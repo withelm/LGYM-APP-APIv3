@@ -1,0 +1,90 @@
+using LgymApi.Api.DTOs;
+using LgymApi.Application.Repositories;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using Microsoft.AspNetCore.Mvc;
+
+namespace LgymApi.Api.Controllers;
+
+[ApiController]
+[Route("api")]
+public sealed class AppConfigController : ControllerBase
+{
+    private readonly IUserRepository _userRepository;
+    private readonly IAppConfigRepository _appConfigRepository;
+
+    public AppConfigController(IUserRepository userRepository, IAppConfigRepository appConfigRepository)
+    {
+        _userRepository = userRepository;
+        _appConfigRepository = appConfigRepository;
+    }
+
+    [HttpPost("appConfig/getAppVersion")]
+    public async Task<IActionResult> GetAppVersion([FromBody] Dictionary<string, string> body)
+    {
+        if (!body.TryGetValue("platform", out var platformRaw))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        if (!Enum.TryParse(platformRaw, true, out Platforms platform))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var config = await _appConfigRepository.GetLatestByPlatformAsync(platform);
+
+        if (config == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        return Ok(new AppConfigInfoDto
+        {
+            MinRequiredVersion = config.MinRequiredVersion,
+            LatestVersion = config.LatestVersion,
+            ForceUpdate = config.ForceUpdate,
+            UpdateUrl = config.UpdateUrl,
+            ReleaseNotes = config.ReleaseNotes
+        });
+    }
+
+    [HttpPost("appConfig/createNewAppVersion/{id}")]
+    public async Task<IActionResult> CreateNewAppVersion([FromRoute] string id, [FromBody] AppConfigInfoWithPlatformDto form)
+    {
+        if (!Guid.TryParse(id, out var userId))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+        }
+
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user == null || user.Admin != true)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+        }
+
+        if (string.IsNullOrWhiteSpace(form.Platform))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+        }
+
+        if (!Enum.TryParse(form.Platform, true, out Platforms platform))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+        }
+
+        var config = new AppConfig
+        {
+            Id = Guid.NewGuid(),
+            Platform = platform,
+            MinRequiredVersion = form.MinRequiredVersion,
+            LatestVersion = form.LatestVersion,
+            ForceUpdate = form.ForceUpdate,
+            UpdateUrl = form.UpdateUrl,
+            ReleaseNotes = form.ReleaseNotes
+        };
+
+        await _appConfigRepository.AddAsync(config);
+        return StatusCode(StatusCodes.Status201Created, new ResponseMessageDto { Message = Message.Created });
+    }
+}

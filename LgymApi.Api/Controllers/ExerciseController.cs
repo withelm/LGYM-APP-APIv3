@@ -1,0 +1,465 @@
+using LgymApi.Api.DTOs;
+using LgymApi.Api.Middleware;
+using LgymApi.Application.Repositories;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using Microsoft.AspNetCore.Mvc;
+
+namespace LgymApi.Api.Controllers;
+
+[ApiController]
+[Route("api")]
+public sealed class ExerciseController : ControllerBase
+{
+    private readonly IUserRepository _userRepository;
+    private readonly IExerciseRepository _exerciseRepository;
+    private readonly IExerciseScoreRepository _exerciseScoreRepository;
+
+    public ExerciseController(
+        IUserRepository userRepository,
+        IExerciseRepository exerciseRepository,
+        IExerciseScoreRepository exerciseScoreRepository)
+    {
+        _userRepository = userRepository;
+        _exerciseRepository = exerciseRepository;
+        _exerciseScoreRepository = exerciseScoreRepository;
+    }
+
+    [HttpPost("exercise/addExercise")]
+    public async Task<IActionResult> AddExercise([FromBody] ExerciseFormDto form)
+    {
+        if (string.IsNullOrWhiteSpace(form.Name) || string.IsNullOrWhiteSpace(form.BodyPart))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+        }
+
+        if (!Enum.TryParse(form.BodyPart, true, out BodyParts bodyPart))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+        }
+
+        var exercise = new Exercise
+        {
+            Id = Guid.NewGuid(),
+            Name = form.Name,
+            BodyPart = bodyPart,
+            Description = form.Description,
+            Image = form.Image,
+            IsDeleted = false
+        };
+
+        await _exerciseRepository.AddAsync(exercise);
+        return Ok(new ResponseMessageDto { Message = Message.Created });
+    }
+
+    [HttpPost("exercise/{id}/addUserExercise")]
+    public async Task<IActionResult> AddUserExercise([FromRoute] string id, [FromBody] ExerciseFormDto form)
+    {
+        if (string.IsNullOrWhiteSpace(form.Name) || string.IsNullOrWhiteSpace(form.BodyPart))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+        }
+
+        if (!Guid.TryParse(id, out var userId))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        if (!Enum.TryParse(form.BodyPart, true, out BodyParts bodyPart))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+        }
+
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var exercise = new Exercise
+        {
+            Id = Guid.NewGuid(),
+            Name = form.Name,
+            BodyPart = bodyPart,
+            Description = form.Description,
+            Image = form.Image,
+            UserId = user.Id,
+            IsDeleted = false
+        };
+
+        await _exerciseRepository.AddAsync(exercise);
+        return Ok(new ResponseMessageDto { Message = Message.Created });
+    }
+
+    [HttpPost("exercise/{id}/deleteExercise")]
+    public async Task<IActionResult> DeleteExercise([FromRoute] string id, [FromBody] Dictionary<string, string> body)
+    {
+        if (!body.TryGetValue("id", out var exerciseIdString))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+        }
+
+        if (!Guid.TryParse(id, out var userId) || !Guid.TryParse(exerciseIdString, out var exerciseId))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
+        if (exercise == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        if (user.Admin == true)
+        {
+            exercise.IsDeleted = true;
+        }
+        else
+        {
+            if (!exercise.UserId.HasValue)
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.Forbidden });
+            }
+
+            if (exercise.UserId.Value != user.Id)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            }
+
+            exercise.IsDeleted = true;
+        }
+
+        await _exerciseRepository.UpdateAsync(exercise);
+        return Ok(new ResponseMessageDto { Message = Message.Deleted });
+    }
+
+    [HttpPost("exercise/updateExercise")]
+    public async Task<IActionResult> UpdateExercise([FromBody] ExerciseFormDto form)
+    {
+        if (!Guid.TryParse(form.Id, out var exerciseId))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+        }
+
+        var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
+        if (exercise == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        if (!string.IsNullOrWhiteSpace(form.Name))
+        {
+            exercise.Name = form.Name;
+        }
+
+        if (!string.IsNullOrWhiteSpace(form.BodyPart) && Enum.TryParse<BodyParts>(form.BodyPart, out var bodyPart))
+        {
+            exercise.BodyPart = bodyPart;
+        }
+
+        exercise.Description = form.Description;
+        exercise.Image = form.Image;
+
+        await _exerciseRepository.UpdateAsync(exercise);
+        return Ok(new ResponseMessageDto { Message = Message.Updated });
+    }
+
+    [HttpGet("exercise/{id}/getAllExercises")]
+    public async Task<IActionResult> GetAllExercises([FromRoute] string id)
+    {
+        if (!Guid.TryParse(id, out var userId))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var exercises = await _exerciseRepository.GetAllForUserAsync(user.Id);
+
+        if (exercises.Count == 0)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var result = exercises.Select(e => new ExerciseFormDto
+        {
+            Id = e.Id.ToString(),
+            Name = e.Name,
+            BodyPart = e.BodyPart.ToString(),
+            Description = e.Description,
+            Image = e.Image,
+            UserId = e.UserId?.ToString()
+        }).ToList();
+
+        return Ok(result);
+    }
+
+    [HttpGet("exercise/{id}/getAllUserExercises")]
+    public async Task<IActionResult> GetAllUserExercises([FromRoute] string id)
+    {
+        if (!Guid.TryParse(id, out var userId))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var exercises = await _exerciseRepository.GetUserExercisesAsync(user.Id);
+
+        if (exercises.Count == 0)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var result = exercises.Select(e => new ExerciseFormDto
+        {
+            Id = e.Id.ToString(),
+            Name = e.Name,
+            BodyPart = e.BodyPart.ToString(),
+            Description = e.Description,
+            Image = e.Image,
+            UserId = e.UserId?.ToString()
+        }).ToList();
+
+        return Ok(result);
+    }
+
+    [HttpGet("exercise/getAllGlobalExercises")]
+    public async Task<IActionResult> GetAllGlobalExercises()
+    {
+        var exercises = await _exerciseRepository.GetAllGlobalAsync();
+
+        if (exercises.Count == 0)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var result = exercises.Select(e => new ExerciseFormDto
+        {
+            Id = e.Id.ToString(),
+            Name = e.Name,
+            BodyPart = e.BodyPart.ToString(),
+            Description = e.Description,
+            Image = e.Image,
+            UserId = e.UserId?.ToString()
+        }).ToList();
+
+        return Ok(result);
+    }
+
+    [HttpPost("exercise/{id}/getExerciseByBodyPart")]
+    public async Task<IActionResult> GetExerciseByBodyPart([FromRoute] string id, [FromBody] Dictionary<string, string> body)
+    {
+        if (!Guid.TryParse(id, out var userId))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        if (!body.TryGetValue("bodyPart", out var bodyPartRaw))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        if (!Enum.TryParse<BodyParts>(bodyPartRaw, out var bodyPart))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var exercises = await _exerciseRepository.GetByBodyPartAsync(user.Id, bodyPartRaw);
+
+        if (exercises.Count == 0)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var result = exercises.Select(e => new ExerciseFormDto
+        {
+            Id = e.Id.ToString(),
+            Name = e.Name,
+            BodyPart = e.BodyPart.ToString(),
+            Description = e.Description,
+            Image = e.Image,
+            UserId = e.UserId?.ToString()
+        }).ToList();
+
+        return Ok(result);
+    }
+
+    [HttpGet("exercise/{id}/getExercise")]
+    public async Task<IActionResult> GetExercise([FromRoute] string id)
+    {
+        if (!Guid.TryParse(id, out var exerciseId))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
+        if (exercise == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        return Ok(new ExerciseFormDto
+        {
+            Id = exercise.Id.ToString(),
+            Name = exercise.Name,
+            BodyPart = exercise.BodyPart.ToString(),
+            Description = exercise.Description,
+            Image = exercise.Image,
+            UserId = exercise.UserId?.ToString()
+        });
+    }
+
+    [HttpPost("exercise/{id}/getLastExerciseScores")]
+    public async Task<IActionResult> GetLastExerciseScores([FromRoute] string id, [FromBody] LastExerciseScoresRequestDto request)
+    {
+        if (!Guid.TryParse(id, out _))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var userId = HttpContext.GetCurrentUser()?.Id;
+        if (!userId.HasValue)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        if (!Guid.TryParse(request.ExerciseId, out var exerciseId))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        Guid? gymId = null;
+        if (!string.IsNullOrWhiteSpace(request.GymId) && Guid.TryParse(request.GymId, out var parsedGymId))
+        {
+            gymId = parsedGymId;
+        }
+
+        var seriesScores = new List<SeriesScoreWithGymDto>();
+        for (var i = 1; i <= request.Series; i++)
+        {
+            var score = await FindLatestExerciseScore(userId.Value, exerciseId, i, gymId);
+            seriesScores.Add(new SeriesScoreWithGymDto
+            {
+                Series = i,
+                Score = score
+            });
+        }
+
+        var result = new LastExerciseScoresResponseDto
+        {
+            ExerciseId = request.ExerciseId,
+            ExerciseName = request.ExerciseName,
+            SeriesScores = seriesScores
+        };
+
+        return Ok(result);
+    }
+
+    [HttpPost("exercise/getExerciseScoresFromTrainingByExercise")]
+    public async Task<IActionResult> GetExerciseScoresFromTrainingByExercise([FromBody] RecordOrPossibleRequestDto request)
+    {
+        var userId = HttpContext.GetCurrentUser()?.Id;
+        if (!userId.HasValue || !Guid.TryParse(request.ExerciseId, out var exerciseId))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+        }
+
+        var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
+        if (exercise == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(userId.Value, exerciseId);
+
+        var tempMap = new Dictionary<Guid, (DateTimeOffset Date, string GymName, string TrainingName, List<(int Series, ScoreDto Score)> RawScores, int MaxSeries)>();
+        foreach (var score in scores)
+        {
+            if (score.Training?.Gym == null || score.Training.PlanDay == null)
+            {
+                continue;
+            }
+
+            var trainingId = score.Training.Id;
+            if (!tempMap.TryGetValue(trainingId, out var entry))
+            {
+                entry = (score.Training.CreatedAt, score.Training.Gym.Name, score.Training.PlanDay.Name, new List<(int, ScoreDto)>(), 0);
+            }
+
+            entry.RawScores.Add((score.Series, new ScoreDto
+            {
+                Id = score.Id.ToString(),
+                Reps = score.Reps,
+                Weight = score.Weight,
+                Unit = score.Unit == WeightUnits.Kilograms ? "kg" : "lbs"
+            }));
+            entry.MaxSeries = Math.Max(entry.MaxSeries, score.Series);
+            tempMap[trainingId] = entry;
+        }
+
+        var result = new List<ExerciseTrainingHistoryItemDto>();
+        foreach (var (trainingId, entry) in tempMap)
+        {
+            var seriesScores = new List<SeriesScoreDto>();
+        var scoreMap = entry.RawScores
+            .GroupBy(s => s.Series)
+            .ToDictionary(g => g.Key, g => g.First().Score);
+
+            for (var i = 1; i <= entry.MaxSeries; i++)
+            {
+                scoreMap.TryGetValue(i, out var score);
+                seriesScores.Add(new SeriesScoreDto { Series = i, Score = score });
+            }
+
+            result.Add(new ExerciseTrainingHistoryItemDto
+            {
+                Id = trainingId.ToString(),
+                Date = entry.Date.UtcDateTime,
+                GymName = entry.GymName,
+                TrainingName = entry.TrainingName,
+                SeriesScores = seriesScores
+            });
+        }
+
+        return Ok(result);
+    }
+
+    private async Task<ScoreWithGymDto?> FindLatestExerciseScore(Guid userId, Guid exerciseId, int seriesNumber, Guid? gymId)
+    {
+        var result = await _exerciseScoreRepository.GetLatestByUserExerciseSeriesAsync(userId, exerciseId, seriesNumber, gymId);
+        if (result == null)
+        {
+            return null;
+        }
+
+        return new ScoreWithGymDto
+        {
+            Id = result.Id.ToString(),
+            Reps = result.Reps,
+            Weight = result.Weight,
+            Unit = result.Unit == WeightUnits.Kilograms ? "kg" : "lbs",
+            GymName = result.Training?.Gym?.Name
+        };
+    }
+}

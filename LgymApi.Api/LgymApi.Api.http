@@ -1,0 +1,6 @@
+@LgymApi.Api_HostAddress = http://localhost:4000
+
+GET {{LgymApi.Api_HostAddress}}/
+Accept: application/json
+
+###
