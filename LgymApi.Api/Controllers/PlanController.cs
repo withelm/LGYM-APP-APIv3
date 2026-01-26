@@ -190,4 +190,59 @@ public sealed class PlanController : ControllerBase
 
         return Ok(new ResponseMessageDto { Message = Message.Updated });
     }
+
+    [HttpPost("copy")]
+    public async Task<IActionResult> CopyPlan([FromBody] CopyPlanDto dto)
+    {
+        var user = HttpContext.GetCurrentUser();
+        if (user == null)
+        {
+            return StatusCode(StatusCodes.Status401Unauthorized, new ResponseMessageDto { Message = Message.Unauthorized });
+        }
+
+        try
+        {
+            var copiedPlan = await _planRepository.CopyPlanByShareCodeAsync(dto.ShareCode, user.Id);
+
+            var planDto = new PlanDto
+            {
+                Id = copiedPlan.Id,
+                Name = copiedPlan.Name,
+                IsActive = copiedPlan.IsActive,
+                UserId = copiedPlan.UserId
+            };
+
+            return StatusCode(StatusCodes.Status201Created, planDto);
+        }
+        catch (InvalidOperationException)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+    }
+
+    [HttpPatch("{id}/share")]
+    public async Task<IActionResult> GenerateShareCode([FromRoute] string id)
+    {
+        var user = HttpContext.GetCurrentUser();
+        if (user == null || !Guid.TryParse(id, out var planId))
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+
+        try
+        {
+            var shareCode = await _planRepository.GenerateShareCodeAsync(planId, user.Id);
+            return Ok(new ShareCodeResponseDto(shareCode));
+        }
+        catch (InvalidOperationException)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+        }
+    }
 }
+
+

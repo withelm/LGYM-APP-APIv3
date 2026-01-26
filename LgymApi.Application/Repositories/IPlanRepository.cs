@@ -10,4 +10,7 @@ public interface IPlanRepository
     Task AddAsync(Plan plan, CancellationToken cancellationToken = default);
     Task UpdateAsync(Plan plan, CancellationToken cancellationToken = default);
     Task SetActivePlanAsync(Guid userId, Guid planId, CancellationToken cancellationToken = default);
+    Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Guid userId, CancellationToken cancellationToken = default);
+    Task<string> GenerateShareCodeAsync(Guid planId, Guid userId, CancellationToken cancellationToken = default);
 }
+
