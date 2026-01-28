@@ -31,7 +31,7 @@
     <value>Deleted!</value>
   </data>
   <data name="DidntFind" xml:space="preserve">
-    <value>Didnt find!</value>
+    <value>Didn't find!</value>
   </data>
   <data name="InvalidToken" xml:space="preserve">
     <value>Invalid JWT Token</value>
