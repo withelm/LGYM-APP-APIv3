@@ -10,6 +10,22 @@ namespace LgymApi.Resources.Generator;
 [Generator]
 public sealed class MessagesResxGenerator : IIncrementalGenerator
 {
+    private static readonly DiagnosticDescriptor ResxParseFailed = new(
+        id: "LGYMRES001",
+        title: "Failed to parse Messages.resx",
+        messageFormat: "Failed to parse Messages.resx at '{0}': {1}",
+        category: "Resources",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ResxNoKeys = new(
+        id: "LGYMRES002",
+        title: "No resource keys found",
+        messageFormat: "No resource keys found in Messages.resx at '{0}'.",
+        category: "Resources",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var resxFiles = context.AdditionalTextsProvider
@@ -25,21 +41,27 @@ public sealed class MessagesResxGenerator : IIncrementalGenerator
         {
             if (string.IsNullOrWhiteSpace(input.Content))
             {
+                context.ReportDiagnostic(Diagnostic.Create(ResxNoKeys, Location.None, input.Path));
+                context.AddSource("Messages.g.cs", GenerateSource(ImmutableArray<string>.Empty));
                 return;
             }
 
-            var keys = ReadKeys(input.Content);
+            var (keys, error) = ReadKeys(input.Content);
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(ResxParseFailed, Location.None, input.Path, error));
+            }
+
             if (keys.Length == 0)
             {
-                return;
+                context.ReportDiagnostic(Diagnostic.Create(ResxNoKeys, Location.None, input.Path));
             }
 
-            var source = GenerateSource(keys);
-            context.AddSource("Messages.g.cs", source);
+            context.AddSource("Messages.g.cs", GenerateSource(keys));
         });
     }
 
-    private static ImmutableArray<string> ReadKeys(string content)
+    private static (ImmutableArray<string> Keys, string? Error) ReadKeys(string content)
     {
         try
         {
@@ -53,11 +75,11 @@ public sealed class MessagesResxGenerator : IIncrementalGenerator
                 .OrderBy(value => value, StringComparer.Ordinal)
                 .ToImmutableArray();
 
-            return keys ?? ImmutableArray<string>.Empty;
+            return (keys ?? ImmutableArray<string>.Empty, null);
         }
-        catch
+        catch (Exception ex)
         {
-            return ImmutableArray<string>.Empty;
+            return (ImmutableArray<string>.Empty, ex.Message);
         }
     }
 
