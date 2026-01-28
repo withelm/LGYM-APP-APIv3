@@ -1,5 +1,4 @@
 using LgymApi.Application.Repositories;
-using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Middleware;
 
@@ -26,7 +25,7 @@ public sealed class UserContextMiddleware
         if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = Message.InvalidToken });
+            await context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
             return;
         }
 
@@ -34,14 +33,14 @@ public sealed class UserContextMiddleware
         if (user == null)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = Message.InvalidToken });
+            await context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
             return;
         }
 
         if (user.IsDeleted)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = Message.Unauthorized });
+            await context.Response.WriteAsJsonAsync(new { message = Messages.Unauthorized });
             return;
         }
 

@@ -3,7 +3,6 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -48,24 +47,24 @@ public sealed class TrainingController : ControllerBase
         {
             if (!Guid.TryParse(id, out var userId) || !Guid.TryParse(form.GymId, out var gymId))
             {
-                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
             }
 
             if (!Guid.TryParse(form.TypePlanDayId, out var planDayId))
             {
-                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
             }
 
             var user = await _userRepository.FindByIdAsync(userId);
             if (user == null)
             {
-                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
             }
 
             var gym = await _gymRepository.FindByIdAsync(gymId);
             if (gym == null)
             {
-                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
             }
 
             var training = new Training
@@ -146,7 +145,7 @@ public sealed class TrainingController : ControllerBase
 
             if (eloEntry == null)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ResponseMessageDto { Message = Message.TryAgain });
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResponseMessageDto { Message = Messages.TryAgain });
             }
 
             var newElo = totalElo + eloEntry.Elo;
@@ -173,12 +172,12 @@ public sealed class TrainingController : ControllerBase
                 UserOldElo = eloEntry.Elo,
                 ProfileRank = new RankDto { Name = currentRank.Name, NeedElo = currentRank.NeedElo },
                 NextRank = nextRank == null ? null : new RankDto { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
-                Message = Message.Created
+                Message = Messages.Created
             });
         }
         catch
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new ResponseMessageDto { Message = Message.TryAgain });
+            return StatusCode(StatusCodes.Status500InternalServerError, new ResponseMessageDto { Message = Messages.TryAgain });
         }
     }
 
@@ -187,20 +186,20 @@ public sealed class TrainingController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var training = await _trainingRepository.GetLastByUserIdAsync(user.Id);
 
         if (training == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = new LastTrainingInfoDto
@@ -223,13 +222,13 @@ public sealed class TrainingController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var startOfDay = new DateTimeOffset(DateTime.SpecifyKind(request.CreatedAt.Date, DateTimeKind.Utc));
@@ -239,7 +238,7 @@ public sealed class TrainingController : ControllerBase
 
         if (trainings.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var trainingIds = trainings.Select(t => t.Id).ToList();
@@ -312,14 +311,14 @@ public sealed class TrainingController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var trainings = await _trainingRepository.GetDatesByUserIdAsync(userId);
 
         if (trainings.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         return Ok(trainings.Select(t => t.UtcDateTime).ToList());

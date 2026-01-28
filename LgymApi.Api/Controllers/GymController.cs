@@ -2,7 +2,6 @@ using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -26,17 +25,17 @@ public sealed class GymController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null || !Guid.TryParse(id, out var routeUserId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (user.Id != routeUserId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         if (string.IsNullOrWhiteSpace(form.Name))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         Guid? addressId = null;
@@ -55,7 +54,7 @@ public sealed class GymController : ControllerBase
         };
 
         await _gymRepository.AddAsync(gym);
-        return Ok(new ResponseMessageDto { Message = Message.Created });
+        return Ok(new ResponseMessageDto { Message = Messages.Created });
     }
 
     [HttpPost("gym/{id}/deleteGym")]
@@ -64,28 +63,28 @@ public sealed class GymController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Guid.TryParse(id, out var gymId))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         var gym = await _gymRepository.FindByIdAsync(gymId);
         if (gym == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (gym.UserId != user.Id)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         gym.IsDeleted = true;
         await _gymRepository.UpdateAsync(gym);
-        return Ok(new ResponseMessageDto { Message = Message.Deleted });
+        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
     }
 
     [HttpGet("gym/{id}/getGyms")]
@@ -94,12 +93,12 @@ public sealed class GymController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null || !Guid.TryParse(id, out var routeUserId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (user.Id != routeUserId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         var gyms = await _gymRepository.GetByUserIdAsync(user.Id);
@@ -141,23 +140,23 @@ public sealed class GymController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Guid.TryParse(id, out var gymId))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         var gym = await _gymRepository.FindByIdAsync(gymId);
         if (gym == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (gym.UserId != user.Id)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         return Ok(new GymFormDto
@@ -174,23 +173,23 @@ public sealed class GymController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Guid.TryParse(form.Id, out var gymId))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         var gym = await _gymRepository.FindByIdAsync(gymId);
         if (gym == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (gym.UserId != user.Id)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         gym.Name = form.Name;
@@ -200,6 +199,6 @@ public sealed class GymController : ControllerBase
         }
 
         await _gymRepository.UpdateAsync(gym);
-        return Ok(new ResponseMessageDto { Message = Message.Updated });
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 }

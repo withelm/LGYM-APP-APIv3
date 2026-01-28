@@ -2,7 +2,6 @@ using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -24,12 +23,12 @@ public sealed class MeasurementsController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Enum.TryParse(form.BodyPart, true, out BodyParts bodyPart))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.TryAgain });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.TryAgain });
         }
 
         var measurement = new Measurement
@@ -43,7 +42,7 @@ public sealed class MeasurementsController : ControllerBase
 
         await _measurementRepository.AddAsync(measurement);
 
-        return Ok(new ResponseMessageDto { Message = Message.Created });
+        return Ok(new ResponseMessageDto { Message = Messages.Created });
     }
 
     [HttpGet("measurements:/{id}/getMeasurementDetail")]
@@ -52,23 +51,23 @@ public sealed class MeasurementsController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Guid.TryParse(id, out var measurementId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var measurement = await _measurementRepository.FindByIdAsync(measurementId);
         if (measurement == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (measurement.UserId != user.Id)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         return Ok(new MeasurementFormDto
@@ -88,18 +87,18 @@ public sealed class MeasurementsController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null || !Guid.TryParse(id, out var routeUserId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (user.Id != routeUserId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         var measurements = await _measurementRepository.GetByUserAsync(user.Id, request?.BodyPart);
         if (measurements.Count < 1)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = new MeasurementsHistoryDto

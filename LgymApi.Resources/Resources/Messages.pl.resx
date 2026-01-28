@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Created" xml:space="preserve">
+    <value>Utworzono</value>
+  </data>
+  <data name="FieldRequired" xml:space="preserve">
+    <value>Wymagane są wszystkie pola</value>
+  </data>
+  <data name="ChooseDays" xml:space="preserve">
+    <value>Wybierz liczbę dni od 1 do 7</value>
+  </data>
+  <data name="Updated" xml:space="preserve">
+    <value>Zaktualizowano</value>
+  </data>
+  <data name="TryAgain" xml:space="preserve">
+    <value>Błąd, spróbuj ponownie</value>
+  </data>
+  <data name="Deleted" xml:space="preserve">
+    <value>Usunięto!</value>
+  </data>
+  <data name="DidntFind" xml:space="preserve">
+    <value>Nie znaleziono!</value>
+  </data>
+  <data name="InvalidToken" xml:space="preserve">
+    <value>Nieprawidłowy token JWT</value>
+  </data>
+  <data name="ExpiredToken" xml:space="preserve">
+    <value>Token wygasł</value>
+  </data>
+  <data name="InputsMustBeNumbers" xml:space="preserve">
+    <value>Wprowadzone wartości muszą być liczbami</value>
+  </data>
+  <data name="NameIsRequired" xml:space="preserve">
+    <value>Nazwa jest wymagana i musi mieć co najmniej jeden znak</value>
+  </data>
+  <data name="EmailInvalid" xml:space="preserve">
+    <value>Ten email jest nieprawidłowy!</value>
+  </data>
+  <data name="PasswordMin" xml:space="preserve">
+    <value>Hasło musi mieć co najmniej sześć znaków</value>
+  </data>
+  <data name="SamePassword" xml:space="preserve">
+    <value>Hasła muszą być takie same</value>
+  </data>
+  <data name="UserWithThatName" xml:space="preserve">
+    <value>Istnieje użytkownik o takiej nazwie</value>
+  </data>
+  <data name="UserWithThatEmail" xml:space="preserve">
+    <value>Istnieje użytkownik z takim adresem email</value>
+  </data>
+  <data name="Unauthorized" xml:space="preserve">
+    <value>Brak autoryzacji</value>
+  </data>
+  <data name="Forbidden" xml:space="preserve">
+    <value>Brak dostępu</value>
+  </data>
+</root>

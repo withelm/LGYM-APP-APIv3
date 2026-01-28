@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +29,7 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddLocalization();
 
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
 
@@ -54,7 +57,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 if (context.Exception is SecurityTokenExpiredException)
                 {
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return context.Response.WriteAsJsonAsync(new { message = LgymApi.Domain.Enums.Message.ExpiredToken });
+                    return context.Response.WriteAsJsonAsync(new { message = Messages.ExpiredToken });
                 }
 
                 return Task.CompletedTask;
@@ -65,7 +68,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 {
                     context.HandleResponse();
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return context.Response.WriteAsJsonAsync(new { message = LgymApi.Domain.Enums.Message.InvalidToken });
+                    return context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
                 }
 
                 return Task.CompletedTask;
@@ -107,6 +110,24 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+var supportedCultures = new[]
+{
+    new CultureInfo("en"),
+    new CultureInfo("pl")
+};
+
+var localizationOptions = new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("en"),
+    SupportedCultures = supportedCultures,
+    SupportedUICultures = supportedCultures
+};
+
+localizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
+{
+    new AcceptLanguageHeaderRequestCultureProvider()
+};
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -115,6 +136,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseRequestLocalization(localizationOptions);
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

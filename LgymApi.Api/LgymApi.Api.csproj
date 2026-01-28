@@ -28,6 +28,7 @@
     <ProjectReference Include="..\LgymApi.Application\LgymApi.Application.csproj" />
     <ProjectReference Include="..\LgymApi.Infrastructure\LgymApi.Infrastructure.csproj" />
     <ProjectReference Include="..\LgymApi.Domain\LgymApi.Domain.csproj" />
+    <ProjectReference Include="..\LgymApi.Resources\LgymApi.Resources.csproj" />
   </ItemGroup>
 
 </Project>

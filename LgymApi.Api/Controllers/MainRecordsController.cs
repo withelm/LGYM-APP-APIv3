@@ -2,7 +2,6 @@ using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -33,19 +32,19 @@ public sealed class MainRecordsController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId) || !Guid.TryParse(form.ExerciseId, out var exerciseId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
         if (exercise == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var unit = form.Unit == "lbs" ? WeightUnits.Pounds : WeightUnits.Kilograms;
@@ -60,7 +59,7 @@ public sealed class MainRecordsController : ControllerBase
         };
 
         await _mainRecordRepository.AddAsync(record);
-        return Ok(new ResponseMessageDto { Message = Message.Created });
+        return Ok(new ResponseMessageDto { Message = Messages.Created });
     }
 
     [HttpGet("mainRecords/{id}/getMainRecordsHistory")]
@@ -68,13 +67,13 @@ public sealed class MainRecordsController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var records = await _mainRecordRepository.GetByUserIdAsync(user.Id);
@@ -82,7 +81,7 @@ public sealed class MainRecordsController : ControllerBase
 
         if (records.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = records.Reverse<MainRecord>().Select(record => new MainRecordsFormDto
@@ -102,20 +101,20 @@ public sealed class MainRecordsController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var records = await _mainRecordRepository.GetByUserIdAsync(user.Id);
 
         if (records.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var latestRecords = records
@@ -155,17 +154,17 @@ public sealed class MainRecordsController : ControllerBase
     {
         if (!Guid.TryParse(id, out var recordId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var record = await _mainRecordRepository.FindByIdAsync(recordId);
         if (record == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         await _mainRecordRepository.DeleteAsync(record);
-        return Ok(new ResponseMessageDto { Message = Message.Deleted });
+        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
     }
 
     [HttpPost("mainRecords/{id}/updateMainRecords")]
@@ -173,35 +172,35 @@ public sealed class MainRecordsController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Guid.TryParse(form.Id, out var recordId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var existingRecord = await _mainRecordRepository.FindByIdAsync(recordId);
         if (existingRecord == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Guid.TryParse(form.ExerciseId, out var exerciseId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
         if (exercise == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         existingRecord.UserId = user.Id;
@@ -211,7 +210,7 @@ public sealed class MainRecordsController : ControllerBase
         existingRecord.Date = new DateTimeOffset(DateTime.SpecifyKind(form.Date, DateTimeKind.Utc));
 
         await _mainRecordRepository.UpdateAsync(existingRecord);
-        return Ok(new ResponseMessageDto { Message = Message.Updated });
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
     [HttpPost("mainRecords/getRecordOrPossibleRecordInExercise")]
@@ -220,7 +219,7 @@ public sealed class MainRecordsController : ControllerBase
         var userId = HttpContext.GetCurrentUser()?.Id;
         if (!userId.HasValue || !Guid.TryParse(request.ExerciseId, out var exerciseId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var record = await _mainRecordRepository.GetLatestByUserAndExerciseAsync(userId.Value, exerciseId);
@@ -231,7 +230,7 @@ public sealed class MainRecordsController : ControllerBase
 
             if (possible == null)
             {
-                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
             }
 
             return Ok(new PossibleRecordForExerciseDto
