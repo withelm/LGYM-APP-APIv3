@@ -1,11 +1,11 @@
 # LGYM .NET Backend
 
-This backend replaces the Node/Mongo implementation with .NET 8, EF Core, and PostgreSQL.
+This backend replaces the Node/Mongo implementation with .NET 10, EF Core, and PostgreSQL.
 All API routes and payloads remain 1:1 compatible with the existing frontend.
 
 ## Requirements
 
-- .NET SDK 8.x
+- .NET SDK 10.x
 - PostgreSQL
 - MongoDB (only needed for offline migration)
 
