@@ -49,7 +49,7 @@
     <value>This email is not valid!</value>
   </data>
   <data name="PasswordMin" xml:space="preserve">
-    <value>Passwword need to have minimum six characters</value>
+    <value>Password needs to have at least six characters</value>
   </data>
   <data name="SamePassword" xml:space="preserve">
     <value>Passwords need to be same</value>
