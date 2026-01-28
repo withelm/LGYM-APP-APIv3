@@ -1,7 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -27,12 +26,12 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null || !Guid.TryParse(id, out var routeUserId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (user.Id != routeUserId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         var plan = new Domain.Entities.Plan
@@ -47,7 +46,7 @@ public sealed class PlanController : ControllerBase
         await _planRepository.AddAsync(plan);
         await _userRepository.UpdateAsync(user);
 
-        return Ok(new ResponseMessageDto { Message = Message.Created });
+        return Ok(new ResponseMessageDto { Message = Messages.Created });
     }
 
     [HttpPost("{id}/updatePlan")]
@@ -56,33 +55,33 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null || !Guid.TryParse(id, out var routeUserId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (user.Id != routeUserId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         if (string.IsNullOrWhiteSpace(form.Name))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         if (!Guid.TryParse(form.Id, out var planId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var plan = await _planRepository.FindByIdAsync(planId);
         if (plan == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         plan.Name = form.Name;
         await _planRepository.UpdateAsync(plan);
-        return Ok(new ResponseMessageDto { Message = Message.Updated });
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
     [HttpGet("{id}/getPlanConfig")]
@@ -91,18 +90,18 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null || !Guid.TryParse(id, out var routeUserId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (user.Id != routeUserId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         var plan = await _planRepository.FindActiveByUserIdAsync(user.Id);
         if (plan == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         return Ok(new PlanFormDto
@@ -148,18 +147,18 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null || !Guid.TryParse(id, out var routeUserId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (user.Id != routeUserId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         var plans = await _planRepository.GetByUserIdAsync(user.Id);
         if (plans.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = plans.Select(plan => new PlanFormDto
@@ -178,17 +177,17 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null || !Guid.TryParse(id, out var routeUserId) || !Guid.TryParse(form.Id, out var planId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (user.Id != routeUserId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         await _planRepository.SetActivePlanAsync(user.Id, planId);
 
-        return Ok(new ResponseMessageDto { Message = Message.Updated });
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
     [HttpPost("copy")]
@@ -197,7 +196,7 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status401Unauthorized, new ResponseMessageDto { Message = Message.Unauthorized });
+            return StatusCode(StatusCodes.Status401Unauthorized, new ResponseMessageDto { Message = Messages.Unauthorized });
         }
 
         try
@@ -216,7 +215,7 @@ public sealed class PlanController : ControllerBase
         }
         catch (InvalidOperationException)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
     }
 
@@ -226,7 +225,7 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null || !Guid.TryParse(id, out var planId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         try
@@ -236,11 +235,11 @@ public sealed class PlanController : ControllerBase
         }
         catch (InvalidOperationException)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
         catch (UnauthorizedAccessException)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
     }
 }

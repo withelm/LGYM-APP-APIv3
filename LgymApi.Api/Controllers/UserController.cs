@@ -4,7 +4,6 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -39,22 +38,22 @@ public sealed class UserController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Name))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.NameIsRequired });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.NameIsRequired });
         }
 
         if (!new EmailAddressAttribute().IsValid(request.Email))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.EmailInvalid });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.EmailInvalid });
         }
 
         if (request.Password.Length < 6)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.PasswordMin });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.PasswordMin });
         }
 
         if (!string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.SamePassword });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.SamePassword });
         }
 
         var existingUser = await _userRepository.FindByNameOrEmailAsync(request.Name, request.Email);
@@ -63,10 +62,10 @@ public sealed class UserController : ControllerBase
         {
             if (string.Equals(existingUser.Name, request.Name, StringComparison.Ordinal))
             {
-                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.UserWithThatName });
+                return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.UserWithThatName });
             }
 
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.UserWithThatEmail });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.UserWithThatEmail });
         }
 
         var passwordData = _legacyPasswordService.Create(request.Password);
@@ -94,7 +93,7 @@ public sealed class UserController : ControllerBase
             Elo = 1000
         });
 
-        return Ok(new ResponseMessageDto { Message = Message.Created });
+        return Ok(new ResponseMessageDto { Message = Messages.Created });
     }
 
     [HttpPost("login")]
@@ -103,13 +102,13 @@ public sealed class UserController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Password))
         {
-            return StatusCode(StatusCodes.Status401Unauthorized, new ResponseMessageDto { Message = Message.Unauthorized });
+            return StatusCode(StatusCodes.Status401Unauthorized, new ResponseMessageDto { Message = Messages.Unauthorized });
         }
 
         var user = await _userRepository.FindByNameAsync(request.Name);
         if (user == null || string.IsNullOrWhiteSpace(user.LegacyHash) || string.IsNullOrWhiteSpace(user.LegacySalt))
         {
-            return StatusCode(StatusCodes.Status401Unauthorized, new ResponseMessageDto { Message = Message.Unauthorized });
+            return StatusCode(StatusCodes.Status401Unauthorized, new ResponseMessageDto { Message = Messages.Unauthorized });
         }
 
         var valid = _legacyPasswordService.Verify(
@@ -122,7 +121,7 @@ public sealed class UserController : ControllerBase
 
         if (!valid)
         {
-            return StatusCode(StatusCodes.Status401Unauthorized, new ResponseMessageDto { Message = Message.Unauthorized });
+            return StatusCode(StatusCodes.Status401Unauthorized, new ResponseMessageDto { Message = Messages.Unauthorized });
         }
 
         var token = _tokenService.CreateToken(user.Id);
@@ -174,7 +173,7 @@ public sealed class UserController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var nextRank = _rankService.GetNextRank(user.ProfileRank);
@@ -208,7 +207,7 @@ public sealed class UserController : ControllerBase
 
         if (users.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = users.Select(u => new UserBaseInfoDto
@@ -228,14 +227,14 @@ public sealed class UserController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = await _eloRepository.GetLatestEloAsync(userId);
 
         if (!result.HasValue)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         return Ok(new UserEloDto { Elo = result.Value });
@@ -248,7 +247,7 @@ public sealed class UserController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         user.Email = $"anonymized_{user.Id}@example.com";
@@ -256,7 +255,7 @@ public sealed class UserController : ControllerBase
         user.IsDeleted = true;
 
         await _userRepository.UpdateAsync(user);
-        return Ok(new ResponseMessageDto { Message = Message.Deleted });
+        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
     }
 
     [HttpPost("changeVisibilityInRanking")]
@@ -265,17 +264,17 @@ public sealed class UserController : ControllerBase
     {
         if (!body.TryGetValue("isVisibleInRanking", out var isVisible))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = HttpContext.GetCurrentUser();
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         user.IsVisibleInRanking = isVisible;
         await _userRepository.UpdateAsync(user);
-        return Ok(new ResponseMessageDto { Message = Message.Updated });
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 }

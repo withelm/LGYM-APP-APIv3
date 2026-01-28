@@ -1,7 +1,6 @@
 using System.Globalization;
 using LgymApi.Api.DTOs;
 using LgymApi.Application.Repositories;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -24,20 +23,20 @@ public sealed class EloRegistryController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var eloRegistry = await _eloRepository.GetByUserIdAsync(user.Id);
 
         if (eloRegistry.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = eloRegistry.Select(entry => new EloRegistryBaseChartDto

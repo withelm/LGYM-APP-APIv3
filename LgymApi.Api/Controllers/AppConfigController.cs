@@ -1,7 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -24,19 +23,19 @@ public sealed class AppConfigController : ControllerBase
     {
         if (!body.TryGetValue("platform", out var platformRaw))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Enum.TryParse(platformRaw, true, out Platforms platform))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var config = await _appConfigRepository.GetLatestByPlatformAsync(platform);
 
         if (config == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         return Ok(new AppConfigInfoDto
@@ -54,23 +53,23 @@ public sealed class AppConfigController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null || user.Admin != true)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
         if (string.IsNullOrWhiteSpace(form.Platform))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         if (!Enum.TryParse(form.Platform, true, out Platforms platform))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         var config = new AppConfig
@@ -85,6 +84,6 @@ public sealed class AppConfigController : ControllerBase
         };
 
         await _appConfigRepository.AddAsync(config);
-        return StatusCode(StatusCodes.Status201Created, new ResponseMessageDto { Message = Message.Created });
+        return StatusCode(StatusCodes.Status201Created, new ResponseMessageDto { Message = Messages.Created });
     }
 }

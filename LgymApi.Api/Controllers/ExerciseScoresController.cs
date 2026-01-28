@@ -1,7 +1,6 @@
 using System.Globalization;
 using LgymApi.Api.DTOs;
 using LgymApi.Application.Repositories;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -24,13 +23,13 @@ public sealed class ExerciseScoresController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId) || !Guid.TryParse(request.ExerciseId, out var exerciseId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(user.Id, exerciseId);

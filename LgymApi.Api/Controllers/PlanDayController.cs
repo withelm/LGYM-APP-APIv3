@@ -1,7 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -38,18 +37,18 @@ public sealed class PlanDayController : ControllerBase
     {
         if (!Guid.TryParse(id, out var planId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var plan = await _planRepository.FindByIdAsync(planId);
         if (plan == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (string.IsNullOrWhiteSpace(form.Name) || form.Exercises == null || form.Exercises.Count == 0)
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         var planDay = new PlanDay
@@ -84,7 +83,7 @@ public sealed class PlanDayController : ControllerBase
         {
             await _planDayExerciseRepository.AddRangeAsync(exercisesToAdd);
         }
-        return Ok(new ResponseMessageDto { Message = Message.Created });
+        return Ok(new ResponseMessageDto { Message = Messages.Created });
     }
 
     [HttpPost("planDay/updatePlanDay")]
@@ -92,18 +91,18 @@ public sealed class PlanDayController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(form.Name) || form.Exercises == null || form.Exercises.Count == 0)
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         if (!Guid.TryParse(form.Id, out var planDayId))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var planDay = await _planDayRepository.FindByIdAsync(planDayId);
         if (planDay == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         planDay.Name = form.Name;
@@ -133,7 +132,7 @@ public sealed class PlanDayController : ControllerBase
         {
             await _planDayExerciseRepository.AddRangeAsync(exercisesToAdd);
         }
-        return Ok(new ResponseMessageDto { Message = Message.Updated });
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
     [HttpGet("planDay/{id}/getPlanDay")]
@@ -141,13 +140,13 @@ public sealed class PlanDayController : ControllerBase
     {
         if (!Guid.TryParse(id, out var planDayId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var planDay = await _planDayRepository.FindByIdAsync(planDayId);
         if (planDay == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var exercises = await _planDayExerciseRepository.GetByPlanDayIdAsync(planDay.Id);
@@ -185,20 +184,20 @@ public sealed class PlanDayController : ControllerBase
     {
         if (!Guid.TryParse(id, out var planId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var plan = await _planRepository.FindByIdAsync(planId);
         if (plan == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id);
 
         if (planDays.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var planDayIds = planDays.Select(pd => pd.Id).ToList();
@@ -244,19 +243,19 @@ public sealed class PlanDayController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var plan = await _planRepository.FindActiveByUserIdAsync(user.Id);
         if (plan == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id);
@@ -274,17 +273,17 @@ public sealed class PlanDayController : ControllerBase
     {
         if (!Guid.TryParse(id, out var planDayId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var planDay = await _planDayRepository.FindByIdAsync(planDayId);
         if (planDay == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         await _planDayRepository.MarkDeletedAsync(planDay.Id);
-        return Ok(new ResponseMessageDto { Message = Message.Deleted });
+        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
     }
 
     [HttpGet("planDay/{id}/getPlanDaysInfo")]
@@ -292,20 +291,20 @@ public sealed class PlanDayController : ControllerBase
     {
         if (!Guid.TryParse(id, out var planId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var plan = await _planRepository.FindByIdAsync(planId);
         if (plan == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id);
 
         if (planDays.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var planDayIds = planDays.Select(pd => pd.Id).ToList();

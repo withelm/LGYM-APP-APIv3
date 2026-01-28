@@ -2,7 +2,6 @@ using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -30,12 +29,12 @@ public sealed class ExerciseController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(form.Name) || string.IsNullOrWhiteSpace(form.BodyPart))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         if (!Enum.TryParse(form.BodyPart, true, out BodyParts bodyPart))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         var exercise = new Exercise
@@ -49,7 +48,7 @@ public sealed class ExerciseController : ControllerBase
         };
 
         await _exerciseRepository.AddAsync(exercise);
-        return Ok(new ResponseMessageDto { Message = Message.Created });
+        return Ok(new ResponseMessageDto { Message = Messages.Created });
     }
 
     [HttpPost("exercise/{id}/addUserExercise")]
@@ -57,23 +56,23 @@ public sealed class ExerciseController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(form.Name) || string.IsNullOrWhiteSpace(form.BodyPart))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Enum.TryParse(form.BodyPart, true, out BodyParts bodyPart))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var exercise = new Exercise
@@ -88,7 +87,7 @@ public sealed class ExerciseController : ControllerBase
         };
 
         await _exerciseRepository.AddAsync(exercise);
-        return Ok(new ResponseMessageDto { Message = Message.Created });
+        return Ok(new ResponseMessageDto { Message = Messages.Created });
     }
 
     [HttpPost("exercise/{id}/deleteExercise")]
@@ -96,24 +95,24 @@ public sealed class ExerciseController : ControllerBase
     {
         if (!body.TryGetValue("id", out var exerciseIdString))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         if (!Guid.TryParse(id, out var userId) || !Guid.TryParse(exerciseIdString, out var exerciseId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
         if (exercise == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (user.Admin == true)
@@ -124,19 +123,19 @@ public sealed class ExerciseController : ControllerBase
         {
             if (!exercise.UserId.HasValue)
             {
-                return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.Forbidden });
+                return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.Forbidden });
             }
 
             if (exercise.UserId.Value != user.Id)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Message.Forbidden });
+                return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
             }
 
             exercise.IsDeleted = true;
         }
 
         await _exerciseRepository.UpdateAsync(exercise);
-        return Ok(new ResponseMessageDto { Message = Message.Deleted });
+        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
     }
 
     [HttpPost("exercise/updateExercise")]
@@ -144,13 +143,13 @@ public sealed class ExerciseController : ControllerBase
     {
         if (!Guid.TryParse(form.Id, out var exerciseId))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
         if (exercise == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!string.IsNullOrWhiteSpace(form.Name))
@@ -167,7 +166,7 @@ public sealed class ExerciseController : ControllerBase
         exercise.Image = form.Image;
 
         await _exerciseRepository.UpdateAsync(exercise);
-        return Ok(new ResponseMessageDto { Message = Message.Updated });
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
     [HttpGet("exercise/{id}/getAllExercises")]
@@ -175,20 +174,20 @@ public sealed class ExerciseController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var exercises = await _exerciseRepository.GetAllForUserAsync(user.Id);
 
         if (exercises.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = exercises.Select(e => new ExerciseFormDto
@@ -209,20 +208,20 @@ public sealed class ExerciseController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var exercises = await _exerciseRepository.GetUserExercisesAsync(user.Id);
 
         if (exercises.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = exercises.Select(e => new ExerciseFormDto
@@ -245,7 +244,7 @@ public sealed class ExerciseController : ControllerBase
 
         if (exercises.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = exercises.Select(e => new ExerciseFormDto
@@ -266,30 +265,30 @@ public sealed class ExerciseController : ControllerBase
     {
         if (!Guid.TryParse(id, out var userId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!body.TryGetValue("bodyPart", out var bodyPartRaw))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Enum.TryParse<BodyParts>(bodyPartRaw, out var bodyPart))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
         if (user == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var exercises = await _exerciseRepository.GetByBodyPartAsync(user.Id, bodyPartRaw);
 
         if (exercises.Count == 0)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var result = exercises.Select(e => new ExerciseFormDto
@@ -310,13 +309,13 @@ public sealed class ExerciseController : ControllerBase
     {
         if (!Guid.TryParse(id, out var exerciseId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
         if (exercise == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         return Ok(new ExerciseFormDto
@@ -335,18 +334,18 @@ public sealed class ExerciseController : ControllerBase
     {
         if (!Guid.TryParse(id, out _))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var userId = HttpContext.GetCurrentUser()?.Id;
         if (!userId.HasValue)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         if (!Guid.TryParse(request.ExerciseId, out var exerciseId))
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         Guid? gymId = null;
@@ -382,13 +381,13 @@ public sealed class ExerciseController : ControllerBase
         var userId = HttpContext.GetCurrentUser()?.Id;
         if (!userId.HasValue || !Guid.TryParse(request.ExerciseId, out var exerciseId))
         {
-            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Message.FieldRequired });
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
         if (exercise == null)
         {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Message.DidntFind });
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
         var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(userId.Value, exerciseId);
