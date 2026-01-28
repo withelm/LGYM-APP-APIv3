@@ -16,6 +16,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<PlanDay> PlanDays => Set<PlanDay>();
     public DbSet<PlanDayExercise> PlanDayExercises => Set<PlanDayExercise>();
     public DbSet<Exercise> Exercises => Set<Exercise>();
+    public DbSet<ExerciseTranslation> ExerciseTranslations => Set<ExerciseTranslation>();
     public DbSet<Training> Trainings => Set<Training>();
     public DbSet<TrainingExerciseScore> TrainingExerciseScores => Set<TrainingExerciseScore>();
     public DbSet<ExerciseScore> ExerciseScores => Set<ExerciseScore>();
@@ -80,6 +81,18 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("Exercises");
             entity.Property(e => e.BodyPart).HasConversion<string>();
+        });
+
+        modelBuilder.Entity<ExerciseTranslation>(entity =>
+        {
+            entity.ToTable("ExerciseTranslations");
+            entity.Property(e => e.Culture).HasMaxLength(16).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.HasIndex(e => new { e.ExerciseId, e.Culture }).IsUnique();
+            entity.HasOne(e => e.Exercise)
+                .WithMany(e => e.Translations)
+                .HasForeignKey(e => e.ExerciseId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Training>(entity =>

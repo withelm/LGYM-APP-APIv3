@@ -10,6 +10,8 @@ public interface IExerciseRepository
     Task<List<Exercise>> GetUserExercisesAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<List<Exercise>> GetByBodyPartAsync(Guid userId, string bodyPart, CancellationToken cancellationToken = default);
     Task<List<Exercise>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default);
+    Task<Dictionary<Guid, string>> GetTranslationsAsync(IEnumerable<Guid> exerciseIds, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
+    Task UpsertTranslationAsync(Guid exerciseId, string culture, string name, CancellationToken cancellationToken = default);
     Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default);
     Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default);
 }

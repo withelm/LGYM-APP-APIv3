@@ -60,6 +60,55 @@ public sealed class ExerciseRepository : IExerciseRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<Dictionary<Guid, string>> GetTranslationsAsync(IEnumerable<Guid> exerciseIds, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+    {
+        var ids = exerciseIds.Distinct().ToList();
+        if (ids.Count == 0 || cultures.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var cultureIndex = cultures
+            .Select((culture, index) => (culture, index))
+            .ToDictionary(x => x.culture, x => x.index, StringComparer.OrdinalIgnoreCase);
+
+        var translations = await _dbContext.ExerciseTranslations
+            .Where(t => ids.Contains(t.ExerciseId) && cultures.Contains(t.Culture))
+            .Select(t => new { t.ExerciseId, t.Culture, t.Name })
+            .ToListAsync(cancellationToken);
+
+        return translations
+            .OrderBy(t => cultureIndex.TryGetValue(t.Culture, out var index) ? index : int.MaxValue)
+            .GroupBy(t => t.ExerciseId)
+            .ToDictionary(g => g.Key, g => g.First().Name);
+    }
+
+    public async Task UpsertTranslationAsync(Guid exerciseId, string culture, string name, CancellationToken cancellationToken = default)
+    {
+        var translation = await _dbContext.ExerciseTranslations
+            .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
+
+        if (translation == null)
+        {
+            translation = new ExerciseTranslation
+            {
+                Id = Guid.NewGuid(),
+                ExerciseId = exerciseId,
+                Culture = culture,
+                Name = name
+            };
+
+            await _dbContext.ExerciseTranslations.AddAsync(translation, cancellationToken);
+        }
+        else
+        {
+            translation.Name = name;
+            _dbContext.ExerciseTranslations.Update(translation);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default)
     {
         await _dbContext.Exercises.AddAsync(exercise, cancellationToken);

@@ -3,6 +3,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 
 namespace LgymApi.Api.Controllers;
 
@@ -169,6 +170,43 @@ public sealed class ExerciseController : ControllerBase
         return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
+    [HttpPost("exercise/{id}/addGlobalTranslation")]
+    public async Task<IActionResult> AddGlobalTranslation([FromRoute] string id, [FromBody] ExerciseTranslationDto form)
+    {
+        if (!Guid.TryParse(id, out var userId))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
+        }
+
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user == null || user.Admin != true)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
+        }
+
+        if (!Guid.TryParse(form.ExerciseId, out var exerciseId) || string.IsNullOrWhiteSpace(form.Culture) || string.IsNullOrWhiteSpace(form.Name))
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
+        }
+
+        var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
+        if (exercise == null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
+        }
+
+        if (exercise.UserId != null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
+        }
+
+        var culture = form.Culture.Trim().ToLowerInvariant();
+        var name = form.Name.Trim();
+        await _exerciseRepository.UpsertTranslationAsync(exerciseId, culture, name);
+
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+    }
+
     [HttpGet("exercise/{id}/getAllExercises")]
     public async Task<IActionResult> GetAllExercises([FromRoute] string id)
     {
@@ -190,15 +228,8 @@ public sealed class ExerciseController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        var result = exercises.Select(e => new ExerciseFormDto
-        {
-            Id = e.Id.ToString(),
-            Name = e.Name,
-            BodyPart = e.BodyPart.ToString(),
-            Description = e.Description,
-            Image = e.Image,
-            UserId = e.UserId?.ToString()
-        }).ToList();
+        var translations = await GetTranslationsForExercisesAsync(exercises);
+        var result = exercises.Select(e => MapExerciseDto(e, translations)).ToList();
 
         return Ok(result);
     }
@@ -224,15 +255,8 @@ public sealed class ExerciseController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        var result = exercises.Select(e => new ExerciseFormDto
-        {
-            Id = e.Id.ToString(),
-            Name = e.Name,
-            BodyPart = e.BodyPart.ToString(),
-            Description = e.Description,
-            Image = e.Image,
-            UserId = e.UserId?.ToString()
-        }).ToList();
+        var translations = await GetTranslationsForExercisesAsync(exercises);
+        var result = exercises.Select(e => MapExerciseDto(e, translations)).ToList();
 
         return Ok(result);
     }
@@ -247,15 +271,8 @@ public sealed class ExerciseController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        var result = exercises.Select(e => new ExerciseFormDto
-        {
-            Id = e.Id.ToString(),
-            Name = e.Name,
-            BodyPart = e.BodyPart.ToString(),
-            Description = e.Description,
-            Image = e.Image,
-            UserId = e.UserId?.ToString()
-        }).ToList();
+        var translations = await GetTranslationsForExercisesAsync(exercises);
+        var result = exercises.Select(e => MapExerciseDto(e, translations)).ToList();
 
         return Ok(result);
     }
@@ -291,15 +308,8 @@ public sealed class ExerciseController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        var result = exercises.Select(e => new ExerciseFormDto
-        {
-            Id = e.Id.ToString(),
-            Name = e.Name,
-            BodyPart = e.BodyPart.ToString(),
-            Description = e.Description,
-            Image = e.Image,
-            UserId = e.UserId?.ToString()
-        }).ToList();
+        var translations = await GetTranslationsForExercisesAsync(exercises);
+        var result = exercises.Select(e => MapExerciseDto(e, translations)).ToList();
 
         return Ok(result);
     }
@@ -318,10 +328,12 @@ public sealed class ExerciseController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
+        var translations = await GetTranslationsForExercisesAsync(new List<Exercise> { exercise });
+
         return Ok(new ExerciseFormDto
         {
             Id = exercise.Id.ToString(),
-            Name = exercise.Name,
+            Name = ResolveExerciseName(exercise, translations),
             BodyPart = exercise.BodyPart.ToString(),
             Description = exercise.Description,
             Image = exercise.Image,
@@ -460,5 +472,67 @@ public sealed class ExerciseController : ControllerBase
             Unit = result.Unit == WeightUnits.Kilograms ? "kg" : "lbs",
             GymName = result.Training?.Gym?.Name
         };
+    }
+
+    private async Task<Dictionary<Guid, string>> GetTranslationsForExercisesAsync(IEnumerable<Exercise> exercises)
+    {
+        var globalIds = exercises
+            .Where(e => e.UserId == null)
+            .Select(e => e.Id)
+            .ToList();
+
+        if (globalIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var cultures = GetCulturePreferences();
+        return await _exerciseRepository.GetTranslationsAsync(globalIds, cultures);
+    }
+
+    private static IReadOnlyList<string> GetCulturePreferences()
+    {
+        var culture = CultureInfo.CurrentUICulture;
+        var cultures = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(culture.Name))
+        {
+            cultures.Add(culture.Name);
+        }
+
+        if (!string.IsNullOrWhiteSpace(culture.TwoLetterISOLanguageName) && !string.Equals(culture.Name, culture.TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase))
+        {
+            cultures.Add(culture.TwoLetterISOLanguageName);
+        }
+
+        cultures.Add("en");
+
+        return cultures
+            .Select(c => c.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static ExerciseFormDto MapExerciseDto(Exercise exercise, IReadOnlyDictionary<Guid, string> translations)
+    {
+        return new ExerciseFormDto
+        {
+            Id = exercise.Id.ToString(),
+            Name = ResolveExerciseName(exercise, translations),
+            BodyPart = exercise.BodyPart.ToString(),
+            Description = exercise.Description,
+            Image = exercise.Image,
+            UserId = exercise.UserId?.ToString()
+        };
+    }
+
+    private static string ResolveExerciseName(Exercise exercise, IReadOnlyDictionary<Guid, string> translations)
+    {
+        if (exercise.UserId != null)
+        {
+            return exercise.Name;
+        }
+
+        return translations.TryGetValue(exercise.Id, out var translated) ? translated : exercise.Name;
     }
 }

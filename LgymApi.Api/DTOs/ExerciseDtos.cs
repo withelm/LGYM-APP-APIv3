@@ -23,6 +23,18 @@ public sealed class ExerciseFormDto
     public string? Image { get; set; }
 }
 
+public sealed class ExerciseTranslationDto
+{
+    [JsonPropertyName("exerciseId")]
+    public string ExerciseId { get; set; } = string.Empty;
+
+    [JsonPropertyName("culture")]
+    public string Culture { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+}
+
 public sealed class SeriesScoreDto
 {
     [JsonPropertyName("series")]
