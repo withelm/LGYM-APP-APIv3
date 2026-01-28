@@ -16,49 +16,49 @@
     <value>Created</value>
   </data>
   <data name="FieldRequired" xml:space="preserve">
-    <value>All fields required</value>
+    <value>All fields are required.</value>
   </data>
   <data name="ChooseDays" xml:space="preserve">
-    <value>You have to choose days number between 1-7</value>
+    <value>You must choose a number of days between 1 and 7.</value>
   </data>
   <data name="Updated" xml:space="preserve">
     <value>Updated</value>
   </data>
   <data name="TryAgain" xml:space="preserve">
-    <value>Error, try again</value>
+    <value>An error occurred. Please try again.</value>
   </data>
   <data name="Deleted" xml:space="preserve">
-    <value>Deleted!</value>
+    <value>Deleted.</value>
   </data>
   <data name="DidntFind" xml:space="preserve">
-    <value>Didn't find!</value>
+    <value>Not found.</value>
   </data>
   <data name="InvalidToken" xml:space="preserve">
-    <value>Invalid JWT Token</value>
+    <value>Invalid JWT token.</value>
   </data>
   <data name="ExpiredToken" xml:space="preserve">
-    <value>Token expired</value>
+    <value>Token has expired.</value>
   </data>
   <data name="InputsMustBeNumbers" xml:space="preserve">
-    <value>Inputs must be numbers</value>
+    <value>Inputs must be numbers.</value>
   </data>
   <data name="NameIsRequired" xml:space="preserve">
-    <value>Name is required, and has to have minimum one character</value>
+    <value>Name is required and must contain at least one character.</value>
   </data>
   <data name="EmailInvalid" xml:space="preserve">
-    <value>This email is not valid!</value>
+    <value>This email address is not valid.</value>
   </data>
   <data name="PasswordMin" xml:space="preserve">
-    <value>Password needs to have at least six characters</value>
+    <value>Password must be at least six characters long.</value>
   </data>
   <data name="SamePassword" xml:space="preserve">
-    <value>Passwords need to be same</value>
+    <value>Passwords must be the same.</value>
   </data>
   <data name="UserWithThatName" xml:space="preserve">
-    <value>We have user with that name</value>
+    <value>A user with that name already exists.</value>
   </data>
   <data name="UserWithThatEmail" xml:space="preserve">
-    <value>We have user with that email</value>
+    <value>A user with that email already exists.</value>
   </data>
   <data name="Unauthorized" xml:space="preserve">
     <value>Unauthorized</value>
