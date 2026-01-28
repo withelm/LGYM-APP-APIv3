@@ -1,0 +1,15 @@
+{
+  "ConnectionStrings": {
+    "Postgres": "Host=localhost;Port=5432;Database=LGYM-APP;Username=postgres;Password=YOUR_DEV_PASSWORD;TimeZone=Europe/Warsaw"
+  },
+  "Jwt": {
+    "Secret": "your-development-jwt-secret-at-least-32-characters-long"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Information",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Information"
+    }
+  }
+}
