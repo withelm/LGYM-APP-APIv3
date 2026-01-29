@@ -552,19 +552,35 @@ public sealed class ExerciseController : ControllerBase
             return;
         }
 
+        if (!TryGetCulture(cultureName, out var cultureInfo))
+        {
+            return;
+        }
+
+        cultures.Add(cultureInfo.Name);
+
+        if (!string.IsNullOrWhiteSpace(cultureInfo.TwoLetterISOLanguageName) && !string.Equals(cultureInfo.Name, cultureInfo.TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase))
+        {
+            cultures.Add(cultureInfo.TwoLetterISOLanguageName);
+        }
+    }
+
+    private static bool TryGetCulture(string cultureName, out CultureInfo cultureInfo)
+    {
+        cultureInfo = null!;
+        if (string.IsNullOrWhiteSpace(cultureName))
+        {
+            return false;
+        }
+
         try
         {
-            var cultureInfo = CultureInfo.GetCultureInfo(cultureName);
-            cultures.Add(cultureInfo.Name);
-
-            if (!string.IsNullOrWhiteSpace(cultureInfo.TwoLetterISOLanguageName) && !string.Equals(cultureInfo.Name, cultureInfo.TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase))
-            {
-                cultures.Add(cultureInfo.TwoLetterISOLanguageName);
-            }
+            cultureInfo = CultureInfo.GetCultureInfo(cultureName.Trim());
+            return true;
         }
         catch (CultureNotFoundException)
         {
-            // Ignore invalid cultures
+            return false;
         }
     }
 
