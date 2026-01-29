@@ -195,6 +195,20 @@ public sealed class ExerciseController : ControllerBase
             return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
+        if (form.Culture.Length > 16 || form.Name.Length > 200)
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
+        }
+
+        try
+        {
+            _ = CultureInfo.GetCultureInfo(form.Culture.Trim());
+        }
+        catch (CultureNotFoundException)
+        {
+            return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
+        }
+
         var exercise = await _exerciseRepository.FindByIdAsync(exerciseId);
         if (exercise == null)
         {
@@ -508,24 +522,19 @@ public sealed class ExerciseController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(rawCulture))
         {
-            cultures.Add(rawCulture);
+            AddCultureAndNeutral(cultures, rawCulture);
         }
 
         var requestCulture = HttpContext.Features.Get<IRequestCultureFeature>()?.RequestCulture?.UICulture;
         if (requestCulture != null && !string.IsNullOrWhiteSpace(requestCulture.Name))
         {
-            cultures.Add(requestCulture.Name);
+            AddCultureAndNeutral(cultures, requestCulture.Name);
         }
 
         var culture = CultureInfo.CurrentUICulture;
         if (!string.IsNullOrWhiteSpace(culture.Name))
         {
-            cultures.Add(culture.Name);
-        }
-
-        if (!string.IsNullOrWhiteSpace(culture.TwoLetterISOLanguageName) && !string.Equals(culture.Name, culture.TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase))
-        {
-            cultures.Add(culture.TwoLetterISOLanguageName);
+            AddCultureAndNeutral(cultures, culture.Name);
         }
 
         cultures.Add("en");
@@ -534,6 +543,29 @@ public sealed class ExerciseController : ControllerBase
             .Select(c => c.Trim().ToLowerInvariant())
             .Distinct(StringComparer.Ordinal)
             .ToList();
+    }
+
+    private static void AddCultureAndNeutral(List<string> cultures, string cultureName)
+    {
+        if (string.IsNullOrWhiteSpace(cultureName))
+        {
+            return;
+        }
+
+        try
+        {
+            var cultureInfo = CultureInfo.GetCultureInfo(cultureName);
+            cultures.Add(cultureInfo.Name);
+
+            if (!string.IsNullOrWhiteSpace(cultureInfo.TwoLetterISOLanguageName) && !string.Equals(cultureInfo.Name, cultureInfo.TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase))
+            {
+                cultures.Add(cultureInfo.TwoLetterISOLanguageName);
+            }
+        }
+        catch (CultureNotFoundException)
+        {
+            // Ignore invalid cultures
+        }
     }
 
     private static ExerciseFormDto MapExerciseDto(Exercise exercise, IReadOnlyDictionary<Guid, string> translations)

@@ -78,9 +78,20 @@ public sealed class ExerciseRepository : IExerciseRepository
             return new Dictionary<Guid, string>();
         }
 
-        var cultureIndex = cultures
-            .Select((culture, index) => (culture, index))
-            .ToDictionary(x => x.culture, x => x.index, StringComparer.OrdinalIgnoreCase);
+        var cultureIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < cultures.Count; i++)
+        {
+            var normalized = cultures[i].Trim().ToLowerInvariant();
+            if (normalized.Length == 0)
+            {
+                continue;
+            }
+
+            if (!cultureIndex.ContainsKey(normalized))
+            {
+                cultureIndex[normalized] = i;
+            }
+        }
 
         var translations = await _dbContext.ExerciseTranslations
             .Where(t => ids.Contains(t.ExerciseId) && normalizedCultures.Contains(t.Culture))
