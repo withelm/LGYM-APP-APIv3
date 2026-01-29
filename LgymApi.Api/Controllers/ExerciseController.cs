@@ -190,19 +190,22 @@ public sealed class ExerciseController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
-        if (!Guid.TryParse(form.ExerciseId, out var exerciseId) || string.IsNullOrWhiteSpace(form.Culture) || string.IsNullOrWhiteSpace(form.Name))
+        var cultureInput = form.Culture?.Trim();
+        var nameInput = form.Name?.Trim();
+
+        if (!Guid.TryParse(form.ExerciseId, out var exerciseId) || string.IsNullOrWhiteSpace(cultureInput) || string.IsNullOrWhiteSpace(nameInput))
         {
             return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
-        if (form.Culture.Length > 16 || form.Name.Length > 200)
+        if (cultureInput.Length > 16 || nameInput.Length > 200)
         {
             return StatusCode(StatusCodes.Status400BadRequest, new ResponseMessageDto { Message = Messages.FieldRequired });
         }
 
         try
         {
-            _ = CultureInfo.GetCultureInfo(form.Culture.Trim());
+            _ = CultureInfo.GetCultureInfo(cultureInput);
         }
         catch (CultureNotFoundException)
         {
@@ -220,8 +223,8 @@ public sealed class ExerciseController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
-        var culture = form.Culture.Trim().ToLowerInvariant();
-        var name = form.Name.Trim();
+        var culture = cultureInput.ToLowerInvariant();
+        var name = nameInput;
         await _exerciseRepository.UpsertTranslationAsync(exerciseId, culture, name);
 
         return Ok(new ResponseMessageDto { Message = Messages.Updated });
