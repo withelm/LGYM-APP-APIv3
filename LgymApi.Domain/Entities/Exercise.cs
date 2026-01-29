@@ -13,4 +13,5 @@ public sealed class Exercise : EntityBase
 
     public User? User { get; set; }
     public ICollection<ExerciseScore> ExerciseScores { get; set; } = new List<ExerciseScore>();
+    public ICollection<ExerciseTranslation> Translations { get; set; } = new List<ExerciseTranslation>();
 }

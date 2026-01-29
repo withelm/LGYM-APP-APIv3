@@ -3,6 +3,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace LgymApi.Infrastructure.Repositories;
 
@@ -58,6 +59,107 @@ public sealed class ExerciseRepository : IExerciseRepository
         return _dbContext.Exercises
             .Where(e => ids.Contains(e.Id))
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Dictionary<Guid, string>> GetTranslationsAsync(IEnumerable<Guid> exerciseIds, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+    {
+        var ids = exerciseIds.Distinct().ToList();
+        if (ids.Count == 0 || cultures.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var normalizedCultures = cultures
+            .Select(c => c.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (normalizedCultures.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var cultureIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < cultures.Count; i++)
+        {
+            var normalized = cultures[i].Trim().ToLowerInvariant();
+            if (normalized.Length == 0)
+            {
+                continue;
+            }
+
+            if (!cultureIndex.ContainsKey(normalized))
+            {
+                cultureIndex[normalized] = i;
+            }
+        }
+
+        var translations = await _dbContext.ExerciseTranslations
+            .Where(t => ids.Contains(t.ExerciseId) && normalizedCultures.Contains(t.Culture))
+            .Select(t => new { t.ExerciseId, t.Culture, t.Name })
+            .ToListAsync(cancellationToken);
+
+        return translations
+            .OrderBy(t => cultureIndex.TryGetValue(t.Culture, out var index) ? index : int.MaxValue)
+            .GroupBy(t => t.ExerciseId)
+            .ToDictionary(g => g.Key, g => g.First().Name);
+    }
+
+    public async Task UpsertTranslationAsync(Guid exerciseId, string culture, string name, CancellationToken cancellationToken = default)
+    {
+        culture = culture.Trim().ToLowerInvariant();
+        name = name.Trim();
+
+        try
+        {
+            var translation = await _dbContext.ExerciseTranslations
+                .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
+
+            if (translation == null)
+            {
+                translation = new ExerciseTranslation
+                {
+                    Id = Guid.NewGuid(),
+                    ExerciseId = exerciseId,
+                    Culture = culture,
+                    Name = name
+                };
+
+                await _dbContext.ExerciseTranslations.AddAsync(translation, cancellationToken);
+            }
+            else
+            {
+                translation.Name = name;
+                _dbContext.ExerciseTranslations.Update(translation);
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            var translation = await _dbContext.ExerciseTranslations
+                .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
+
+            if (translation == null)
+            {
+                throw;
+            }
+
+            translation.Name = name;
+            _dbContext.ExerciseTranslations.Update(translation);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    {
+        // PostgreSQL: 23505 unique_violation
+        if (exception.InnerException is PostgresException pg && pg.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public async Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default)
