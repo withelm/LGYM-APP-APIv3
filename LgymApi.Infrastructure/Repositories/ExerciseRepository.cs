@@ -68,12 +68,22 @@ public sealed class ExerciseRepository : IExerciseRepository
             return new Dictionary<Guid, string>();
         }
 
+        var normalizedCultures = cultures
+            .Select(c => c.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (normalizedCultures.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
         var cultureIndex = cultures
             .Select((culture, index) => (culture, index))
             .ToDictionary(x => x.culture, x => x.index, StringComparer.OrdinalIgnoreCase);
 
         var translations = await _dbContext.ExerciseTranslations
-            .Where(t => ids.Contains(t.ExerciseId) && cultures.Contains(t.Culture))
+            .Where(t => ids.Contains(t.ExerciseId) && normalizedCultures.Contains(t.Culture))
             .Select(t => new { t.ExerciseId, t.Culture, t.Name })
             .ToListAsync(cancellationToken);
 
@@ -85,28 +95,49 @@ public sealed class ExerciseRepository : IExerciseRepository
 
     public async Task UpsertTranslationAsync(Guid exerciseId, string culture, string name, CancellationToken cancellationToken = default)
     {
-        var translation = await _dbContext.ExerciseTranslations
-            .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
+        culture = culture.Trim().ToLowerInvariant();
+        name = name.Trim();
 
-        if (translation == null)
+        try
         {
-            translation = new ExerciseTranslation
+            var translation = await _dbContext.ExerciseTranslations
+                .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
+
+            if (translation == null)
             {
-                Id = Guid.NewGuid(),
-                ExerciseId = exerciseId,
-                Culture = culture,
-                Name = name
-            };
+                translation = new ExerciseTranslation
+                {
+                    Id = Guid.NewGuid(),
+                    ExerciseId = exerciseId,
+                    Culture = culture,
+                    Name = name
+                };
 
-            await _dbContext.ExerciseTranslations.AddAsync(translation, cancellationToken);
+                await _dbContext.ExerciseTranslations.AddAsync(translation, cancellationToken);
+            }
+            else
+            {
+                translation.Name = name;
+                _dbContext.ExerciseTranslations.Update(translation);
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
-        else
+        catch (DbUpdateException)
         {
+            // Unique constraint on (ExerciseId, Culture) might have been hit by a concurrent insert.
+            var translation = await _dbContext.ExerciseTranslations
+                .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
+
+            if (translation == null)
+            {
+                throw;
+            }
+
             translation.Name = name;
             _dbContext.ExerciseTranslations.Update(translation);
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default)

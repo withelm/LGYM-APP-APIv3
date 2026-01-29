@@ -3,6 +3,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Localization;
 using System.Globalization;
 
 namespace LgymApi.Api.Controllers;
@@ -173,13 +174,18 @@ public sealed class ExerciseController : ControllerBase
     [HttpPost("exercise/{id}/addGlobalTranslation")]
     public async Task<IActionResult> AddGlobalTranslation([FromRoute] string id, [FromBody] ExerciseTranslationDto form)
     {
-        if (!Guid.TryParse(id, out var userId))
+        var currentUser = HttpContext.GetCurrentUser();
+        if (currentUser == null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
-        if (user == null || user.Admin != true)
+        if (!Guid.TryParse(id, out var userId) || currentUser.Id != userId)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
+        }
+
+        if (currentUser.Admin != true)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
@@ -490,11 +496,28 @@ public sealed class ExerciseController : ControllerBase
         return await _exerciseRepository.GetTranslationsAsync(globalIds, cultures);
     }
 
-    private static IReadOnlyList<string> GetCulturePreferences()
+    private IReadOnlyList<string> GetCulturePreferences()
     {
-        var culture = CultureInfo.CurrentUICulture;
         var cultures = new List<string>();
 
+        var acceptLanguage = Request.Headers.AcceptLanguage.ToString();
+        var rawCulture = acceptLanguage
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(value => value.Split(';', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault())
+            .FirstOrDefault()?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(rawCulture))
+        {
+            cultures.Add(rawCulture);
+        }
+
+        var requestCulture = HttpContext.Features.Get<IRequestCultureFeature>()?.RequestCulture?.UICulture;
+        if (requestCulture != null && !string.IsNullOrWhiteSpace(requestCulture.Name))
+        {
+            cultures.Add(requestCulture.Name);
+        }
+
+        var culture = CultureInfo.CurrentUICulture;
         if (!string.IsNullOrWhiteSpace(culture.Name))
         {
             cultures.Add(culture.Name);
