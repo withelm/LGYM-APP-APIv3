@@ -3,6 +3,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace LgymApi.Infrastructure.Repositories;
 
@@ -134,9 +135,8 @@ public sealed class ExerciseRepository : IExerciseRepository
 
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
-            // Unique constraint on (ExerciseId, Culture) might have been hit by a concurrent insert.
             var translation = await _dbContext.ExerciseTranslations
                 .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
 
@@ -149,6 +149,17 @@ public sealed class ExerciseRepository : IExerciseRepository
             _dbContext.ExerciseTranslations.Update(translation);
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    {
+        // PostgreSQL: 23505 unique_violation
+        if (exception.InnerException is PostgresException pg && pg.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public async Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default)
