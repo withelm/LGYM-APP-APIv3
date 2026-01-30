@@ -34,7 +34,6 @@ public sealed class EnumLookupService : IEnumLookupService
 
         return Enum.GetValues<TEnum>()
             .Cast<Enum>()
-            .OrderBy(e => Convert.ToInt32(e))
             .Select(e => e.ToLookup(culture))
             .ToList();
     }
