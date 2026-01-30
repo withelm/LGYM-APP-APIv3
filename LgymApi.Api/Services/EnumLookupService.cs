@@ -32,8 +32,8 @@ public sealed class EnumLookupService : IEnumLookupService
 
         return Enum.GetValues<TEnum>()
             .Cast<Enum>()
+            .OrderBy(e => Convert.ToInt32(e))
             .Select(e => e.ToLookup(culture))
-            .OrderBy(dto => dto.Value)
             .ToList();
     }
 
@@ -55,7 +55,7 @@ public sealed class EnumLookupService : IEnumLookupService
         return new EnumLookupResponseDto
         {
             EnumType = enumType.Name,
-            Values = values.OrderBy(dto => dto.Value).ToList()
+            Values = values
         };
     }
 
@@ -78,10 +78,8 @@ public sealed class EnumLookupService : IEnumLookupService
 
         return new EnumLookupDto
         {
-            Value = Convert.ToInt32(enumValue),
             Name = enumName,
-            DisplayName = displayName,
-            TranslationKey = translationKey
+            DisplayName = displayName
         };
     }
 }
