@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Resources;
 using LgymApi.Api.DTOs;
@@ -15,6 +16,7 @@ public interface IEnumLookupService
 
 public sealed class EnumLookupService : IEnumLookupService
 {
+    private static readonly ConcurrentDictionary<(Type EnumType, string EnumName), string> TranslationKeyCache = new();
     private static readonly ResourceManager EnumResourceManager =
         new("LgymApi.Resources.Resources.Enums", typeof(LgymApi.Resources.Messages).Assembly);
 
@@ -69,10 +71,13 @@ public sealed class EnumLookupService : IEnumLookupService
         culture ??= CultureInfo.CurrentUICulture;
         var enumName = enumValue.ToString();
 
-        var translationKey = enumValue.GetType()
-            .GetField(enumName)?
-            .GetCustomAttribute<EnumTranslationAttribute>()?.ResourceKey
-            ?? $"{enumValue.GetType().Name}_{enumName}";
+        var enumType = enumValue.GetType();
+        var translationKey = TranslationKeyCache.GetOrAdd((enumType, enumName), key =>
+        {
+            var field = key.EnumType.GetField(key.EnumName);
+            var attributeKey = field?.GetCustomAttribute<EnumTranslationAttribute>()?.ResourceKey;
+            return attributeKey ?? $"{key.EnumType.Name}_{key.EnumName}";
+        });
 
         var displayName = EnumResourceManager.GetString(translationKey, culture) ?? enumName;
 

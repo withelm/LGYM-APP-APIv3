@@ -1,6 +1,7 @@
 using System.Globalization;
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Services;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Controllers;
@@ -24,19 +25,19 @@ public sealed class EnumController : ControllerBase
     }
 
     [HttpGet("all")]
-    [ProducesResponseType(typeof(Dictionary<string, EnumLookupResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(List<EnumLookupResponseDto>), StatusCodes.Status200OK)]
     public IActionResult GetAllEnumLookups()
     {
         var culture = GetRequestCulture();
         var enumTypes = _enumLookupService.GetAvailableEnumTypes();
-        var result = new Dictionary<string, EnumLookupResponseDto>();
+        var result = new List<EnumLookupResponseDto>();
 
         foreach (var enumType in enumTypes)
         {
             var lookup = _enumLookupService.GetLookupByName(enumType, culture);
             if (lookup != null)
             {
-                result[enumType] = lookup;
+                result.Add(lookup);
             }
         }
 
@@ -61,23 +62,7 @@ public sealed class EnumController : ControllerBase
 
     private CultureInfo GetRequestCulture()
     {
-        var acceptLanguage = Request.Headers.AcceptLanguage.ToString();
-        var cultureName = acceptLanguage
-            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(value => value.Split(';', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault())
-            .FirstOrDefault()?.Trim();
-
-        if (!string.IsNullOrWhiteSpace(cultureName))
-        {
-            try
-            {
-                return CultureInfo.GetCultureInfo(cultureName);
-            }
-            catch (CultureNotFoundException)
-            {
-            }
-        }
-
-        return CultureInfo.CurrentUICulture;
+        var feature = HttpContext.Features.Get<IRequestCultureFeature>();
+        return feature?.RequestCulture?.UICulture ?? CultureInfo.CurrentUICulture;
     }
 }
