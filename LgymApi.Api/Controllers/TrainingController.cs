@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
+using LgymApi.Api.Services;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
@@ -267,24 +268,24 @@ public sealed class TrainingController : ControllerBase
                     group = new EnrichedExerciseDto
                     {
                         ExerciseScoreId = reference.ExerciseScoreId.ToString(),
-                        ExerciseDetails = new ExerciseFormDto
+                        ExerciseDetails = new ExerciseResponseDto
                         {
                             Id = score.Exercise.Id.ToString(),
                             Name = score.Exercise.Name,
-                            BodyPart = score.Exercise.BodyPart.ToString()
+                            BodyPart = score.Exercise.BodyPart.ToLookup()
                         }
                     };
                     grouped[score.ExerciseId] = group;
                 }
 
-                group.ScoresDetails.Add(new ExerciseScoresTrainingFormDto
+                group.ScoresDetails.Add(new ExerciseScoreResponseDto
                 {
                     Id = score.Id.ToString(),
                     ExerciseId = score.ExerciseId.ToString(),
                     Reps = score.Reps,
                     Series = score.Series,
                     Weight = score.Weight,
-                    Unit = score.Unit == WeightUnits.Kilograms ? "kg" : "lbs"
+                    Unit = score.Unit.ToLookup()
                 });
             }
 
@@ -411,6 +412,7 @@ public sealed class TrainingController : ControllerBase
             var key = $"{exerciseId}-{current.Series}";
             previousScores.TryGetValue(key, out var previous);
 
+            var currentUnit = current.Unit == "lbs" ? WeightUnits.Pounds : WeightUnits.Kilograms;
             comparisonMap[exerciseId].SeriesComparisons.Add(new SeriesComparisonDto
             {
                 Series = current.Series,
@@ -418,7 +420,7 @@ public sealed class TrainingController : ControllerBase
                 {
                     Reps = current.Reps,
                     Weight = current.Weight,
-                    Unit = current.Unit
+                    Unit = currentUnit.ToLookup()
                 },
                 PreviousResult = previous == null
                     ? null
@@ -426,7 +428,7 @@ public sealed class TrainingController : ControllerBase
                     {
                         Reps = previous.Reps,
                         Weight = previous.Weight,
-                        Unit = previous.Unit == WeightUnits.Kilograms ? "kg" : "lbs"
+                        Unit = previous.Unit.ToLookup()
                     }
             });
         }

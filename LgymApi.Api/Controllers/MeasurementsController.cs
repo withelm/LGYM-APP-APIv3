@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
+using LgymApi.Api.Services;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -70,10 +71,10 @@ public sealed class MeasurementsController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
-        return Ok(new MeasurementFormDto
+        return Ok(new MeasurementResponseDto
         {
             UserId = measurement.UserId.ToString(),
-            BodyPart = measurement.BodyPart.ToString(),
+            BodyPart = measurement.BodyPart.ToLookup(),
             Unit = measurement.Unit,
             Value = measurement.Value,
             CreatedAt = measurement.CreatedAt.UtcDateTime,
@@ -105,10 +106,10 @@ public sealed class MeasurementsController : ControllerBase
         {
             Measurements = measurements
                 .OrderBy(m => m.CreatedAt)
-                .Select(m => new MeasurementFormDto
+                .Select(m => new MeasurementResponseDto
                 {
                     UserId = m.UserId.ToString(),
-                    BodyPart = m.BodyPart.ToString(),
+                    BodyPart = m.BodyPart.ToLookup(),
                     Unit = m.Unit,
                     Value = m.Value,
                     CreatedAt = m.CreatedAt.UtcDateTime,

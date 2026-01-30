@@ -20,10 +20,28 @@ public class MainRecordsFormDto
     public string ExerciseId { get; set; } = string.Empty;
 }
 
-public class MainRecordsLastDto : MainRecordsFormDto
+public class MainRecordResponseDto
+{
+    [JsonPropertyName("_id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("weight")]
+    public double Weight { get; set; }
+
+    [JsonPropertyName("date")]
+    public DateTime Date { get; set; }
+
+    [JsonPropertyName("unit")]
+    public EnumLookupDto Unit { get; set; } = new();
+
+    [JsonPropertyName("exercise")]
+    public string ExerciseId { get; set; } = string.Empty;
+}
+
+public class MainRecordsLastDto : MainRecordResponseDto
 {
     [JsonPropertyName("exerciseDetails")]
-    public ExerciseFormDto ExerciseDetails { get; set; } = new();
+    public ExerciseResponseDto ExerciseDetails { get; set; } = new();
 }
 
 public sealed class PossibleRecordForExerciseDto
@@ -35,7 +53,7 @@ public sealed class PossibleRecordForExerciseDto
     public int Reps { get; set; }
 
     [JsonPropertyName("unit")]
-    public string Unit { get; set; } = string.Empty;
+    public EnumLookupDto Unit { get; set; } = new();
 
     [JsonPropertyName("date")]
     public DateTime Date { get; set; }

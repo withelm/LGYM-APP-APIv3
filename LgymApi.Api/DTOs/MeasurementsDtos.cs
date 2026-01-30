@@ -23,6 +23,27 @@ public sealed class MeasurementFormDto
     public DateTime? UpdatedAt { get; set; }
 }
 
+public sealed class MeasurementResponseDto
+{
+    [JsonPropertyName("user")]
+    public string UserId { get; set; } = string.Empty;
+
+    [JsonPropertyName("bodyPart")]
+    public EnumLookupDto BodyPart { get; set; } = new();
+
+    [JsonPropertyName("unit")]
+    public string Unit { get; set; } = string.Empty;
+
+    [JsonPropertyName("value")]
+    public double Value { get; set; }
+
+    [JsonPropertyName("createdAt")]
+    public DateTime? CreatedAt { get; set; }
+
+    [JsonPropertyName("updatedAt")]
+    public DateTime? UpdatedAt { get; set; }
+}
+
 public sealed class MeasurementsHistoryRequestDto
 {
     [JsonPropertyName("bodyPart")]
@@ -32,5 +53,5 @@ public sealed class MeasurementsHistoryRequestDto
 public sealed class MeasurementsHistoryDto
 {
     [JsonPropertyName("measurements")]
-    public List<MeasurementFormDto> Measurements { get; set; } = new();
+    public List<MeasurementResponseDto> Measurements { get; set; } = new();
 }

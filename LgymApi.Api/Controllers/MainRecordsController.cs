@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
+using LgymApi.Api.Services;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -84,12 +85,12 @@ public sealed class MainRecordsController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        var result = records.Reverse<MainRecord>().Select(record => new MainRecordsFormDto
+        var result = records.Reverse<MainRecord>().Select(record => new MainRecordResponseDto
         {
             Id = record.Id.ToString(),
             ExerciseId = record.ExerciseId.ToString(),
             Weight = record.Weight,
-            Unit = record.Unit == WeightUnits.Kilograms ? "kg" : "lbs",
+            Unit = record.Unit.ToLookup(),
             Date = record.Date.UtcDateTime
         }).ToList();
 
@@ -131,19 +132,19 @@ public sealed class MainRecordsController : ControllerBase
             Id = record.Id.ToString(),
             ExerciseId = record.ExerciseId.ToString(),
             Weight = record.Weight,
-            Unit = record.Unit == WeightUnits.Kilograms ? "kg" : "lbs",
+            Unit = record.Unit.ToLookup(),
             Date = record.Date.UtcDateTime,
             ExerciseDetails = exerciseMap.TryGetValue(record.ExerciseId, out var exercise)
-                ? new ExerciseFormDto
+                ? new ExerciseResponseDto
                 {
                     Id = exercise.Id.ToString(),
                     Name = exercise.Name,
-                    BodyPart = exercise.BodyPart.ToString(),
+                    BodyPart = exercise.BodyPart.ToLookup(),
                     Description = exercise.Description,
                     Image = exercise.Image,
                     UserId = exercise.UserId?.ToString()
                 }
-                : new ExerciseFormDto()
+                : new ExerciseResponseDto()
         }).ToList();
 
         return Ok(result);
@@ -237,7 +238,7 @@ public sealed class MainRecordsController : ControllerBase
             {
                 Weight = possible.Weight,
                 Reps = possible.Reps,
-                Unit = possible.Unit == WeightUnits.Kilograms ? "kg" : "lbs",
+                Unit = possible.Unit.ToLookup(),
                 Date = possible.CreatedAt.UtcDateTime
             });
         }
@@ -246,7 +247,7 @@ public sealed class MainRecordsController : ControllerBase
         {
             Weight = record.Weight,
             Reps = 1,
-            Unit = record.Unit == WeightUnits.Kilograms ? "kg" : "lbs",
+            Unit = record.Unit.ToLookup(),
             Date = record.Date.UtcDateTime
         });
     }

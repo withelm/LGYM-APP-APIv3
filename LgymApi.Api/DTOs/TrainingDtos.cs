@@ -23,6 +23,27 @@ public class ExerciseScoresTrainingFormDto
     public int Series { get; set; }
 }
 
+public sealed class ExerciseScoreResponseDto
+{
+    [JsonPropertyName("_id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("weight")]
+    public double Weight { get; set; }
+
+    [JsonPropertyName("unit")]
+    public EnumLookupDto Unit { get; set; } = new();
+
+    [JsonPropertyName("reps")]
+    public int Reps { get; set; }
+
+    [JsonPropertyName("exercise")]
+    public string ExerciseId { get; set; } = string.Empty;
+
+    [JsonPropertyName("series")]
+    public int Series { get; set; }
+}
+
 public sealed class TrainingFormDto
 {
     [JsonPropertyName("type")]
@@ -80,10 +101,10 @@ public sealed class EnrichedExerciseDto
     public string ExerciseScoreId { get; set; } = string.Empty;
 
     [JsonPropertyName("scoresDetails")]
-    public List<ExerciseScoresTrainingFormDto> ScoresDetails { get; set; } = new();
+    public List<ExerciseScoreResponseDto> ScoresDetails { get; set; } = new();
 
     [JsonPropertyName("exerciseDetails")]
-    public ExerciseFormDto ExerciseDetails { get; set; } = new();
+    public ExerciseResponseDto ExerciseDetails { get; set; } = new();
 }
 
 public class TrainingByDateDetailsDto : LastTrainingInfoDto
@@ -113,7 +134,7 @@ public sealed class ScoreResultDto
     public double Weight { get; set; }
 
     [JsonPropertyName("unit")]
-    public string Unit { get; set; } = string.Empty;
+    public EnumLookupDto Unit { get; set; } = new();
 }
 
 public sealed class GroupedExerciseComparisonDto

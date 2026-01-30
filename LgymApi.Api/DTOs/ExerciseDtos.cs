@@ -23,6 +23,27 @@ public sealed class ExerciseFormDto
     public string? Image { get; set; }
 }
 
+public sealed class ExerciseResponseDto
+{
+    [JsonPropertyName("_id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("user")]
+    public string? UserId { get; set; }
+
+    [JsonPropertyName("bodyPart")]
+    public EnumLookupDto BodyPart { get; set; } = new();
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("image")]
+    public string? Image { get; set; }
+}
+
 public sealed class ExerciseTranslationDto
 {
     [JsonPropertyName("exerciseId")]
@@ -53,7 +74,7 @@ public class ScoreDto
     public double Weight { get; set; }
 
     [JsonPropertyName("unit")]
-    public string Unit { get; set; } = string.Empty;
+    public EnumLookupDto Unit { get; set; } = new();
 
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
