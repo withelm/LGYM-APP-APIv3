@@ -75,7 +75,7 @@ public sealed class MeasurementsController : ControllerBase
         {
             UserId = measurement.UserId.ToString(),
             BodyPart = measurement.BodyPart.ToLookup(),
-            Unit = measurement.Unit,
+            Unit = ParseHeightUnit(measurement.Unit).ToLookup(),
             Value = measurement.Value,
             CreatedAt = measurement.CreatedAt.UtcDateTime,
             UpdatedAt = measurement.UpdatedAt.UtcDateTime
@@ -110,7 +110,7 @@ public sealed class MeasurementsController : ControllerBase
                 {
                     UserId = m.UserId.ToString(),
                     BodyPart = m.BodyPart.ToLookup(),
-                    Unit = m.Unit,
+                    Unit = ParseHeightUnit(m.Unit).ToLookup(),
                     Value = m.Value,
                     CreatedAt = m.CreatedAt.UtcDateTime,
                     UpdatedAt = m.UpdatedAt.UtcDateTime
@@ -119,5 +119,21 @@ public sealed class MeasurementsController : ControllerBase
         };
 
         return Ok(result);
+    }
+
+    private static HeightUnits ParseHeightUnit(string? unit)
+    {
+        if (!string.IsNullOrWhiteSpace(unit) && Enum.TryParse(unit, true, out HeightUnits parsed))
+        {
+            return parsed;
+        }
+
+        return unit?.Trim().ToLowerInvariant() switch
+        {
+            "cm" => HeightUnits.Centimeters,
+            "mm" => HeightUnits.Millimeters,
+            "m" => HeightUnits.Meters,
+            _ => HeightUnits.Centimeters
+        };
     }
 }

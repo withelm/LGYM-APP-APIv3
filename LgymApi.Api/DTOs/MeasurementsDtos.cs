@@ -32,7 +32,7 @@ public sealed class MeasurementResponseDto
     public EnumLookupDto BodyPart { get; set; } = new();
 
     [JsonPropertyName("unit")]
-    public string Unit { get; set; } = string.Empty;
+    public EnumLookupDto Unit { get; set; } = new();
 
     [JsonPropertyName("value")]
     public double Value { get; set; }

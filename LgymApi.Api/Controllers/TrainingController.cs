@@ -412,7 +412,7 @@ public sealed class TrainingController : ControllerBase
             var key = $"{exerciseId}-{current.Series}";
             previousScores.TryGetValue(key, out var previous);
 
-            var currentUnit = current.Unit == "lbs" ? WeightUnits.Pounds : WeightUnits.Kilograms;
+            var currentUnit = ParseWeightUnit(current.Unit);
             comparisonMap[exerciseId].SeriesComparisons.Add(new SeriesComparisonDto
             {
                 Series = current.Series,
@@ -434,5 +434,21 @@ public sealed class TrainingController : ControllerBase
         }
 
         return comparisonMap.Values.ToList();
+    }
+
+    private static WeightUnits ParseWeightUnit(string? unit)
+    {
+        if (!string.IsNullOrWhiteSpace(unit) && Enum.TryParse(unit, true, out WeightUnits parsed))
+        {
+            return parsed;
+        }
+
+        if (string.Equals(unit, "lbs", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(unit, "lb", StringComparison.OrdinalIgnoreCase))
+        {
+            return WeightUnits.Pounds;
+        }
+
+        return WeightUnits.Kilograms;
     }
 }

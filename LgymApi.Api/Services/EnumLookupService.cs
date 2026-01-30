@@ -18,7 +18,7 @@ public sealed class EnumLookupService : IEnumLookupService
 {
     private static readonly ConcurrentDictionary<(Type EnumType, string EnumName), string> TranslationKeyCache = new();
     private static readonly ResourceManager EnumResourceManager =
-        new("LgymApi.Resources.Resources.Enums", typeof(LgymApi.Resources.Messages).Assembly);
+        new("LgymApi.Resources.Resources.Enums", typeof(LgymApi.Resources.Enums).Assembly);
 
     private static readonly Dictionary<string, Type> EnumTypes = new(StringComparer.OrdinalIgnoreCase)
     {
