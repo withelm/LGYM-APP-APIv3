@@ -1,7 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace LgymApi.Infrastructure.Data;
 
@@ -30,14 +29,6 @@ public sealed class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        var weightUnitConverter = new ValueConverter<WeightUnits, string>(
-            unit => unit == WeightUnits.Kilograms ? "kg" : "lbs",
-            value => value == "kg" ? WeightUnits.Kilograms : WeightUnits.Pounds);
-
-        var platformConverter = new ValueConverter<Platforms, string>(
-            platform => platform == Platforms.Android ? "ANDROID" : "IOS",
-            value => value == "ANDROID" ? Platforms.Android : Platforms.Ios);
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -123,7 +114,7 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<ExerciseScore>(entity =>
         {
             entity.ToTable("ExerciseScores");
-            entity.Property(e => e.Unit).HasConversion(weightUnitConverter);
+            entity.Property(e => e.Unit).HasConversion<string>();
             entity.HasOne(e => e.Exercise)
                 .WithMany(e => e.ExerciseScores)
                 .HasForeignKey(e => e.ExerciseId);
@@ -144,7 +135,7 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<MainRecord>(entity =>
         {
             entity.ToTable("MainRecords");
-            entity.Property(e => e.Unit).HasConversion(weightUnitConverter);
+            entity.Property(e => e.Unit).HasConversion<string>();
         });
 
         modelBuilder.Entity<Gym>(entity =>
@@ -171,7 +162,7 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<AppConfig>(entity =>
         {
             entity.ToTable("AppConfigs");
-            entity.Property(e => e.Platform).HasConversion(platformConverter);
+            entity.Property(e => e.Platform).HasConversion<string>();
         });
     }
 

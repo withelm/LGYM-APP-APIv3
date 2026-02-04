@@ -27,17 +27,20 @@ public sealed class MeasurementsController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        if (!Enum.TryParse(form.BodyPart, true, out BodyParts bodyPart))
-        {
-            return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.TryAgain });
-        }
+        var bodyPart = Enum.TryParse(form.BodyPart, true, out BodyParts parsedBodyPart)
+            ? parsedBodyPart
+            : BodyParts.Unknown;
+
+        var heightUnit = Enum.TryParse(form.Unit, true, out HeightUnits parsedUnit)
+            ? parsedUnit
+            : HeightUnits.Unknown;
 
         var measurement = new Measurement
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
             BodyPart = bodyPart,
-            Unit = form.Unit,
+            Unit = heightUnit.ToString(),
             Value = form.Value
         };
 
@@ -128,12 +131,6 @@ public sealed class MeasurementsController : ControllerBase
             return parsed;
         }
 
-        return unit?.Trim().ToLowerInvariant() switch
-        {
-            "cm" => HeightUnits.Centimeters,
-            "mm" => HeightUnits.Millimeters,
-            "m" => HeightUnits.Meters,
-            _ => HeightUnits.Centimeters
-        };
+        return HeightUnits.Unknown;
     }
 }

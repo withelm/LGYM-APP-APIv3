@@ -19,10 +19,23 @@ var configuration = new ConfigurationBuilder()
 var mongoConnection = configuration["Mongo:ConnectionString"] ?? string.Empty;
 var mongoDatabaseName = configuration["Mongo:Database"] ?? string.Empty;
 var postgresConnection = configuration.GetConnectionString("Postgres") ?? string.Empty;
-
-if (string.IsNullOrWhiteSpace(mongoConnection) || string.IsNullOrWhiteSpace(postgresConnection))
+var resetData = true;
+if (bool.TryParse(configuration["Migrator:Reset"], out var parsedReset))
 {
-    Console.WriteLine("Missing Mongo/Postgres configuration.");
+    resetData = parsedReset;
+}
+var resetArg = args.Any(a => string.Equals(a, "--reset", StringComparison.OrdinalIgnoreCase));
+var migrateOnlyArg = args.Any(a => string.Equals(a, "--migrate-only", StringComparison.OrdinalIgnoreCase));
+
+if (string.IsNullOrWhiteSpace(postgresConnection))
+{
+    Console.WriteLine("Missing Postgres configuration.");
+    return;
+}
+
+if (!migrateOnlyArg && string.IsNullOrWhiteSpace(mongoConnection))
+{
+    Console.WriteLine("Missing Mongo configuration. Use --migrate-only to apply only EF Core migrations without data migration.");
     return;
 }
 
@@ -37,6 +50,33 @@ if (int.TryParse(batchSizeRaw, out var parsedBatchSize) && parsedBatchSize > 0)
 
 Log($"Batch size: {batchSize}");
 
+if (resetArg)
+{
+    resetData = true;
+}
+
+var options = new DbContextOptionsBuilder<AppDbContext>()
+    .UseNpgsql(postgresConnection)
+    .Options;
+
+await using var dbContext = new AppDbContext(options);
+
+if (migrateOnlyArg)
+{
+    Log("Running in migrate-only mode (EF Core migrations only, no data migration).");
+    try
+    {
+        await RunStep("EF Core schema migrations", () => dbContext.Database.MigrateAsync());
+        Log("Database migrations completed successfully.");
+    }
+    catch (Exception ex)
+    {
+        Log($"Migration failed: {ex}");
+        Environment.ExitCode = 1;
+    }
+    return;
+}
+
 var mongoUrl = new MongoUrl(mongoConnection);
 var databaseName = !string.IsNullOrWhiteSpace(mongoDatabaseName)
     ? mongoDatabaseName
@@ -46,12 +86,6 @@ Log($"Mongo database: {databaseName}");
 
 var mongoClient = new MongoClient(mongoConnection);
 var mongoDb = mongoClient.GetDatabase(databaseName);
-
-var options = new DbContextOptionsBuilder<AppDbContext>()
-    .UseNpgsql(postgresConnection)
-    .Options;
-
-await using var dbContext = new AppDbContext(options);
 
 var userMap = new Dictionary<string, Guid>();
 var planMap = new Dictionary<string, Guid>();
@@ -70,6 +104,10 @@ var userPlanLegacyMap = new Dictionary<Guid, string>();
 try
 {
     await RunStep("EF Core schema migrations", () => dbContext.Database.MigrateAsync());
+    if (resetData)
+    {
+        await RunStep("Reset database data", ResetDatabaseData);
+    }
     await RunStep(nameof(MigrateUsers), MigrateUsers);
     await RunStep(nameof(MigrateAddresses), MigrateAddresses);
     await RunStep(nameof(MigrateGyms), MigrateGyms);
@@ -409,7 +447,7 @@ async Task MigrateExercises()
 
             var userId = ResolveGuid(doc.GetValue("user", BsonNull.Value), userMap);
             var bodyPartRaw = doc.GetValue("bodyPart", string.Empty).AsString;
-            Enum.TryParse<BodyParts>(bodyPartRaw, out var bodyPart);
+            var bodyPart = NormalizeBodyPart(bodyPartRaw);
 
             exercises.Add(new Exercise
             {
@@ -758,7 +796,7 @@ async Task MigrateExerciseScores()
             exerciseScoreMap[legacyId] = id;
 
             var unitRaw = doc.GetValue("unit", "kg").AsString;
-            var unit = unitRaw == "lbs" ? WeightUnits.Pounds : WeightUnits.Kilograms;
+            var unit = NormalizeWeightUnit(unitRaw);
 
             scores.Add(new ExerciseScore
             {
@@ -930,7 +968,8 @@ async Task MigrateMeasurements()
             var id = Guid.NewGuid();
             measurementMap[legacyId] = id;
 
-            Enum.TryParse<BodyParts>(doc.GetValue("bodyPart", string.Empty).AsString, out var bodyPart);
+            var bodyPart = NormalizeBodyPart(doc.GetValue("bodyPart", string.Empty).AsString);
+            var heightUnit = NormalizeHeightUnit(doc.GetValue("unit", string.Empty).AsString);
 
             measurements.Add(new Measurement
             {
@@ -938,7 +977,7 @@ async Task MigrateMeasurements()
                 LegacyMongoId = legacyId,
                 UserId = userId,
                 BodyPart = bodyPart,
-                Unit = doc.GetValue("unit", string.Empty).AsString,
+                Unit = heightUnit.ToString(),
                 Value = doc.GetValue("value", 0).ToDouble(),
                 CreatedAt = ToPolandOffset(doc.GetValue("createdAt", BsonNull.Value)),
                 UpdatedAt = ToPolandOffset(doc.GetValue("updatedAt", BsonNull.Value))
@@ -1008,7 +1047,7 @@ async Task MigrateMainRecords()
             mainRecordMap[legacyId] = id;
 
             var unitRaw = doc.GetValue("unit", "kg").AsString;
-            var unit = unitRaw == "lbs" ? WeightUnits.Pounds : WeightUnits.Kilograms;
+            var unit = NormalizeWeightUnit(unitRaw);
 
             records.Add(new MainRecord
             {
@@ -1156,10 +1195,10 @@ async Task MigrateAppConfigs()
             appConfigMap[legacyId] = id;
 
             var platformRaw = doc.GetValue("platform", string.Empty).AsString;
-            if (!Enum.TryParse(platformRaw, true, out Platforms platform))
+            var platform = NormalizePlatform(platformRaw);
+            if (platform == Platforms.Unknown)
             {
-                Log($"MigrateAppConfigs: unknown platform '{platformRaw}' for legacyId={legacyId}, skipping.");
-                continue;
+                Log($"MigrateAppConfigs: unknown platform '{platformRaw}' for legacyId={legacyId}, storing Unknown.");
             }
 
             configs.Add(new AppConfig
@@ -1251,4 +1290,82 @@ static async Task RunStep(string name, Func<Task> action)
         Log($"{name}: failed after {sw.Elapsed.TotalSeconds:0.000}s\n{ex}");
         throw;
     }
+}
+
+async Task ResetDatabaseData()
+{
+    await dbContext.Database.ExecuteSqlRawAsync("""
+TRUNCATE TABLE
+    "TrainingExerciseScores",
+    "ExerciseScores",
+    "Trainings",
+    "PlanDayExercises",
+    "PlanDays",
+    "MainRecords",
+    "Measurements",
+    "Exercises",
+    "Gyms",
+    "AppConfigs",
+    "EloRegistries",
+    "Addresses",
+    "Plans",
+    "Users"
+CASCADE;
+""");
+}
+
+static BodyParts NormalizeBodyPart(string? raw)
+{
+    if (!string.IsNullOrWhiteSpace(raw) && Enum.TryParse(raw, true, out BodyParts parsed))
+    {
+        return parsed;
+    }
+
+    return BodyParts.Unknown;
+}
+
+static WeightUnits NormalizeWeightUnit(string? raw)
+{
+    if (!string.IsNullOrWhiteSpace(raw) && Enum.TryParse(raw, true, out WeightUnits parsed))
+    {
+        return parsed;
+    }
+
+    return raw?.Trim().ToLowerInvariant() switch
+    {
+        "kg" or "kilogram" or "kilograms" => WeightUnits.Kilograms,
+        "lb" or "lbs" or "pound" or "pounds" => WeightUnits.Pounds,
+        _ => WeightUnits.Unknown
+    };
+}
+
+static HeightUnits NormalizeHeightUnit(string? raw)
+{
+    if (!string.IsNullOrWhiteSpace(raw) && Enum.TryParse(raw, true, out HeightUnits parsed))
+    {
+        return parsed;
+    }
+
+    return raw?.Trim().ToLowerInvariant() switch
+    {
+        "m" or "meter" or "meters" => HeightUnits.Meters,
+        "cm" or "centimeter" or "centimeters" => HeightUnits.Centimeters,
+        "mm" or "millimeter" or "millimeters" => HeightUnits.Millimeters,
+        _ => HeightUnits.Unknown
+    };
+}
+
+static Platforms NormalizePlatform(string? raw)
+{
+    if (!string.IsNullOrWhiteSpace(raw) && Enum.TryParse(raw, true, out Platforms parsed))
+    {
+        return parsed;
+    }
+
+    return raw?.Trim().ToLowerInvariant() switch
+    {
+        "android" => Platforms.Android,
+        "ios" => Platforms.Ios,
+        _ => Platforms.Unknown
+    };
 }
