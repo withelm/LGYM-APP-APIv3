@@ -19,6 +19,8 @@ public sealed class EloRegistryController : ControllerBase
     }
 
     [HttpGet("eloRegistry/{id}/getEloRegistryChart")]
+    [ProducesResponseType(typeof(List<EloRegistryBaseChartDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetEloRegistryChart([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var userId))

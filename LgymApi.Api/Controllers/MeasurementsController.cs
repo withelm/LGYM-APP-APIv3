@@ -19,6 +19,8 @@ public sealed class MeasurementsController : ControllerBase
     }
 
     [HttpPost("measurements/add")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddMeasurement([FromBody] MeasurementFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
@@ -50,6 +52,9 @@ public sealed class MeasurementsController : ControllerBase
     }
 
     [HttpGet("measurements:/{id}/getMeasurementDetail")]
+    [ProducesResponseType(typeof(MeasurementResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMeasurementDetail([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
@@ -86,6 +91,9 @@ public sealed class MeasurementsController : ControllerBase
     }
 
     [HttpGet("measurements/{id}/getHistory")]
+    [ProducesResponseType(typeof(MeasurementsHistoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMeasurementsHistory([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request)
     {
         var user = HttpContext.GetCurrentUser();

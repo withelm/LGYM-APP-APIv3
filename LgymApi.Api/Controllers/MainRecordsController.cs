@@ -29,6 +29,8 @@ public sealed class MainRecordsController : ControllerBase
     }
 
     [HttpPost("mainRecords/{id}/addNewRecord")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddNewRecord([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         if (!Guid.TryParse(id, out var userId) || !Guid.TryParse(form.ExerciseId, out var exerciseId))
@@ -64,6 +66,8 @@ public sealed class MainRecordsController : ControllerBase
     }
 
     [HttpGet("mainRecords/{id}/getMainRecordsHistory")]
+    [ProducesResponseType(typeof(List<MainRecordResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMainRecordsHistory([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var userId))
@@ -98,6 +102,8 @@ public sealed class MainRecordsController : ControllerBase
     }
 
     [HttpGet("mainRecords/{id}/getLastMainRecords")]
+    [ProducesResponseType(typeof(List<MainRecordsLastDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLastMainRecords([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var userId))
@@ -151,6 +157,8 @@ public sealed class MainRecordsController : ControllerBase
     }
 
     [HttpGet("mainRecords/{id}/deleteMainRecord")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteMainRecord([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var recordId))
@@ -169,6 +177,8 @@ public sealed class MainRecordsController : ControllerBase
     }
 
     [HttpPost("mainRecords/{id}/updateMainRecords")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMainRecords([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         if (!Guid.TryParse(id, out var userId))
@@ -215,6 +225,8 @@ public sealed class MainRecordsController : ControllerBase
     }
 
     [HttpPost("mainRecords/getRecordOrPossibleRecordInExercise")]
+    [ProducesResponseType(typeof(PossibleRecordForExerciseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRecordOrPossibleRecordInExercise([FromBody] RecordOrPossibleRequestDto request)
     {
         var userId = HttpContext.GetCurrentUser()?.Id;

@@ -19,6 +19,8 @@ public sealed class ExerciseScoresController : ControllerBase
     }
 
     [HttpPost("exerciseScores/{id}/getExerciseScoresChartData")]
+    [ProducesResponseType(typeof(List<ExerciseScoresChartDataDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetExerciseScoresChartData([FromRoute] string id, [FromBody] ExerciseScoresChartRequestDto request)
     {
         if (!Guid.TryParse(id, out var userId) || !Guid.TryParse(request.ExerciseId, out var exerciseId))

@@ -28,6 +28,8 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/addExercise")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AddExercise([FromBody] ExerciseFormDto form)
     {
         if (string.IsNullOrWhiteSpace(form.Name) || string.IsNullOrWhiteSpace(form.BodyPart))
@@ -55,6 +57,9 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/{id}/addUserExercise")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddUserExercise([FromRoute] string id, [FromBody] ExerciseFormDto form)
     {
         if (string.IsNullOrWhiteSpace(form.Name) || string.IsNullOrWhiteSpace(form.BodyPart))
@@ -94,6 +99,10 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/{id}/deleteExercise")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteExercise([FromRoute] string id, [FromBody] Dictionary<string, string> body)
     {
         if (!body.TryGetValue("id", out var exerciseIdString))
@@ -142,6 +151,9 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/updateExercise")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateExercise([FromBody] ExerciseFormDto form)
     {
         if (!Guid.TryParse(form.Id, out var exerciseId))
@@ -173,6 +185,10 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/{id}/addGlobalTranslation")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddGlobalTranslation([FromRoute] string id, [FromBody] ExerciseTranslationDto form)
     {
         var currentUser = HttpContext.GetCurrentUser();
@@ -232,6 +248,8 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpGet("exercise/{id}/getAllExercises")]
+    [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAllExercises([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var userId))
@@ -259,6 +277,8 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpGet("exercise/{id}/getAllUserExercises")]
+    [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAllUserExercises([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var userId))
@@ -286,6 +306,8 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpGet("exercise/getAllGlobalExercises")]
+    [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAllGlobalExercises()
     {
         var exercises = await _exerciseRepository.GetAllGlobalAsync();
@@ -302,6 +324,8 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/{id}/getExerciseByBodyPart")]
+    [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetExerciseByBodyPart([FromRoute] string id, [FromBody] Dictionary<string, string> body)
     {
         if (!Guid.TryParse(id, out var userId))
@@ -339,6 +363,8 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpGet("exercise/{id}/getExercise")]
+    [ProducesResponseType(typeof(ExerciseResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetExercise([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var exerciseId))
@@ -366,6 +392,8 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/{id}/getLastExerciseScores")]
+    [ProducesResponseType(typeof(LastExerciseScoresResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLastExerciseScores([FromRoute] string id, [FromBody] LastExerciseScoresRequestDto request)
     {
         if (!Guid.TryParse(id, out _))
@@ -412,6 +440,9 @@ public sealed class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/getExerciseScoresFromTrainingByExercise")]
+    [ProducesResponseType(typeof(List<ExerciseTrainingHistoryItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetExerciseScoresFromTrainingByExercise([FromBody] RecordOrPossibleRequestDto request)
     {
         var userId = HttpContext.GetCurrentUser()?.Id;

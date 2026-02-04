@@ -20,6 +20,10 @@ public sealed class GymController : ControllerBase
     }
 
     [HttpPost("gym/{id}/addGym")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddGym([FromRoute] string id, [FromBody] GymFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
@@ -58,6 +62,10 @@ public sealed class GymController : ControllerBase
     }
 
     [HttpPost("gym/{id}/deleteGym")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteGym([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
@@ -88,6 +96,9 @@ public sealed class GymController : ControllerBase
     }
 
     [HttpGet("gym/{id}/getGyms")]
+    [ProducesResponseType(typeof(List<GymChoiceInfoDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetGyms([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
@@ -135,6 +146,10 @@ public sealed class GymController : ControllerBase
     }
 
     [HttpGet("gym/{id}/getGym")]
+    [ProducesResponseType(typeof(GymFormDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetGym([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
@@ -168,6 +183,10 @@ public sealed class GymController : ControllerBase
     }
 
     [HttpPost("gym/editGym")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> EditGym([FromBody] GymFormDto form)
     {
         var user = HttpContext.GetCurrentUser();

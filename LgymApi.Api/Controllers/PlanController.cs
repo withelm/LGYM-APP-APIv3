@@ -21,6 +21,9 @@ public sealed class PlanController : ControllerBase
     }
 
     [HttpPost("{id}/createPlan")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreatePlan([FromRoute] string id, [FromBody] PlanFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
@@ -50,6 +53,10 @@ public sealed class PlanController : ControllerBase
     }
 
     [HttpPost("{id}/updatePlan")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdatePlan([FromRoute] string id, [FromBody] PlanFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
@@ -85,6 +92,9 @@ public sealed class PlanController : ControllerBase
     }
 
     [HttpGet("{id}/getPlanConfig")]
+    [ProducesResponseType(typeof(PlanFormDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlanConfig([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
@@ -113,6 +123,9 @@ public sealed class PlanController : ControllerBase
     }
 
     [HttpGet("{id}/checkIsUserHavePlan")]
+    [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(bool), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(bool), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CheckIsUserHavePlan([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
@@ -142,6 +155,9 @@ public sealed class PlanController : ControllerBase
     }
 
     [HttpGet("{id}/getPlansList")]
+    [ProducesResponseType(typeof(List<PlanFormDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlansList([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
@@ -172,6 +188,9 @@ public sealed class PlanController : ControllerBase
     }
 
     [HttpPost("{id}/setNewActivePlan")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetNewActivePlan([FromRoute] string id, [FromBody] PlanFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
@@ -191,6 +210,9 @@ public sealed class PlanController : ControllerBase
     }
 
     [HttpPost("copy")]
+    [ProducesResponseType(typeof(PlanDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CopyPlan([FromBody] CopyPlanDto dto)
     {
         var user = HttpContext.GetCurrentUser();
@@ -220,6 +242,9 @@ public sealed class PlanController : ControllerBase
     }
 
     [HttpPatch("{id}/share")]
+    [ProducesResponseType(typeof(ShareCodeResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GenerateShareCode([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();

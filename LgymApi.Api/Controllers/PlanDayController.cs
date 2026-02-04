@@ -34,6 +34,9 @@ public sealed class PlanDayController : ControllerBase
     }
 
     [HttpPost("planDay/{id}/createPlanDay")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreatePlanDay([FromRoute] string id, [FromBody] PlanDayFormDto form)
     {
         if (!Guid.TryParse(id, out var planId))
@@ -88,6 +91,9 @@ public sealed class PlanDayController : ControllerBase
     }
 
     [HttpPost("planDay/updatePlanDay")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdatePlanDay([FromBody] PlanDayFormDto form)
     {
         if (string.IsNullOrWhiteSpace(form.Name) || form.Exercises == null || form.Exercises.Count == 0)
@@ -137,6 +143,8 @@ public sealed class PlanDayController : ControllerBase
     }
 
     [HttpGet("planDay/{id}/getPlanDay")]
+    [ProducesResponseType(typeof(PlanDayVmDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlanDay([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var planDayId))
@@ -181,6 +189,8 @@ public sealed class PlanDayController : ControllerBase
     }
 
     [HttpGet("planDay/{id}/getPlanDays")]
+    [ProducesResponseType(typeof(List<PlanDayVmDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlanDays([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var planId))
@@ -240,6 +250,8 @@ public sealed class PlanDayController : ControllerBase
     }
 
     [HttpGet("planDay/{id}/getPlanDaysTypes")]
+    [ProducesResponseType(typeof(List<PlanDayChooseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlanDaysTypes([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var userId))
@@ -270,6 +282,8 @@ public sealed class PlanDayController : ControllerBase
     }
 
     [HttpGet("planDay/{id}/deletePlanDay")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletePlanDay([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var planDayId))
@@ -288,6 +302,8 @@ public sealed class PlanDayController : ControllerBase
     }
 
     [HttpGet("planDay/{id}/getPlanDaysInfo")]
+    [ProducesResponseType(typeof(List<PlanDayBaseInfoDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlanDaysInfo([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var planId))

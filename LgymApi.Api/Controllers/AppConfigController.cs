@@ -19,6 +19,8 @@ public sealed class AppConfigController : ControllerBase
     }
 
     [HttpPost("appConfig/getAppVersion")]
+    [ProducesResponseType(typeof(AppConfigInfoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAppVersion([FromBody] Dictionary<string, string> body)
     {
         if (!body.TryGetValue("platform", out var platformRaw))
@@ -49,6 +51,9 @@ public sealed class AppConfigController : ControllerBase
     }
 
     [HttpPost("appConfig/createNewAppVersion/{id}")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateNewAppVersion([FromRoute] string id, [FromBody] AppConfigInfoWithPlatformDto form)
     {
         if (!Guid.TryParse(id, out var userId))

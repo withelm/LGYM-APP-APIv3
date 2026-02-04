@@ -42,6 +42,9 @@ public sealed class TrainingController : ControllerBase
     }
 
     [HttpPost("{id}/addTraining")]
+    [ProducesResponseType(typeof(TrainingSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> AddTraining([FromRoute] string id, [FromBody] TrainingFormDto form)
     {
         try
@@ -183,6 +186,8 @@ public sealed class TrainingController : ControllerBase
     }
 
     [HttpGet("{id}/getLastTraining")]
+    [ProducesResponseType(typeof(LastTrainingInfoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLastTraining([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var userId))
@@ -219,6 +224,8 @@ public sealed class TrainingController : ControllerBase
     }
 
     [HttpPost("{id}/getTrainingByDate")]
+    [ProducesResponseType(typeof(List<TrainingByDateDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTrainingByDate([FromRoute] string id, [FromBody] TrainingByDateRequestDto request)
     {
         if (!Guid.TryParse(id, out var userId))
@@ -308,6 +315,8 @@ public sealed class TrainingController : ControllerBase
     }
 
     [HttpGet("{id}/getTrainingDates")]
+    [ProducesResponseType(typeof(List<DateTime>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTrainingDates([FromRoute] string id)
     {
         if (!Guid.TryParse(id, out var userId))
