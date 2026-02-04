@@ -15,6 +15,9 @@
   <data name="BodyParts_Chest" xml:space="preserve">
     <value>Klatka piersiowa</value>
   </data>
+  <data name="BodyParts_Unknown" xml:space="preserve">
+    <value>Nieznane</value>
+  </data>
   <data name="BodyParts_Back" xml:space="preserve">
     <value>Plecy</value>
   </data>
@@ -48,11 +51,17 @@
   <data name="WeightUnits_Kilograms" xml:space="preserve">
     <value>kg</value>
   </data>
+  <data name="WeightUnits_Unknown" xml:space="preserve">
+    <value>Nieznane</value>
+  </data>
   <data name="WeightUnits_Pounds" xml:space="preserve">
     <value>lbs</value>
   </data>
   <data name="HeightUnits_Meters" xml:space="preserve">
     <value>Metry</value>
+  </data>
+  <data name="HeightUnits_Unknown" xml:space="preserve">
+    <value>Nieznane</value>
   </data>
   <data name="HeightUnits_Centimeters" xml:space="preserve">
     <value>Centymetry</value>
@@ -62,6 +71,9 @@
   </data>
   <data name="Platforms_Android" xml:space="preserve">
     <value>Android</value>
+  </data>
+  <data name="Platforms_Unknown" xml:space="preserve">
+    <value>Nieznane</value>
   </data>
   <data name="Platforms_Ios" xml:space="preserve">
     <value>iOS</value>

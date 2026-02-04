@@ -4,6 +4,8 @@ namespace LgymApi.Domain.Enums;
 
 public enum Platforms
 {
+    [EnumTranslation(EnumTranslationKeys.Platforms.Unknown)]
+    Unknown = 0,
     [EnumTranslation(EnumTranslationKeys.Platforms.Android)]
     Android = 1,
     [EnumTranslation(EnumTranslationKeys.Platforms.Ios)]

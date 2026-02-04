@@ -117,3 +117,6 @@ appsettings.*.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local deployment helper
+deploy.sh

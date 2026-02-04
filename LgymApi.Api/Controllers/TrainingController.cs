@@ -101,7 +101,7 @@ public sealed class TrainingController : ControllerBase
                     continue;
                 }
 
-                var unit = exercise.Unit == "lbs" ? WeightUnits.Pounds : WeightUnits.Kilograms;
+                var unit = ParseWeightUnit(exercise.Unit);
                 var scoreEntity = new ExerciseScore
                 {
                     Id = Guid.NewGuid(),
@@ -443,12 +443,6 @@ public sealed class TrainingController : ControllerBase
             return parsed;
         }
 
-        if (string.Equals(unit, "lbs", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(unit, "lb", StringComparison.OrdinalIgnoreCase))
-        {
-            return WeightUnits.Pounds;
-        }
-
-        return WeightUnits.Kilograms;
+        return WeightUnits.Unknown;
     }
 }
