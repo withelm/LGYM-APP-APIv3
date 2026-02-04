@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
+using LgymApi.Api.Services;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -70,11 +71,11 @@ public sealed class MeasurementsController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
-        return Ok(new MeasurementFormDto
+        return Ok(new MeasurementResponseDto
         {
             UserId = measurement.UserId.ToString(),
-            BodyPart = measurement.BodyPart.ToString(),
-            Unit = measurement.Unit,
+            BodyPart = measurement.BodyPart.ToLookup(),
+            Unit = ParseHeightUnit(measurement.Unit).ToLookup(),
             Value = measurement.Value,
             CreatedAt = measurement.CreatedAt.UtcDateTime,
             UpdatedAt = measurement.UpdatedAt.UtcDateTime
@@ -105,11 +106,11 @@ public sealed class MeasurementsController : ControllerBase
         {
             Measurements = measurements
                 .OrderBy(m => m.CreatedAt)
-                .Select(m => new MeasurementFormDto
+                .Select(m => new MeasurementResponseDto
                 {
                     UserId = m.UserId.ToString(),
-                    BodyPart = m.BodyPart.ToString(),
-                    Unit = m.Unit,
+                    BodyPart = m.BodyPart.ToLookup(),
+                    Unit = ParseHeightUnit(m.Unit).ToLookup(),
                     Value = m.Value,
                     CreatedAt = m.CreatedAt.UtcDateTime,
                     UpdatedAt = m.UpdatedAt.UtcDateTime
@@ -118,5 +119,21 @@ public sealed class MeasurementsController : ControllerBase
         };
 
         return Ok(result);
+    }
+
+    private static HeightUnits ParseHeightUnit(string? unit)
+    {
+        if (!string.IsNullOrWhiteSpace(unit) && Enum.TryParse(unit, true, out HeightUnits parsed))
+        {
+            return parsed;
+        }
+
+        return unit?.Trim().ToLowerInvariant() switch
+        {
+            "cm" => HeightUnits.Centimeters,
+            "mm" => HeightUnits.Millimeters,
+            "m" => HeightUnits.Meters,
+            _ => HeightUnits.Centimeters
+        };
     }
 }

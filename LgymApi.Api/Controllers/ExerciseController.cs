@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
+using LgymApi.Api.Services;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -353,11 +354,11 @@ public sealed class ExerciseController : ControllerBase
 
         var translations = await GetTranslationsForExercisesAsync(new List<Exercise> { exercise });
 
-        return Ok(new ExerciseFormDto
+        return Ok(new ExerciseResponseDto
         {
             Id = exercise.Id.ToString(),
             Name = ResolveExerciseName(exercise, translations),
-            BodyPart = exercise.BodyPart.ToString(),
+            BodyPart = exercise.BodyPart.ToLookup(),
             Description = exercise.Description,
             Image = exercise.Image,
             UserId = exercise.UserId?.ToString()
@@ -446,7 +447,7 @@ public sealed class ExerciseController : ControllerBase
                 Id = score.Id.ToString(),
                 Reps = score.Reps,
                 Weight = score.Weight,
-                Unit = score.Unit == WeightUnits.Kilograms ? "kg" : "lbs"
+                Unit = score.Unit.ToLookup()
             }));
             entry.MaxSeries = Math.Max(entry.MaxSeries, score.Series);
             tempMap[trainingId] = entry;
@@ -492,7 +493,7 @@ public sealed class ExerciseController : ControllerBase
             Id = result.Id.ToString(),
             Reps = result.Reps,
             Weight = result.Weight,
-            Unit = result.Unit == WeightUnits.Kilograms ? "kg" : "lbs",
+            Unit = result.Unit.ToLookup(),
             GymName = result.Training?.Gym?.Name
         };
     }
@@ -587,13 +588,13 @@ public sealed class ExerciseController : ControllerBase
         }
     }
 
-    private static ExerciseFormDto MapExerciseDto(Exercise exercise, IReadOnlyDictionary<Guid, string> translations)
+    private static ExerciseResponseDto MapExerciseDto(Exercise exercise, IReadOnlyDictionary<Guid, string> translations)
     {
-        return new ExerciseFormDto
+        return new ExerciseResponseDto
         {
             Id = exercise.Id.ToString(),
             Name = ResolveExerciseName(exercise, translations),
-            BodyPart = exercise.BodyPart.ToString(),
+            BodyPart = exercise.BodyPart.ToLookup(),
             Description = exercise.Description,
             Image = exercise.Image,
             UserId = exercise.UserId?.ToString()

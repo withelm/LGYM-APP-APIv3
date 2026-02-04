@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="BodyParts_Chest" xml:space="preserve">
+    <value>Chest</value>
+  </data>
+  <data name="BodyParts_Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="BodyParts_Shoulders" xml:space="preserve">
+    <value>Shoulders</value>
+  </data>
+  <data name="BodyParts_Biceps" xml:space="preserve">
+    <value>Biceps</value>
+  </data>
+  <data name="BodyParts_Triceps" xml:space="preserve">
+    <value>Triceps</value>
+  </data>
+  <data name="BodyParts_Forearms" xml:space="preserve">
+    <value>Forearms</value>
+  </data>
+  <data name="BodyParts_Abs" xml:space="preserve">
+    <value>Abs</value>
+  </data>
+  <data name="BodyParts_Quads" xml:space="preserve">
+    <value>Quads</value>
+  </data>
+  <data name="BodyParts_Hamstrings" xml:space="preserve">
+    <value>Hamstrings</value>
+  </data>
+  <data name="BodyParts_Calves" xml:space="preserve">
+    <value>Calves</value>
+  </data>
+  <data name="BodyParts_Glutes" xml:space="preserve">
+    <value>Glutes</value>
+  </data>
+  <data name="WeightUnits_Kilograms" xml:space="preserve">
+    <value>kg</value>
+  </data>
+  <data name="WeightUnits_Pounds" xml:space="preserve">
+    <value>lbs</value>
+  </data>
+  <data name="HeightUnits_Meters" xml:space="preserve">
+    <value>Meters</value>
+  </data>
+  <data name="HeightUnits_Centimeters" xml:space="preserve">
+    <value>Centimeters</value>
+  </data>
+  <data name="HeightUnits_Millimeters" xml:space="preserve">
+    <value>Millimeters</value>
+  </data>
+  <data name="Platforms_Android" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="Platforms_Ios" xml:space="preserve">
+    <value>iOS</value>
+  </data>
+</root>

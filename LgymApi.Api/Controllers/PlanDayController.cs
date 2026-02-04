@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Application.Repositories;
+using LgymApi.Api.Services;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -163,16 +164,16 @@ public sealed class PlanDayController : ControllerBase
                 Series = e.Series,
                 Reps = e.Reps,
                 Exercise = exerciseMap.TryGetValue(e.ExerciseId, out var exercise)
-                    ? new ExerciseFormDto
+                    ? new ExerciseResponseDto
                     {
                         Id = exercise.Id.ToString(),
                         Name = exercise.Name,
-                        BodyPart = exercise.BodyPart.ToString(),
+                        BodyPart = exercise.BodyPart.ToLookup(),
                         Description = exercise.Description,
                         Image = exercise.Image,
                         UserId = exercise.UserId?.ToString()
                     }
-                    : new ExerciseFormDto()
+                    : new ExerciseResponseDto()
             }).ToList()
         };
 
@@ -215,16 +216,16 @@ public sealed class PlanDayController : ControllerBase
                 Series = e.Series,
                 Reps = e.Reps,
                 Exercise = exerciseMap.TryGetValue(e.ExerciseId, out var ex)
-                    ? new ExerciseFormDto
+                    ? new ExerciseResponseDto
                     {
                         Id = ex.Id.ToString(),
                         Name = ex.Name,
-                        BodyPart = ex.BodyPart.ToString(),
+                        BodyPart = ex.BodyPart.ToLookup(),
                         Description = ex.Description,
                         Image = ex.Image,
                         UserId = ex.UserId?.ToString()
                     }
-                    : new ExerciseFormDto()
+                    : new ExerciseResponseDto()
             }).ToList();
 
             return new PlanDayVmDto

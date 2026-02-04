@@ -35,7 +35,7 @@ public sealed class PlanDayExerciseVmDto
     public string Reps { get; set; } = string.Empty;
 
     [JsonPropertyName("exercise")]
-    public ExerciseFormDto Exercise { get; set; } = new();
+    public ExerciseResponseDto Exercise { get; set; } = new();
 }
 
 public sealed class PlanDayVmDto
