@@ -95,3 +95,28 @@ dotnet run --project LgymApi.Api
 
 - Password verification uses legacy `passport-local-mongoose` PBKDF2 settings (sha256, 25000 iterations, keylen 512, hex).
 - All IDs are GUIDs in Postgres; responses return `_id` as a string GUID.
+
+## Plan implementacji Unit of Work
+
+1. **Definicja kontraktu**  
+   - W projekcie `LgymApi.Application` dodaj interfejs `IUnitOfWork` z metodami `Task<int> SaveChangesAsync(CancellationToken)` oraz `IDbContextTransaction BeginTransactionAsync(...)` lub prostym wrapperem `Task<IDisposable> BeginTransactionAsync(...)` (w zależności od aktualnego wzorca w EF Core).  
+   - Ekspozycja `DbContext` nie jest potrzebna – UoW ma zarządzać wyłącznie zapisem.
+
+2. **Implementacja**  
+   - W projekcie `LgymApi.Infrastructure` utwórz klasę `UnitOfWork` korzystającą z istniejącego `LgymDbContext`.  
+   - Zaimplementuj metody `SaveChangesAsync` oraz obsługę transakcji (opcjonalnie `CommitAsync`/`RollbackAsync` jeżeli decydujemy się na jawne transakcje).
+
+3. **Rejestracja w DI**  
+   - W miejscu konfiguracji usług (prawdopodobnie `LgymApi.Api/Program.cs`) zarejestruj `IUnitOfWork` jako `Scoped`.  
+   - Repozytoria pozostają `Scoped` i współdzielą ten sam `DbContext`.
+
+4. **Użycie w serwisach/aplikacji**  
+   - W warstwie `Services` wstrzykuj `IUnitOfWork` tam, gdzie wykonywane są operacje na wielu repozytoriach w ramach jednej operacji biznesowej (np. zapisy treningów, planów, pomiarów).  
+   - Używaj `SaveChangesAsync` zamiast wywołań `DbContext.SaveChangesAsync` (jeśli występują) lub zamiast rozproszonych zapisów w repozytoriach.
+
+5. **Migracja istniejącego kodu**  
+   - W repozytoriach usuń samodzielne wywołania `SaveChangesAsync`; odpowiedzialność za commit przenieś do warstwy aplikacji/serwisów.  
+   - W miejscach wymagających transakcji (np. tworzenie planu wraz z dniami i ćwiczeniami) otwórz transakcję UoW i zatwierdź po poprawnym zakończeniu.
+
+6. **Testy**  
+   - Dodaj testy integracyjne w stylu obecnych testów (jeśli istnieją) sprawdzające, że wiele zmian w ramach jednej transakcji zapisuje się razem i że rollback działa (np. rzucenie wyjątku po zapisaniu pierwszej encji nie zapisuje drugiej).
