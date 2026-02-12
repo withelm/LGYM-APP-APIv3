@@ -1,4 +1,5 @@
 using LgymApi.Application.Repositories;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LgymApi.Api.Middleware;
 
@@ -13,9 +14,8 @@ public sealed class UserContextMiddleware
 
     public async Task InvokeAsync(HttpContext context, IUserRepository userRepository)
     {
-        var path = context.Request.Path.Value ?? string.Empty;
-        if (path.Contains("/login", StringComparison.OrdinalIgnoreCase)
-            || path.Contains("/register", StringComparison.OrdinalIgnoreCase))
+        var endpoint = context.GetEndpoint();
+        if (endpoint?.Metadata.GetMetadata<IAllowAnonymous>() != null)
         {
             await _next(context);
             return;

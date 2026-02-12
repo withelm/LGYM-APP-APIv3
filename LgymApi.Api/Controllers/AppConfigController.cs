@@ -2,6 +2,7 @@ using LgymApi.Api.DTOs;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LgymApi.Api.Controllers;
 
@@ -19,6 +20,7 @@ public sealed class AppConfigController : ControllerBase
     }
 
     [HttpPost("appConfig/getAppVersion")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(AppConfigInfoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAppVersion([FromBody] Dictionary<string, string> body)

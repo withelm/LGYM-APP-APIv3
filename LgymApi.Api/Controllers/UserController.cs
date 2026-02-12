@@ -5,6 +5,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LgymApi.Api.Controllers;
 
@@ -33,6 +34,7 @@ public sealed class UserController : ControllerBase
     }
 
     [HttpPost("register")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
@@ -97,6 +99,7 @@ public sealed class UserController : ControllerBase
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
