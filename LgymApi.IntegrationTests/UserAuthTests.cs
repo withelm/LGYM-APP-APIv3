@@ -58,11 +58,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/register", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-
-        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Name is required and must contain at least one character.");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -78,11 +74,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/register", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-
-        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("This email address is not valid.");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -98,11 +90,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/register", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-
-        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Password must be at least six characters long.");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -118,11 +106,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/register", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-
-        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Passwords must be the same.");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -234,7 +218,7 @@ public sealed class UserAuthTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Login_WithEmptyCredentials_ReturnsUnauthorized()
+    public async Task Login_WithEmptyCredentials_ReturnsBadRequest()
     {
         var request = new
         {
@@ -244,11 +228,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/login", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-
-        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Unauthorized");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]

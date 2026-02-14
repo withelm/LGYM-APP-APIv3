@@ -37,4 +37,10 @@ public sealed record ShareCodeResponseDto(
     [property: JsonPropertyName("shareCode")] string ShareCode
 );
 
+public sealed class SetActivePlanDto
+{
+    [JsonPropertyName("_id")]
+    public string? Id { get; set; }
+}
+
 
