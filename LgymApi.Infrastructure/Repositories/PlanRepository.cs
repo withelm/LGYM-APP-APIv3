@@ -1,7 +1,9 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Security.Cryptography;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -46,11 +48,11 @@ public sealed class PlanRepository : IPlanRepository
     {
         await _dbContext.Plans
             .Where(p => p.UserId == userId && p.Id != planId)
-            .ExecuteUpdateAsync(update => update.SetProperty(p => p.IsActive, false), cancellationToken);
+            .ExecuteUpdateAsync(_dbContext, p => p.IsActive, p => false, cancellationToken);
 
         await _dbContext.Plans
             .Where(p => p.UserId == userId && p.Id == planId)
-            .ExecuteUpdateAsync(update => update.SetProperty(p => p.IsActive, true), cancellationToken);
+            .ExecuteUpdateAsync(_dbContext, p => p.IsActive, p => true, cancellationToken);
     }
 
     public async Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Guid userId, CancellationToken cancellationToken = default)
