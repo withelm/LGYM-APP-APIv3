@@ -118,5 +118,8 @@ appsettings.*.json
 .DS_Store
 Thumbs.db
 
+# Windows reserved filenames (created accidentally)
+nul
+
 # Local deployment helper
 deploy.sh
