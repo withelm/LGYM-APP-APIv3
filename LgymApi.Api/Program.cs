@@ -2,6 +2,8 @@ using System.Text;
 using System.Threading.RateLimiting;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using LgymApi.Application.Mapping;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -35,6 +37,7 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddLocalization();
+builder.Services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
 
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AddSingleton<LgymApi.Api.Services.IEnumLookupService, LgymApi.Api.Services.EnumLookupService>();

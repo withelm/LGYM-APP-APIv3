@@ -1,6 +1,7 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Services;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -15,17 +16,20 @@ public sealed class MainRecordsController : ControllerBase
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IMainRecordRepository _mainRecordRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
+    private readonly IMapper _mapper;
 
     public MainRecordsController(
         IUserRepository userRepository,
         IExerciseRepository exerciseRepository,
         IMainRecordRepository mainRecordRepository,
-        IExerciseScoreRepository exerciseScoreRepository)
+        IExerciseScoreRepository exerciseScoreRepository,
+        IMapper mapper)
     {
         _userRepository = userRepository;
         _exerciseRepository = exerciseRepository;
         _mainRecordRepository = mainRecordRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
+        _mapper = mapper;
     }
 
     [HttpPost("mainRecords/{id}/addNewRecord")]
@@ -89,16 +93,9 @@ public sealed class MainRecordsController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        var result = records.Reverse<MainRecord>().Select(record => new MainRecordResponseDto
-        {
-            Id = record.Id.ToString(),
-            ExerciseId = record.ExerciseId.ToString(),
-            Weight = record.Weight,
-            Unit = record.Unit.ToLookup(),
-            Date = record.Date.UtcDateTime
-        }).ToList();
+        var mappedRecords = _mapper.MapList<MainRecord, MainRecordResponseDto>(records.Reverse<MainRecord>().ToList());
 
-        return Ok(result);
+        return Ok(mappedRecords);
     }
 
     [HttpGet("mainRecords/{id}/getLastMainRecords")]
@@ -133,27 +130,11 @@ public sealed class MainRecordsController : ControllerBase
         var exercises = await _exerciseRepository.GetByIdsAsync(exerciseIds);
         var exerciseMap = exercises.ToDictionary(e => e.Id, e => e);
 
-        var result = latestRecords.Select(record => new MainRecordsLastDto
-        {
-            Id = record.Id.ToString(),
-            ExerciseId = record.ExerciseId.ToString(),
-            Weight = record.Weight,
-            Unit = record.Unit.ToLookup(),
-            Date = record.Date.UtcDateTime,
-            ExerciseDetails = exerciseMap.TryGetValue(record.ExerciseId, out var exercise)
-                ? new ExerciseResponseDto
-                {
-                    Id = exercise.Id.ToString(),
-                    Name = exercise.Name,
-                    BodyPart = exercise.BodyPart.ToLookup(),
-                    Description = exercise.Description,
-                    Image = exercise.Image,
-                    UserId = exercise.UserId?.ToString()
-                }
-                : new ExerciseResponseDto()
-        }).ToList();
+        var mappingContext = new MappingContext();
+        mappingContext.Set("exerciseMap", exerciseMap);
+        var mapped = _mapper.MapList<MainRecord, MainRecordsLastDto>(latestRecords, mappingContext);
 
-        return Ok(result);
+        return Ok(mapped);
     }
 
     [HttpGet("mainRecords/{id}/deleteMainRecord")]

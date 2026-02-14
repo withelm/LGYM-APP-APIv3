@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -12,11 +13,13 @@ public sealed class GymController : ControllerBase
 {
     private readonly IGymRepository _gymRepository;
     private readonly ITrainingRepository _trainingRepository;
+    private readonly IMapper _mapper;
 
-    public GymController(IGymRepository gymRepository, ITrainingRepository trainingRepository)
+    public GymController(IGymRepository gymRepository, ITrainingRepository trainingRepository, IMapper mapper)
     {
         _gymRepository = gymRepository;
         _trainingRepository = trainingRepository;
+        _mapper = mapper;
     }
 
     [HttpPost("gym/{id}/addGym")]
@@ -120,27 +123,10 @@ public sealed class GymController : ControllerBase
             .GroupBy(t => t.GymId)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.CreatedAt).FirstOrDefault());
 
-        var result = gyms.Select(gym =>
-        {
-            lastTrainings.TryGetValue(gym.Id, out var training);
-            return new GymChoiceInfoDto
-            {
-                Id = gym.Id.ToString(),
-                Name = gym.Name,
-                Address = gym.AddressId?.ToString(),
-                LastTrainingInfo = training == null ? null : new LastTrainingGymInfoDto
-                {
-                    Id = training.Id.ToString(),
-                    CreatedAt = training.CreatedAt.UtcDateTime,
-                    Type = training.PlanDay == null ? null : new LastTrainingGymPlanDayInfoDto
-                    {
-                        Id = training.PlanDay.Id.ToString(),
-                        Name = training.PlanDay.Name
-                    },
-                    Name = training.PlanDay?.Name
-                }
-            };
-        }).ToList();
+        var mappingContext = new MappingContext();
+        mappingContext.Set("lastTrainingMap", lastTrainings);
+
+        var result = _mapper.MapList<Gym, GymChoiceInfoDto>(gyms, mappingContext);
 
         return Ok(result);
     }
@@ -174,12 +160,7 @@ public sealed class GymController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
-        return Ok(new GymFormDto
-        {
-            Id = gym.Id.ToString(),
-            Name = gym.Name,
-            Address = gym.AddressId?.ToString()
-        });
+        return Ok(_mapper.Map<Gym, GymFormDto>(gym));
     }
 
     [HttpPost("gym/editGym")]
