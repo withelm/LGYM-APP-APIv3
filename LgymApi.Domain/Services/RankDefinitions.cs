@@ -20,5 +20,5 @@ public static class RankDefinitions
         new RankDefinition { Name = "Pro 2", NeedElo = 20000 },
         new RankDefinition { Name = "Pro 3", NeedElo = 24000 },
         new RankDefinition { Name = "Champ", NeedElo = 30000 }
-    };
+    }.AsReadOnly();
 }
