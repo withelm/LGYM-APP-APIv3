@@ -1,4 +1,4 @@
-using LgymApi.Api.DTOs;
+using LgymApi.Api.Features.Plan.Contracts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 

@@ -1,5 +1,5 @@
-using LgymApi.Api.DTOs;
-using LgymApi.Api.Services;
+using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Features.Enum;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 
