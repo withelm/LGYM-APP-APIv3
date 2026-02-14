@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -40,7 +41,7 @@ public sealed class PlanDayRepository : IPlanDayRepository
     {
         await _dbContext.PlanDays
             .Where(p => p.Id == planDayId)
-            .ExecuteUpdateAsync(update => update.SetProperty(p => p.IsDeleted, true), cancellationToken);
+            .ExecuteUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
     }
 
     public Task<bool> AnyByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
