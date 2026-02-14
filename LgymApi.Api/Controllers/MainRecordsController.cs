@@ -1,6 +1,7 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Services;
+using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -130,8 +131,8 @@ public sealed class MainRecordsController : ControllerBase
         var exercises = await _exerciseRepository.GetByIdsAsync(exerciseIds);
         var exerciseMap = exercises.ToDictionary(e => e.Id, e => e);
 
-        var mappingContext = new MappingContext();
-        mappingContext.Set("exerciseMap", exerciseMap);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(MainRecordProfile.Keys.ExerciseMap, exerciseMap);
         var mapped = _mapper.MapList<MainRecord, MainRecordsLastDto>(latestRecords, mappingContext);
 
         return Ok(mapped);

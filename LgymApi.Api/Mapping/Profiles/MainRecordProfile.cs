@@ -7,10 +7,15 @@ namespace LgymApi.Api.Mapping.Profiles;
 
 public sealed class MainRecordProfile : IMappingProfile
 {
-    private const string ExerciseMapContextKey = "exerciseMap";
+    internal static class Keys
+    {
+        internal static readonly ContextKey<IReadOnlyDictionary<Guid, Exercise>> ExerciseMap = new("MainRecord.ExerciseMap");
+    }
 
     public void Configure(MappingConfiguration configuration)
     {
+        configuration.AllowContextKey(Keys.ExerciseMap);
+
         configuration.CreateMap<MainRecord, MainRecordResponseDto>((source, _) => new MainRecordResponseDto
         {
             Id = source.Id.ToString(),
@@ -24,7 +29,7 @@ public sealed class MainRecordProfile : IMappingProfile
         {
             var exerciseDetails = new ExerciseResponseDto();
 
-            var exerciseMap = context?.Get<IReadOnlyDictionary<Guid, Exercise>>(ExerciseMapContextKey);
+            var exerciseMap = context?.Get(Keys.ExerciseMap);
             if (exerciseMap != null && exerciseMap.TryGetValue(source.ExerciseId, out var exercise))
             {
                 exerciseDetails = new ExerciseResponseDto

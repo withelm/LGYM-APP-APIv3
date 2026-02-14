@@ -6,10 +6,15 @@ namespace LgymApi.Api.Mapping.Profiles;
 
 public sealed class GymProfile : IMappingProfile
 {
-    private const string LastTrainingMapContextKey = "lastTrainingMap";
+    internal static class Keys
+    {
+        internal static readonly ContextKey<IReadOnlyDictionary<Guid, LgymApi.Domain.Entities.Training>> LastTrainingMap = new("Gym.LastTrainingMap");
+    }
 
     public void Configure(MappingConfiguration configuration)
     {
+        configuration.AllowContextKey(Keys.LastTrainingMap);
+
         configuration.CreateMap<Gym, GymFormDto>((source, _) => new GymFormDto
         {
             Id = source.Id.ToString(),
@@ -19,7 +24,7 @@ public sealed class GymProfile : IMappingProfile
 
         configuration.CreateMap<Gym, GymChoiceInfoDto>((source, context) =>
         {
-            var lastTrainingMap = context?.Get<IReadOnlyDictionary<Guid, LgymApi.Domain.Entities.Training>>(LastTrainingMapContextKey);
+            var lastTrainingMap = context?.Get(Keys.LastTrainingMap);
             LgymApi.Domain.Entities.Training? training = null;
             if (lastTrainingMap != null && lastTrainingMap.TryGetValue(source.Id, out var resolvedTraining))
             {

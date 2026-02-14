@@ -5,6 +5,7 @@ namespace LgymApi.Application.Mapping.Core;
 public sealed class Mapper : IMapper
 {
     private readonly IReadOnlyDictionary<(Type Source, Type Target), Func<object, MappingContext?, object>> _mappings;
+    private readonly IReadOnlySet<string> _allowedContextKeys;
 
     internal Mapper(IEnumerable<IMappingProfile> profiles)
     {
@@ -15,6 +16,7 @@ public sealed class Mapper : IMapper
         }
 
         _mappings = new ReadOnlyDictionary<(Type Source, Type Target), Func<object, MappingContext?, object>>(configuration.GetMappings().ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
+        _allowedContextKeys = new HashSet<string>(configuration.AllowedContextKeys, StringComparer.Ordinal);
         ValidateMappings();
     }
 
@@ -87,7 +89,12 @@ public sealed class Mapper : IMapper
                 continue;
             }
 
-            mapper(instance, new MappingContext());
+            mapper(instance, new MappingContext(_allowedContextKeys));
         }
+    }
+
+    public MappingContext CreateContext()
+    {
+        return new MappingContext(_allowedContextKeys);
     }
 }

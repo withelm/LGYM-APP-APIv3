@@ -5,6 +5,7 @@ namespace LgymApi.Application.Mapping.Core;
 public sealed class MappingConfiguration
 {
     private readonly Dictionary<(Type Source, Type Target), Func<object, MappingContext?, object>> _mappings = new();
+    private readonly HashSet<string> _allowedContextKeys = new(StringComparer.Ordinal);
 
     public void CreateMap<TSource, TTarget>(Func<TSource, MappingContext?, TTarget> map)
     {
@@ -18,6 +19,11 @@ public sealed class MappingConfiguration
         _mappings[key] = (source, context) => map((TSource)source, context);
     }
 
+    public void AllowContextKey<T>(ContextKey<T> key)
+    {
+        _allowedContextKeys.Add(key.Name);
+    }
+
     internal bool TryGetMapping((Type Source, Type Target) key, out Func<object, MappingContext?, object>? mapper)
     {
         return _mappings.TryGetValue(key, out mapper);
@@ -27,4 +33,6 @@ public sealed class MappingConfiguration
     {
         return new ReadOnlyDictionary<(Type Source, Type Target), Func<object, MappingContext?, object>>(_mappings);
     }
+
+    internal IReadOnlySet<string> AllowedContextKeys => _allowedContextKeys;
 }

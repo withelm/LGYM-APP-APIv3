@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
+using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -121,10 +122,12 @@ public sealed class GymController : ControllerBase
         var trainings = await _trainingRepository.GetByGymIdsAsync(gymIds);
         var lastTrainings = trainings
             .GroupBy(t => t.GymId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.CreatedAt).FirstOrDefault());
+            .Select(g => g.OrderByDescending(t => t.CreatedAt).FirstOrDefault())
+            .Where(t => t != null)
+            .ToDictionary(t => t!.GymId, t => t!);
 
-        var mappingContext = new MappingContext();
-        mappingContext.Set("lastTrainingMap", lastTrainings);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(GymProfile.Keys.LastTrainingMap, lastTrainings);
 
         var result = _mapper.MapList<Gym, GymChoiceInfoDto>(gyms, mappingContext);
 

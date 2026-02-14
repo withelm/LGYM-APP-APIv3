@@ -1,6 +1,7 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Services;
+using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -275,8 +276,8 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(exercises);
-        var mappingContext = new MappingContext();
-        mappingContext.Set("translations", translations);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
         var result = _mapper.MapList<Exercise, ExerciseResponseDto>(exercises, mappingContext);
 
         return Ok(result);
@@ -306,8 +307,8 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(exercises);
-        var mappingContext = new MappingContext();
-        mappingContext.Set("translations", translations);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
         var result = _mapper.MapList<Exercise, ExerciseResponseDto>(exercises, mappingContext);
 
         return Ok(result);
@@ -326,8 +327,8 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(exercises);
-        var mappingContext = new MappingContext();
-        mappingContext.Set("translations", translations);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
         var result = _mapper.MapList<Exercise, ExerciseResponseDto>(exercises, mappingContext);
 
         return Ok(result);
@@ -367,8 +368,8 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(exercises);
-        var mappingContext = new MappingContext();
-        mappingContext.Set("translations", translations);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
         var result = _mapper.MapList<Exercise, ExerciseResponseDto>(exercises, mappingContext);
 
         return Ok(result);
@@ -391,8 +392,8 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(new List<Exercise> { exercise });
-        var mappingContext = new MappingContext();
-        mappingContext.Set("translations", translations);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
 
         return Ok(_mapper.Map<Exercise, ExerciseResponseDto>(exercise, mappingContext));
     }

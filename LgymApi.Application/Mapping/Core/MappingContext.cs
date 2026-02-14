@@ -4,11 +4,17 @@ namespace LgymApi.Application.Mapping.Core;
 
 public sealed class MappingContext : IMappingContext
 {
-    private readonly ConcurrentDictionary<string, object?> _items = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<ContextKey<object>, object?> _items = new();
+    private readonly IReadOnlySet<string>? _allowedKeys;
 
-    public T? Get<T>(string key)
+    public MappingContext(IReadOnlySet<string>? allowedKeys = null)
     {
-        if (_items.TryGetValue(key, out var value) && value is T typed)
+        _allowedKeys = allowedKeys;
+    }
+
+    public T? Get<T>(ContextKey<T> key)
+    {
+        if (_items.TryGetValue(new ContextKey<object>(key.Name), out var value) && value is T typed)
         {
             return typed;
         }
@@ -16,8 +22,13 @@ public sealed class MappingContext : IMappingContext
         return default;
     }
 
-    public void Set<T>(string key, T value)
+    public void Set<T>(ContextKey<T> key, T value)
     {
-        _items[key] = value;
+        if (_allowedKeys != null && !_allowedKeys.Contains(key.Name))
+        {
+            throw new InvalidOperationException($"Context key '{key.Name}' is not allowed. Register it via MappingConfiguration.AllowContextKey.");
+        }
+
+        _items[new ContextKey<object>(key.Name)] = value;
     }
 }

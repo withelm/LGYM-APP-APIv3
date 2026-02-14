@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Services;
+using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -167,9 +168,9 @@ public sealed class PlanDayController : ControllerBase
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds);
         var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
 
-        var mappingContext = new MappingContext();
-        mappingContext.Set("planDayExercises", exercises);
-        mappingContext.Set("exerciseMap", exerciseMap);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, exercises);
+        mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, exerciseMap);
 
         var planDayVm = _mapper.Map<PlanDay, PlanDayVmDto>(planDay, mappingContext);
 
@@ -206,9 +207,9 @@ public sealed class PlanDayController : ControllerBase
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds);
         var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
 
-        var mappingContext = new MappingContext();
-        mappingContext.Set("planDayExercises", planDayExercises);
-        mappingContext.Set("exerciseMap", exerciseMap);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, planDayExercises);
+        mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, exerciseMap);
 
         var result = _mapper.MapList<PlanDay, PlanDayVmDto>(planDays, mappingContext);
 
@@ -294,9 +295,9 @@ public sealed class PlanDayController : ControllerBase
             .GroupBy(t => t.TypePlanDayId)
             .ToDictionary(g => g.Key, g => (DateTime?)g.Max(t => t.CreatedAt).UtcDateTime);
 
-        var mappingContext = new MappingContext();
-        mappingContext.Set("planDayExercises", planDayExercises);
-        mappingContext.Set("planDayLastTrainings", lastTrainingMap);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, planDayExercises);
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayLastTrainings, lastTrainingMap);
 
         var result = _mapper.MapList<PlanDay, PlanDayBaseInfoDto>(planDays, mappingContext);
 

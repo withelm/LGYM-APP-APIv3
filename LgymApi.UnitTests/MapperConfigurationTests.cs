@@ -1,4 +1,5 @@
 using LgymApi.Api;
+using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,5 +28,19 @@ public sealed class MapperConfigurationTests
             Assert.That(concrete!.RegisteredMappings.Count, Is.GreaterThan(0), "No mappings registered");
             Assert.DoesNotThrow(concrete.ValidateMappings, "Mapping validation failed");
         });
+    }
+
+    [Test]
+    public void MappingContext_Should_Reject_Unknown_Key()
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+
+        var context = mapper.CreateContext();
+
+        Assert.Throws<InvalidOperationException>(() => context.Set(new ContextKey<string>("Unknown.Key"), "value"));
     }
 }

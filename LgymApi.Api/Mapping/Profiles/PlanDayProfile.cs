@@ -7,12 +7,19 @@ namespace LgymApi.Api.Mapping.Profiles;
 
 public sealed class PlanDayProfile : IMappingProfile
 {
-    private const string ExerciseMapContextKey = "exerciseMap";
-    private const string ExercisesContextKey = "planDayExercises";
-    private const string LastTrainingMapContextKey = "planDayLastTrainings";
+    internal static class Keys
+    {
+        internal static readonly ContextKey<IReadOnlyDictionary<Guid, Exercise>> ExerciseMap = new("PlanDay.ExerciseMap");
+        internal static readonly ContextKey<IReadOnlyList<PlanDayExercise>> PlanDayExercises = new("PlanDay.Exercises");
+        internal static readonly ContextKey<IReadOnlyDictionary<Guid, DateTime?>> PlanDayLastTrainings = new("PlanDay.LastTrainings");
+    }
 
     public void Configure(MappingConfiguration configuration)
     {
+        configuration.AllowContextKey(Keys.ExerciseMap);
+        configuration.AllowContextKey(Keys.PlanDayExercises);
+        configuration.AllowContextKey(Keys.PlanDayLastTrainings);
+
         configuration.CreateMap<PlanDay, PlanDayChooseDto>((source, _) => new PlanDayChooseDto
         {
             Id = source.Id.ToString(),
@@ -21,8 +28,8 @@ public sealed class PlanDayProfile : IMappingProfile
 
         configuration.CreateMap<PlanDay, PlanDayVmDto>((source, context) =>
         {
-            var exercises = context?.Get<IReadOnlyList<PlanDayExercise>>(ExercisesContextKey) ?? Array.Empty<PlanDayExercise>();
-            var exerciseMap = context?.Get<IReadOnlyDictionary<Guid, Exercise>>(ExerciseMapContextKey);
+            var exercises = context?.Get(Keys.PlanDayExercises) ?? Array.Empty<PlanDayExercise>();
+            var exerciseMap = context?.Get(Keys.ExerciseMap);
 
             var vmExercises = exercises
                 .Where(e => e.PlanDayId == source.Id)
@@ -44,8 +51,8 @@ public sealed class PlanDayProfile : IMappingProfile
 
         configuration.CreateMap<PlanDay, PlanDayBaseInfoDto>((source, context) =>
         {
-            var exercises = context?.Get<IReadOnlyList<PlanDayExercise>>(ExercisesContextKey) ?? Array.Empty<PlanDayExercise>();
-            var lastTrainingMap = context?.Get<IReadOnlyDictionary<Guid, DateTime?>>(LastTrainingMapContextKey);
+            var exercises = context?.Get(Keys.PlanDayExercises) ?? Array.Empty<PlanDayExercise>();
+            var lastTrainingMap = context?.Get(Keys.PlanDayLastTrainings);
 
             var filteredExercises = exercises.Where(e => e.PlanDayId == source.Id).ToList();
             var lastTrainingDate = lastTrainingMap != null && lastTrainingMap.TryGetValue(source.Id, out var date)
