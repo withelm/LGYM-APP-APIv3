@@ -43,4 +43,15 @@ public sealed class MapperConfigurationTests
 
         Assert.Throws<InvalidOperationException>(() => context.Set(new ContextKey<string>("Unknown.Key"), "value"));
     }
+
+    [Test]
+    public void Duplicate_ContextKeys_Should_Throw()
+    {
+        var configuration = new MappingConfiguration();
+        var key = new ContextKey<string>("Duplicate.Key");
+
+        configuration.AllowContextKey(key);
+
+        Assert.Throws<InvalidOperationException>(() => configuration.AllowContextKey(key));
+    }
 }

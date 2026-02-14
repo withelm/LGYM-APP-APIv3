@@ -21,7 +21,10 @@ public sealed class MappingConfiguration
 
     public void AllowContextKey<T>(ContextKey<T> key)
     {
-        _allowedContextKeys.Add(key.Name);
+        if (!_allowedContextKeys.Add(key.Name))
+        {
+            throw new InvalidOperationException($"Context key '{key.Name}' is already registered.");
+        }
     }
 
     internal bool TryGetMapping((Type Source, Type Target) key, out Func<object, MappingContext?, object>? mapper)
