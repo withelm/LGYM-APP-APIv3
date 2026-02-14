@@ -1,4 +1,5 @@
 using LgymApi.Application.Services;
+using LgymApi.Domain.Services;
 
 namespace LgymApi.UnitTests;
 
@@ -12,6 +13,7 @@ public sealed class RankServiceTests
     {
         var ranks = _service.GetRanks();
 
+        Assert.That(ranks, Is.SameAs(RankDefinitions.All));
         Assert.That(ranks, Has.Count.EqualTo(10));
         Assert.That(ranks[0].Name, Is.EqualTo("Junior 1"));
         Assert.That(ranks[0].NeedElo, Is.EqualTo(0));
