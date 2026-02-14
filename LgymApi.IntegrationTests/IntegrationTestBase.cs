@@ -42,6 +42,20 @@ public abstract class IntegrationTestBase : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    // Default admin credentials for tests
+    protected const string AdminName = "testadmin";
+    protected const string AdminEmail = "testadmin@example.com";
+    protected const string AdminPassword = "AdminPass123!";
+
+    protected async Task<User> SeedAdminAsync()
+    {
+        return await SeedUserAsync(
+            name: AdminName,
+            email: AdminEmail,
+            password: AdminPassword,
+            isAdmin: true);
+    }
+
     protected async Task<User> SeedUserAsync(
         string name = "testuser",
         string email = "test@example.com",
@@ -137,5 +151,150 @@ public abstract class IntegrationTestBase : IDisposable
         var json = System.Text.Json.JsonSerializer.Serialize(value, options);
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         return Client.PostAsync(requestUri, content);
+    }
+
+    protected async Task<(Guid UserId, string Token)> RegisterUserViaEndpointAsync(
+        string name = "testuser",
+        string email = "test@example.com",
+        string password = "password123",
+        bool isVisibleInRanking = true)
+    {
+        var registerRequest = new
+        {
+            name,
+            email,
+            password,
+            cpassword = password,
+            isVisibleInRanking
+        };
+
+        await Client.PostAsJsonAsync("/api/register", registerRequest);
+
+        var loginRequest = new { name, password };
+        var loginResponse = await Client.PostAsJsonAsync("/api/login", loginRequest);
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+
+        return (Guid.Parse(loginBody!.User!.Id!), loginBody.Token!);
+    }
+
+    protected async Task<Guid> CreateGymViaEndpointAsync(Guid userId, string name = "Test Gym")
+    {
+        SetAuthorizationHeader(userId);
+        var request = new { name, address = (string?)null };
+        await Client.PostAsJsonAsync($"/api/gym/{userId}/addGym", request);
+
+        var gymsResponse = await Client.GetAsync($"/api/gym/{userId}/getGyms");
+        var gyms = await gymsResponse.Content.ReadFromJsonAsync<List<GymResult>>();
+        return Guid.Parse(gyms!.First(g => g.Name == name).Id!);
+    }
+
+    protected async Task<Guid> CreatePlanViaEndpointAsync(Guid userId, string name = "Test Plan")
+    {
+        SetAuthorizationHeader(userId);
+        var request = new { name };
+        await Client.PostAsJsonAsync($"/api/{userId}/createPlan", request);
+
+        var plansResponse = await Client.GetAsync($"/api/{userId}/getPlansList");
+        var plans = await plansResponse.Content.ReadFromJsonAsync<List<PlanResult>>();
+        return Guid.Parse(plans!.First(p => p.Name == name).Id!);
+    }
+
+    protected async Task<Guid> CreateExerciseViaEndpointAsync(Guid userId, string name = "Test Exercise", string bodyPart = "Chest")
+    {
+        SetAuthorizationHeader(userId);
+        var request = new { name, bodyPart, description = "Test description" };
+        await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/addUserExercise", request);
+
+        var exercisesResponse = await Client.GetAsync($"/api/exercise/{userId}/getAllUserExercises");
+        var exercises = await exercisesResponse.Content.ReadFromJsonAsync<List<ExerciseResult>>();
+        return Guid.Parse(exercises!.First(e => e.Name == name).Id!);
+    }
+
+    protected async Task<Guid> CreateGlobalExerciseViaEndpointAsync(Guid userId, string name = "Global Exercise", string bodyPart = "Chest")
+    {
+        SetAuthorizationHeader(userId);
+        var request = new { name, bodyPart, description = "Global exercise description" };
+        await Client.PostAsJsonAsync("/api/exercise/addExercise", request);
+
+        var exercisesResponse = await Client.GetAsync("/api/exercise/getAllGlobalExercises");
+        var exercises = await exercisesResponse.Content.ReadFromJsonAsync<List<ExerciseResult>>();
+        return Guid.Parse(exercises!.First(e => e.Name == name).Id!);
+    }
+
+    protected async Task<Guid> CreatePlanDayViaEndpointAsync(Guid userId, Guid planId, string name, List<PlanDayExerciseInput> exercises)
+    {
+        SetAuthorizationHeader(userId);
+        var request = new { name, exercises };
+        await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", request);
+
+        var planDaysResponse = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
+        var planDays = await planDaysResponse.Content.ReadFromJsonAsync<List<PlanDayResult>>();
+        return Guid.Parse(planDays!.First(pd => pd.Name == name).Id!);
+    }
+
+    protected sealed class LoginResult
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("token")]
+        public string? Token { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("req")]
+        public UserResult? User { get; set; }
+    }
+
+    protected sealed class UserResult
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("_id")]
+        public string? Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string? Name { get; set; }
+    }
+
+    protected sealed class GymResult
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("_id")]
+        public string? Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string? Name { get; set; }
+    }
+
+    protected sealed class PlanResult
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("_id")]
+        public string? Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string? Name { get; set; }
+    }
+
+    protected sealed class ExerciseResult
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("_id")]
+        public string? Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string? Name { get; set; }
+    }
+
+    protected sealed class PlanDayResult
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("_id")]
+        public string? Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string? Name { get; set; }
+    }
+
+    protected sealed class PlanDayExerciseInput
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("exercise")]
+        public string? ExerciseId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("series")]
+        public int Series { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("reps")]
+        public string Reps { get; set; } = string.Empty;
     }
 }

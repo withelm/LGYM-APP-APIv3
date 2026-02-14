@@ -1,0 +1,300 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using FluentAssertions;
+
+namespace LgymApi.IntegrationTests;
+
+[TestFixture]
+public sealed class ExerciseScoresTests : IntegrationTestBase
+{
+    [Test]
+    public async Task GetExerciseScoresChartData_WithNoScores_ReturnsEmptyList()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "chartuser",
+            email: "chart@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Chart Exercise", "Chest");
+
+        var request = new { exerciseId = exerciseId.ToString() };
+        var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{userId}/getExerciseScoresChartData", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<ChartDataEntry>>();
+        body.Should().NotBeNull();
+        body.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task GetExerciseScoresChartData_WithScores_ReturnsChartData()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "chartuser2",
+            email: "chart2@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Chart Exercise 2", "Chest");
+        var gymId = await CreateGymViaEndpointAsync(userId, "Chart Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Chart Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Chart Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        var trainingRequest = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 50.0, unit = "kg" },
+                new { exercise = exerciseId.ToString(), series = 2, reps = 8, weight = 55.0, unit = "kg" }
+            }
+        };
+
+        await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", trainingRequest);
+
+        var chartRequest = new { exerciseId = exerciseId.ToString() };
+        var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{userId}/getExerciseScoresChartData", chartRequest);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<ChartDataEntry>>();
+        body.Should().NotBeNull();
+        body.Should().HaveCountGreaterThanOrEqualTo(1);
+    }
+
+    [Test]
+    public async Task GetExerciseScoresChartData_WithInvalidUserId_ReturnsNotFound()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "authuser",
+            email: "auth@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Auth Exercise", "Chest");
+
+        var nonExistentId = Guid.NewGuid();
+        var request = new { exerciseId = exerciseId.ToString() };
+        var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{nonExistentId}/getExerciseScoresChartData", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task GetLastExerciseScores_WithNoScores_ReturnsNullScores()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "lastscoresuser",
+            email: "lastscores@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "LastScores Exercise", "Back");
+
+        var request = new
+        {
+            exerciseId = exerciseId.ToString(),
+            exerciseName = "LastScores Exercise",
+            series = 3
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/getLastExerciseScores", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<LastExerciseScoresResponse>();
+        body.Should().NotBeNull();
+        body!.ExerciseId.Should().Be(exerciseId.ToString());
+        body.SeriesScores.Should().HaveCount(3);
+        body.SeriesScores.Should().AllSatisfy(s => s.Score.Should().BeNull());
+    }
+
+    [Test]
+    public async Task GetLastExerciseScores_WithExistingScores_ReturnsPreviousScores()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "lastscoresuser2",
+            email: "lastscores2@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "LastScores Exercise 2", "Back");
+        var gymId = await CreateGymViaEndpointAsync(userId, "LastScores Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "LastScores Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "LastScores Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        var trainingRequest = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 60.0, unit = "kg" },
+                new { exercise = exerciseId.ToString(), series = 2, reps = 8, weight = 65.0, unit = "kg" }
+            }
+        };
+
+        await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", trainingRequest);
+
+        var request = new
+        {
+            exerciseId = exerciseId.ToString(),
+            exerciseName = "LastScores Exercise 2",
+            series = 3,
+            gymId = gymId.ToString()
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/getLastExerciseScores", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<LastExerciseScoresResponse>();
+        body.Should().NotBeNull();
+        body!.SeriesScores[0].Score.Should().NotBeNull();
+        body.SeriesScores[0].Score!.Weight.Should().Be(60.0);
+    }
+
+    [Test]
+    public async Task GetExerciseScoresFromTrainingByExercise_WithNoScores_ReturnsEmptyList()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "historyuser",
+            email: "history@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "History Exercise", "Quads");
+
+        var request = new { exerciseId = exerciseId.ToString() };
+        var response = await Client.PostAsJsonAsync("/api/exercise/getExerciseScoresFromTrainingByExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<ExerciseHistoryItem>>();
+        body.Should().NotBeNull();
+        body.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task GetExerciseScoresFromTrainingByExercise_WithScores_ReturnsHistory()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "historyuser2",
+            email: "history2@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "History Exercise 2", "Quads");
+        var gymId = await CreateGymViaEndpointAsync(userId, "History Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "History Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "History Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        var trainingRequest = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 100.0, unit = "kg" }
+            }
+        };
+
+        await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", trainingRequest);
+
+        var request = new { exerciseId = exerciseId.ToString() };
+        var response = await Client.PostAsJsonAsync("/api/exercise/getExerciseScoresFromTrainingByExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<ExerciseHistoryItem>>();
+        body.Should().NotBeNull();
+        body.Should().HaveCountGreaterThanOrEqualTo(1);
+    }
+
+    private sealed class ChartDataEntry
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("value")]
+        public double Value { get; set; }
+
+        [JsonPropertyName("date")]
+        public string Date { get; set; } = string.Empty;
+    }
+
+    private sealed class LastExerciseScoresResponse
+    {
+        [JsonPropertyName("exerciseId")]
+        public string ExerciseId { get; set; } = string.Empty;
+
+        [JsonPropertyName("exerciseName")]
+        public string ExerciseName { get; set; } = string.Empty;
+
+        [JsonPropertyName("seriesScores")]
+        public List<SeriesScoreItem> SeriesScores { get; set; } = new();
+    }
+
+    private sealed class SeriesScoreItem
+    {
+        [JsonPropertyName("series")]
+        public int Series { get; set; }
+
+        [JsonPropertyName("score")]
+        public ScoreItem? Score { get; set; }
+    }
+
+    private sealed class ScoreItem
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("reps")]
+        public int Reps { get; set; }
+
+        [JsonPropertyName("weight")]
+        public double Weight { get; set; }
+    }
+
+    private sealed class ExerciseHistoryItem
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("date")]
+        public DateTime Date { get; set; }
+
+        [JsonPropertyName("gymName")]
+        public string GymName { get; set; } = string.Empty;
+    }
+}

@@ -3,6 +3,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using System;
 using System.Security.Cryptography;
 
@@ -71,8 +72,12 @@ public sealed class PlanRepository : IPlanRepository
             .Where(pd => pd.PlanId == planToCopy.Id && !pd.IsDeleted)
             .ToListAsync(cancellationToken);
 
-        // 3. Begin transaction for atomicity
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        // 3. Begin transaction for atomicity (skip for in-memory provider)
+        IDbContextTransaction? transaction = null;
+        if (!string.Equals(_dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal))
+        {
+            transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        }
 
         try
         {
@@ -157,14 +162,27 @@ public sealed class PlanRepository : IPlanRepository
             }
 
             // 7. Commit transaction
-            await transaction.CommitAsync(cancellationToken);
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
 
             return newPlan;
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
             throw;
+        }
+        finally
+        {
+            if (transaction != null)
+            {
+                await transaction.DisposeAsync();
+            }
         }
     }
 
