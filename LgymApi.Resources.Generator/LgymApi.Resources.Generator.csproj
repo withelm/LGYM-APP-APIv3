@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!-- Prevent LSP from locking the DLL during Debug builds -->
+    <CopyBuildOutputToOutputDirectory Condition="'$(Configuration)' == 'Debug'">false</CopyBuildOutputToOutputDirectory>
   </PropertyGroup>
 
   <ItemGroup>
