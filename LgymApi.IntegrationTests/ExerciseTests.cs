@@ -350,4 +350,128 @@ public sealed class ExerciseTests : IntegrationTestBase
         [JsonPropertyName("displayName")]
         public string DisplayName { get; set; } = string.Empty;
     }
+
+    [Test]
+    public async Task AddGlobalTranslation_AsAdmin_AddsTranslation()
+    {
+        var admin = await SeedAdminAsync();
+        SetAuthorizationHeader(admin.Id);
+
+        var exercise = await SeedExerciseAsync(null, "Global Push Ups", "Chest");
+
+        var request = new
+        {
+            exerciseId = exercise.Id.ToString(),
+            culture = "pl",
+            name = "Pompki"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Updated");
+    }
+
+    [Test]
+    public async Task AddGlobalTranslation_AsNonAdmin_ReturnsForbidden()
+    {
+        var admin = await SeedAdminAsync();
+        var user = await SeedUserAsync(name: "normaluser", email: "normal@example.com");
+        
+        SetAuthorizationHeader(admin.Id);
+        var exercise = await SeedExerciseAsync(null, "Global Squats", "Quads");
+        
+        SetAuthorizationHeader(user.Id);
+
+        var request = new
+        {
+            exerciseId = exercise.Id.ToString(),
+            culture = "pl",
+            name = "Przysiady"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{user.Id}/addGlobalTranslation", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task AddGlobalTranslation_ForUserExercise_ReturnsForbidden()
+    {
+        var admin = await SeedAdminAsync();
+        SetAuthorizationHeader(admin.Id);
+
+        var exercise = await SeedExerciseAsync(admin.Id, "Admin User Exercise", "Back");
+
+        var request = new
+        {
+            exerciseId = exercise.Id.ToString(),
+            culture = "pl",
+            name = "Cwiczenie uzytkownika"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task AddGlobalTranslation_WithInvalidCulture_ReturnsBadRequest()
+    {
+        var admin = await SeedAdminAsync();
+        SetAuthorizationHeader(admin.Id);
+
+        var exercise = await SeedExerciseAsync(null, "Global Deadlift", "Back");
+
+        var request = new
+        {
+            exerciseId = exercise.Id.ToString(),
+            culture = "invalid-culture-code",
+            name = "Martwy ciag"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task AddGlobalTranslation_WithMissingFields_ReturnsBadRequest()
+    {
+        var admin = await SeedAdminAsync();
+        SetAuthorizationHeader(admin.Id);
+
+        var request = new
+        {
+            exerciseId = "",
+            culture = "pl",
+            name = "Test"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task AddGlobalTranslation_WithNonExistentExercise_ReturnsNotFound()
+    {
+        var admin = await SeedAdminAsync();
+        SetAuthorizationHeader(admin.Id);
+
+        var nonExistentId = Guid.NewGuid();
+        var request = new
+        {
+            exerciseId = nonExistentId.ToString(),
+            culture = "pl",
+            name = "Test"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
 }

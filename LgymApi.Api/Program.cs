@@ -79,37 +79,40 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddRateLimiter(options =>
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    builder.Services.AddRateLimiter(options =>
     {
-        var path = context.Request.Path.Value ?? string.Empty;
-        var isAuth = path.Contains("/login", StringComparison.OrdinalIgnoreCase)
-                     || path.Contains("/register", StringComparison.OrdinalIgnoreCase);
-
-        if (isAuth)
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         {
-            var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+            var path = context.Request.Path.Value ?? string.Empty;
+            var isAuth = path.Contains("/login", StringComparison.OrdinalIgnoreCase)
+                         || path.Contains("/register", StringComparison.OrdinalIgnoreCase);
+
+            if (isAuth)
             {
-                PermitLimit = 20,
-                Window = TimeSpan.FromMinutes(15)
+                var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 20,
+                    Window = TimeSpan.FromMinutes(15)
+                });
+            }
+
+            var userId = context.User.FindFirst("userId")?.Value;
+            var key = string.IsNullOrWhiteSpace(userId)
+                ? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"
+                : userId;
+
+            return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1)
             });
-        }
-
-        var userId = context.User.FindFirst("userId")?.Value;
-        var key = string.IsNullOrWhiteSpace(userId)
-            ? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"
-            : userId;
-
-        return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 10,
-            Window = TimeSpan.FromMinutes(1)
         });
     });
-});
+}
 
 var supportedCultures = new[]
 {
@@ -141,7 +144,10 @@ app.UseRequestLocalization(localizationOptions);
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseRateLimiter();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseRateLimiter();
+}
 
 app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
 

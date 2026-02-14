@@ -220,4 +220,137 @@ public sealed class PlanTests : IntegrationTestBase
         [JsonPropertyName("isActive")]
         public bool IsActive { get; set; }
     }
+
+    private sealed class ShareCodeResponse
+    {
+        [JsonPropertyName("shareCode")]
+        public string ShareCode { get; set; } = string.Empty;
+    }
+
+    private sealed class CopiedPlanResponse
+    {
+        [JsonPropertyName("id")]
+        public Guid Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("isActive")]
+        public bool IsActive { get; set; }
+
+        [JsonPropertyName("userId")]
+        public Guid UserId { get; set; }
+    }
+
+    [Test]
+    public async Task GenerateShareCode_WithValidPlan_ReturnsShareCode()
+    {
+        var user = await SeedUserAsync(name: "shareuser", email: "share@example.com");
+        var plan = await SeedPlanAsync(user.Id, "Shareable Plan");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
+        var response = await Client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<ShareCodeResponse>();
+        body.Should().NotBeNull();
+        body!.ShareCode.Should().NotBeNullOrWhiteSpace();
+        body.ShareCode.Should().HaveLength(10);
+    }
+
+    [Test]
+    public async Task GenerateShareCode_WithInvalidPlanId_ReturnsNotFound()
+    {
+        var user = await SeedUserAsync(name: "shareuser2", email: "share2@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var nonExistentPlanId = Guid.NewGuid();
+        var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/{nonExistentPlanId}/share");
+        var response = await Client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task GenerateShareCode_WithOtherUsersPlan_ReturnsForbidden()
+    {
+        var user1 = await SeedUserAsync(name: "shareuser3", email: "share3@example.com");
+        var user2 = await SeedUserAsync(name: "shareuser4", email: "share4@example.com");
+        var plan = await SeedPlanAsync(user2.Id, "Other User Plan");
+        SetAuthorizationHeader(user1.Id);
+
+        var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
+        var response = await Client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task CopyPlan_WithValidShareCode_CopiesPlan()
+    {
+        var user1 = await SeedUserAsync(name: "copyuser1", email: "copy1@example.com");
+        var user2 = await SeedUserAsync(name: "copyuser2", email: "copy2@example.com");
+        var plan = await SeedPlanAsync(user1.Id, "Plan To Copy");
+        
+        SetAuthorizationHeader(user1.Id);
+        var shareRequest = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
+        var shareResponse = await Client.SendAsync(shareRequest);
+        var shareBody = await shareResponse.Content.ReadFromJsonAsync<ShareCodeResponse>();
+        var shareCode = shareBody!.ShareCode;
+
+        SetAuthorizationHeader(user2.Id);
+        var copyRequest = new { shareCode };
+        var copyResponse = await Client.PostAsJsonAsync("/api/copy", copyRequest);
+
+        copyResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var copyBody = await copyResponse.Content.ReadFromJsonAsync<CopiedPlanResponse>();
+        copyBody.Should().NotBeNull();
+        copyBody!.Name.Should().Be("Plan To Copy");
+        copyBody.UserId.Should().Be(user2.Id);
+        copyBody.IsActive.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task CopyPlan_WithInvalidShareCode_ReturnsNotFound()
+    {
+        var user = await SeedUserAsync(name: "copyuser3", email: "copy3@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var copyRequest = new { shareCode = "INVALID1" };
+        var copyResponse = await Client.PostAsJsonAsync("/api/copy", copyRequest);
+
+        copyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task CopyPlan_WithoutAuth_ReturnsUnauthorized()
+    {
+        ClearAuthorizationHeader();
+
+        var copyRequest = new { shareCode = "TESTCODE" };
+        var copyResponse = await Client.PostAsJsonAsync("/api/copy", copyRequest);
+
+        copyResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Test]
+    public async Task GenerateShareCode_CalledTwice_ReturnsSameCode()
+    {
+        var user = await SeedUserAsync(name: "sharetwice", email: "sharetwice@example.com");
+        var plan = await SeedPlanAsync(user.Id, "Double Share Plan");
+        SetAuthorizationHeader(user.Id);
+
+        var request1 = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
+        var response1 = await Client.SendAsync(request1);
+        var body1 = await response1.Content.ReadFromJsonAsync<ShareCodeResponse>();
+
+        var request2 = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
+        var response2 = await Client.SendAsync(request2);
+        var body2 = await response2.Content.ReadFromJsonAsync<ShareCodeResponse>();
+
+        body1!.ShareCode.Should().Be(body2!.ShareCode);
+    }
 }
