@@ -2,6 +2,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Security.Cryptography;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -44,6 +45,23 @@ public sealed class PlanRepository : IPlanRepository
 
     public async Task SetActivePlanAsync(Guid userId, Guid planId, CancellationToken cancellationToken = default)
     {
+        var providerName = _dbContext.Database.ProviderName;
+        if (!string.IsNullOrWhiteSpace(providerName)
+            && providerName.Contains("InMemory", StringComparison.OrdinalIgnoreCase))
+        {
+            var plans = await _dbContext.Plans
+                .Where(p => p.UserId == userId)
+                .ToListAsync(cancellationToken);
+
+            foreach (var plan in plans)
+            {
+                plan.IsActive = plan.Id == planId;
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
         await _dbContext.Plans
             .Where(p => p.UserId == userId && p.Id != planId)
             .ExecuteUpdateAsync(update => update.SetProperty(p => p.IsActive, false), cancellationToken);

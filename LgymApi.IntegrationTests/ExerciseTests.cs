@@ -1,0 +1,353 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using FluentAssertions;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace LgymApi.IntegrationTests;
+
+[TestFixture]
+public sealed class ExerciseTests : IntegrationTestBase
+{
+    [Test]
+    public async Task AddExercise_WithValidData_CreatesGlobalExercise()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new
+        {
+            name = "Bench Press",
+            bodyPart = "Chest",
+            description = "Classic chest exercise"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/exercise/addExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Created");
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Name == "Bench Press" && e.UserId == null);
+        exercise.Should().NotBeNull();
+        exercise!.BodyPart.ToString().Should().Be("Chest");
+        exercise.IsDeleted.Should().BeFalse();
+    }
+
+    [Test]
+    public async Task AddUserExercise_WithValidData_CreatesUserExercise()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new
+        {
+            name = "Custom Squat",
+            bodyPart = "Quads",
+            description = "Custom leg exercise"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{user.Id}/addUserExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Name == "Custom Squat" && e.UserId == user.Id);
+        exercise.Should().NotBeNull();
+        exercise!.BodyPart.ToString().Should().Be("Quads");
+    }
+
+    [Test]
+    public async Task AddExercise_WithoutName_ReturnsBadRequest()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new
+        {
+            name = "",
+            bodyPart = "Chest"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/exercise/addExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task AddExercise_WithInvalidBodyPart_ReturnsBadRequest()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new
+        {
+            name = "Test Exercise",
+            bodyPart = "InvalidBodyPart"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/exercise/addExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task DeleteExercise_AsOwner_MarksAsDeleted()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        var exercise = await SeedExerciseAsync(user.Id, "User Exercise", "Chest");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new Dictionary<string, string>
+        {
+            { "id", exercise.Id.ToString() }
+        };
+
+        var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/deleteExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var deletedExercise = await db.Exercises.FirstOrDefaultAsync(e => e.Id == exercise.Id);
+        deletedExercise.Should().NotBeNull();
+        deletedExercise!.IsDeleted.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task DeleteExercise_AsAdmin_CanDeleteAnyExercise()
+    {
+        var admin = await SeedUserAsync(name: "admin", email: "admin@example.com", isAdmin: true);
+        var exercise = await SeedExerciseAsync(null, "Global Exercise", "Chest");
+        SetAuthorizationHeader(admin.Id);
+
+        var request = new Dictionary<string, string>
+        {
+            { "id", exercise.Id.ToString() }
+        };
+
+        var response = await Client.PostAsJsonAsync($"/api/exercise/{admin.Id}/deleteExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var deletedExercise = await db.Exercises.FirstOrDefaultAsync(e => e.Id == exercise.Id);
+        deletedExercise!.IsDeleted.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task DeleteExercise_NonOwnerNonAdmin_ReturnsForbidden()
+    {
+        var user1 = await SeedUserAsync(name: "user1", email: "user1@example.com");
+        var user2 = await SeedUserAsync(name: "user2", email: "user2@example.com");
+        var exercise = await SeedExerciseAsync(user2.Id, "User2 Exercise", "Chest");
+        SetAuthorizationHeader(user1.Id);
+
+        var request = new Dictionary<string, string>
+        {
+            { "id", exercise.Id.ToString() }
+        };
+
+        var response = await Client.PostAsJsonAsync($"/api/exercise/{user1.Id}/deleteExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task UpdateExercise_WithValidData_UpdatesExercise()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        var exercise = await SeedExerciseAsync(user.Id, "Old Name", "Chest");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new
+        {
+            _id = exercise.Id.ToString(),
+            name = "New Name",
+            bodyPart = "Back",
+            description = "Updated description"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var updatedExercise = await db.Exercises.FirstOrDefaultAsync(e => e.Id == exercise.Id);
+        updatedExercise.Should().NotBeNull();
+        updatedExercise!.Name.Should().Be("New Name");
+        updatedExercise.BodyPart.ToString().Should().Be("Back");
+        updatedExercise.Description.Should().Be("Updated description");
+    }
+
+    [Test]
+    public async Task GetAllGlobalExercises_ReturnsOnlyGlobalExercises()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        await SeedExerciseAsync(null, "Global Exercise 1", "Chest");
+        await SeedExerciseAsync(null, "Global Exercise 2", "Back");
+        await SeedExerciseAsync(user.Id, "User Exercise", "Legs");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.GetAsync("/api/exercise/getAllGlobalExercises");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
+        body.Should().NotBeNull();
+        body.Should().HaveCount(2);
+        body!.Select(e => e.Name).Should().Contain(new[] { "Global Exercise 1", "Global Exercise 2" });
+    }
+
+    [Test]
+    public async Task GetAllUserExercises_ReturnsOnlyUserExercises()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        await SeedExerciseAsync(null, "Global Exercise", "Chest");
+        await SeedExerciseAsync(user.Id, "User Exercise 1", "Back");
+        await SeedExerciseAsync(user.Id, "User Exercise 2", "Legs");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.GetAsync($"/api/exercise/{user.Id}/getAllUserExercises");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
+        body.Should().NotBeNull();
+        body.Should().HaveCount(2);
+        body!.Select(e => e.Name).Should().Contain(new[] { "User Exercise 1", "User Exercise 2" });
+    }
+
+    [Test]
+    public async Task GetAllExercises_ReturnsGlobalAndUserExercises()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        await SeedExerciseAsync(null, "Global Exercise", "Chest");
+        await SeedExerciseAsync(user.Id, "User Exercise", "Back");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.GetAsync($"/api/exercise/{user.Id}/getAllExercises");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
+        body.Should().NotBeNull();
+        body.Should().HaveCount(2);
+        body!.Select(e => e.Name).Should().Contain(new[] { "Global Exercise", "User Exercise" });
+    }
+
+    [Test]
+    public async Task GetExerciseByBodyPart_FiltersCorrectly()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        await SeedExerciseAsync(null, "Chest Exercise", "Chest");
+        await SeedExerciseAsync(null, "Back Exercise", "Back");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new Dictionary<string, string>
+        {
+            { "bodyPart", "Chest" }
+        };
+
+        var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/getExerciseByBodyPart", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
+        body.Should().NotBeNull();
+        body.Should().HaveCount(1);
+        body![0].Name.Should().Be("Chest Exercise");
+    }
+
+    [Test]
+    public async Task GetExercise_WithValidId_ReturnsExercise()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        var exercise = await SeedExerciseAsync(user.Id, "Test Exercise", "Chest");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.GetAsync($"/api/exercise/{exercise.Id}/getExercise");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<ExerciseResponse>();
+        body.Should().NotBeNull();
+        body!.Name.Should().Be("Test Exercise");
+        body.BodyPart.Should().NotBeNull();
+        body.BodyPart!.Name.Should().Be("Chest");
+    }
+
+    private async Task<Exercise> SeedExerciseAsync(Guid? userId, string name, string bodyPart, bool isDeleted = false)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        Enum.TryParse<BodyParts>(bodyPart, out var bodyPartEnum);
+
+        var exercise = new Exercise
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Name = name,
+            BodyPart = bodyPartEnum,
+            IsDeleted = isDeleted
+        };
+
+        db.Exercises.Add(exercise);
+        await db.SaveChangesAsync();
+
+        return exercise;
+    }
+
+    private sealed class MessageResponse
+    {
+        [JsonPropertyName("msg")]
+        public string Message { get; set; } = string.Empty;
+    }
+
+    private sealed class ExerciseResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("bodyPart")]
+        public BodyPartLookup? BodyPart { get; set; }
+
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        [JsonPropertyName("image")]
+        public string? Image { get; set; }
+
+        [JsonPropertyName("userId")]
+        public string? UserId { get; set; }
+    }
+
+    private sealed class BodyPartLookup
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("displayName")]
+        public string DisplayName { get; set; } = string.Empty;
+    }
+}

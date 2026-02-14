@@ -148,3 +148,6 @@ app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
 app.MapControllers();
 
 app.Run();
+
+// For WebApplicationFactory in integration tests
+public partial class Program { }

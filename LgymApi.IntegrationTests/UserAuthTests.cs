@@ -1,0 +1,379 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using FluentAssertions;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace LgymApi.IntegrationTests;
+
+[TestFixture]
+public sealed class UserAuthTests : IntegrationTestBase
+{
+    [Test]
+    public async Task Register_WithValidData_ReturnsCreatedAndCreatesUserWithElo()
+    {
+        var request = new
+        {
+            name = "newuser",
+            email = "newuser@example.com",
+            password = "password123",
+            cpassword = "password123",
+            isVisibleInRanking = true
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/register", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Created");
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "newuser");
+        user.Should().NotBeNull();
+        user!.Email.Should().Be("newuser@example.com");
+        user.ProfileRank.Should().Be("Junior 1");
+        user.IsVisibleInRanking.Should().BeTrue();
+
+        var eloEntry = await db.EloRegistries.FirstOrDefaultAsync(e => e.UserId == user.Id);
+        eloEntry.Should().NotBeNull();
+        eloEntry!.Elo.Should().Be(1000);
+    }
+
+    [Test]
+    public async Task Register_WithEmptyName_ReturnsError()
+    {
+        var request = new
+        {
+            name = "",
+            email = "test@example.com",
+            password = "password123",
+            cpassword = "password123"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/register", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Name is required and must contain at least one character.");
+    }
+
+    [Test]
+    public async Task Register_WithInvalidEmail_ReturnsError()
+    {
+        var request = new
+        {
+            name = "testuser",
+            email = "invalid-email",
+            password = "password123",
+            cpassword = "password123"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/register", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("This email address is not valid.");
+    }
+
+    [Test]
+    public async Task Register_WithShortPassword_ReturnsError()
+    {
+        var request = new
+        {
+            name = "testuser",
+            email = "test@example.com",
+            password = "12345",
+            cpassword = "12345"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/register", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Password must be at least six characters long.");
+    }
+
+    [Test]
+    public async Task Register_WithMismatchedPasswords_ReturnsError()
+    {
+        var request = new
+        {
+            name = "testuser",
+            email = "test@example.com",
+            password = "password123",
+            cpassword = "differentpassword"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/register", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Passwords must be the same.");
+    }
+
+    [Test]
+    public async Task Register_WithExistingName_ReturnsError()
+    {
+        await SeedUserAsync(name: "existinguser", email: "existing@example.com");
+
+        var request = new
+        {
+            name = "existinguser",
+            email = "newemail@example.com",
+            password = "password123",
+            cpassword = "password123"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/register", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("A user with that name already exists.");
+    }
+
+    [Test]
+    public async Task Register_WithExistingEmail_ReturnsError()
+    {
+        await SeedUserAsync(name: "existinguser", email: "existing@example.com");
+
+        var request = new
+        {
+            name = "newuser",
+            email = "existing@example.com",
+            password = "password123",
+            cpassword = "password123"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/register", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("A user with that email already exists.");
+    }
+
+    [Test]
+    public async Task Login_WithValidCredentials_ReturnsTokenAndUserInfo()
+    {
+        await SeedUserAsync(name: "loginuser", email: "login@example.com", password: "mypassword", elo: 1500);
+
+        var request = new
+        {
+            name = "loginuser",
+            password = "mypassword"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/login", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        body.Should().NotBeNull();
+        body!.Token.Should().NotBeNullOrWhiteSpace();
+        body.User.Should().NotBeNull();
+        body.User!.Name.Should().Be("loginuser");
+        body.User.Email.Should().Be("login@example.com");
+        body.User.Elo.Should().Be(1500);
+        body.User.ProfileRank.Should().Be("Junior 1");
+        body.User.IsVisibleInRanking.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Login_WithInvalidPassword_ReturnsUnauthorized()
+    {
+        await SeedUserAsync(name: "loginuser", email: "login@example.com", password: "correctpassword");
+
+        var request = new
+        {
+            name = "loginuser",
+            password = "wrongpassword"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/login", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Unauthorized");
+    }
+
+    [Test]
+    public async Task Login_WithNonExistentUser_ReturnsUnauthorized()
+    {
+        var request = new
+        {
+            name = "nonexistent",
+            password = "somepassword"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/login", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Unauthorized");
+    }
+
+    [Test]
+    public async Task Login_WithEmptyCredentials_ReturnsUnauthorized()
+    {
+        var request = new
+        {
+            name = "",
+            password = ""
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/login", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Unauthorized");
+    }
+
+    [Test]
+    public async Task CheckToken_WithValidToken_ReturnsUserInfo()
+    {
+        var user = await SeedUserAsync(name: "tokenuser", email: "token@example.com", elo: 2000);
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.GetAsync("/api/checkToken");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<UserInfoResponse>();
+        body.Should().NotBeNull();
+        body!.Name.Should().Be("tokenuser");
+        body.Email.Should().Be("token@example.com");
+        body.Elo.Should().Be(2000);
+    }
+
+    [Test]
+    public async Task CheckToken_WithoutToken_ReturnsUnauthorized()
+    {
+        ClearAuthorizationHeader();
+
+        var response = await Client.GetAsync("/api/checkToken");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Invalid JWT token.");
+    }
+
+    [Test]
+    public async Task CheckToken_WithInvalidToken_ReturnsUnauthorized()
+    {
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "invalid.jwt.token");
+
+        var response = await Client.GetAsync("/api/checkToken");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Invalid JWT token.");
+    }
+
+    [Test]
+    public async Task CheckToken_WithDeletedUser_ReturnsUnauthorized()
+    {
+        var user = await SeedUserAsync(name: "deleteduser", email: "deleted@example.com", isDeleted: true);
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.GetAsync("/api/checkToken");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Unauthorized");
+    }
+
+    [Test]
+    public async Task DeleteAccount_WithValidToken_AnonymizesUserAndReturnsDeleted()
+    {
+        var user = await SeedUserAsync(name: "todelete", email: "todelete@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.GetAsync("/api/deleteAccount");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Deleted.");
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var updatedUser = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+
+        updatedUser.Should().NotBeNull();
+        updatedUser!.IsDeleted.Should().BeTrue();
+        updatedUser.Name.Should().StartWith("anonymized_user_");
+        updatedUser.Email.Should().StartWith("anonymized_");
+    }
+
+    private sealed class MessageResponse
+    {
+        [JsonPropertyName("msg")]
+        public string Message { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Used for middleware error responses which use { "message": "..." } format
+    /// </summary>
+    private sealed class MiddlewareErrorResponse
+    {
+        [JsonPropertyName("message")]
+        public string Message { get; set; } = string.Empty;
+    }
+
+    private sealed class LoginResponse
+    {
+        [JsonPropertyName("token")]
+        public string Token { get; set; } = string.Empty;
+
+        [JsonPropertyName("req")]
+        public UserInfoResponse? User { get; set; }
+    }
+
+    private sealed class UserInfoResponse
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("email")]
+        public string Email { get; set; } = string.Empty;
+
+        [JsonPropertyName("elo")]
+        public int Elo { get; set; }
+
+        [JsonPropertyName("profileRank")]
+        public string ProfileRank { get; set; } = string.Empty;
+
+        [JsonPropertyName("isVisibleInRanking")]
+        public bool IsVisibleInRanking { get; set; }
+    }
+}
