@@ -1,6 +1,8 @@
 using LgymApi.Api.DTOs;
-using LgymApi.Application.Repositories;
 using LgymApi.Api.Services;
+using LgymApi.Api.Mapping.Profiles;
+using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +18,7 @@ public sealed class PlanDayController : ControllerBase
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IUserRepository _userRepository;
     private readonly ITrainingRepository _trainingRepository;
+    private readonly IMapper _mapper;
 
     public PlanDayController(
         IPlanRepository planRepository,
@@ -23,7 +26,8 @@ public sealed class PlanDayController : ControllerBase
         IPlanDayExerciseRepository planDayExerciseRepository,
         IExerciseRepository exerciseRepository,
         IUserRepository userRepository,
-        ITrainingRepository trainingRepository)
+        ITrainingRepository trainingRepository,
+        IMapper mapper)
     {
         _planRepository = planRepository;
         _planDayRepository = planDayRepository;
@@ -31,6 +35,7 @@ public sealed class PlanDayController : ControllerBase
         _exerciseRepository = exerciseRepository;
         _userRepository = userRepository;
         _trainingRepository = trainingRepository;
+        _mapper = mapper;
     }
 
     [HttpPost("planDay/{id}/createPlanDay")]
@@ -163,27 +168,11 @@ public sealed class PlanDayController : ControllerBase
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds);
         var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
 
-        var planDayVm = new PlanDayVmDto
-        {
-            Id = planDay.Id.ToString(),
-            Name = planDay.Name,
-            Exercises = exercises.Select(e => new PlanDayExerciseVmDto
-            {
-                Series = e.Series,
-                Reps = e.Reps,
-                Exercise = exerciseMap.TryGetValue(e.ExerciseId, out var exercise)
-                    ? new ExerciseResponseDto
-                    {
-                        Id = exercise.Id.ToString(),
-                        Name = exercise.Name,
-                        BodyPart = exercise.BodyPart.ToLookup(),
-                        Description = exercise.Description,
-                        Image = exercise.Image,
-                        UserId = exercise.UserId?.ToString()
-                    }
-                    : new ExerciseResponseDto()
-            }).ToList()
-        };
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, exercises);
+        mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, exerciseMap);
+
+        var planDayVm = _mapper.Map<PlanDay, PlanDayVmDto>(planDay, mappingContext);
 
         return Ok(planDayVm);
     }
@@ -218,33 +207,11 @@ public sealed class PlanDayController : ControllerBase
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds);
         var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
 
-        var result = planDays.Select(planDay =>
-        {
-            var exercises = planDayExercises.Where(e => e.PlanDayId == planDay.Id).ToList();
-            var vmExercises = exercises.Select(e => new PlanDayExerciseVmDto
-            {
-                Series = e.Series,
-                Reps = e.Reps,
-                Exercise = exerciseMap.TryGetValue(e.ExerciseId, out var ex)
-                    ? new ExerciseResponseDto
-                    {
-                        Id = ex.Id.ToString(),
-                        Name = ex.Name,
-                        BodyPart = ex.BodyPart.ToLookup(),
-                        Description = ex.Description,
-                        Image = ex.Image,
-                        UserId = ex.UserId?.ToString()
-                    }
-                    : new ExerciseResponseDto()
-            }).ToList();
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, planDayExercises);
+        mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, exerciseMap);
 
-            return new PlanDayVmDto
-            {
-                Id = planDay.Id.ToString(),
-                Name = planDay.Name,
-                Exercises = vmExercises
-            };
-        }).ToList();
+        var result = _mapper.MapList<PlanDay, PlanDayVmDto>(planDays, mappingContext);
 
         return Ok(result);
     }
@@ -272,11 +239,7 @@ public sealed class PlanDayController : ControllerBase
         }
 
         var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id);
-        var planDayDtos = planDays.Select(pd => new PlanDayChooseDto
-        {
-            Id = pd.Id.ToString(),
-            Name = pd.Name
-        }).ToList();
+        var planDayDtos = _mapper.MapList<PlanDay, PlanDayChooseDto>(planDays);
 
         return Ok(planDayDtos);
     }
@@ -332,20 +295,11 @@ public sealed class PlanDayController : ControllerBase
             .GroupBy(t => t.TypePlanDayId)
             .ToDictionary(g => g.Key, g => (DateTime?)g.Max(t => t.CreatedAt).UtcDateTime);
 
-        var result = planDays.Select(planDay =>
-        {
-            var exercises = planDayExercises.Where(e => e.PlanDayId == planDay.Id).ToList();
-            return new PlanDayBaseInfoDto
-            {
-                Id = planDay.Id.ToString(),
-                Name = planDay.Name,
-                LastTrainingDate = lastTrainingMap.TryGetValue(planDay.Id, out var lastDate)
-                    ? lastDate
-                    : null,
-                TotalNumberOfSeries = exercises.Sum(e => e.Series),
-                TotalNumberOfExercises = exercises.Count
-            };
-        }).ToList();
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, planDayExercises);
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayLastTrainings, lastTrainingMap);
+
+        var result = _mapper.MapList<PlanDay, PlanDayBaseInfoDto>(planDays, mappingContext);
 
         return Ok(result);
     }

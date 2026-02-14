@@ -1,5 +1,6 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,12 +13,14 @@ public sealed class PlanController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IPlanRepository _planRepository;
     private readonly IPlanDayRepository _planDayRepository;
+    private readonly IMapper _mapper;
 
-    public PlanController(IUserRepository userRepository, IPlanRepository planRepository, IPlanDayRepository planDayRepository)
+    public PlanController(IUserRepository userRepository, IPlanRepository planRepository, IPlanDayRepository planDayRepository, IMapper mapper)
     {
         _userRepository = userRepository;
         _planRepository = planRepository;
         _planDayRepository = planDayRepository;
+        _mapper = mapper;
     }
 
     [HttpPost("{id}/createPlan")]
@@ -114,12 +117,7 @@ public sealed class PlanController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        return Ok(new PlanFormDto
-        {
-            Id = plan.Id.ToString(),
-            Name = plan.Name,
-            IsActive = plan.IsActive
-        });
+        return Ok(_mapper.Map<Domain.Entities.Plan, PlanFormDto>(plan));
     }
 
     [HttpGet("{id}/checkIsUserHavePlan")]
@@ -177,14 +175,9 @@ public sealed class PlanController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        var result = plans.Select(plan => new PlanFormDto
-        {
-            Id = plan.Id.ToString(),
-            Name = plan.Name,
-            IsActive = plan.IsActive
-        }).ToList();
+        var mapped = _mapper.MapList<Domain.Entities.Plan, PlanFormDto>(plans);
 
-        return Ok(result);
+        return Ok(mapped);
     }
 
     [HttpPost("{id}/setNewActivePlan")]
@@ -225,13 +218,7 @@ public sealed class PlanController : ControllerBase
         {
             var copiedPlan = await _planRepository.CopyPlanByShareCodeAsync(dto.ShareCode, user.Id);
 
-            var planDto = new PlanDto
-            {
-                Id = copiedPlan.Id,
-                Name = copiedPlan.Name,
-                IsActive = copiedPlan.IsActive,
-                UserId = copiedPlan.UserId
-            };
+            var planDto = _mapper.Map<Domain.Entities.Plan, PlanDto>(copiedPlan);
 
             return StatusCode(StatusCodes.Status201Created, planDto);
         }

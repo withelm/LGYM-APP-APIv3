@@ -1,6 +1,8 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Services;
+using LgymApi.Api.Mapping.Profiles;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -16,15 +18,18 @@ public sealed class ExerciseController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
+    private readonly IMapper _mapper;
 
     public ExerciseController(
         IUserRepository userRepository,
         IExerciseRepository exerciseRepository,
-        IExerciseScoreRepository exerciseScoreRepository)
+        IExerciseScoreRepository exerciseScoreRepository,
+        IMapper mapper)
     {
         _userRepository = userRepository;
         _exerciseRepository = exerciseRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
+        _mapper = mapper;
     }
 
     [HttpPost("exercise/addExercise")]
@@ -271,7 +276,9 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(exercises);
-        var result = exercises.Select(e => MapExerciseDto(e, translations)).ToList();
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
+        var result = _mapper.MapList<Exercise, ExerciseResponseDto>(exercises, mappingContext);
 
         return Ok(result);
     }
@@ -300,7 +307,9 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(exercises);
-        var result = exercises.Select(e => MapExerciseDto(e, translations)).ToList();
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
+        var result = _mapper.MapList<Exercise, ExerciseResponseDto>(exercises, mappingContext);
 
         return Ok(result);
     }
@@ -318,7 +327,9 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(exercises);
-        var result = exercises.Select(e => MapExerciseDto(e, translations)).ToList();
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
+        var result = _mapper.MapList<Exercise, ExerciseResponseDto>(exercises, mappingContext);
 
         return Ok(result);
     }
@@ -357,7 +368,9 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(exercises);
-        var result = exercises.Select(e => MapExerciseDto(e, translations)).ToList();
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
+        var result = _mapper.MapList<Exercise, ExerciseResponseDto>(exercises, mappingContext);
 
         return Ok(result);
     }
@@ -379,16 +392,10 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var translations = await GetTranslationsForExercisesAsync(new List<Exercise> { exercise });
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
 
-        return Ok(new ExerciseResponseDto
-        {
-            Id = exercise.Id.ToString(),
-            Name = ResolveExerciseName(exercise, translations),
-            BodyPart = exercise.BodyPart.ToLookup(),
-            Description = exercise.Description,
-            Image = exercise.Image,
-            UserId = exercise.UserId?.ToString()
-        });
+        return Ok(_mapper.Map<Exercise, ExerciseResponseDto>(exercise, mappingContext));
     }
 
     [HttpPost("exercise/{id}/getLastExerciseScores")]
@@ -473,13 +480,7 @@ public sealed class ExerciseController : ControllerBase
                 entry = (score.Training.CreatedAt, score.Training.Gym.Name, score.Training.PlanDay.Name, new List<(int, ScoreDto)>(), 0);
             }
 
-            entry.RawScores.Add((score.Series, new ScoreDto
-            {
-                Id = score.Id.ToString(),
-                Reps = score.Reps,
-                Weight = score.Weight,
-                Unit = score.Unit.ToLookup()
-            }));
+            entry.RawScores.Add((score.Series, _mapper.Map<ExerciseScore, ScoreDto>(score)));
             entry.MaxSeries = Math.Max(entry.MaxSeries, score.Series);
             tempMap[trainingId] = entry;
         }
@@ -519,14 +520,7 @@ public sealed class ExerciseController : ControllerBase
             return null;
         }
 
-        return new ScoreWithGymDto
-        {
-            Id = result.Id.ToString(),
-            Reps = result.Reps,
-            Weight = result.Weight,
-            Unit = result.Unit.ToLookup(),
-            GymName = result.Training?.Gym?.Name
-        };
+        return _mapper.Map<ExerciseScore, ScoreWithGymDto>(result);
     }
 
     private async Task<Dictionary<Guid, string>> GetTranslationsForExercisesAsync(IEnumerable<Exercise> exercises)
@@ -619,26 +613,4 @@ public sealed class ExerciseController : ControllerBase
         }
     }
 
-    private static ExerciseResponseDto MapExerciseDto(Exercise exercise, IReadOnlyDictionary<Guid, string> translations)
-    {
-        return new ExerciseResponseDto
-        {
-            Id = exercise.Id.ToString(),
-            Name = ResolveExerciseName(exercise, translations),
-            BodyPart = exercise.BodyPart.ToLookup(),
-            Description = exercise.Description,
-            Image = exercise.Image,
-            UserId = exercise.UserId?.ToString()
-        };
-    }
-
-    private static string ResolveExerciseName(Exercise exercise, IReadOnlyDictionary<Guid, string> translations)
-    {
-        if (exercise.UserId != null)
-        {
-            return exercise.Name;
-        }
-
-        return translations.TryGetValue(exercise.Id, out var translated) ? translated : exercise.Name;
-    }
 }

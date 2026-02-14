@@ -1,10 +1,12 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Services;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using TrainingEntity = LgymApi.Domain.Entities.Training;
 
 namespace LgymApi.Api.Controllers;
 
@@ -20,6 +22,7 @@ public sealed class TrainingController : ControllerBase
     private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
+    private readonly IMapper _mapper;
 
     public TrainingController(
         IUserRepository userRepository,
@@ -29,7 +32,8 @@ public sealed class TrainingController : ControllerBase
         IExerciseScoreRepository exerciseScoreRepository,
         ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
         IEloRegistryRepository eloRepository,
-        IRankService rankService)
+        IRankService rankService,
+        IMapper mapper)
     {
         _userRepository = userRepository;
         _gymRepository = gymRepository;
@@ -39,6 +43,7 @@ public sealed class TrainingController : ControllerBase
         _trainingExerciseScoreRepository = trainingExerciseScoreRepository;
         _eloRepository = eloRepository;
         _rankService = rankService;
+        _mapper = mapper;
     }
 
     [HttpPost("{id}/addTraining")]
@@ -71,7 +76,7 @@ public sealed class TrainingController : ControllerBase
                 return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
             }
 
-            var training = new Training
+            var training = new TrainingEntity
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
@@ -208,19 +213,7 @@ public sealed class TrainingController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, new ResponseMessageDto { Message = Messages.DidntFind });
         }
 
-        var result = new LastTrainingInfoDto
-        {
-            Id = training.Id.ToString(),
-            TypePlanDayId = training.TypePlanDayId.ToString(),
-            CreatedAt = training.CreatedAt.UtcDateTime,
-            PlanDay = training.PlanDay == null ? new PlanDayChooseDto() : new PlanDayChooseDto
-            {
-                Id = training.PlanDay.Id.ToString(),
-                Name = training.PlanDay.Name
-            }
-        };
-
-        return Ok(result);
+        return Ok(_mapper.Map<LgymApi.Domain.Entities.Training, LastTrainingInfoDto>(training));
     }
 
     [HttpPost("{id}/getTrainingByDate")]
@@ -275,25 +268,12 @@ public sealed class TrainingController : ControllerBase
                     group = new EnrichedExerciseDto
                     {
                         ExerciseScoreId = reference.ExerciseScoreId.ToString(),
-                        ExerciseDetails = new ExerciseResponseDto
-                        {
-                            Id = score.Exercise.Id.ToString(),
-                            Name = score.Exercise.Name,
-                            BodyPart = score.Exercise.BodyPart.ToLookup()
-                        }
+                        ExerciseDetails = _mapper.Map<Exercise, ExerciseResponseDto>(score.Exercise)
                     };
                     grouped[score.ExerciseId] = group;
                 }
 
-                group.ScoresDetails.Add(new ExerciseScoreResponseDto
-                {
-                    Id = score.Id.ToString(),
-                    ExerciseId = score.ExerciseId.ToString(),
-                    Reps = score.Reps,
-                    Series = score.Series,
-                    Weight = score.Weight,
-                    Unit = score.Unit.ToLookup()
-                });
+                group.ScoresDetails.Add(_mapper.Map<ExerciseScore, ExerciseScoreResponseDto>(score));
             }
 
             result.Add(new TrainingByDateDetailsDto

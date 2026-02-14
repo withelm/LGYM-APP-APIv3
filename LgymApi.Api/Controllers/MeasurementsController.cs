@@ -1,6 +1,7 @@
 using LgymApi.Api.DTOs;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Services;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -8,15 +9,17 @@ using Microsoft.AspNetCore.Mvc;
 namespace LgymApi.Api.Controllers;
 
 [ApiController]
-[Route("api")]
-public sealed class MeasurementsController : ControllerBase
-{
-    private readonly IMeasurementRepository _measurementRepository;
-
-    public MeasurementsController(IMeasurementRepository measurementRepository)
+    [Route("api")]
+    public sealed class MeasurementsController : ControllerBase
     {
-        _measurementRepository = measurementRepository;
-    }
+        private readonly IMeasurementRepository _measurementRepository;
+        private readonly IMapper _mapper;
+
+        public MeasurementsController(IMeasurementRepository measurementRepository, IMapper mapper)
+        {
+            _measurementRepository = measurementRepository;
+            _mapper = mapper;
+        }
 
     [HttpPost("measurements/add")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
@@ -79,15 +82,7 @@ public sealed class MeasurementsController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new ResponseMessageDto { Message = Messages.Forbidden });
         }
 
-        return Ok(new MeasurementResponseDto
-        {
-            UserId = measurement.UserId.ToString(),
-            BodyPart = measurement.BodyPart.ToLookup(),
-            Unit = ParseHeightUnit(measurement.Unit).ToLookup(),
-            Value = measurement.Value,
-            CreatedAt = measurement.CreatedAt.UtcDateTime,
-            UpdatedAt = measurement.UpdatedAt.UtcDateTime
-        });
+        return Ok(_mapper.Map<Measurement, MeasurementResponseDto>(measurement));
     }
 
     [HttpGet("measurements/{id}/getHistory")]
@@ -117,28 +112,11 @@ public sealed class MeasurementsController : ControllerBase
         {
             Measurements = measurements
                 .OrderBy(m => m.CreatedAt)
-                .Select(m => new MeasurementResponseDto
-                {
-                    UserId = m.UserId.ToString(),
-                    BodyPart = m.BodyPart.ToLookup(),
-                    Unit = ParseHeightUnit(m.Unit).ToLookup(),
-                    Value = m.Value,
-                    CreatedAt = m.CreatedAt.UtcDateTime,
-                    UpdatedAt = m.UpdatedAt.UtcDateTime
-                })
+                .Select(m => _mapper.Map<Measurement, MeasurementResponseDto>(m))
                 .ToList()
         };
 
         return Ok(result);
     }
 
-    private static HeightUnits ParseHeightUnit(string? unit)
-    {
-        if (!string.IsNullOrWhiteSpace(unit) && Enum.TryParse(unit, true, out HeightUnits parsed))
-        {
-            return parsed;
-        }
-
-        return HeightUnits.Unknown;
-    }
 }
