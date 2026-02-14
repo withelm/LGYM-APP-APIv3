@@ -1,5 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -20,6 +22,9 @@ builder.Services
         options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

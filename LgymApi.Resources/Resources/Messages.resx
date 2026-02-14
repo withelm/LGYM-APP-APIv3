@@ -66,4 +66,55 @@
   <data name="Forbidden" xml:space="preserve">
     <value>Forbidden</value>
   </data>
+  <data name="BodyPartRequired" xml:space="preserve">
+    <value>Body part is required.</value>
+  </data>
+  <data name="ExerciseIdRequired" xml:space="preserve">
+    <value>Exercise ID is required.</value>
+  </data>
+  <data name="CultureRequired" xml:space="preserve">
+    <value>Culture is required.</value>
+  </data>
+  <data name="SeriesMustBeGreaterThanZero" xml:space="preserve">
+    <value>Series must be greater than 0.</value>
+  </data>
+  <data name="ExerciseNameRequired" xml:space="preserve">
+    <value>Exercise name is required.</value>
+  </data>
+  <data name="PasswordRequired" xml:space="preserve">
+    <value>Password is required.</value>
+  </data>
+  <data name="GymIdRequired" xml:space="preserve">
+    <value>Gym ID is required.</value>
+  </data>
+  <data name="PlanDayIdRequired" xml:space="preserve">
+    <value>Plan day ID is required.</value>
+  </data>
+  <data name="DateRequired" xml:space="preserve">
+    <value>Date is required.</value>
+  </data>
+  <data name="UnitRequired" xml:space="preserve">
+    <value>Unit is required.</value>
+  </data>
+  <data name="WeightMustBePositive" xml:space="preserve">
+    <value>Weight must be a positive number.</value>
+  </data>
+  <data name="RepsMustBePositive" xml:space="preserve">
+    <value>Reps must be a positive number.</value>
+  </data>
+  <data name="RepsRequired" xml:space="preserve">
+    <value>Reps is required.</value>
+  </data>
+  <data name="ShareCodeRequired" xml:space="preserve">
+    <value>Share code is required.</value>
+  </data>
+  <data name="ValueMustBePositive" xml:space="preserve">
+    <value>Value must be a positive number.</value>
+  </data>
+  <data name="TrainingIdRequired" xml:space="preserve">
+    <value>Training ID is required.</value>
+  </data>
+  <data name="UserIdRequired" xml:space="preserve">
+    <value>User ID is required.</value>
+  </data>
 </root>
