@@ -3,9 +3,8 @@ using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User;
-using LgymApi.Domain.Security;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Features.User.Controllers;
 
@@ -145,18 +144,6 @@ public sealed class UserController : ControllerBase
 
         var user = HttpContext.GetCurrentUser();
         await _userService.ChangeVisibilityInRankingAsync(user!, isVisible);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
-    }
-
-    [HttpPost("users/{id}/roles")]
-    [Authorize(Policy = AuthConstants.Policies.ManageUserRoles)]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateUserRoles([FromRoute] string id, [FromBody] UpdateUserRolesRequest request)
-    {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _userService.UpdateUserRolesAsync(userId, request.Roles);
         return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 }

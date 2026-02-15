@@ -112,9 +112,3 @@ public sealed class LoginResponseDto
     [JsonPropertyName("permissionClaims")]
     public List<string> PermissionClaims { get; set; } = new();
 }
-
-public sealed class UpdateUserRolesRequest
-{
-    [JsonPropertyName("roles")]
-    public List<string> Roles { get; set; } = new();
-}

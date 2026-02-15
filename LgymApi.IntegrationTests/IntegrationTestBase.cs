@@ -4,9 +4,11 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
@@ -115,14 +117,41 @@ public abstract class IntegrationTestBase : IDisposable
 
     protected string GenerateJwt(Guid userId)
     {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var roles = db.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.Role.Name)
+            .Distinct()
+            .ToList();
+
+        var permissionClaims = db.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .SelectMany(ur => ur.Role.RoleClaims)
+            .Where(rc => rc.ClaimType == AuthConstants.PermissionClaimType)
+            .Select(rc => rc.ClaimValue)
+            .Distinct()
+            .ToList();
+
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(CustomWebApplicationFactory.TestJwtSecret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim("userId", userId.ToString())
         };
+
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        foreach (var permission in permissionClaims)
+        {
+            claims.Add(new Claim(AuthConstants.PermissionClaimType, permission));
+        }
 
         var token = new JwtSecurityToken(
             claims: claims,

@@ -137,7 +137,7 @@ async Task MigrateUsers()
     var processed = 0;
     var inserted = 0;
     var users = new List<User>(batchSize);
-    var userRoles = new List<UserRole>(batchSize * 2);
+    var userRoles = new List<UserRole>(batchSize * 3);
 
     async Task Flush()
     {

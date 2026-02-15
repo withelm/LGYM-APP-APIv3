@@ -1,15 +1,27 @@
 using System.Collections.Concurrent;
 using LgymApi.Application.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace LgymApi.Infrastructure.Services;
 
 public sealed class UserSessionCache : IUserSessionCache
 {
-    private const int Capacity = 1000;
+    private const int DefaultCapacity = 1000;
+    private readonly int _capacity;
 
     private readonly ConcurrentDictionary<Guid, LinkedListNode<Guid>> _nodes = new();
     private readonly LinkedList<Guid> _lru = new();
     private readonly object _sync = new();
+
+    public UserSessionCache(IConfiguration configuration)
+    {
+        var configuredValue = configuration["UserSessionCache:Capacity"];
+        _capacity = int.TryParse(configuredValue, out var parsedCapacity) ? parsedCapacity : DefaultCapacity;
+        if (_capacity <= 0)
+        {
+            _capacity = DefaultCapacity;
+        }
+    }
 
     public int Count
     {
@@ -42,7 +54,7 @@ public sealed class UserSessionCache : IUserSessionCache
             _lru.AddFirst(node);
             _nodes[userId] = node;
 
-            if (_lru.Count <= Capacity)
+            if (_lru.Count <= _capacity)
             {
                 return;
             }
