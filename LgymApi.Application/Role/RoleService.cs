@@ -28,15 +28,13 @@ public sealed class RoleService : IRoleService
     public async Task<List<RoleResult>> GetRolesAsync()
     {
         var roles = await _roleRepository.GetAllAsync();
-        var result = new List<RoleResult>(roles.Count);
+        var claimsByRole = await _roleRepository.GetPermissionClaimsByRoleIdsAsync(roles.Select(r => r.Id).ToList());
 
-        foreach (var role in roles)
-        {
-            var permissionClaims = await _roleRepository.GetPermissionClaimsByRoleIdAsync(role.Id);
-            result.Add(MapRole(role, permissionClaims));
-        }
-
-        return result;
+        return roles
+            .Select(role => MapRole(
+                role,
+                claimsByRole.TryGetValue(role.Id, out var claims) ? claims : new List<string>()))
+            .ToList();
     }
 
     public async Task<RoleResult> GetRoleAsync(Guid roleId)
@@ -63,7 +61,7 @@ public sealed class RoleService : IRoleService
 
         if (await _roleRepository.ExistsByNameAsync(normalizedName))
         {
-            throw AppException.BadRequest(Messages.UserWithThatName);
+            throw AppException.BadRequest(Messages.RoleWithThatName);
         }
 
         var role = new Domain.Entities.Role
@@ -108,7 +106,7 @@ public sealed class RoleService : IRoleService
 
         if (await _roleRepository.ExistsByNameAsync(normalizedName, roleId))
         {
-            throw AppException.BadRequest(Messages.UserWithThatName);
+            throw AppException.BadRequest(Messages.RoleWithThatName);
         }
 
         role.Name = normalizedName;
@@ -181,7 +179,7 @@ public sealed class RoleService : IRoleService
         var rolesToSet = await _roleRepository.GetByNamesAsync(normalizedRoleNames);
         if (rolesToSet.Count != normalizedRoleNames.Count)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            throw AppException.BadRequest(Messages.InvalidRoleSelection);
         }
 
         await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => r.Id).ToList());
@@ -226,7 +224,7 @@ public sealed class RoleService : IRoleService
 
         if (normalizedClaims.Any(c => !AuthConstants.Permissions.All.Contains(c, StringComparer.Ordinal)))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            throw AppException.BadRequest(Messages.InvalidPermissionClaims);
         }
 
         return normalizedClaims;

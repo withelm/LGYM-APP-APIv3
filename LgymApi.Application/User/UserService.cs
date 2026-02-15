@@ -91,7 +91,7 @@ public sealed class UserService : IUserService
         var defaultRole = await _roleRepository.FindByNameAsync(AuthConstants.Roles.User);
         if (defaultRole == null)
         {
-            throw AppException.BadRequest(Messages.DidntFind);
+            throw AppException.Internal(Messages.DefaultRoleMissing);
         }
 
         await _roleRepository.AddUserRolesAsync(user.Id, new[] { defaultRole.Id });
@@ -293,7 +293,7 @@ public sealed class UserService : IUserService
         var rolesToSet = await _roleRepository.GetByNamesAsync(normalizedRoleNames);
         if (rolesToSet.Count != normalizedRoleNames.Count)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            throw AppException.BadRequest(Messages.InvalidRoleSelection);
         }
 
         await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => r.Id).ToList());

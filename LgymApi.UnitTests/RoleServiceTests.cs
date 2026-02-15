@@ -285,6 +285,17 @@ public sealed class RoleServiceTests
                 ? claims.OrderBy(c => c).ToList()
                 : new List<string>());
 
+        public Task<Dictionary<Guid, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
+        {
+            var result = roleIds
+                .Distinct()
+                .Where(roleId => RoleClaims.ContainsKey(roleId))
+                .ToDictionary(
+                    roleId => roleId,
+                    roleId => RoleClaims[roleId].OrderBy(c => c).ToList());
+            return Task.FromResult(result);
+        }
+
         public Task<bool> UserHasRoleAsync(Guid userId, string roleName, CancellationToken cancellationToken = default)
         {
             if (!UserRoleAssignments.TryGetValue(userId, out var roleIds))

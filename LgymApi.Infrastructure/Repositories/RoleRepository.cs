@@ -91,6 +91,28 @@ public sealed class RoleRepository : IRoleRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<Dictionary<Guid, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
+    {
+        if (roleIds.Count == 0)
+        {
+            return new Dictionary<Guid, List<string>>();
+        }
+
+        var items = await _dbContext.RoleClaims
+            .Where(rc => roleIds.Contains(rc.RoleId) && rc.ClaimType == AuthConstants.PermissionClaimType)
+            .Select(rc => new { rc.RoleId, rc.ClaimValue })
+            .ToListAsync(cancellationToken);
+
+        return items
+            .GroupBy(i => i.RoleId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(i => i.ClaimValue)
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(v => v, StringComparer.Ordinal)
+                    .ToList());
+    }
+
     public Task<bool> UserHasRoleAsync(Guid userId, string roleName, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserRoles.AnyAsync(ur => ur.UserId == userId && ur.Role.Name == roleName, cancellationToken);

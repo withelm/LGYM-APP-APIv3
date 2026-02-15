@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using LgymApi.Domain.Entities;
+using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -133,6 +134,10 @@ public abstract class IntegrationTestBase : IDisposable
 
     protected void SetAuthorizationHeader(Guid userId)
     {
+        using var scope = Factory.Services.CreateScope();
+        var userSessionCache = scope.ServiceProvider.GetRequiredService<IUserSessionCache>();
+        userSessionCache.AddOrRefresh(userId);
+
         var token = GenerateJwt(userId);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }

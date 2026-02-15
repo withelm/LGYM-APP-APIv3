@@ -129,4 +129,16 @@
   <data name="PermissionManageGlobalExercises" xml:space="preserve">
     <value>Zarządzanie globalnymi ćwiczeniami</value>
   </data>
+  <data name="RoleWithThatName" xml:space="preserve">
+    <value>Istnieje rola o takiej nazwie.</value>
+  </data>
+  <data name="InvalidRoleSelection" xml:space="preserve">
+    <value>Jedna lub więcej wybranych ról jest nieprawidłowa.</value>
+  </data>
+  <data name="InvalidPermissionClaims" xml:space="preserve">
+    <value>Jedno lub więcej wybranych uprawnień jest nieprawidłowe.</value>
+  </data>
+  <data name="DefaultRoleMissing" xml:space="preserve">
+    <value>Brakuje konfiguracji domyślnej roli użytkownika.</value>
+  </data>
 </root>

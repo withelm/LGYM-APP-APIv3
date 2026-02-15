@@ -12,6 +12,7 @@ public interface IRoleRepository
     Task<List<string>> GetRoleNamesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<List<string>> GetPermissionClaimsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<List<string>> GetPermissionClaimsByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default);
+    Task<Dictionary<Guid, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default);
     Task<bool> UserHasRoleAsync(Guid userId, string roleName, CancellationToken cancellationToken = default);
     Task<bool> UserHasPermissionAsync(Guid userId, string permission, CancellationToken cancellationToken = default);
     Task AddRoleAsync(Role role, CancellationToken cancellationToken = default);
