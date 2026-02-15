@@ -1,5 +1,10 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using LgymApi.Application.Mapping;
+using LgymApi.Application.Mapping.Core;
+using LgymApi.Application;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,6 +14,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
+using LgymApi.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +27,9 @@ builder.Services
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
@@ -30,9 +39,10 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddLocalization();
+builder.Services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+builder.Services.AddApplicationServices();
 
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
-builder.Services.AddSingleton<LgymApi.Api.Services.IEnumLookupService, LgymApi.Api.Services.EnumLookupService>();
 
 var jwtSecret = builder.Configuration["Jwt:Secret"];
 if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
@@ -141,6 +151,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRequestLocalization(localizationOptions);
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

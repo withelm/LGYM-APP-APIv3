@@ -66,4 +66,55 @@
   <data name="Forbidden" xml:space="preserve">
     <value>Brak dostępu</value>
   </data>
+  <data name="BodyPartRequired" xml:space="preserve">
+    <value>Partia ciała jest wymagana.</value>
+  </data>
+  <data name="ExerciseIdRequired" xml:space="preserve">
+    <value>ID ćwiczenia jest wymagane.</value>
+  </data>
+  <data name="CultureRequired" xml:space="preserve">
+    <value>Kultura jest wymagana.</value>
+  </data>
+  <data name="SeriesMustBeGreaterThanZero" xml:space="preserve">
+    <value>Liczba serii musi być większa od 0.</value>
+  </data>
+  <data name="ExerciseNameRequired" xml:space="preserve">
+    <value>Nazwa ćwiczenia jest wymagana.</value>
+  </data>
+  <data name="PasswordRequired" xml:space="preserve">
+    <value>Hasło jest wymagane.</value>
+  </data>
+  <data name="GymIdRequired" xml:space="preserve">
+    <value>ID siłowni jest wymagane.</value>
+  </data>
+  <data name="PlanDayIdRequired" xml:space="preserve">
+    <value>ID dnia planu jest wymagane.</value>
+  </data>
+  <data name="DateRequired" xml:space="preserve">
+    <value>Data jest wymagana.</value>
+  </data>
+  <data name="UnitRequired" xml:space="preserve">
+    <value>Jednostka jest wymagana.</value>
+  </data>
+  <data name="WeightMustBePositive" xml:space="preserve">
+    <value>Waga musi być liczbą dodatnią.</value>
+  </data>
+  <data name="RepsMustBePositive" xml:space="preserve">
+    <value>Liczba powtórzeń musi być dodatnia.</value>
+  </data>
+  <data name="RepsRequired" xml:space="preserve">
+    <value>Liczba powtórzeń jest wymagana.</value>
+  </data>
+  <data name="ShareCodeRequired" xml:space="preserve">
+    <value>Kod udostępniania jest wymagany.</value>
+  </data>
+  <data name="ValueMustBePositive" xml:space="preserve">
+    <value>Wartość musi być liczbą dodatnią.</value>
+  </data>
+  <data name="TrainingIdRequired" xml:space="preserve">
+    <value>ID treningu jest wymagane.</value>
+  </data>
+  <data name="UserIdRequired" xml:space="preserve">
+    <value>ID użytkownika jest wymagane.</value>
+  </data>
 </root>

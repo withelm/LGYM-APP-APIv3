@@ -1,0 +1,123 @@
+using LgymApi.Api.Features.Common.Contracts;
+using LgymApi.Api.Features.PlanDay.Contracts;
+using LgymApi.Api.Mapping.Profiles;
+using LgymApi.Application.Features.PlanDay;
+using LgymApi.Application.Features.PlanDay.Models;
+using LgymApi.Application.Mapping.Core;
+using Microsoft.AspNetCore.Mvc;
+
+namespace LgymApi.Api.Features.PlanDay.Controllers;
+
+[ApiController]
+[Route("api")]
+public sealed class PlanDayController : ControllerBase
+{
+    private readonly IPlanDayService _planDayService;
+    private readonly IMapper _mapper;
+
+    public PlanDayController(IPlanDayService planDayService, IMapper mapper)
+    {
+        _planDayService = planDayService;
+        _mapper = mapper;
+    }
+
+    [HttpPost("planDay/{id}/createPlanDay")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CreatePlanDay([FromRoute] string id, [FromBody] PlanDayFormDto form)
+    {
+        var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
+        var exercises = form.Exercises
+            .Select(exercise => new PlanDayExerciseInput
+            {
+                ExerciseId = exercise.ExerciseId,
+                Series = exercise.Series,
+                Reps = exercise.Reps
+            })
+            .ToList();
+        await _planDayService.CreatePlanDayAsync(planId, form.Name, exercises);
+        return Ok(new ResponseMessageDto { Message = Messages.Created });
+    }
+
+    [HttpPost("planDay/updatePlanDay")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdatePlanDay([FromBody] PlanDayFormDto form)
+    {
+        var exercises = form.Exercises
+            .Select(exercise => new PlanDayExerciseInput
+            {
+                ExerciseId = exercise.ExerciseId,
+                Series = exercise.Series,
+                Reps = exercise.Reps
+            })
+            .ToList();
+        await _planDayService.UpdatePlanDayAsync(form.Id ?? string.Empty, form.Name, exercises);
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+    }
+
+    [HttpGet("planDay/{id}/getPlanDay")]
+    [ProducesResponseType(typeof(PlanDayVmDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPlanDay([FromRoute] string id)
+    {
+        var planDayId = Guid.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
+        var context = await _planDayService.GetPlanDayAsync(planDayId);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.Exercises);
+        mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
+        var planDayVm = _mapper.Map<LgymApi.Domain.Entities.PlanDay, PlanDayVmDto>(context.PlanDay, mappingContext);
+        return Ok(planDayVm);
+    }
+
+    [HttpGet("planDay/{id}/getPlanDays")]
+    [ProducesResponseType(typeof(List<PlanDayVmDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPlanDays([FromRoute] string id)
+    {
+        var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
+        var context = await _planDayService.GetPlanDaysAsync(planId);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
+        mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
+        var result = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayVmDto>(context.PlanDays, mappingContext);
+        return Ok(result);
+    }
+
+    [HttpGet("planDay/{id}/getPlanDaysTypes")]
+    [ProducesResponseType(typeof(List<PlanDayChooseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPlanDaysTypes([FromRoute] string id)
+    {
+        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var planDays = await _planDayService.GetPlanDaysTypesAsync(userId);
+        var planDayDtos = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayChooseDto>(planDays);
+        return Ok(planDayDtos);
+    }
+
+    [HttpGet("planDay/{id}/deletePlanDay")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletePlanDay([FromRoute] string id)
+    {
+        var planDayId = Guid.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
+        await _planDayService.DeletePlanDayAsync(planDayId);
+        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
+    }
+
+    [HttpGet("planDay/{id}/getPlanDaysInfo")]
+    [ProducesResponseType(typeof(List<PlanDayBaseInfoDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPlanDaysInfo([FromRoute] string id)
+    {
+        var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
+        var context = await _planDayService.GetPlanDaysInfoAsync(planId);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
+        mappingContext.Set(PlanDayProfile.Keys.PlanDayLastTrainings, context.LastTrainingMap);
+        var result = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayBaseInfoDto>(context.PlanDays, mappingContext);
+        return Ok(result);
+    }
+}
