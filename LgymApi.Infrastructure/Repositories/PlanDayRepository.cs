@@ -44,6 +44,13 @@ public sealed class PlanDayRepository : IPlanDayRepository
             .ExecuteUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
     }
 
+    public async Task MarkDeletedByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.PlanDays
+            .Where(p => p.PlanId == planId)
+            .ExecuteUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
+    }
+
     public Task<bool> AnyByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDays.AnyAsync(p => p.PlanId == planId && !p.IsDeleted, cancellationToken);

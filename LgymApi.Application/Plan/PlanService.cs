@@ -36,7 +36,8 @@ public sealed class PlanService : IPlanService
             Id = Guid.NewGuid(),
             UserId = currentUser.Id,
             Name = name,
-            IsActive = true
+            IsActive = true,
+            IsDeleted = false
         };
 
         currentUser.PlanId = plan.Id;
@@ -152,7 +153,53 @@ public sealed class PlanService : IPlanService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
+        var plan = await _planRepository.FindByIdAsync(planId);
+        if (plan == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
+        }
+
         await _planRepository.SetActivePlanAsync(currentUser.Id, planId);
+        currentUser.PlanId = planId;
+        await _userRepository.UpdateAsync(currentUser);
+    }
+
+    public async Task DeletePlanAsync(UserEntity currentUser, Guid planId)
+    {
+        if (currentUser == null || planId == Guid.Empty)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var plan = await _planRepository.FindByIdAsync(planId);
+        if (plan == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
+        }
+
+        await _planDayRepository.MarkDeletedByPlanIdAsync(plan.Id);
+
+        plan.IsActive = false;
+        plan.IsDeleted = true;
+        await _planRepository.UpdateAsync(plan);
+
+        var user = await _userRepository.FindByIdAsync(currentUser.Id);
+        if (user != null && user.PlanId == plan.Id)
+        {
+            user.PlanId = null;
+            await _userRepository.UpdateAsync(user);
+            currentUser.PlanId = null;
+        }
     }
 
     public async Task<PlanEntity> CopyPlanAsync(UserEntity currentUser, string shareCode)

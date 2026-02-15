@@ -336,6 +336,238 @@ public sealed class PlanDayTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task DeletePlanDay_WithOtherUsersPlanDay_ReturnsForbidden()
+    {
+        var (_, user1Token) = await RegisterUserViaEndpointAsync(
+            name: "deletedayuser3",
+            email: "deleteday3@example.com",
+            password: "password123");
+
+        var (user2Id, user2Token) = await RegisterUserViaEndpointAsync(
+            name: "deletedayuser4",
+            email: "deleteday4@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", user2Token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(user2Id, "DeleteDay Exercise 2", "Back");
+        var planId = await CreatePlanViaEndpointAsync(user2Id, "DeleteDay Plan 2");
+        var planDayId = await CreatePlanDayViaEndpointAsync(user2Id, planId, "Protected Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "8" }
+        });
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", user1Token);
+
+        var response = await Client.GetAsync($"/api/planDay/{planDayId}/deletePlanDay");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task CreatePlanDay_WithOtherUsersPlan_ReturnsForbidden()
+    {
+        var (ownerId, ownerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayowner1",
+            email: "plandayowner1@example.com",
+            password: "password123");
+
+        var (_, attackerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayattacker1",
+            email: "plandayattacker1@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Create Forbidden Exercise", "Back");
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "Create Forbidden Plan");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", attackerToken);
+
+        var request = new
+        {
+            name = "Should Not Be Created",
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 3, reps = "10" }
+            }
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task UpdatePlanDay_WithOtherUsersPlanDay_ReturnsForbidden()
+    {
+        var (ownerId, ownerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayowner2",
+            email: "plandayowner2@example.com",
+            password: "password123");
+
+        var (_, attackerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayattacker2",
+            email: "plandayattacker2@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Update Forbidden Exercise", "Chest");
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "Update Forbidden Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", attackerToken);
+
+        var request = new
+        {
+            _id = planDayId.ToString(),
+            name = "Hacked Name",
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 4, reps = "8" }
+            }
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task GetPlanDay_WithOtherUsersPlanDay_ReturnsForbidden()
+    {
+        var (ownerId, ownerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayowner3",
+            email: "plandayowner3@example.com",
+            password: "password123");
+
+        var (_, attackerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayattacker3",
+            email: "plandayattacker3@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Get Forbidden Exercise", "Quads");
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "Get Forbidden Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", attackerToken);
+
+        var response = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task GetPlanDays_WithOtherUsersPlan_ReturnsForbidden()
+    {
+        var (ownerId, ownerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayowner4",
+            email: "plandayowner4@example.com",
+            password: "password123");
+
+        var (_, attackerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayattacker4",
+            email: "plandayattacker4@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "GetDays Forbidden Exercise", "Back");
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "GetDays Forbidden Plan");
+        await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", attackerToken);
+
+        var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task GetPlanDaysTypes_WithOtherUserId_ReturnsForbidden()
+    {
+        var (ownerId, ownerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayowner5",
+            email: "plandayowner5@example.com",
+            password: "password123");
+
+        var (_, attackerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayattacker5",
+            email: "plandayattacker5@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Types Forbidden Exercise", "Biceps");
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "Types Forbidden Plan");
+        await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "12" }
+        });
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", attackerToken);
+
+        var response = await Client.GetAsync($"/api/planDay/{ownerId}/getPlanDaysTypes");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task GetPlanDaysInfo_WithOtherUsersPlan_ReturnsForbidden()
+    {
+        var (ownerId, ownerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayowner6",
+            email: "plandayowner6@example.com",
+            password: "password123");
+
+        var (_, attackerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayattacker6",
+            email: "plandayattacker6@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Info Forbidden Exercise", "Quads");
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "Info Forbidden Plan");
+        await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", attackerToken);
+
+        var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDaysInfo");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
     public async Task GetPlanDaysTypes_WithValidUserId_ReturnsTypes()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(

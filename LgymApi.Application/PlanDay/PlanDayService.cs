@@ -4,6 +4,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Resources;
 using PlanDayEntity = LgymApi.Domain.Entities.PlanDay;
 using PlanDayExerciseEntity = LgymApi.Domain.Entities.PlanDayExercise;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.PlanDay;
 
@@ -13,7 +14,6 @@ public sealed class PlanDayService : IPlanDayService
     private readonly IPlanDayRepository _planDayRepository;
     private readonly IPlanDayExerciseRepository _planDayExerciseRepository;
     private readonly IExerciseRepository _exerciseRepository;
-    private readonly IUserRepository _userRepository;
     private readonly ITrainingRepository _trainingRepository;
 
     public PlanDayService(
@@ -21,20 +21,18 @@ public sealed class PlanDayService : IPlanDayService
         IPlanDayRepository planDayRepository,
         IPlanDayExerciseRepository planDayExerciseRepository,
         IExerciseRepository exerciseRepository,
-        IUserRepository userRepository,
         ITrainingRepository trainingRepository)
     {
         _planRepository = planRepository;
         _planDayRepository = planDayRepository;
         _planDayExerciseRepository = planDayExerciseRepository;
         _exerciseRepository = exerciseRepository;
-        _userRepository = userRepository;
         _trainingRepository = trainingRepository;
     }
 
-    public async Task CreatePlanDayAsync(Guid planId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises)
+    public async Task CreatePlanDayAsync(UserEntity currentUser, Guid planId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises)
     {
-        if (planId == Guid.Empty)
+        if (currentUser == null || planId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -43,6 +41,11 @@ public sealed class PlanDayService : IPlanDayService
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
         if (string.IsNullOrWhiteSpace(name) || exercises.Count == 0)
@@ -84,8 +87,13 @@ public sealed class PlanDayService : IPlanDayService
         }
     }
 
-    public async Task UpdatePlanDayAsync(string planDayId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises)
+    public async Task UpdatePlanDayAsync(UserEntity currentUser, string planDayId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises)
     {
+        if (currentUser == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
         if (string.IsNullOrWhiteSpace(name) || exercises.Count == 0)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
@@ -100,6 +108,17 @@ public sealed class PlanDayService : IPlanDayService
         if (planDay == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var plan = await _planRepository.FindByIdAsync(planDay.PlanId);
+        if (plan == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
         planDay.Name = name;
@@ -131,9 +150,9 @@ public sealed class PlanDayService : IPlanDayService
         }
     }
 
-    public async Task<PlanDayDetailsContext> GetPlanDayAsync(Guid planDayId)
+    public async Task<PlanDayDetailsContext> GetPlanDayAsync(UserEntity currentUser, Guid planDayId)
     {
-        if (planDayId == Guid.Empty)
+        if (currentUser == null || planDayId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -142,6 +161,17 @@ public sealed class PlanDayService : IPlanDayService
         if (planDay == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var plan = await _planRepository.FindByIdAsync(planDay.PlanId);
+        if (plan == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
         var exercises = await _planDayExerciseRepository.GetByPlanDayIdAsync(planDay.Id);
@@ -157,9 +187,9 @@ public sealed class PlanDayService : IPlanDayService
         };
     }
 
-    public async Task<PlanDaysContext> GetPlanDaysAsync(Guid planId)
+    public async Task<PlanDaysContext> GetPlanDaysAsync(UserEntity currentUser, Guid planId)
     {
-        if (planId == Guid.Empty)
+        if (currentUser == null || planId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -168,6 +198,11 @@ public sealed class PlanDayService : IPlanDayService
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
         var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id);
@@ -191,20 +226,19 @@ public sealed class PlanDayService : IPlanDayService
         };
     }
 
-    public async Task<List<PlanDayEntity>> GetPlanDaysTypesAsync(Guid userId)
+    public async Task<List<PlanDayEntity>> GetPlanDaysTypesAsync(UserEntity currentUser, Guid routeUserId)
     {
-        if (userId == Guid.Empty)
+        if (currentUser == null || routeUserId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
-        if (user == null)
+        if (currentUser.Id != routeUserId)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        var plan = await _planRepository.FindActiveByUserIdAsync(user.Id);
+        var plan = await _planRepository.FindActiveByUserIdAsync(currentUser.Id);
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -213,9 +247,9 @@ public sealed class PlanDayService : IPlanDayService
         return await _planDayRepository.GetByPlanIdAsync(plan.Id);
     }
 
-    public async Task DeletePlanDayAsync(Guid planDayId)
+    public async Task DeletePlanDayAsync(UserEntity currentUser, Guid planDayId)
     {
-        if (planDayId == Guid.Empty)
+        if (currentUser == null || planDayId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -226,12 +260,23 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
+        var plan = await _planRepository.FindByIdAsync(planDay.PlanId);
+        if (plan == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
+        }
+
         await _planDayRepository.MarkDeletedAsync(planDay.Id);
     }
 
-    public async Task<PlanDaysInfoContext> GetPlanDaysInfoAsync(Guid planId)
+    public async Task<PlanDaysInfoContext> GetPlanDaysInfoAsync(UserEntity currentUser, Guid planId)
     {
-        if (planId == Guid.Empty)
+        if (currentUser == null || planId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -240,6 +285,11 @@ public sealed class PlanDayService : IPlanDayService
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
         var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id);

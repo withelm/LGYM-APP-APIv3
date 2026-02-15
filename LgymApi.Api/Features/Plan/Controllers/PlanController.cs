@@ -109,7 +109,7 @@ public sealed class PlanController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, planDto);
     }
 
-    [HttpPatch("{id}/share")]
+    [HttpPost("{id}/share")]
     [ProducesResponseType(typeof(ShareCodeResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
@@ -119,6 +119,18 @@ public sealed class PlanController : ControllerBase
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
         var shareCode = await _planService.GenerateShareCodeAsync(user!, planId);
         return Ok(new ShareCodeResponseDto(shareCode));
+    }
+
+    [HttpPost("{id}/deletePlan")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletePlan([FromRoute] string id)
+    {
+        var user = HttpContext.GetCurrentUser();
+        var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
+        await _planService.DeletePlanAsync(user!, planId);
+        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
     }
 }
 
