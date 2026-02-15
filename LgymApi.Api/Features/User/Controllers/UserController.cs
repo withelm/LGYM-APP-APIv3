@@ -148,7 +148,7 @@ public sealed class UserController : ControllerBase
         return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
-    [HttpPut("users/{id}/roles")]
+    [HttpPost("users/{id}/roles")]
     [Authorize(Policy = AuthConstants.Policies.ManageUserRoles)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]

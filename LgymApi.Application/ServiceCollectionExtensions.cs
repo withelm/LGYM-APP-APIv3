@@ -8,6 +8,7 @@ using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.PlanDay;
+using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.User;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +29,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMeasurementsService, MeasurementsService>();
         services.AddScoped<IPlanService, PlanService>();
         services.AddScoped<IPlanDayService, PlanDayService>();
+        services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<ITrainingService, TrainingService>();
         services.AddScoped<IUserService, UserService>();
 

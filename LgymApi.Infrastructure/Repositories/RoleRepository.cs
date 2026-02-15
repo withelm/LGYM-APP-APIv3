@@ -15,9 +15,30 @@ public sealed class RoleRepository : IRoleRepository
         _dbContext = dbContext;
     }
 
+    public Task<List<Role>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Roles
+            .OrderBy(r => r.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<Role?> FindByIdAsync(Guid roleId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+    }
+
     public Task<Role?> FindByNameAsync(string roleName, CancellationToken cancellationToken = default)
     {
         return _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == roleName, cancellationToken);
+    }
+
+    public Task<bool> ExistsByNameAsync(string roleName, Guid? excludeRoleId = null, CancellationToken cancellationToken = default)
+    {
+        var normalizedName = roleName.Trim().ToLowerInvariant();
+        return _dbContext.Roles.AnyAsync(r =>
+                r.Name.ToLower() == normalizedName &&
+                (!excludeRoleId.HasValue || r.Id != excludeRoleId.Value),
+            cancellationToken);
     }
 
     public Task<List<Role>> GetByNamesAsync(IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
@@ -60,6 +81,16 @@ public sealed class RoleRepository : IRoleRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.RoleClaims
+            .Where(rc => rc.RoleId == roleId && rc.ClaimType == AuthConstants.PermissionClaimType)
+            .Select(rc => rc.ClaimValue)
+            .Distinct()
+            .OrderBy(value => value)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<bool> UserHasRoleAsync(Guid userId, string roleName, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserRoles.AnyAsync(ur => ur.UserId == userId && ur.Role.Name == roleName, cancellationToken);
@@ -71,6 +102,57 @@ public sealed class RoleRepository : IRoleRepository
             .Where(ur => ur.UserId == userId)
             .SelectMany(ur => ur.Role.RoleClaims)
             .AnyAsync(rc => rc.ClaimType == AuthConstants.PermissionClaimType && rc.ClaimValue == permission, cancellationToken);
+    }
+
+    public async Task AddRoleAsync(Role role, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.Roles.AddAsync(role, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateRoleAsync(Role role, CancellationToken cancellationToken = default)
+    {
+        _dbContext.Roles.Update(role);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteRoleAsync(Role role, CancellationToken cancellationToken = default)
+    {
+        _dbContext.Roles.Remove(role);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task ReplaceRolePermissionClaimsAsync(Guid roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
+    {
+        var existingClaims = await _dbContext.RoleClaims
+            .Where(rc => rc.RoleId == roleId && rc.ClaimType == AuthConstants.PermissionClaimType)
+            .ToListAsync(cancellationToken);
+
+        if (existingClaims.Count > 0)
+        {
+            _dbContext.RoleClaims.RemoveRange(existingClaims);
+        }
+
+        var claimsToAdd = permissionClaims
+            .Where(pc => !string.IsNullOrWhiteSpace(pc))
+            .Select(pc => pc.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(pc => pc, StringComparer.Ordinal)
+            .Select(pc => new RoleClaim
+            {
+                Id = Guid.NewGuid(),
+                RoleId = roleId,
+                ClaimType = AuthConstants.PermissionClaimType,
+                ClaimValue = pc
+            })
+            .ToList();
+
+        if (claimsToAdd.Count > 0)
+        {
+            await _dbContext.RoleClaims.AddRangeAsync(claimsToAdd, cancellationToken);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)

@@ -117,4 +117,16 @@
   <data name="UserIdRequired" xml:space="preserve">
     <value>ID użytkownika jest wymagane.</value>
   </data>
+  <data name="PermissionAdminAccess" xml:space="preserve">
+    <value>Dostęp administratora</value>
+  </data>
+  <data name="PermissionManageUserRoles" xml:space="preserve">
+    <value>Zarządzanie rolami użytkowników</value>
+  </data>
+  <data name="PermissionManageAppConfig" xml:space="preserve">
+    <value>Zarządzanie konfiguracją wersji aplikacji</value>
+  </data>
+  <data name="PermissionManageGlobalExercises" xml:space="preserve">
+    <value>Zarządzanie globalnymi ćwiczeniami</value>
+  </data>
 </root>

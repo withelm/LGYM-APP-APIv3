@@ -17,6 +17,14 @@ public static class AuthConstants
         public const string ManageUserRoles = "users.roles.manage";
         public const string ManageAppConfig = "appconfig.manage";
         public const string ManageGlobalExercises = "exercises.global.manage";
+
+        public static readonly IReadOnlyList<string> All =
+        [
+            AdminAccess,
+            ManageUserRoles,
+            ManageAppConfig,
+            ManageGlobalExercises
+        ];
     }
 
     public static class Policies
