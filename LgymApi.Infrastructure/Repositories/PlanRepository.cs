@@ -20,17 +20,17 @@ public sealed class PlanRepository : IPlanRepository
 
     public Task<Plan?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        return _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
     }
 
     public Task<Plan?> FindActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Plans.FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive, cancellationToken);
+        return _dbContext.Plans.FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive && !p.IsDeleted, cancellationToken);
     }
 
     public Task<List<Plan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Plans.Where(p => p.UserId == userId).ToListAsync(cancellationToken);
+        return _dbContext.Plans.Where(p => p.UserId == userId && !p.IsDeleted).ToListAsync(cancellationToken);
     }
 
     public async Task AddAsync(Plan plan, CancellationToken cancellationToken = default)
@@ -48,11 +48,11 @@ public sealed class PlanRepository : IPlanRepository
     public async Task SetActivePlanAsync(Guid userId, Guid planId, CancellationToken cancellationToken = default)
     {
         await _dbContext.Plans
-            .Where(p => p.UserId == userId && p.Id != planId)
+            .Where(p => p.UserId == userId && p.Id != planId && !p.IsDeleted)
             .ExecuteUpdateAsync(_dbContext, p => p.IsActive, p => false, cancellationToken);
 
         await _dbContext.Plans
-            .Where(p => p.UserId == userId && p.Id == planId)
+            .Where(p => p.UserId == userId && p.Id == planId && !p.IsDeleted)
             .ExecuteUpdateAsync(_dbContext, p => p.IsActive, p => true, cancellationToken);
     }
 
@@ -60,7 +60,7 @@ public sealed class PlanRepository : IPlanRepository
     {
         // 1. Find plan by ShareCode
         var planToCopy = await _dbContext.Plans
-            .FirstOrDefaultAsync(p => p.ShareCode == shareCode, cancellationToken);
+            .FirstOrDefaultAsync(p => p.ShareCode == shareCode && !p.IsDeleted, cancellationToken);
 
         if (planToCopy == null)
             throw new InvalidOperationException("Plan not found");
@@ -86,7 +86,8 @@ public sealed class PlanRepository : IPlanRepository
             {
                 UserId = userId,
                 Name = planToCopy.Name,
-                IsActive = true
+                IsActive = true,
+                IsDeleted = false
             };
 
             await _dbContext.Plans.AddAsync(newPlan, cancellationToken);
@@ -188,7 +189,7 @@ public sealed class PlanRepository : IPlanRepository
 
     public async Task<string> GenerateShareCodeAsync(Guid planId, Guid userId, CancellationToken cancellationToken = default)
     {
-        var plan = await _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
+        var plan = await _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == planId && !p.IsDeleted, cancellationToken);
 
         if (plan == null)
             throw new InvalidOperationException("Plan not found");

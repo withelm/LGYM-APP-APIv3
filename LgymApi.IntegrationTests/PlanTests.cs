@@ -215,6 +215,7 @@ public sealed class PlanTests : IntegrationTestBase
         var updatedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId);
         updatedPlan.Should().NotBeNull();
         updatedPlan!.IsActive.Should().BeFalse();
+        updatedPlan.IsDeleted.Should().BeTrue();
 
         var planDays = await db.PlanDays.Where(pd => pd.PlanId == planId).ToListAsync();
         planDays.Should().HaveCount(3);
@@ -253,6 +254,7 @@ public sealed class PlanTests : IntegrationTestBase
         var unchangedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == plan.Id);
         unchangedPlan.Should().NotBeNull();
         unchangedPlan!.IsActive.Should().BeTrue();
+        unchangedPlan.IsDeleted.Should().BeFalse();
 
         var unchangedPlanDays = await db.PlanDays.Where(pd => pd.PlanId == plan.Id).ToListAsync();
         unchangedPlanDays.Should().HaveCount(2);
@@ -290,6 +292,7 @@ public sealed class PlanTests : IntegrationTestBase
         var updatedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId);
         updatedPlan.Should().NotBeNull();
         updatedPlan!.IsActive.Should().BeFalse();
+        updatedPlan.IsDeleted.Should().BeTrue();
 
         var planDays = await db.PlanDays.Where(pd => pd.PlanId == planId).ToListAsync();
         planDays.Should().HaveCount(2);
@@ -334,6 +337,7 @@ public sealed class PlanTests : IntegrationTestBase
         var unchangedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId);
         unchangedPlan.Should().NotBeNull();
         unchangedPlan!.IsActive.Should().BeTrue();
+        unchangedPlan.IsDeleted.Should().BeFalse();
 
         var unchangedPlanDays = await db.PlanDays.Where(pd => pd.PlanId == planId).ToListAsync();
         unchangedPlanDays.Should().HaveCount(2);

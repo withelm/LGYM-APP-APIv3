@@ -36,7 +36,8 @@ public sealed class PlanService : IPlanService
             Id = Guid.NewGuid(),
             UserId = currentUser.Id,
             Name = name,
-            IsActive = true
+            IsActive = true,
+            IsDeleted = false
         };
 
         currentUser.PlanId = plan.Id;
@@ -176,6 +177,7 @@ public sealed class PlanService : IPlanService
         await _planDayRepository.MarkDeletedByPlanIdAsync(plan.Id);
 
         plan.IsActive = false;
+        plan.IsDeleted = true;
         await _planRepository.UpdateAsync(plan);
 
         if (currentUser.PlanId == plan.Id)
