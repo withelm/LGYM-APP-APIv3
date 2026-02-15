@@ -38,7 +38,8 @@ public sealed class UserService : IUserService
             throw AppException.NotFound(Messages.NameIsRequired);
         }
 
-        if (!new EmailAddressAttribute().IsValid(email))
+        var normalizedEmail = email?.Trim().ToLowerInvariant();
+        if (!new EmailAddressAttribute().IsValid(normalizedEmail))
         {
             throw AppException.NotFound(Messages.EmailInvalid);
         }
@@ -53,7 +54,7 @@ public sealed class UserService : IUserService
             throw AppException.NotFound(Messages.SamePassword);
         }
 
-        var existingUser = await _userRepository.FindByNameOrEmailAsync(name, email);
+        var existingUser = await _userRepository.FindByNameOrEmailAsync(name, normalizedEmail!);
         if (existingUser != null)
         {
             if (string.Equals(existingUser.Name, name, StringComparison.Ordinal))
@@ -70,7 +71,7 @@ public sealed class UserService : IUserService
             Id = Guid.NewGuid(),
             Name = name,
             Admin = false,
-            Email = email,
+            Email = normalizedEmail!,
             IsVisibleInRanking = isVisibleInRanking ?? true,
             ProfileRank = "Junior 1",
             LegacyHash = passwordData.Hash,
