@@ -336,6 +336,37 @@ public sealed class PlanDayTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task DeletePlanDay_WithOtherUsersPlanDay_ReturnsForbidden()
+    {
+        var (_, user1Token) = await RegisterUserViaEndpointAsync(
+            name: "deletedayuser3",
+            email: "deleteday3@example.com",
+            password: "password123");
+
+        var (user2Id, user2Token) = await RegisterUserViaEndpointAsync(
+            name: "deletedayuser4",
+            email: "deleteday4@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", user2Token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(user2Id, "DeleteDay Exercise 2", "Back");
+        var planId = await CreatePlanViaEndpointAsync(user2Id, "DeleteDay Plan 2");
+        var planDayId = await CreatePlanDayViaEndpointAsync(user2Id, planId, "Protected Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "8" }
+        });
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", user1Token);
+
+        var response = await Client.GetAsync($"/api/planDay/{planDayId}/deletePlanDay");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
     public async Task GetPlanDaysTypes_WithValidUserId_ReturnsTypes()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(

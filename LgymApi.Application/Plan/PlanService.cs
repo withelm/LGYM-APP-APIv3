@@ -155,6 +155,36 @@ public sealed class PlanService : IPlanService
         await _planRepository.SetActivePlanAsync(currentUser.Id, planId);
     }
 
+    public async Task DeletePlanAsync(UserEntity currentUser, Guid planId)
+    {
+        if (currentUser == null || planId == Guid.Empty)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var plan = await _planRepository.FindByIdAsync(planId);
+        if (plan == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
+        }
+
+        await _planDayRepository.MarkDeletedByPlanIdAsync(plan.Id);
+
+        plan.IsActive = false;
+        await _planRepository.UpdateAsync(plan);
+
+        if (currentUser.PlanId == plan.Id)
+        {
+            currentUser.PlanId = null;
+            await _userRepository.UpdateAsync(currentUser);
+        }
+    }
+
     public async Task<PlanEntity> CopyPlanAsync(UserEntity currentUser, string shareCode)
     {
         if (currentUser == null)

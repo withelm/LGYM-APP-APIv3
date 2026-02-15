@@ -9,5 +9,6 @@ public interface IPlanDayRepository
     Task AddAsync(PlanDay planDay, CancellationToken cancellationToken = default);
     Task UpdateAsync(PlanDay planDay, CancellationToken cancellationToken = default);
     Task MarkDeletedAsync(Guid planDayId, CancellationToken cancellationToken = default);
+    Task MarkDeletedByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default);
     Task<bool> AnyByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default);
 }

@@ -184,6 +184,184 @@ public sealed class PlanTests : IntegrationTestBase
         updatedPlan2!.IsActive.Should().BeTrue();
     }
 
+    [Test]
+    public async Task DeletePlan_WithValidId_SoftDeletesPlanAndAllPlanDays()
+    {
+        var user = await SeedUserAsync(name: "deleteplanuser", email: "deleteplan@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Delete Plan Exercise", "Chest");
+        var planId = await CreatePlanViaEndpointAsync(user.Id, "Plan To Delete");
+        await CreatePlanDayViaEndpointAsync(user.Id, planId, "Delete Day 1", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+        await CreatePlanDayViaEndpointAsync(user.Id, planId, "Delete Day 2", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "8" }
+        });
+        await CreatePlanDayViaEndpointAsync(user.Id, planId, "Delete Day 3", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var updatedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId);
+        updatedPlan.Should().NotBeNull();
+        updatedPlan!.IsActive.Should().BeFalse();
+
+        var planDays = await db.PlanDays.Where(pd => pd.PlanId == planId).ToListAsync();
+        planDays.Should().HaveCount(3);
+        planDays.All(pd => pd.IsDeleted).Should().BeTrue();
+
+        var updatedUser = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        updatedUser.Should().NotBeNull();
+        updatedUser!.PlanId.Should().BeNull();
+    }
+
+    [Test]
+    public async Task DeletePlan_WithOtherUsersPlan_ReturnsForbidden()
+    {
+        var user1 = await SeedUserAsync(name: "deleteplanuser2", email: "deleteplan2@example.com");
+        var user2 = await SeedUserAsync(name: "deleteplanuser3", email: "deleteplan3@example.com");
+        var plan = await SeedPlanAsync(user2.Id, "Other User Plan", isActive: true);
+        var exerciseId = await CreateExerciseViaEndpointAsync(user2.Id, "Protected Plan Exercise", "Back");
+        await CreatePlanDayViaEndpointAsync(user2.Id, plan.Id, "Protected Day 1", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+        await CreatePlanDayViaEndpointAsync(user2.Id, plan.Id, "Protected Day 2", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 5, Reps = "5" }
+        });
+
+        SetAuthorizationHeader(user1.Id);
+
+        var response = await Client.PostAsync($"/api/{plan.Id}/deletePlan", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var unchangedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == plan.Id);
+        unchangedPlan.Should().NotBeNull();
+        unchangedPlan!.IsActive.Should().BeTrue();
+
+        var unchangedPlanDays = await db.PlanDays.Where(pd => pd.PlanId == plan.Id).ToListAsync();
+        unchangedPlanDays.Should().HaveCount(2);
+        unchangedPlanDays.All(pd => !pd.IsDeleted).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task DeletePlan_WithPlanDaysAndTrainings_ByOwner_SoftDeletesPlanAndPlanDaysAndKeepsTrainings()
+    {
+        var user = await SeedUserAsync(name: "deleteplanownertrain", email: "deleteplanownertrain@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Owner Delete Exercise", "Chest");
+        var gymId = await CreateGymViaEndpointAsync(user.Id, "Owner Delete Gym");
+        var planId = await CreatePlanViaEndpointAsync(user.Id, "Owner Delete Plan");
+        var planDay1Id = await CreatePlanDayViaEndpointAsync(user.Id, planId, "Owner Delete Day 1", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+        var planDay2Id = await CreatePlanDayViaEndpointAsync(user.Id, planId, "Owner Delete Day 2", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "8" }
+        });
+
+        await AddTrainingViaEndpointAsync(user.Id, gymId, planDay1Id, exerciseId);
+        await AddTrainingViaEndpointAsync(user.Id, gymId, planDay2Id, exerciseId);
+
+        var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var updatedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId);
+        updatedPlan.Should().NotBeNull();
+        updatedPlan!.IsActive.Should().BeFalse();
+
+        var planDays = await db.PlanDays.Where(pd => pd.PlanId == planId).ToListAsync();
+        planDays.Should().HaveCount(2);
+        planDays.All(pd => pd.IsDeleted).Should().BeTrue();
+
+        var trainings = await db.Trainings
+            .Where(t => t.UserId == user.Id && (t.TypePlanDayId == planDay1Id || t.TypePlanDayId == planDay2Id))
+            .ToListAsync();
+        trainings.Should().HaveCount(2);
+    }
+
+    [Test]
+    public async Task DeletePlan_WithPlanDaysAndTrainings_ByNonOwner_ReturnsForbiddenAndKeepsData()
+    {
+        var owner = await SeedUserAsync(name: "deleteplannonowner1", email: "deleteplannonowner1@example.com");
+        var attacker = await SeedUserAsync(name: "deleteplannonowner2", email: "deleteplannonowner2@example.com");
+
+        SetAuthorizationHeader(owner.Id);
+        var exerciseId = await CreateExerciseViaEndpointAsync(owner.Id, "NonOwner Delete Exercise", "Back");
+        var gymId = await CreateGymViaEndpointAsync(owner.Id, "NonOwner Delete Gym");
+        var planId = await CreatePlanViaEndpointAsync(owner.Id, "NonOwner Protected Plan");
+        var planDay1Id = await CreatePlanDayViaEndpointAsync(owner.Id, planId, "NonOwner Day 1", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+        var planDay2Id = await CreatePlanDayViaEndpointAsync(owner.Id, planId, "NonOwner Day 2", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 5, Reps = "5" }
+        });
+
+        await AddTrainingViaEndpointAsync(owner.Id, gymId, planDay1Id, exerciseId);
+        await AddTrainingViaEndpointAsync(owner.Id, gymId, planDay2Id, exerciseId);
+
+        SetAuthorizationHeader(attacker.Id);
+        var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var unchangedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId);
+        unchangedPlan.Should().NotBeNull();
+        unchangedPlan!.IsActive.Should().BeTrue();
+
+        var unchangedPlanDays = await db.PlanDays.Where(pd => pd.PlanId == planId).ToListAsync();
+        unchangedPlanDays.Should().HaveCount(2);
+        unchangedPlanDays.All(pd => !pd.IsDeleted).Should().BeTrue();
+
+        var trainings = await db.Trainings
+            .Where(t => t.UserId == owner.Id && (t.TypePlanDayId == planDay1Id || t.TypePlanDayId == planDay2Id))
+            .ToListAsync();
+        trainings.Should().HaveCount(2);
+    }
+
+    private async Task AddTrainingViaEndpointAsync(Guid userId, Guid gymId, Guid planDayId, Guid exerciseId)
+    {
+        var request = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 60.0, unit = "kg" }
+            }
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private async Task<Plan> SeedPlanAsync(Guid userId, string name, bool isActive = true)
     {
         using var scope = Factory.Services.CreateScope();
@@ -249,8 +427,7 @@ public sealed class PlanTests : IntegrationTestBase
         var plan = await SeedPlanAsync(user.Id, "Shareable Plan");
         SetAuthorizationHeader(user.Id);
 
-        var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
-        var response = await Client.SendAsync(request);
+        var response = await Client.PostAsync($"/api/{plan.Id}/share", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -267,8 +444,7 @@ public sealed class PlanTests : IntegrationTestBase
         SetAuthorizationHeader(user.Id);
 
         var nonExistentPlanId = Guid.NewGuid();
-        var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/{nonExistentPlanId}/share");
-        var response = await Client.SendAsync(request);
+        var response = await Client.PostAsync($"/api/{nonExistentPlanId}/share", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -281,8 +457,7 @@ public sealed class PlanTests : IntegrationTestBase
         var plan = await SeedPlanAsync(user2.Id, "Other User Plan");
         SetAuthorizationHeader(user1.Id);
 
-        var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
-        var response = await Client.SendAsync(request);
+        var response = await Client.PostAsync($"/api/{plan.Id}/share", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -295,8 +470,7 @@ public sealed class PlanTests : IntegrationTestBase
         var plan = await SeedPlanAsync(user1.Id, "Plan To Copy");
         
         SetAuthorizationHeader(user1.Id);
-        var shareRequest = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
-        var shareResponse = await Client.SendAsync(shareRequest);
+        var shareResponse = await Client.PostAsync($"/api/{plan.Id}/share", null);
         var shareBody = await shareResponse.Content.ReadFromJsonAsync<ShareCodeResponse>();
         var shareCode = shareBody!.ShareCode;
 
@@ -343,12 +517,10 @@ public sealed class PlanTests : IntegrationTestBase
         var plan = await SeedPlanAsync(user.Id, "Double Share Plan");
         SetAuthorizationHeader(user.Id);
 
-        var request1 = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
-        var response1 = await Client.SendAsync(request1);
+        var response1 = await Client.PostAsync($"/api/{plan.Id}/share", null);
         var body1 = await response1.Content.ReadFromJsonAsync<ShareCodeResponse>();
 
-        var request2 = new HttpRequestMessage(HttpMethod.Patch, $"/api/{plan.Id}/share");
-        var response2 = await Client.SendAsync(request2);
+        var response2 = await Client.PostAsync($"/api/{plan.Id}/share", null);
         var body2 = await response2.Content.ReadFromJsonAsync<ShareCodeResponse>();
 
         body1!.ShareCode.Should().Be(body2!.ShareCode);
