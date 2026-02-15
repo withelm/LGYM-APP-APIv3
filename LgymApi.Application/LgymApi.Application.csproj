@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LgymApi.Domain\LgymApi.Domain.csproj" />
+    <ProjectReference Include="..\LgymApi.Resources\LgymApi.Resources.csproj" />
   </ItemGroup>
 
   <ItemGroup>
