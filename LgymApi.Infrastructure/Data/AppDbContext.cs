@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Data;
@@ -25,6 +26,14 @@ public sealed class AppDbContext : DbContext
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<EloRegistry> EloRegistries => Set<EloRegistry>();
     public DbSet<AppConfig> AppConfigs => Set<AppConfig>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<RoleClaim> RoleClaims => Set<RoleClaim>();
+
+    public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
+    public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
+    public static readonly Guid TesterRoleSeedId = Guid.Parse("f93f03af-ae11-4fd8-a60e-f970f89df6fb");
+    private static readonly DateTimeOffset RoleSeedTimestamp = new(2026, 2, 15, 0, 0, 0, TimeSpan.Zero);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -163,6 +172,64 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("AppConfigs");
             entity.Property(e => e.Platform).HasConversion<string>();
+        });
+
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.ToTable("Roles");
+            entity.Property(e => e.Name).IsRequired();
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasData(
+                new Role
+                {
+                    Id = UserRoleSeedId,
+                    Name = AuthConstants.Roles.User,
+                    Description = "Default role for all users",
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new Role
+                {
+                    Id = AdminRoleSeedId,
+                    Name = AuthConstants.Roles.Admin,
+                    Description = "Administrative privileges",
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new Role
+                {
+                    Id = TesterRoleSeedId,
+                    Name = AuthConstants.Roles.Tester,
+                    Description = "Excluded from ranking",
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                });
+        });
+
+        modelBuilder.Entity<UserRole>(entity =>
+        {
+            entity.ToTable("UserRoles");
+            entity.HasKey(e => new { e.UserId, e.RoleId });
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RoleClaim>(entity =>
+        {
+            entity.ToTable("RoleClaims");
+            entity.Property(e => e.ClaimType).IsRequired();
+            entity.Property(e => e.ClaimValue).IsRequired();
+            entity.HasIndex(e => new { e.RoleId, e.ClaimType, e.ClaimValue }).IsUnique();
+            entity.HasOne(e => e.Role)
+                .WithMany(r => r.RoleClaims)
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

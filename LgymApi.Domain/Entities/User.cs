@@ -5,13 +5,11 @@ namespace LgymApi.Domain.Entities;
 public sealed class User : EntityBase
 {
     public string Name { get; set; } = string.Empty;
-    public bool? Admin { get; set; }
     public string Email { get; set; } = string.Empty;
     public Guid? PlanId { get; set; }
     public string ProfileRank { get; set; } = string.Empty;
     public string? Avatar { get; set; }
     public bool IsDeleted { get; set; }
-    public bool IsTester { get; set; }
     public bool IsVisibleInRanking { get; set; } = true;
 
     public string? LegacyHash { get; set; }
@@ -28,4 +26,5 @@ public sealed class User : EntityBase
     public ICollection<MainRecord> MainRecords { get; set; } = new List<MainRecord>();
     public ICollection<EloRegistry> EloRegistries { get; set; } = new List<EloRegistry>();
     public ICollection<Gym> Gyms { get; set; } = new List<Gym>();
+    public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }

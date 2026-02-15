@@ -4,6 +4,7 @@ using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Security;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -12,15 +13,18 @@ namespace LgymApi.Application.Features.Exercise;
 public sealed class ExerciseService : IExerciseService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IRoleRepository _roleRepository;
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
 
     public ExerciseService(
         IUserRepository userRepository,
+        IRoleRepository roleRepository,
         IExerciseRepository exerciseRepository,
         IExerciseScoreRepository exerciseScoreRepository)
     {
         _userRepository = userRepository;
+        _roleRepository = roleRepository;
         _exerciseRepository = exerciseRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
     }
@@ -106,7 +110,7 @@ public sealed class ExerciseService : IExerciseService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (user.Admin == true)
+        if (await _roleRepository.UserHasRoleAsync(user.Id, AuthConstants.Roles.Admin))
         {
             exercise.IsDeleted = true;
         }
@@ -169,7 +173,7 @@ public sealed class ExerciseService : IExerciseService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (currentUser.Admin != true)
+        if (!await _roleRepository.UserHasRoleAsync(currentUser.Id, AuthConstants.Roles.Admin))
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }

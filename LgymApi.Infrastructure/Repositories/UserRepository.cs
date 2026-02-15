@@ -1,6 +1,7 @@
 using LgymApi.Application.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +34,8 @@ public sealed class UserRepository : IUserRepository
     public async Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default)
     {
         var rankedUsers = await _dbContext.Users
-            .Where(u => !u.IsTester && !u.IsDeleted && u.IsVisibleInRanking)
+            .Where(u => !u.IsDeleted && u.IsVisibleInRanking)
+            .Where(u => !u.UserRoles.Any(ur => ur.Role.Name == AuthConstants.Roles.Tester))
             .Select(u => new
             {
                 User = u,

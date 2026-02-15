@@ -137,6 +137,7 @@ async Task MigrateUsers()
     var processed = 0;
     var inserted = 0;
     var users = new List<User>(batchSize);
+    var userRoles = new List<UserRole>(batchSize * 2);
 
     async Task Flush()
     {
@@ -146,11 +147,13 @@ async Task MigrateUsers()
         }
 
         await dbContext.Users.AddRangeAsync(users);
+        await dbContext.UserRoles.AddRangeAsync(userRoles);
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
         inserted += users.Count;
         Log($"MigrateUsers: saved batch ({users.Count}), total inserted={inserted}");
         users.Clear();
+        userRoles.Clear();
     }
 
     using var cursor = await collection.FindAsync(
@@ -173,17 +176,18 @@ async Task MigrateUsers()
                 userPlanLegacyMap[id] = planValue.ToString();
             }
 
+            var isAdmin = doc.GetValue("admin", BsonBoolean.False).ToBoolean();
+            var isTester = doc.GetValue("isTester", BsonBoolean.False).ToBoolean();
+
             users.Add(new User
             {
                 Id = id,
                 LegacyMongoId = legacyId,
                 Name = doc.GetValue("name", string.Empty).AsString,
-                Admin = doc.GetValue("admin", BsonBoolean.False).ToBoolean(),
                 Email = doc.GetValue("email", string.Empty).AsString,
                 ProfileRank = doc.GetValue("profileRank", string.Empty).AsString,
                 Avatar = doc.GetValue("avatar", BsonNull.Value).IsBsonNull ? null : doc.GetValue("avatar").AsString,
                 IsDeleted = doc.GetValue("isDeleted", BsonBoolean.False).ToBoolean(),
-                IsTester = doc.GetValue("isTester", BsonBoolean.False).ToBoolean(),
                 IsVisibleInRanking = doc.GetValue("isVisibleInRanking", BsonBoolean.True).ToBoolean(),
                 LegacyHash = doc.GetValue("hash", BsonNull.Value).IsBsonNull ? null : doc.GetValue("hash").AsString,
                 LegacySalt = doc.GetValue("salt", BsonNull.Value).IsBsonNull ? null : doc.GetValue("salt").AsString,
@@ -193,6 +197,30 @@ async Task MigrateUsers()
                 CreatedAt = ToPolandOffset(doc.GetValue("createdAt", BsonNull.Value)),
                 UpdatedAt = ToPolandOffset(doc.GetValue("updatedAt", BsonNull.Value))
             });
+
+            userRoles.Add(new UserRole
+            {
+                UserId = id,
+                RoleId = AppDbContext.UserRoleSeedId
+            });
+
+            if (isAdmin)
+            {
+                userRoles.Add(new UserRole
+                {
+                    UserId = id,
+                    RoleId = AppDbContext.AdminRoleSeedId
+                });
+            }
+
+            if (isTester)
+            {
+                userRoles.Add(new UserRole
+                {
+                    UserId = id,
+                    RoleId = AppDbContext.TesterRoleSeedId
+                });
+            }
 
             if (users.Count >= batchSize)
             {
@@ -1296,6 +1324,9 @@ async Task ResetDatabaseData()
 {
     await dbContext.Database.ExecuteSqlRawAsync("""
 TRUNCATE TABLE
+    "RoleClaims",
+    "UserRoles",
+    "Roles",
     "TrainingExerciseScores",
     "ExerciseScores",
     "Trainings",

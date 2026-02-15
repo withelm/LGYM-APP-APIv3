@@ -76,9 +76,7 @@ public abstract class IntegrationTestBase : IDisposable
             Id = Guid.NewGuid(),
             Name = name,
             Email = email,
-            Admin = isAdmin,
             IsVisibleInRanking = isVisibleInRanking,
-            IsTester = isTester,
             IsDeleted = isDeleted,
             ProfileRank = "Junior 1",
             LegacyHash = passwordData.Hash,
@@ -89,6 +87,16 @@ public abstract class IntegrationTestBase : IDisposable
         };
 
         db.Users.Add(user);
+        db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = AppDbContext.UserRoleSeedId });
+        if (isAdmin)
+        {
+            db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = AppDbContext.AdminRoleSeedId });
+        }
+
+        if (isTester)
+        {
+            db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = AppDbContext.TesterRoleSeedId });
+        }
 
         var eloRegistry = new EloRegistry
         {

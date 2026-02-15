@@ -1,4 +1,6 @@
 using LgymApi.Infrastructure.Data;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +35,42 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 options.UseInMemoryDatabase(DatabaseName);
                 options.EnableSensitiveDataLogging();
             });
+
+            using var serviceProvider = services.BuildServiceProvider();
+            using var scope = serviceProvider.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Database.EnsureCreated();
+
+            if (!db.Roles.Any())
+            {
+                var timestamp = new DateTimeOffset(2026, 2, 15, 0, 0, 0, TimeSpan.Zero);
+                db.Roles.AddRange(
+                    new Role
+                    {
+                        Id = AppDbContext.UserRoleSeedId,
+                        Name = AuthConstants.Roles.User,
+                        Description = "Default role for all users",
+                        CreatedAt = timestamp,
+                        UpdatedAt = timestamp
+                    },
+                    new Role
+                    {
+                        Id = AppDbContext.AdminRoleSeedId,
+                        Name = AuthConstants.Roles.Admin,
+                        Description = "Administrative privileges",
+                        CreatedAt = timestamp,
+                        UpdatedAt = timestamp
+                    },
+                    new Role
+                    {
+                        Id = AppDbContext.TesterRoleSeedId,
+                        Name = AuthConstants.Roles.Tester,
+                        Description = "Excluded from ranking",
+                        CreatedAt = timestamp,
+                        UpdatedAt = timestamp
+                    });
+                db.SaveChanges();
+            }
         });
 
         builder.UseSetting("Jwt:Secret", TestJwtSecret);

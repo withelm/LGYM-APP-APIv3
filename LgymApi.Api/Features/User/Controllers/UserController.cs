@@ -38,21 +38,22 @@ public sealed class UserController : ControllerBase
         return Ok(new LoginResponseDto
         {
             Token = result.Token,
+            PermissionClaims = result.PermissionClaims,
             User = new UserInfoDto
             {
                 Name = result.User.Name,
                 Id = result.User.Id.ToString(),
                 Email = result.User.Email,
                 Avatar = result.User.Avatar,
-                Admin = result.User.Admin,
                 ProfileRank = result.User.ProfileRank,
                 CreatedAt = result.User.CreatedAt,
                 UpdatedAt = result.User.UpdatedAt,
                 Elo = result.User.Elo,
                 NextRank = result.User.NextRank == null ? null : new RankDto { Name = result.User.NextRank.Name, NeedElo = result.User.NextRank.NeedElo },
                 IsDeleted = result.User.IsDeleted,
-                IsTester = result.User.IsTester,
-                IsVisibleInRanking = result.User.IsVisibleInRanking
+                IsVisibleInRanking = result.User.IsVisibleInRanking,
+                Roles = result.User.Roles,
+                PermissionClaims = result.User.PermissionClaims
             }
         });
     }
@@ -78,16 +79,25 @@ public sealed class UserController : ControllerBase
             Id = result.Id.ToString(),
             Email = result.Email,
             Avatar = result.Avatar,
-            Admin = result.Admin,
             ProfileRank = result.ProfileRank,
             CreatedAt = result.CreatedAt,
             UpdatedAt = result.UpdatedAt,
             Elo = result.Elo,
             NextRank = result.NextRank == null ? null : new RankDto { Name = result.NextRank.Name, NeedElo = result.NextRank.NeedElo },
             IsDeleted = result.IsDeleted,
-            IsTester = result.IsTester,
-            IsVisibleInRanking = result.IsVisibleInRanking
+            IsVisibleInRanking = result.IsVisibleInRanking,
+            Roles = result.Roles,
+            PermissionClaims = result.PermissionClaims
         });
+    }
+
+    [HttpPost("logout")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Logout()
+    {
+        var user = HttpContext.GetCurrentUser();
+        await _userService.LogoutAsync(user!);
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
     [HttpGet("getUsersRanking")]
@@ -134,6 +144,18 @@ public sealed class UserController : ControllerBase
 
         var user = HttpContext.GetCurrentUser();
         await _userService.ChangeVisibilityInRankingAsync(user!, isVisible);
+        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+    }
+
+    [HttpPut("users/{id}/roles")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateUserRoles([FromRoute] string id, [FromBody] UpdateUserRolesRequest request)
+    {
+        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        await _userService.UpdateUserRolesAsync(userId, request.Roles);
         return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 }

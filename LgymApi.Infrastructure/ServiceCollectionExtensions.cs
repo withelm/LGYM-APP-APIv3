@@ -33,8 +33,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<ILegacyPasswordService, LegacyPasswordService>();
         services.AddScoped<LgymApi.Application.Services.IRankService, LgymApi.Application.Services.RankService>();
+        services.AddSingleton<IUserSessionCache, UserSessionCache>();
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IPlanDayRepository, PlanDayRepository>();
         services.AddScoped<IPlanDayExerciseRepository, PlanDayExerciseRepository>();

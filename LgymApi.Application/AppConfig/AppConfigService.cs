@@ -2,6 +2,7 @@ using AppConfigEntity = LgymApi.Domain.Entities.AppConfig;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Security;
 using LgymApi.Resources;
 
 namespace LgymApi.Application.Features.AppConfig;
@@ -9,11 +10,13 @@ namespace LgymApi.Application.Features.AppConfig;
 public sealed class AppConfigService : IAppConfigService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IRoleRepository _roleRepository;
     private readonly IAppConfigRepository _appConfigRepository;
 
-    public AppConfigService(IUserRepository userRepository, IAppConfigRepository appConfigRepository)
+    public AppConfigService(IUserRepository userRepository, IRoleRepository roleRepository, IAppConfigRepository appConfigRepository)
     {
         _userRepository = userRepository;
+        _roleRepository = roleRepository;
         _appConfigRepository = appConfigRepository;
     }
 
@@ -53,7 +56,7 @@ public sealed class AppConfigService : IAppConfigService
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
-        if (user == null || user.Admin != true)
+        if (user == null || !await _roleRepository.UserHasRoleAsync(userId, AuthConstants.Roles.Admin))
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }

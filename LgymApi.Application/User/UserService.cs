@@ -4,6 +4,7 @@ using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -12,23 +13,29 @@ namespace LgymApi.Application.Features.User;
 public sealed class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IRoleRepository _roleRepository;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly ITokenService _tokenService;
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
+    private readonly IUserSessionCache _userSessionCache;
 
     public UserService(
         IUserRepository userRepository,
+        IRoleRepository roleRepository,
         IEloRegistryRepository eloRepository,
         ITokenService tokenService,
         ILegacyPasswordService legacyPasswordService,
-        IRankService rankService)
+        IRankService rankService,
+        IUserSessionCache userSessionCache)
     {
         _userRepository = userRepository;
+        _roleRepository = roleRepository;
         _eloRepository = eloRepository;
         _tokenService = tokenService;
         _legacyPasswordService = legacyPasswordService;
         _rankService = rankService;
+        _userSessionCache = userSessionCache;
     }
 
     public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking)
@@ -70,7 +77,6 @@ public sealed class UserService : IUserService
         {
             Id = Guid.NewGuid(),
             Name = name,
-            Admin = false,
             Email = normalizedEmail!,
             IsVisibleInRanking = isVisibleInRanking ?? true,
             ProfileRank = "Junior 1",
@@ -82,6 +88,14 @@ public sealed class UserService : IUserService
         };
 
         await _userRepository.AddAsync(user);
+        var defaultRole = await _roleRepository.FindByNameAsync(AuthConstants.Roles.User);
+        if (defaultRole == null)
+        {
+            throw AppException.BadRequest(Messages.DidntFind);
+        }
+
+        await _roleRepository.AddUserRolesAsync(user.Id, new[] { defaultRole.Id });
+
         await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
         {
             Id = Guid.NewGuid(),
@@ -117,28 +131,33 @@ public sealed class UserService : IUserService
             throw AppException.Unauthorized(Messages.Unauthorized);
         }
 
-        var token = _tokenService.CreateToken(user.Id);
+        var roles = await _roleRepository.GetRoleNamesByUserIdAsync(user.Id);
+        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id);
+        var token = _tokenService.CreateToken(user.Id, roles, permissionClaims);
         var elo = await _eloRepository.GetLatestEloAsync(user.Id) ?? 1000;
         var nextRank = _rankService.GetNextRank(user.ProfileRank);
+
+        _userSessionCache.AddOrRefresh(user.Id);
 
         return new LoginResult
         {
             Token = token,
+            PermissionClaims = permissionClaims,
             User = new UserInfoResult
             {
                 Name = user.Name,
                 Id = user.Id,
                 Email = user.Email,
                 Avatar = user.Avatar,
-                Admin = user.Admin,
                 ProfileRank = user.ProfileRank,
                 CreatedAt = user.CreatedAt.UtcDateTime,
                 UpdatedAt = user.UpdatedAt.UtcDateTime,
                 Elo = elo,
                 NextRank = nextRank == null ? null : new RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
                 IsDeleted = user.IsDeleted,
-                IsTester = user.IsTester,
-                IsVisibleInRanking = user.IsVisibleInRanking
+                IsVisibleInRanking = user.IsVisibleInRanking,
+                Roles = roles,
+                PermissionClaims = permissionClaims
             }
         };
     }
@@ -150,8 +169,7 @@ public sealed class UserService : IUserService
             return false;
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
-        return user != null && user.Admin == true;
+        return await _roleRepository.UserHasRoleAsync(userId, AuthConstants.Roles.Admin);
     }
 
     public async Task<UserInfoResult> CheckTokenAsync(UserEntity currentUser)
@@ -163,6 +181,8 @@ public sealed class UserService : IUserService
 
         var nextRank = _rankService.GetNextRank(currentUser.ProfileRank);
         var elo = await _eloRepository.GetLatestEloAsync(currentUser.Id) ?? 1000;
+        var roles = await _roleRepository.GetRoleNamesByUserIdAsync(currentUser.Id);
+        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(currentUser.Id);
 
         return new UserInfoResult
         {
@@ -170,15 +190,15 @@ public sealed class UserService : IUserService
             Id = currentUser.Id,
             Email = currentUser.Email,
             Avatar = currentUser.Avatar,
-            Admin = currentUser.Admin,
             ProfileRank = currentUser.ProfileRank,
             CreatedAt = currentUser.CreatedAt.UtcDateTime,
             UpdatedAt = currentUser.UpdatedAt.UtcDateTime,
             Elo = elo,
             NextRank = nextRank == null ? null : new RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
             IsDeleted = currentUser.IsDeleted,
-            IsTester = currentUser.IsTester,
-            IsVisibleInRanking = currentUser.IsVisibleInRanking
+            IsVisibleInRanking = currentUser.IsVisibleInRanking,
+            Roles = roles,
+            PermissionClaims = permissionClaims
         };
     }
 
@@ -229,6 +249,17 @@ public sealed class UserService : IUserService
         await _userRepository.UpdateAsync(currentUser);
     }
 
+    public Task LogoutAsync(UserEntity currentUser)
+    {
+        if (currentUser == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        _userSessionCache.Remove(currentUser.Id);
+        return Task.CompletedTask;
+    }
+
     public async Task ChangeVisibilityInRankingAsync(UserEntity currentUser, bool isVisibleInRanking)
     {
         if (currentUser == null)
@@ -238,5 +269,33 @@ public sealed class UserService : IUserService
 
         currentUser.IsVisibleInRanking = isVisibleInRanking;
         await _userRepository.UpdateAsync(currentUser);
+    }
+
+    public async Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roles)
+    {
+        if (userId == Guid.Empty)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var normalizedRoleNames = roles
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Select(r => r.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var rolesToSet = await _roleRepository.GetByNamesAsync(normalizedRoleNames);
+        if (rolesToSet.Count != normalizedRoleNames.Count)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => r.Id).ToList());
     }
 }

@@ -11,6 +11,8 @@ public interface IUserService
     Task<UserInfoResult> CheckTokenAsync(UserEntity currentUser);
     Task<List<RankingEntry>> GetUsersRankingAsync();
     Task<int> GetUserEloAsync(Guid userId);
+    Task LogoutAsync(UserEntity currentUser);
     Task DeleteAccountAsync(UserEntity currentUser);
     Task ChangeVisibilityInRankingAsync(UserEntity currentUser, bool isVisibleInRanking);
+    Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roles);
 }

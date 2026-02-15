@@ -52,9 +52,6 @@ public sealed class UserInfoDto
     [JsonPropertyName("avatar")]
     public string? Avatar { get; set; }
 
-    [JsonPropertyName("admin")]
-    public bool? Admin { get; set; }
-
     [JsonPropertyName("profileRank")]
     public string ProfileRank { get; set; } = string.Empty;
 
@@ -73,11 +70,14 @@ public sealed class UserInfoDto
     [JsonPropertyName("isDeleted")]
     public bool IsDeleted { get; set; }
 
-    [JsonPropertyName("isTester")]
-    public bool IsTester { get; set; }
-
     [JsonPropertyName("isVisibleInRanking")]
     public bool IsVisibleInRanking { get; set; }
+
+    [JsonPropertyName("roles")]
+    public List<string> Roles { get; set; } = new();
+
+    [JsonPropertyName("permissionClaims")]
+    public List<string> PermissionClaims { get; set; } = new();
 }
 
 public sealed class UserBaseInfoDto
@@ -108,4 +108,13 @@ public sealed class LoginResponseDto
 
     [JsonPropertyName("req")]
     public UserInfoDto? User { get; set; }
+
+    [JsonPropertyName("permissionClaims")]
+    public List<string> PermissionClaims { get; set; } = new();
+}
+
+public sealed class UpdateUserRolesRequest
+{
+    [JsonPropertyName("roles")]
+    public List<string> Roles { get; set; } = new();
 }
