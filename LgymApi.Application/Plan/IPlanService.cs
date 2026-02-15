@@ -11,6 +11,7 @@ public interface IPlanService
     Task<bool> CheckIsUserHavePlanAsync(UserEntity currentUser, Guid routeUserId);
     Task<List<PlanEntity>> GetPlansListAsync(UserEntity currentUser, Guid routeUserId);
     Task SetNewActivePlanAsync(UserEntity currentUser, Guid routeUserId, Guid planId);
+    Task DeletePlanAsync(UserEntity currentUser, Guid planId);
     Task<PlanEntity> CopyPlanAsync(UserEntity currentUser, string shareCode);
     Task<string> GenerateShareCodeAsync(UserEntity currentUser, Guid planId);
 }

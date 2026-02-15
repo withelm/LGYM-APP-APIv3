@@ -1,5 +1,6 @@
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.PlanDay.Contracts;
+using LgymApi.Api.Middleware;
 using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Features.PlanDay;
 using LgymApi.Application.Features.PlanDay.Models;
@@ -24,9 +25,11 @@ public sealed class PlanDayController : ControllerBase
     [HttpPost("planDay/{id}/createPlanDay")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreatePlanDay([FromRoute] string id, [FromBody] PlanDayFormDto form)
     {
+        var user = HttpContext.GetCurrentUser();
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
         var exercises = form.Exercises
             .Select(exercise => new PlanDayExerciseInput
@@ -36,16 +39,18 @@ public sealed class PlanDayController : ControllerBase
                 Reps = exercise.Reps
             })
             .ToList();
-        await _planDayService.CreatePlanDayAsync(planId, form.Name, exercises);
+        await _planDayService.CreatePlanDayAsync(user!, planId, form.Name, exercises);
         return Ok(new ResponseMessageDto { Message = Messages.Created });
     }
 
     [HttpPost("planDay/updatePlanDay")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdatePlanDay([FromBody] PlanDayFormDto form)
     {
+        var user = HttpContext.GetCurrentUser();
         var exercises = form.Exercises
             .Select(exercise => new PlanDayExerciseInput
             {
@@ -54,17 +59,19 @@ public sealed class PlanDayController : ControllerBase
                 Reps = exercise.Reps
             })
             .ToList();
-        await _planDayService.UpdatePlanDayAsync(form.Id ?? string.Empty, form.Name, exercises);
+        await _planDayService.UpdatePlanDayAsync(user!, form.Id ?? string.Empty, form.Name, exercises);
         return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
     [HttpGet("planDay/{id}/getPlanDay")]
     [ProducesResponseType(typeof(PlanDayVmDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlanDay([FromRoute] string id)
     {
+        var user = HttpContext.GetCurrentUser();
         var planDayId = Guid.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
-        var context = await _planDayService.GetPlanDayAsync(planDayId);
+        var context = await _planDayService.GetPlanDayAsync(user!, planDayId);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.Exercises);
         mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
@@ -74,11 +81,13 @@ public sealed class PlanDayController : ControllerBase
 
     [HttpGet("planDay/{id}/getPlanDays")]
     [ProducesResponseType(typeof(List<PlanDayVmDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlanDays([FromRoute] string id)
     {
+        var user = HttpContext.GetCurrentUser();
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
-        var context = await _planDayService.GetPlanDaysAsync(planId);
+        var context = await _planDayService.GetPlanDaysAsync(user!, planId);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
         mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
@@ -88,32 +97,38 @@ public sealed class PlanDayController : ControllerBase
 
     [HttpGet("planDay/{id}/getPlanDaysTypes")]
     [ProducesResponseType(typeof(List<PlanDayChooseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlanDaysTypes([FromRoute] string id)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var planDays = await _planDayService.GetPlanDaysTypesAsync(userId);
+        var user = HttpContext.GetCurrentUser();
+        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var planDays = await _planDayService.GetPlanDaysTypesAsync(user!, routeUserId);
         var planDayDtos = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayChooseDto>(planDays);
         return Ok(planDayDtos);
     }
 
     [HttpGet("planDay/{id}/deletePlanDay")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletePlanDay([FromRoute] string id)
     {
+        var user = HttpContext.GetCurrentUser();
         var planDayId = Guid.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
-        await _planDayService.DeletePlanDayAsync(planDayId);
+        await _planDayService.DeletePlanDayAsync(user!, planDayId);
         return Ok(new ResponseMessageDto { Message = Messages.Deleted });
     }
 
     [HttpGet("planDay/{id}/getPlanDaysInfo")]
     [ProducesResponseType(typeof(List<PlanDayBaseInfoDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPlanDaysInfo([FromRoute] string id)
     {
+        var user = HttpContext.GetCurrentUser();
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
-        var context = await _planDayService.GetPlanDaysInfoAsync(planId);
+        var context = await _planDayService.GetPlanDaysInfoAsync(user!, planId);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
         mappingContext.Set(PlanDayProfile.Keys.PlanDayLastTrainings, context.LastTrainingMap);

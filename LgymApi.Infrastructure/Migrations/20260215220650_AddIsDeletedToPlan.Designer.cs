@@ -3,6 +3,7 @@ using System;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LgymApi.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260215220650_AddIsDeletedToPlan")]
+    partial class AddIsDeletedToPlan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -505,134 +508,6 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("PlanDayExercises", (string)null);
                 });
 
-            modelBuilder.Entity("LgymApi.Domain.Entities.Role", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<string>("LegacyMongoId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Roles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("f124fe5f-9bf2-45df-bfd2-d5d6be920016"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Default role for all users",
-                            Name = "User",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Administrative privileges",
-                            Name = "Admin",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = new Guid("f93f03af-ae11-4fd8-a60e-f970f89df6fb"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Excluded from ranking",
-                            Name = "Tester",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        });
-                });
-
-            modelBuilder.Entity("LgymApi.Domain.Entities.RoleClaim", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ClaimType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ClaimValue")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LegacyMongoId")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoleId", "ClaimType", "ClaimValue")
-                        .IsUnique();
-
-                    b.ToTable("RoleClaims", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("9dbfd057-cf88-4597-b668-2fdf16a2def6"),
-                            ClaimType = "permission",
-                            ClaimValue = "admin.access",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            RoleId = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = new Guid("97f7ea56-0032-4f18-8703-ab2d1485ad45"),
-                            ClaimType = "permission",
-                            ClaimValue = "users.roles.manage",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            RoleId = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = new Guid("d12f9f84-48f4-4f4b-9614-843f31ea0f96"),
-                            ClaimType = "permission",
-                            ClaimValue = "appconfig.manage",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            RoleId = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = new Guid("27965bf4-ff55-4261-8f98-218ccf00e537"),
-                            ClaimType = "permission",
-                            ClaimValue = "exercises.global.manage",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            RoleId = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        });
-                });
-
             modelBuilder.Entity("LgymApi.Domain.Entities.Training", b =>
                 {
                     b.Property<Guid>("Id")
@@ -704,6 +579,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool?>("Admin")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Avatar")
                         .HasColumnType("text");
 
@@ -715,6 +593,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTester")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsVisibleInRanking")
@@ -763,21 +644,6 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasIndex("PlanId");
 
                     b.ToTable("Users", (string)null);
-                });
-
-            modelBuilder.Entity("LgymApi.Domain.Entities.UserRole", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("UserId", "RoleId");
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.EloRegistry", b =>
@@ -932,17 +798,6 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("PlanDay");
                 });
 
-            modelBuilder.Entity("LgymApi.Domain.Entities.RoleClaim", b =>
-                {
-                    b.HasOne("LgymApi.Domain.Entities.Role", "Role")
-                        .WithMany("RoleClaims")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Role");
-                });
-
             modelBuilder.Entity("LgymApi.Domain.Entities.Training", b =>
                 {
                     b.HasOne("LgymApi.Domain.Entities.Gym", "Gym")
@@ -999,25 +854,6 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Plan");
                 });
 
-            modelBuilder.Entity("LgymApi.Domain.Entities.UserRole", b =>
-                {
-                    b.HasOne("LgymApi.Domain.Entities.Role", "Role")
-                        .WithMany("UserRoles")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LgymApi.Domain.Entities.User", "User")
-                        .WithMany("UserRoles")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Role");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("LgymApi.Domain.Entities.Exercise", b =>
                 {
                     b.Navigation("ExerciseScores");
@@ -1040,13 +876,6 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Exercises");
                 });
 
-            modelBuilder.Entity("LgymApi.Domain.Entities.Role", b =>
-                {
-                    b.Navigation("RoleClaims");
-
-                    b.Navigation("UserRoles");
-                });
-
             modelBuilder.Entity("LgymApi.Domain.Entities.Training", b =>
                 {
                     b.Navigation("Exercises");
@@ -1067,8 +896,6 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Plans");
 
                     b.Navigation("Trainings");
-
-                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }
