@@ -153,7 +153,20 @@ public sealed class PlanService : IPlanService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
+        var plan = await _planRepository.FindByIdAsync(planId);
+        if (plan == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (plan.UserId != currentUser.Id)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
+        }
+
         await _planRepository.SetActivePlanAsync(currentUser.Id, planId);
+        currentUser.PlanId = planId;
+        await _userRepository.UpdateAsync(currentUser);
     }
 
     public async Task DeletePlanAsync(UserEntity currentUser, Guid planId)
@@ -180,10 +193,12 @@ public sealed class PlanService : IPlanService
         plan.IsDeleted = true;
         await _planRepository.UpdateAsync(plan);
 
-        if (currentUser.PlanId == plan.Id)
+        var user = await _userRepository.FindByIdAsync(currentUser.Id);
+        if (user != null && user.PlanId == plan.Id)
         {
+            user.PlanId = null;
+            await _userRepository.UpdateAsync(user);
             currentUser.PlanId = null;
-            await _userRepository.UpdateAsync(currentUser);
         }
     }
 
