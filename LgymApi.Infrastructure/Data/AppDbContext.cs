@@ -33,6 +33,10 @@ public sealed class AppDbContext : DbContext
     public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
     public static readonly Guid TesterRoleSeedId = Guid.Parse("f93f03af-ae11-4fd8-a60e-f970f89df6fb");
+    public static readonly Guid AdminAccessClaimSeedId = Guid.Parse("9dbfd057-cf88-4597-b668-2fdf16a2def6");
+    public static readonly Guid ManageUserRolesClaimSeedId = Guid.Parse("97f7ea56-0032-4f18-8703-ab2d1485ad45");
+    public static readonly Guid ManageAppConfigClaimSeedId = Guid.Parse("d12f9f84-48f4-4f4b-9614-843f31ea0f96");
+    public static readonly Guid ManageGlobalExercisesClaimSeedId = Guid.Parse("27965bf4-ff55-4261-8f98-218ccf00e537");
     private static readonly DateTimeOffset RoleSeedTimestamp = new(2026, 2, 15, 0, 0, 0, TimeSpan.Zero);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -230,6 +234,43 @@ public sealed class AppDbContext : DbContext
                 .WithMany(r => r.RoleClaims)
                 .HasForeignKey(e => e.RoleId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasData(
+                new RoleClaim
+                {
+                    Id = AdminAccessClaimSeedId,
+                    RoleId = AdminRoleSeedId,
+                    ClaimType = AuthConstants.PermissionClaimType,
+                    ClaimValue = AuthConstants.Permissions.AdminAccess,
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new RoleClaim
+                {
+                    Id = ManageUserRolesClaimSeedId,
+                    RoleId = AdminRoleSeedId,
+                    ClaimType = AuthConstants.PermissionClaimType,
+                    ClaimValue = AuthConstants.Permissions.ManageUserRoles,
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new RoleClaim
+                {
+                    Id = ManageAppConfigClaimSeedId,
+                    RoleId = AdminRoleSeedId,
+                    ClaimType = AuthConstants.PermissionClaimType,
+                    ClaimValue = AuthConstants.Permissions.ManageAppConfig,
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new RoleClaim
+                {
+                    Id = ManageGlobalExercisesClaimSeedId,
+                    RoleId = AdminRoleSeedId,
+                    ClaimType = AuthConstants.PermissionClaimType,
+                    ClaimValue = AuthConstants.Permissions.ManageGlobalExercises,
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                });
         });
     }
 

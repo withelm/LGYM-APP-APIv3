@@ -69,6 +69,43 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                         CreatedAt = timestamp,
                         UpdatedAt = timestamp
                     });
+                db.RoleClaims.AddRange(
+                    new RoleClaim
+                    {
+                        Id = AppDbContext.AdminAccessClaimSeedId,
+                        RoleId = AppDbContext.AdminRoleSeedId,
+                        ClaimType = AuthConstants.PermissionClaimType,
+                        ClaimValue = AuthConstants.Permissions.AdminAccess,
+                        CreatedAt = timestamp,
+                        UpdatedAt = timestamp
+                    },
+                    new RoleClaim
+                    {
+                        Id = AppDbContext.ManageUserRolesClaimSeedId,
+                        RoleId = AppDbContext.AdminRoleSeedId,
+                        ClaimType = AuthConstants.PermissionClaimType,
+                        ClaimValue = AuthConstants.Permissions.ManageUserRoles,
+                        CreatedAt = timestamp,
+                        UpdatedAt = timestamp
+                    },
+                    new RoleClaim
+                    {
+                        Id = AppDbContext.ManageAppConfigClaimSeedId,
+                        RoleId = AppDbContext.AdminRoleSeedId,
+                        ClaimType = AuthConstants.PermissionClaimType,
+                        ClaimValue = AuthConstants.Permissions.ManageAppConfig,
+                        CreatedAt = timestamp,
+                        UpdatedAt = timestamp
+                    },
+                    new RoleClaim
+                    {
+                        Id = AppDbContext.ManageGlobalExercisesClaimSeedId,
+                        RoleId = AppDbContext.AdminRoleSeedId,
+                        ClaimType = AuthConstants.PermissionClaimType,
+                        ClaimValue = AuthConstants.Permissions.ManageGlobalExercises,
+                        CreatedAt = timestamp,
+                        UpdatedAt = timestamp
+                    });
                 db.SaveChanges();
             }
         });

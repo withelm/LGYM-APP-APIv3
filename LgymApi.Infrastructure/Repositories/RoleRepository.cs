@@ -65,6 +65,14 @@ public sealed class RoleRepository : IRoleRepository
         return _dbContext.UserRoles.AnyAsync(ur => ur.UserId == userId && ur.Role.Name == roleName, cancellationToken);
     }
 
+    public Task<bool> UserHasPermissionAsync(Guid userId, string permission, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .SelectMany(ur => ur.Role.RoleClaims)
+            .AnyAsync(rc => rc.ClaimType == AuthConstants.PermissionClaimType && rc.ClaimValue == permission, cancellationToken);
+    }
+
     public async Task AddUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
     {
         if (roleIds.Count == 0)

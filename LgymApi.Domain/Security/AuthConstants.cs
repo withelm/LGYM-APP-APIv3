@@ -10,4 +10,19 @@ public static class AuthConstants
         public const string Admin = "Admin";
         public const string Tester = "Tester";
     }
+
+    public static class Permissions
+    {
+        public const string AdminAccess = "admin.access";
+        public const string ManageUserRoles = "users.roles.manage";
+        public const string ManageAppConfig = "appconfig.manage";
+        public const string ManageGlobalExercises = "exercises.global.manage";
+    }
+
+    public static class Policies
+    {
+        public const string ManageUserRoles = "policy.users.roles.manage";
+        public const string ManageAppConfig = "policy.appconfig.manage";
+        public const string ManageGlobalExercises = "policy.exercises.global.manage";
+    }
 }

@@ -169,7 +169,7 @@ public sealed class UserService : IUserService
             return false;
         }
 
-        return await _roleRepository.UserHasRoleAsync(userId, AuthConstants.Roles.Admin);
+        return await _roleRepository.UserHasPermissionAsync(userId, AuthConstants.Permissions.AdminAccess);
     }
 
     public async Task<UserInfoResult> CheckTokenAsync(UserEntity currentUser)

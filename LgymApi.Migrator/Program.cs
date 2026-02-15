@@ -1343,6 +1343,21 @@ TRUNCATE TABLE
     "Users"
 CASCADE;
 """);
+
+    await dbContext.Database.ExecuteSqlRawAsync("""
+INSERT INTO "Roles" ("Id", "Name", "Description", "CreatedAt", "UpdatedAt")
+VALUES
+    ('f124fe5f-9bf2-45df-bfd2-d5d6be920016'::uuid, 'User', 'Default role for all users', TIMESTAMPTZ '2026-02-15T00:00:00+00:00', TIMESTAMPTZ '2026-02-15T00:00:00+00:00'),
+    ('1754c6f8-c021-41aa-b610-17088f9476f9'::uuid, 'Admin', 'Administrative privileges', TIMESTAMPTZ '2026-02-15T00:00:00+00:00', TIMESTAMPTZ '2026-02-15T00:00:00+00:00'),
+    ('f93f03af-ae11-4fd8-a60e-f970f89df6fb'::uuid, 'Tester', 'Excluded from ranking', TIMESTAMPTZ '2026-02-15T00:00:00+00:00', TIMESTAMPTZ '2026-02-15T00:00:00+00:00');
+
+INSERT INTO "RoleClaims" ("Id", "RoleId", "ClaimType", "ClaimValue", "CreatedAt", "UpdatedAt")
+VALUES
+    ('9dbfd057-cf88-4597-b668-2fdf16a2def6'::uuid, '1754c6f8-c021-41aa-b610-17088f9476f9'::uuid, 'permission', 'admin.access', TIMESTAMPTZ '2026-02-15T00:00:00+00:00', TIMESTAMPTZ '2026-02-15T00:00:00+00:00'),
+    ('97f7ea56-0032-4f18-8703-ab2d1485ad45'::uuid, '1754c6f8-c021-41aa-b610-17088f9476f9'::uuid, 'permission', 'users.roles.manage', TIMESTAMPTZ '2026-02-15T00:00:00+00:00', TIMESTAMPTZ '2026-02-15T00:00:00+00:00'),
+    ('d12f9f84-48f4-4f4b-9614-843f31ea0f96'::uuid, '1754c6f8-c021-41aa-b610-17088f9476f9'::uuid, 'permission', 'appconfig.manage', TIMESTAMPTZ '2026-02-15T00:00:00+00:00', TIMESTAMPTZ '2026-02-15T00:00:00+00:00'),
+    ('27965bf4-ff55-4261-8f98-218ccf00e537'::uuid, '1754c6f8-c021-41aa-b610-17088f9476f9'::uuid, 'permission', 'exercises.global.manage', TIMESTAMPTZ '2026-02-15T00:00:00+00:00', TIMESTAMPTZ '2026-02-15T00:00:00+00:00');
+""");
 }
 
 static BodyParts NormalizeBodyPart(string? raw)

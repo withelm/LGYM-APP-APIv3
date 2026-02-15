@@ -56,7 +56,7 @@ public sealed class AppConfigService : IAppConfigService
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
-        if (user == null || !await _roleRepository.UserHasRoleAsync(userId, AuthConstants.Roles.Admin))
+        if (user == null || !await _roleRepository.UserHasPermissionAsync(userId, AuthConstants.Permissions.ManageAppConfig))
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }

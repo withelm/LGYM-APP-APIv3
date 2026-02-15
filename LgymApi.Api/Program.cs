@@ -15,6 +15,7 @@ using System.Text.Json.Serialization;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
 using LgymApi.Api.Middleware;
+using LgymApi.Domain.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,7 +88,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthConstants.Policies.ManageUserRoles, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageUserRoles));
+    options.AddPolicy(AuthConstants.Policies.ManageAppConfig, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageAppConfig));
+    options.AddPolicy(AuthConstants.Policies.ManageGlobalExercises, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageGlobalExercises));
+});
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {

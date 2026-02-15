@@ -3,6 +3,7 @@ using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User;
+using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
@@ -148,7 +149,7 @@ public sealed class UserController : ControllerBase
     }
 
     [HttpPut("users/{id}/roles")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = AuthConstants.Policies.ManageUserRoles)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
