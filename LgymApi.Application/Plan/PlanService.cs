@@ -196,9 +196,15 @@ public sealed class PlanService : IPlanService
         var user = await _userRepository.FindByIdAsync(currentUser.Id);
         if (user != null && user.PlanId == plan.Id)
         {
-            user.PlanId = null;
+            var lastValidPlan = await _planRepository.FindLastActiveByUserIdAsync(currentUser.Id);
+            if (lastValidPlan != null)
+            {
+                await _planRepository.SetActivePlanAsync(currentUser.Id, lastValidPlan.Id);
+            }
+
+            user.PlanId = lastValidPlan?.Id;
             await _userRepository.UpdateAsync(user);
-            currentUser.PlanId = null;
+            currentUser.PlanId = user.PlanId;
         }
     }
 

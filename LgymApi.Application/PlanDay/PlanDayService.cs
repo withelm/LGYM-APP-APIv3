@@ -293,10 +293,6 @@ public sealed class PlanDayService : IPlanDayService
         }
 
         var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id);
-        if (planDays.Count == 0)
-        {
-            throw AppException.NotFound(Messages.DidntFind);
-        }
 
         var planDayIds = planDays.Select(pd => pd.Id).ToList();
         var planDayExercises = await _planDayExerciseRepository.GetByPlanDayIdsAsync(planDayIds);

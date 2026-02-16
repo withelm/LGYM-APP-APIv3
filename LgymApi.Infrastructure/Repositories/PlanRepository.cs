@@ -28,6 +28,14 @@ public sealed class PlanRepository : IPlanRepository
         return _dbContext.Plans.FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive && !p.IsDeleted, cancellationToken);
     }
 
+    public Task<Plan?> FindLastActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Plans
+            .Where(p => p.UserId == userId && !p.IsActive && !p.IsDeleted)
+            .OrderByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public Task<List<Plan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Plans.Where(p => p.UserId == userId && !p.IsDeleted).ToListAsync(cancellationToken);
@@ -218,4 +226,5 @@ public sealed class PlanRepository : IPlanRepository
 
         return new string(result);
     }
+
 }

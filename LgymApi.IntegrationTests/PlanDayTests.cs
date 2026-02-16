@@ -642,6 +642,28 @@ public sealed class PlanDayTests : IntegrationTestBase
         body[0].TotalNumberOfSeries.Should().Be(7);
     }
 
+    [Test]
+    public async Task GetPlanDaysInfo_WithNoPlanDays_ReturnsOkWithEmptyList()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "infouser2",
+            email: "info2@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var planId = await CreatePlanViaEndpointAsync(userId, "Info Empty Plan");
+
+        var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDaysInfo");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<PlanDayInfoResponse>>();
+        body.Should().NotBeNull();
+        body.Should().BeEmpty();
+    }
+
     private sealed class MessageResponse
     {
         [JsonPropertyName("msg")]
