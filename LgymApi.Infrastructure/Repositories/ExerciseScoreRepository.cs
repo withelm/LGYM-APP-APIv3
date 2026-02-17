@@ -82,9 +82,8 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
         }
 
         return query
-            .OrderByDescending(s => s.CreatedAt)
             .GroupBy(s => s.Series)
-            .Select(g => g.First())
+            .Select(g => g.OrderByDescending(x => x.CreatedAt).First())
             .ToListAsync(cancellationToken);
     }
 
