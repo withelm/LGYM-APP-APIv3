@@ -69,6 +69,18 @@ public sealed class TrainingService : ITrainingService
                 throw AppException.NotFound(Messages.DidntFind);
             }
 
+            var uniqueExerciseIds = exercises
+                .Select(e => e.ExerciseId)
+                .Where(e => Guid.TryParse(e, out _))
+                .Distinct()
+                .Select(Guid.Parse)
+                .ToList();
+
+            var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds);
+            var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
+
+            var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds);
+
             await using var transaction = await _unitOfWork.BeginTransactionAsync();
             try
             {
@@ -82,18 +94,6 @@ public sealed class TrainingService : ITrainingService
                 };
 
                 await _trainingRepository.AddAsync(training);
-
-                var uniqueExerciseIds = exercises
-                    .Select(e => e.ExerciseId)
-                    .Where(e => Guid.TryParse(e, out _))
-                    .Distinct()
-                    .Select(Guid.Parse)
-                    .ToList();
-
-                var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds);
-                var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
-
-                var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds);
 
                 var savedScoreIds = new List<Guid>();
                 var totalElo = 0;
