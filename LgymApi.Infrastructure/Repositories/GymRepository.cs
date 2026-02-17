@@ -14,10 +14,9 @@ public sealed class GymRepository : IGymRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(Gym gym, CancellationToken cancellationToken = default)
+    public Task AddAsync(Gym gym, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Gyms.AddAsync(gym, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.Gyms.AddAsync(gym, cancellationToken).AsTask();
     }
 
     public Task<Gym?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -32,9 +31,9 @@ public sealed class GymRepository : IGymRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(Gym gym, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(Gym gym, CancellationToken cancellationToken = default)
     {
         _dbContext.Gyms.Update(gym);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 }

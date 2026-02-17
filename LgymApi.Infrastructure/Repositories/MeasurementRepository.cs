@@ -15,10 +15,9 @@ public sealed class MeasurementRepository : IMeasurementRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(Measurement measurement, CancellationToken cancellationToken = default)
+    public Task AddAsync(Measurement measurement, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Measurements.AddAsync(measurement, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.Measurements.AddAsync(measurement, cancellationToken).AsTask();
     }
 
     public Task<Measurement?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)

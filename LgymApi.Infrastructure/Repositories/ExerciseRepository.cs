@@ -133,7 +133,6 @@ public sealed class ExerciseRepository : IExerciseRepository
                 _dbContext.ExerciseTranslations.Update(translation);
             }
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
@@ -147,7 +146,6 @@ public sealed class ExerciseRepository : IExerciseRepository
 
             translation.Name = name;
             _dbContext.ExerciseTranslations.Update(translation);
-            await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 
@@ -162,15 +160,14 @@ public sealed class ExerciseRepository : IExerciseRepository
         return false;
     }
 
-    public async Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default)
+    public Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Exercises.AddAsync(exercise, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.Exercises.AddAsync(exercise, cancellationToken).AsTask();
     }
 
-    public async Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default)
     {
         _dbContext.Exercises.Update(exercise);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 }

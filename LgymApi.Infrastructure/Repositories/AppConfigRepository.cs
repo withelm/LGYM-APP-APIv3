@@ -23,9 +23,8 @@ public sealed class AppConfigRepository : IAppConfigRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task AddAsync(AppConfig config, CancellationToken cancellationToken = default)
+    public Task AddAsync(AppConfig config, CancellationToken cancellationToken = default)
     {
-        await _dbContext.AppConfigs.AddAsync(config, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.AppConfigs.AddAsync(config, cancellationToken).AsTask();
     }
 }

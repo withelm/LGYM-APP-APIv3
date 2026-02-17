@@ -28,10 +28,9 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task AddRangeAsync(IEnumerable<PlanDayExercise> exercises, CancellationToken cancellationToken = default)
+    public Task AddRangeAsync(IEnumerable<PlanDayExercise> exercises, CancellationToken cancellationToken = default)
     {
-        await _dbContext.PlanDayExercises.AddRangeAsync(exercises, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.PlanDayExercises.AddRangeAsync(exercises, cancellationToken);
     }
 
     public async Task RemoveByPlanDayIdAsync(Guid planDayId, CancellationToken cancellationToken = default)
@@ -41,6 +40,5 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
             .ToListAsync(cancellationToken);
 
         _dbContext.PlanDayExercises.RemoveRange(existing);
-        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
