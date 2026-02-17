@@ -22,13 +22,14 @@ public sealed class MainRecordRepository : IMainRecordRepository
     public Task<List<MainRecord>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
+            .AsNoTracking()
             .Where(r => r.UserId == userId)
             .ToListAsync(cancellationToken);
     }
 
     public Task<MainRecord?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.MainRecords.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+        return _dbContext.MainRecords.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
     }
 
     public Task DeleteAsync(MainRecord record, CancellationToken cancellationToken = default)
@@ -46,6 +47,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
     public Task<MainRecord?> GetLatestByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
+            .AsNoTracking()
             .Where(r => r.UserId == userId && r.ExerciseId == exerciseId)
             .OrderByDescending(r => r.Date)
             .FirstOrDefaultAsync(cancellationToken);

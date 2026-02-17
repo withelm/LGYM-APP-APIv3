@@ -17,12 +17,13 @@ public sealed class ExerciseRepository : IExerciseRepository
 
     public Task<Exercise?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Exercises.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+        return _dbContext.Exercises.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
     public Task<List<Exercise>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises
+            .AsNoTracking()
             .Where(e => e.UserId == userId || e.UserId == null)
             .ToListAsync(cancellationToken);
     }
@@ -30,6 +31,7 @@ public sealed class ExerciseRepository : IExerciseRepository
     public Task<List<Exercise>> GetAllGlobalAsync(CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises
+            .AsNoTracking()
             .Where(e => e.UserId == null && !e.IsDeleted)
             .ToListAsync(cancellationToken);
     }
@@ -37,6 +39,7 @@ public sealed class ExerciseRepository : IExerciseRepository
     public Task<List<Exercise>> GetUserExercisesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises
+            .AsNoTracking()
             .Where(e => e.UserId == userId && !e.IsDeleted)
             .ToListAsync(cancellationToken);
     }
@@ -49,6 +52,7 @@ public sealed class ExerciseRepository : IExerciseRepository
         }
 
         return _dbContext.Exercises
+            .AsNoTracking()
             .Where(e => e.BodyPart == parsed && !e.IsDeleted && (e.UserId == userId || e.UserId == null))
             .ToListAsync(cancellationToken);
     }
@@ -56,6 +60,7 @@ public sealed class ExerciseRepository : IExerciseRepository
     public Task<List<Exercise>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises
+            .AsNoTracking()
             .Where(e => ids.Contains(e.Id))
             .ToListAsync(cancellationToken);
     }
@@ -94,6 +99,7 @@ public sealed class ExerciseRepository : IExerciseRepository
         }
 
         var translations = await _dbContext.ExerciseTranslations
+            .AsNoTracking()
             .Where(t => ids.Contains(t.ExerciseId) && normalizedCultures.Contains(t.Culture))
             .Select(t => new { t.ExerciseId, t.Culture, t.Name })
             .ToListAsync(cancellationToken);

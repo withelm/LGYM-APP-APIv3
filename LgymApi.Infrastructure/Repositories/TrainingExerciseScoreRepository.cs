@@ -22,6 +22,7 @@ public sealed class TrainingExerciseScoreRepository : ITrainingExerciseScoreRepo
     public Task<List<TrainingExerciseScore>> GetByTrainingIdsAsync(List<Guid> trainingIds, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainingExerciseScores
+            .AsNoTracking()
             .Where(t => trainingIds.Contains(t.TrainingId))
             .ToListAsync(cancellationToken);
     }

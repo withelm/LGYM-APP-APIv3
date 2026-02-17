@@ -18,6 +18,7 @@ public sealed class AppConfigRepository : IAppConfigRepository
     public Task<AppConfig?> GetLatestByPlatformAsync(Platforms platform, CancellationToken cancellationToken = default)
     {
         return _dbContext.AppConfigs
+            .AsNoTracking()
             .Where(c => c.Platform == platform)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);

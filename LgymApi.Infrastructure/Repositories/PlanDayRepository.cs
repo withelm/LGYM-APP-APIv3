@@ -17,12 +17,12 @@ public sealed class PlanDayRepository : IPlanDayRepository
 
     public Task<PlanDay?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.PlanDays.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        return _dbContext.PlanDays.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
     public Task<List<PlanDay>> GetByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.PlanDays.Where(p => p.PlanId == planId && !p.IsDeleted).ToListAsync(cancellationToken);
+        return _dbContext.PlanDays.AsNoTracking().Where(p => p.PlanId == planId && !p.IsDeleted).ToListAsync(cancellationToken);
     }
 
     public Task AddAsync(PlanDay planDay, CancellationToken cancellationToken = default)

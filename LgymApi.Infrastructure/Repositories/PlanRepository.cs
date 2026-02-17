@@ -18,17 +18,18 @@ public sealed class PlanRepository : IPlanRepository
 
     public Task<Plan?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
+        return _dbContext.Plans.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
     }
 
     public Task<Plan?> FindActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Plans.FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive && !p.IsDeleted, cancellationToken);
+        return _dbContext.Plans.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive && !p.IsDeleted, cancellationToken);
     }
 
     public Task<Plan?> FindLastActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Plans
+            .AsNoTracking()
             .Where(p => p.UserId == userId && !p.IsActive && !p.IsDeleted)
             .OrderByDescending(p => p.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
@@ -36,7 +37,7 @@ public sealed class PlanRepository : IPlanRepository
 
     public Task<List<Plan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Plans.Where(p => p.UserId == userId && !p.IsDeleted).ToListAsync(cancellationToken);
+        return _dbContext.Plans.AsNoTracking().Where(p => p.UserId == userId && !p.IsDeleted).ToListAsync(cancellationToken);
     }
 
     public Task AddAsync(Plan plan, CancellationToken cancellationToken = default)
