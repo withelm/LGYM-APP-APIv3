@@ -95,3 +95,18 @@ dotnet run --project LgymApi.Api
 
 - Password verification uses legacy `passport-local-mongoose` PBKDF2 settings (sha256, 25000 iterations, keylen 512, hex).
 - All IDs are GUIDs in Postgres; responses return `_id` as a string GUID.
+
+## Persistence Conventions (UoW)
+
+The project uses Unit of Work semantics for writes.
+
+- Repositories stage entity changes (`Add`, `Update`, `Remove`) and do not call `SaveChangesAsync`.
+- Application services own commit timing (`IUnitOfWork.SaveChangesAsync`) at use-case boundaries.
+- Multi-step write flows use explicit `IUnitOfWork` transactions in the service layer.
+- Read-only repository queries should prefer `AsNoTracking()` unless tracking is explicitly needed.
+
+### Transaction Ownership
+
+- The top-level application service method owns the transaction scope.
+- Repository methods are transaction-agnostic and should not begin/commit/rollback transactions.
+- On failures in transactional flows, service code rolls back and propagates domain/application errors.

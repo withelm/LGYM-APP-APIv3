@@ -19,6 +19,11 @@ public sealed class EfUnitOfWork : IUnitOfWork
 
     public async Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
+        if (string.Equals(_dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal))
+        {
+            return NoOpUnitOfWorkTransaction.Instance;
+        }
+
         var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         return new EfUnitOfWorkTransaction(transaction);
     }
