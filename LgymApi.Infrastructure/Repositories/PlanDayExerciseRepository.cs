@@ -17,6 +17,7 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
     public Task<List<PlanDayExercise>> GetByPlanDayIdsAsync(List<Guid> planDayIds, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDayExercises
+            .AsNoTracking()
             .Where(e => planDayIds.Contains(e.PlanDayId))
             .ToListAsync(cancellationToken);
     }
@@ -24,6 +25,7 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
     public Task<List<PlanDayExercise>> GetByPlanDayIdAsync(Guid planDayId, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDayExercises
+            .AsNoTracking()
             .Where(e => e.PlanDayId == planDayId)
             .ToListAsync(cancellationToken);
     }

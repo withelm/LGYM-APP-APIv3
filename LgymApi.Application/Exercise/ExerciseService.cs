@@ -349,10 +349,13 @@ public sealed class ExerciseService : IExerciseService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
+        var latestScores = await _exerciseScoreRepository.GetLatestByUserExerciseSeriesAsync(currentUserId, exerciseId, gymId);
+        var latestBySeries = latestScores.ToDictionary(s => s.Series, s => s);
+
         var seriesScores = new List<SeriesScoreResult>();
         for (var i = 1; i <= series; i++)
         {
-            var score = await _exerciseScoreRepository.GetLatestByUserExerciseSeriesAsync(currentUserId, exerciseId, i, gymId);
+            latestBySeries.TryGetValue(i, out var score);
             seriesScores.Add(new SeriesScoreResult
             {
                 Series = i,

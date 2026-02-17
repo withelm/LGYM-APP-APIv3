@@ -22,12 +22,12 @@ public sealed class MeasurementRepository : IMeasurementRepository
 
     public Task<Measurement?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Measurements.FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+        return _dbContext.Measurements.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
     }
 
     public Task<List<Measurement>> GetByUserAsync(Guid userId, string? bodyPart, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Measurements.Where(m => m.UserId == userId).AsQueryable();
+        var query = _dbContext.Measurements.AsNoTracking().Where(m => m.UserId == userId).AsQueryable();
         if (!string.IsNullOrWhiteSpace(bodyPart) && Enum.TryParse(bodyPart, true, out BodyParts parsed))
         {
             query = query.Where(m => m.BodyPart == parsed);

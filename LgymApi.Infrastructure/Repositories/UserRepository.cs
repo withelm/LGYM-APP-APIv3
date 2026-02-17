@@ -17,22 +17,23 @@ public sealed class UserRepository : IUserRepository
 
     public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
     public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Users.FirstOrDefaultAsync(u => u.Name == name, cancellationToken);
+        return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Name == name, cancellationToken);
     }
 
     public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Users.FirstOrDefaultAsync(u => u.Name == name || u.Email == email, cancellationToken);
+        return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Name == name || u.Email == email, cancellationToken);
     }
 
     public async Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default)
     {
         var rankedUsers = await _dbContext.Users
+            .AsNoTracking()
             .Where(u => !u.IsTester && !u.IsDeleted && u.IsVisibleInRanking)
             .Select(u => new
             {
