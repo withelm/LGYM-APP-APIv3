@@ -10,11 +10,13 @@ public sealed class AppConfigService : IAppConfigService
 {
     private readonly IUserRepository _userRepository;
     private readonly IAppConfigRepository _appConfigRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public AppConfigService(IUserRepository userRepository, IAppConfigRepository appConfigRepository)
+    public AppConfigService(IUserRepository userRepository, IAppConfigRepository appConfigRepository, IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _appConfigRepository = appConfigRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<AppConfigEntity> GetLatestByPlatformAsync(string platformRaw)
@@ -80,5 +82,6 @@ public sealed class AppConfigService : IAppConfigService
         };
 
         await _appConfigRepository.AddAsync((global::LgymApi.Domain.Entities.AppConfig)config);
+        await _unitOfWork.SaveChangesAsync();
     }
 }

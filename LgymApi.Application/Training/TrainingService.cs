@@ -19,6 +19,7 @@ public sealed class TrainingService : ITrainingService
     private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public TrainingService(
         IUserRepository userRepository,
@@ -28,7 +29,8 @@ public sealed class TrainingService : ITrainingService
         IExerciseScoreRepository exerciseScoreRepository,
         ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
         IEloRegistryRepository eloRepository,
-        IRankService rankService)
+        IRankService rankService,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _gymRepository = gymRepository;
@@ -38,6 +40,7 @@ public sealed class TrainingService : ITrainingService
         _trainingExerciseScoreRepository = trainingExerciseScoreRepository;
         _eloRepository = eloRepository;
         _rankService = rankService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<TrainingSummaryResult> AddTrainingAsync(
@@ -160,6 +163,7 @@ public sealed class TrainingService : ITrainingService
                 TrainingId = training.Id
             });
             await _userRepository.UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
 
             var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
 

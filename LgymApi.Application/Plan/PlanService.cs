@@ -11,12 +11,14 @@ public sealed class PlanService : IPlanService
     private readonly IUserRepository _userRepository;
     private readonly IPlanRepository _planRepository;
     private readonly IPlanDayRepository _planDayRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public PlanService(IUserRepository userRepository, IPlanRepository planRepository, IPlanDayRepository planDayRepository)
+    public PlanService(IUserRepository userRepository, IPlanRepository planRepository, IPlanDayRepository planDayRepository, IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _planRepository = planRepository;
         _planDayRepository = planDayRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task CreatePlanAsync(UserEntity currentUser, Guid routeUserId, string name)
@@ -43,6 +45,7 @@ public sealed class PlanService : IPlanService
         currentUser.PlanId = plan.Id;
         await _planRepository.AddAsync(plan);
         await _userRepository.UpdateAsync(currentUser);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task UpdatePlanAsync(UserEntity currentUser, Guid routeUserId, string planId, string name)
@@ -75,6 +78,7 @@ public sealed class PlanService : IPlanService
 
         plan.Name = name;
         await _planRepository.UpdateAsync(plan);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<PlanEntity> GetPlanConfigAsync(UserEntity currentUser, Guid routeUserId)
@@ -167,6 +171,7 @@ public sealed class PlanService : IPlanService
         await _planRepository.SetActivePlanAsync(currentUser.Id, planId);
         currentUser.PlanId = planId;
         await _userRepository.UpdateAsync(currentUser);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task DeletePlanAsync(UserEntity currentUser, Guid planId)
@@ -206,6 +211,8 @@ public sealed class PlanService : IPlanService
             await _userRepository.UpdateAsync(user);
             currentUser.PlanId = user.PlanId;
         }
+
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<PlanEntity> CopyPlanAsync(UserEntity currentUser, string shareCode)
@@ -217,7 +224,9 @@ public sealed class PlanService : IPlanService
 
         try
         {
-            return await _planRepository.CopyPlanByShareCodeAsync(shareCode, currentUser.Id);
+            var plan = await _planRepository.CopyPlanByShareCodeAsync(shareCode, currentUser.Id);
+            await _unitOfWork.SaveChangesAsync();
+            return plan;
         }
         catch (InvalidOperationException)
         {
@@ -234,7 +243,9 @@ public sealed class PlanService : IPlanService
 
         try
         {
-            return await _planRepository.GenerateShareCodeAsync(planId, currentUser.Id);
+            var shareCode = await _planRepository.GenerateShareCodeAsync(planId, currentUser.Id);
+            await _unitOfWork.SaveChangesAsync();
+            return shareCode;
         }
         catch (InvalidOperationException)
         {
