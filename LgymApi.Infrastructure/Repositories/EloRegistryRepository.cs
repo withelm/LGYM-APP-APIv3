@@ -14,10 +14,9 @@ public sealed class EloRegistryRepository : IEloRegistryRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(EloRegistry registry, CancellationToken cancellationToken = default)
+    public Task AddAsync(EloRegistry registry, CancellationToken cancellationToken = default)
     {
-        await _dbContext.EloRegistries.AddAsync(registry, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.EloRegistries.AddAsync(registry, cancellationToken).AsTask();
     }
 
     public Task<int?> GetLatestEloAsync(Guid userId, CancellationToken cancellationToken = default)

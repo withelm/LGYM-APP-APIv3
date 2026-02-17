@@ -14,10 +14,9 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddRangeAsync(IEnumerable<ExerciseScore> scores, CancellationToken cancellationToken = default)
+    public Task AddRangeAsync(IEnumerable<ExerciseScore> scores, CancellationToken cancellationToken = default)
     {
-        await _dbContext.ExerciseScores.AddRangeAsync(scores, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.ExerciseScores.AddRangeAsync(scores, cancellationToken);
     }
 
     public Task<List<ExerciseScore>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default)

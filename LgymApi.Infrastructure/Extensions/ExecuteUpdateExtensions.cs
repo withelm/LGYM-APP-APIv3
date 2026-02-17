@@ -30,10 +30,7 @@ public static class ExecuteUpdateExtensions
             propertyInfo.SetValue(entity, valueFunc(entity));
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-
         return entities.Count;
-
     }
 
     public static Task<int> ExecuteUpdateAsync<TSource, TProperty>(

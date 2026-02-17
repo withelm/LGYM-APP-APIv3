@@ -3,7 +3,6 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace LgymApi.Infrastructure.Repositories;
 
@@ -110,67 +109,36 @@ public sealed class ExerciseRepository : IExerciseRepository
         culture = culture.Trim().ToLowerInvariant();
         name = name.Trim();
 
-        try
+        var translation = await _dbContext.ExerciseTranslations
+            .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
+
+        if (translation == null)
         {
-            var translation = await _dbContext.ExerciseTranslations
-                .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
-
-            if (translation == null)
+            translation = new ExerciseTranslation
             {
-                translation = new ExerciseTranslation
-                {
-                    Id = Guid.NewGuid(),
-                    ExerciseId = exerciseId,
-                    Culture = culture,
-                    Name = name
-                };
+                Id = Guid.NewGuid(),
+                ExerciseId = exerciseId,
+                Culture = culture,
+                Name = name
+            };
 
-                await _dbContext.ExerciseTranslations.AddAsync(translation, cancellationToken);
-            }
-            else
-            {
-                translation.Name = name;
-                _dbContext.ExerciseTranslations.Update(translation);
-            }
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _dbContext.ExerciseTranslations.AddAsync(translation, cancellationToken);
         }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        else
         {
-            var translation = await _dbContext.ExerciseTranslations
-                .FirstOrDefaultAsync(t => t.ExerciseId == exerciseId && t.Culture == culture, cancellationToken);
-
-            if (translation == null)
-            {
-                throw;
-            }
-
             translation.Name = name;
             _dbContext.ExerciseTranslations.Update(translation);
-            await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 
-    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    public Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default)
     {
-        // PostgreSQL: 23505 unique_violation
-        if (exception.InnerException is PostgresException pg && pg.SqlState == PostgresErrorCodes.UniqueViolation)
-        {
-            return true;
-        }
-
-        return false;
+        return _dbContext.Exercises.AddAsync(exercise, cancellationToken).AsTask();
     }
 
-    public async Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default)
-    {
-        await _dbContext.Exercises.AddAsync(exercise, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default)
     {
         _dbContext.Exercises.Update(exercise);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 }

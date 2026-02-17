@@ -14,10 +14,9 @@ public sealed class TrainingRepository : ITrainingRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(Training training, CancellationToken cancellationToken = default)
+    public Task AddAsync(Training training, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Trainings.AddAsync(training, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.Trainings.AddAsync(training, cancellationToken).AsTask();
     }
 
     public Task<Training?> GetLastByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
