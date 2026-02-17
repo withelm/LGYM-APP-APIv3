@@ -260,6 +260,66 @@ public sealed class PlanDayTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task UpdatePlanDay_WithValidData_ReplacesExercisesAndKeepsOnlyUpdatedValues()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "updatedayuser3",
+            email: "updateday3@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var removedExerciseId = await CreateExerciseViaEndpointAsync(userId, "Removed Exercise", "Chest");
+        var updatedExerciseId = await CreateExerciseViaEndpointAsync(userId, "Updated Exercise", "Back");
+        var addedExerciseId = await CreateExerciseViaEndpointAsync(userId, "Added Exercise", "Quads");
+
+        var planId = await CreatePlanViaEndpointAsync(userId, "Comprehensive Update Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Initial Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = removedExerciseId.ToString(), Series = 3, Reps = "10" },
+            new() { ExerciseId = updatedExerciseId.ToString(), Series = 2, Reps = "8" }
+        });
+
+        var updateRequest = new
+        {
+            _id = planDayId.ToString(),
+            name = "Updated Day Name",
+            exercises = new[]
+            {
+                new { exercise = updatedExerciseId.ToString(), series = 5, reps = "6" },
+                new { exercise = addedExerciseId.ToString(), series = 4, reps = "12" }
+            }
+        };
+
+        var updateResponse = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", updateRequest);
+
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var getResponse = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updatedPlanDay = await getResponse.Content.ReadFromJsonAsync<PlanDayVmResponse>();
+        updatedPlanDay.Should().NotBeNull();
+        updatedPlanDay!.Name.Should().Be("Updated Day Name");
+        updatedPlanDay.Exercises.Should().HaveCount(2);
+
+        updatedPlanDay.Exercises
+            .Should()
+            .OnlyContain(e => e.Exercise != null && e.Exercise.Id != removedExerciseId.ToString());
+
+        var updatedExercise = updatedPlanDay.Exercises
+            .Single(e => e.Exercise != null && e.Exercise.Id == updatedExerciseId.ToString());
+        updatedExercise.Series.Should().Be(5);
+        updatedExercise.Reps.Should().Be("6");
+
+        var addedExercise = updatedPlanDay.Exercises
+            .Single(e => e.Exercise != null && e.Exercise.Id == addedExerciseId.ToString());
+        addedExercise.Series.Should().Be(4);
+        addedExercise.Reps.Should().Be("12");
+    }
+
+    [Test]
     public async Task UpdatePlanDay_WithMissingName_ReturnsBadRequest()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
