@@ -167,9 +167,10 @@ public sealed class TrainingService : ITrainingService
                 });
                 await _userRepository.UpdateAsync(user);
                 await _unitOfWork.SaveChangesAsync();
-                await transaction.CommitAsync();
 
                 var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
+
+                await transaction.CommitAsync();
 
                 return new TrainingSummaryResult
                 {
