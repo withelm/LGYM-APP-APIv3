@@ -69,119 +69,129 @@ public sealed class TrainingService : ITrainingService
                 throw AppException.NotFound(Messages.DidntFind);
             }
 
-            var training = new TrainingEntity
+            await using var transaction = await _unitOfWork.BeginTransactionAsync();
+            try
             {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                TypePlanDayId = planDayId,
-                CreatedAt = new DateTimeOffset(DateTime.SpecifyKind(createdAt, DateTimeKind.Utc)),
-                GymId = gym.Id
-            };
-
-            await _trainingRepository.AddAsync(training);
-
-            var uniqueExerciseIds = exercises
-                .Select(e => e.ExerciseId)
-                .Where(e => Guid.TryParse(e, out _))
-                .Distinct()
-                .Select(Guid.Parse)
-                .ToList();
-
-            var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds);
-            var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
-
-            var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds);
-
-            var savedScoreIds = new List<Guid>();
-            var totalElo = 0;
-            var scoresToAdd = new List<ExerciseScore>();
-            foreach (var exercise in exercises)
-            {
-                if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
-                {
-                    continue;
-                }
-
-                var unit = ParseWeightUnit(exercise.Unit);
-                var scoreEntity = new ExerciseScore
+                var training = new TrainingEntity
                 {
                     Id = Guid.NewGuid(),
-                    ExerciseId = exerciseId,
                     UserId = user.Id,
-                    Reps = exercise.Reps,
-                    Series = exercise.Series,
-                    Weight = exercise.Weight,
-                    Unit = unit,
-                    TrainingId = training.Id
+                    TypePlanDayId = planDayId,
+                    CreatedAt = new DateTimeOffset(DateTime.SpecifyKind(createdAt, DateTimeKind.Utc)),
+                    GymId = gym.Id
                 };
 
-                scoresToAdd.Add(scoreEntity);
-                savedScoreIds.Add(scoreEntity.Id);
+                await _trainingRepository.AddAsync(training);
 
-                var key = $"{exerciseId}-{exercise.Series}";
-                if (previousScoresMap.TryGetValue(key, out var previousScore))
+                var uniqueExerciseIds = exercises
+                    .Select(e => e.ExerciseId)
+                    .Where(e => Guid.TryParse(e, out _))
+                    .Distinct()
+                    .Select(Guid.Parse)
+                    .ToList();
+
+                var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds);
+                var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
+
+                var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds);
+
+                var savedScoreIds = new List<Guid>();
+                var totalElo = 0;
+                var scoresToAdd = new List<ExerciseScore>();
+                foreach (var exercise in exercises)
                 {
-                    var eloGain = CalculateEloPerExercise(scoreEntity, previousScore);
-                    totalElo += eloGain;
+                    if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
+                    {
+                        continue;
+                    }
+
+                    var unit = ParseWeightUnit(exercise.Unit);
+                    var scoreEntity = new ExerciseScore
+                    {
+                        Id = Guid.NewGuid(),
+                        ExerciseId = exerciseId,
+                        UserId = user.Id,
+                        Reps = exercise.Reps,
+                        Series = exercise.Series,
+                        Weight = exercise.Weight,
+                        Unit = unit,
+                        TrainingId = training.Id
+                    };
+
+                    scoresToAdd.Add(scoreEntity);
+                    savedScoreIds.Add(scoreEntity.Id);
+
+                    var key = $"{exerciseId}-{exercise.Series}";
+                    if (previousScoresMap.TryGetValue(key, out var previousScore))
+                    {
+                        var eloGain = CalculateEloPerExercise(scoreEntity, previousScore);
+                        totalElo += eloGain;
+                    }
                 }
+
+                if (scoresToAdd.Count > 0)
+                {
+                    await _exerciseScoreRepository.AddRangeAsync(scoresToAdd);
+                }
+
+                var trainingScores = savedScoreIds.Select(scoreId => new TrainingExerciseScore
+                {
+                    Id = Guid.NewGuid(),
+                    TrainingId = training.Id,
+                    ExerciseScoreId = scoreId
+                }).ToList();
+
+                if (trainingScores.Count > 0)
+                {
+                    await _trainingExerciseScoreRepository.AddRangeAsync(trainingScores);
+                }
+
+                var eloEntry = await _eloRepository.GetLatestEntryAsync(user.Id);
+                if (eloEntry == null)
+                {
+                    throw AppException.Internal(Messages.TryAgain);
+                }
+
+                var newElo = totalElo + eloEntry.Elo;
+                var currentRank = _rankService.GetCurrentRank(newElo);
+                var nextRank = _rankService.GetNextRank(currentRank.Name);
+
+                user.ProfileRank = currentRank.Name;
+                await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    Date = DateTimeOffset.UtcNow,
+                    Elo = newElo,
+                    TrainingId = training.Id
+                });
+                await _userRepository.UpdateAsync(user);
+                await _unitOfWork.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
+
+                return new TrainingSummaryResult
+                {
+                    Comparison = comparison,
+                    GainElo = totalElo,
+                    UserOldElo = eloEntry.Elo,
+                    ProfileRank = new Features.User.Models.RankInfo { Name = currentRank.Name, NeedElo = currentRank.NeedElo },
+                    NextRank = nextRank == null ? null : new Features.User.Models.RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
+                    Message = Messages.Created
+                };
             }
-
-            if (scoresToAdd.Count > 0)
+            catch
             {
-                await _exerciseScoreRepository.AddRangeAsync(scoresToAdd);
+                await transaction.RollbackAsync();
+                throw;
             }
-
-            var trainingScores = savedScoreIds.Select(scoreId => new TrainingExerciseScore
-            {
-                Id = Guid.NewGuid(),
-                TrainingId = training.Id,
-                ExerciseScoreId = scoreId
-            }).ToList();
-
-            if (trainingScores.Count > 0)
-            {
-                await _trainingExerciseScoreRepository.AddRangeAsync(trainingScores);
-            }
-
-            var eloEntry = await _eloRepository.GetLatestEntryAsync(user.Id);
-            if (eloEntry == null)
-            {
-                throw AppException.Internal(Messages.TryAgain);
-            }
-
-            var newElo = totalElo + eloEntry.Elo;
-            var currentRank = _rankService.GetCurrentRank(newElo);
-            var nextRank = _rankService.GetNextRank(currentRank.Name);
-
-            user.ProfileRank = currentRank.Name;
-            await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                Date = DateTimeOffset.UtcNow,
-                Elo = newElo,
-                TrainingId = training.Id
-            });
-            await _userRepository.UpdateAsync(user);
-            await _unitOfWork.SaveChangesAsync();
-
-            var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
-
-            return new TrainingSummaryResult
-            {
-                Comparison = comparison,
-                GainElo = totalElo,
-                UserOldElo = eloEntry.Elo,
-                ProfileRank = new Features.User.Models.RankInfo { Name = currentRank.Name, NeedElo = currentRank.NeedElo },
-                NextRank = nextRank == null ? null : new Features.User.Models.RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
-                Message = Messages.Created
-            };
         }
         catch (AppException)
         {
             throw;
         }
-        catch
+        catch (Exception exception) when (exception is not AppException)
         {
             throw AppException.Internal(Messages.TryAgain);
         }

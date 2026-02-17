@@ -192,27 +192,37 @@ public sealed class PlanService : IPlanService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        await _planDayRepository.MarkDeletedByPlanIdAsync(plan.Id);
-
-        plan.IsActive = false;
-        plan.IsDeleted = true;
-        await _planRepository.UpdateAsync(plan);
-
-        var user = await _userRepository.FindByIdAsync(currentUser.Id);
-        if (user != null && user.PlanId == plan.Id)
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
         {
-            var lastValidPlan = await _planRepository.FindLastActiveByUserIdAsync(currentUser.Id);
-            if (lastValidPlan != null)
+            await _planDayRepository.MarkDeletedByPlanIdAsync(plan.Id);
+
+            plan.IsActive = false;
+            plan.IsDeleted = true;
+            await _planRepository.UpdateAsync(plan);
+
+            var user = await _userRepository.FindByIdAsync(currentUser.Id);
+            if (user != null && user.PlanId == plan.Id)
             {
-                await _planRepository.SetActivePlanAsync(currentUser.Id, lastValidPlan.Id);
+                var lastValidPlan = await _planRepository.FindLastActiveByUserIdAsync(currentUser.Id);
+                if (lastValidPlan != null)
+                {
+                    await _planRepository.SetActivePlanAsync(currentUser.Id, lastValidPlan.Id);
+                }
+
+                user.PlanId = lastValidPlan?.Id;
+                await _userRepository.UpdateAsync(user);
+                currentUser.PlanId = user.PlanId;
             }
 
-            user.PlanId = lastValidPlan?.Id;
-            await _userRepository.UpdateAsync(user);
-            currentUser.PlanId = user.PlanId;
+            await _unitOfWork.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
-
-        await _unitOfWork.SaveChangesAsync();
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<PlanEntity> CopyPlanAsync(UserEntity currentUser, string shareCode)
@@ -222,15 +232,24 @@ public sealed class PlanService : IPlanService
             throw AppException.Unauthorized(Messages.Unauthorized);
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+
         try
         {
             var plan = await _planRepository.CopyPlanByShareCodeAsync(shareCode, currentUser.Id);
             await _unitOfWork.SaveChangesAsync();
+            await transaction.CommitAsync();
             return plan;
         }
         catch (InvalidOperationException)
         {
+            await transaction.RollbackAsync();
             throw AppException.NotFound(Messages.DidntFind);
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
         }
     }
 
