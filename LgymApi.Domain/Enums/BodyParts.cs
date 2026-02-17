@@ -5,6 +5,7 @@ namespace LgymApi.Domain.Enums;
 public enum BodyParts
 {
     [EnumTranslation(EnumTranslationKeys.BodyParts.Unknown)]
+    [Hidden]
     Unknown = 0,
     [EnumTranslation(EnumTranslationKeys.BodyParts.Chest)]
     Chest = 1,

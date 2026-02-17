@@ -5,6 +5,7 @@ namespace LgymApi.Domain.Enums;
 public enum WeightUnits
 {
     [EnumTranslation(EnumTranslationKeys.WeightUnits.Unknown)]
+    [Hidden]
     Unknown = 0,
     [EnumTranslation(EnumTranslationKeys.WeightUnits.Kilograms)]
     Kilograms = 1,
@@ -15,6 +16,7 @@ public enum WeightUnits
 public enum HeightUnits
 {
     [EnumTranslation(EnumTranslationKeys.HeightUnits.Unknown)]
+    [Hidden]
     Unknown = 0,
     [EnumTranslation(EnumTranslationKeys.HeightUnits.Meters)]
     Meters = 1,

@@ -10,6 +10,7 @@ namespace LgymApi.Application.Features.Enum;
 public sealed class EnumService : IEnumService
 {
     private static readonly ConcurrentDictionary<(Type EnumType, string EnumName), string> TranslationKeyCache = new();
+    private static readonly ConcurrentDictionary<(Type EnumType, string EnumName), bool> HiddenValueCache = new();
     private static readonly ResourceManager EnumResourceManager =
         new("LgymApi.Resources.Resources.Enums", typeof(LgymApi.Resources.Enums).Assembly);
 
@@ -27,6 +28,7 @@ public sealed class EnumService : IEnumService
 
         return System.Enum.GetValues<TEnum>()
             .Cast<System.Enum>()
+            .Where(e => !IsHidden(e))
             .Select(e => ToLookup(e, culture))
             .ToList();
     }
@@ -43,6 +45,11 @@ public sealed class EnumService : IEnumService
         var values = new List<EnumLookupEntry>();
         foreach (System.Enum enumValue in System.Enum.GetValues(enumType))
         {
+            if (IsHidden(enumValue))
+            {
+                continue;
+            }
+
             values.Add(ToLookup(enumValue, culture));
         }
 
@@ -78,5 +85,17 @@ public sealed class EnumService : IEnumService
             Name = enumName,
             DisplayName = displayName
         };
+    }
+
+    private static bool IsHidden(System.Enum enumValue)
+    {
+        var enumType = enumValue.GetType();
+        var enumName = enumValue.ToString();
+
+        return HiddenValueCache.GetOrAdd((enumType, enumName), key =>
+        {
+            var field = key.EnumType.GetField(key.EnumName);
+            return field?.GetCustomAttribute<HiddenAttribute>() != null;
+        });
     }
 }

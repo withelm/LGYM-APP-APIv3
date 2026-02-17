@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.IntegrationTests;
 
@@ -148,6 +149,40 @@ public sealed class PlanDayTests : IntegrationTestBase
         body.Exercises.Should().HaveCount(1);
         body.Exercises[0].Series.Should().Be(5);
         body.Exercises[0].Reps.Should().Be("5");
+    }
+
+    [Test]
+    public async Task GetPlanDay_PreservesExerciseOrderFromCreateRequest()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "ordercreateuser",
+            email: "ordercreate@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseA = await CreateExerciseViaEndpointAsync(userId, "Order Exercise A", "Quads");
+        var exerciseB = await CreateExerciseViaEndpointAsync(userId, "Order Exercise B", "Back");
+        var exerciseC = await CreateExerciseViaEndpointAsync(userId, "Order Exercise C", "Chest");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Order Plan");
+
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Order Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseB.ToString(), Series = 3, Reps = "10" },
+            new() { ExerciseId = exerciseC.ToString(), Series = 4, Reps = "8" },
+            new() { ExerciseId = exerciseA.ToString(), Series = 2, Reps = "15" }
+        });
+
+        var response = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<PlanDayVmResponse>();
+        body.Should().NotBeNull();
+        body!.Exercises.Select(e => e.Exercise?.Id)
+            .Should()
+            .ContainInOrder(exerciseB.ToString(), exerciseC.ToString(), exerciseA.ToString());
     }
 
     [Test]
@@ -317,6 +352,62 @@ public sealed class PlanDayTests : IntegrationTestBase
             .Single(e => e.Exercise != null && e.Exercise.Id == addedExerciseId.ToString());
         addedExercise.Series.Should().Be(4);
         addedExercise.Reps.Should().Be("12");
+    }
+
+    [Test]
+    public async Task UpdatePlanDay_PreservesExerciseOrderFromUpdateRequest()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "orderupdateuser",
+            email: "orderupdate@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseA = await CreateExerciseViaEndpointAsync(userId, "Update Order Exercise A", "Back");
+        var exerciseB = await CreateExerciseViaEndpointAsync(userId, "Update Order Exercise B", "Chest");
+        var exerciseC = await CreateExerciseViaEndpointAsync(userId, "Update Order Exercise C", "Quads");
+
+        var planId = await CreatePlanViaEndpointAsync(userId, "Update Order Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Update Order Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseA.ToString(), Series = 3, Reps = "10" },
+            new() { ExerciseId = exerciseB.ToString(), Series = 4, Reps = "8" }
+        });
+
+        var updateRequest = new
+        {
+            _id = planDayId.ToString(),
+            name = "Update Order Day",
+            exercises = new[]
+            {
+                new { exercise = exerciseC.ToString(), series = 5, reps = "6" },
+                new { exercise = exerciseA.ToString(), series = 4, reps = "10" },
+                new { exercise = exerciseB.ToString(), series = 3, reps = "12" }
+            }
+        };
+
+        var updateResponse = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", updateRequest);
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var getResponse = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updatedPlanDay = await getResponse.Content.ReadFromJsonAsync<PlanDayVmResponse>();
+        updatedPlanDay.Should().NotBeNull();
+        updatedPlanDay!.Exercises.Select(e => e.Exercise?.Id)
+            .Should()
+            .ContainInOrder(exerciseC.ToString(), exerciseA.ToString(), exerciseB.ToString());
+
+        var dbContext = GetDbContext();
+        var persistedOrders = await dbContext.PlanDayExercises
+            .Where(x => x.PlanDayId == planDayId)
+            .OrderBy(x => x.Order)
+            .Select(x => x.Order)
+            .ToListAsync();
+
+        persistedOrders.Should().Equal(0, 1, 2);
     }
 
     [Test]
