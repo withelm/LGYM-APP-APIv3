@@ -16,19 +16,22 @@ public sealed class UserService : IUserService
     private readonly ITokenService _tokenService;
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public UserService(
         IUserRepository userRepository,
         IEloRegistryRepository eloRepository,
         ITokenService tokenService,
         ILegacyPasswordService legacyPasswordService,
-        IRankService rankService)
+        IRankService rankService,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _eloRepository = eloRepository;
         _tokenService = tokenService;
         _legacyPasswordService = legacyPasswordService;
         _rankService = rankService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking)
@@ -89,6 +92,7 @@ public sealed class UserService : IUserService
             Date = DateTimeOffset.UtcNow,
             Elo = 1000
         });
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<LoginResult> LoginAsync(string name, string password)
@@ -227,6 +231,7 @@ public sealed class UserService : IUserService
         currentUser.IsDeleted = true;
 
         await _userRepository.UpdateAsync(currentUser);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task ChangeVisibilityInRankingAsync(UserEntity currentUser, bool isVisibleInRanking)
@@ -238,5 +243,6 @@ public sealed class UserService : IUserService
 
         currentUser.IsVisibleInRanking = isVisibleInRanking;
         await _userRepository.UpdateAsync(currentUser);
+        await _unitOfWork.SaveChangesAsync();
     }
 }

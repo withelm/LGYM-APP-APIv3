@@ -14,17 +14,20 @@ public sealed class MainRecordsService : IMainRecordsService
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IMainRecordRepository _mainRecordRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public MainRecordsService(
         IUserRepository userRepository,
         IExerciseRepository exerciseRepository,
         IMainRecordRepository mainRecordRepository,
-        IExerciseScoreRepository exerciseScoreRepository)
+        IExerciseScoreRepository exerciseScoreRepository,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _exerciseRepository = exerciseRepository;
         _mainRecordRepository = mainRecordRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task AddNewRecordAsync(Guid userId, string exerciseId, double weight, string unit, DateTime date)
@@ -58,6 +61,7 @@ public sealed class MainRecordsService : IMainRecordsService
         };
 
         await _mainRecordRepository.AddAsync(record);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<List<MainRecordEntity>> GetMainRecordsHistoryAsync(Guid userId)
@@ -133,6 +137,7 @@ public sealed class MainRecordsService : IMainRecordsService
         }
 
         await _mainRecordRepository.DeleteAsync(record);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task UpdateMainRecordAsync(Guid userId, string recordId, string exerciseId, double weight, string unit, DateTime date)
@@ -177,6 +182,7 @@ public sealed class MainRecordsService : IMainRecordsService
         existingRecord.Date = new DateTimeOffset(DateTime.SpecifyKind(date, DateTimeKind.Utc));
 
         await _mainRecordRepository.UpdateAsync(existingRecord);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<PossibleRecordResult> GetRecordOrPossibleRecordInExerciseAsync(Guid userId, string exerciseId)
