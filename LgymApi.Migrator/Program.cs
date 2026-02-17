@@ -630,10 +630,12 @@ async Task MigratePlanDays()
 
             if (doc.TryGetValue("exercises", out var exercisesValue) && exercisesValue.IsBsonArray)
             {
+                var order = 0;
                 foreach (var exerciseDoc in exercisesValue.AsBsonArray)
                 {
                     if (!exerciseDoc.IsBsonDocument)
                     {
+                        order++;
                         continue;
                     }
 
@@ -642,6 +644,7 @@ async Task MigratePlanDays()
                     if (exerciseId == Guid.Empty)
                     {
                         skippedMissingExercise++;
+                        order++;
                         continue;
                     }
 
@@ -650,9 +653,12 @@ async Task MigratePlanDays()
                         Id = Guid.NewGuid(),
                         PlanDayId = planDay.Id,
                         ExerciseId = exerciseId,
+                        Order = order,
                         Series = exerciseDocument.GetValue("series", 0).ToInt32(),
                         Reps = exerciseDocument.GetValue("reps", string.Empty).AsString
                     });
+
+                    order++;
                 }
             }
 

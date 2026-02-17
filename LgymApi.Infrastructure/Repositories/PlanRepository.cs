@@ -104,7 +104,7 @@ public sealed class PlanRepository : IPlanRepository
             await _dbContext.PlanDays.AddAsync(newPlanDay, cancellationToken);
 
             // 5. Iterate through exercises in the day
-            foreach (var planDayExercise in planDay.Exercises)
+            foreach (var planDayExercise in planDay.Exercises.OrderBy(e => e.Order).ThenBy(e => e.Id))
             {
                 var exercise = planDayExercise.Exercise;
                 if (exercise == null)
@@ -150,6 +150,7 @@ public sealed class PlanRepository : IPlanRepository
                 {
                     PlanDay = newPlanDay,
                     Exercise = exerciseToUse,
+                    Order = planDayExercise.Order,
                     Series = planDayExercise.Series,
                     Reps = planDayExercise.Reps
                 };

@@ -19,6 +19,9 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
         return _dbContext.PlanDayExercises
             .AsNoTracking()
             .Where(e => planDayIds.Contains(e.PlanDayId))
+            .OrderBy(e => e.PlanDayId)
+            .ThenBy(e => e.Order)
+            .ThenBy(e => e.Id)
             .ToListAsync(cancellationToken);
     }
 
@@ -27,12 +30,21 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
         return _dbContext.PlanDayExercises
             .AsNoTracking()
             .Where(e => e.PlanDayId == planDayId)
+            .OrderBy(e => e.Order)
+            .ThenBy(e => e.Id)
             .ToListAsync(cancellationToken);
     }
 
-    public Task AddRangeAsync(IEnumerable<PlanDayExercise> exercises, CancellationToken cancellationToken = default)
+    public async Task AddRangeAsync(IEnumerable<PlanDayExercise> exercises, CancellationToken cancellationToken = default)
     {
-        return _dbContext.PlanDayExercises.AddRangeAsync(exercises, cancellationToken);
+        var exercisesToAdd = exercises.ToList();
+        if (exercisesToAdd.Count == 0)
+        {
+            return;
+        }
+
+        await _dbContext.PlanDayExercises.AddRangeAsync(exercisesToAdd, cancellationToken);
+        await NormalizeOrdersAsync(exercisesToAdd.Select(e => e.PlanDayId), cancellationToken);
     }
 
     public async Task RemoveByPlanDayIdAsync(Guid planDayId, CancellationToken cancellationToken = default)
@@ -41,6 +53,51 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
             .Where(e => e.PlanDayId == planDayId)
             .ToListAsync(cancellationToken);
 
+        if (existing.Count == 0)
+        {
+            return;
+        }
+
         _dbContext.PlanDayExercises.RemoveRange(existing);
+        await NormalizeOrdersAsync(new[] { planDayId }, cancellationToken);
+    }
+
+    private async Task NormalizeOrdersAsync(IEnumerable<Guid> planDayIds, CancellationToken cancellationToken)
+    {
+        var affectedPlanDayIds = planDayIds
+            .Distinct()
+            .ToList();
+
+        if (affectedPlanDayIds.Count == 0)
+        {
+            return;
+        }
+
+        var orderedExercises = await _dbContext.PlanDayExercises
+            .Where(e => affectedPlanDayIds.Contains(e.PlanDayId))
+            .OrderBy(e => e.PlanDayId)
+            .ThenBy(e => e.Order)
+            .ThenBy(e => e.Id)
+            .ToListAsync(cancellationToken);
+
+        Guid? currentPlanDayId = null;
+        var nextOrder = 0;
+
+        foreach (var exercise in orderedExercises)
+        {
+            if (currentPlanDayId != exercise.PlanDayId)
+            {
+                currentPlanDayId = exercise.PlanDayId;
+                nextOrder = 0;
+            }
+
+            if (exercise.Order != nextOrder)
+            {
+                exercise.Order = nextOrder;
+            }
+
+            nextOrder++;
+        }
+
     }
 }

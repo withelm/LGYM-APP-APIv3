@@ -67,6 +67,7 @@ public sealed class PlanDayService : IPlanDayService
         await _planDayRepository.AddAsync(planDay);
 
         var exercisesToAdd = new List<PlanDayExerciseEntity>();
+        var order = 0;
         foreach (var exercise in exercises)
         {
             if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
@@ -79,6 +80,7 @@ public sealed class PlanDayService : IPlanDayService
                 Id = Guid.NewGuid(),
                 PlanDayId = planDay.Id,
                 ExerciseId = exerciseId,
+                Order = order++,
                 Series = exercise.Series,
                 Reps = exercise.Reps
             });
@@ -132,6 +134,7 @@ public sealed class PlanDayService : IPlanDayService
         await _planDayExerciseRepository.RemoveByPlanDayIdAsync(planDay.Id);
 
         var exercisesToAdd = new List<PlanDayExerciseEntity>();
+        var order = 0;
         foreach (var exercise in exercises)
         {
             if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
@@ -144,6 +147,7 @@ public sealed class PlanDayService : IPlanDayService
                 Id = Guid.NewGuid(),
                 PlanDayId = planDay.Id,
                 ExerciseId = exerciseId,
+                Order = order++,
                 Series = exercise.Series,
                 Reps = exercise.Reps
             });
