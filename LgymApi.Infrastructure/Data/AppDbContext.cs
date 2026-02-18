@@ -29,6 +29,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<RoleClaim> RoleClaims => Set<RoleClaim>();
+    public DbSet<TrainerInvitation> TrainerInvitations => Set<TrainerInvitation>();
+    public DbSet<TrainerTraineeLink> TrainerTraineeLinks => Set<TrainerTraineeLink>();
 
     public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
@@ -280,6 +282,37 @@ public sealed class AppDbContext : DbContext
                     CreatedAt = RoleSeedTimestamp,
                     UpdatedAt = RoleSeedTimestamp
                 });
+        });
+
+        modelBuilder.Entity<TrainerInvitation>(entity =>
+        {
+            entity.ToTable("TrainerInvitations");
+            entity.Property(e => e.Code).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TrainerTraineeLink>(entity =>
+        {
+            entity.ToTable("TrainerTraineeLinks");
+            entity.HasIndex(e => e.TraineeId).IsUnique();
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

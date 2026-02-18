@@ -141,4 +141,19 @@
   <data name="DefaultRoleMissing" xml:space="preserve">
     <value>Default user role configuration is missing.</value>
   </data>
+  <data name="TrainerRoleRequired" xml:space="preserve">
+    <value>Trainer role is required.</value>
+  </data>
+  <data name="CannotInviteYourself" xml:space="preserve">
+    <value>You cannot invite yourself.</value>
+  </data>
+  <data name="TraineeAlreadyLinked" xml:space="preserve">
+    <value>This trainee is already linked to a trainer.</value>
+  </data>
+  <data name="InvitationNoLongerPending" xml:space="preserve">
+    <value>Invitation is no longer pending.</value>
+  </data>
+  <data name="InvitationExpired" xml:space="preserve">
+    <value>Invitation has expired.</value>
+  </data>
 </root>

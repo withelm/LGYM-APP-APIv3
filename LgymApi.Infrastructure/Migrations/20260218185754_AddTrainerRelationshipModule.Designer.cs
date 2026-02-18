@@ -3,6 +3,7 @@ using System;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LgymApi.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260218185754_AddTrainerRelationshipModule")]
+    partial class AddTrainerRelationshipModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -717,7 +720,8 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasIndex("TraineeId")
                         .IsUnique();
 
-                    b.HasIndex("TrainerId", "TraineeId");
+                    b.HasIndex("TrainerId", "TraineeId")
+                        .IsUnique();
 
                     b.ToTable("TrainerTraineeLinks", (string)null);
                 });
