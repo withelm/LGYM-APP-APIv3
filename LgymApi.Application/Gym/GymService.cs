@@ -11,11 +11,13 @@ public sealed class GymService : IGymService
 {
     private readonly IGymRepository _gymRepository;
     private readonly ITrainingRepository _trainingRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public GymService(IGymRepository gymRepository, ITrainingRepository trainingRepository)
+    public GymService(IGymRepository gymRepository, ITrainingRepository trainingRepository, IUnitOfWork unitOfWork)
     {
         _gymRepository = gymRepository;
         _trainingRepository = trainingRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task AddGymAsync(UserEntity currentUser, Guid routeUserId, string name, string? address)
@@ -51,6 +53,7 @@ public sealed class GymService : IGymService
         };
 
         await _gymRepository.AddAsync(gym);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task DeleteGymAsync(UserEntity currentUser, Guid gymId)
@@ -78,6 +81,7 @@ public sealed class GymService : IGymService
 
         gym.IsDeleted = true;
         await _gymRepository.UpdateAsync(gym);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<GymListContext> GetGymsAsync(UserEntity currentUser, Guid routeUserId)
@@ -164,5 +168,6 @@ public sealed class GymService : IGymService
         }
 
         await _gymRepository.UpdateAsync(gym);
+        await _unitOfWork.SaveChangesAsync();
     }
 }

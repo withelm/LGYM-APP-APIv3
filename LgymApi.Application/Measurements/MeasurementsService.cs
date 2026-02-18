@@ -10,10 +10,12 @@ namespace LgymApi.Application.Features.Measurements;
 public sealed class MeasurementsService : IMeasurementsService
 {
     private readonly IMeasurementRepository _measurementRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public MeasurementsService(IMeasurementRepository measurementRepository)
+    public MeasurementsService(IMeasurementRepository measurementRepository, IUnitOfWork unitOfWork)
     {
         _measurementRepository = measurementRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task AddMeasurementAsync(UserEntity currentUser, string bodyPart, string unit, double value)
@@ -41,6 +43,7 @@ public sealed class MeasurementsService : IMeasurementsService
         };
 
         await _measurementRepository.AddAsync(measurement);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<MeasurementEntity> GetMeasurementDetailAsync(UserEntity currentUser, Guid measurementId)

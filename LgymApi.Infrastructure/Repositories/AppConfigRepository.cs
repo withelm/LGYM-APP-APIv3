@@ -18,14 +18,14 @@ public sealed class AppConfigRepository : IAppConfigRepository
     public Task<AppConfig?> GetLatestByPlatformAsync(Platforms platform, CancellationToken cancellationToken = default)
     {
         return _dbContext.AppConfigs
+            .AsNoTracking()
             .Where(c => c.Platform == platform)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task AddAsync(AppConfig config, CancellationToken cancellationToken = default)
+    public Task AddAsync(AppConfig config, CancellationToken cancellationToken = default)
     {
-        await _dbContext.AppConfigs.AddAsync(config, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.AppConfigs.AddAsync(config, cancellationToken).AsTask();
     }
 }

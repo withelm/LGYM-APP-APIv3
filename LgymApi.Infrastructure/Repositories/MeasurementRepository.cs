@@ -15,10 +15,9 @@ public sealed class MeasurementRepository : IMeasurementRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(Measurement measurement, CancellationToken cancellationToken = default)
+    public Task AddAsync(Measurement measurement, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Measurements.AddAsync(measurement, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.Measurements.AddAsync(measurement, cancellationToken).AsTask();
     }
 
     public Task<Measurement?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -28,7 +27,7 @@ public sealed class MeasurementRepository : IMeasurementRepository
 
     public Task<List<Measurement>> GetByUserAsync(Guid userId, string? bodyPart, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Measurements.Where(m => m.UserId == userId).AsQueryable();
+        var query = _dbContext.Measurements.AsNoTracking().Where(m => m.UserId == userId).AsQueryable();
         if (!string.IsNullOrWhiteSpace(bodyPart) && Enum.TryParse(bodyPart, true, out BodyParts parsed))
         {
             query = query.Where(m => m.BodyPart == parsed);

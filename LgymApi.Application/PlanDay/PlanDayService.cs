@@ -15,19 +15,22 @@ public sealed class PlanDayService : IPlanDayService
     private readonly IPlanDayExerciseRepository _planDayExerciseRepository;
     private readonly IExerciseRepository _exerciseRepository;
     private readonly ITrainingRepository _trainingRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public PlanDayService(
         IPlanRepository planRepository,
         IPlanDayRepository planDayRepository,
         IPlanDayExerciseRepository planDayExerciseRepository,
         IExerciseRepository exerciseRepository,
-        ITrainingRepository trainingRepository)
+        ITrainingRepository trainingRepository,
+        IUnitOfWork unitOfWork)
     {
         _planRepository = planRepository;
         _planDayRepository = planDayRepository;
         _planDayExerciseRepository = planDayExerciseRepository;
         _exerciseRepository = exerciseRepository;
         _trainingRepository = trainingRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task CreatePlanDayAsync(UserEntity currentUser, Guid planId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises)
@@ -87,6 +90,8 @@ public sealed class PlanDayService : IPlanDayService
         {
             await _planDayExerciseRepository.AddRangeAsync(exercisesToAdd);
         }
+
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task UpdatePlanDayAsync(UserEntity currentUser, string planDayId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises)
@@ -152,6 +157,8 @@ public sealed class PlanDayService : IPlanDayService
         {
             await _planDayExerciseRepository.AddRangeAsync(exercisesToAdd);
         }
+
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<PlanDayDetailsContext> GetPlanDayAsync(UserEntity currentUser, Guid planDayId)
@@ -276,6 +283,7 @@ public sealed class PlanDayService : IPlanDayService
         }
 
         await _planDayRepository.MarkDeletedAsync(planDay.Id);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<PlanDaysInfoContext> GetPlanDaysInfoAsync(UserEntity currentUser, Guid planId)

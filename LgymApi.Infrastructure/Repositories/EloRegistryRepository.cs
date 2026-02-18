@@ -14,15 +14,15 @@ public sealed class EloRegistryRepository : IEloRegistryRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(EloRegistry registry, CancellationToken cancellationToken = default)
+    public Task AddAsync(EloRegistry registry, CancellationToken cancellationToken = default)
     {
-        await _dbContext.EloRegistries.AddAsync(registry, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.EloRegistries.AddAsync(registry, cancellationToken).AsTask();
     }
 
     public Task<int?> GetLatestEloAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.EloRegistries
+            .AsNoTracking()
             .Where(e => e.UserId == userId)
             .OrderByDescending(e => e.Date)
             .Select(e => (int?)e.Elo)
@@ -32,6 +32,7 @@ public sealed class EloRegistryRepository : IEloRegistryRepository
     public Task<EloRegistry?> GetLatestEntryAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.EloRegistries
+            .AsNoTracking()
             .Where(e => e.UserId == userId)
             .OrderByDescending(e => e.Date)
             .FirstOrDefaultAsync(cancellationToken);
@@ -40,6 +41,7 @@ public sealed class EloRegistryRepository : IEloRegistryRepository
     public Task<List<EloRegistry>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.EloRegistries
+            .AsNoTracking()
             .Where(e => e.UserId == userId)
             .OrderBy(e => e.Date)
             .ToListAsync(cancellationToken);
