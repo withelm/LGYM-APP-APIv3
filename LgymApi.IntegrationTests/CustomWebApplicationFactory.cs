@@ -139,10 +139,10 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         public List<EmailMessage> SentMessages { get; } = new();
 
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+        public Task<bool> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
         {
             SentMessages.Add(message);
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
     }
 }

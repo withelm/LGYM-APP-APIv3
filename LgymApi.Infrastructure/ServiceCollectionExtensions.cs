@@ -108,6 +108,11 @@ public static class ServiceCollectionExtensions
 
     private static void ValidateEmailOptions(EmailOptions options)
     {
+        if (!options.Enabled)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(options.InvitationBaseUrl))
         {
             throw new InvalidOperationException("Email:InvitationBaseUrl is required.");
@@ -116,11 +121,6 @@ public static class ServiceCollectionExtensions
         if (!Uri.TryCreate(options.InvitationBaseUrl, UriKind.Absolute, out _))
         {
             throw new InvalidOperationException("Email:InvitationBaseUrl must be a valid absolute URL.");
-        }
-
-        if (!options.Enabled)
-        {
-            return;
         }
 
         if (string.IsNullOrWhiteSpace(options.TemplateRootPath))

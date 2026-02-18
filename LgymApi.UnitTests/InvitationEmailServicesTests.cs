@@ -217,10 +217,10 @@ public sealed class InvitationEmailServicesTests
     {
         public int SendCalls { get; private set; }
 
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+        public Task<bool> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
         {
             SendCalls += 1;
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
     }
 }

@@ -82,7 +82,18 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
 
         try
         {
-            await _emailSender.SendAsync(message, cancellationToken);
+            var delivered = await _emailSender.SendAsync(message, cancellationToken);
+            if (!delivered)
+            {
+                notification.Status = EmailNotificationStatus.Failed;
+                notification.LastError = "Email sender is disabled.";
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogWarning(
+                    "Email sender is disabled; notification {NotificationId} was not delivered.",
+                    notificationId);
+                return;
+            }
+
             notification.Status = EmailNotificationStatus.Sent;
             notification.SentAt = DateTimeOffset.UtcNow;
             notification.LastError = null;

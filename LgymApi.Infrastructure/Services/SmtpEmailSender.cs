@@ -18,13 +18,13 @@ public sealed class SmtpEmailSender : IEmailSender
         _emailOptions = emailOptions;
     }
 
-    public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+    public async Task<bool> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         if (!_emailOptions.Enabled)
         {
-            return;
+            return false;
         }
 
         MailAddress recipientAddress;
@@ -58,5 +58,6 @@ public sealed class SmtpEmailSender : IEmailSender
 
         await smtpClient.SendAsync(mimeMessage, cancellationToken);
         await smtpClient.DisconnectAsync(quit: true, cancellationToken);
+        return true;
     }
 }

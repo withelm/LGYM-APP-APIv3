@@ -4,5 +4,5 @@ namespace LgymApi.Application.Notifications;
 
 public interface IEmailSender
 {
-    Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default);
+    Task<bool> SendAsync(EmailMessage message, CancellationToken cancellationToken = default);
 }
