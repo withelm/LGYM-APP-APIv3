@@ -5,14 +5,10 @@ using LgymApi.Resources;
 
 namespace LgymApi.Api.Features.Exercise.Validation;
 
-public class ExerciseFormDtoValidator : AbstractValidator<ExerciseFormDto>
+public sealed class ExerciseByBodyPartRequestDtoValidator : AbstractValidator<ExerciseByBodyPartRequestDto>
 {
-    public ExerciseFormDtoValidator()
+    public ExerciseByBodyPartRequestDtoValidator()
     {
-        RuleFor(x => x.Name)
-            .NotEmpty()
-            .WithMessage(Messages.NameIsRequired);
-
         RuleFor(x => x.BodyPart)
             .NotEqual(BodyParts.Unknown)
             .WithMessage(Messages.BodyPartRequired);

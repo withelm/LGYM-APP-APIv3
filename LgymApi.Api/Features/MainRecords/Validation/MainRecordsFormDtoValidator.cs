@@ -1,5 +1,6 @@
 using FluentValidation;
 using LgymApi.Api.Features.MainRecords.Contracts;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 
 namespace LgymApi.Api.Features.MainRecords.Validation;
@@ -13,7 +14,7 @@ public class MainRecordsFormDtoValidator : AbstractValidator<MainRecordsFormDto>
             .WithMessage(Messages.ExerciseIdRequired);
 
         RuleFor(x => x.Unit)
-            .NotEmpty()
+            .NotEqual(WeightUnits.Unknown)
             .WithMessage(Messages.UnitRequired);
 
         RuleFor(x => x.Weight)

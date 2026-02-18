@@ -16,27 +16,19 @@ public sealed class MeasurementsService : IMeasurementsService
         _measurementRepository = measurementRepository;
     }
 
-    public async Task AddMeasurementAsync(UserEntity currentUser, string bodyPart, string unit, double value)
+    public async Task AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, HeightUnits unit, double value)
     {
         if (currentUser == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var parsedBodyPart = global::System.Enum.TryParse(bodyPart, true, out BodyParts bodyPartValue)
-            ? bodyPartValue
-            : BodyParts.Unknown;
-
-        var parsedUnit = global::System.Enum.TryParse(unit, true, out HeightUnits heightUnit)
-            ? heightUnit
-            : HeightUnits.Unknown;
-
         var measurement = new MeasurementEntity
         {
             Id = Guid.NewGuid(),
             UserId = currentUser.Id,
-            BodyPart = parsedBodyPart,
-            Unit = parsedUnit.ToString(),
+            BodyPart = bodyPart,
+            Unit = unit.ToString(),
             Value = value
         };
 
@@ -69,7 +61,7 @@ public sealed class MeasurementsService : IMeasurementsService
         return measurement;
     }
 
-    public async Task<List<MeasurementEntity>> GetMeasurementsHistoryAsync(UserEntity currentUser, Guid routeUserId, string? bodyPart)
+    public async Task<List<MeasurementEntity>> GetMeasurementsHistoryAsync(UserEntity currentUser, Guid routeUserId, BodyParts? bodyPart)
     {
         if (currentUser == null || routeUserId == Guid.Empty)
         {

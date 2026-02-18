@@ -42,15 +42,10 @@ public sealed class ExerciseRepository : IExerciseRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<Exercise>> GetByBodyPartAsync(Guid userId, string bodyPart, CancellationToken cancellationToken = default)
+    public Task<List<Exercise>> GetByBodyPartAsync(Guid userId, BodyParts bodyPart, CancellationToken cancellationToken = default)
     {
-        if (!Enum.TryParse<BodyParts>(bodyPart, out var parsed))
-        {
-            return Task.FromResult(new List<Exercise>());
-        }
-
         return _dbContext.Exercises
-            .Where(e => e.BodyPart == parsed && !e.IsDeleted && (e.UserId == userId || e.UserId == null))
+            .Where(e => e.BodyPart == bodyPart && !e.IsDeleted && (e.UserId == userId || e.UserId == null))
             .ToListAsync(cancellationToken);
     }
 

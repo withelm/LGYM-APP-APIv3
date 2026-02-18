@@ -99,7 +99,6 @@ public sealed class TrainingService : ITrainingService
                     continue;
                 }
 
-                var unit = ParseWeightUnit(exercise.Unit);
                 var scoreEntity = new ExerciseScore
                 {
                     Id = Guid.NewGuid(),
@@ -108,7 +107,7 @@ public sealed class TrainingService : ITrainingService
                     Reps = exercise.Reps,
                     Series = exercise.Series,
                     Weight = exercise.Weight,
-                    Unit = unit,
+                    Unit = exercise.Unit,
                     TrainingId = training.Id
                 };
 
@@ -377,7 +376,6 @@ public sealed class TrainingService : ITrainingService
             var key = $"{exerciseId}-{current.Series}";
             previousScores.TryGetValue(key, out var previous);
 
-            var currentUnit = ParseWeightUnit(current.Unit);
             comparisonMap[exerciseId].SeriesComparisons.Add(new SeriesComparison
             {
                 Series = current.Series,
@@ -385,7 +383,7 @@ public sealed class TrainingService : ITrainingService
                 {
                     Reps = current.Reps,
                     Weight = current.Weight,
-                    Unit = currentUnit
+                    Unit = current.Unit
                 },
                 PreviousResult = previous == null
                     ? null
@@ -401,13 +399,4 @@ public sealed class TrainingService : ITrainingService
         return comparisonMap.Values.ToList();
     }
 
-    private static WeightUnits ParseWeightUnit(string? unit)
-    {
-        if (!string.IsNullOrWhiteSpace(unit) && global::System.Enum.TryParse(unit, true, out WeightUnits parsed))
-        {
-            return parsed;
-        }
-
-        return WeightUnits.Unknown;
-    }
 }

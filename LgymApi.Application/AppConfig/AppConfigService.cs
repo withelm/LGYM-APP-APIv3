@@ -17,14 +17,9 @@ public sealed class AppConfigService : IAppConfigService
         _appConfigRepository = appConfigRepository;
     }
 
-    public async Task<AppConfigEntity> GetLatestByPlatformAsync(string platformRaw)
+    public async Task<AppConfigEntity> GetLatestByPlatformAsync(Platforms platform)
     {
-        if (string.IsNullOrWhiteSpace(platformRaw))
-        {
-            throw AppException.NotFound(Messages.DidntFind);
-        }
-
-        if (!global::System.Enum.TryParse(platformRaw, true, out Platforms platform))
+        if (platform == Platforms.Unknown)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -40,7 +35,7 @@ public sealed class AppConfigService : IAppConfigService
 
     public async Task CreateNewAppVersionAsync(
         Guid userId,
-        string platformRaw,
+        Platforms platform,
         string? minRequiredVersion,
         string? latestVersion,
         bool forceUpdate,
@@ -58,12 +53,7 @@ public sealed class AppConfigService : IAppConfigService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (string.IsNullOrWhiteSpace(platformRaw))
-        {
-            throw AppException.BadRequest(Messages.FieldRequired);
-        }
-
-        if (!global::System.Enum.TryParse(platformRaw, true, out Platforms platform))
+        if (platform == Platforms.Unknown)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }

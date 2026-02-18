@@ -3,6 +3,8 @@ using LgymApi.Api.Features.Enum.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.PlanDay.Contracts;
 using LgymApi.Api.Features.User.Contracts;
+using LgymApi.Api.Serialization;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.Training.Contracts;
 
@@ -15,7 +17,9 @@ public class ExerciseScoresTrainingFormDto
     public double Weight { get; set; }
 
     [JsonPropertyName("unit")]
-    public string Unit { get; set; } = string.Empty;
+    [JsonRequired]
+    [JsonConverter(typeof(WeightUnitsJsonConverter))]
+    public WeightUnits Unit { get; set; }
 
     [JsonPropertyName("reps")]
     public int Reps { get; set; }

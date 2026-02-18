@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Enum.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Serialization;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.MainRecords.Contracts;
 
@@ -16,7 +18,9 @@ public class MainRecordsFormDto
     public DateTime Date { get; set; }
 
     [JsonPropertyName("unit")]
-    public string Unit { get; set; } = string.Empty;
+    [JsonRequired]
+    [JsonConverter(typeof(WeightUnitsJsonConverter))]
+    public WeightUnits Unit { get; set; }
 
     [JsonPropertyName("exercise")]
     public string ExerciseId { get; set; } = string.Empty;

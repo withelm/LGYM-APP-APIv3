@@ -53,7 +53,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddMeasurement_WithInvalidBodyPart_UsesUnknown()
+    public async Task AddMeasurement_WithInvalidBodyPart_ReturnsBadRequest()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "measureuser2",
@@ -72,7 +72,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]

@@ -27,7 +27,7 @@ public sealed class AppConfigTests : IntegrationTestBase
         var createResponse = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", createRequest);
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var getRequest = new Dictionary<string, string> { { "platform", "Android" } };
+        var getRequest = new { platform = "Android" };
         var getResponse = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", getRequest);
 
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -42,27 +42,27 @@ public sealed class AppConfigTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetAppVersion_WithInvalidPlatform_ReturnsNotFound()
+    public async Task GetAppVersion_WithInvalidPlatform_ReturnsBadRequest()
     {
         var user = await SeedUserAsync(name: "testuser", email: "test@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var request = new Dictionary<string, string> { { "platform", "InvalidPlatform" } };
+        var request = new { platform = "InvalidPlatform" };
         var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
-    public async Task GetAppVersion_WithMissingPlatform_ReturnsNotFound()
+    public async Task GetAppVersion_WithMissingPlatform_ReturnsBadRequest()
     {
         var user = await SeedUserAsync(name: "testuser", email: "test@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var request = new Dictionary<string, string>();
+        var request = new { };
         var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -71,7 +71,7 @@ public sealed class AppConfigTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "testuser", email: "test@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var request = new Dictionary<string, string> { { "platform", "iOS" } };
+        var request = new { platform = "iOS" };
         var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -180,7 +180,7 @@ public sealed class AppConfigTests : IntegrationTestBase
         };
         await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", secondRequest);
 
-        var getRequest = new Dictionary<string, string> { { "platform", "Android" } };
+        var getRequest = new { platform = "Android" };
         var getResponse = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", getRequest);
 
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);

@@ -134,12 +134,11 @@ public sealed class ExerciseController : ControllerBase
     [HttpPost("exercise/{id}/getExerciseByBodyPart")]
     [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetExerciseByBodyPart([FromRoute] string id, [FromBody] Dictionary<string, string> body)
+    public async Task<IActionResult> GetExerciseByBodyPart([FromRoute] string id, [FromBody] ExerciseByBodyPartRequestDto request)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        body.TryGetValue("bodyPart", out var bodyPartRaw);
         var cultures = GetCulturePreferences();
-        var context = await _exerciseService.GetExerciseByBodyPartAsync(userId, bodyPartRaw ?? string.Empty, cultures);
+        var context = await _exerciseService.GetExerciseByBodyPartAsync(userId, request.BodyPart, cultures);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var result = _mapper.MapList<ExerciseEntity, ExerciseResponseDto>(context.Exercises, mappingContext);
