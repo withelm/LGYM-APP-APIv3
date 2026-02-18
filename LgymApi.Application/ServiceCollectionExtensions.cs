@@ -12,6 +12,7 @@ using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Notifications;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.Application;
@@ -34,6 +35,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITrainingService, TrainingService>();
         services.AddScoped<ITrainerRelationshipService, TrainerRelationshipService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IInvitationEmailScheduler, InvitationEmailSchedulerService>();
+        services.AddScoped<IInvitationEmailJobHandler, InvitationEmailJobHandlerService>();
 
         return services;
     }

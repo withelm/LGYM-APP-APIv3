@@ -1,10 +1,13 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.TrainerRelationships.Models;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
+using Microsoft.Extensions.Logging;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.TrainerRelationships;
@@ -14,18 +17,27 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly IInvitationEmailScheduler _invitationEmailScheduler;
+    private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<TrainerRelationshipService> _logger;
 
     public TrainerRelationshipService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         ITrainerRelationshipRepository trainerRelationshipRepository,
-        IUnitOfWork unitOfWork)
+        IInvitationEmailScheduler invitationEmailScheduler,
+        IEmailNotificationsFeature emailNotificationsFeature,
+        IUnitOfWork unitOfWork,
+        ILogger<TrainerRelationshipService> logger)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _trainerRelationshipRepository = trainerRelationshipRepository;
+        _invitationEmailScheduler = invitationEmailScheduler;
+        _emailNotificationsFeature = emailNotificationsFeature;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<TrainerInvitationResult> CreateInvitationAsync(UserEntity currentTrainer, Guid traineeId)
@@ -78,6 +90,43 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         await _trainerRelationshipRepository.AddInvitationAsync(invitation);
         await _unitOfWork.SaveChangesAsync();
+
+        if (_emailNotificationsFeature.Enabled && !string.IsNullOrWhiteSpace(trainee.Email))
+        {
+            try
+            {
+                await _invitationEmailScheduler.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+                {
+                    InvitationId = invitation.Id,
+                    InvitationCode = invitation.Code,
+                    ExpiresAt = invitation.ExpiresAt,
+                    TrainerName = currentTrainer.Name,
+                    RecipientEmail = trainee.Email,
+                    CultureName = string.IsNullOrWhiteSpace(currentTrainer.PreferredLanguage)
+                        ? "en-US"
+                        : currentTrainer.PreferredLanguage
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to schedule invitation email for invitation {InvitationId}. Invitation creation is still successful.",
+                    invitation.Id);
+            }
+        }
+        else if (!_emailNotificationsFeature.Enabled)
+        {
+            _logger.LogInformation(
+                "Email notifications are disabled; invitation {InvitationId} created without scheduling email.",
+                invitation.Id);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Trainee email is empty; invitation {InvitationId} created without scheduling email.",
+                invitation.Id);
+        }
 
         return MapInvitation(invitation);
     }
@@ -267,4 +316,5 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     {
         return Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
     }
+
 }

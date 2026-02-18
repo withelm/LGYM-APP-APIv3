@@ -6,6 +6,7 @@ public sealed class User : EntityBase
 {
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string PreferredLanguage { get; set; } = "en-US";
     public Guid? PlanId { get; set; }
     public string ProfileRank { get; set; } = string.Empty;
     public string? Avatar { get; set; }
