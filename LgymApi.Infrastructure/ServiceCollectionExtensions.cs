@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
     {
         var emailOptions = new EmailOptions
         {
-            Enabled = bool.TryParse(configuration["Email:Enabled"], out var enabled) ? enabled : true,
+            Enabled = bool.TryParse(configuration["Email:Enabled"], out var enabled) ? enabled : false,
             FromAddress = configuration["Email:FromAddress"] ?? string.Empty,
             FromName = configuration["Email:FromName"] ?? "LGYM Trainer",
             SmtpHost = configuration["Email:SmtpHost"] ?? string.Empty,
