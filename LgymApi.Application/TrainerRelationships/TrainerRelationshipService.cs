@@ -1,0 +1,240 @@
+using LgymApi.Application.Exceptions;
+using LgymApi.Application.Features.TrainerRelationships.Models;
+using LgymApi.Application.Repositories;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using LgymApi.Domain.Security;
+using LgymApi.Resources;
+using UserEntity = LgymApi.Domain.Entities.User;
+
+namespace LgymApi.Application.Features.TrainerRelationships;
+
+public sealed class TrainerRelationshipService : ITrainerRelationshipService
+{
+    private readonly IUserRepository _userRepository;
+    private readonly IRoleRepository _roleRepository;
+    private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public TrainerRelationshipService(
+        IUserRepository userRepository,
+        IRoleRepository roleRepository,
+        ITrainerRelationshipRepository trainerRelationshipRepository,
+        IUnitOfWork unitOfWork)
+    {
+        _userRepository = userRepository;
+        _roleRepository = roleRepository;
+        _trainerRelationshipRepository = trainerRelationshipRepository;
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<TrainerInvitationResult> CreateInvitationAsync(UserEntity currentTrainer, Guid traineeId)
+    {
+        await EnsureTrainerAsync(currentTrainer);
+
+        if (traineeId == Guid.Empty)
+        {
+            throw AppException.BadRequest(Messages.UserIdRequired);
+        }
+
+        if (currentTrainer.Id == traineeId)
+        {
+            throw AppException.BadRequest(Messages.CannotInviteYourself);
+        }
+
+        var trainee = await _userRepository.FindByIdAsync(traineeId);
+        if (trainee == null || trainee.IsDeleted)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync(traineeId))
+        {
+            throw AppException.BadRequest(Messages.TraineeAlreadyLinked);
+        }
+
+        var invitation = new TrainerInvitation
+        {
+            Id = Guid.NewGuid(),
+            TrainerId = currentTrainer.Id,
+            TraineeId = traineeId,
+            Code = CreateInvitationCode(),
+            Status = TrainerInvitationStatus.Pending,
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7)
+        };
+
+        await _trainerRelationshipRepository.AddInvitationAsync(invitation);
+        await _unitOfWork.SaveChangesAsync();
+
+        return MapInvitation(invitation);
+    }
+
+    public async Task<List<TrainerInvitationResult>> GetTrainerInvitationsAsync(UserEntity currentTrainer)
+    {
+        await EnsureTrainerAsync(currentTrainer);
+
+        var invitations = await _trainerRelationshipRepository.GetInvitationsByTrainerIdAsync(currentTrainer.Id);
+        var hasUpdates = false;
+
+        foreach (var invitation in invitations)
+        {
+            if (invitation.Status == TrainerInvitationStatus.Pending && invitation.ExpiresAt <= DateTimeOffset.UtcNow)
+            {
+                invitation.Status = TrainerInvitationStatus.Expired;
+                invitation.RespondedAt = DateTimeOffset.UtcNow;
+                hasUpdates = true;
+            }
+        }
+
+        if (hasUpdates)
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        return invitations.Select(MapInvitation).ToList();
+    }
+
+    public async Task AcceptInvitationAsync(UserEntity currentTrainee, Guid invitationId)
+    {
+        if (invitationId == Guid.Empty)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        var invitation = await GetInvitationForTraineeAsync(currentTrainee, invitationId);
+        if (invitation.Status == TrainerInvitationStatus.Accepted)
+        {
+            var existing = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(invitation.TrainerId, currentTrainee.Id);
+            if (existing != null)
+            {
+                return;
+            }
+        }
+
+        EnsureInvitationPending(invitation);
+
+        if (await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync(currentTrainee.Id))
+        {
+            throw AppException.BadRequest(Messages.TraineeAlreadyLinked);
+        }
+
+        invitation.Status = TrainerInvitationStatus.Accepted;
+        invitation.RespondedAt = DateTimeOffset.UtcNow;
+
+        await _trainerRelationshipRepository.AddLinkAsync(new TrainerTraineeLink
+        {
+            Id = Guid.NewGuid(),
+            TrainerId = invitation.TrainerId,
+            TraineeId = currentTrainee.Id
+        });
+
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task RejectInvitationAsync(UserEntity currentTrainee, Guid invitationId)
+    {
+        if (invitationId == Guid.Empty)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        var invitation = await GetInvitationForTraineeAsync(currentTrainee, invitationId);
+        if (invitation.Status == TrainerInvitationStatus.Rejected)
+        {
+            return;
+        }
+
+        EnsureInvitationPending(invitation);
+
+        invitation.Status = TrainerInvitationStatus.Rejected;
+        invitation.RespondedAt = DateTimeOffset.UtcNow;
+
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task UnlinkTraineeAsync(UserEntity currentTrainer, Guid traineeId)
+    {
+        await EnsureTrainerAsync(currentTrainer);
+
+        if (traineeId == Guid.Empty)
+        {
+            throw AppException.BadRequest(Messages.UserIdRequired);
+        }
+
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId);
+        if (link == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        await _trainerRelationshipRepository.RemoveLinkAsync(link);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task DetachFromTrainerAsync(UserEntity currentTrainee)
+    {
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTraineeIdAsync(currentTrainee.Id);
+        if (link == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        await _trainerRelationshipRepository.RemoveLinkAsync(link);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    private async Task EnsureTrainerAsync(UserEntity currentTrainer)
+    {
+        var isTrainer = await _roleRepository.UserHasRoleAsync(currentTrainer.Id, AuthConstants.Roles.Trainer);
+        if (!isTrainer)
+        {
+            throw AppException.Forbidden(Messages.TrainerRoleRequired);
+        }
+    }
+
+    private async Task<TrainerInvitation> GetInvitationForTraineeAsync(UserEntity currentTrainee, Guid invitationId)
+    {
+        var invitation = await _trainerRelationshipRepository.FindInvitationByIdAsync(invitationId);
+        if (invitation == null || invitation.TraineeId != currentTrainee.Id)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        return invitation;
+    }
+
+    private static void EnsureInvitationPending(TrainerInvitation invitation)
+    {
+        if (invitation.Status != TrainerInvitationStatus.Pending)
+        {
+            throw AppException.BadRequest(Messages.InvitationNoLongerPending);
+        }
+
+        if (invitation.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            invitation.Status = TrainerInvitationStatus.Expired;
+            invitation.RespondedAt = DateTimeOffset.UtcNow;
+            throw AppException.BadRequest(Messages.InvitationExpired);
+        }
+    }
+
+    private static TrainerInvitationResult MapInvitation(TrainerInvitation invitation)
+    {
+        return new TrainerInvitationResult
+        {
+            Id = invitation.Id,
+            TrainerId = invitation.TrainerId,
+            TraineeId = invitation.TraineeId,
+            Code = invitation.Code,
+            Status = invitation.Status,
+            ExpiresAt = invitation.ExpiresAt,
+            RespondedAt = invitation.RespondedAt,
+            CreatedAt = invitation.CreatedAt
+        };
+    }
+
+    private static string CreateInvitationCode()
+    {
+        return Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+    }
+}

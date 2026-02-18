@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<ITrainerRelationshipRepository, TrainerRelationshipRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IPlanDayRepository, PlanDayRepository>();
         services.AddScoped<IPlanDayExerciseRepository, PlanDayExerciseRepository>();

@@ -141,4 +141,19 @@
   <data name="DefaultRoleMissing" xml:space="preserve">
     <value>Brakuje konfiguracji domyślnej roli użytkownika.</value>
   </data>
+  <data name="TrainerRoleRequired" xml:space="preserve">
+    <value>Wymagana jest rola trenera.</value>
+  </data>
+  <data name="CannotInviteYourself" xml:space="preserve">
+    <value>Nie możesz zaprosić samego siebie.</value>
+  </data>
+  <data name="TraineeAlreadyLinked" xml:space="preserve">
+    <value>Ten podopieczny jest już powiązany z trenerem.</value>
+  </data>
+  <data name="InvitationNoLongerPending" xml:space="preserve">
+    <value>Zaproszenie nie jest już oczekujące.</value>
+  </data>
+  <data name="InvitationExpired" xml:space="preserve">
+    <value>Zaproszenie wygasło.</value>
+  </data>
 </root>

@@ -2,6 +2,7 @@ using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +14,12 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 public sealed class TrainerAuthController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IMapper _mapper;
 
-    public TrainerAuthController(IUserService userService)
+    public TrainerAuthController(IUserService userService, IMapper mapper)
     {
         _userService = userService;
+        _mapper = mapper;
     }
 
     [HttpPost("register")]
@@ -34,27 +37,7 @@ public sealed class TrainerAuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await _userService.LoginTrainerAsync(request.Name, request.Password);
-        return Ok(new LoginResponseDto
-        {
-            Token = result.Token,
-            PermissionClaims = result.PermissionClaims,
-            User = new UserInfoDto
-            {
-                Name = result.User.Name,
-                Id = result.User.Id.ToString(),
-                Email = result.User.Email,
-                Avatar = result.User.Avatar,
-                ProfileRank = result.User.ProfileRank,
-                CreatedAt = result.User.CreatedAt,
-                UpdatedAt = result.User.UpdatedAt,
-                Elo = result.User.Elo,
-                NextRank = result.User.NextRank == null ? null : new RankDto { Name = result.User.NextRank.Name, NeedElo = result.User.NextRank.NeedElo },
-                IsDeleted = result.User.IsDeleted,
-                IsVisibleInRanking = result.User.IsVisibleInRanking,
-                Roles = result.User.Roles,
-                PermissionClaims = result.User.PermissionClaims
-            }
-        });
+        return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.LoginResult, LoginResponseDto>(result));
     }
 
     [HttpGet("checkToken")]
@@ -64,21 +47,6 @@ public sealed class TrainerAuthController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var result = await _userService.CheckTokenAsync(user!);
-        return Ok(new UserInfoDto
-        {
-            Name = result.Name,
-            Id = result.Id.ToString(),
-            Email = result.Email,
-            Avatar = result.Avatar,
-            ProfileRank = result.ProfileRank,
-            CreatedAt = result.CreatedAt,
-            UpdatedAt = result.UpdatedAt,
-            Elo = result.Elo,
-            NextRank = result.NextRank == null ? null : new RankDto { Name = result.NextRank.Name, NeedElo = result.NextRank.NeedElo },
-            IsDeleted = result.IsDeleted,
-            IsVisibleInRanking = result.IsVisibleInRanking,
-            Roles = result.Roles,
-            PermissionClaims = result.PermissionClaims
-        });
+        return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.UserInfoResult, UserInfoDto>(result));
     }
 }
