@@ -48,15 +48,25 @@ public sealed class SmtpEmailSender : IEmailSender
         using var smtpClient = new MailKitSmtpClient();
         var secureSocketOption = _emailOptions.UseSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
 
-        await smtpClient.ConnectAsync(_emailOptions.SmtpHost, _emailOptions.SmtpPort, secureSocketOption, cancellationToken);
-
-        if (!string.IsNullOrWhiteSpace(_emailOptions.Username))
+        try
         {
-            await smtpClient.AuthenticateAsync(_emailOptions.Username, _emailOptions.Password, cancellationToken);
+            await smtpClient.ConnectAsync(_emailOptions.SmtpHost, _emailOptions.SmtpPort, secureSocketOption, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(_emailOptions.Username))
+            {
+                await smtpClient.AuthenticateAsync(_emailOptions.Username, _emailOptions.Password, cancellationToken);
+            }
+
+            await smtpClient.SendAsync(mimeMessage, cancellationToken);
+        }
+        finally
+        {
+            if (smtpClient.IsConnected)
+            {
+                await smtpClient.DisconnectAsync(quit: true, CancellationToken.None);
+            }
         }
 
-        await smtpClient.SendAsync(mimeMessage, cancellationToken);
-        await smtpClient.DisconnectAsync(quit: true, cancellationToken);
         return true;
     }
 }
