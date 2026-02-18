@@ -30,7 +30,7 @@ public static class ServiceCollectionExtensions
             SmtpPort = int.TryParse(configuration["Email:SmtpPort"], out var smtpPort) ? smtpPort : 587,
             Username = configuration["Email:Username"] ?? string.Empty,
             Password = configuration["Email:Password"] ?? string.Empty,
-            UseSsl = !bool.TryParse(configuration["Email:UseSsl"], out var useSsl) || useSsl,
+            UseSsl = GetBooleanOrDefault(configuration["Email:UseSsl"], defaultValue: true),
             InvitationBaseUrl = configuration["Email:InvitationBaseUrl"] ?? string.Empty,
             TemplateRootPath = configuration["Email:TemplateRootPath"] ?? "EmailTemplates",
             DefaultCulture = ResolveDefaultCulture(configuration["Email:DefaultCulture"])
@@ -158,5 +158,10 @@ public static class ServiceCollectionExtensions
         {
             return CultureInfo.GetCultureInfo("en-US");
         }
+    }
+
+    private static bool GetBooleanOrDefault(string? value, bool defaultValue)
+    {
+        return bool.TryParse(value, out var parsed) ? parsed : defaultValue;
     }
 }
