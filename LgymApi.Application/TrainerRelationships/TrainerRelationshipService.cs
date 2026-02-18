@@ -7,7 +7,6 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
-using System.Globalization;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.TrainerRelationships;
@@ -94,7 +93,9 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
                 ExpiresAt = invitation.ExpiresAt,
                 TrainerName = currentTrainer.Name,
                 RecipientEmail = trainee.Email,
-                CultureName = ResolveCulture(currentTrainer.PreferredLanguage).Name
+                CultureName = string.IsNullOrWhiteSpace(currentTrainer.PreferredLanguage)
+                    ? "en-US"
+                    : currentTrainer.PreferredLanguage
             });
         }
 
@@ -287,20 +288,4 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
     }
 
-    private static CultureInfo ResolveCulture(string? preferredLanguage)
-    {
-        if (string.IsNullOrWhiteSpace(preferredLanguage))
-        {
-            return CultureInfo.GetCultureInfo("en-US");
-        }
-
-        try
-        {
-            return CultureInfo.GetCultureInfo(preferredLanguage);
-        }
-        catch (CultureNotFoundException)
-        {
-            return CultureInfo.GetCultureInfo("en-US");
-        }
-    }
 }

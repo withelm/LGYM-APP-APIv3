@@ -12,7 +12,7 @@ public sealed class InvitationEmailJob
         _handler = handler;
     }
 
-    [AutomaticRetry(Attempts = 3)]
+    [AutomaticRetry(Attempts = 3, DelaysInSeconds = new[] { 60, 300, 900 })]
     public Task ExecuteAsync(Guid notificationId)
     {
         return _handler.ProcessAsync(notificationId);

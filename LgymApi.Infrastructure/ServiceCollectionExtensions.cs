@@ -33,7 +33,7 @@ public static class ServiceCollectionExtensions
             UseSsl = !bool.TryParse(configuration["Email:UseSsl"], out var useSsl) || useSsl,
             InvitationBaseUrl = configuration["Email:InvitationBaseUrl"] ?? string.Empty,
             TemplateRootPath = configuration["Email:TemplateRootPath"] ?? "EmailTemplates",
-            DefaultCulture = ResolveDefaultCulture(configuration["Email:DefaultCulture"] ?? configuration["Email:DefaultLanguage"])
+            DefaultCulture = ResolveDefaultCulture(configuration["Email:DefaultCulture"])
         };
 
         ValidateEmailOptions(emailOptions);

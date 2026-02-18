@@ -1,6 +1,7 @@
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Infrastructure.Options;
+using System.Collections.Concurrent;
 using System.Globalization;
 
 namespace LgymApi.Infrastructure.Services;
@@ -8,6 +9,7 @@ namespace LgymApi.Infrastructure.Services;
 public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateComposer
 {
     private readonly EmailOptions _emailOptions;
+    private readonly ConcurrentDictionary<string, (string Subject, string Body)> _templateCache = new(StringComparer.OrdinalIgnoreCase);
 
     public TrainerInvitationEmailTemplateComposer(EmailOptions emailOptions)
     {
@@ -25,8 +27,8 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
         var expiresAt = payload.ExpiresAt.ToString("f", culture);
         var replacements = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["{{TrainerName}}"] = payload.TrainerName,
-            ["{{InvitationCode}}"] = payload.InvitationCode,
+            ["{{TrainerName}}"] = SanitizeTemplateValue(payload.TrainerName),
+            ["{{InvitationCode}}"] = SanitizeTemplateValue(payload.InvitationCode),
             ["{{AcceptUrl}}"] = acceptUrl,
             ["{{RejectUrl}}"] = rejectUrl,
             ["{{ExpiresAt}}"] = expiresAt
@@ -51,6 +53,11 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
             templatePath = ResolveTemplatePath(templateName, _emailOptions.DefaultCulture);
         }
 
+        return _templateCache.GetOrAdd(templatePath, LoadTemplateFromFile);
+    }
+
+    private static (string Subject, string Body) LoadTemplateFromFile(string templatePath)
+    {
         if (!File.Exists(templatePath))
         {
             throw new InvalidOperationException($"Email template not found: {templatePath}");
@@ -98,6 +105,18 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
         }
 
         return result;
+    }
+
+    private static string SanitizeTemplateValue(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        return value.Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal)
+            .Trim();
     }
 
 }

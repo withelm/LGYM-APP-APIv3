@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using System.Text;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Infrastructure.Options;
@@ -22,12 +23,16 @@ public sealed class SmtpEmailSender : IEmailSender
             return;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         using var mailMessage = new MailMessage
         {
             From = new MailAddress(_emailOptions.FromAddress, _emailOptions.FromName),
             Subject = message.Subject,
             Body = message.Body,
-            IsBodyHtml = false
+            IsBodyHtml = false,
+            BodyEncoding = Encoding.UTF8,
+            SubjectEncoding = Encoding.UTF8
         };
         mailMessage.To.Add(message.To);
 
@@ -39,7 +44,6 @@ public sealed class SmtpEmailSender : IEmailSender
                 : new NetworkCredential(_emailOptions.Username, _emailOptions.Password)
         };
 
-        cancellationToken.ThrowIfCancellationRequested();
         await smtpClient.SendMailAsync(mailMessage, cancellationToken);
     }
 }

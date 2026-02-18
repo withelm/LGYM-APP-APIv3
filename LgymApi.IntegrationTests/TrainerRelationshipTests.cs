@@ -15,6 +15,12 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class TrainerRelationshipTests : IntegrationTestBase
 {
+    [SetUp]
+    public void ResetEmailCapture()
+    {
+        Factory.EmailSender.SentMessages.Clear();
+    }
+
     [Test]
     public async Task CreateInvitation_AsTrainer_CreatesPendingInvitation()
     {

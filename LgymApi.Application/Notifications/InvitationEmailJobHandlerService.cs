@@ -2,6 +2,7 @@ using System.Text.Json;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Notifications;
 
@@ -11,17 +12,20 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
     private readonly IEmailTemplateComposer _templateComposer;
     private readonly IEmailSender _emailSender;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<InvitationEmailJobHandlerService> _logger;
 
     public InvitationEmailJobHandlerService(
         IEmailNotificationLogRepository notificationLogRepository,
         IEmailTemplateComposer templateComposer,
         IEmailSender emailSender,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<InvitationEmailJobHandlerService> logger)
     {
         _notificationLogRepository = notificationLogRepository;
         _templateComposer = templateComposer;
         _emailSender = emailSender;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task ProcessAsync(Guid notificationId, CancellationToken cancellationToken = default)
@@ -48,8 +52,9 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
         catch (Exception ex)
         {
             notification.Status = EmailNotificationStatus.Failed;
-            notification.LastError = ex.Message;
+            notification.LastError = ToSafeError(ex);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _logger.LogError(ex, "Failed to deserialize invitation email payload for notification {NotificationId}.", notificationId);
             throw;
         }
 
@@ -61,7 +66,19 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
             return;
         }
 
-        var message = _templateComposer.ComposeTrainerInvitation(payload);
+        EmailMessage message;
+        try
+        {
+            message = _templateComposer.ComposeTrainerInvitation(payload);
+        }
+        catch (Exception ex)
+        {
+            notification.Status = EmailNotificationStatus.Failed;
+            notification.LastError = ToSafeError(ex);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _logger.LogError(ex, "Failed to compose invitation email template for notification {NotificationId}.", notificationId);
+            throw;
+        }
 
         try
         {
@@ -74,9 +91,23 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
         catch (Exception ex)
         {
             notification.Status = EmailNotificationStatus.Failed;
-            notification.LastError = ex.Message;
+            notification.LastError = ToSafeError(ex);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _logger.LogError(ex, "Failed to send invitation email for notification {NotificationId}.", notificationId);
             throw;
         }
+    }
+
+    private static string ToSafeError(Exception exception)
+    {
+        var message = exception.GetType().Name;
+        if (!string.IsNullOrWhiteSpace(exception.Message))
+        {
+            message = $"{message}: {exception.Message}";
+        }
+
+        message = message.Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal);
+        return message.Length <= 400 ? message : message[..400];
     }
 }
