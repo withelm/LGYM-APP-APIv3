@@ -18,12 +18,22 @@ public sealed class SmtpEmailSender : IEmailSender
 
     public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!_emailOptions.Enabled)
         {
             return;
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
+        MailAddress recipientAddress;
+        try
+        {
+            recipientAddress = new MailAddress(message.To);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException("Recipient email address is invalid.", ex);
+        }
 
         using var mailMessage = new MailMessage
         {
@@ -34,7 +44,7 @@ public sealed class SmtpEmailSender : IEmailSender
             BodyEncoding = Encoding.UTF8,
             SubjectEncoding = Encoding.UTF8
         };
-        mailMessage.To.Add(message.To);
+        mailMessage.To.Add(recipientAddress);
 
         using var smtpClient = new SmtpClient(_emailOptions.SmtpHost, _emailOptions.SmtpPort)
         {

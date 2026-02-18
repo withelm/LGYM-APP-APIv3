@@ -29,8 +29,8 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
         {
             ["{{TrainerName}}"] = SanitizeTemplateValue(payload.TrainerName),
             ["{{InvitationCode}}"] = SanitizeTemplateValue(payload.InvitationCode),
-            ["{{AcceptUrl}}"] = acceptUrl,
-            ["{{RejectUrl}}"] = rejectUrl,
+            ["{{AcceptUrl}}"] = SanitizeTemplateValue(acceptUrl),
+            ["{{RejectUrl}}"] = SanitizeTemplateValue(rejectUrl),
             ["{{ExpiresAt}}"] = expiresAt
         };
 

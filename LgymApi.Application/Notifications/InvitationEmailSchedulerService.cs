@@ -81,5 +81,9 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _backgroundScheduler.Enqueue(log.Id);
+        _logger.LogInformation(
+            "Created and enqueued invitation email notification {NotificationId} for invitation {InvitationId}.",
+            log.Id,
+            payload.InvitationId);
     }
 }
