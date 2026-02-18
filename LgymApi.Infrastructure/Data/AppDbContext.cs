@@ -304,7 +304,7 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("TrainerTraineeLinks");
             entity.HasIndex(e => e.TraineeId).IsUnique();
-            entity.HasIndex(e => new { e.TrainerId, e.TraineeId }).IsUnique();
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId });
             entity.HasOne(e => e.Trainer)
                 .WithMany()
                 .HasForeignKey(e => e.TrainerId)

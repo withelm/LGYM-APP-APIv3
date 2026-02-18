@@ -29,8 +29,12 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(TrainerInvitationDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateInvitation([FromBody] CreateTrainerInvitationRequest request)
     {
+        if (!Guid.TryParse(request.TraineeId, out var traineeId))
+        {
+            throw AppException.BadRequest(Messages.UserIdRequired);
+        }
+
         var trainer = HttpContext.GetCurrentUser();
-        var traineeId = Guid.Parse(request.TraineeId);
         var invitation = await _trainerRelationshipService.CreateInvitationAsync(trainer!, traineeId);
         return Ok(_mapper.Map<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(invitation));
     }

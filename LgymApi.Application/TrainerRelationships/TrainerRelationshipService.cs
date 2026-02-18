@@ -53,6 +53,19 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             throw AppException.BadRequest(Messages.TraineeAlreadyLinked);
         }
 
+        var existingPending = await _trainerRelationshipRepository.FindPendingInvitationAsync(currentTrainer.Id, traineeId);
+        if (existingPending != null)
+        {
+            if (existingPending.ExpiresAt > DateTimeOffset.UtcNow)
+            {
+                return MapInvitation(existingPending);
+            }
+
+            existingPending.Status = TrainerInvitationStatus.Expired;
+            existingPending.RespondedAt = DateTimeOffset.UtcNow;
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         var invitation = new TrainerInvitation
         {
             Id = Guid.NewGuid(),
@@ -111,7 +124,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             }
         }
 
-        EnsureInvitationPending(invitation);
+        await EnsureInvitationPendingAsync(invitation);
 
         if (await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync(currentTrainee.Id))
         {
@@ -121,14 +134,26 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         invitation.Status = TrainerInvitationStatus.Accepted;
         invitation.RespondedAt = DateTimeOffset.UtcNow;
 
-        await _trainerRelationshipRepository.AddLinkAsync(new TrainerTraineeLink
+        try
         {
-            Id = Guid.NewGuid(),
-            TrainerId = invitation.TrainerId,
-            TraineeId = currentTrainee.Id
-        });
+            await _trainerRelationshipRepository.AddLinkAsync(new TrainerTraineeLink
+            {
+                Id = Guid.NewGuid(),
+                TrainerId = invitation.TrainerId,
+                TraineeId = currentTrainee.Id
+            });
 
-        await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch
+        {
+            if (await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync(currentTrainee.Id))
+            {
+                throw AppException.BadRequest(Messages.TraineeAlreadyLinked);
+            }
+
+            throw;
+        }
     }
 
     public async Task RejectInvitationAsync(UserEntity currentTrainee, Guid invitationId)
@@ -144,7 +169,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             return;
         }
 
-        EnsureInvitationPending(invitation);
+        await EnsureInvitationPendingAsync(invitation);
 
         invitation.Status = TrainerInvitationStatus.Rejected;
         invitation.RespondedAt = DateTimeOffset.UtcNow;
@@ -203,18 +228,23 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return invitation;
     }
 
-    private static void EnsureInvitationPending(TrainerInvitation invitation)
+    private async Task EnsureInvitationPendingAsync(TrainerInvitation invitation)
     {
+        if (invitation.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            if (invitation.Status == TrainerInvitationStatus.Pending)
+            {
+                invitation.Status = TrainerInvitationStatus.Expired;
+                invitation.RespondedAt = DateTimeOffset.UtcNow;
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            throw AppException.BadRequest(Messages.InvitationExpired);
+        }
+
         if (invitation.Status != TrainerInvitationStatus.Pending)
         {
             throw AppException.BadRequest(Messages.InvitationNoLongerPending);
-        }
-
-        if (invitation.ExpiresAt <= DateTimeOffset.UtcNow)
-        {
-            invitation.Status = TrainerInvitationStatus.Expired;
-            invitation.RespondedAt = DateTimeOffset.UtcNow;
-            throw AppException.BadRequest(Messages.InvitationExpired);
         }
     }
 

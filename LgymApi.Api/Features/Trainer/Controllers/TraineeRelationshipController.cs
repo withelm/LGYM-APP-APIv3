@@ -26,7 +26,7 @@ public sealed class TraineeRelationshipController : ControllerBase
     {
         if (!Guid.TryParse(invitationId, out var parsedInvitationId))
         {
-            throw AppException.BadRequest(Messages.DidntFind);
+            throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainee = HttpContext.GetCurrentUser();
@@ -40,7 +40,7 @@ public sealed class TraineeRelationshipController : ControllerBase
     {
         if (!Guid.TryParse(invitationId, out var parsedInvitationId))
         {
-            throw AppException.BadRequest(Messages.DidntFind);
+            throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainee = HttpContext.GetCurrentUser();

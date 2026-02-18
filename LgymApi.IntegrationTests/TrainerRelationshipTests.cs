@@ -34,6 +34,46 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreateInvitation_RepeatedRequest_ReturnsExistingPendingInvitation()
+    {
+        var trainer = await SeedTrainerAsync("trainer-repeat", "trainer-repeat@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-repeat", email: "trainee-repeat@example.com", password: "password123");
+        SetAuthorizationHeader(trainer.Id);
+
+        var first = await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
+        var firstBody = await first.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        var second = await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
+        var secondBody = await second.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        second.StatusCode.Should().Be(HttpStatusCode.OK);
+        firstBody.Should().NotBeNull();
+        secondBody.Should().NotBeNull();
+        secondBody!.Id.Should().Be(firstBody!.Id);
+        secondBody.Code.Should().Be(firstBody.Code);
+    }
+
+    [Test]
+    public async Task GetInvitations_AsTrainer_ReturnsCreatedInvitations()
+    {
+        var trainer = await SeedTrainerAsync("trainer-list", "trainer-list@example.com");
+        var traineeA = await SeedUserAsync(name: "trainee-list-a", email: "trainee-list-a@example.com", password: "password123");
+        var traineeB = await SeedUserAsync(name: "trainee-list-b", email: "trainee-list-b@example.com", password: "password123");
+        SetAuthorizationHeader(trainer.Id);
+
+        await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = traineeA.Id.ToString() });
+        await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = traineeB.Id.ToString() });
+
+        var response = await Client.GetAsync("/api/trainer/invitations");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<TrainerInvitationResponse>>();
+        body.Should().NotBeNull();
+        body!.Count.Should().Be(2);
+        body.Select(x => x.TraineeId).Should().BeEquivalentTo(new[] { traineeA.Id.ToString(), traineeB.Id.ToString() });
+    }
+
+    [Test]
     public async Task AcceptInvitation_AsTrainee_CreatesLink()
     {
         var trainer = await SeedTrainerAsync("trainer-accept", "trainer-accept@example.com");
@@ -55,6 +95,66 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await db.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainer.Id && x.TraineeId == trainee.Id);
         link.Should().NotBeNull();
+    }
+
+    [Test]
+    public async Task RejectInvitation_AsTrainee_ChangesInvitationStatusToRejected()
+    {
+        var trainer = await SeedTrainerAsync("trainer-reject", "trainer-reject@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-reject", email: "trainee-reject@example.com", password: "password123");
+
+        SetAuthorizationHeader(trainer.Id);
+        var createResponse = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+        {
+            traineeId = trainee.Id.ToString()
+        });
+        var invitation = await createResponse.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        SetAuthorizationHeader(trainee.Id);
+        var rejectResponse = await Client.PostAsync($"/api/trainee/invitations/{invitation!.Id}/reject", null);
+        rejectResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var invitationEntity = await db.TrainerInvitations.FirstAsync(i => i.Id == Guid.Parse(invitation.Id));
+        invitationEntity.Status.ToString().Should().Be("Rejected");
+        invitationEntity.RespondedAt.Should().NotBeNull();
+    }
+
+    [Test]
+    public async Task AcceptInvitation_WhenExpired_ReturnsBadRequestAndMarksInvitationAsExpired()
+    {
+        var trainer = await SeedTrainerAsync("trainer-expired", "trainer-expired@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-expired", email: "trainee-expired@example.com", password: "password123");
+
+        var invitationId = Guid.NewGuid();
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.TrainerInvitations.Add(new TrainerInvitation
+            {
+                Id = invitationId,
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                Code = "EXPIRED123456",
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-5)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainee.Id);
+        var response = await Client.PostAsync($"/api/trainee/invitations/{invitationId}/accept", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Invitation has expired.");
+
+        using var verifyScope = Factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var invitation = await verifyDb.TrainerInvitations.FirstAsync(i => i.Id == invitationId);
+        invitation.Status.ToString().Should().Be("Expired");
+        invitation.RespondedAt.Should().NotBeNull();
     }
 
     [Test]
@@ -164,5 +264,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
+    }
+
+    private sealed class MessageResponse
+    {
+        [JsonPropertyName("msg")]
+        public string Message { get; set; } = string.Empty;
     }
 }
