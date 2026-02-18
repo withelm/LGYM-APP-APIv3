@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using System.Net.Mail;
 
 namespace LgymApi.Infrastructure;
 
@@ -135,6 +136,15 @@ public static class ServiceCollectionExtensions
         if (string.IsNullOrWhiteSpace(options.FromAddress))
         {
             throw new InvalidOperationException("Email:FromAddress is required when email is enabled.");
+        }
+
+        try
+        {
+            _ = new MailAddress(options.FromAddress);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("Email:FromAddress must be a valid email address.");
         }
 
         if (string.IsNullOrWhiteSpace(options.SmtpHost))

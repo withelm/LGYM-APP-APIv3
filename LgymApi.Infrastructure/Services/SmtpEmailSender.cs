@@ -1,6 +1,8 @@
-using System.Net;
 using System.Net.Mail;
-using System.Text;
+using MailKitSmtpClient = MailKit.Net.Smtp.SmtpClient;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Infrastructure.Options;
@@ -35,25 +37,26 @@ public sealed class SmtpEmailSender : IEmailSender
             throw new InvalidOperationException("Recipient email address is invalid.", ex);
         }
 
-        using var mailMessage = new MailMessage
+        var mimeMessage = new MimeMessage();
+        mimeMessage.From.Add(new MailboxAddress(_emailOptions.FromName, _emailOptions.FromAddress));
+        mimeMessage.To.Add(new MailboxAddress(string.Empty, recipientAddress.Address));
+        mimeMessage.Subject = message.Subject;
+        mimeMessage.Body = new TextPart("plain")
         {
-            From = new MailAddress(_emailOptions.FromAddress, _emailOptions.FromName),
-            Subject = message.Subject,
-            Body = message.Body,
-            IsBodyHtml = false,
-            BodyEncoding = Encoding.UTF8,
-            SubjectEncoding = Encoding.UTF8
-        };
-        mailMessage.To.Add(recipientAddress);
-
-        using var smtpClient = new SmtpClient(_emailOptions.SmtpHost, _emailOptions.SmtpPort)
-        {
-            EnableSsl = _emailOptions.UseSsl,
-            Credentials = string.IsNullOrWhiteSpace(_emailOptions.Username)
-                ? CredentialCache.DefaultNetworkCredentials
-                : new NetworkCredential(_emailOptions.Username, _emailOptions.Password)
+            Text = message.Body
         };
 
-        await smtpClient.SendMailAsync(mailMessage, cancellationToken);
+        using var smtpClient = new MailKitSmtpClient();
+        var secureSocketOption = _emailOptions.UseSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+
+        await smtpClient.ConnectAsync(_emailOptions.SmtpHost, _emailOptions.SmtpPort, secureSocketOption, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(_emailOptions.Username))
+        {
+            await smtpClient.AuthenticateAsync(_emailOptions.Username, _emailOptions.Password, cancellationToken);
+        }
+
+        await smtpClient.SendAsync(mimeMessage, cancellationToken);
+        await smtpClient.DisconnectAsync(quit: true, cancellationToken);
     }
 }

@@ -24,7 +24,7 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
         var acceptUrl = $"{baseUrl}/accept/{payload.InvitationId}";
         var rejectUrl = $"{baseUrl}/reject/{payload.InvitationId}";
 
-        var expiresAt = payload.ExpiresAt.ToString("f", culture);
+        var expiresAt = payload.ExpiresAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
         var replacements = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["{{TrainerName}}"] = SanitizeTemplateValue(payload.TrainerName),
