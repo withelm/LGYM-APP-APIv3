@@ -121,6 +121,12 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
                 "Email notifications are disabled; invitation {InvitationId} created without scheduling email.",
                 invitation.Id);
         }
+        else
+        {
+            _logger.LogInformation(
+                "Trainee email is empty; invitation {InvitationId} created without scheduling email.",
+                invitation.Id);
+        }
 
         return MapInvitation(invitation);
     }

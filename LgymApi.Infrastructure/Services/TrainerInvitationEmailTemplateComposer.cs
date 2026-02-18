@@ -47,10 +47,20 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
 
     private (string Subject, string Body) LoadTemplate(string templateName, CultureInfo culture)
     {
-        var templatePath = ResolveTemplatePath(templateName, culture);
+        var templatePath = ResolveTemplatePath(templateName, culture.Name);
+        if (!File.Exists(templatePath) && !string.IsNullOrWhiteSpace(culture.TwoLetterISOLanguageName))
+        {
+            templatePath = ResolveTemplatePath(templateName, culture.TwoLetterISOLanguageName);
+        }
+
         if (!File.Exists(templatePath))
         {
-            templatePath = ResolveTemplatePath(templateName, _emailOptions.DefaultCulture);
+            templatePath = ResolveTemplatePath(templateName, _emailOptions.DefaultCulture.Name);
+        }
+
+        if (!File.Exists(templatePath) && !string.IsNullOrWhiteSpace(_emailOptions.DefaultCulture.TwoLetterISOLanguageName))
+        {
+            templatePath = ResolveTemplatePath(templateName, _emailOptions.DefaultCulture.TwoLetterISOLanguageName);
         }
 
         return _templateCache.GetOrAdd(templatePath, LoadTemplateFromFile);
@@ -84,7 +94,7 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
         return (subject, body);
     }
 
-    private string ResolveTemplatePath(string templateName, CultureInfo culture)
+    private string ResolveTemplatePath(string templateName, string cultureName)
     {
         var root = _emailOptions.TemplateRootPath;
         if (!Path.IsPathRooted(root))
@@ -92,8 +102,8 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
             root = Path.Combine(AppContext.BaseDirectory, root);
         }
 
-        var language = culture.TwoLetterISOLanguageName.ToLowerInvariant();
-        return Path.Combine(root, templateName, $"{language}.email");
+        var normalized = cultureName.Trim().ToLowerInvariant();
+        return Path.Combine(root, templateName, $"{normalized}.email");
     }
 
     private static string Render(string template, IReadOnlyDictionary<string, string> replacements)

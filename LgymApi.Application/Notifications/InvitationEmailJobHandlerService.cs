@@ -33,6 +33,9 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
         var notification = await _notificationLogRepository.FindByIdAsync(notificationId, cancellationToken);
         if (notification == null)
         {
+            _logger.LogWarning(
+                "Invitation email notification {NotificationId} was not found. The job will be skipped.",
+                notificationId);
             return;
         }
 

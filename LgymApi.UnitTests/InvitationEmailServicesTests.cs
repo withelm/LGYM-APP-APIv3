@@ -108,6 +108,47 @@ public sealed class InvitationEmailServicesTests
     }
 
     [Test]
+    public async Task Scheduler_WhenConcurrentInsertDetected_EnqueuesExistingNotification()
+    {
+        var existing = new EmailNotificationLog
+        {
+            Id = Guid.NewGuid(),
+            Status = EmailNotificationStatus.Pending,
+            Type = InvitationEmailSchedulerService.NotificationType,
+            CorrelationId = Guid.NewGuid(),
+            RecipientEmail = "trainee@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository
+        {
+            ExistingByCorrelationOnSecondLookup = existing
+        };
+        var scheduler = new FakeBackgroundScheduler();
+        var unitOfWork = new FakeUnitOfWork { ThrowOnSave = true };
+
+        var service = new InvitationEmailSchedulerService(
+            repository,
+            scheduler,
+            unitOfWork,
+            new EnabledFeature(),
+            NullLogger<InvitationEmailSchedulerService>.Instance);
+
+        await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+        {
+            InvitationId = existing.CorrelationId,
+            InvitationCode = "ABC123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
+            TrainerName = "Coach",
+            RecipientEmail = existing.RecipientEmail,
+            CultureName = "en-US"
+        });
+
+        Assert.That(scheduler.EnqueuedNotificationIds.Count, Is.EqualTo(1));
+        Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
+    }
+
+    [Test]
     public async Task JobHandler_WhenTemplateComposerThrows_MarksFailedAndSaves()
     {
         var notification = new EmailNotificationLog
@@ -171,7 +212,9 @@ public sealed class InvitationEmailServicesTests
     {
         public EmailNotificationLog? ExistingById { get; set; }
         public EmailNotificationLog? ExistingByCorrelation { get; set; }
+        public EmailNotificationLog? ExistingByCorrelationOnSecondLookup { get; set; }
         public List<EmailNotificationLog> Added { get; } = new();
+        private int _correlationLookups;
 
         public Task AddAsync(EmailNotificationLog log, CancellationToken cancellationToken = default)
         {
@@ -186,6 +229,12 @@ public sealed class InvitationEmailServicesTests
 
         public Task<EmailNotificationLog?> FindByCorrelationAsync(string type, Guid correlationId, string recipientEmail, CancellationToken cancellationToken = default)
         {
+            _correlationLookups += 1;
+            if (_correlationLookups >= 2 && ExistingByCorrelationOnSecondLookup != null)
+            {
+                return Task.FromResult<EmailNotificationLog?>(ExistingByCorrelationOnSecondLookup);
+            }
+
             return Task.FromResult(ExistingByCorrelation);
         }
     }
@@ -203,10 +252,16 @@ public sealed class InvitationEmailServicesTests
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
         public int SaveChangesCalls { get; private set; }
+        public bool ThrowOnSave { get; set; }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SaveChangesCalls += 1;
+            if (ThrowOnSave)
+            {
+                throw new InvalidOperationException("Simulated concurrent insert failure");
+            }
+
             return Task.FromResult(1);
         }
 

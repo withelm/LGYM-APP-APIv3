@@ -63,7 +63,8 @@ public sealed class SmtpEmailSender : IEmailSender
         {
             if (smtpClient.IsConnected)
             {
-                await smtpClient.DisconnectAsync(quit: true, CancellationToken.None);
+                using var disconnectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await smtpClient.DisconnectAsync(quit: true, disconnectTimeout.Token);
             }
         }
 

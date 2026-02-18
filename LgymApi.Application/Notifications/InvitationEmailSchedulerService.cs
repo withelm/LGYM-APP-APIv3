@@ -88,8 +88,32 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
             PayloadJson = JsonSerializer.Serialize(payload)
         };
 
-        await _notificationLogRepository.AddAsync(log, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _notificationLogRepository.AddAsync(log, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            var concurrent = await _notificationLogRepository.FindByCorrelationAsync(
+                NotificationType,
+                payload.InvitationId,
+                payload.RecipientEmail,
+                cancellationToken);
+
+            if (concurrent == null)
+            {
+                throw;
+            }
+
+            _logger.LogWarning(
+                ex,
+                "Detected concurrent invitation email scheduling for invitation {InvitationId}; using existing notification {NotificationId}.",
+                payload.InvitationId,
+                concurrent.Id);
+            _backgroundScheduler.Enqueue(concurrent.Id);
+            return;
+        }
 
         _backgroundScheduler.Enqueue(log.Id);
         _logger.LogInformation(
