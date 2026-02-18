@@ -1,10 +1,13 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.TrainerRelationships.Models;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
+using System.Globalization;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.TrainerRelationships;
@@ -14,17 +17,20 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly IInvitationEmailScheduler _invitationEmailScheduler;
     private readonly IUnitOfWork _unitOfWork;
 
     public TrainerRelationshipService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         ITrainerRelationshipRepository trainerRelationshipRepository,
+        IInvitationEmailScheduler invitationEmailScheduler,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _trainerRelationshipRepository = trainerRelationshipRepository;
+        _invitationEmailScheduler = invitationEmailScheduler;
         _unitOfWork = unitOfWork;
     }
 
@@ -78,6 +84,19 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         await _trainerRelationshipRepository.AddInvitationAsync(invitation);
         await _unitOfWork.SaveChangesAsync();
+
+        if (!string.IsNullOrWhiteSpace(trainee.Email))
+        {
+            await _invitationEmailScheduler.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+            {
+                InvitationId = invitation.Id,
+                InvitationCode = invitation.Code,
+                ExpiresAt = invitation.ExpiresAt,
+                TrainerName = currentTrainer.Name,
+                RecipientEmail = trainee.Email,
+                CultureName = ResolveCulture(currentTrainer.PreferredLanguage).Name
+            });
+        }
 
         return MapInvitation(invitation);
     }
@@ -266,5 +285,22 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private static string CreateInvitationCode()
     {
         return Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+    }
+
+    private static CultureInfo ResolveCulture(string? preferredLanguage)
+    {
+        if (string.IsNullOrWhiteSpace(preferredLanguage))
+        {
+            return CultureInfo.GetCultureInfo("en-US");
+        }
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(preferredLanguage);
+        }
+        catch (CultureNotFoundException)
+        {
+            return CultureInfo.GetCultureInfo("en-US");
+        }
     }
 }

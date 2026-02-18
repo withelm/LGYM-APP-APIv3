@@ -1,0 +1,103 @@
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
+using LgymApi.Infrastructure.Options;
+using System.Globalization;
+
+namespace LgymApi.Infrastructure.Services;
+
+public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateComposer
+{
+    private readonly EmailOptions _emailOptions;
+
+    public TrainerInvitationEmailTemplateComposer(EmailOptions emailOptions)
+    {
+        _emailOptions = emailOptions;
+    }
+
+    public EmailMessage ComposeTrainerInvitation(InvitationEmailPayload payload)
+    {
+        var culture = payload.Culture;
+        var template = LoadTemplate("TrainerInvitation", culture);
+        var baseUrl = _emailOptions.InvitationBaseUrl.TrimEnd('/');
+        var acceptUrl = $"{baseUrl}/accept/{payload.InvitationId}";
+        var rejectUrl = $"{baseUrl}/reject/{payload.InvitationId}";
+
+        var expiresAt = payload.ExpiresAt.ToString("f", culture);
+        var replacements = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["{{TrainerName}}"] = payload.TrainerName,
+            ["{{InvitationCode}}"] = payload.InvitationCode,
+            ["{{AcceptUrl}}"] = acceptUrl,
+            ["{{RejectUrl}}"] = rejectUrl,
+            ["{{ExpiresAt}}"] = expiresAt
+        };
+
+        var subject = Render(template.Subject, replacements);
+        var body = Render(template.Body, replacements);
+
+        return new EmailMessage
+        {
+            To = payload.RecipientEmail,
+            Subject = subject,
+            Body = body
+        };
+    }
+
+    private (string Subject, string Body) LoadTemplate(string templateName, CultureInfo culture)
+    {
+        var templatePath = ResolveTemplatePath(templateName, culture);
+        if (!File.Exists(templatePath))
+        {
+            templatePath = ResolveTemplatePath(templateName, _emailOptions.DefaultCulture);
+        }
+
+        if (!File.Exists(templatePath))
+        {
+            throw new InvalidOperationException($"Email template not found: {templatePath}");
+        }
+
+        var content = File.ReadAllText(templatePath);
+        const string separator = "\n---\n";
+        var normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
+        var separatorIndex = normalized.IndexOf(separator, StringComparison.Ordinal);
+        if (separatorIndex <= 0)
+        {
+            throw new InvalidOperationException($"Invalid email template format in {templatePath}");
+        }
+
+        var header = normalized[..separatorIndex].Trim();
+        var body = normalized[(separatorIndex + separator.Length)..].Trim();
+        const string subjectPrefix = "Subject:";
+        if (!header.StartsWith(subjectPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Template subject header is missing in {templatePath}");
+        }
+
+        var subject = header[subjectPrefix.Length..].Trim();
+        return (subject, body);
+    }
+
+    private string ResolveTemplatePath(string templateName, CultureInfo culture)
+    {
+        var root = _emailOptions.TemplateRootPath;
+        if (!Path.IsPathRooted(root))
+        {
+            root = Path.Combine(AppContext.BaseDirectory, root);
+        }
+
+        var language = culture.TwoLetterISOLanguageName.ToLowerInvariant();
+        return Path.Combine(root, templateName, $"{language}.email");
+    }
+
+    private static string Render(string template, IReadOnlyDictionary<string, string> replacements)
+    {
+        var result = template;
+        foreach (var replacement in replacements)
+        {
+            result = result.Replace(replacement.Key, replacement.Value, StringComparison.Ordinal);
+        }
+
+        return result;
+    }
+
+}

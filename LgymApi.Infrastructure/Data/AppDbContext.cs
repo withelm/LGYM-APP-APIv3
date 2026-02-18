@@ -31,6 +31,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<RoleClaim> RoleClaims => Set<RoleClaim>();
     public DbSet<TrainerInvitation> TrainerInvitations => Set<TrainerInvitation>();
     public DbSet<TrainerTraineeLink> TrainerTraineeLinks => Set<TrainerTraineeLink>();
+    public DbSet<EmailNotificationLog> EmailNotificationLogs => Set<EmailNotificationLog>();
 
     public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
@@ -313,6 +314,17 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.TraineeId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmailNotificationLog>(entity =>
+        {
+            entity.ToTable("EmailNotificationLogs");
+            entity.Property(e => e.Type).IsRequired();
+            entity.Property(e => e.RecipientEmail).IsRequired();
+            entity.Property(e => e.PayloadJson).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.HasIndex(e => new { e.Status, e.CreatedAt });
+            entity.HasIndex(e => new { e.Type, e.CorrelationId, e.RecipientEmail }).IsUnique();
         });
     }
 

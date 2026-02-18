@@ -1,0 +1,12 @@
+Subject: Trainer invitation from {{TrainerName}}
+---
+Hi,
+
+You received a trainer invitation from {{TrainerName}}.
+Invitation code: {{InvitationCode}}
+Expires at: {{ExpiresAt}}
+
+Accept invitation: {{AcceptUrl}}
+Reject invitation: {{RejectUrl}}
+
+If you did not expect this invitation, you can ignore this message.

@@ -1,0 +1,12 @@
+Subject: Zaproszenie trenerskie od {{TrainerName}}
+---
+Czesc,
+
+Otrzymales zaproszenie trenerskie od {{TrainerName}}.
+Kod zaproszenia: {{InvitationCode}}
+Wygasa: {{ExpiresAt}}
+
+Akceptuj zaproszenie: {{AcceptUrl}}
+Odrzuc zaproszenie: {{RejectUrl}}
+
+Jesli nie oczekiwales tego zaproszenia, zignoruj te wiadomosc.

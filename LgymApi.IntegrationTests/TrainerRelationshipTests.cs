@@ -3,7 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Application.Notifications;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +36,134 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreateInvitation_CreatesPendingEmailNotificationLog()
+    {
+        var trainer = await SeedTrainerAsync("trainer-email-log", "trainer-email-log@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-email-log", email: "trainee-email-log@example.com", password: "password123");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+        {
+            traineeId = trainee.Id.ToString()
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+        invitation.Should().NotBeNull();
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var log = await db.EmailNotificationLogs.FirstOrDefaultAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+        log.Should().NotBeNull();
+        log!.Status.Should().Be(EmailNotificationStatus.Pending);
+        log.RecipientEmail.Should().Be("trainee-email-log@example.com");
+    }
+
+    [Test]
+    public async Task InvitationEmailJob_ProcessesPendingNotification_AndMarksSent()
+    {
+        var trainer = await SeedTrainerAsync("trainer-email-job", "trainer-email-job@example.com", preferredLanguage: "en");
+        var trainee = await SeedUserAsync(name: "trainee-email-job", email: "trainee-email-job@example.com", password: "password123");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+        {
+            traineeId = trainee.Id.ToString()
+        });
+        var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+        invitation.Should().NotBeNull();
+
+        Guid notificationId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            notificationId = log.Id;
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            await handler.ProcessAsync(notificationId);
+        }
+
+        using (var verifyScope = Factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var log = await db.EmailNotificationLogs.FirstAsync(x => x.Id == notificationId);
+            log.Status.Should().Be(EmailNotificationStatus.Sent);
+            log.SentAt.Should().NotBeNull();
+            log.Attempts.Should().BeGreaterThanOrEqualTo(1);
+        }
+
+        Factory.EmailSender.SentMessages.Should().ContainSingle();
+        Factory.EmailSender.SentMessages[0].To.Should().Be("trainee-email-job@example.com");
+    }
+
+    [Test]
+    public async Task InvitationEmailJob_UsesTrainerLanguageTemplate_WhenTrainerIsPolish()
+    {
+        var trainer = await SeedTrainerAsync("trainer-email-pl", "trainer-email-pl@example.com", preferredLanguage: "pl");
+        var trainee = await SeedUserAsync(name: "trainee-email-pl", email: "trainee-email-pl@example.com", password: "password123");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+        {
+            traineeId = trainee.Id.ToString()
+        });
+        var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        Guid notificationId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            notificationId = log.Id;
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            await handler.ProcessAsync(notificationId);
+        }
+
+        Factory.EmailSender.SentMessages.Should().ContainSingle();
+        Factory.EmailSender.SentMessages[0].Subject.Should().Contain("Zaproszenie");
+        Factory.EmailSender.SentMessages[0].Body.Should().Contain("Akceptuj");
+    }
+
+    [Test]
+    public async Task InvitationEmailJob_DoesNotResend_WhenAlreadySent()
+    {
+        var trainer = await SeedTrainerAsync("trainer-email-idempotent", "trainer-email-idempotent@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-email-idempotent", email: "trainee-email-idempotent@example.com", password: "password123");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+        {
+            traineeId = trainee.Id.ToString()
+        });
+        var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        Guid notificationId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            notificationId = log.Id;
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            await handler.ProcessAsync(notificationId);
+            await handler.ProcessAsync(notificationId);
+        }
+
+        Factory.EmailSender.SentMessages.Should().ContainSingle();
+    }
+
+    [Test]
     public async Task CreateInvitation_RepeatedRequest_ReturnsExistingPendingInvitation()
     {
         var trainer = await SeedTrainerAsync("trainer-repeat", "trainer-repeat@example.com");
@@ -51,6 +181,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         secondBody.Should().NotBeNull();
         secondBody!.Id.Should().Be(firstBody!.Id);
         secondBody.Code.Should().Be(firstBody.Code);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var logsCount = await db.EmailNotificationLogs
+            .CountAsync(x => x.CorrelationId == Guid.Parse(firstBody.Id));
+        logsCount.Should().Be(1);
     }
 
     [Test]
@@ -230,7 +366,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         link.Should().BeNull();
     }
 
-    private async Task<User> SeedTrainerAsync(string name, string email)
+    private async Task<User> SeedTrainerAsync(string name, string email, string preferredLanguage = "en")
     {
         var trainer = await SeedUserAsync(name: name, email: email, password: "password123");
 
@@ -245,8 +381,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
                 UserId = trainer.Id,
                 RoleId = AppDbContext.TrainerRoleSeedId
             });
-            await db.SaveChangesAsync();
         }
+
+        trainer.PreferredLanguage = preferredLanguage;
+        db.Users.Update(trainer);
+        await db.SaveChangesAsync();
 
         return trainer;
     }
