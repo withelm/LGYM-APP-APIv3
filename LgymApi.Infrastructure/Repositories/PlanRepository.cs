@@ -18,7 +18,7 @@ public sealed class PlanRepository : IPlanRepository
 
     public Task<Plan?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Plans.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
+        return _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
     }
 
     public Task<Plan?> FindActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -55,11 +55,11 @@ public sealed class PlanRepository : IPlanRepository
     {
         await _dbContext.Plans
             .Where(p => p.UserId == userId && p.Id != planId && !p.IsDeleted)
-            .ExecuteUpdateAsync(_dbContext, p => p.IsActive, p => false, cancellationToken);
+            .StageUpdateAsync(_dbContext, p => p.IsActive, p => false, cancellationToken);
 
         await _dbContext.Plans
             .Where(p => p.UserId == userId && p.Id == planId && !p.IsDeleted)
-            .ExecuteUpdateAsync(_dbContext, p => p.IsActive, p => true, cancellationToken);
+            .StageUpdateAsync(_dbContext, p => p.IsActive, p => true, cancellationToken);
     }
 
     public async Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Guid userId, CancellationToken cancellationToken = default)

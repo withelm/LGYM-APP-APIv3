@@ -17,7 +17,7 @@ public sealed class UserRepository : IUserRepository
 
     public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        return _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
     public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)

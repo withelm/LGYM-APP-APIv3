@@ -17,7 +17,7 @@ public sealed class ExerciseRepository : IExerciseRepository
 
     public Task<Exercise?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Exercises.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+        return _dbContext.Exercises.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
     public Task<List<Exercise>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)

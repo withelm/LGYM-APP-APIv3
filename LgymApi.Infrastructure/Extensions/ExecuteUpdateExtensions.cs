@@ -12,7 +12,7 @@ namespace LgymApi.Infrastructure.Extensions;
 
 public static class ExecuteUpdateExtensions
 {
-    public static async Task<int> ExecuteUpdateAsync<TSource, TProperty>(
+    public static async Task<int> StageUpdateAsync<TSource, TProperty>(
         this IQueryable<TSource> source,
         DbContext dbContext,
         Expression<Func<TSource, TProperty>> propertySelector,
@@ -33,6 +33,36 @@ public static class ExecuteUpdateExtensions
         return entities.Count;
     }
 
+    [Obsolete("Use StageUpdateAsync for UoW-friendly staged updates.")]
+    public static Task<int> ExecuteUpdateAsync<TSource, TProperty>(
+        this IQueryable<TSource> source,
+        DbContext dbContext,
+        Expression<Func<TSource, TProperty>> propertySelector,
+        Expression<Func<TSource, TProperty>> valueExpression,
+        CancellationToken cancellationToken = default)
+        where TSource : class
+    {
+        return StageUpdateAsync(source, dbContext, propertySelector, valueExpression, cancellationToken);
+    }
+
+    public static Task<int> StageUpdateAsync<TSource, TProperty>(
+        this IQueryable<TSource> source,
+        Expression<Func<TSource, TProperty>> propertySelector,
+        Expression<Func<TSource, TProperty>> valueExpression,
+        CancellationToken cancellationToken = default)
+        where TSource : class
+    {
+        var dbContext = TryGetDbContext(source);
+        if (dbContext == null)
+        {
+            throw new InvalidOperationException(
+                "DbContext is required for StageUpdateAsync fallback. Use overload with DbContext.");
+        }
+
+        return StageUpdateAsync(source, dbContext, propertySelector, valueExpression, cancellationToken);
+    }
+
+    [Obsolete("Use StageUpdateAsync for UoW-friendly staged updates.")]
     public static Task<int> ExecuteUpdateAsync<TSource, TProperty>(
         this IQueryable<TSource> source,
         Expression<Func<TSource, TProperty>> propertySelector,
@@ -47,7 +77,7 @@ public static class ExecuteUpdateExtensions
                 "DbContext is required for ExecuteUpdateAsync fallback. Use overload with DbContext.");
         }
 
-        return ExecuteUpdateAsync(source, dbContext, propertySelector, valueExpression, cancellationToken);
+        return StageUpdateAsync(source, dbContext, propertySelector, valueExpression, cancellationToken);
     }
 
     private static DbContext? TryGetDbContext<TSource>(IQueryable<TSource> source)

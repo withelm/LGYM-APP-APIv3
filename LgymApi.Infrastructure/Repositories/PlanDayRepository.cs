@@ -17,7 +17,7 @@ public sealed class PlanDayRepository : IPlanDayRepository
 
     public Task<PlanDay?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.PlanDays.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        return _dbContext.PlanDays.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
     public Task<List<PlanDay>> GetByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
@@ -40,14 +40,14 @@ public sealed class PlanDayRepository : IPlanDayRepository
     {
         await _dbContext.PlanDays
             .Where(p => p.Id == planDayId)
-            .ExecuteUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
+            .StageUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
     }
 
     public async Task MarkDeletedByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
     {
         await _dbContext.PlanDays
             .Where(p => p.PlanId == planId)
-            .ExecuteUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
+            .StageUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
     }
 
     public Task<bool> AnyByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)

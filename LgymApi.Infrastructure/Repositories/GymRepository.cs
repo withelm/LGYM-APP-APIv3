@@ -21,7 +21,7 @@ public sealed class GymRepository : IGymRepository
 
     public Task<Gym?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Gyms.AsNoTracking().FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
+        return _dbContext.Gyms.FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
     }
 
     public Task<List<Gym>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)

@@ -29,7 +29,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
 
     public Task<MainRecord?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.MainRecords.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+        return _dbContext.MainRecords.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
     }
 
     public Task DeleteAsync(MainRecord record, CancellationToken cancellationToken = default)

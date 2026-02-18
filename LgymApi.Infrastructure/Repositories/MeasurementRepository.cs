@@ -22,7 +22,7 @@ public sealed class MeasurementRepository : IMeasurementRepository
 
     public Task<Measurement?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Measurements.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+        return _dbContext.Measurements.FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
     }
 
     public Task<List<Measurement>> GetByUserAsync(Guid userId, string? bodyPart, CancellationToken cancellationToken = default)
