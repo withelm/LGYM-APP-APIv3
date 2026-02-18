@@ -384,6 +384,87 @@ public sealed class PlanTests : IntegrationTestBase
         unchangedUser!.PlanId.Should().Be(activePlan.Id);
     }
 
+    [Test]
+    public async Task DeletePlan_WhenDeletingActivePlan_WithInactivePlan_ReassignsUserToLatestInactivePlan()
+    {
+        var user = await SeedUserAsync(name: "deleteactiveplanuser", email: "deleteactiveplan@example.com");
+        var activePlan = await SeedPlanAsync(user.Id, "Active Plan", isActive: true);
+        var fallbackPlan = await SeedPlanAsync(user.Id, "Fallback Plan", isActive: false);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var dbUser = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+            dbUser.Should().NotBeNull();
+            dbUser!.PlanId = activePlan.Id;
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.PostAsync($"/api/{activePlan.Id}/deletePlan", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var verifyScope = Factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var deletedPlan = await verifyDb.Plans.FirstOrDefaultAsync(p => p.Id == activePlan.Id);
+        deletedPlan.Should().NotBeNull();
+        deletedPlan!.IsDeleted.Should().BeTrue();
+        deletedPlan.IsActive.Should().BeFalse();
+
+        var activatedFallback = await verifyDb.Plans.FirstOrDefaultAsync(p => p.Id == fallbackPlan.Id);
+        activatedFallback.Should().NotBeNull();
+        activatedFallback!.IsDeleted.Should().BeFalse();
+        activatedFallback.IsActive.Should().BeTrue();
+
+        var updatedUser = await verifyDb.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        updatedUser.Should().NotBeNull();
+        updatedUser!.PlanId.Should().Be(fallbackPlan.Id);
+    }
+
+    [Test]
+    public async Task DeletePlan_WhenDeletingActivePlan_WithOnlyDeletedInactivePlans_ClearsUserPlanId()
+    {
+        var user = await SeedUserAsync(name: "deleteactiveplanuser2", email: "deleteactiveplan2@example.com");
+        var activePlan = await SeedPlanAsync(user.Id, "Active Plan", isActive: true);
+        var deletedFallbackPlan = await SeedPlanAsync(user.Id, "Deleted Fallback", isActive: false);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var dbUser = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+            dbUser.Should().NotBeNull();
+            dbUser!.PlanId = activePlan.Id;
+
+            var fallback = await db.Plans.FirstOrDefaultAsync(p => p.Id == deletedFallbackPlan.Id);
+            fallback.Should().NotBeNull();
+            fallback!.IsDeleted = true;
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.PostAsync($"/api/{activePlan.Id}/deletePlan", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var verifyScope = Factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var unchangedFallback = await verifyDb.Plans.FirstOrDefaultAsync(p => p.Id == deletedFallbackPlan.Id);
+        unchangedFallback.Should().NotBeNull();
+        unchangedFallback!.IsDeleted.Should().BeTrue();
+        unchangedFallback.IsActive.Should().BeFalse();
+
+        var updatedUser = await verifyDb.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        updatedUser.Should().NotBeNull();
+        updatedUser!.PlanId.Should().BeNull();
+    }
+
     private async Task AddTrainingViaEndpointAsync(Guid userId, Guid gymId, Guid planDayId, Guid exerciseId)
     {
         var request = new

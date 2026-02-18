@@ -14,15 +14,15 @@ public sealed class MainRecordRepository : IMainRecordRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(MainRecord record, CancellationToken cancellationToken = default)
+    public Task AddAsync(MainRecord record, CancellationToken cancellationToken = default)
     {
-        await _dbContext.MainRecords.AddAsync(record, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.MainRecords.AddAsync(record, cancellationToken).AsTask();
     }
 
     public Task<List<MainRecord>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
+            .AsNoTracking()
             .Where(r => r.UserId == userId)
             .ToListAsync(cancellationToken);
     }
@@ -32,21 +32,22 @@ public sealed class MainRecordRepository : IMainRecordRepository
         return _dbContext.MainRecords.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
     }
 
-    public async Task DeleteAsync(MainRecord record, CancellationToken cancellationToken = default)
+    public Task DeleteAsync(MainRecord record, CancellationToken cancellationToken = default)
     {
         _dbContext.MainRecords.Remove(record);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(MainRecord record, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(MainRecord record, CancellationToken cancellationToken = default)
     {
         _dbContext.MainRecords.Update(record);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
     public Task<MainRecord?> GetLatestByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
+            .AsNoTracking()
             .Where(r => r.UserId == userId && r.ExerciseId == exerciseId)
             .OrderByDescending(r => r.Date)
             .FirstOrDefaultAsync(cancellationToken);

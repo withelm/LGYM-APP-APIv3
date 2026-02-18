@@ -19,6 +19,7 @@ public sealed class UserService : IUserService
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
     private readonly IUserSessionCache _userSessionCache;
+    private readonly IUnitOfWork _unitOfWork;
 
     public UserService(
         IUserRepository userRepository,
@@ -27,7 +28,8 @@ public sealed class UserService : IUserService
         ITokenService tokenService,
         ILegacyPasswordService legacyPasswordService,
         IRankService rankService,
-        IUserSessionCache userSessionCache)
+        IUserSessionCache userSessionCache,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -36,6 +38,7 @@ public sealed class UserService : IUserService
         _legacyPasswordService = legacyPasswordService;
         _rankService = rankService;
         _userSessionCache = userSessionCache;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking)
@@ -103,6 +106,7 @@ public sealed class UserService : IUserService
             Date = DateTimeOffset.UtcNow,
             Elo = 1000
         });
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<LoginResult> LoginAsync(string name, string password)
@@ -247,6 +251,7 @@ public sealed class UserService : IUserService
         currentUser.IsDeleted = true;
 
         await _userRepository.UpdateAsync(currentUser);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public Task LogoutAsync(UserEntity currentUser)
@@ -269,6 +274,7 @@ public sealed class UserService : IUserService
 
         currentUser.IsVisibleInRanking = isVisibleInRanking;
         await _userRepository.UpdateAsync(currentUser);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roles)

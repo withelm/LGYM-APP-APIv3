@@ -22,17 +22,18 @@ public sealed class UserRepository : IUserRepository
 
     public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Users.FirstOrDefaultAsync(u => u.Name == name, cancellationToken);
+        return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Name == name, cancellationToken);
     }
 
     public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Users.FirstOrDefaultAsync(u => u.Name == name || u.Email == email, cancellationToken);
+        return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Name == name || u.Email == email, cancellationToken);
     }
 
     public async Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default)
     {
         var rankedUsers = await _dbContext.Users
+            .AsNoTracking()
             .Where(u => !u.IsDeleted && u.IsVisibleInRanking)
             .Where(u => !u.UserRoles.Any(ur => ur.RoleId == AppDbContext.TesterRoleSeedId))
             .Select(u => new
@@ -52,15 +53,14 @@ public sealed class UserRepository : IUserRepository
             .ToList();
     }
 
-    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
+    public Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Users.AddAsync(user, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.Users.AddAsync(user, cancellationToken).AsTask();
     }
 
-    public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
     {
         _dbContext.Users.Update(user);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 }

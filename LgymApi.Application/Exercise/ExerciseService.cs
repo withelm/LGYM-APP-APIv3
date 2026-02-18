@@ -16,17 +16,20 @@ public sealed class ExerciseService : IExerciseService
     private readonly IRoleRepository _roleRepository;
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public ExerciseService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IExerciseRepository exerciseRepository,
-        IExerciseScoreRepository exerciseScoreRepository)
+        IExerciseScoreRepository exerciseScoreRepository,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _exerciseRepository = exerciseRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task AddExerciseAsync(string name, string bodyPart, string? description, string? image)
@@ -52,6 +55,7 @@ public sealed class ExerciseService : IExerciseService
         };
 
         await _exerciseRepository.AddAsync(exercise);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task AddUserExerciseAsync(Guid userId, string name, string bodyPart, string? description, string? image)
@@ -89,6 +93,7 @@ public sealed class ExerciseService : IExerciseService
         };
 
         await _exerciseRepository.AddAsync(exercise);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task DeleteExerciseAsync(Guid userId, Guid exerciseId)
@@ -130,6 +135,7 @@ public sealed class ExerciseService : IExerciseService
         }
 
         await _exerciseRepository.UpdateAsync(exercise);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task UpdateExerciseAsync(string exerciseId, string? name, string? bodyPart, string? description, string? image)
@@ -159,6 +165,7 @@ public sealed class ExerciseService : IExerciseService
         exercise.Image = image;
 
         await _exerciseRepository.UpdateAsync(exercise);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task AddGlobalTranslationAsync(UserEntity currentUser, Guid routeUserId, string exerciseId, string? culture, string? name)
@@ -213,6 +220,7 @@ public sealed class ExerciseService : IExerciseService
 
         var normalizedCulture = cultureInput.ToLowerInvariant();
         await _exerciseRepository.UpsertTranslationAsync(exerciseGuid, normalizedCulture, nameInput);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<ExercisesWithTranslations> GetAllExercisesAsync(Guid userId, IReadOnlyList<string> cultures)
@@ -345,10 +353,13 @@ public sealed class ExerciseService : IExerciseService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
+        var latestScores = await _exerciseScoreRepository.GetLatestByUserExerciseSeriesAsync(currentUserId, exerciseId, gymId);
+        var latestBySeries = latestScores.ToDictionary(s => s.Series, s => s);
+
         var seriesScores = new List<SeriesScoreResult>();
         for (var i = 1; i <= series; i++)
         {
-            var score = await _exerciseScoreRepository.GetLatestByUserExerciseSeriesAsync(currentUserId, exerciseId, i, gymId);
+            latestBySeries.TryGetValue(i, out var score);
             seriesScores.Add(new SeriesScoreResult
             {
                 Series = i,

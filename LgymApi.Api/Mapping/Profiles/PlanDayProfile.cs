@@ -34,6 +34,8 @@ public sealed class PlanDayProfile : IMappingProfile
 
             var vmExercises = exercises
                 .Where(e => e.PlanDayId == source.Id)
+                .OrderBy(e => e.Order)
+                .ThenBy(e => e.Id)
                 .Select(exercise => new PlanDayExerciseVmDto
                 {
                     Series = exercise.Series,

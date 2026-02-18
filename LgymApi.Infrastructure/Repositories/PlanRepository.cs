@@ -3,8 +3,6 @@ using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-using System;
 using System.Security.Cryptography;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -25,35 +23,43 @@ public sealed class PlanRepository : IPlanRepository
 
     public Task<Plan?> FindActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Plans.FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive && !p.IsDeleted, cancellationToken);
+        return _dbContext.Plans.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive && !p.IsDeleted, cancellationToken);
+    }
+
+    public Task<Plan?> FindLastActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Plans
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && !p.IsActive && !p.IsDeleted)
+            .OrderByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public Task<List<Plan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Plans.Where(p => p.UserId == userId && !p.IsDeleted).ToListAsync(cancellationToken);
+        return _dbContext.Plans.AsNoTracking().Where(p => p.UserId == userId && !p.IsDeleted).ToListAsync(cancellationToken);
     }
 
-    public async Task AddAsync(Plan plan, CancellationToken cancellationToken = default)
+    public Task AddAsync(Plan plan, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Plans.AddAsync(plan, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.Plans.AddAsync(plan, cancellationToken).AsTask();
     }
 
-    public async Task UpdateAsync(Plan plan, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(Plan plan, CancellationToken cancellationToken = default)
     {
         _dbContext.Plans.Update(plan);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
     public async Task SetActivePlanAsync(Guid userId, Guid planId, CancellationToken cancellationToken = default)
     {
         await _dbContext.Plans
             .Where(p => p.UserId == userId && p.Id != planId && !p.IsDeleted)
-            .ExecuteUpdateAsync(_dbContext, p => p.IsActive, p => false, cancellationToken);
+            .StageUpdateAsync(_dbContext, p => p.IsActive, p => false, cancellationToken);
 
         await _dbContext.Plans
             .Where(p => p.UserId == userId && p.Id == planId && !p.IsDeleted)
-            .ExecuteUpdateAsync(_dbContext, p => p.IsActive, p => true, cancellationToken);
+            .StageUpdateAsync(_dbContext, p => p.IsActive, p => true, cancellationToken);
     }
 
     public async Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Guid userId, CancellationToken cancellationToken = default)
@@ -72,119 +78,88 @@ public sealed class PlanRepository : IPlanRepository
             .Where(pd => pd.PlanId == planToCopy.Id && !pd.IsDeleted)
             .ToListAsync(cancellationToken);
 
-        // 3. Begin transaction for atomicity (skip for in-memory provider)
-        IDbContextTransaction? transaction = null;
-        if (!string.Equals(_dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal))
+        // 3. Build copied graph in current unit of work.
+        var newPlan = new Plan
         {
-            transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        }
+            UserId = userId,
+            Name = planToCopy.Name,
+            IsActive = true,
+            IsDeleted = false
+        };
 
-        try
+        await _dbContext.Plans.AddAsync(newPlan, cancellationToken);
+
+        var copiedExercises = new Dictionary<Guid, Exercise>(); // Old ExerciseId -> New Exercise
+
+        // 4. Iterate through days
+        foreach (var planDay in planDaysToCopy)
         {
-            // 4. Create new Plan
-            var newPlan = new Plan
+            var newPlanDay = new PlanDay
             {
-                UserId = userId,
-                Name = planToCopy.Name,
-                IsActive = true,
+                Plan = newPlan,
+                Name = planDay.Name,
                 IsDeleted = false
             };
 
-            await _dbContext.Plans.AddAsync(newPlan, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _dbContext.PlanDays.AddAsync(newPlanDay, cancellationToken);
 
-            var copiedExercises = new Dictionary<Guid, Guid>(); // Old ExerciseId -> New ExerciseId
-
-            // 5. Iterate through days
-            foreach (var planDay in planDaysToCopy)
+            // 5. Iterate through exercises in the day
+            foreach (var planDayExercise in planDay.Exercises.OrderBy(e => e.Order).ThenBy(e => e.Id))
             {
-                var newPlanDay = new PlanDay
+                var exercise = planDayExercise.Exercise;
+                if (exercise == null)
                 {
-                    PlanId = newPlan.Id,
-                    Name = planDay.Name,
-                    IsDeleted = false
-                };
+                    continue;
+                }
 
-                await _dbContext.PlanDays.AddAsync(newPlanDay, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                Exercise exerciseToUse;
 
-                // 6. Iterate through exercises in the day
-                foreach (var planDayExercise in planDay.Exercises)
+                // CORE LOGIC: Deep Copy for user exercises, reference for system exercises
+                if (exercise.UserId.HasValue)
                 {
-                    var exercise = planDayExercise.Exercise;
-                    if (exercise == null)
-                        continue;
-
-                    Guid exerciseIdToUse;
-
-                    // CORE LOGIC: Deep Copy for user exercises, reference for system exercises
-                    if (exercise.UserId.HasValue)
+                    // Check if we already copied this exercise
+                    if (!copiedExercises.TryGetValue(exercise.Id, out var copiedExercise))
                     {
-                        // Check if we already copied this exercise
-                        if (!copiedExercises.TryGetValue(exercise.Id, out exerciseIdToUse))
+                        // Deep Copy: Create new Exercise entity for current user
+                        var newExercise = new Exercise
                         {
-                            // Deep Copy: Create new Exercise entity for current user
-                            var newExercise = new Exercise
-                            {
-                                Name = exercise.Name,
-                                UserId = userId,
-                                BodyPart = exercise.BodyPart,
-                                Description = exercise.Description,
-                                Image = exercise.Image,
-                                IsDeleted = false
-                            };
+                            Name = exercise.Name,
+                            UserId = userId,
+                            BodyPart = exercise.BodyPart,
+                            Description = exercise.Description,
+                            Image = exercise.Image,
+                            IsDeleted = false
+                        };
 
-                            await _dbContext.Exercises.AddAsync(newExercise, cancellationToken);
-                            await _dbContext.SaveChangesAsync(cancellationToken);
-
-                            exerciseIdToUse = newExercise.Id;
-                            copiedExercises[exercise.Id] = newExercise.Id;
-                        }
+                        await _dbContext.Exercises.AddAsync(newExercise, cancellationToken);
+                        copiedExercises[exercise.Id] = newExercise;
+                        exerciseToUse = newExercise;
                     }
                     else
                     {
-                        // System exercise: Keep reference to original
-                        exerciseIdToUse = exercise.Id;
+                        exerciseToUse = copiedExercise;
                     }
-
-                    // Create PlanDayExercise with appropriate ExerciseId
-                    var newPlanDayExercise = new PlanDayExercise
-                    {
-                        PlanDayId = newPlanDay.Id,
-                        ExerciseId = exerciseIdToUse,
-                        Series = planDayExercise.Series,
-                        Reps = planDayExercise.Reps
-                    };
-
-                    await _dbContext.PlanDayExercises.AddAsync(newPlanDayExercise, cancellationToken);
+                }
+                else
+                {
+                    // System exercise: Keep reference to original
+                    exerciseToUse = exercise;
                 }
 
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
+                var newPlanDayExercise = new PlanDayExercise
+                {
+                    PlanDay = newPlanDay,
+                    Exercise = exerciseToUse,
+                    Order = planDayExercise.Order,
+                    Series = planDayExercise.Series,
+                    Reps = planDayExercise.Reps
+                };
 
-            // 7. Commit transaction
-            if (transaction != null)
-            {
-                await transaction.CommitAsync(cancellationToken);
+                await _dbContext.PlanDayExercises.AddAsync(newPlanDayExercise, cancellationToken);
             }
+        }
 
-            return newPlan;
-        }
-        catch
-        {
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-            throw;
-        }
-        finally
-        {
-            if (transaction != null)
-            {
-                await transaction.DisposeAsync();
-            }
-        }
+        return newPlan;
     }
 
     public async Task<string> GenerateShareCodeAsync(Guid planId, Guid userId, CancellationToken cancellationToken = default)
@@ -201,7 +176,6 @@ public sealed class PlanRepository : IPlanRepository
             return plan.ShareCode;
 
         plan.ShareCode = GenerateSecureAlphanumericCode(10);
-        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return plan.ShareCode;
     }
@@ -218,4 +192,5 @@ public sealed class PlanRepository : IPlanRepository
 
         return new string(result);
     }
+
 }
