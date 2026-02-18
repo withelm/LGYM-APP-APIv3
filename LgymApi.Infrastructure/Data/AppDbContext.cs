@@ -33,6 +33,7 @@ public sealed class AppDbContext : DbContext
     public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
     public static readonly Guid TesterRoleSeedId = Guid.Parse("f93f03af-ae11-4fd8-a60e-f970f89df6fb");
+    public static readonly Guid TrainerRoleSeedId = Guid.Parse("8c1a3db8-72a3-47cc-b3de-f5347c6ae501");
     public static readonly Guid AdminAccessClaimSeedId = Guid.Parse("9dbfd057-cf88-4597-b668-2fdf16a2def6");
     public static readonly Guid ManageUserRolesClaimSeedId = Guid.Parse("97f7ea56-0032-4f18-8703-ab2d1485ad45");
     public static readonly Guid ManageAppConfigClaimSeedId = Guid.Parse("d12f9f84-48f4-4f4b-9614-843f31ea0f96");
@@ -205,6 +206,14 @@ public sealed class AppDbContext : DbContext
                     Id = TesterRoleSeedId,
                     Name = AuthConstants.Roles.Tester,
                     Description = "Excluded from ranking",
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new Role
+                {
+                    Id = TrainerRoleSeedId,
+                    Name = AuthConstants.Roles.Trainer,
+                    Description = "Trainer role for coach-facing APIs",
                     CreatedAt = RoleSeedTimestamp,
                     UpdatedAt = RoleSeedTimestamp
                 });

@@ -43,6 +43,44 @@ public sealed class UserService : IUserService
 
     public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking)
     {
+        await RegisterCoreAsync(
+            name,
+            email,
+            password,
+            confirmPassword,
+            isVisibleInRanking,
+            [AuthConstants.Roles.User]);
+    }
+
+    public async Task RegisterTrainerAsync(string name, string email, string password, string confirmPassword)
+    {
+        await RegisterCoreAsync(
+            name,
+            email,
+            password,
+            confirmPassword,
+            isVisibleInRanking: false,
+            [AuthConstants.Roles.User, AuthConstants.Roles.Trainer]);
+    }
+
+    public async Task<LoginResult> LoginAsync(string name, string password)
+    {
+        return await LoginCoreAsync(name, password, requiredRole: null);
+    }
+
+    public async Task<LoginResult> LoginTrainerAsync(string name, string password)
+    {
+        return await LoginCoreAsync(name, password, AuthConstants.Roles.Trainer);
+    }
+
+    private async Task RegisterCoreAsync(
+        string name,
+        string email,
+        string password,
+        string confirmPassword,
+        bool? isVisibleInRanking,
+        IReadOnlyCollection<string> roleNames)
+    {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw AppException.NotFound(Messages.NameIsRequired);
@@ -91,13 +129,14 @@ public sealed class UserService : IUserService
         };
 
         await _userRepository.AddAsync(user);
-        var defaultRole = await _roleRepository.FindByNameAsync(AuthConstants.Roles.User);
-        if (defaultRole == null)
+
+        var rolesToAssign = await _roleRepository.GetByNamesAsync(roleNames);
+        if (rolesToAssign.Count != roleNames.Count)
         {
             throw AppException.Internal(Messages.DefaultRoleMissing);
         }
 
-        await _roleRepository.AddUserRolesAsync(user.Id, new[] { defaultRole.Id });
+        await _roleRepository.AddUserRolesAsync(user.Id, rolesToAssign.Select(r => r.Id).ToList());
 
         await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
         {
@@ -109,7 +148,7 @@ public sealed class UserService : IUserService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    public async Task<LoginResult> LoginAsync(string name, string password)
+    private async Task<LoginResult> LoginCoreAsync(string name, string password, string? requiredRole)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(password))
         {
@@ -136,6 +175,12 @@ public sealed class UserService : IUserService
         }
 
         var roles = await _roleRepository.GetRoleNamesByUserIdAsync(user.Id);
+        if (!string.IsNullOrWhiteSpace(requiredRole) &&
+            !roles.Contains(requiredRole, StringComparer.Ordinal))
+        {
+            throw AppException.Unauthorized(Messages.Unauthorized);
+        }
+
         var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id);
         var token = _tokenService.CreateToken(user.Id, roles, permissionClaims);
         var elo = await _eloRepository.GetLatestEloAsync(user.Id) ?? 1000;

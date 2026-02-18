@@ -96,6 +96,8 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageAppConfig));
     options.AddPolicy(AuthConstants.Policies.ManageGlobalExercises, policy =>
         policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageGlobalExercises));
+    options.AddPolicy(AuthConstants.Policies.TrainerAccess, policy =>
+        policy.RequireRole(AuthConstants.Roles.Trainer));
 });
 
 if (!builder.Environment.IsEnvironment("Testing"))

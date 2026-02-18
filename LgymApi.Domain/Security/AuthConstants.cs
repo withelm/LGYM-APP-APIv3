@@ -9,6 +9,7 @@ public static class AuthConstants
         public const string User = "User";
         public const string Admin = "Admin";
         public const string Tester = "Tester";
+        public const string Trainer = "Trainer";
     }
 
     public static class Permissions
@@ -32,5 +33,6 @@ public static class AuthConstants
         public const string ManageUserRoles = "policy.users.roles.manage";
         public const string ManageAppConfig = "policy.appconfig.manage";
         public const string ManageGlobalExercises = "policy.exercises.global.manage";
+        public const string TrainerAccess = "policy.trainer.access";
     }
 }
