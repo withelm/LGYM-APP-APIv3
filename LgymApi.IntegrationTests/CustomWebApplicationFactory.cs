@@ -68,6 +68,14 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                         Description = "Excluded from ranking",
                         CreatedAt = timestamp,
                         UpdatedAt = timestamp
+                    },
+                    new Role
+                    {
+                        Id = AppDbContext.TrainerRoleSeedId,
+                        Name = AuthConstants.Roles.Trainer,
+                        Description = "Trainer role for coach-facing APIs",
+                        CreatedAt = timestamp,
+                        UpdatedAt = timestamp
                     });
                 db.RoleClaims.AddRange(
                     new RoleClaim
