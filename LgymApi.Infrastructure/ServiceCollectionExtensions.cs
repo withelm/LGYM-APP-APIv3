@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
 
         ValidateEmailOptions(emailOptions);
         services.AddSingleton(emailOptions);
+        services.AddSingleton<IEmailNotificationsFeature, EmailNotificationsFeature>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {

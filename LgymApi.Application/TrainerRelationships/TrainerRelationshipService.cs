@@ -18,6 +18,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly IRoleRepository _roleRepository;
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IInvitationEmailScheduler _invitationEmailScheduler;
+    private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<TrainerRelationshipService> _logger;
 
@@ -26,6 +27,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         IRoleRepository roleRepository,
         ITrainerRelationshipRepository trainerRelationshipRepository,
         IInvitationEmailScheduler invitationEmailScheduler,
+        IEmailNotificationsFeature emailNotificationsFeature,
         IUnitOfWork unitOfWork,
         ILogger<TrainerRelationshipService> logger)
     {
@@ -33,6 +35,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         _roleRepository = roleRepository;
         _trainerRelationshipRepository = trainerRelationshipRepository;
         _invitationEmailScheduler = invitationEmailScheduler;
+        _emailNotificationsFeature = emailNotificationsFeature;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -88,7 +91,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         await _trainerRelationshipRepository.AddInvitationAsync(invitation);
         await _unitOfWork.SaveChangesAsync();
 
-        if (!string.IsNullOrWhiteSpace(trainee.Email))
+        if (_emailNotificationsFeature.Enabled && !string.IsNullOrWhiteSpace(trainee.Email))
         {
             try
             {
@@ -111,6 +114,12 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
                     "Failed to schedule invitation email for invitation {InvitationId}. Invitation creation is still successful.",
                     invitation.Id);
             }
+        }
+        else if (!_emailNotificationsFeature.Enabled)
+        {
+            _logger.LogInformation(
+                "Email notifications are disabled; invitation {InvitationId} created without scheduling email.",
+                invitation.Id);
         }
 
         return MapInvitation(invitation);

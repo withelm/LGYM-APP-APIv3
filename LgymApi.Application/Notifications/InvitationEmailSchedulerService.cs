@@ -15,22 +15,33 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
     private readonly IEmailNotificationLogRepository _notificationLogRepository;
     private readonly IInvitationEmailBackgroundScheduler _backgroundScheduler;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly ILogger<InvitationEmailSchedulerService> _logger;
 
     public InvitationEmailSchedulerService(
         IEmailNotificationLogRepository notificationLogRepository,
         IInvitationEmailBackgroundScheduler backgroundScheduler,
         IUnitOfWork unitOfWork,
+        IEmailNotificationsFeature emailNotificationsFeature,
         ILogger<InvitationEmailSchedulerService> logger)
     {
         _notificationLogRepository = notificationLogRepository;
         _backgroundScheduler = backgroundScheduler;
         _unitOfWork = unitOfWork;
+        _emailNotificationsFeature = emailNotificationsFeature;
         _logger = logger;
     }
 
     public async Task ScheduleInvitationCreatedAsync(InvitationEmailPayload payload, CancellationToken cancellationToken = default)
     {
+        if (!_emailNotificationsFeature.Enabled)
+        {
+            _logger.LogInformation(
+                "Email notifications are disabled; skipping invitation email scheduling for invitation {InvitationId}.",
+                payload.InvitationId);
+            return;
+        }
+
         var existing = await _notificationLogRepository.FindByCorrelationAsync(
             NotificationType,
             payload.InvitationId,

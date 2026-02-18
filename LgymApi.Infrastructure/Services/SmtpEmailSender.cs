@@ -1,6 +1,5 @@
 using System.Net.Mail;
 using MailKitSmtpClient = MailKit.Net.Smtp.SmtpClient;
-using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
 using LgymApi.Application.Notifications;

@@ -21,6 +21,7 @@ public sealed class InvitationEmailServicesTests
             repository,
             scheduler,
             unitOfWork,
+            new EnabledFeature(),
             NullLogger<InvitationEmailSchedulerService>.Instance);
 
         await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
@@ -60,6 +61,7 @@ public sealed class InvitationEmailServicesTests
             repository,
             scheduler,
             unitOfWork,
+            new EnabledFeature(),
             NullLogger<InvitationEmailSchedulerService>.Instance);
 
         await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
@@ -74,6 +76,35 @@ public sealed class InvitationEmailServicesTests
 
         Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
         Assert.That(repository.Added, Is.Empty);
+    }
+
+    [Test]
+    public async Task Scheduler_WhenEmailNotificationsDisabled_DoesNotCreateOrEnqueue()
+    {
+        var repository = new FakeNotificationRepository();
+        var scheduler = new FakeBackgroundScheduler();
+        var unitOfWork = new FakeUnitOfWork();
+
+        var service = new InvitationEmailSchedulerService(
+            repository,
+            scheduler,
+            unitOfWork,
+            new DisabledFeature(),
+            NullLogger<InvitationEmailSchedulerService>.Instance);
+
+        await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+        {
+            InvitationId = Guid.NewGuid(),
+            InvitationCode = "ABC123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
+            TrainerName = "Coach",
+            RecipientEmail = "trainee@example.com",
+            CultureName = "en-US"
+        });
+
+        Assert.That(repository.Added, Is.Empty);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
     }
 
     [Test]
@@ -222,5 +253,15 @@ public sealed class InvitationEmailServicesTests
             SendCalls += 1;
             return Task.FromResult(true);
         }
+    }
+
+    private sealed class EnabledFeature : IEmailNotificationsFeature
+    {
+        public bool Enabled => true;
+    }
+
+    private sealed class DisabledFeature : IEmailNotificationsFeature
+    {
+        public bool Enabled => false;
     }
 }
