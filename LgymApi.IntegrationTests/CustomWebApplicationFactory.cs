@@ -131,7 +131,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Email:SmtpHost", "localhost");
         builder.UseSetting("Email:SmtpPort", "1025");
         builder.UseSetting("Email:InvitationBaseUrl", "https://app.test.local/invitations");
-        builder.UseSetting("Email:TemplateRootPath", Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "LgymApi.Infrastructure", "EmailTemplates")));
+        builder.UseSetting("Email:TemplateRootPath", Path.Combine(AppContext.BaseDirectory, "EmailTemplates"));
         builder.UseSetting("Email:DefaultCulture", "en-US");
     }
 

@@ -7,6 +7,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
+using Microsoft.Extensions.Logging;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.TrainerRelationships;
@@ -18,19 +19,22 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IInvitationEmailScheduler _invitationEmailScheduler;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<TrainerRelationshipService> _logger;
 
     public TrainerRelationshipService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         ITrainerRelationshipRepository trainerRelationshipRepository,
         IInvitationEmailScheduler invitationEmailScheduler,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<TrainerRelationshipService> logger)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _trainerRelationshipRepository = trainerRelationshipRepository;
         _invitationEmailScheduler = invitationEmailScheduler;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<TrainerInvitationResult> CreateInvitationAsync(UserEntity currentTrainer, Guid traineeId)
@@ -86,17 +90,27 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         if (!string.IsNullOrWhiteSpace(trainee.Email))
         {
-            await _invitationEmailScheduler.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+            try
             {
-                InvitationId = invitation.Id,
-                InvitationCode = invitation.Code,
-                ExpiresAt = invitation.ExpiresAt,
-                TrainerName = currentTrainer.Name,
-                RecipientEmail = trainee.Email,
-                CultureName = string.IsNullOrWhiteSpace(currentTrainer.PreferredLanguage)
-                    ? "en-US"
-                    : currentTrainer.PreferredLanguage
-            });
+                await _invitationEmailScheduler.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+                {
+                    InvitationId = invitation.Id,
+                    InvitationCode = invitation.Code,
+                    ExpiresAt = invitation.ExpiresAt,
+                    TrainerName = currentTrainer.Name,
+                    RecipientEmail = trainee.Email,
+                    CultureName = string.IsNullOrWhiteSpace(currentTrainer.PreferredLanguage)
+                        ? "en-US"
+                        : currentTrainer.PreferredLanguage
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to schedule invitation email for invitation {InvitationId}. Invitation creation is still successful.",
+                    invitation.Id);
+            }
         }
 
         return MapInvitation(invitation);

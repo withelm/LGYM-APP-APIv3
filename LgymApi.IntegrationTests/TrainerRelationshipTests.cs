@@ -372,7 +372,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         link.Should().BeNull();
     }
 
-    private async Task<User> SeedTrainerAsync(string name, string email, string preferredLanguage = "en")
+    private async Task<User> SeedTrainerAsync(string name, string email, string preferredLanguage = "en-US")
     {
         var trainer = await SeedUserAsync(name: name, email: email, password: "password123");
 

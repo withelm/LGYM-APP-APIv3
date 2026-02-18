@@ -15,7 +15,7 @@ namespace LgymApi.Infrastructure.Migrations
                 table: "Users",
                 type: "text",
                 nullable: false,
-                defaultValue: "en");
+                defaultValue: "en-US");
         }
 
         /// <inheritdoc />

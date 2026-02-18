@@ -112,6 +112,11 @@ public static class ServiceCollectionExtensions
             throw new InvalidOperationException("Email:InvitationBaseUrl is required.");
         }
 
+        if (!Uri.TryCreate(options.InvitationBaseUrl, UriKind.Absolute, out _))
+        {
+            throw new InvalidOperationException("Email:InvitationBaseUrl must be a valid absolute URL.");
+        }
+
         if (!options.Enabled)
         {
             return;
