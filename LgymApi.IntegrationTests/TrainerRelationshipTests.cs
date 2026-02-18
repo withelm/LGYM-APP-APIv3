@@ -389,8 +389,8 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             });
         }
 
-        trainer.PreferredLanguage = preferredLanguage;
-        db.Users.Update(trainer);
+        var trainerToUpdate = await db.Users.FirstAsync(u => u.Id == trainer.Id);
+        trainerToUpdate.PreferredLanguage = preferredLanguage;
         await db.SaveChangesAsync();
 
         return trainer;
