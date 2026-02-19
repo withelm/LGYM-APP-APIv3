@@ -1,6 +1,8 @@
 using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Features.ExerciseScores.Contracts;
 using LgymApi.Api.Features.Training.Contracts;
 using LgymApi.Api.Features.Enum;
+using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 
@@ -35,6 +37,15 @@ public sealed class ExerciseScoreProfile : IMappingProfile
             Weight = source.Weight,
             Unit = source.Unit.ToLookup(),
             GymName = source.Training?.Gym?.Name
+        });
+
+        configuration.CreateMap<ExerciseScoresChartData, ExerciseScoresChartDataDto>((source, _) => new ExerciseScoresChartDataDto
+        {
+            Id = source.Id,
+            Value = source.Value,
+            Date = source.Date,
+            ExerciseName = source.ExerciseName,
+            ExerciseId = source.ExerciseId
         });
     }
 }

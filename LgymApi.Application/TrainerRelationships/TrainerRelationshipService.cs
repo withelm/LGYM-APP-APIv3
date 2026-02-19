@@ -1,5 +1,12 @@
 using LgymApi.Application.Exceptions;
+using LgymApi.Application.Features.EloRegistry;
+using LgymApi.Application.Features.EloRegistry.Models;
+using LgymApi.Application.Features.ExerciseScores;
+using LgymApi.Application.Features.ExerciseScores.Models;
+using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.TrainerRelationships.Models;
+using LgymApi.Application.Features.Training;
+using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
@@ -8,6 +15,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
+using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.TrainerRelationships;
@@ -19,6 +27,10 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IInvitationEmailScheduler _invitationEmailScheduler;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
+    private readonly ITrainingService _trainingService;
+    private readonly IExerciseScoresService _exerciseScoresService;
+    private readonly IEloRegistryService _eloRegistryService;
+    private readonly IMainRecordsService _mainRecordsService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<TrainerRelationshipService> _logger;
 
@@ -28,6 +40,10 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         ITrainerRelationshipRepository trainerRelationshipRepository,
         IInvitationEmailScheduler invitationEmailScheduler,
         IEmailNotificationsFeature emailNotificationsFeature,
+        ITrainingService trainingService,
+        IExerciseScoresService exerciseScoresService,
+        IEloRegistryService eloRegistryService,
+        IMainRecordsService mainRecordsService,
         IUnitOfWork unitOfWork,
         ILogger<TrainerRelationshipService> logger)
     {
@@ -36,6 +52,10 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         _trainerRelationshipRepository = trainerRelationshipRepository;
         _invitationEmailScheduler = invitationEmailScheduler;
         _emailNotificationsFeature = emailNotificationsFeature;
+        _trainingService = trainingService;
+        _exerciseScoresService = exerciseScoresService;
+        _eloRegistryService = eloRegistryService;
+        _mainRecordsService = mainRecordsService;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -163,6 +183,36 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return await _trainerRelationshipRepository.GetDashboardTraineesAsync(currentTrainer.Id, query);
     }
 
+    public async Task<List<DateTime>> GetTraineeTrainingDatesAsync(UserEntity currentTrainer, Guid traineeId)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+        return await _trainingService.GetTrainingDatesAsync(traineeId);
+    }
+
+    public async Task<List<TrainingByDateDetails>> GetTraineeTrainingByDateAsync(UserEntity currentTrainer, Guid traineeId, DateTime createdAt)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+        return await _trainingService.GetTrainingByDateAsync(traineeId, createdAt);
+    }
+
+    public async Task<List<ExerciseScoresChartData>> GetTraineeExerciseScoresChartDataAsync(UserEntity currentTrainer, Guid traineeId, Guid exerciseId)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+        return await _exerciseScoresService.GetExerciseScoresChartDataAsync(traineeId, exerciseId);
+    }
+
+    public async Task<List<EloRegistryChartEntry>> GetTraineeEloChartAsync(UserEntity currentTrainer, Guid traineeId)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+        return await _eloRegistryService.GetChartAsync(traineeId);
+    }
+
+    public async Task<List<MainRecordEntity>> GetTraineeMainRecordsHistoryAsync(UserEntity currentTrainer, Guid traineeId)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+        return await _mainRecordsService.GetMainRecordsHistoryAsync(traineeId);
+    }
+
     public async Task AcceptInvitationAsync(UserEntity currentTrainee, Guid invitationId)
     {
         if (invitationId == Guid.Empty)
@@ -235,18 +285,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
     public async Task UnlinkTraineeAsync(UserEntity currentTrainer, Guid traineeId)
     {
-        await EnsureTrainerAsync(currentTrainer);
-
-        if (traineeId == Guid.Empty)
-        {
-            throw AppException.BadRequest(Messages.UserIdRequired);
-        }
-
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId);
-        if (link == null)
-        {
-            throw AppException.NotFound(Messages.DidntFind);
-        }
+        var link = await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
 
         await _trainerRelationshipRepository.RemoveLinkAsync(link);
         await _unitOfWork.SaveChangesAsync();
@@ -271,6 +310,24 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         {
             throw AppException.Forbidden(Messages.TrainerRoleRequired);
         }
+    }
+
+    private async Task<TrainerTraineeLink> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Guid traineeId)
+    {
+        await EnsureTrainerAsync(currentTrainer);
+
+        if (traineeId == Guid.Empty)
+        {
+            throw AppException.BadRequest(Messages.UserIdRequired);
+        }
+
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId);
+        if (link == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        return link;
     }
 
     private async Task<TrainerInvitation> GetInvitationForTraineeAsync(UserEntity currentTrainee, Guid invitationId)
