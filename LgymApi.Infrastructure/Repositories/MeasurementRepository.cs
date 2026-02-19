@@ -25,12 +25,12 @@ public sealed class MeasurementRepository : IMeasurementRepository
         return _dbContext.Measurements.FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
     }
 
-    public Task<List<Measurement>> GetByUserAsync(Guid userId, string? bodyPart, CancellationToken cancellationToken = default)
+    public Task<List<Measurement>> GetByUserAsync(Guid userId, BodyParts? bodyPart, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.Measurements.AsNoTracking().Where(m => m.UserId == userId).AsQueryable();
-        if (!string.IsNullOrWhiteSpace(bodyPart) && Enum.TryParse(bodyPart, true, out BodyParts parsed))
+        if (bodyPart.HasValue)
         {
-            query = query.Where(m => m.BodyPart == parsed);
+            query = query.Where(m => m.BodyPart == bodyPart.Value);
         }
 
         return query.ToListAsync(cancellationToken);

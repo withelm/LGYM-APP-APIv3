@@ -1,13 +1,14 @@
 using AppConfigEntity = LgymApi.Domain.Entities.AppConfig;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Features.AppConfig;
 
 public interface IAppConfigService
 {
-    Task<AppConfigEntity> GetLatestByPlatformAsync(string platformRaw);
+    Task<AppConfigEntity> GetLatestByPlatformAsync(Platforms platform);
     Task CreateNewAppVersionAsync(
         Guid userId,
-        string platformRaw,
+        Platforms platform,
         string? minRequiredVersion,
         string? latestVersion,
         bool forceUpdate,

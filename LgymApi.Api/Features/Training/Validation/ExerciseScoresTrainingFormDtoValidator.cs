@@ -1,5 +1,6 @@
 using FluentValidation;
 using LgymApi.Api.Features.Training.Contracts;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 
 namespace LgymApi.Api.Features.Training.Validation;
@@ -13,7 +14,8 @@ public class ExerciseScoresTrainingFormDtoValidator : AbstractValidator<Exercise
             .WithMessage(Messages.ExerciseIdRequired);
 
         RuleFor(x => x.Unit)
-            .NotEmpty()
+            .IsInEnum()
+            .NotEqual(WeightUnits.Unknown)
             .WithMessage(Messages.UnitRequired);
 
         RuleFor(x => x.Series)

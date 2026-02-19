@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Localization;
 using LgymApi.Api.Middleware;
 using LgymApi.Domain.Security;
 using Hangfire;
+using LgymApi.Api.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,13 +28,18 @@ builder.Services
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
     });
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.UseInlineDefinitionsForEnums();
+    options.SchemaFilter<EnumAsStringSchemaFilter>();
+});
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -120,7 +126,8 @@ if (!builder.Environment.IsEnvironment("Testing"))
                 var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                 return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 20,
+                    // Intentional: allow higher burst for auth retries from mobile networks/devices.
+                    PermitLimit = 200,
                     Window = TimeSpan.FromMinutes(15)
                 });
             }
@@ -132,7 +139,8 @@ if (!builder.Environment.IsEnvironment("Testing"))
 
             return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                // Intentional: raise global throughput limit to reduce throttling in normal app usage.
+                PermitLimit = 100,
                 Window = TimeSpan.FromMinutes(1)
             });
         });

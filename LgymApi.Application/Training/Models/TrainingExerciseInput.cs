@@ -1,3 +1,5 @@
+using LgymApi.Domain.Enums;
+
 namespace LgymApi.Application.Features.Training.Models;
 
 public sealed class TrainingExerciseInput
@@ -6,5 +8,5 @@ public sealed class TrainingExerciseInput
     public int Series { get; init; }
     public int Reps { get; init; }
     public double Weight { get; init; }
-    public string Unit { get; init; } = string.Empty;
+    public WeightUnits Unit { get; init; }
 }

@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -190,7 +191,7 @@ public sealed class PlanTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "deleteplanuser", email: "deleteplan@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Delete Plan Exercise", "Chest");
+        var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Delete Plan Exercise", BodyParts.Chest);
         var planId = await CreatePlanViaEndpointAsync(user.Id, "Plan To Delete");
         await CreatePlanDayViaEndpointAsync(user.Id, planId, "Delete Day 1", new List<PlanDayExerciseInput>
         {
@@ -232,7 +233,7 @@ public sealed class PlanTests : IntegrationTestBase
         var user1 = await SeedUserAsync(name: "deleteplanuser2", email: "deleteplan2@example.com");
         var user2 = await SeedUserAsync(name: "deleteplanuser3", email: "deleteplan3@example.com");
         var plan = await SeedPlanAsync(user2.Id, "Other User Plan", isActive: true);
-        var exerciseId = await CreateExerciseViaEndpointAsync(user2.Id, "Protected Plan Exercise", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(user2.Id, "Protected Plan Exercise", BodyParts.Back);
         await CreatePlanDayViaEndpointAsync(user2.Id, plan.Id, "Protected Day 1", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
@@ -267,7 +268,7 @@ public sealed class PlanTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "deleteplanownertrain", email: "deleteplanownertrain@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Owner Delete Exercise", "Chest");
+        var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Owner Delete Exercise", BodyParts.Chest);
         var gymId = await CreateGymViaEndpointAsync(user.Id, "Owner Delete Gym");
         var planId = await CreatePlanViaEndpointAsync(user.Id, "Owner Delete Plan");
         var planDay1Id = await CreatePlanDayViaEndpointAsync(user.Id, planId, "Owner Delete Day 1", new List<PlanDayExerciseInput>
@@ -311,7 +312,7 @@ public sealed class PlanTests : IntegrationTestBase
         var attacker = await SeedUserAsync(name: "deleteplannonowner2", email: "deleteplannonowner2@example.com");
 
         SetAuthorizationHeader(owner.Id);
-        var exerciseId = await CreateExerciseViaEndpointAsync(owner.Id, "NonOwner Delete Exercise", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(owner.Id, "NonOwner Delete Exercise", BodyParts.Back);
         var gymId = await CreateGymViaEndpointAsync(owner.Id, "NonOwner Delete Gym");
         var planId = await CreatePlanViaEndpointAsync(owner.Id, "NonOwner Protected Plan");
         var planDay1Id = await CreatePlanDayViaEndpointAsync(owner.Id, planId, "NonOwner Day 1", new List<PlanDayExerciseInput>
@@ -474,7 +475,7 @@ public sealed class PlanTests : IntegrationTestBase
             createdAt = DateTime.UtcNow,
             exercises = new[]
             {
-                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 60.0, unit = "kg" }
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 60.0, unit = WeightUnits.Kilograms.ToString() }
             }
         };
 

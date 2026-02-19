@@ -44,16 +44,11 @@ public sealed class ExerciseRepository : IExerciseRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<Exercise>> GetByBodyPartAsync(Guid userId, string bodyPart, CancellationToken cancellationToken = default)
+    public Task<List<Exercise>> GetByBodyPartAsync(Guid userId, BodyParts bodyPart, CancellationToken cancellationToken = default)
     {
-        if (!Enum.TryParse<BodyParts>(bodyPart, out var parsed))
-        {
-            return Task.FromResult(new List<Exercise>());
-        }
-
         return _dbContext.Exercises
             .AsNoTracking()
-            .Where(e => e.BodyPart == parsed && !e.IsDeleted && (e.UserId == userId || e.UserId == null))
+            .Where(e => e.BodyPart == bodyPart && !e.IsDeleted && (e.UserId == userId || e.UserId == null))
             .ToListAsync(cancellationToken);
     }
 
@@ -99,7 +94,6 @@ public sealed class ExerciseRepository : IExerciseRepository
         }
 
         var translations = await _dbContext.ExerciseTranslations
-            .AsNoTracking()
             .Where(t => ids.Contains(t.ExerciseId) && normalizedCultures.Contains(t.Culture))
             .Select(t => new { t.ExerciseId, t.Culture, t.Name })
             .ToListAsync(cancellationToken);

@@ -32,14 +32,9 @@ public sealed class ExerciseService : IExerciseService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddExerciseAsync(string name, string bodyPart, string? description, string? image)
+    public async Task AddExerciseAsync(string name, BodyParts bodyPart, string? description, string? image)
     {
-        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(bodyPart))
-        {
-            throw AppException.BadRequest(Messages.FieldRequired);
-        }
-
-        if (!global::System.Enum.TryParse(bodyPart, true, out BodyParts parsedBodyPart))
+        if (string.IsNullOrWhiteSpace(name) || bodyPart == BodyParts.Unknown)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -48,7 +43,7 @@ public sealed class ExerciseService : IExerciseService
         {
             Id = Guid.NewGuid(),
             Name = name,
-            BodyPart = parsedBodyPart,
+            BodyPart = bodyPart,
             Description = description,
             Image = image,
             IsDeleted = false
@@ -58,9 +53,9 @@ public sealed class ExerciseService : IExerciseService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    public async Task AddUserExerciseAsync(Guid userId, string name, string bodyPart, string? description, string? image)
+    public async Task AddUserExerciseAsync(Guid userId, string name, BodyParts bodyPart, string? description, string? image)
     {
-        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(bodyPart))
+        if (string.IsNullOrWhiteSpace(name) || bodyPart == BodyParts.Unknown)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -68,11 +63,6 @@ public sealed class ExerciseService : IExerciseService
         if (userId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
-        }
-
-        if (!global::System.Enum.TryParse(bodyPart, true, out BodyParts parsedBodyPart))
-        {
-            throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var user = await _userRepository.FindByIdAsync(userId);
@@ -85,7 +75,7 @@ public sealed class ExerciseService : IExerciseService
         {
             Id = Guid.NewGuid(),
             Name = name,
-            BodyPart = parsedBodyPart,
+            BodyPart = bodyPart,
             Description = description,
             Image = image,
             UserId = user.Id,
@@ -138,7 +128,7 @@ public sealed class ExerciseService : IExerciseService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    public async Task UpdateExerciseAsync(string exerciseId, string? name, string? bodyPart, string? description, string? image)
+    public async Task UpdateExerciseAsync(string exerciseId, string? name, BodyParts bodyPart, string? description, string? image)
     {
         if (!Guid.TryParse(exerciseId, out var exerciseGuid))
         {
@@ -156,9 +146,9 @@ public sealed class ExerciseService : IExerciseService
             exercise.Name = name;
         }
 
-        if (!string.IsNullOrWhiteSpace(bodyPart) && global::System.Enum.TryParse(bodyPart, true, out BodyParts parsedBodyPart))
+        if (bodyPart != BodyParts.Unknown)
         {
-            exercise.BodyPart = parsedBodyPart;
+            exercise.BodyPart = bodyPart;
         }
 
         exercise.Description = description;
@@ -293,14 +283,14 @@ public sealed class ExerciseService : IExerciseService
         };
     }
 
-    public async Task<ExercisesWithTranslations> GetExerciseByBodyPartAsync(Guid userId, string bodyPart, IReadOnlyList<string> cultures)
+    public async Task<ExercisesWithTranslations> GetExerciseByBodyPartAsync(Guid userId, BodyParts bodyPart, IReadOnlyList<string> cultures)
     {
         if (userId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (!global::System.Enum.TryParse<BodyParts>(bodyPart, out _))
+        if (bodyPart == BodyParts.Unknown)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }

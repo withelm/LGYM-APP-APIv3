@@ -6,6 +6,7 @@ using System.Text;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Application.Services;
+using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -241,10 +242,10 @@ public abstract class IntegrationTestBase : IDisposable
         return Guid.Parse(plans!.First(p => p.Name == name).Id!);
     }
 
-    protected async Task<Guid> CreateExerciseViaEndpointAsync(Guid userId, string name = "Test Exercise", string bodyPart = "Chest")
+    protected async Task<Guid> CreateExerciseViaEndpointAsync(Guid userId, string name = "Test Exercise", BodyParts bodyPart = BodyParts.Chest)
     {
         SetAuthorizationHeader(userId);
-        var request = new { name, bodyPart, description = "Test description" };
+        var request = new { name, bodyPart = bodyPart.ToString(), description = "Test description" };
         await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/addUserExercise", request);
 
         var exercisesResponse = await Client.GetAsync($"/api/exercise/{userId}/getAllUserExercises");
@@ -252,10 +253,10 @@ public abstract class IntegrationTestBase : IDisposable
         return Guid.Parse(exercises!.First(e => e.Name == name).Id!);
     }
 
-    protected async Task<Guid> CreateGlobalExerciseViaEndpointAsync(Guid userId, string name = "Global Exercise", string bodyPart = "Chest")
+    protected async Task<Guid> CreateGlobalExerciseViaEndpointAsync(Guid userId, string name = "Global Exercise", BodyParts bodyPart = BodyParts.Chest)
     {
         SetAuthorizationHeader(userId);
-        var request = new { name, bodyPart, description = "Global exercise description" };
+        var request = new { name, bodyPart = bodyPart.ToString(), description = "Global exercise description" };
         await Client.PostAsJsonAsync("/api/exercise/addExercise", request);
 
         var exercisesResponse = await Client.GetAsync("/api/exercise/getAllGlobalExercises");

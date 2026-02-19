@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Enum.Contracts;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.Exercise.Contracts;
 
@@ -15,7 +16,7 @@ public sealed class ExerciseFormDto
     public string? UserId { get; set; }
 
     [JsonPropertyName("bodyPart")]
-    public string BodyPart { get; set; } = string.Empty;
+    public BodyParts BodyPart { get; set; }
 
     [JsonPropertyName("description")]
     public string? Description { get; set; }
@@ -121,6 +122,13 @@ public sealed class LastExerciseScoresResponseDto
 
     [JsonPropertyName("seriesScores")]
     public List<SeriesScoreWithGymDto> SeriesScores { get; set; } = new();
+}
+
+public sealed class ExerciseByBodyPartRequestDto
+{
+    [JsonPropertyName("bodyPart")]
+    [JsonRequired]
+    public BodyParts BodyPart { get; set; }
 }
 
 public sealed class ExerciseTrainingHistoryItemDto
