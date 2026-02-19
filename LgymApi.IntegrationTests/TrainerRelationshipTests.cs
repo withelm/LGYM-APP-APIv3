@@ -921,8 +921,6 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         });
         invalidExerciseResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var invalidExerciseBody = await invalidExerciseResponse.Content.ReadAsStringAsync();
-        originalCulture = CultureInfo.CurrentCulture;
-        originalUiCulture = CultureInfo.CurrentUICulture;
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
