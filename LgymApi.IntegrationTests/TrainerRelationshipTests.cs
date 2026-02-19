@@ -630,6 +630,313 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetTraineeTrainingReads_AsLinkedTrainer_ReturnsOnlyOwnedTraineeData()
+    {
+        var trainer = await SeedTrainerAsync("trainer-read-training", "trainer-read-training@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-read-training", email: "trainee-read-training@example.com", password: "password123");
+        var foreignTrainee = await SeedUserAsync(name: "trainee-read-training-foreign", email: "trainee-read-training-foreign@example.com", password: "password123");
+
+        var trackedDay = DateTime.UtcNow.Date.AddDays(-1).AddHours(10);
+        var otherDay = trackedDay.AddDays(1);
+
+        Guid exerciseId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+
+            var traineePlan = new Plan { Id = Guid.NewGuid(), UserId = trainee.Id, Name = "Plan A" };
+            var traineePlanDay = new PlanDay { Id = Guid.NewGuid(), PlanId = traineePlan.Id, Name = "Push Day" };
+            var traineeGym = new Gym { Id = Guid.NewGuid(), UserId = trainee.Id, Name = "Gym A" };
+
+            var foreignPlan = new Plan { Id = Guid.NewGuid(), UserId = foreignTrainee.Id, Name = "Plan B" };
+            var foreignPlanDay = new PlanDay { Id = Guid.NewGuid(), PlanId = foreignPlan.Id, Name = "Pull Day" };
+            var foreignGym = new Gym { Id = Guid.NewGuid(), UserId = foreignTrainee.Id, Name = "Gym B" };
+
+            var exercise = new Exercise { Id = Guid.NewGuid(), Name = "Bench Press", BodyPart = BodyParts.Chest };
+            exerciseId = exercise.Id;
+
+            db.Plans.AddRange(traineePlan, foreignPlan);
+            db.PlanDays.AddRange(traineePlanDay, foreignPlanDay);
+            db.Gyms.AddRange(traineeGym, foreignGym);
+            db.Exercises.Add(exercise);
+
+            var traineeTrainingA = new Training
+            {
+                Id = Guid.NewGuid(),
+                UserId = trainee.Id,
+                TypePlanDayId = traineePlanDay.Id,
+                GymId = traineeGym.Id,
+                CreatedAt = trackedDay
+            };
+            var traineeTrainingB = new Training
+            {
+                Id = Guid.NewGuid(),
+                UserId = trainee.Id,
+                TypePlanDayId = traineePlanDay.Id,
+                GymId = traineeGym.Id,
+                CreatedAt = otherDay
+            };
+            var foreignTraining = new Training
+            {
+                Id = Guid.NewGuid(),
+                UserId = foreignTrainee.Id,
+                TypePlanDayId = foreignPlanDay.Id,
+                GymId = foreignGym.Id,
+                CreatedAt = trackedDay
+            };
+
+            db.Trainings.AddRange(traineeTrainingA, traineeTrainingB, foreignTraining);
+
+            var traineeScore = new ExerciseScore
+            {
+                Id = Guid.NewGuid(),
+                ExerciseId = exercise.Id,
+                UserId = trainee.Id,
+                Reps = 8,
+                Series = 1,
+                Weight = 80,
+                Unit = WeightUnits.Kilograms,
+                TrainingId = traineeTrainingA.Id,
+                CreatedAt = trackedDay
+            };
+
+            db.ExerciseScores.Add(traineeScore);
+            db.TrainingExerciseScores.Add(new TrainingExerciseScore
+            {
+                Id = Guid.NewGuid(),
+                TrainingId = traineeTrainingA.Id,
+                ExerciseScoreId = traineeScore.Id
+            });
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+
+        var datesResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/trainings/dates");
+        datesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dates = await datesResponse.Content.ReadFromJsonAsync<List<DateTime>>();
+        dates.Should().NotBeNull();
+        dates!.Count.Should().Be(2);
+
+        var byDateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/trainings/by-date", new
+        {
+            createdAt = trackedDay
+        });
+        byDateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var byDate = await byDateResponse.Content.ReadFromJsonAsync<List<TrainingByDateDetailsResponse>>();
+        byDate.Should().NotBeNull();
+        byDate!.Count.Should().Be(1);
+        byDate[0].Gym.Should().Be("Gym A");
+        byDate[0].Exercises.Should().ContainSingle();
+        byDate[0].Exercises[0].ExerciseDetails.Name.Should().Be("Bench Press");
+        byDate[0].Exercises[0].ExerciseDetails.Id.Should().Be(exerciseId.ToString());
+    }
+
+    [Test]
+    public async Task GetTraineeProgressReads_AsLinkedTrainer_ReturnsExerciseAndEloCharts()
+    {
+        var trainer = await SeedTrainerAsync("trainer-read-progress", "trainer-read-progress@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-read-progress", email: "trainee-read-progress@example.com", password: "password123");
+
+        Guid exerciseId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+
+            var plan = new Plan { Id = Guid.NewGuid(), UserId = trainee.Id, Name = "Plan Progress" };
+            var planDay = new PlanDay { Id = Guid.NewGuid(), PlanId = plan.Id, Name = "Progress Day" };
+            var gym = new Gym { Id = Guid.NewGuid(), UserId = trainee.Id, Name = "Progress Gym" };
+            var exercise = new Exercise { Id = Guid.NewGuid(), Name = "Squat", BodyPart = BodyParts.Quads };
+            exerciseId = exercise.Id;
+
+            db.Plans.Add(plan);
+            db.PlanDays.Add(planDay);
+            db.Gyms.Add(gym);
+            db.Exercises.Add(exercise);
+
+            var dayA = DateTimeOffset.UtcNow.AddDays(-3);
+            var dayB = DateTimeOffset.UtcNow.AddDays(-1);
+            var trainingA = new Training { Id = Guid.NewGuid(), UserId = trainee.Id, TypePlanDayId = planDay.Id, GymId = gym.Id, CreatedAt = dayA };
+            var trainingB = new Training { Id = Guid.NewGuid(), UserId = trainee.Id, TypePlanDayId = planDay.Id, GymId = gym.Id, CreatedAt = dayB };
+            db.Trainings.AddRange(trainingA, trainingB);
+
+            var scoreA = new ExerciseScore
+            {
+                Id = Guid.NewGuid(),
+                ExerciseId = exercise.Id,
+                UserId = trainee.Id,
+                Reps = 5,
+                Series = 1,
+                Weight = 100,
+                Unit = WeightUnits.Kilograms,
+                TrainingId = trainingA.Id,
+                CreatedAt = dayA
+            };
+            var scoreB = new ExerciseScore
+            {
+                Id = Guid.NewGuid(),
+                ExerciseId = exercise.Id,
+                UserId = trainee.Id,
+                Reps = 5,
+                Series = 1,
+                Weight = 110,
+                Unit = WeightUnits.Kilograms,
+                TrainingId = trainingB.Id,
+                CreatedAt = dayB
+            };
+
+            db.ExerciseScores.AddRange(scoreA, scoreB);
+            db.EloRegistries.AddRange(
+                new EloRegistry { Id = Guid.NewGuid(), UserId = trainee.Id, Date = dayA, Elo = 1010 },
+                new EloRegistry { Id = Guid.NewGuid(), UserId = trainee.Id, Date = dayB, Elo = 1030 });
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+
+        var progressResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/exercise-scores/chart", new
+        {
+            exerciseId = exerciseId.ToString()
+        });
+        progressResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var progress = await progressResponse.Content.ReadFromJsonAsync<List<ExerciseScoresChartDataResponse>>();
+        progress.Should().NotBeNull();
+        progress!.Count.Should().Be(2);
+        progress.Select(x => x.ExerciseId).Should().OnlyContain(x => x == exerciseId.ToString());
+
+        var eloResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/elo/chart");
+        eloResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var elo = await eloResponse.Content.ReadFromJsonAsync<List<EloRegistryChartResponse>>();
+        elo.Should().NotBeNull();
+        elo!.Count.Should().BeGreaterThanOrEqualTo(3);
+    }
+
+    [Test]
+    public async Task GetTraineeMainRecordsHistory_AsLinkedTrainer_ReturnsHistory()
+    {
+        var trainer = await SeedTrainerAsync("trainer-read-records", "trainer-read-records@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-read-records", email: "trainee-read-records@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+
+            var exercise = new Exercise { Id = Guid.NewGuid(), Name = "Deadlift", BodyPart = BodyParts.Back };
+            db.Exercises.Add(exercise);
+
+            db.MainRecords.AddRange(
+                new MainRecord
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = trainee.Id,
+                    ExerciseId = exercise.Id,
+                    Weight = 140,
+                    Unit = WeightUnits.Kilograms,
+                    Date = DateTimeOffset.UtcNow.AddDays(-20)
+                },
+                new MainRecord
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = trainee.Id,
+                    ExerciseId = exercise.Id,
+                    Weight = 150,
+                    Unit = WeightUnits.Kilograms,
+                    Date = DateTimeOffset.UtcNow.AddDays(-10)
+                });
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/main-records/history");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var records = await response.Content.ReadFromJsonAsync<List<MainRecordResponse>>();
+        records.Should().NotBeNull();
+        records!.Count.Should().Be(2);
+        records.Select(x => x.Weight).Should().Contain(new[] { 140d, 150d });
+    }
+
+    [Test]
+    public async Task TraineeReadEndpoints_WhenTraineeBelongsToAnotherTrainer_ReturnNotFound()
+    {
+        var trainerA = await SeedTrainerAsync("trainer-read-owner-a", "trainer-read-owner-a@example.com");
+        var trainerB = await SeedTrainerAsync("trainer-read-owner-b", "trainer-read-owner-b@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-read-owner", email: "trainee-read-owner@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await LinkTrainerAndTraineeAsync(db, trainerB.Id, trainee.Id);
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainerA.Id);
+        var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/trainings/dates");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task TraineeReadEndpoints_WithInvalidIds_ReturnBadRequestWithResourceMessage()
+    {
+        var trainer = await SeedTrainerAsync("trainer-read-invalid", "trainer-read-invalid@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-read-invalid", email: "trainee-read-invalid@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+
+        var invalidTraineeResponse = await Client.GetAsync("/api/trainer/trainees/not-a-guid/trainings/dates");
+        invalidTraineeResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var invalidTraineeBody = await invalidTraineeResponse.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            invalidTraineeBody.Should().Contain(Messages.UserIdRequired);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+
+        var invalidExerciseResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/exercise-scores/chart", new
+        {
+            exerciseId = "not-a-guid"
+        });
+        invalidExerciseResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var invalidExerciseBody = await invalidExerciseResponse.Content.ReadAsStringAsync();
+        originalCulture = CultureInfo.CurrentCulture;
+        originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            invalidExerciseBody.Should().Contain(Messages.ExerciseIdRequired);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Test]
     public async Task AcceptInvitation_AsTrainee_CreatesLink()
     {
         var trainer = await SeedTrainerAsync("trainer-accept", "trainer-accept@example.com");
@@ -786,6 +1093,22 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         link.Should().BeNull();
     }
 
+    private static async Task LinkTrainerAndTraineeAsync(AppDbContext db, Guid trainerId, Guid traineeId)
+    {
+        var existing = await db.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainerId && x.TraineeId == traineeId);
+        if (existing != null)
+        {
+            return;
+        }
+
+        db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+        {
+            Id = Guid.NewGuid(),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        });
+    }
+
     private async Task<User> SeedTrainerAsync(string name, string email, string preferredLanguage = "en-US")
     {
         var trainer = await SeedUserAsync(name: name, email: email, password: "password123");
@@ -860,6 +1183,48 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         [JsonPropertyName("hasExpiredInvitation")]
         public bool HasExpiredInvitation { get; set; }
+    }
+
+    private sealed class TrainingByDateDetailsResponse
+    {
+        [JsonPropertyName("gym")]
+        public string? Gym { get; set; }
+
+        [JsonPropertyName("exercises")]
+        public List<TrainingExerciseGroupResponse> Exercises { get; set; } = [];
+    }
+
+    private sealed class TrainingExerciseGroupResponse
+    {
+        [JsonPropertyName("exerciseDetails")]
+        public ExerciseDetailsResponse ExerciseDetails { get; set; } = new();
+    }
+
+    private sealed class ExerciseDetailsResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class ExerciseScoresChartDataResponse
+    {
+        [JsonPropertyName("exerciseId")]
+        public string ExerciseId { get; set; } = string.Empty;
+    }
+
+    private sealed class EloRegistryChartResponse
+    {
+        [JsonPropertyName("value")]
+        public int Value { get; set; }
+    }
+
+    private sealed class MainRecordResponse
+    {
+        [JsonPropertyName("weight")]
+        public double Weight { get; set; }
     }
 
     private sealed class MessageResponse
