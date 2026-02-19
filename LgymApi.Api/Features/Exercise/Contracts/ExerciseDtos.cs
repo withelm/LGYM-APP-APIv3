@@ -112,12 +112,6 @@ public sealed class LastExerciseScoresRequestDto
     public string ExerciseName { get; set; } = string.Empty;
 }
 
-public sealed class ExerciseByBodyPartRequestDto
-{
-    [JsonPropertyName("bodyPart")]
-    public BodyParts BodyPart { get; set; }
-}
-
 public sealed class LastExerciseScoresResponseDto
 {
     [JsonPropertyName("exerciseId")]
