@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.IntegrationTests;
 
@@ -19,13 +20,13 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Bench Press", "Chest");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Bench Press", BodyParts.Chest);
 
         var request = new
         {
             exercise = exerciseId.ToString(),
             weight = 100.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         };
 
@@ -49,14 +50,14 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Deadlift", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Deadlift", BodyParts.Back);
 
         var nonExistentId = Guid.NewGuid();
         var request = new
         {
             exercise = exerciseId.ToString(),
             weight = 150.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         };
 
@@ -81,7 +82,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
         {
             exercise = nonExistentExerciseId.ToString(),
             weight = 100.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         };
 
@@ -117,13 +118,13 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Squat", "Quads");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Squat", BodyParts.Quads);
 
         var addRequest = new
         {
             exercise = exerciseId.ToString(),
             weight = 120.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         };
         await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", addRequest);
@@ -165,13 +166,13 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "OHP", "Shoulders");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "OHP", BodyParts.Shoulders);
 
         var firstRequest = new
         {
             exercise = exerciseId.ToString(),
             weight = 50.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow.AddDays(-1)
         };
         await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", firstRequest);
@@ -180,7 +181,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
         {
             exercise = exerciseId.ToString(),
             weight = 55.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         };
         await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", secondRequest);
@@ -206,13 +207,13 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Curl", "Biceps");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Curl", BodyParts.Biceps);
 
         var addRequest = new
         {
             exercise = exerciseId.ToString(),
             weight = 20.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         };
         await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", addRequest);
@@ -257,13 +258,13 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Rows", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Rows", BodyParts.Back);
 
         var addRequest = new
         {
             exercise = exerciseId.ToString(),
             weight = 70.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         };
         await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", addRequest);
@@ -277,7 +278,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
             _id = recordId,
             exercise = exerciseId.ToString(),
             weight = 80.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         };
 
@@ -301,13 +302,13 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Dips", "Triceps");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Dips", BodyParts.Triceps);
 
         var addRequest = new
         {
             exercise = exerciseId.ToString(),
             weight = 30.0,
-            unit = "kg",
+            unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         };
         await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", addRequest);
@@ -334,7 +335,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Pullups", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Pullups", BodyParts.Back);
         var gymId = await CreateGymViaEndpointAsync(userId, "Possible Gym");
         var planId = await CreatePlanViaEndpointAsync(userId, "Possible Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Possible Day", new List<PlanDayExerciseInput>
@@ -349,7 +350,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
             createdAt = DateTime.UtcNow,
             exercises = new[]
             {
-                new { exercise = exerciseId.ToString(), series = 1, reps = 12, weight = 0.0, unit = "kg" }
+                new { exercise = exerciseId.ToString(), series = 1, reps = 12, weight = 0.0, unit = WeightUnits.Kilograms.ToString() }
             }
         };
         await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", trainingRequest);
@@ -375,12 +376,37 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "NoData Exercise", "Chest");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "NoData Exercise", BodyParts.Chest);
 
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task AddNewRecord_WithAliasUnit_ReturnsBadRequest()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "recordstrict",
+            email: "recordstrict@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Strict Bench", BodyParts.Chest);
+
+        var request = new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 95.0,
+            unit = "kg",
+            date = DateTime.UtcNow
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     private sealed class MessageResponse

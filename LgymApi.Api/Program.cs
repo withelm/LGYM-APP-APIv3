@@ -15,6 +15,7 @@ using System.Text.Json.Serialization;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
 using LgymApi.Api.Middleware;
+using LgymApi.Api.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,13 +26,18 @@ builder.Services
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
     });
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.UseInlineDefinitionsForEnums();
+    options.SchemaFilter<EnumAsStringSchemaFilter>();
+});
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.IntegrationTests;
 
@@ -21,9 +22,9 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var request = new
         {
-            bodyPart = "Chest",
+            bodyPart = BodyParts.Chest.ToString(),
             value = 100.5,
-            unit = "cm"
+            unit = HeightUnits.Centimeters.ToString()
         };
 
         var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
@@ -42,9 +43,9 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var request = new
         {
-            bodyPart = "Chest",
+            bodyPart = BodyParts.Chest.ToString(),
             value = 100.5,
-            unit = "cm"
+            unit = HeightUnits.Centimeters.ToString()
         };
 
         var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
@@ -53,7 +54,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddMeasurement_WithInvalidBodyPart_UsesUnknown()
+    public async Task AddMeasurement_WithInvalidBodyPart_ReturnsBadRequest()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "measureuser2",
@@ -67,12 +68,12 @@ public sealed class MeasurementsTests : IntegrationTestBase
         {
             bodyPart = "InvalidBodyPart",
             value = 50.0,
-            unit = "cm"
+            unit = HeightUnits.Centimeters.ToString()
         };
 
         var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -104,9 +105,9 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var addRequest = new
         {
-            bodyPart = "Biceps",
+            bodyPart = BodyParts.Biceps.ToString(),
             value = 35.0,
-            unit = "cm"
+            unit = HeightUnits.Centimeters.ToString()
         };
         await Client.PostAsJsonAsync("/api/measurements/add", addRequest);
 
@@ -131,10 +132,10 @@ public sealed class MeasurementsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var chestRequest = new { bodyPart = "Chest", value = 100.0, unit = "cm" };
+        var chestRequest = new { bodyPart = BodyParts.Chest.ToString(), value = 100.0, unit = HeightUnits.Centimeters.ToString() };
         await Client.PostAsJsonAsync("/api/measurements/add", chestRequest);
 
-        var bicepsRequest = new { bodyPart = "Biceps", value = 40.0, unit = "cm" };
+        var bicepsRequest = new { bodyPart = BodyParts.Biceps.ToString(), value = 40.0, unit = HeightUnits.Centimeters.ToString() };
         await Client.PostAsJsonAsync("/api/measurements/add", bicepsRequest);
 
         var response = await Client.GetAsync($"/api/measurements/{userId}/getHistory?bodyPart=Chest");
@@ -179,10 +180,10 @@ public sealed class MeasurementsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var firstRequest = new { bodyPart = "Chest", value = 95.0, unit = "cm" };
+        var firstRequest = new { bodyPart = BodyParts.Chest.ToString(), value = 95.0, unit = HeightUnits.Centimeters.ToString() };
         await Client.PostAsJsonAsync("/api/measurements/add", firstRequest);
 
-        var secondRequest = new { bodyPart = "Chest", value = 100.0, unit = "cm" };
+        var secondRequest = new { bodyPart = BodyParts.Chest.ToString(), value = 100.0, unit = HeightUnits.Centimeters.ToString() };
         await Client.PostAsJsonAsync("/api/measurements/add", secondRequest);
 
         var response = await Client.GetAsync($"/api/measurements/{userId}/getHistory");
@@ -194,6 +195,50 @@ public sealed class MeasurementsTests : IntegrationTestBase
         body!.Measurements.Should().HaveCount(2);
         body.Measurements[0].Value.Should().Be(95.0);
         body.Measurements[1].Value.Should().Be(100.0);
+    }
+
+    [Test]
+    public async Task AddMeasurement_WithAliasUnit_ReturnsBadRequest()
+    {
+        var (_, token) = await RegisterUserViaEndpointAsync(
+            name: "measurealias",
+            email: "measurealias@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var request = new
+        {
+            bodyPart = BodyParts.Chest.ToString(),
+            value = 77.7,
+            unit = "cm"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task AddMeasurement_WithNumericEnumValue_ReturnsBadRequest()
+    {
+        var (_, token) = await RegisterUserViaEndpointAsync(
+            name: "measurenumeric",
+            email: "measurenumeric@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var request = new
+        {
+            bodyPart = 1,
+            value = 77.7,
+            unit = 2
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     private sealed class MessageResponse

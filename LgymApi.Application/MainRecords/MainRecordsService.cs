@@ -30,7 +30,7 @@ public sealed class MainRecordsService : IMainRecordsService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddNewRecordAsync(Guid userId, string exerciseId, double weight, string unit, DateTime date)
+    public async Task AddNewRecordAsync(Guid userId, string exerciseId, double weight, WeightUnits unit, DateTime date)
     {
         if (userId == Guid.Empty || !Guid.TryParse(exerciseId, out var exerciseGuid))
         {
@@ -49,14 +49,18 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var parsedUnit = unit == "lbs" ? WeightUnits.Pounds : WeightUnits.Kilograms;
+        if (unit == WeightUnits.Unknown)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
         var record = new MainRecordEntity
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
             ExerciseId = exercise.Id,
             Weight = weight,
-            Unit = parsedUnit,
+            Unit = unit,
             Date = new DateTimeOffset(DateTime.SpecifyKind(date, DateTimeKind.Utc))
         };
 
@@ -140,7 +144,7 @@ public sealed class MainRecordsService : IMainRecordsService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    public async Task UpdateMainRecordAsync(Guid userId, string recordId, string exerciseId, double weight, string unit, DateTime date)
+    public async Task UpdateMainRecordAsync(Guid userId, string recordId, string exerciseId, double weight, WeightUnits unit, DateTime date)
     {
         if (userId == Guid.Empty)
         {
@@ -175,10 +179,15 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
+        if (unit == WeightUnits.Unknown)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
         existingRecord.UserId = user.Id;
         existingRecord.ExerciseId = exercise.Id;
         existingRecord.Weight = weight;
-        existingRecord.Unit = unit == "lbs" ? WeightUnits.Pounds : WeightUnits.Kilograms;
+        existingRecord.Unit = unit;
         existingRecord.Date = new DateTimeOffset(DateTime.SpecifyKind(date, DateTimeKind.Utc));
 
         await _mainRecordRepository.UpdateAsync(existingRecord);
@@ -219,4 +228,5 @@ public sealed class MainRecordsService : IMainRecordsService
             Date = record.Date.UtcDateTime
         };
     }
+
 }

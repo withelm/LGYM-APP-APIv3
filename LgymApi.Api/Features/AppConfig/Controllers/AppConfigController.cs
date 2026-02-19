@@ -20,11 +20,11 @@ public sealed class AppConfigController : ControllerBase
     [HttpPost("appConfig/getAppVersion")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AppConfigInfoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetAppVersion([FromBody] Dictionary<string, string> body)
+    public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request)
     {
-        body.TryGetValue("platform", out var platformRaw);
-        var config = await _appConfigService.GetLatestByPlatformAsync(platformRaw ?? string.Empty);
+        var config = await _appConfigService.GetLatestByPlatformAsync(request.Platform);
 
         return Ok(new AppConfigInfoDto
         {

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.IntegrationTests;
@@ -20,7 +21,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "PlanDay Exercise", "Chest");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "PlanDay Exercise", BodyParts.Chest);
         var planId = await CreatePlanViaEndpointAsync(userId, "PlanDay Plan");
 
         var request = new
@@ -52,7 +53,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "PlanDay Exercise 2", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "PlanDay Exercise 2", BodyParts.Back);
         var planId = await CreatePlanViaEndpointAsync(userId, "PlanDay Plan 2");
 
         var request = new
@@ -104,7 +105,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "PlanDay Exercise 4", "Shoulders");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "PlanDay Exercise 4", BodyParts.Shoulders);
 
         var nonExistentPlanId = Guid.NewGuid();
         var request = new
@@ -132,7 +133,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "GetDay Exercise", "Quads");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "GetDay Exercise", BodyParts.Quads);
         var planId = await CreatePlanViaEndpointAsync(userId, "GetDay Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Leg Day", new List<PlanDayExerciseInput>
         {
@@ -162,9 +163,9 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseA = await CreateExerciseViaEndpointAsync(userId, "Order Exercise A", "Quads");
-        var exerciseB = await CreateExerciseViaEndpointAsync(userId, "Order Exercise B", "Back");
-        var exerciseC = await CreateExerciseViaEndpointAsync(userId, "Order Exercise C", "Chest");
+        var exerciseA = await CreateExerciseViaEndpointAsync(userId, "Order Exercise A", BodyParts.Quads);
+        var exerciseB = await CreateExerciseViaEndpointAsync(userId, "Order Exercise B", BodyParts.Back);
+        var exerciseC = await CreateExerciseViaEndpointAsync(userId, "Order Exercise C", BodyParts.Chest);
         var planId = await CreatePlanViaEndpointAsync(userId, "Order Plan");
 
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Order Day", new List<PlanDayExerciseInput>
@@ -213,7 +214,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "GetDays Exercise", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "GetDays Exercise", BodyParts.Back);
         var planId = await CreatePlanViaEndpointAsync(userId, "GetDays Plan");
 
         await CreatePlanDayViaEndpointAsync(userId, planId, "Day A", new List<PlanDayExerciseInput>
@@ -265,8 +266,8 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "UpdateDay Exercise", "Chest");
-        var exerciseId2 = await CreateExerciseViaEndpointAsync(userId, "UpdateDay Exercise 2", "Triceps");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "UpdateDay Exercise", BodyParts.Chest);
+        var exerciseId2 = await CreateExerciseViaEndpointAsync(userId, "UpdateDay Exercise 2", BodyParts.Triceps);
         var planId = await CreatePlanViaEndpointAsync(userId, "UpdateDay Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Original Name", new List<PlanDayExerciseInput>
         {
@@ -305,9 +306,9 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var removedExerciseId = await CreateExerciseViaEndpointAsync(userId, "Removed Exercise", "Chest");
-        var updatedExerciseId = await CreateExerciseViaEndpointAsync(userId, "Updated Exercise", "Back");
-        var addedExerciseId = await CreateExerciseViaEndpointAsync(userId, "Added Exercise", "Quads");
+        var removedExerciseId = await CreateExerciseViaEndpointAsync(userId, "Removed Exercise", BodyParts.Chest);
+        var updatedExerciseId = await CreateExerciseViaEndpointAsync(userId, "Updated Exercise", BodyParts.Back);
+        var addedExerciseId = await CreateExerciseViaEndpointAsync(userId, "Added Exercise", BodyParts.Quads);
 
         var planId = await CreatePlanViaEndpointAsync(userId, "Comprehensive Update Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Initial Day", new List<PlanDayExerciseInput>
@@ -365,9 +366,9 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseA = await CreateExerciseViaEndpointAsync(userId, "Update Order Exercise A", "Back");
-        var exerciseB = await CreateExerciseViaEndpointAsync(userId, "Update Order Exercise B", "Chest");
-        var exerciseC = await CreateExerciseViaEndpointAsync(userId, "Update Order Exercise C", "Quads");
+        var exerciseA = await CreateExerciseViaEndpointAsync(userId, "Update Order Exercise A", BodyParts.Back);
+        var exerciseB = await CreateExerciseViaEndpointAsync(userId, "Update Order Exercise B", BodyParts.Chest);
+        var exerciseC = await CreateExerciseViaEndpointAsync(userId, "Update Order Exercise C", BodyParts.Quads);
 
         var planId = await CreatePlanViaEndpointAsync(userId, "Update Order Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Update Order Day", new List<PlanDayExerciseInput>
@@ -421,7 +422,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "UpdateDay Exercise 3", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "UpdateDay Exercise 3", BodyParts.Back);
         var planId = await CreatePlanViaEndpointAsync(userId, "UpdateDay Plan 2");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Test Day", new List<PlanDayExerciseInput>
         {
@@ -454,7 +455,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "DeleteDay Exercise", "Shoulders");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "DeleteDay Exercise", BodyParts.Shoulders);
         var planId = await CreatePlanViaEndpointAsync(userId, "DeleteDay Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "To Delete", new List<PlanDayExerciseInput>
         {
@@ -502,7 +503,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", user2Token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(user2Id, "DeleteDay Exercise 2", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(user2Id, "DeleteDay Exercise 2", BodyParts.Back);
         var planId = await CreatePlanViaEndpointAsync(user2Id, "DeleteDay Plan 2");
         var planDayId = await CreatePlanDayViaEndpointAsync(user2Id, planId, "Protected Day", new List<PlanDayExerciseInput>
         {
@@ -533,7 +534,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Create Forbidden Exercise", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Create Forbidden Exercise", BodyParts.Back);
         var planId = await CreatePlanViaEndpointAsync(ownerId, "Create Forbidden Plan");
 
         Client.DefaultRequestHeaders.Authorization =
@@ -569,7 +570,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Update Forbidden Exercise", "Chest");
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Update Forbidden Exercise", BodyParts.Chest);
         var planId = await CreatePlanViaEndpointAsync(ownerId, "Update Forbidden Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
         {
@@ -610,7 +611,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Get Forbidden Exercise", "Quads");
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Get Forbidden Exercise", BodyParts.Quads);
         var planId = await CreatePlanViaEndpointAsync(ownerId, "Get Forbidden Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
         {
@@ -641,7 +642,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "GetDays Forbidden Exercise", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "GetDays Forbidden Exercise", BodyParts.Back);
         var planId = await CreatePlanViaEndpointAsync(ownerId, "GetDays Forbidden Plan");
         await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
         {
@@ -672,7 +673,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Types Forbidden Exercise", "Biceps");
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Types Forbidden Exercise", BodyParts.Biceps);
         var planId = await CreatePlanViaEndpointAsync(ownerId, "Types Forbidden Plan");
         await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
         {
@@ -703,7 +704,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Info Forbidden Exercise", "Quads");
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Info Forbidden Exercise", BodyParts.Quads);
         var planId = await CreatePlanViaEndpointAsync(ownerId, "Info Forbidden Plan");
         await CreatePlanDayViaEndpointAsync(ownerId, planId, "Owner Day", new List<PlanDayExerciseInput>
         {
@@ -729,7 +730,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Types Exercise", "Biceps");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Types Exercise", BodyParts.Biceps);
         var planId = await CreatePlanViaEndpointAsync(userId, "Types Plan");
         await CreatePlanDayViaEndpointAsync(userId, planId, "Arms Day", new List<PlanDayExerciseInput>
         {
@@ -773,7 +774,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Info Exercise", "Quads");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Info Exercise", BodyParts.Quads);
         var planId = await CreatePlanViaEndpointAsync(userId, "Info Plan");
         await CreatePlanDayViaEndpointAsync(userId, planId, "Info Day", new List<PlanDayExerciseInput>
         {

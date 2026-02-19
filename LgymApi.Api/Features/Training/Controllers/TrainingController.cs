@@ -36,12 +36,12 @@ public sealed class TrainingController : ControllerBase
         var planDayId = Guid.TryParse(form.TypePlanDayId, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
         var exercises = form.Exercises.Select(exercise => new TrainingExerciseInput
         {
-            ExerciseId = exercise.ExerciseId,
-            Series = exercise.Series,
-            Reps = exercise.Reps,
-            Weight = exercise.Weight,
-            Unit = exercise.Unit
-        }).ToList();
+                ExerciseId = exercise.ExerciseId,
+                Series = exercise.Series,
+                Reps = exercise.Reps,
+                Weight = exercise.Weight,
+                Unit = exercise.Unit
+            }).ToList();
 
         var result = await _trainingService.AddTrainingAsync(userId, gymId, planDayId, form.CreatedAt, exercises);
 

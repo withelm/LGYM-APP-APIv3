@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.AppConfig.Contracts;
 
@@ -23,5 +24,11 @@ public class AppConfigInfoDto
 public class AppConfigInfoWithPlatformDto : AppConfigInfoDto
 {
     [JsonPropertyName("platform")]
-    public string Platform { get; set; } = string.Empty;
+    public Platforms Platform { get; set; }
+}
+
+public sealed class AppConfigVersionRequestDto
+{
+    [JsonPropertyName("platform")]
+    public Platforms Platform { get; set; }
 }
