@@ -1,13 +1,14 @@
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.EloRegistry.Contracts;
 using LgymApi.Api.Features.ExerciseScores.Contracts;
-using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.MainRecords.Contracts;
-using LgymApi.Api.Features.PlanDay.Contracts;
 using LgymApi.Api.Features.Training.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
+using LgymApi.Application.Features.EloRegistry.Models;
+using LgymApi.Application.Features.ExerciseScores.Models;
+using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
@@ -106,28 +107,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
         var trainer = HttpContext.GetCurrentUser();
         var result = await _trainerRelationshipService.GetTraineeTrainingByDateAsync(trainer!, parsedTraineeId, request.CreatedAt);
-        var mapped = result.Select(training => new TrainingByDateDetailsDto
-        {
-            Id = training.Id.ToString(),
-            TypePlanDayId = training.TypePlanDayId.ToString(),
-            CreatedAt = training.CreatedAt,
-            PlanDay = training.PlanDay == null
-                ? new PlanDayChooseDto()
-                : new PlanDayChooseDto
-                {
-                    Id = training.PlanDay.Id.ToString(),
-                    Name = training.PlanDay.Name
-                },
-            Gym = training.Gym,
-            Exercises = training.Exercises.Select(exercise => new EnrichedExerciseDto
-            {
-                ExerciseScoreId = exercise.ExerciseScoreId.ToString(),
-                ExerciseDetails = _mapper.Map<LgymApi.Domain.Entities.Exercise, ExerciseResponseDto>(exercise.ExerciseDetails),
-                ScoresDetails = exercise.ScoresDetails.Select(score => _mapper.Map<LgymApi.Domain.Entities.ExerciseScore, ExerciseScoreResponseDto>(score)).ToList()
-            }).ToList()
-        }).ToList();
-
-        return Ok(mapped);
+        return Ok(_mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result));
     }
 
     [HttpPost("trainees/{traineeId}/exercise-scores/chart")]
@@ -147,16 +127,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
         var trainer = HttpContext.GetCurrentUser();
         var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, parsedTraineeId, parsedExerciseId);
-        var mapped = result.Select(entry => new ExerciseScoresChartDataDto
-        {
-            Id = entry.Id,
-            Value = entry.Value,
-            Date = entry.Date,
-            ExerciseName = entry.ExerciseName,
-            ExerciseId = entry.ExerciseId
-        }).ToList();
-
-        return Ok(mapped);
+        return Ok(_mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result));
     }
 
     [HttpGet("trainees/{traineeId}/elo/chart")]
@@ -171,14 +142,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
         var trainer = HttpContext.GetCurrentUser();
         var result = await _trainerRelationshipService.GetTraineeEloChartAsync(trainer!, parsedTraineeId);
-        var mapped = result.Select(entry => new EloRegistryBaseChartDto
-        {
-            Id = entry.Id,
-            Value = entry.Value,
-            Date = entry.Date
-        }).ToList();
-
-        return Ok(mapped);
+        return Ok(_mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result));
     }
 
     [HttpGet("trainees/{traineeId}/main-records/history")]

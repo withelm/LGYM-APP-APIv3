@@ -1,5 +1,7 @@
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.User.Contracts;
+using LgymApi.Api.Features.EloRegistry.Contracts;
+using LgymApi.Application.Features.EloRegistry.Models;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
@@ -94,6 +96,13 @@ public sealed class TrainerProfile : IMappingProfile
             LinkedAt = source.LinkedAt,
             LastInvitationExpiresAt = source.LastInvitationExpiresAt,
             LastInvitationRespondedAt = source.LastInvitationRespondedAt
+        });
+
+        configuration.CreateMap<EloRegistryChartEntry, EloRegistryBaseChartDto>((source, _) => new EloRegistryBaseChartDto
+        {
+            Id = source.Id,
+            Value = source.Value,
+            Date = source.Date
         });
     }
 }
