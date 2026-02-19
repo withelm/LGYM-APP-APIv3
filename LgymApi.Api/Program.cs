@@ -111,7 +111,8 @@ if (!builder.Environment.IsEnvironment("Testing"))
                 var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                 return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 20,
+                    // Intentional: allow higher burst for auth retries from mobile networks/devices.
+                    PermitLimit = 200,
                     Window = TimeSpan.FromMinutes(15)
                 });
             }
@@ -123,7 +124,8 @@ if (!builder.Environment.IsEnvironment("Testing"))
 
             return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                // Intentional: raise global throughput limit to reduce throttling in normal app usage.
+                PermitLimit = 100,
                 Window = TimeSpan.FromMinutes(1)
             });
         });
