@@ -285,18 +285,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
     public async Task UnlinkTraineeAsync(UserEntity currentTrainer, Guid traineeId)
     {
-        await EnsureTrainerAsync(currentTrainer);
-
-        if (traineeId == Guid.Empty)
-        {
-            throw AppException.BadRequest(Messages.UserIdRequired);
-        }
-
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId);
-        if (link == null)
-        {
-            throw AppException.NotFound(Messages.DidntFind);
-        }
+        var link = await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
 
         await _trainerRelationshipRepository.RemoveLinkAsync(link);
         await _unitOfWork.SaveChangesAsync();
@@ -323,7 +312,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         }
     }
 
-    private async Task EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Guid traineeId)
+    private async Task<TrainerTraineeLink> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Guid traineeId)
     {
         await EnsureTrainerAsync(currentTrainer);
 
@@ -337,6 +326,8 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
+
+        return link;
     }
 
     private async Task<TrainerInvitation> GetInvitationForTraineeAsync(UserEntity currentTrainee, Guid invitationId)
