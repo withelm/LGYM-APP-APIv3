@@ -1,6 +1,8 @@
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Role.Contracts;
 using LgymApi.Application.Features.Role;
+using LgymApi.Application.Features.Role.Models;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +15,12 @@ namespace LgymApi.Api.Features.Role.Controllers;
 public sealed class RoleController : ControllerBase
 {
     private readonly IRoleService _roleService;
+    private readonly IMapper _mapper;
 
-    public RoleController(IRoleService roleService)
+    public RoleController(IRoleService roleService, IMapper mapper)
     {
         _roleService = roleService;
+        _mapper = mapper;
     }
 
     [HttpGet]
@@ -24,7 +28,7 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> GetRoles()
     {
         var roles = await _roleService.GetRolesAsync();
-        return Ok(roles.Select(MapRole).ToList());
+        return Ok(_mapper.MapList<RoleResult, RoleDto>(roles));
     }
 
     [HttpGet("{id}")]
@@ -34,7 +38,7 @@ public sealed class RoleController : ControllerBase
     {
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
         var role = await _roleService.GetRoleAsync(roleId);
-        return Ok(MapRole(role));
+        return Ok(_mapper.Map<RoleResult, RoleDto>(role));
     }
 
     [HttpGet("permission-claims")]
@@ -42,12 +46,7 @@ public sealed class RoleController : ControllerBase
     public IActionResult GetPermissionClaims()
     {
         var claims = _roleService.GetAvailablePermissionClaims();
-        return Ok(claims.Select(c => new PermissionClaimLookupDto
-        {
-            ClaimType = c.ClaimType,
-            ClaimValue = c.ClaimValue,
-            DisplayName = c.DisplayName
-        }).ToList());
+        return Ok(_mapper.MapList<PermissionClaimLookupResult, PermissionClaimLookupDto>(claims));
     }
 
     [HttpPost]
@@ -56,7 +55,7 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> CreateRole([FromBody] UpsertRoleRequest request)
     {
         var role = await _roleService.CreateRoleAsync(request.Name, request.Description, request.PermissionClaims);
-        return Ok(MapRole(role));
+        return Ok(_mapper.Map<RoleResult, RoleDto>(role));
     }
 
     [HttpPost("{id}/update")]
@@ -91,14 +90,4 @@ public sealed class RoleController : ControllerBase
         return Ok(new ResponseMessageDto { Message = Messages.Updated });
     }
 
-    private static RoleDto MapRole(LgymApi.Application.Features.Role.Models.RoleResult role)
-    {
-        return new RoleDto
-        {
-            Id = role.Id.ToString(),
-            Name = role.Name,
-            Description = role.Description,
-            PermissionClaims = role.PermissionClaims
-        };
-    }
 }

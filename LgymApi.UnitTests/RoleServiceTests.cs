@@ -13,13 +13,15 @@ public sealed class RoleServiceTests
     private RoleService _service = null!;
     private InMemoryRoleRepository _roleRepository = null!;
     private InMemoryUserRepository _userRepository = null!;
+    private FakeUnitOfWork _unitOfWork = null!;
 
     [SetUp]
     public void SetUp()
     {
         _roleRepository = new InMemoryRoleRepository();
         _userRepository = new InMemoryUserRepository();
-        _service = new RoleService(_roleRepository, _userRepository);
+        _unitOfWork = new FakeUnitOfWork();
+        _service = new RoleService(_roleRepository, _userRepository, _unitOfWork);
     }
 
     [Test]
@@ -69,6 +71,7 @@ public sealed class RoleServiceTests
             AuthConstants.Permissions.ManageUserRoles
         }));
         Assert.That(_roleRepository.Roles.Any(r => r.Id == result.Id), Is.True);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -114,6 +117,7 @@ public sealed class RoleServiceTests
         Assert.That(updated.Name, Is.EqualTo("Senior Coach"));
         Assert.That(updated.Description, Is.EqualTo("New desc"));
         Assert.That(_roleRepository.RoleClaims[roleId], Is.EqualTo(new[] { AuthConstants.Permissions.ManageGlobalExercises }));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -137,6 +141,7 @@ public sealed class RoleServiceTests
         await _service.DeleteRoleAsync(role.Id);
 
         Assert.That(_roleRepository.Roles.Any(r => r.Id == role.Id), Is.False);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -153,6 +158,7 @@ public sealed class RoleServiceTests
 
         Assert.That(_roleRepository.UserRoleAssignments.TryGetValue(userId, out var roles), Is.True);
         Assert.That(roles!, Is.EquivalentTo(new[] { coach.Id, analyst.Id }));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -383,5 +389,28 @@ public sealed class RoleServiceTests
             UserRoleAssignments[userId] = roleIds.Distinct().ToList();
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FakeUnitOfWork : IUnitOfWork
+    {
+        public int SaveChangesCalls { get; private set; }
+
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            SaveChangesCalls++;
+            return Task.FromResult(1);
+        }
+
+        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IUnitOfWorkTransaction>(new FakeUnitOfWorkTransaction());
+    }
+
+    private sealed class FakeUnitOfWorkTransaction : IUnitOfWorkTransaction
+    {
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task RollbackAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

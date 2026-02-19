@@ -1,8 +1,12 @@
 using System.Reflection;
+using LgymApi.Api;
 using LgymApi.Api.Features.Role.Contracts;
 using LgymApi.Api.Features.Role.Controllers;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Role.Models;
+using LgymApi.Application.Mapping;
+using LgymApi.Application.Mapping.Core;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.UnitTests;
@@ -23,7 +27,7 @@ public sealed class RoleControllerTests
                 PermissionClaims = ["users.roles.manage"]
             })
         };
-        var controller = new RoleController(fakeService);
+        var controller = new RoleController(fakeService, BuildMapper());
 
         var action = await controller.CreateRole(new UpsertRoleRequest
         {
@@ -39,6 +43,14 @@ public sealed class RoleControllerTests
         Assert.That(dto!.Id, Is.EqualTo("11111111-1111-1111-1111-111111111111"));
         Assert.That(dto.Name, Is.EqualTo("Coach"));
         Assert.That(dto.PermissionClaims, Is.EqualTo(new[] { "users.roles.manage" }));
+    }
+
+    private static IMapper BuildMapper()
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+        using var provider = services.BuildServiceProvider();
+        return provider.GetRequiredService<IMapper>();
     }
 
     [Test]

@@ -18,11 +18,13 @@ public sealed class RoleService : IRoleService
 
     private readonly IRoleRepository _roleRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public RoleService(IRoleRepository roleRepository, IUserRepository userRepository)
+    public RoleService(IRoleRepository roleRepository, IUserRepository userRepository, IUnitOfWork unitOfWork)
     {
         _roleRepository = roleRepository;
         _userRepository = userRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<List<RoleResult>> GetRolesAsync()
@@ -73,6 +75,7 @@ public sealed class RoleService : IRoleService
 
         await _roleRepository.AddRoleAsync(role);
         await _roleRepository.ReplaceRolePermissionClaimsAsync(role.Id, normalizedClaims);
+        await _unitOfWork.SaveChangesAsync();
 
         return new RoleResult
         {
@@ -114,6 +117,7 @@ public sealed class RoleService : IRoleService
 
         await _roleRepository.UpdateRoleAsync(role);
         await _roleRepository.ReplaceRolePermissionClaimsAsync(role.Id, normalizedClaims);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task DeleteRoleAsync(Guid roleId)
@@ -135,6 +139,7 @@ public sealed class RoleService : IRoleService
         }
 
         await _roleRepository.DeleteRoleAsync(role);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public List<PermissionClaimLookupResult> GetAvailablePermissionClaims()
@@ -183,6 +188,7 @@ public sealed class RoleService : IRoleService
         }
 
         await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => r.Id).ToList());
+        await _unitOfWork.SaveChangesAsync();
     }
 
     private static RoleResult MapRole(Domain.Entities.Role role, List<string> permissionClaims)

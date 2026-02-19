@@ -1,4 +1,5 @@
 using LgymApi.Application.Features.Plan;
+using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
@@ -100,6 +101,88 @@ public sealed class ServiceCommitBehaviorTests
         var savedElo = await dbContext.EloRegistries.FirstOrDefaultAsync(e => e.UserId == savedUser!.Id);
         Assert.That(savedElo, Is.Not.Null);
         Assert.That(savedElo!.Elo, Is.EqualTo(1000));
+    }
+
+    [Test]
+    public async Task CreateRoleAsync_PersistsRoleAndClaims()
+    {
+        var dbName = $"service-commit-role-create-{Guid.NewGuid()}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+
+        await using var dbContext = new AppDbContext(options);
+
+        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IUserRepository userRepository = new UserRepository(dbContext);
+        IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+
+        var service = new RoleService(roleRepository, userRepository, unitOfWork);
+
+        var created = await service.CreateRoleAsync(
+            "Coach",
+            "Role for coaching",
+            [AuthConstants.Permissions.ManageGlobalExercises, AuthConstants.Permissions.ManageAppConfig]);
+
+        var savedRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == created.Id);
+        Assert.That(savedRole, Is.Not.Null);
+
+        var savedClaims = await dbContext.RoleClaims
+            .Where(rc => rc.RoleId == created.Id)
+            .Select(rc => rc.ClaimValue)
+            .OrderBy(v => v)
+            .ToListAsync();
+
+        Assert.That(savedClaims, Is.EquivalentTo(new[]
+        {
+            AuthConstants.Permissions.ManageAppConfig,
+            AuthConstants.Permissions.ManageGlobalExercises
+        }));
+    }
+
+    [Test]
+    public async Task UpdateUserRolesAsync_PersistsUserRoleAssignments()
+    {
+        var dbName = $"service-commit-role-assign-{Guid.NewGuid()}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+
+        await using var dbContext = new AppDbContext(options);
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = "role-user",
+            Email = "role-user@example.com",
+            ProfileRank = "Junior 1",
+            LegacyHash = "hash",
+            LegacySalt = "salt",
+            LegacyDigest = "sha256",
+            LegacyIterations = 25000,
+            LegacyKeyLength = 512
+        };
+
+        dbContext.Users.Add(user);
+        dbContext.Roles.Add(new Role { Id = Guid.NewGuid(), Name = AuthConstants.Roles.User, Description = "Default" });
+        dbContext.Roles.Add(new Role { Id = Guid.NewGuid(), Name = "Coach", Description = "Custom" });
+        await dbContext.SaveChangesAsync();
+
+        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IUserRepository userRepository = new UserRepository(dbContext);
+        IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+
+        var service = new RoleService(roleRepository, userRepository, unitOfWork);
+
+        await service.UpdateUserRolesAsync(user.Id, [AuthConstants.Roles.User, "Coach"]);
+
+        var assignedRoleNames = await dbContext.UserRoles
+            .Where(ur => ur.UserId == user.Id)
+            .Select(ur => ur.Role.Name)
+            .OrderBy(name => name)
+            .ToListAsync();
+
+        Assert.That(assignedRoleNames, Is.EquivalentTo(new[] { "Coach", AuthConstants.Roles.User }));
     }
 
     private sealed class NoOpTokenService : ITokenService
