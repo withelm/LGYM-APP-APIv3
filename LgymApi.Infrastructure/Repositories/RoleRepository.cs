@@ -25,9 +25,7 @@ public sealed class RoleRepository : IRoleRepository
 
     public Task<Role?> FindByIdAsync(Guid roleId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Roles
-            .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+        return _dbContext.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
     }
 
     public Task<Role?> FindByNameAsync(string roleName, CancellationToken cancellationToken = default)
