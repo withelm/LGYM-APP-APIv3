@@ -683,7 +683,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
                 UserId = foreignTrainee.Id,
                 TypePlanDayId = foreignPlanDay.Id,
                 GymId = foreignGym.Id,
-                CreatedAt = trackedDay
+                CreatedAt = otherDay.AddDays(1)
             };
 
             db.Trainings.AddRange(traineeTrainingA, traineeTrainingB, foreignTraining);
@@ -864,7 +864,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task TraineeReadEndpoints_WhenTraineeBelongsToAnotherTrainer_ReturnNotFound()
+    public async Task TraineeReadEndpoints_WhenTraineeBelongsToAnotherTrainer_ReturnsNotFound()
     {
         var trainerA = await SeedTrainerAsync("trainer-read-owner-a", "trainer-read-owner-a@example.com");
         var trainerB = await SeedTrainerAsync("trainer-read-owner-b", "trainer-read-owner-b@example.com");
@@ -884,7 +884,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task TraineeReadEndpoints_WithInvalidIds_ReturnBadRequestWithResourceMessage()
+    public async Task TraineeReadEndpoints_WithInvalidIds_ReturnsBadRequestWithResourceMessage()
     {
         var trainer = await SeedTrainerAsync("trainer-read-invalid", "trainer-read-invalid@example.com");
         var trainee = await SeedUserAsync(name: "trainee-read-invalid", email: "trainee-read-invalid@example.com", password: "password123");
