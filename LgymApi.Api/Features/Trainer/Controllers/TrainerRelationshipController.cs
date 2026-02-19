@@ -82,6 +82,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpGet("trainees/{traineeId}/trainings/dates")]
     [ProducesResponseType(typeof(List<DateTime>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeTrainingDates([FromRoute] string traineeId)
     {
@@ -97,6 +98,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/trainings/by-date")]
     [ProducesResponseType(typeof(List<TrainingByDateDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeTrainingByDate([FromRoute] string traineeId, [FromBody] TrainingByDateRequestDto request)
     {
@@ -112,6 +114,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/exercise-scores/chart")]
     [ProducesResponseType(typeof(List<ExerciseScoresChartDataDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeExerciseScoresChartData([FromRoute] string traineeId, [FromBody] ExerciseScoresChartRequestDto request)
     {
@@ -132,6 +135,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpGet("trainees/{traineeId}/elo/chart")]
     [ProducesResponseType(typeof(List<EloRegistryBaseChartDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeEloChart([FromRoute] string traineeId)
     {
@@ -147,6 +151,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpGet("trainees/{traineeId}/main-records/history")]
     [ProducesResponseType(typeof(List<MainRecordResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeMainRecordsHistory([FromRoute] string traineeId)
     {
