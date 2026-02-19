@@ -36,6 +36,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.UseInlineDefinitionsForEnums();
+    options.SchemaFilter<EnumAsStringSchemaFilter>();
 });
 builder.Services.AddCors(options =>
 {
