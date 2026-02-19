@@ -159,6 +159,9 @@
   <data name="DashboardPageMustBeGreaterThanZero" xml:space="preserve">
     <value>Numer strony musi być większy niż 0.</value>
   </data>
+  <data name="DashboardPageRange" xml:space="preserve">
+    <value>Numer strony musi mieścić się w zakresie od 1 do 21474837.</value>
+  </data>
   <data name="DashboardPageSizeRange" xml:space="preserve">
     <value>Rozmiar strony musi mieścić się w zakresie od 1 do 100.</value>
   </data>

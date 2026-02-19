@@ -159,6 +159,9 @@
   <data name="DashboardPageMustBeGreaterThanZero" xml:space="preserve">
     <value>Page must be greater than 0.</value>
   </data>
+  <data name="DashboardPageRange" xml:space="preserve">
+    <value>Page must be between 1 and 21474837.</value>
+  </data>
   <data name="DashboardPageSizeRange" xml:space="preserve">
     <value>Page size must be between 1 and 100.</value>
   </data>

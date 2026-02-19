@@ -7,14 +7,15 @@ namespace LgymApi.Api.Features.Trainer.Validation;
 
 public sealed class TrainerDashboardTraineesRequestValidator : AbstractValidator<TrainerDashboardTraineesRequest>
 {
+    private const int MaxPage = 21_474_837;
     private static readonly string[] AllowedSortBy = ["name", "createdAt", "status"];
     private static readonly string[] AllowedSortDirection = ["asc", "desc"];
 
     public TrainerDashboardTraineesRequestValidator()
     {
         RuleFor(x => x.Page)
-            .GreaterThan(0)
-            .WithMessage(Messages.DashboardPageMustBeGreaterThanZero);
+            .InclusiveBetween(1, MaxPage)
+            .WithMessage(Messages.DashboardPageRange);
 
         RuleFor(x => x.PageSize)
             .InclusiveBetween(1, 100)

@@ -117,7 +117,10 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         {
             var search = query.Search.Trim();
             var pattern = $"%{search}%";
-            baseQuery = baseQuery.Where(x => EF.Functions.Like(x.Name, pattern) || EF.Functions.Like(x.Email, pattern));
+            var isNpgsql = _dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+            baseQuery = isNpgsql
+                ? baseQuery.Where(x => EF.Functions.ILike(x.Name, pattern) || EF.Functions.ILike(x.Email, pattern))
+                : baseQuery.Where(x => EF.Functions.Like(x.Name, pattern) || EF.Functions.Like(x.Email, pattern));
         }
 
         if (Enum.TryParse<TrainerDashboardTraineeStatus>(query.Status, true, out var statusFilter))
@@ -193,9 +196,21 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
             _ => baseQuery.OrderBy(x => x.Name)
         };
 
+        var offsetLong = ((long)page - 1L) * pageSize;
+        if (offsetLong < 0)
+        {
+            offsetLong = 0;
+        }
+        else if (offsetLong > int.MaxValue)
+        {
+            offsetLong = int.MaxValue;
+        }
+
+        var offset = (int)offsetLong;
+
         var total = await baseQuery.CountAsync(cancellationToken);
         var items = await baseQuery
-            .Skip((page - 1) * pageSize)
+            .Skip(offset)
             .Take(pageSize)
             .Select(x => new TrainerDashboardTraineeResult
             {

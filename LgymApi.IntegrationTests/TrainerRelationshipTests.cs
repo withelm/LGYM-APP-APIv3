@@ -434,6 +434,50 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetDashboardTrainees_SearchByName_IsCaseInsensitive()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-search-case", "trainer-dashboard-search-case@example.com");
+        var matching = await SeedUserAsync(name: "Omega Case", email: "person-one@example.com", password: "password123");
+        var nonMatching = await SeedUserAsync(name: "Delta Other", email: "person-two@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            db.TrainerInvitations.AddRange(
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = matching.Id,
+                    Code = "SEARCHCASE001",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
+                },
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = nonMatching.Id,
+                    Code = "SEARCHCASE002",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
+                });
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        var response = await Client.GetAsync("/api/trainer/trainees?search=omega");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+        body.Should().NotBeNull();
+        body!.Total.Should().Be(1);
+        body.Items.Should().ContainSingle(x => x.Id == matching.Id.ToString());
+    }
+
+    [Test]
     public async Task GetDashboardTrainees_WithInvalidSortBy_ReturnsBadRequestWithResourceMessage()
     {
         var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-sort", "trainer-dashboard-invalid-sort@example.com");
@@ -499,7 +543,32 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            responseBody.Should().Contain(Messages.DashboardPageMustBeGreaterThanZero);
+            responseBody.Should().Contain(Messages.DashboardPageRange);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_WithTooLargePage_ReturnsBadRequestWithResourceMessage()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-page-max", "trainer-dashboard-invalid-page-max@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync("/api/trainer/trainees?page=21474838");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            responseBody.Should().Contain(Messages.DashboardPageRange);
         }
         finally
         {
