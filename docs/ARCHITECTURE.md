@@ -119,7 +119,29 @@ Recommended validation path for new modules:
 - Keep transaction ownership in services, not repositories.
 - Keep controllers thin: parse inputs, call service, map outputs.
 
-## 9. Quick Module Skeleton (Minimal)
+## 9. DTO Enum and Localization Rules (API Contract)
+
+These rules are required for new API modules and for updates to existing endpoints.
+
+- **Enum fields in DTOs**: if a response DTO contains an enum concept, expose it as the enum type in DTO (for example `TrainerDashboardTraineeStatus Status`) instead of manual string/int shadow fields.
+- **No duplicate enum fields**: avoid parallel properties like `status` + `statusEnum` unless explicitly required by an approved backward-compatibility requirement.
+- **Serialization behavior**: keep enum serialization aligned with global JSON settings in `Program.cs` (`JsonStringEnumConverter`) so API responses use enum names.
+- **Mapping rule**: map enum-to-enum in mapping profiles; do not force `ToString()` in profile mapping unless contract explicitly expects raw string.
+- **Validation/user messages**: do not hardcode user-facing validator messages. Always use strongly typed `LgymApi.Resources.Messages` entries.
+- **Resource updates**: when adding a new validation/error message, add keys in both `LgymApi.Resources/Resources/Messages.resx` and `LgymApi.Resources/Resources/Messages.pl.resx`.
+- **Tests for messages**: integration tests for invalid inputs should assert localized resource-driven messages (not hardcoded text literals).
+
+### Enum Evolution Safety (Do/Do Not)
+
+When changing existing enums, treat them as part of a persisted and externally consumed contract.
+
+- **Reordering is forbidden**: do not change the declaration order of existing enum members.
+- **Renumbering is forbidden**: do not change explicit numeric values of existing members.
+- **Editing requires client impact review**: any enum value rename or semantic change requires coordinated app update planning (mobile/web/API consumers).
+- **Prefer deprecation over deletion**: do not remove enum members in normal flow; mark them with `[Obsolete]` first and keep compatibility until a planned removal window.
+- **If removal is unavoidable**: document migration steps, update all mappings/validators/tests, and communicate a breaking change before merge.
+
+## 10. Quick Module Skeleton (Minimal)
 
 For module `FeatureX`, add:
 
