@@ -25,7 +25,6 @@ public class AppConfigInfoWithPlatformDto : AppConfigInfoDto
 {
     [JsonPropertyName("platform")]
     [JsonRequired]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public Platforms Platform { get; set; }
 }
 
@@ -33,6 +32,5 @@ public sealed class AppConfigPlatformRequestDto
 {
     [JsonPropertyName("platform")]
     [JsonRequired]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public Platforms Platform { get; set; }
 }

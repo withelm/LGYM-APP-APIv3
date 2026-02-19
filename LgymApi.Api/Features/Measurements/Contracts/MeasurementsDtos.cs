@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Enum.Contracts;
-using LgymApi.Api.Serialization;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.Measurements.Contracts;
@@ -12,12 +11,10 @@ public sealed class MeasurementFormDto
 
     [JsonPropertyName("bodyPart")]
     [JsonRequired]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public BodyParts BodyPart { get; set; }
 
     [JsonPropertyName("unit")]
     [JsonRequired]
-    [JsonConverter(typeof(HeightUnitsJsonConverter))]
     public HeightUnits Unit { get; set; }
 
     [JsonPropertyName("value")]
@@ -54,7 +51,6 @@ public sealed class MeasurementResponseDto
 public sealed class MeasurementsHistoryRequestDto
 {
     [JsonPropertyName("bodyPart")]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public BodyParts? BodyPart { get; set; }
 }
 

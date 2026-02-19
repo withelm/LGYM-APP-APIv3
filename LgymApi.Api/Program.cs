@@ -11,13 +11,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
-using Microsoft.OpenApi;
 using LgymApi.Api.Middleware;
-using LgymApi.Domain.Enums;
+using LgymApi.Api.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +26,7 @@ builder.Services
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new StringEnumJsonConverterFactory());
     });
 
 builder.Services.AddFluentValidationAutoValidation();
@@ -38,26 +36,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.UseInlineDefinitionsForEnums();
-    options.MapType<Platforms>(() => new OpenApiSchema
-    {
-        Type = JsonSchemaType.String,
-        Enum = Enum.GetNames<Platforms>().Select(x => (JsonNode?)JsonValue.Create(x)).ToList()
-    });
-    options.MapType<BodyParts>(() => new OpenApiSchema
-    {
-        Type = JsonSchemaType.String,
-        Enum = Enum.GetNames<BodyParts>().Select(x => (JsonNode?)JsonValue.Create(x)).ToList()
-    });
-    options.MapType<WeightUnits>(() => new OpenApiSchema
-    {
-        Type = JsonSchemaType.String,
-        Enum = Enum.GetNames<WeightUnits>().Select(x => (JsonNode?)JsonValue.Create(x)).ToList()
-    });
-    options.MapType<HeightUnits>(() => new OpenApiSchema
-    {
-        Type = JsonSchemaType.String,
-        Enum = Enum.GetNames<HeightUnits>().Select(x => (JsonNode?)JsonValue.Create(x)).ToList()
-    });
+    options.SchemaFilter<EnumAsStringSchemaFilter>();
 });
 builder.Services.AddCors(options =>
 {

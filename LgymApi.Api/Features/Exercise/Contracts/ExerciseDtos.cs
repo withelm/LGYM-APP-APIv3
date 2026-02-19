@@ -17,7 +17,6 @@ public sealed class ExerciseFormDto
 
     [JsonPropertyName("bodyPart")]
     [JsonRequired]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public BodyParts BodyPart { get; set; }
 
     [JsonPropertyName("description")]
@@ -130,7 +129,6 @@ public sealed class ExerciseByBodyPartRequestDto
 {
     [JsonPropertyName("bodyPart")]
     [JsonRequired]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public BodyParts BodyPart { get; set; }
 }
 
