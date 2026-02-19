@@ -383,6 +383,57 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetDashboardTrainees_SortByStatus_OrdersByComputedRelationshipStatus()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-sort-status", "trainer-dashboard-sort-status@example.com");
+        var linked = await SeedUserAsync(name: "Zulu Linked", email: "zulu-linked@example.com", password: "password123");
+        var pending = await SeedUserAsync(name: "Alpha Pending", email: "alpha-pending@example.com", password: "password123");
+        var expired = await SeedUserAsync(name: "Mike Expired", email: "mike-expired@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+            {
+                Id = Guid.NewGuid(),
+                TrainerId = trainer.Id,
+                TraineeId = linked.Id
+            });
+
+            db.TrainerInvitations.AddRange(
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = pending.Id,
+                    Code = "STATUSSORTPEND",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
+                },
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = expired.Id,
+                    Code = "STATUSSORTEXP",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-10)
+                });
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        var response = await Client.GetAsync("/api/trainer/trainees?sortBy=status&sortDirection=asc&page=1&pageSize=10");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+        body.Should().NotBeNull();
+        body!.Items.Select(x => x.Name).Should().Equal("Zulu Linked", "Alpha Pending", "Mike Expired");
+    }
+
+    [Test]
     public async Task GetDashboardTrainees_WithInvalidSortBy_ReturnsBadRequestWithResourceMessage()
     {
         var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-sort", "trainer-dashboard-invalid-sort@example.com");
