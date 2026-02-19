@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Application.Features.TrainerRelationships.Models;
 
 namespace LgymApi.Application.Repositories;
 
@@ -11,6 +12,7 @@ public interface ITrainerRelationshipRepository
     Task<bool> HasActiveLinkForTraineeAsync(Guid traineeId, CancellationToken cancellationToken = default);
     Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default);
     Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default);
+    Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Guid trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default);
     Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default);
     Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default);
 }

@@ -1,12 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Globalization;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Resources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -216,6 +218,418 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetDashboardTrainees_AppliesOwnershipIsolation()
+    {
+        var trainerA = await SeedTrainerAsync("trainer-dashboard-a", "trainer-dashboard-a@example.com");
+        var trainerB = await SeedTrainerAsync("trainer-dashboard-b", "trainer-dashboard-b@example.com");
+        var traineeLinkedToA = await SeedUserAsync(name: "trainee-owned-link", email: "trainee-owned-link@example.com", password: "password123");
+        var traineeInvitedByA = await SeedUserAsync(name: "trainee-owned-invite", email: "trainee-owned-invite@example.com", password: "password123");
+        var traineeLinkedToB = await SeedUserAsync(name: "trainee-foreign", email: "trainee-foreign@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.TrainerTraineeLinks.AddRange(
+                new TrainerTraineeLink
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainerA.Id,
+                    TraineeId = traineeLinkedToA.Id
+                },
+                new TrainerTraineeLink
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainerB.Id,
+                    TraineeId = traineeLinkedToB.Id
+                });
+
+            db.TrainerInvitations.Add(new TrainerInvitation
+            {
+                Id = Guid.NewGuid(),
+                TrainerId = trainerA.Id,
+                TraineeId = traineeInvitedByA.Id,
+                Code = "OWNERSHIPA001",
+                Status = TrainerInvitationStatus.Pending,
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(3)
+            });
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainerA.Id);
+        var response = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+        body.Should().NotBeNull();
+        body!.Total.Should().Be(2);
+        body.Items.Select(x => x.Id).Should().BeEquivalentTo(new[]
+        {
+            traineeLinkedToA.Id.ToString(),
+            traineeInvitedByA.Id.ToString()
+        });
+        body.Items.Should().NotContain(x => x.Id == traineeLinkedToB.Id.ToString());
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_AppliesSearchFilterSortAndStatusFlags()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-filter", "trainer-dashboard-filter@example.com");
+        var linked = await SeedUserAsync(name: "Alpha Linked", email: "alpha-linked@example.com", password: "password123");
+        var pending = await SeedUserAsync(name: "Beta Pending", email: "beta-pending@example.com", password: "password123");
+        var expired = await SeedUserAsync(name: "Gamma Expired", email: "gamma-expired@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+            {
+                Id = Guid.NewGuid(),
+                TrainerId = trainer.Id,
+                TraineeId = linked.Id
+            });
+
+            db.TrainerInvitations.AddRange(
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = pending.Id,
+                    Code = "STATUSPENDING1",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
+                },
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = expired.Id,
+                    Code = "STATUSEXPIRED1",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-10)
+                });
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+
+        var filtered = await Client.GetAsync("/api/trainer/trainees?search=gamma&status=InvitationExpired&sortBy=name&sortDirection=desc&page=1&pageSize=10");
+        filtered.StatusCode.Should().Be(HttpStatusCode.OK);
+        var filteredBody = await filtered.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+
+        filteredBody.Should().NotBeNull();
+        filteredBody!.Total.Should().Be(1);
+        filteredBody.Items.Should().ContainSingle();
+        filteredBody.Items[0].Id.Should().Be(expired.Id.ToString());
+        filteredBody.Items[0].Status.Should().Be("InvitationExpired");
+        filteredBody.Items[0].HasExpiredInvitation.Should().BeTrue();
+        filteredBody.Items[0].HasPendingInvitation.Should().BeFalse();
+        filteredBody.Items[0].IsLinked.Should().BeFalse();
+
+        var full = await Client.GetAsync("/api/trainer/trainees?sortBy=name&sortDirection=asc&page=1&pageSize=10");
+        full.StatusCode.Should().Be(HttpStatusCode.OK);
+        var fullBody = await full.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+        fullBody.Should().NotBeNull();
+        fullBody!.Items.Select(x => x.Name).Should().Equal("Alpha Linked", "Beta Pending", "Gamma Expired");
+
+        var linkedItem = fullBody.Items.Single(x => x.Id == linked.Id.ToString());
+        linkedItem.Status.Should().Be("Linked");
+        linkedItem.IsLinked.Should().BeTrue();
+
+        var pendingItem = fullBody.Items.Single(x => x.Id == pending.Id.ToString());
+        pendingItem.Status.Should().Be("InvitationPending");
+        pendingItem.HasPendingInvitation.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_AppliesPagination_ForLargeResultSet()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-pagination", "trainer-dashboard-pagination@example.com");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            for (var i = 0; i < 35; i++)
+            {
+                var trainee = await SeedUserAsync(name: $"trainee-{i:00}", email: $"trainee-{i:00}@example.com", password: "password123");
+                db.TrainerInvitations.Add(new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = trainee.Id,
+                    Code = $"PAGE{i:000}CODE",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+                });
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        var response = await Client.GetAsync("/api/trainer/trainees?sortBy=name&sortDirection=asc&page=2&pageSize=10");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+        body.Should().NotBeNull();
+        body!.Total.Should().Be(35);
+        body.Page.Should().Be(2);
+        body.PageSize.Should().Be(10);
+        body.Items.Count.Should().Be(10);
+        body.Items.First().Name.Should().Be("trainee-10");
+        body.Items.Last().Name.Should().Be("trainee-19");
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_SortByStatus_OrdersByComputedRelationshipStatus()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-sort-status", "trainer-dashboard-sort-status@example.com");
+        var linked = await SeedUserAsync(name: "Zulu Linked", email: "zulu-linked@example.com", password: "password123");
+        var pending = await SeedUserAsync(name: "Alpha Pending", email: "alpha-pending@example.com", password: "password123");
+        var expired = await SeedUserAsync(name: "Mike Expired", email: "mike-expired@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+            {
+                Id = Guid.NewGuid(),
+                TrainerId = trainer.Id,
+                TraineeId = linked.Id
+            });
+
+            db.TrainerInvitations.AddRange(
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = pending.Id,
+                    Code = "STATUSSORTPEND",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
+                },
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = expired.Id,
+                    Code = "STATUSSORTEXP",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-10)
+                });
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        var response = await Client.GetAsync("/api/trainer/trainees?sortBy=status&sortDirection=asc&page=1&pageSize=10");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+        body.Should().NotBeNull();
+        body!.Items.Select(x => x.Name).Should().Equal("Zulu Linked", "Alpha Pending", "Mike Expired");
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_SearchByName_IsCaseInsensitive()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-search-case", "trainer-dashboard-search-case@example.com");
+        var matching = await SeedUserAsync(name: "Omega Case", email: "person-one@example.com", password: "password123");
+        var nonMatching = await SeedUserAsync(name: "Delta Other", email: "person-two@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            db.TrainerInvitations.AddRange(
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = matching.Id,
+                    Code = "SEARCHCASE001",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
+                },
+                new TrainerInvitation
+                {
+                    Id = Guid.NewGuid(),
+                    TrainerId = trainer.Id,
+                    TraineeId = nonMatching.Id,
+                    Code = "SEARCHCASE002",
+                    Status = TrainerInvitationStatus.Pending,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
+                });
+
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        var response = await Client.GetAsync("/api/trainer/trainees?search=omega");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+        body.Should().NotBeNull();
+        body!.Total.Should().Be(1);
+        body.Items.Should().ContainSingle(x => x.Id == matching.Id.ToString());
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_WithInvalidSortBy_ReturnsBadRequestWithResourceMessage()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-sort", "trainer-dashboard-invalid-sort@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync("/api/trainer/trainees?sortBy=unknown");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            responseBody.Should().Contain(Messages.DashboardSortByInvalid);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_WithInvalidStatus_ReturnsBadRequestWithResourceMessage()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-status", "trainer-dashboard-invalid-status@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync("/api/trainer/trainees?status=NotAStatus");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            responseBody.Should().Contain(Messages.DashboardStatusInvalid);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_WithInvalidPage_ReturnsBadRequestWithResourceMessage()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-page", "trainer-dashboard-invalid-page@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync("/api/trainer/trainees?page=0");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            responseBody.Should().Contain(Messages.DashboardPageRange);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_WithTooLargePage_ReturnsBadRequestWithResourceMessage()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-page-max", "trainer-dashboard-invalid-page-max@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync("/api/trainer/trainees?page=21474838");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            responseBody.Should().Contain(Messages.DashboardPageRange);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [TestCase(0)]
+    [TestCase(-1)]
+    [TestCase(101)]
+    public async Task GetDashboardTrainees_WithInvalidPageSize_ReturnsBadRequestWithResourceMessage(int pageSize)
+    {
+        var trainer = await SeedTrainerAsync($"trainer-dashboard-invalid-pagesize-{pageSize}", $"trainer-dashboard-invalid-pagesize-{Guid.NewGuid():N}@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync($"/api/trainer/trainees?pageSize={pageSize}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            responseBody.Should().Contain(Messages.DashboardPageSizeRange);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_WithInvalidSortDirection_ReturnsBadRequestWithResourceMessage()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-sortdir", "trainer-dashboard-invalid-sortdir@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync("/api/trainer/trainees?sortDirection=invalid");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            responseBody.Should().Contain(Messages.DashboardSortDirectionInvalid);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Test]
     public async Task AcceptInvitation_AsTrainee_CreatesLink()
     {
         var trainer = await SeedTrainerAsync("trainer-accept", "trainer-accept@example.com");
@@ -409,6 +823,43 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
+
+    }
+
+    private sealed class TrainerDashboardTraineesResponse
+    {
+        [JsonPropertyName("page")]
+        public int Page { get; set; }
+
+        [JsonPropertyName("pageSize")]
+        public int PageSize { get; set; }
+
+        [JsonPropertyName("total")]
+        public int Total { get; set; }
+
+        [JsonPropertyName("items")]
+        public List<TrainerDashboardTraineeResponse> Items { get; set; } = [];
+    }
+
+    private sealed class TrainerDashboardTraineeResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = string.Empty;
+
+        [JsonPropertyName("isLinked")]
+        public bool IsLinked { get; set; }
+
+        [JsonPropertyName("hasPendingInvitation")]
+        public bool HasPendingInvitation { get; set; }
+
+        [JsonPropertyName("hasExpiredInvitation")]
+        public bool HasExpiredInvitation { get; set; }
     }
 
     private sealed class MessageResponse

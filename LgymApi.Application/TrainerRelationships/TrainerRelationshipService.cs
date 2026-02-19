@@ -156,6 +156,13 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return invitations.Select(MapInvitation).ToList();
     }
 
+    public async Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(UserEntity currentTrainer, TrainerDashboardTraineeQuery query)
+    {
+        await EnsureTrainerAsync(currentTrainer);
+
+        return await _trainerRelationshipRepository.GetDashboardTraineesAsync(currentTrainer.Id, query);
+    }
+
     public async Task AcceptInvitationAsync(UserEntity currentTrainee, Guid invitationId)
     {
         if (invitationId == Guid.Empty)
