@@ -20,6 +20,7 @@ public sealed class AppConfigController : ControllerBase
     [HttpPost("appConfig/getAppVersion")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AppConfigInfoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request)
     {

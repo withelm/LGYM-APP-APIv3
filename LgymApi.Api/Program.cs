@@ -111,7 +111,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
                 var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                 return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 200,
+                    PermitLimit = 20,
                     Window = TimeSpan.FromMinutes(15)
                 });
             }
@@ -123,7 +123,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 
             return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 100,
+                PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1)
             });
         });

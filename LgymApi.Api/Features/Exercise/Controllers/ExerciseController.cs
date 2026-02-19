@@ -133,6 +133,7 @@ public sealed class ExerciseController : ControllerBase
 
     [HttpPost("exercise/{id}/getExerciseByBodyPart")]
     [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetExerciseByBodyPart([FromRoute] string id, [FromBody] ExerciseByBodyPartRequestDto request)
     {
