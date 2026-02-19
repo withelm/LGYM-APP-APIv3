@@ -3,6 +3,7 @@ using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.TrainerRelationships;
+using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
@@ -46,6 +47,30 @@ public sealed class TrainerRelationshipController : ControllerBase
         var trainer = HttpContext.GetCurrentUser();
         var invitations = await _trainerRelationshipService.GetTrainerInvitationsAsync(trainer!);
         return Ok(_mapper.MapList<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(invitations));
+    }
+
+    [HttpGet("trainees")]
+    [ProducesResponseType(typeof(TrainerDashboardTraineesResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDashboardTrainees([FromQuery] TrainerDashboardTraineesRequest request)
+    {
+        var trainer = HttpContext.GetCurrentUser();
+        var result = await _trainerRelationshipService.GetDashboardTraineesAsync(trainer!, new TrainerDashboardTraineeQuery
+        {
+            Search = request.Search,
+            Status = request.Status,
+            SortBy = request.SortBy,
+            SortDirection = request.SortDirection,
+            Page = request.Page,
+            PageSize = request.PageSize
+        });
+
+        return Ok(new TrainerDashboardTraineesResponse
+        {
+            Page = result.Page,
+            PageSize = result.PageSize,
+            Total = result.Total,
+            Items = _mapper.MapList<TrainerDashboardTraineeResult, TrainerDashboardTraineeDto>(result.Items)
+        });
     }
 
     [HttpPost("trainees/{traineeId}/unlink")]

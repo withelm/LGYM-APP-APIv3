@@ -156,4 +156,19 @@
   <data name="InvitationExpired" xml:space="preserve">
     <value>Zaproszenie wygasło.</value>
   </data>
+  <data name="DashboardPageMustBeGreaterThanZero" xml:space="preserve">
+    <value>Numer strony musi być większy niż 0.</value>
+  </data>
+  <data name="DashboardPageSizeRange" xml:space="preserve">
+    <value>Rozmiar strony musi mieścić się w zakresie od 1 do 100.</value>
+  </data>
+  <data name="DashboardSortByInvalid" xml:space="preserve">
+    <value>Nieprawidłowa wartość sortBy. Dozwolone: name, createdAt, status.</value>
+  </data>
+  <data name="DashboardSortDirectionInvalid" xml:space="preserve">
+    <value>Nieprawidłowa wartość sortDirection. Dozwolone: asc, desc.</value>
+  </data>
+  <data name="DashboardStatusInvalid" xml:space="preserve">
+    <value>Nieprawidłowa wartość status.</value>
+  </data>
 </root>

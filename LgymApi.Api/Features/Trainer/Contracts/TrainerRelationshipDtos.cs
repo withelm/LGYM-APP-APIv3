@@ -34,3 +34,75 @@ public sealed class TrainerInvitationDto
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+public sealed class TrainerDashboardTraineesRequest
+{
+    [JsonPropertyName("search")]
+    public string? Search { get; set; }
+
+    [JsonPropertyName("status")]
+    public string? Status { get; set; }
+
+    [JsonPropertyName("sortBy")]
+    public string? SortBy { get; set; }
+
+    [JsonPropertyName("sortDirection")]
+    public string? SortDirection { get; set; }
+
+    [JsonPropertyName("page")]
+    public int Page { get; set; } = 1;
+
+    [JsonPropertyName("pageSize")]
+    public int PageSize { get; set; } = 20;
+}
+
+public sealed class TrainerDashboardTraineeDto
+{
+    [JsonPropertyName("_id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("email")]
+    public string Email { get; set; } = string.Empty;
+
+    [JsonPropertyName("avatar")]
+    public string? Avatar { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [JsonPropertyName("isLinked")]
+    public bool IsLinked { get; set; }
+
+    [JsonPropertyName("hasPendingInvitation")]
+    public bool HasPendingInvitation { get; set; }
+
+    [JsonPropertyName("hasExpiredInvitation")]
+    public bool HasExpiredInvitation { get; set; }
+
+    [JsonPropertyName("linkedAt")]
+    public DateTimeOffset? LinkedAt { get; set; }
+
+    [JsonPropertyName("lastInvitationExpiresAt")]
+    public DateTimeOffset? LastInvitationExpiresAt { get; set; }
+
+    [JsonPropertyName("lastInvitationRespondedAt")]
+    public DateTimeOffset? LastInvitationRespondedAt { get; set; }
+}
+
+public sealed class TrainerDashboardTraineesResponse
+{
+    [JsonPropertyName("page")]
+    public int Page { get; set; }
+
+    [JsonPropertyName("pageSize")]
+    public int PageSize { get; set; }
+
+    [JsonPropertyName("total")]
+    public int Total { get; set; }
+
+    [JsonPropertyName("items")]
+    public List<TrainerDashboardTraineeDto> Items { get; set; } = [];
+}

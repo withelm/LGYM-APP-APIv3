@@ -80,5 +80,20 @@ public sealed class TrainerProfile : IMappingProfile
             RespondedAt = source.RespondedAt,
             CreatedAt = source.CreatedAt
         });
+
+        configuration.CreateMap<TrainerDashboardTraineeResult, TrainerDashboardTraineeDto>((source, _) => new TrainerDashboardTraineeDto
+        {
+            Id = source.Id.ToString(),
+            Name = source.Name,
+            Email = source.Email,
+            Avatar = source.Avatar,
+            Status = source.Status.ToString(),
+            IsLinked = source.IsLinked,
+            HasPendingInvitation = source.HasPendingInvitation,
+            HasExpiredInvitation = source.HasExpiredInvitation,
+            LinkedAt = source.LinkedAt,
+            LastInvitationExpiresAt = source.LastInvitationExpiresAt,
+            LastInvitationRespondedAt = source.LastInvitationRespondedAt
+        });
     }
 }
