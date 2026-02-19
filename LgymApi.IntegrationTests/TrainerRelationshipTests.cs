@@ -336,7 +336,6 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         var linkedItem = fullBody.Items.Single(x => x.Id == linked.Id.ToString());
         linkedItem.Status.Should().Be("Linked");
-        linkedItem.StatusEnum.Should().Be(0);
         linkedItem.IsLinked.Should().BeTrue();
 
         var pendingItem = fullBody.Items.Single(x => x.Id == pending.Id.ToString());
@@ -732,9 +731,6 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
-
-        [JsonPropertyName("statusEnum")]
-        public int StatusEnum { get; set; }
 
         [JsonPropertyName("isLinked")]
         public bool IsLinked { get; set; }

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LgymApi.Application.Features.TrainerRelationships.Models;
 
 namespace LgymApi.Api.Features.Trainer.Contracts;
 
@@ -71,10 +72,7 @@ public sealed class TrainerDashboardTraineeDto
     public string? Avatar { get; set; }
 
     [JsonPropertyName("status")]
-    public string Status { get; set; } = string.Empty;
-
-    [JsonPropertyName("statusEnum")]
-    public int StatusEnum { get; set; }
+    public TrainerDashboardTraineeStatus Status { get; set; }
 
     [JsonPropertyName("isLinked")]
     public bool IsLinked { get; set; }
