@@ -110,54 +110,40 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
                     .OrderByDescending(i => i.CreatedAt)
                     .ThenByDescending(i => i.Id)
                     .Select(i => i.RespondedAt)
-                    .FirstOrDefault(),
-                IsLinked = trainerLinks.Any(l => l.TraineeId == user.Id)
+                    .FirstOrDefault()
             };
-
-        baseQuery = baseQuery
-            .Select(x => new DashboardTraineeProjection
-            {
-                Id = x.Id,
-                Name = x.Name,
-                Email = x.Email,
-                Avatar = x.Avatar,
-                CreatedAt = x.CreatedAt,
-                LinkedAt = x.LinkedAt,
-                LastInvitationStatus = x.LastInvitationStatus,
-                LastInvitationExpiresAt = x.LastInvitationExpiresAt,
-                LastInvitationRespondedAt = x.LastInvitationRespondedAt,
-                IsLinked = x.IsLinked,
-                HasPendingInvitation = !x.IsLinked
-                    && x.LastInvitationStatus == TrainerInvitationStatus.Pending
-                    && x.LastInvitationExpiresAt > now,
-                HasExpiredInvitation = !x.IsLinked
-                    && (x.LastInvitationStatus == TrainerInvitationStatus.Expired
-                        || (x.LastInvitationStatus == TrainerInvitationStatus.Pending && x.LastInvitationExpiresAt <= now)),
-                Status = x.IsLinked
-                    ? TrainerDashboardTraineeStatus.Linked
-                    : x.LastInvitationStatus == null
-                        ? TrainerDashboardTraineeStatus.NoRelationship
-                        : x.LastInvitationStatus == TrainerInvitationStatus.Accepted
-                            ? TrainerDashboardTraineeStatus.InvitationAccepted
-                            : x.LastInvitationStatus == TrainerInvitationStatus.Rejected
-                                ? TrainerDashboardTraineeStatus.InvitationRejected
-                                : x.LastInvitationStatus == TrainerInvitationStatus.Expired
-                                    || (x.LastInvitationStatus == TrainerInvitationStatus.Pending && x.LastInvitationExpiresAt <= now)
-                                        ? TrainerDashboardTraineeStatus.InvitationExpired
-                                        : x.LastInvitationStatus == TrainerInvitationStatus.Pending
-                                            ? TrainerDashboardTraineeStatus.InvitationPending
-                                            : TrainerDashboardTraineeStatus.NoRelationship
-            });
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            var search = query.Search.Trim().ToLowerInvariant();
-            baseQuery = baseQuery.Where(x => x.Name.ToLower().Contains(search) || x.Email.ToLower().Contains(search));
+            var search = query.Search.Trim();
+            var pattern = $"%{search}%";
+            baseQuery = baseQuery.Where(x => EF.Functions.Like(x.Name, pattern) || EF.Functions.Like(x.Email, pattern));
         }
 
         if (Enum.TryParse<TrainerDashboardTraineeStatus>(query.Status, true, out var statusFilter))
         {
-            baseQuery = baseQuery.Where(x => x.Status == statusFilter);
+            baseQuery = statusFilter switch
+            {
+                TrainerDashboardTraineeStatus.Linked => baseQuery.Where(x => x.LinkedAt != null),
+                TrainerDashboardTraineeStatus.InvitationPending => baseQuery.Where(x =>
+                    x.LinkedAt == null
+                    && x.LastInvitationStatus == TrainerInvitationStatus.Pending
+                    && x.LastInvitationExpiresAt > now),
+                TrainerDashboardTraineeStatus.InvitationExpired => baseQuery.Where(x =>
+                    x.LinkedAt == null
+                    && (x.LastInvitationStatus == TrainerInvitationStatus.Expired
+                        || (x.LastInvitationStatus == TrainerInvitationStatus.Pending && x.LastInvitationExpiresAt <= now))),
+                TrainerDashboardTraineeStatus.InvitationRejected => baseQuery.Where(x =>
+                    x.LinkedAt == null
+                    && x.LastInvitationStatus == TrainerInvitationStatus.Rejected),
+                TrainerDashboardTraineeStatus.InvitationAccepted => baseQuery.Where(x =>
+                    x.LinkedAt == null
+                    && x.LastInvitationStatus == TrainerInvitationStatus.Accepted),
+                TrainerDashboardTraineeStatus.NoRelationship => baseQuery.Where(x =>
+                    x.LinkedAt == null
+                    && x.LastInvitationStatus == null),
+                _ => baseQuery
+            };
         }
 
         var sortBy = query.SortBy?.Trim().ToLowerInvariant();
@@ -167,8 +153,12 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         {
             ("createdat", true) => baseQuery.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Name),
             ("createdat", false) => baseQuery.OrderBy(x => x.CreatedAt).ThenBy(x => x.Name),
-            ("status", true) => baseQuery.OrderByDescending(x => x.Status).ThenBy(x => x.Name),
-            ("status", false) => baseQuery.OrderBy(x => x.Status).ThenBy(x => x.Name),
+            ("status", true) => baseQuery
+                .OrderByDescending(x => GetStatusSortOrder(x, now))
+                .ThenBy(x => x.Name),
+            ("status", false) => baseQuery
+                .OrderBy(x => GetStatusSortOrder(x, now))
+                .ThenBy(x => x.Name),
             (_, true) => baseQuery.OrderByDescending(x => x.Name),
             _ => baseQuery.OrderBy(x => x.Name)
         };
@@ -183,10 +173,14 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
                 Name = x.Name,
                 Email = x.Email,
                 Avatar = x.Avatar,
-                Status = x.Status,
-                IsLinked = x.IsLinked,
-                HasPendingInvitation = x.HasPendingInvitation,
-                HasExpiredInvitation = x.HasExpiredInvitation,
+                Status = GetStatus(x, now),
+                IsLinked = x.LinkedAt != null,
+                HasPendingInvitation = x.LinkedAt == null
+                    && x.LastInvitationStatus == TrainerInvitationStatus.Pending
+                    && x.LastInvitationExpiresAt > now,
+                HasExpiredInvitation = x.LinkedAt == null
+                    && (x.LastInvitationStatus == TrainerInvitationStatus.Expired
+                        || (x.LastInvitationStatus == TrainerInvitationStatus.Pending && x.LastInvitationExpiresAt <= now)),
                 LinkedAt = x.LinkedAt,
                 LastInvitationExpiresAt = x.LastInvitationExpiresAt,
                 LastInvitationRespondedAt = x.LastInvitationRespondedAt
@@ -224,9 +218,37 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         public TrainerInvitationStatus? LastInvitationStatus { get; init; }
         public DateTimeOffset? LastInvitationExpiresAt { get; init; }
         public DateTimeOffset? LastInvitationRespondedAt { get; init; }
-        public TrainerDashboardTraineeStatus Status { get; init; }
-        public bool IsLinked { get; init; }
-        public bool HasPendingInvitation { get; init; }
-        public bool HasExpiredInvitation { get; init; }
+    }
+
+    private static int GetStatusSortOrder(DashboardTraineeProjection trainee, DateTimeOffset now)
+    {
+        return GetStatus(trainee, now) switch
+        {
+            TrainerDashboardTraineeStatus.Linked => 0,
+            TrainerDashboardTraineeStatus.InvitationPending => 1,
+            TrainerDashboardTraineeStatus.InvitationExpired => 2,
+            TrainerDashboardTraineeStatus.InvitationRejected => 3,
+            TrainerDashboardTraineeStatus.InvitationAccepted => 4,
+            _ => 5
+        };
+    }
+
+    private static TrainerDashboardTraineeStatus GetStatus(DashboardTraineeProjection trainee, DateTimeOffset now)
+    {
+        if (trainee.LinkedAt != null)
+        {
+            return TrainerDashboardTraineeStatus.Linked;
+        }
+
+        return trainee.LastInvitationStatus switch
+        {
+            null => TrainerDashboardTraineeStatus.NoRelationship,
+            TrainerInvitationStatus.Accepted => TrainerDashboardTraineeStatus.InvitationAccepted,
+            TrainerInvitationStatus.Rejected => TrainerDashboardTraineeStatus.InvitationRejected,
+            TrainerInvitationStatus.Expired => TrainerDashboardTraineeStatus.InvitationExpired,
+            TrainerInvitationStatus.Pending when trainee.LastInvitationExpiresAt <= now => TrainerDashboardTraineeStatus.InvitationExpired,
+            TrainerInvitationStatus.Pending => TrainerDashboardTraineeStatus.InvitationPending,
+            _ => TrainerDashboardTraineeStatus.NoRelationship
+        };
     }
 }

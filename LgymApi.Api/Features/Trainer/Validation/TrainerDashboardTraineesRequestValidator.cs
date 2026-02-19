@@ -1,5 +1,6 @@
 using FluentValidation;
 using LgymApi.Api.Features.Trainer.Contracts;
+using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Resources;
 
 namespace LgymApi.Api.Features.Trainer.Validation;
@@ -28,7 +29,7 @@ public sealed class TrainerDashboardTraineesRequestValidator : AbstractValidator
             .WithMessage(Messages.DashboardSortDirectionInvalid);
 
         RuleFor(x => x.Status)
-            .Must(value => string.IsNullOrWhiteSpace(value) || System.Enum.TryParse(value, true, out LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeStatus _))
+            .Must(value => string.IsNullOrWhiteSpace(value) || System.Enum.TryParse(value, true, out TrainerDashboardTraineeStatus _))
             .WithMessage(Messages.DashboardStatusInvalid);
     }
 }

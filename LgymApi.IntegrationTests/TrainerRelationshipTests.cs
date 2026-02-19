@@ -336,6 +336,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         var linkedItem = fullBody.Items.Single(x => x.Id == linked.Id.ToString());
         linkedItem.Status.Should().Be("Linked");
+        linkedItem.StatusEnum.Should().Be(0);
         linkedItem.IsLinked.Should().BeTrue();
 
         var pendingItem = fullBody.Items.Single(x => x.Id == pending.Id.ToString());
@@ -449,6 +450,58 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
             responseBody.Should().Contain(Messages.DashboardPageMustBeGreaterThanZero);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [TestCase(0)]
+    [TestCase(-1)]
+    [TestCase(101)]
+    public async Task GetDashboardTrainees_WithInvalidPageSize_ReturnsBadRequestWithResourceMessage(int pageSize)
+    {
+        var trainer = await SeedTrainerAsync($"trainer-dashboard-invalid-pagesize-{pageSize}", $"trainer-dashboard-invalid-pagesize-{Guid.NewGuid():N}@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync($"/api/trainer/trainees?pageSize={pageSize}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            responseBody.Should().Contain(Messages.DashboardPageSizeRange);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Test]
+    public async Task GetDashboardTrainees_WithInvalidSortDirection_ReturnsBadRequestWithResourceMessage()
+    {
+        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-sortdir", "trainer-dashboard-invalid-sortdir@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.GetAsync("/api/trainer/trainees?sortDirection=invalid");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            responseBody.Should().Contain(Messages.DashboardSortDirectionInvalid);
         }
         finally
         {
@@ -651,6 +704,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
+
     }
 
     private sealed class TrainerDashboardTraineesResponse
@@ -678,6 +732,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
+
+        [JsonPropertyName("statusEnum")]
+        public int StatusEnum { get; set; }
 
         [JsonPropertyName("isLinked")]
         public bool IsLinked { get; set; }

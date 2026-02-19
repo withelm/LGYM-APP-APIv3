@@ -73,6 +73,9 @@ public sealed class TrainerDashboardTraineeDto
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
 
+    [JsonPropertyName("statusEnum")]
+    public int StatusEnum { get; set; }
+
     [JsonPropertyName("isLinked")]
     public bool IsLinked { get; set; }
 

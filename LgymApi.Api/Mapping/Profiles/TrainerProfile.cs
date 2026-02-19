@@ -88,6 +88,7 @@ public sealed class TrainerProfile : IMappingProfile
             Email = source.Email,
             Avatar = source.Avatar,
             Status = source.Status.ToString(),
+            StatusEnum = (int)source.Status,
             IsLinked = source.IsLinked,
             HasPendingInvitation = source.HasPendingInvitation,
             HasExpiredInvitation = source.HasExpiredInvitation,
