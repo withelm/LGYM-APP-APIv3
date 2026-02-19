@@ -14,6 +14,7 @@ public class ExerciseScoresTrainingFormDtoValidator : AbstractValidator<Exercise
             .WithMessage(Messages.ExerciseIdRequired);
 
         RuleFor(x => x.Unit)
+            .IsInEnum()
             .NotEqual(WeightUnits.Unknown)
             .WithMessage(Messages.UnitRequired);
 

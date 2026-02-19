@@ -99,6 +99,11 @@ public sealed class TrainingService : ITrainingService
                     continue;
                 }
 
+                if (exercise.Unit == WeightUnits.Unknown)
+                {
+                    throw AppException.BadRequest(Messages.FieldRequired);
+                }
+
                 var scoreEntity = new ExerciseScore
                 {
                     Id = Guid.NewGuid(),

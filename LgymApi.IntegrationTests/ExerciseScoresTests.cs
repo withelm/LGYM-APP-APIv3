@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.IntegrationTests;
 
@@ -19,7 +20,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Chart Exercise", "Chest");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Chart Exercise", BodyParts.Chest);
 
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{userId}/getExerciseScoresChartData", request);
@@ -42,7 +43,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Chart Exercise 2", "Chest");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Chart Exercise 2", BodyParts.Chest);
         var gymId = await CreateGymViaEndpointAsync(userId, "Chart Gym");
         var planId = await CreatePlanViaEndpointAsync(userId, "Chart Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Chart Day", new List<PlanDayExerciseInput>
@@ -57,8 +58,8 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
             createdAt = DateTime.UtcNow,
             exercises = new[]
             {
-                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 50.0, unit = "kg" },
-                new { exercise = exerciseId.ToString(), series = 2, reps = 8, weight = 55.0, unit = "kg" }
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 50.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 2, reps = 8, weight = 55.0, unit = WeightUnits.Kilograms.ToString() }
             }
         };
 
@@ -85,7 +86,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Auth Exercise", "Chest");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Auth Exercise", BodyParts.Chest);
 
         var nonExistentId = Guid.NewGuid();
         var request = new { exerciseId = exerciseId.ToString() };
@@ -105,7 +106,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "LastScores Exercise", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "LastScores Exercise", BodyParts.Back);
 
         var request = new
         {
@@ -136,7 +137,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "LastScores Exercise 2", "Back");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "LastScores Exercise 2", BodyParts.Back);
         var gymId = await CreateGymViaEndpointAsync(userId, "LastScores Gym");
         var planId = await CreatePlanViaEndpointAsync(userId, "LastScores Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "LastScores Day", new List<PlanDayExerciseInput>
@@ -151,8 +152,8 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
             createdAt = DateTime.UtcNow,
             exercises = new[]
             {
-                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 60.0, unit = "kg" },
-                new { exercise = exerciseId.ToString(), series = 2, reps = 8, weight = 65.0, unit = "kg" }
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 60.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 2, reps = 8, weight = 65.0, unit = WeightUnits.Kilograms.ToString() }
             }
         };
 
@@ -187,7 +188,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "History Exercise", "Quads");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "History Exercise", BodyParts.Quads);
 
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/exercise/getExerciseScoresFromTrainingByExercise", request);
@@ -210,7 +211,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "History Exercise 2", "Quads");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "History Exercise 2", BodyParts.Quads);
         var gymId = await CreateGymViaEndpointAsync(userId, "History Gym");
         var planId = await CreatePlanViaEndpointAsync(userId, "History Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "History Day", new List<PlanDayExerciseInput>
@@ -225,7 +226,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
             createdAt = DateTime.UtcNow,
             exercises = new[]
             {
-                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 100.0, unit = "kg" }
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 100.0, unit = WeightUnits.Kilograms.ToString() }
             }
         };
 

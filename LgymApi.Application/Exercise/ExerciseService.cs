@@ -118,7 +118,7 @@ public sealed class ExerciseService : IExerciseService
         await _exerciseRepository.UpdateAsync(exercise);
     }
 
-    public async Task UpdateExerciseAsync(string exerciseId, string? name, BodyParts? bodyPart, string? description, string? image)
+    public async Task UpdateExerciseAsync(string exerciseId, string? name, BodyParts bodyPart, string? description, string? image)
     {
         if (!Guid.TryParse(exerciseId, out var exerciseGuid))
         {
@@ -136,9 +136,9 @@ public sealed class ExerciseService : IExerciseService
             exercise.Name = name;
         }
 
-        if (bodyPart.HasValue && bodyPart.Value != BodyParts.Unknown)
+        if (bodyPart != BodyParts.Unknown)
         {
-            exercise.BodyPart = bodyPart.Value;
+            exercise.BodyPart = bodyPart;
         }
 
         exercise.Description = description;

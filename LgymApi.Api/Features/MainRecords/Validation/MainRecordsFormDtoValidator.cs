@@ -14,6 +14,7 @@ public class MainRecordsFormDtoValidator : AbstractValidator<MainRecordsFormDto>
             .WithMessage(Messages.ExerciseIdRequired);
 
         RuleFor(x => x.Unit)
+            .IsInEnum()
             .NotEqual(WeightUnits.Unknown)
             .WithMessage(Messages.UnitRequired);
 

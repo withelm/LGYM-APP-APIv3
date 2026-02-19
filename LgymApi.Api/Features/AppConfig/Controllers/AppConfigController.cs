@@ -21,7 +21,7 @@ public sealed class AppConfigController : ControllerBase
     [AllowAnonymous]
     [ProducesResponseType(typeof(AppConfigInfoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetAppVersion([FromBody] AppConfigPlatformRequestDto request)
+    public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request)
     {
         var config = await _appConfigService.GetLatestByPlatformAsync(request.Platform);
 

@@ -16,7 +16,6 @@ public sealed class ExerciseFormDto
     public string? UserId { get; set; }
 
     [JsonPropertyName("bodyPart")]
-    [JsonRequired]
     public BodyParts BodyPart { get; set; }
 
     [JsonPropertyName("description")]
@@ -111,6 +110,12 @@ public sealed class LastExerciseScoresRequestDto
 
     [JsonPropertyName("exerciseName")]
     public string ExerciseName { get; set; } = string.Empty;
+}
+
+public sealed class ExerciseByBodyPartRequestDto
+{
+    [JsonPropertyName("bodyPart")]
+    public BodyParts BodyPart { get; set; }
 }
 
 public sealed class LastExerciseScoresResponseDto

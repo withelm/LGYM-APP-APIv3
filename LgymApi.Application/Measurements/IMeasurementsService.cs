@@ -1,6 +1,7 @@
 using LgymApi.Domain.Enums;
 using MeasurementEntity = LgymApi.Domain.Entities.Measurement;
 using UserEntity = LgymApi.Domain.Entities.User;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Features.Measurements;
 

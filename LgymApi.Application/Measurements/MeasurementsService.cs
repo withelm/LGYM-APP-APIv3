@@ -23,6 +23,11 @@ public sealed class MeasurementsService : IMeasurementsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
+        if (bodyPart == BodyParts.Unknown || unit == HeightUnits.Unknown)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
         var measurement = new MeasurementEntity
         {
             Id = Guid.NewGuid(),

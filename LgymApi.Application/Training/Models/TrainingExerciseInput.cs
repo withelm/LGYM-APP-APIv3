@@ -2,6 +2,8 @@ using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Features.Training.Models;
 
+using LgymApi.Domain.Enums;
+
 public sealed class TrainingExerciseInput
 {
     public string ExerciseId { get; init; } = string.Empty;

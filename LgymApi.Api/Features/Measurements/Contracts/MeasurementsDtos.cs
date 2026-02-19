@@ -10,11 +10,9 @@ public sealed class MeasurementFormDto
     public string UserId { get; set; } = string.Empty;
 
     [JsonPropertyName("bodyPart")]
-    [JsonRequired]
     public BodyParts BodyPart { get; set; }
 
     [JsonPropertyName("unit")]
-    [JsonRequired]
     public HeightUnits Unit { get; set; }
 
     [JsonPropertyName("value")]

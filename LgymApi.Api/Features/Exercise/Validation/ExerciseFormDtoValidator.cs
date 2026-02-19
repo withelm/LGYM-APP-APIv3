@@ -14,6 +14,7 @@ public class ExerciseFormDtoValidator : AbstractValidator<ExerciseFormDto>
             .WithMessage(Messages.NameIsRequired);
 
         RuleFor(x => x.BodyPart)
+            .IsInEnum()
             .NotEqual(BodyParts.Unknown)
             .WithMessage(Messages.BodyPartRequired);
     }

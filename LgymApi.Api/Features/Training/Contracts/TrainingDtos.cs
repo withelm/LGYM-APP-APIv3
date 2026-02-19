@@ -16,7 +16,6 @@ public class ExerciseScoresTrainingFormDto
     public double Weight { get; set; }
 
     [JsonPropertyName("unit")]
-    [JsonRequired]
     public WeightUnits Unit { get; set; }
 
     [JsonPropertyName("reps")]

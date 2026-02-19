@@ -8,7 +8,7 @@ public interface IExerciseService
     Task AddExerciseAsync(string name, BodyParts bodyPart, string? description, string? image);
     Task AddUserExerciseAsync(Guid userId, string name, BodyParts bodyPart, string? description, string? image);
     Task DeleteExerciseAsync(Guid userId, Guid exerciseId);
-    Task UpdateExerciseAsync(string exerciseId, string? name, BodyParts? bodyPart, string? description, string? image);
+    Task UpdateExerciseAsync(string exerciseId, string? name, BodyParts bodyPart, string? description, string? image);
     Task AddGlobalTranslationAsync(LgymApi.Domain.Entities.User currentUser, Guid routeUserId, string exerciseId, string? culture, string? name);
     Task<ExercisesWithTranslations> GetAllExercisesAsync(Guid userId, IReadOnlyList<string> cultures);
     Task<ExercisesWithTranslations> GetAllUserExercisesAsync(Guid userId, IReadOnlyList<string> cultures);

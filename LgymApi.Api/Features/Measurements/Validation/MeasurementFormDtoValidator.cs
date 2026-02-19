@@ -10,10 +10,12 @@ public class MeasurementFormDtoValidator : AbstractValidator<MeasurementFormDto>
     public MeasurementFormDtoValidator()
     {
         RuleFor(x => x.BodyPart)
+            .IsInEnum()
             .NotEqual(BodyParts.Unknown)
             .WithMessage(Messages.BodyPartRequired);
 
         RuleFor(x => x.Unit)
+            .IsInEnum()
             .NotEqual(HeightUnits.Unknown)
             .WithMessage(Messages.UnitRequired);
 

@@ -17,7 +17,6 @@ public class MainRecordsFormDto
     public DateTime Date { get; set; }
 
     [JsonPropertyName("unit")]
-    [JsonRequired]
     public WeightUnits Unit { get; set; }
 
     [JsonPropertyName("exercise")]

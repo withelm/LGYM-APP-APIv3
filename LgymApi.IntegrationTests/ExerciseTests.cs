@@ -22,7 +22,7 @@ public sealed class ExerciseTests : IntegrationTestBase
         var request = new
         {
             name = "Bench Press",
-            bodyPart = "Chest",
+            bodyPart = BodyParts.Chest.ToString(),
             description = "Classic chest exercise"
         };
 
@@ -52,7 +52,7 @@ public sealed class ExerciseTests : IntegrationTestBase
         var request = new
         {
             name = "Custom Squat",
-            bodyPart = "Quads",
+            bodyPart = BodyParts.Quads.ToString(),
             description = "Custom leg exercise"
         };
 
@@ -77,7 +77,7 @@ public sealed class ExerciseTests : IntegrationTestBase
         var request = new
         {
             name = "",
-            bodyPart = "Chest"
+            bodyPart = BodyParts.Chest.ToString()
         };
 
         var response = await Client.PostAsJsonAsync("/api/exercise/addExercise", request);
@@ -178,7 +178,7 @@ public sealed class ExerciseTests : IntegrationTestBase
         {
             _id = exercise.Id.ToString(),
             name = "New Name",
-            bodyPart = "Back",
+            bodyPart = BodyParts.Back.ToString(),
             description = "Updated description"
         };
 
@@ -260,10 +260,7 @@ public sealed class ExerciseTests : IntegrationTestBase
         await SeedExerciseAsync(null, "Back Exercise", "Back");
         SetAuthorizationHeader(user.Id);
 
-        var request = new Dictionary<string, string>
-        {
-            { "bodyPart", "Chest" }
-        };
+        var request = new { bodyPart = BodyParts.Chest.ToString() };
 
         var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/getExerciseByBodyPart", request);
 
@@ -273,6 +270,30 @@ public sealed class ExerciseTests : IntegrationTestBase
         body.Should().NotBeNull();
         body.Should().HaveCount(1);
         body![0].Name.Should().Be("Chest Exercise");
+    }
+
+    [Test]
+    public async Task GetExerciseByBodyPart_WithInvalidBodyPart_ReturnsBadRequest()
+    {
+        var user = await SeedUserAsync(name: "exerciseuseralias", email: "exercisealias@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new { bodyPart = "ChestAlias" };
+        var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/getExerciseByBodyPart", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task GetExerciseByBodyPart_WithNumericBodyPart_ReturnsBadRequest()
+    {
+        var user = await SeedUserAsync(name: "exerciseusernum", email: "exercisenum@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new { bodyPart = 1 };
+        var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/getExerciseByBodyPart", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]

@@ -46,6 +46,11 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
+        if (unit == WeightUnits.Unknown)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
         var record = new MainRecordEntity
         {
             Id = Guid.NewGuid(),
@@ -167,6 +172,11 @@ public sealed class MainRecordsService : IMainRecordsService
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (unit == WeightUnits.Unknown)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         existingRecord.UserId = user.Id;

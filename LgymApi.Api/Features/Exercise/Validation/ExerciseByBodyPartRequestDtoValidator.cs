@@ -10,6 +10,7 @@ public sealed class ExerciseByBodyPartRequestDtoValidator : AbstractValidator<Ex
     public ExerciseByBodyPartRequestDtoValidator()
     {
         RuleFor(x => x.BodyPart)
+            .IsInEnum()
             .NotEqual(BodyParts.Unknown)
             .WithMessage(Messages.BodyPartRequired);
     }
