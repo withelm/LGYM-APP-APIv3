@@ -3,6 +3,9 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Enums;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.IntegrationTests;
 
@@ -431,6 +434,68 @@ public sealed class TrainingTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task AddTraining_WhenLatestEloEntryMissing_DoesNotPersistPartialData()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "rollbackuser",
+            email: "rollback@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Rollback Bench", BodyParts.Chest);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Rollback Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Rollback Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Rollback Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var eloEntries = await db.EloRegistries.Where(e => e.UserId == userId).ToListAsync();
+            db.EloRegistries.RemoveRange(eloEntries);
+            await db.SaveChangesAsync();
+        }
+
+        var request = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new
+                {
+                    exercise = exerciseId.ToString(),
+                    series = 1,
+                    reps = 10,
+                    weight = 60.0,
+                    unit = WeightUnits.Kilograms.ToString()
+                }
+            }
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var trainings = await db.Trainings.Where(t => t.UserId == userId).ToListAsync();
+            var scores = await db.ExerciseScores.Where(s => s.UserId == userId).ToListAsync();
+            var links = await db.TrainingExerciseScores.ToListAsync();
+
+            trainings.Should().BeEmpty();
+            scores.Should().BeEmpty();
+            links.Should().BeEmpty();
+        }
     }
 
     private sealed class TrainingSummaryResponse

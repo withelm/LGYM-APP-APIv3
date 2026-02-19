@@ -1,6 +1,7 @@
 using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
+using LgymApi.Infrastructure.UnitOfWork;
 using LgymApi.Application.Repositories;
 using LgymApi.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGymRepository, GymRepository>();
         services.AddScoped<IEloRegistryRepository, EloRegistryRepository>();
         services.AddScoped<IAppConfigRepository, AppConfigRepository>();
+        services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         return services;
     }

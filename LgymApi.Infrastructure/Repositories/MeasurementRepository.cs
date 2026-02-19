@@ -28,7 +28,7 @@ public sealed class MeasurementRepository : IMeasurementRepository
 
     public Task<List<Measurement>> GetByUserAsync(Guid userId, BodyParts? bodyPart, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Measurements.Where(m => m.UserId == userId).AsQueryable();
+        var query = _dbContext.Measurements.AsNoTracking().Where(m => m.UserId == userId).AsQueryable();
         if (bodyPart.HasValue)
         {
             query = query.Where(m => m.BodyPart == bodyPart.Value);

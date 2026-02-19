@@ -17,6 +17,7 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
     public Task<List<PlanDayExercise>> GetByPlanDayIdsAsync(List<Guid> planDayIds, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDayExercises
+            .AsNoTracking()
             .Where(e => planDayIds.Contains(e.PlanDayId))
             .OrderBy(e => e.PlanDayId)
             .ThenBy(e => e.Order)
@@ -27,6 +28,7 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
     public Task<List<PlanDayExercise>> GetByPlanDayIdAsync(Guid planDayId, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDayExercises
+            .AsNoTracking()
             .Where(e => e.PlanDayId == planDayId)
             .OrderBy(e => e.Order)
             .ThenBy(e => e.Id)
@@ -42,8 +44,6 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
         }
 
         await _dbContext.PlanDayExercises.AddRangeAsync(exercisesToAdd, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
         await NormalizeOrdersAsync(exercisesToAdd.Select(e => e.PlanDayId), cancellationToken);
     }
 
@@ -59,8 +59,6 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
         }
 
         _dbContext.PlanDayExercises.RemoveRange(existing);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
         await NormalizeOrdersAsync(new[] { planDayId }, cancellationToken);
     }
 
@@ -82,7 +80,6 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
             .ThenBy(e => e.Id)
             .ToListAsync(cancellationToken);
 
-        var changed = false;
         Guid? currentPlanDayId = null;
         var nextOrder = 0;
 
@@ -97,15 +94,10 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
             if (exercise.Order != nextOrder)
             {
                 exercise.Order = nextOrder;
-                changed = true;
             }
 
             nextOrder++;
         }
 
-        if (changed)
-        {
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
     }
 }

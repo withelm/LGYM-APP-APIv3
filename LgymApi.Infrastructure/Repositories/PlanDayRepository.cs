@@ -22,33 +22,32 @@ public sealed class PlanDayRepository : IPlanDayRepository
 
     public Task<List<PlanDay>> GetByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.PlanDays.Where(p => p.PlanId == planId && !p.IsDeleted).ToListAsync(cancellationToken);
+        return _dbContext.PlanDays.AsNoTracking().Where(p => p.PlanId == planId && !p.IsDeleted).ToListAsync(cancellationToken);
     }
 
-    public async Task AddAsync(PlanDay planDay, CancellationToken cancellationToken = default)
+    public Task AddAsync(PlanDay planDay, CancellationToken cancellationToken = default)
     {
-        await _dbContext.PlanDays.AddAsync(planDay, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return _dbContext.PlanDays.AddAsync(planDay, cancellationToken).AsTask();
     }
 
-    public async Task UpdateAsync(PlanDay planDay, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(PlanDay planDay, CancellationToken cancellationToken = default)
     {
         _dbContext.PlanDays.Update(planDay);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
     public async Task MarkDeletedAsync(Guid planDayId, CancellationToken cancellationToken = default)
     {
         await _dbContext.PlanDays
             .Where(p => p.Id == planDayId)
-            .ExecuteUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
+            .StageUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
     }
 
     public async Task MarkDeletedByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
     {
         await _dbContext.PlanDays
             .Where(p => p.PlanId == planId)
-            .ExecuteUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
+            .StageUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
     }
 
     public Task<bool> AnyByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)

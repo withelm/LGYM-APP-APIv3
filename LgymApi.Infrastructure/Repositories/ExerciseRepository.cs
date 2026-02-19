@@ -45,6 +45,7 @@ public sealed class ExerciseRepository : IExerciseRepository
     public Task<List<Exercise>> GetByBodyPartAsync(Guid userId, BodyParts bodyPart, CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises
+            .AsNoTracking()
             .Where(e => e.BodyPart == bodyPart && !e.IsDeleted && (e.UserId == userId || e.UserId == null))
             .ToListAsync(cancellationToken);
     }
