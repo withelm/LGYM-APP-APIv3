@@ -11,10 +11,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.OpenApi;
 using LgymApi.Api.Middleware;
+using LgymApi.Domain.Enums;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +35,30 @@ builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.UseInlineDefinitionsForEnums();
+    options.MapType<Platforms>(() => new OpenApiSchema
+    {
+        Type = JsonSchemaType.String,
+        Enum = Enum.GetNames<Platforms>().Select(x => (JsonNode?)JsonValue.Create(x)).ToList()
+    });
+    options.MapType<BodyParts>(() => new OpenApiSchema
+    {
+        Type = JsonSchemaType.String,
+        Enum = Enum.GetNames<BodyParts>().Select(x => (JsonNode?)JsonValue.Create(x)).ToList()
+    });
+    options.MapType<WeightUnits>(() => new OpenApiSchema
+    {
+        Type = JsonSchemaType.String,
+        Enum = Enum.GetNames<WeightUnits>().Select(x => (JsonNode?)JsonValue.Create(x)).ToList()
+    });
+    options.MapType<HeightUnits>(() => new OpenApiSchema
+    {
+        Type = JsonSchemaType.String,
+        Enum = Enum.GetNames<HeightUnits>().Select(x => (JsonNode?)JsonValue.Create(x)).ToList()
+    });
+});
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -106,7 +132,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
                 var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                 return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 20,
+                    PermitLimit = 200,
                     Window = TimeSpan.FromMinutes(15)
                 });
             }
@@ -118,7 +144,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 
             return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 100,
                 Window = TimeSpan.FromMinutes(1)
             });
         });
