@@ -638,6 +638,82 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task AddTraining_WithMultipleSeriesForExercise_AddsOnlyBestMainRecordFromPayload()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "maxseriesuser",
+            email: "maxseries@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Bench Press", BodyParts.Chest);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Series Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Series Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Series Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "5" }
+        });
+
+        var initialDate = DateTime.UtcNow.AddDays(-1);
+        var initialResponse = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = initialDate,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 5, weight = 70.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        });
+        initialResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var initialMaxResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
+        initialMaxResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var initialMaxBody = await initialMaxResponse.Content.ReadFromJsonAsync<List<MainRecordBestResponse>>();
+        initialMaxBody.Should().NotBeNull();
+        initialMaxBody.Should().HaveCount(1);
+        initialMaxBody![0].Weight.Should().Be(70.0);
+
+        var trainingDate = DateTime.UtcNow;
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = trainingDate,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 5, weight = 72.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 2, reps = 5, weight = 74.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 3, reps = 5, weight = 76.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updatedMaxResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
+        updatedMaxResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updatedMaxBody = await updatedMaxResponse.Content.ReadFromJsonAsync<List<MainRecordBestResponse>>();
+        updatedMaxBody.Should().NotBeNull();
+        updatedMaxBody.Should().HaveCount(1);
+        updatedMaxBody![0].Weight.Should().Be(76.0);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var records = await db.MainRecords
+            .Where(r => r.UserId == userId && r.ExerciseId == exerciseId)
+            .OrderBy(r => r.Date)
+            .ToListAsync();
+
+        records.Should().HaveCount(2);
+        records.Should().Contain(r => r.Weight == 70.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().Contain(r => r.Weight == 76.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().NotContain(r => r.Weight == 72.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().NotContain(r => r.Weight == 74.0 && r.Unit == WeightUnits.Kilograms);
+    }
+
+    [Test]
     public async Task AddTraining_WhenLatestEloEntryMissing_DoesNotPersistPartialData()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
@@ -778,5 +854,11 @@ public sealed class TrainingTests : IntegrationTestBase
     {
         [JsonPropertyName("exerciseScoreId")]
         public string ExerciseScoreId { get; set; } = string.Empty;
+    }
+
+    private sealed class MainRecordBestResponse
+    {
+        [JsonPropertyName("weight")]
+        public double Weight { get; set; }
     }
 }
