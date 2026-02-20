@@ -71,19 +71,26 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
 
     public Task<List<ExerciseScore>> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, Guid? gymId, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.ExerciseScores
+        var filteredQuery = _dbContext.ExerciseScores
             .AsNoTracking()
             .Where(s => s.UserId == userId && s.ExerciseId == exerciseId)
             .AsQueryable();
 
         if (gymId.HasValue)
         {
-            query = query.Where(s => s.Training != null && s.Training.GymId == gymId.Value);
+            filteredQuery = filteredQuery.Where(s => s.Training != null && s.Training.GymId == gymId.Value);
         }
 
-        return query
+        var latestScoreIds = filteredQuery
             .GroupBy(s => s.Series)
-            .Select(g => g.OrderByDescending(x => x.CreatedAt).First())
+            .Select(g => g.OrderByDescending(x => x.CreatedAt).Select(x => x.Id).First());
+
+        return _dbContext.ExerciseScores
+            .AsNoTracking()
+            .Where(s => latestScoreIds.Contains(s.Id))
+            .Include(s => s.Training)
+                .ThenInclude(t => t!.Gym)
+            .OrderBy(s => s.Series)
             .ToListAsync(cancellationToken);
     }
 

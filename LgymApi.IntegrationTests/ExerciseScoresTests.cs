@@ -175,6 +175,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         body.Should().NotBeNull();
         body!.SeriesScores[0].Score.Should().NotBeNull();
         body.SeriesScores[0].Score!.Weight.Should().Be(60.0);
+        body.SeriesScores[0].Score!.GymName.Should().Be("LastScores Gym");
     }
 
     [Test]
@@ -285,6 +286,9 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
 
         [JsonPropertyName("weight")]
         public double Weight { get; set; }
+
+        [JsonPropertyName("gymName")]
+        public string? GymName { get; set; }
     }
 
     private sealed class ExerciseHistoryItem
