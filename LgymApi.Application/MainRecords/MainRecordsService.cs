@@ -1,6 +1,7 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.MainRecords.Models;
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Units;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
@@ -14,6 +15,7 @@ public sealed class MainRecordsService : IMainRecordsService
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IMainRecordRepository _mainRecordRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
+    private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
 
     public MainRecordsService(
@@ -21,12 +23,14 @@ public sealed class MainRecordsService : IMainRecordsService
         IExerciseRepository exerciseRepository,
         IMainRecordRepository mainRecordRepository,
         IExerciseScoreRepository exerciseScoreRepository,
+        IUnitConverter<WeightUnits> weightUnitConverter,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _exerciseRepository = exerciseRepository;
         _mainRecordRepository = mainRecordRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
+        _weightUnitConverter = weightUnitConverter;
         _unitOfWork = unitOfWork;
     }
 
@@ -111,18 +115,24 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var latestRecords = records
+        var bestRecords = records
+            .Where(r => r.Unit != WeightUnits.Unknown)
             .GroupBy(r => r.ExerciseId)
-            .Select(g => g.OrderByDescending(r => r.Date).First())
+            .Select(g => GetBestRecord(g.ToList()))
             .ToList();
 
-        var exerciseIds = latestRecords.Select(r => r.ExerciseId).Distinct().ToList();
+        if (bestRecords.Count == 0)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var exerciseIds = bestRecords.Select(r => r.ExerciseId).Distinct().ToList();
         var exercises = await _exerciseRepository.GetByIdsAsync(exerciseIds);
         var exerciseMap = exercises.ToDictionary(e => e.Id, e => e);
 
         return new MainRecordsLastContext
         {
-            Records = latestRecords,
+            Records = bestRecords,
             ExerciseMap = exerciseMap
         };
     }
@@ -201,7 +211,12 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var record = await _mainRecordRepository.GetLatestByUserAndExerciseAsync(userId, exerciseGuid);
+        var records = await _mainRecordRepository.GetByUserAndExerciseAsync(userId, exerciseGuid);
+        var comparableRecords = records
+            .Where(r => r.Unit != WeightUnits.Unknown)
+            .ToList();
+
+        MainRecordEntity? record = comparableRecords.Count == 0 ? null : GetBestRecord(comparableRecords);
 
         if (record == null)
         {
@@ -227,6 +242,31 @@ public sealed class MainRecordsService : IMainRecordsService
             Unit = record.Unit,
             Date = record.Date.UtcDateTime
         };
+    }
+
+    private MainRecordEntity GetBestRecord(List<MainRecordEntity> records)
+    {
+        var best = records[0];
+        foreach (var candidate in records.Skip(1))
+        {
+            var comparison = CompareWeights(candidate.Weight, candidate.Unit, best.Weight, best.Unit);
+            if (comparison > 0 || (comparison == 0 && candidate.Date > best.Date))
+            {
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    private int CompareWeights(double leftWeight, WeightUnits leftUnit, double rightWeight, WeightUnits rightUnit)
+    {
+        return UnitValueComparer.Compare(
+            leftWeight,
+            leftUnit,
+            rightWeight,
+            rightUnit,
+            (value, unit) => _weightUnitConverter.Convert(value, unit, WeightUnits.Kilograms));
     }
 
 }

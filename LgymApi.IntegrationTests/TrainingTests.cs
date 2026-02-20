@@ -526,14 +526,15 @@ public sealed class TrainingTests : IntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var records = await db.MainRecords.Where(r => r.UserId == userId && r.ExerciseId == exerciseId).ToListAsync();
 
-        records.Should().HaveCount(1);
-        records[0].Weight.Should().Be(225.0);
-        records[0].Unit.Should().Be(WeightUnits.Pounds);
-        records[0].Date.UtcDateTime.Should().BeCloseTo(trainingDate, TimeSpan.FromSeconds(1));
+        records.Should().HaveCount(2);
+        records.Should().Contain(r => r.Weight == 100.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().Contain(r => r.Weight == 225.0 && r.Unit == WeightUnits.Pounds);
+        records.Should().Contain(r => r.Weight == 225.0 && r.Unit == WeightUnits.Pounds &&
+                                     r.Date.UtcDateTime >= trainingDate.AddSeconds(-1));
     }
 
     [Test]
-    public async Task AddTraining_WithEqualResultAcrossUnits_UpdatesOnlyMainRecordDate()
+    public async Task AddTraining_WithEqualResultAcrossUnits_DoesNotChangeMainRecords()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "maxequaluser",
@@ -577,11 +578,12 @@ public sealed class TrainingTests : IntegrationTestBase
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var record = await db.MainRecords.SingleAsync(r => r.UserId == userId && r.ExerciseId == exerciseId);
+        var records = await db.MainRecords.Where(r => r.UserId == userId && r.ExerciseId == exerciseId).ToListAsync();
 
-        record.Weight.Should().Be(100.0);
-        record.Unit.Should().Be(WeightUnits.Kilograms);
-        record.Date.UtcDateTime.Should().BeCloseTo(trainingDate, TimeSpan.FromSeconds(1));
+        records.Should().HaveCount(1);
+        records[0].Weight.Should().Be(100.0);
+        records[0].Unit.Should().Be(WeightUnits.Kilograms);
+        records[0].Date.UtcDateTime.Should().BeCloseTo(initialDate, TimeSpan.FromSeconds(1));
     }
 
     [Test]

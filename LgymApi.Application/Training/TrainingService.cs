@@ -253,7 +253,11 @@ public sealed class TrainingService : ITrainingService
             existingRecordsByExercise.TryGetValue(exerciseId, out var records);
             records ??= new List<MainRecordEntity>();
 
-            if (records.Count == 0)
+            var comparableRecords = records
+                .Where(r => r.Unit != WeightUnits.Unknown)
+                .ToList();
+
+            if (comparableRecords.Count == 0)
             {
                 await _mainRecordRepository.AddAsync(new MainRecordEntity
                 {
@@ -267,44 +271,28 @@ public sealed class TrainingService : ITrainingService
                 continue;
             }
 
-            var currentBestRecord = records[0];
-            foreach (var candidateRecord in records.Skip(1))
+            var currentBestRecord = comparableRecords[0];
+            foreach (var candidateRecord in comparableRecords.Skip(1))
             {
-                if (candidateRecord.Unit == WeightUnits.Unknown)
-                {
-                    continue;
-                }
-
-                if (currentBestRecord.Unit == WeightUnits.Unknown ||
-                    CompareWeights(candidateRecord.Weight, candidateRecord.Unit, currentBestRecord.Weight, currentBestRecord.Unit) > 0)
+                if (CompareWeights(candidateRecord.Weight, candidateRecord.Unit, currentBestRecord.Weight, currentBestRecord.Unit) > 0)
                 {
                     currentBestRecord = candidateRecord;
                 }
             }
 
-            if (currentBestRecord.Unit == WeightUnits.Unknown)
-            {
-                currentBestRecord.Weight = bestScore.Weight;
-                currentBestRecord.Unit = bestScore.Unit;
-                currentBestRecord.Date = recordDate;
-                await _mainRecordRepository.UpdateAsync(currentBestRecord);
-                continue;
-            }
-
             var comparison = CompareWeights(bestScore.Weight, bestScore.Unit, currentBestRecord.Weight, currentBestRecord.Unit);
-            if (comparison < 0)
-            {
-                continue;
-            }
-
             if (comparison > 0)
             {
-                currentBestRecord.Weight = bestScore.Weight;
-                currentBestRecord.Unit = bestScore.Unit;
+                await _mainRecordRepository.AddAsync(new MainRecordEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    ExerciseId = exerciseId,
+                    Weight = bestScore.Weight,
+                    Unit = bestScore.Unit,
+                    Date = recordDate
+                });
             }
-
-            currentBestRecord.Date = recordDate;
-            await _mainRecordRepository.UpdateAsync(currentBestRecord);
         }
     }
 
