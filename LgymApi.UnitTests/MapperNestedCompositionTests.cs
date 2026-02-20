@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Diagnostics;
 using LgymApi.Application.Mapping.Core;
 
 namespace LgymApi.UnitTests;
@@ -77,6 +78,20 @@ public sealed class MapperNestedCompositionTests
         Assert.That(ex!.Message, Does.Contain("already bound to a different mapper"));
     }
 
+    [Test]
+    public async Task Map_Should_Not_Leak_Cycle_State_Between_Parallel_Executions()
+    {
+        var mapper = CreateMapper(new ParallelValueTypeMappingProfile());
+        var context = mapper.CreateContext();
+
+        var first = Task.Run(() => mapper.Map<int, int>(1, context));
+        var second = Task.Run(() => mapper.Map<int, int>(1, context));
+
+        var results = await Task.WhenAll(first, second);
+
+        Assert.That(results, Is.EqualTo(new[] { 1, 1 }));
+    }
+
     private static IMapper CreateMapper(params IMappingProfile[] profiles)
     {
         return (IMapper)Activator.CreateInstance(
@@ -148,6 +163,27 @@ public sealed class MapperNestedCompositionTests
                 if (source == 1)
                 {
                     return context!.Map<int, int>(source);
+                }
+
+                return source;
+            });
+        }
+    }
+
+    private sealed class ParallelValueTypeMappingProfile : IMappingProfile
+    {
+        private int _started;
+
+        public void Configure(MappingConfiguration configuration)
+        {
+            configuration.CreateMap<int, int>((source, _) =>
+            {
+                Interlocked.Increment(ref _started);
+
+                var wait = Stopwatch.StartNew();
+                while (Volatile.Read(ref _started) < 2 && wait.Elapsed < TimeSpan.FromMilliseconds(250))
+                {
+                    Thread.SpinWait(1000);
                 }
 
                 return source;

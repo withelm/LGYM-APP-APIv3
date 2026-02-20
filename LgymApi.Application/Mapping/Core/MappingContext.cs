@@ -6,8 +6,7 @@ public sealed class MappingContext : IMappingContext
 {
     private readonly ConcurrentDictionary<ContextKey<object>, object?> _items = new();
     private readonly IReadOnlySet<string>? _allowedKeys;
-    private readonly object _mappingPathLock = new();
-    private readonly List<(Type Source, Type Target, object? SourceReference)> _mappingPath = new();
+    private readonly AsyncLocal<List<(Type Source, Type Target, object? SourceReference)>?> _mappingPath = new();
     private Mapper? _mapper;
 
     public MappingContext(IReadOnlySet<string>? allowedKeys = null)
@@ -71,25 +70,24 @@ public sealed class MappingContext : IMappingContext
 
     internal IDisposable EnterMappingScope(Type sourceType, Type targetType, object source)
     {
-        lock (_mappingPathLock)
+        var path = _mappingPath.Value ??= new List<(Type Source, Type Target, object? SourceReference)>();
+
+        var hasCycle = path.Any(item =>
+            item.Source == sourceType &&
+            item.Target == targetType &&
+            (sourceType.IsValueType || ReferenceEquals(item.SourceReference, source)));
+
+        if (hasCycle)
         {
-            var hasCycle = _mappingPath.Any(item =>
-                item.Source == sourceType &&
-                item.Target == targetType &&
-                (sourceType.IsValueType || ReferenceEquals(item.SourceReference, source)));
+            var chain = path
+                .Select(item => $"{item.Source.Name}->{item.Target.Name}")
+                .Append($"{sourceType.Name}->{targetType.Name}");
 
-            if (hasCycle)
-            {
-                var chain = _mappingPath
-                    .Select(item => $"{item.Source.Name}->{item.Target.Name}")
-                    .Append($"{sourceType.Name}->{targetType.Name}");
-
-                throw new InvalidOperationException($"Cyclic nested mapping detected. Chain: {string.Join(" -> ", chain)}.");
-            }
-
-            var trackedReference = sourceType.IsValueType ? null : source;
-            _mappingPath.Add((sourceType, targetType, trackedReference));
+            throw new InvalidOperationException($"Cyclic nested mapping detected. Chain: {string.Join(" -> ", chain)}.");
         }
+
+        var trackedReference = sourceType.IsValueType ? null : source;
+        path.Add((sourceType, targetType, trackedReference));
 
         return new MappingScope(this);
     }
@@ -101,12 +99,20 @@ public sealed class MappingContext : IMappingContext
 
     private void ExitMappingScope()
     {
-        lock (_mappingPathLock)
+        var path = _mappingPath.Value;
+        if (path == null)
         {
-            if (_mappingPath.Count > 0)
-            {
-                _mappingPath.RemoveAt(_mappingPath.Count - 1);
-            }
+            return;
+        }
+
+        if (path.Count > 0)
+        {
+            path.RemoveAt(path.Count - 1);
+        }
+
+        if (path.Count == 0)
+        {
+            _mappingPath.Value = null;
         }
     }
 
