@@ -22,6 +22,7 @@ public sealed class TrainingService : ITrainingService
     private readonly IMainRecordRepository _mainRecordRepository;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
+    private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
 
     public TrainingService(
@@ -34,6 +35,7 @@ public sealed class TrainingService : ITrainingService
         IMainRecordRepository mainRecordRepository,
         IEloRegistryRepository eloRepository,
         IRankService rankService,
+        IUnitConverter<WeightUnits> weightUnitConverter,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
@@ -45,6 +47,7 @@ public sealed class TrainingService : ITrainingService
         _mainRecordRepository = mainRecordRepository;
         _eloRepository = eloRepository;
         _rankService = rankService;
+        _weightUnitConverter = weightUnitConverter;
         _unitOfWork = unitOfWork;
     }
 
@@ -417,9 +420,14 @@ public sealed class TrainingService : ITrainingService
         return PartElo(previousScore.Weight, previousScore.Reps, currentScore.Weight, currentScore.Reps);
     }
 
-    private static int CompareWeights(double leftWeight, WeightUnits leftUnit, double rightWeight, WeightUnits rightUnit)
+    private int CompareWeights(double leftWeight, WeightUnits leftUnit, double rightWeight, WeightUnits rightUnit)
     {
-        return UnitValueComparer.Compare(leftWeight, leftUnit, rightWeight, rightUnit, WeightUnitConversions.ToKilograms);
+        return UnitValueComparer.Compare(
+            leftWeight,
+            leftUnit,
+            rightWeight,
+            rightUnit,
+            (value, unit) => _weightUnitConverter.Convert(value, unit, WeightUnits.Kilograms));
     }
 
     private static int PartElo(double prevWeight, int prevReps, double accWeight, int accReps)
