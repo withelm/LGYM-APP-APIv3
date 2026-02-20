@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,6 +140,51 @@ public sealed class GymTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetGyms_WithTrainingHistory_ReturnsLastTrainingNestedInfo()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "gymhistoryuser",
+            email: "gymhistory@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Gym History Exercise", BodyParts.Back);
+        var gymId = await CreateGymViaEndpointAsync(userId, "History Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "History Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "History Pull Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        var trainingRequest = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 50.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        };
+        await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", trainingRequest);
+
+        var response = await Client.GetAsync($"/api/gym/{userId}/getGyms");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<GymChoiceInfoResponse>>();
+        body.Should().NotBeNull();
+
+        var gym = body!.Single(g => g.Id == gymId.ToString());
+        gym.LastTrainingInfo.Should().NotBeNull();
+        gym.LastTrainingInfo!.Type.Should().NotBeNull();
+        gym.LastTrainingInfo.Type!.Id.Should().Be(planDayId.ToString());
+        gym.LastTrainingInfo.Type.Name.Should().Be("History Pull Day");
+    }
+
+    [Test]
     public async Task GetGyms_ExcludesDeletedGyms()
     {
         var user = await SeedUserAsync(name: "gymuser", email: "gym@example.com");
@@ -233,6 +279,30 @@ public sealed class GymTests : IntegrationTestBase
 
         [JsonPropertyName("address")]
         public string? Address { get; set; }
+
+        [JsonPropertyName("lastTrainingInfo")]
+        public LastTrainingGymInfoResponse? LastTrainingInfo { get; set; }
+    }
+
+    private sealed class LastTrainingGymInfoResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("createdAt")]
+        public DateTime CreatedAt { get; set; }
+
+        [JsonPropertyName("type")]
+        public LastTrainingGymPlanDayResponse? Type { get; set; }
+    }
+
+    private sealed class LastTrainingGymPlanDayResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
     }
 
     private sealed class GymFormResponse
