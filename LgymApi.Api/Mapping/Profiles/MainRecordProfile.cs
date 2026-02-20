@@ -28,21 +28,10 @@ public sealed class MainRecordProfile : IMappingProfile
 
         configuration.CreateMap<MainRecord, MainRecordsLastDto>((source, context) =>
         {
-            var exerciseDetails = new ExerciseResponseDto();
-
             var exerciseMap = context?.Get(Keys.ExerciseMap);
-            if (exerciseMap != null && exerciseMap.TryGetValue(source.ExerciseId, out var exercise))
-            {
-                exerciseDetails = new ExerciseResponseDto
-                {
-                    Id = exercise.Id.ToString(),
-                    Name = exercise.Name,
-                    BodyPart = exercise.BodyPart.ToLookup(),
-                    Description = exercise.Description,
-                    Image = exercise.Image,
-                    UserId = exercise.UserId?.ToString()
-                };
-            }
+            var exercise = exerciseMap != null && exerciseMap.TryGetValue(source.ExerciseId, out var resolvedExercise)
+                ? resolvedExercise
+                : null;
 
             return new MainRecordsLastDto
             {
@@ -51,7 +40,9 @@ public sealed class MainRecordProfile : IMappingProfile
                 Weight = source.Weight,
                 Unit = source.Unit.ToLookup(),
                 Date = source.Date.UtcDateTime,
-                ExerciseDetails = exerciseDetails
+                ExerciseDetails = exercise == null
+                    ? new ExerciseResponseDto()
+                    : context!.Map<Exercise, ExerciseResponseDto>(exercise)
             };
         });
     }
