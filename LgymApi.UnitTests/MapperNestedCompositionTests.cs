@@ -54,6 +54,29 @@ public sealed class MapperNestedCompositionTests
         Assert.That(ex!.Message, Does.Contain("Cyclic nested mapping detected."));
     }
 
+    [Test]
+    public void Map_Should_Throw_Clear_Error_When_Cyclic_ValueType_Nested_Mapping_Is_Detected()
+    {
+        var mapper = CreateMapper(new CyclicValueTypeMappingProfile());
+
+        var ex = Assert.Throws<InvalidOperationException>(() => mapper.Map<int, int>(1));
+
+        Assert.That(ex!.Message, Does.Contain("Cyclic nested mapping detected."));
+    }
+
+    [Test]
+    public void Map_Should_Throw_When_Context_Is_Bound_To_Different_Mapper()
+    {
+        var firstMapper = CreateMapper(new NestedCompositionProfile());
+        var secondMapper = CreateMapper(new NestedCompositionProfile());
+        var context = firstMapper.CreateContext();
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            secondMapper.Map<ParentSource, ParentTarget>(new ParentSource(), context));
+
+        Assert.That(ex!.Message, Does.Contain("already bound to a different mapper"));
+    }
+
     private static IMapper CreateMapper(params IMappingProfile[] profiles)
     {
         return (IMapper)Activator.CreateInstance(
@@ -112,6 +135,22 @@ public sealed class MapperNestedCompositionTests
                 }
 
                 return new CyclicTarget();
+            });
+        }
+    }
+
+    private sealed class CyclicValueTypeMappingProfile : IMappingProfile
+    {
+        public void Configure(MappingConfiguration configuration)
+        {
+            configuration.CreateMap<int, int>((source, context) =>
+            {
+                if (source == 1)
+                {
+                    return context!.Map<int, int>(source);
+                }
+
+                return source;
             });
         }
     }

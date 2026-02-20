@@ -57,28 +57,34 @@ public sealed class MappingContext : IMappingContext
 
     internal void AttachMapper(Mapper mapper)
     {
-        _mapper = mapper;
+        if (_mapper is null)
+        {
+            _mapper = mapper;
+            return;
+        }
+
+        if (!ReferenceEquals(_mapper, mapper))
+        {
+            throw new InvalidOperationException("This mapping context is already bound to a different mapper instance.");
+        }
     }
 
     internal IDisposable EnterMappingScope(Type sourceType, Type targetType, object source)
     {
         lock (_mappingPathLock)
         {
-            if (!sourceType.IsValueType)
+            var hasCycle = _mappingPath.Any(item =>
+                item.Source == sourceType &&
+                item.Target == targetType &&
+                (sourceType.IsValueType || ReferenceEquals(item.SourceReference, source)));
+
+            if (hasCycle)
             {
-                var hasCycle = _mappingPath.Any(item =>
-                    item.Source == sourceType &&
-                    item.Target == targetType &&
-                    ReferenceEquals(item.SourceReference, source));
+                var chain = _mappingPath
+                    .Select(item => $"{item.Source.Name}->{item.Target.Name}")
+                    .Append($"{sourceType.Name}->{targetType.Name}");
 
-                if (hasCycle)
-                {
-                    var chain = _mappingPath
-                        .Select(item => $"{item.Source.Name}->{item.Target.Name}")
-                        .Append($"{sourceType.Name}->{targetType.Name}");
-
-                    throw new InvalidOperationException($"Cyclic nested mapping detected. Chain: {string.Join(" -> ", chain)}.");
-                }
+                throw new InvalidOperationException($"Cyclic nested mapping detected. Chain: {string.Join(" -> ", chain)}.");
             }
 
             var trackedReference = sourceType.IsValueType ? null : source;
