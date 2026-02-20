@@ -35,6 +35,19 @@ public sealed class MainRecordRepository : IMainRecordRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<List<MainRecord>> GetByUserAndExercisesAsync(Guid userId, IReadOnlyCollection<Guid> exerciseIds, CancellationToken cancellationToken = default)
+    {
+        if (exerciseIds.Count == 0)
+        {
+            return Task.FromResult(new List<MainRecord>());
+        }
+
+        return _dbContext.MainRecords
+            .AsNoTracking()
+            .Where(r => r.UserId == userId && exerciseIds.Contains(r.ExerciseId))
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<MainRecord?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);

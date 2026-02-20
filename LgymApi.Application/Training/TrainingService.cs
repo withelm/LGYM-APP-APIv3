@@ -233,11 +233,23 @@ public sealed class TrainingService : ITrainingService
             }
         }
 
+        if (bestScoresByExercise.Count == 0)
+        {
+            return;
+        }
+
+        var existingRecords = await _mainRecordRepository.GetByUserAndExercisesAsync(userId, bestScoresByExercise.Keys.ToList());
+        var existingRecordsByExercise = existingRecords
+            .GroupBy(r => r.ExerciseId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         var recordDate = new DateTimeOffset(createdAtUtc);
 
         foreach (var (exerciseId, bestScore) in bestScoresByExercise)
         {
-            var records = await _mainRecordRepository.GetByUserAndExerciseAsync(userId, exerciseId);
+            existingRecordsByExercise.TryGetValue(exerciseId, out var records);
+            records ??= new List<MainRecordEntity>();
+
             if (records.Count == 0)
             {
                 await _mainRecordRepository.AddAsync(new MainRecordEntity
@@ -269,16 +281,10 @@ public sealed class TrainingService : ITrainingService
 
             if (currentBestRecord.Unit == WeightUnits.Unknown)
             {
-                var unknownRecord = await _mainRecordRepository.FindByIdAsync(currentBestRecord.Id);
-                if (unknownRecord == null)
-                {
-                    continue;
-                }
-
-                unknownRecord.Weight = bestScore.Weight;
-                unknownRecord.Unit = bestScore.Unit;
-                unknownRecord.Date = recordDate;
-                await _mainRecordRepository.UpdateAsync(unknownRecord);
+                currentBestRecord.Weight = bestScore.Weight;
+                currentBestRecord.Unit = bestScore.Unit;
+                currentBestRecord.Date = recordDate;
+                await _mainRecordRepository.UpdateAsync(currentBestRecord);
                 continue;
             }
 
@@ -288,20 +294,14 @@ public sealed class TrainingService : ITrainingService
                 continue;
             }
 
-            var recordToUpdate = await _mainRecordRepository.FindByIdAsync(currentBestRecord.Id);
-            if (recordToUpdate == null)
-            {
-                continue;
-            }
-
             if (comparison > 0)
             {
-                recordToUpdate.Weight = bestScore.Weight;
-                recordToUpdate.Unit = bestScore.Unit;
+                currentBestRecord.Weight = bestScore.Weight;
+                currentBestRecord.Unit = bestScore.Unit;
             }
 
-            recordToUpdate.Date = recordDate;
-            await _mainRecordRepository.UpdateAsync(recordToUpdate);
+            currentBestRecord.Date = recordDate;
+            await _mainRecordRepository.UpdateAsync(currentBestRecord);
         }
     }
 
