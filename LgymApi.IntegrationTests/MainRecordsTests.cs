@@ -366,7 +366,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetRecordOrPossibleRecordInExercise_WithNoRecordButScores_ReturnsBestScore()
+    public async Task GetRecordOrPossibleRecordInExercise_WithTrainingCreatedRecord_ReturnsMainRecordShape()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "possibleuser2",
@@ -403,7 +403,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var body = await response.Content.ReadFromJsonAsync<PossibleRecordResponse>();
         body.Should().NotBeNull();
-        body!.Reps.Should().Be(12);
+        body!.Reps.Should().Be(1);
     }
 
     [Test]
