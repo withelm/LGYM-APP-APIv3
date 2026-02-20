@@ -10,6 +10,8 @@ using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.PlanDay;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Units;
+using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.Application;
@@ -30,6 +32,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlanDayService, PlanDayService>();
         services.AddScoped<ITrainingService, TrainingService>();
         services.AddScoped<IUserService, UserService>();
+
+        services.AddSingleton<ILinearUnitStrategy<WeightUnits>, WeightLinearUnitStrategy>();
+        services.AddSingleton<IUnitConverter<WeightUnits>, LinearUnitConverter<WeightUnits>>();
 
         return services;
     }

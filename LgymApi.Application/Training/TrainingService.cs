@@ -2,9 +2,11 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Application.Units;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
+using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
 using TrainingEntity = LgymApi.Domain.Entities.Training;
 
 namespace LgymApi.Application.Features.Training;
@@ -17,8 +19,10 @@ public sealed class TrainingService : ITrainingService
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
     private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
+    private readonly IMainRecordRepository _mainRecordRepository;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
+    private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
 
     public TrainingService(
@@ -28,8 +32,10 @@ public sealed class TrainingService : ITrainingService
         IExerciseRepository exerciseRepository,
         IExerciseScoreRepository exerciseScoreRepository,
         ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
+        IMainRecordRepository mainRecordRepository,
         IEloRegistryRepository eloRepository,
         IRankService rankService,
+        IUnitConverter<WeightUnits> weightUnitConverter,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
@@ -38,8 +44,10 @@ public sealed class TrainingService : ITrainingService
         _exerciseRepository = exerciseRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
         _trainingExerciseScoreRepository = trainingExerciseScoreRepository;
+        _mainRecordRepository = mainRecordRepository;
         _eloRepository = eloRepository;
         _rankService = rankService;
+        _weightUnitConverter = weightUnitConverter;
         _unitOfWork = unitOfWork;
     }
 
@@ -84,12 +92,13 @@ public sealed class TrainingService : ITrainingService
             await using var transaction = await _unitOfWork.BeginTransactionAsync();
             try
             {
+                var createdAtUtc = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
                 var training = new TrainingEntity
                 {
                     Id = Guid.NewGuid(),
                     UserId = user.Id,
                     TypePlanDayId = planDayId,
-                    CreatedAt = new DateTimeOffset(DateTime.SpecifyKind(createdAt, DateTimeKind.Utc)),
+                    CreatedAt = new DateTimeOffset(createdAtUtc),
                     GymId = gym.Id
                 };
 
@@ -150,6 +159,8 @@ public sealed class TrainingService : ITrainingService
                     await _trainingExerciseScoreRepository.AddRangeAsync(trainingScores);
                 }
 
+                await SynchronizeMainRecordsAsync(user.Id, exercises, createdAtUtc);
+
                 var eloEntry = await _eloRepository.GetLatestEntryAsync(user.Id);
                 if (eloEntry == null)
                 {
@@ -199,6 +210,89 @@ public sealed class TrainingService : ITrainingService
         catch (Exception exception) when (exception is not AppException)
         {
             throw AppException.Internal(Messages.TryAgain);
+        }
+    }
+
+    private async Task SynchronizeMainRecordsAsync(Guid userId, IReadOnlyCollection<TrainingExerciseInput> exercises, DateTime createdAtUtc)
+    {
+        var bestScoresByExercise = new Dictionary<Guid, TrainingExerciseInput>();
+
+        foreach (var score in exercises)
+        {
+            if (!Guid.TryParse(score.ExerciseId, out var exerciseId) || score.Unit == WeightUnits.Unknown)
+            {
+                continue;
+            }
+
+            if (!bestScoresByExercise.TryGetValue(exerciseId, out var currentBest))
+            {
+                bestScoresByExercise[exerciseId] = score;
+                continue;
+            }
+
+            if (CompareWeights(score.Weight, score.Unit, currentBest.Weight, currentBest.Unit) > 0)
+            {
+                bestScoresByExercise[exerciseId] = score;
+            }
+        }
+
+        if (bestScoresByExercise.Count == 0)
+        {
+            return;
+        }
+
+        var existingRecords = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, bestScoresByExercise.Keys.ToList());
+        var existingRecordsByExercise = existingRecords
+            .GroupBy(r => r.ExerciseId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var recordDate = new DateTimeOffset(createdAtUtc);
+
+        foreach (var (exerciseId, bestScore) in bestScoresByExercise)
+        {
+            existingRecordsByExercise.TryGetValue(exerciseId, out var records);
+            records ??= new List<MainRecordEntity>();
+
+            var comparableRecords = records
+                .Where(r => r.Unit != WeightUnits.Unknown)
+                .ToList();
+
+            if (comparableRecords.Count == 0)
+            {
+                await _mainRecordRepository.AddAsync(new MainRecordEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    ExerciseId = exerciseId,
+                    Weight = bestScore.Weight,
+                    Unit = bestScore.Unit,
+                    Date = recordDate
+                });
+                continue;
+            }
+
+            var currentBestRecord = comparableRecords[0];
+            foreach (var candidateRecord in comparableRecords.Skip(1))
+            {
+                if (CompareWeights(candidateRecord.Weight, candidateRecord.Unit, currentBestRecord.Weight, currentBestRecord.Unit) > 0)
+                {
+                    currentBestRecord = candidateRecord;
+                }
+            }
+
+            var comparison = CompareWeights(bestScore.Weight, bestScore.Unit, currentBestRecord.Weight, currentBestRecord.Unit);
+            if (comparison > 0)
+            {
+                await _mainRecordRepository.AddAsync(new MainRecordEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    ExerciseId = exerciseId,
+                    Weight = bestScore.Weight,
+                    Unit = bestScore.Unit,
+                    Date = recordDate
+                });
+            }
         }
     }
 
@@ -312,6 +406,16 @@ public sealed class TrainingService : ITrainingService
     private static int CalculateEloPerExercise(ExerciseScore currentScore, ExerciseScore previousScore)
     {
         return PartElo(previousScore.Weight, previousScore.Reps, currentScore.Weight, currentScore.Reps);
+    }
+
+    private int CompareWeights(double leftWeight, WeightUnits leftUnit, double rightWeight, WeightUnits rightUnit)
+    {
+        return UnitValueComparer.Compare(
+            leftWeight,
+            leftUnit,
+            rightWeight,
+            rightUnit,
+            (value, unit) => _weightUnitConverter.Convert(value, unit, WeightUnits.Kilograms));
     }
 
     private static int PartElo(double prevWeight, int prevReps, double accWeight, int accReps)

@@ -8,6 +8,7 @@ public interface IMainRecordsService
 {
     Task AddNewRecordAsync(Guid userId, string exerciseId, double weight, WeightUnits unit, DateTime date);
     Task<List<MainRecordEntity>> GetMainRecordsHistoryAsync(Guid userId);
+    // Legacy name kept for backward compatibility: this returns the best (max) record per exercise.
     Task<MainRecordsLastContext> GetLastMainRecordsAsync(Guid userId);
     Task DeleteMainRecordAsync(Guid recordId);
     Task UpdateMainRecordAsync(Guid userId, string recordId, string exerciseId, double weight, WeightUnits unit, DateTime date);

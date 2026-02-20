@@ -437,6 +437,283 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task AddTraining_CreatesMainRecordFromBestWeightInPayload()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "maxcreateuser",
+            email: "maxcreate@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Max Bench", BodyParts.Chest);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Max Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Max Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Max Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "5" }
+        });
+
+        var trainingDate = DateTime.UtcNow;
+        var request = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = trainingDate,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 5, weight = 80.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 2, reps = 5, weight = 85.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var record = await db.MainRecords.SingleAsync(r => r.UserId == userId && r.ExerciseId == exerciseId);
+
+        record.Weight.Should().Be(85.0);
+        record.Unit.Should().Be(WeightUnits.Kilograms);
+        record.Date.UtcDateTime.Should().BeCloseTo(trainingDate, TimeSpan.FromSeconds(1));
+    }
+
+    [Test]
+    public async Task AddTraining_WithBetterResultInDifferentUnit_UpdatesMainRecordAndKeepsSourceUnit()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "maxupdateuser",
+            email: "maxupdate@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Max Deadlift", BodyParts.Back);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Max Update Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Max Update Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Max Update Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "5" }
+        });
+
+        var oldDate = DateTime.UtcNow.AddDays(-7);
+        await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 100.0,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = oldDate
+        });
+
+        var trainingDate = DateTime.UtcNow;
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = trainingDate,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 3, weight = 225.0, unit = WeightUnits.Pounds.ToString() }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var records = await db.MainRecords.Where(r => r.UserId == userId && r.ExerciseId == exerciseId).ToListAsync();
+
+        records.Should().HaveCount(2);
+        records.Should().Contain(r => r.Weight == 100.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().Contain(r => r.Weight == 225.0 && r.Unit == WeightUnits.Pounds);
+        records.Should().Contain(r => r.Weight == 225.0 && r.Unit == WeightUnits.Pounds &&
+                                     r.Date.UtcDateTime >= trainingDate.AddSeconds(-1));
+    }
+
+    [Test]
+    public async Task AddTraining_WithEqualResultAcrossUnits_DoesNotChangeMainRecords()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "maxequaluser",
+            email: "maxequal@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Max Press", BodyParts.Shoulders);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Max Equal Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Max Equal Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Max Equal Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "5" }
+        });
+
+        var initialDate = DateTime.UtcNow.AddDays(-5);
+        await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 100.0,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = initialDate
+        });
+
+        var equivalentPounds = 100.0 / 0.45359237;
+        var trainingDate = DateTime.UtcNow;
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = trainingDate,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 5, weight = equivalentPounds, unit = WeightUnits.Pounds.ToString() }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var records = await db.MainRecords.Where(r => r.UserId == userId && r.ExerciseId == exerciseId).ToListAsync();
+
+        records.Should().HaveCount(1);
+        records[0].Weight.Should().Be(100.0);
+        records[0].Unit.Should().Be(WeightUnits.Kilograms);
+        records[0].Date.UtcDateTime.Should().BeCloseTo(initialDate, TimeSpan.FromSeconds(1));
+    }
+
+    [Test]
+    public async Task AddTraining_WithWorseResultAcrossUnits_DoesNotUpdateMainRecord()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "maxworseuser",
+            email: "maxworse@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Max Row", BodyParts.Back);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Max Worse Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Max Worse Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Max Worse Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "5" }
+        });
+
+        var initialDate = DateTime.UtcNow.AddDays(-4);
+        await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 100.0,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = initialDate
+        });
+
+        var trainingDate = DateTime.UtcNow;
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = trainingDate,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 5, weight = 200.0, unit = WeightUnits.Pounds.ToString() }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var record = await db.MainRecords.SingleAsync(r => r.UserId == userId && r.ExerciseId == exerciseId);
+
+        record.Weight.Should().Be(100.0);
+        record.Unit.Should().Be(WeightUnits.Kilograms);
+        record.Date.UtcDateTime.Should().BeCloseTo(initialDate, TimeSpan.FromSeconds(1));
+    }
+
+    [Test]
+    public async Task AddTraining_WithMultipleSeriesForExercise_AddsOnlyBestMainRecordFromPayload()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "maxseriesuser",
+            email: "maxseries@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Bench Press", BodyParts.Chest);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Series Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Series Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Series Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "5" }
+        });
+
+        var initialDate = DateTime.UtcNow.AddDays(-1);
+        var initialResponse = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = initialDate,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 5, weight = 70.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        });
+        initialResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var initialMaxResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
+        initialMaxResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var initialMaxBody = await initialMaxResponse.Content.ReadFromJsonAsync<List<MainRecordBestResponse>>();
+        initialMaxBody.Should().NotBeNull();
+        initialMaxBody.Should().HaveCount(1);
+        initialMaxBody![0].Weight.Should().Be(70.0);
+
+        var trainingDate = DateTime.UtcNow;
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = trainingDate,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 5, weight = 72.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 2, reps = 5, weight = 74.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 3, reps = 5, weight = 76.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updatedMaxResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
+        updatedMaxResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updatedMaxBody = await updatedMaxResponse.Content.ReadFromJsonAsync<List<MainRecordBestResponse>>();
+        updatedMaxBody.Should().NotBeNull();
+        updatedMaxBody.Should().HaveCount(1);
+        updatedMaxBody![0].Weight.Should().Be(76.0);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var records = await db.MainRecords
+            .Where(r => r.UserId == userId && r.ExerciseId == exerciseId)
+            .OrderBy(r => r.Date)
+            .ToListAsync();
+
+        records.Should().HaveCount(2);
+        records.Should().Contain(r => r.Weight == 70.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().Contain(r => r.Weight == 76.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().NotContain(r => r.Weight == 72.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().NotContain(r => r.Weight == 74.0 && r.Unit == WeightUnits.Kilograms);
+    }
+
+    [Test]
     public async Task AddTraining_WhenLatestEloEntryMissing_DoesNotPersistPartialData()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
@@ -577,5 +854,11 @@ public sealed class TrainingTests : IntegrationTestBase
     {
         [JsonPropertyName("exerciseScoreId")]
         public string ExerciseScoreId { get; set; } = string.Empty;
+    }
+
+    private sealed class MainRecordBestResponse
+    {
+        [JsonPropertyName("weight")]
+        public double Weight { get; set; }
     }
 }
