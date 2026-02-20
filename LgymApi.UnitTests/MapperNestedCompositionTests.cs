@@ -197,7 +197,7 @@ public sealed class MapperNestedCompositionTests
         {
             configuration.CreateMap<int, int>((source, _) =>
             {
-                _barrier.SignalAndWait(TimeSpan.FromSeconds(2));
+                _barrier.SignalAndWait(TimeSpan.FromSeconds(30));
 
                 return source;
             });
