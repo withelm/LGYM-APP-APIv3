@@ -142,13 +142,10 @@ public sealed class GymTests : IntegrationTestBase
     [Test]
     public async Task GetGyms_WithTrainingHistory_ReturnsLastTrainingNestedInfo()
     {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
+        var (userId, _) = await RegisterUserViaEndpointAsync(
             name: "gymhistoryuser",
             email: "gymhistory@example.com",
             password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
         var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Gym History Exercise", BodyParts.Back);
         var gymId = await CreateGymViaEndpointAsync(userId, "History Gym");
