@@ -46,6 +46,7 @@ public sealed class MainRecordsController : ControllerBase
     [HttpGet("mainRecords/{id}/getLastMainRecords")]
     [ProducesResponseType(typeof(List<MainRecordsLastDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    // Route name is legacy; payload contains best (max) record per exercise.
     public async Task<IActionResult> GetLastMainRecords([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
