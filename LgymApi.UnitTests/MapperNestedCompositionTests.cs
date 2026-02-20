@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Diagnostics;
 using LgymApi.Application.Mapping.Core;
 
 namespace LgymApi.UnitTests;
@@ -92,6 +91,26 @@ public sealed class MapperNestedCompositionTests
         Assert.That(results, Is.EqualTo(new[] { 1, 1 }));
     }
 
+    [Test]
+    public async Task Map_Should_Allow_Only_One_Mapper_To_Bind_Unbound_Context_Concurrently()
+    {
+        var firstMapper = CreateMapper(new PlainIntMappingProfile());
+        var secondMapper = CreateMapper(new PlainIntMappingProfile());
+        var context = new MappingContext();
+
+        var firstTask = Task.Run(() => TryMap(firstMapper, context));
+        var secondTask = Task.Run(() => TryMap(secondMapper, context));
+
+        var results = await Task.WhenAll(firstTask, secondTask);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(results.Count(r => r.Success), Is.EqualTo(1));
+            Assert.That(results.Count(r => !r.Success), Is.EqualTo(1));
+            Assert.That(results.Single(r => !r.Success).Exception, Is.TypeOf<InvalidOperationException>());
+        });
+    }
+
     private static IMapper CreateMapper(params IMappingProfile[] profiles)
     {
         return (IMapper)Activator.CreateInstance(
@@ -172,24 +191,41 @@ public sealed class MapperNestedCompositionTests
 
     private sealed class ParallelValueTypeMappingProfile : IMappingProfile
     {
-        private int _started;
+        private readonly Barrier _barrier = new(participantCount: 2);
 
         public void Configure(MappingConfiguration configuration)
         {
             configuration.CreateMap<int, int>((source, _) =>
             {
-                Interlocked.Increment(ref _started);
-
-                var wait = Stopwatch.StartNew();
-                while (Volatile.Read(ref _started) < 2 && wait.Elapsed < TimeSpan.FromMilliseconds(250))
-                {
-                    Thread.SpinWait(1000);
-                }
+                _barrier.SignalAndWait(TimeSpan.FromSeconds(2));
 
                 return source;
             });
         }
     }
+
+    private sealed class PlainIntMappingProfile : IMappingProfile
+    {
+        public void Configure(MappingConfiguration configuration)
+        {
+            configuration.CreateMap<int, int>((source, _) => source);
+        }
+    }
+
+    private static MapAttemptResult TryMap(IMapper mapper, MappingContext context)
+    {
+        try
+        {
+            _ = mapper.Map<int, int>(1, context);
+            return new MapAttemptResult(Success: true, Exception: null);
+        }
+        catch (Exception ex)
+        {
+            return new MapAttemptResult(Success: false, Exception: ex);
+        }
+    }
+
+    private readonly record struct MapAttemptResult(bool Success, Exception? Exception);
 
     private sealed class ParentSource
     {

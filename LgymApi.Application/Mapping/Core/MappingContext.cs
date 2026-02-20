@@ -56,13 +56,13 @@ public sealed class MappingContext : IMappingContext
 
     internal void AttachMapper(Mapper mapper)
     {
-        if (_mapper is null)
+        var existing = Interlocked.CompareExchange(ref _mapper, mapper, comparand: null);
+        if (existing is null)
         {
-            _mapper = mapper;
             return;
         }
 
-        if (!ReferenceEquals(_mapper, mapper))
+        if (!ReferenceEquals(existing, mapper))
         {
             throw new InvalidOperationException("This mapping context is already bound to a different mapper instance.");
         }
