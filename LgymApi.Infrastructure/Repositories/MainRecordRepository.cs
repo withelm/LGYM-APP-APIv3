@@ -48,6 +48,26 @@ public sealed class MainRecordRepository : IMainRecordRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<List<MainRecord>> GetBestByUserGroupedByExerciseAndUnitAsync(Guid userId, IReadOnlyCollection<Guid>? exerciseIds = null, CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.MainRecords
+            .AsNoTracking()
+            .Where(r => r.UserId == userId);
+
+        if (exerciseIds is { Count: > 0 })
+        {
+            query = query.Where(r => exerciseIds.Contains(r.ExerciseId));
+        }
+
+        return query
+            .GroupBy(r => new { r.ExerciseId, r.Unit })
+            .Select(g => g
+                .OrderByDescending(r => r.Weight)
+                .ThenByDescending(r => r.Date)
+                .First())
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<MainRecord?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);

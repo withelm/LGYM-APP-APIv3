@@ -241,7 +241,7 @@ public sealed class TrainingService : ITrainingService
             return;
         }
 
-        var existingRecords = await _mainRecordRepository.GetByUserAndExercisesAsync(userId, bestScoresByExercise.Keys.ToList());
+        var existingRecords = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, bestScoresByExercise.Keys.ToList());
         var existingRecordsByExercise = existingRecords
             .GroupBy(r => r.ExerciseId)
             .ToDictionary(g => g.Key, g => g.ToList());

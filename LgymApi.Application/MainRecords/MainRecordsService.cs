@@ -109,7 +109,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var records = await _mainRecordRepository.GetByUserIdAsync(user.Id);
+        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(user.Id);
         if (records.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -211,7 +211,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var records = await _mainRecordRepository.GetByUserAndExerciseAsync(userId, exerciseGuid);
+        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, new[] { exerciseGuid });
         var comparableRecords = records
             .Where(r => r.Unit != WeightUnits.Unknown)
             .ToList();
