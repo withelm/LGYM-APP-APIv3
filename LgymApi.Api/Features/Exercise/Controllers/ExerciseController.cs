@@ -6,6 +6,7 @@ using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Exercise;
+using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Mapping.Core;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using LgymApi.Domain.Entities;
@@ -174,7 +175,7 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var result = await _exerciseService.GetLastExerciseScoresAsync(routeUserId, currentUserId, exerciseId, request.Series, gymId, request.ExerciseName);
-        return Ok(_mapper.Map<LgymApi.Application.Features.Exercise.Models.LastExerciseScoresResult, LastExerciseScoresResponseDto>(result));
+        return Ok(_mapper.Map<LastExerciseScoresResult, LastExerciseScoresResponseDto>(result));
     }
 
     [HttpPost("exercise/getExerciseScoresFromTrainingByExercise")]
@@ -186,7 +187,7 @@ public sealed class ExerciseController : ControllerBase
         var currentUserId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
         var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync(currentUserId, exerciseId);
-        var mapped = _mapper.MapList<LgymApi.Application.Features.Exercise.Models.ExerciseTrainingHistoryItem, ExerciseTrainingHistoryItemDto>(result);
+        var mapped = _mapper.MapList<ExerciseTrainingHistoryItem, ExerciseTrainingHistoryItemDto>(result);
 
         return Ok(mapped);
     }

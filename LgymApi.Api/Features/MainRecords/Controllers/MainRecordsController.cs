@@ -4,6 +4,7 @@ using LgymApi.Api.Features.MainRecords.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Features.MainRecords;
+using LgymApi.Application.Features.MainRecords.Models;
 using LgymApi.Application.Mapping.Core;
 using Microsoft.AspNetCore.Mvc;
 
@@ -84,6 +85,6 @@ public sealed class MainRecordsController : ControllerBase
     {
         var userId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
         var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, request.ExerciseId);
-        return Ok(_mapper.Map<LgymApi.Application.Features.MainRecords.Models.PossibleRecordResult, PossibleRecordForExerciseDto>(result));
+        return Ok(_mapper.Map<PossibleRecordResult, PossibleRecordForExerciseDto>(result));
     }
 }

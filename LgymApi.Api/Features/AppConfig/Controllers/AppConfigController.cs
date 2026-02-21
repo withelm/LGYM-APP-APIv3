@@ -4,6 +4,7 @@ using LgymApi.Application.Features.AppConfig;
 using LgymApi.Application.Mapping.Core;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using AppConfigEntity = LgymApi.Domain.Entities.AppConfig;
 
 namespace LgymApi.Api.Features.AppConfig.Controllers;
 
@@ -28,7 +29,7 @@ public sealed class AppConfigController : ControllerBase
     public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request)
     {
         var config = await _appConfigService.GetLatestByPlatformAsync(request.Platform);
-        return Ok(_mapper.Map<LgymApi.Domain.Entities.AppConfig, AppConfigInfoDto>(config));
+        return Ok(_mapper.Map<AppConfigEntity, AppConfigInfoDto>(config));
     }
 
     [HttpPost("appConfig/createNewAppVersion/{id}")]
