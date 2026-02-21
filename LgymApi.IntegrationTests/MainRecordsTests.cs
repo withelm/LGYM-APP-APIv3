@@ -194,6 +194,8 @@ public sealed class MainRecordsTests : IntegrationTestBase
         body.Should().NotBeNull();
         body.Should().HaveCount(1);
         body![0].Weight.Should().Be(55.0);
+        body[0].ExerciseDetails.Id.Should().Be(exerciseId.ToString());
+        body[0].ExerciseDetails.Name.Should().Be("OHP");
     }
 
     [Test]
@@ -478,6 +480,18 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         [JsonPropertyName("weight")]
         public double Weight { get; set; }
+
+        [JsonPropertyName("exerciseDetails")]
+        public ExerciseDetailsResponse ExerciseDetails { get; set; } = new();
+    }
+
+    private sealed class ExerciseDetailsResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
     }
 
     private sealed class PossibleRecordResponse

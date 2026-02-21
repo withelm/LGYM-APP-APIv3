@@ -33,6 +33,52 @@ public sealed class MapperNestedCompositionTests
     }
 
     [Test]
+    public void Map_Should_Support_Nested_Object_Mapping_With_Context_Propagation()
+    {
+        var mapper = CreateMapper(new NestedCompositionProfile());
+        var context = mapper.CreateContext();
+        context.Set(NestedCompositionProfile.Keys.Suffix, "!");
+
+        var source = new ParentSource
+        {
+            Child = new ChildSource { Name = "press" }
+        };
+
+        var result = mapper.Map<ParentSource, ParentTarget>(source, context);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Child?.Name, Is.EqualTo("press!"));
+            Assert.That(result.Children, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void Map_Should_Support_Nested_List_Mapping_With_Context_Propagation()
+    {
+        var mapper = CreateMapper(new NestedCompositionProfile());
+        var context = mapper.CreateContext();
+        context.Set(NestedCompositionProfile.Keys.Suffix, "!");
+
+        var source = new ParentSource
+        {
+            Children =
+            [
+                new ChildSource { Name = "row" },
+                new ChildSource { Name = "curl" }
+            ]
+        };
+
+        var result = mapper.Map<ParentSource, ParentTarget>(source, context);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Child, Is.Null);
+            Assert.That(result.Children.Select(c => c.Name), Is.EqualTo(new[] { "row!", "curl!" }));
+        });
+    }
+
+    [Test]
     public void Map_Should_Throw_Clear_Error_When_Nested_Mapping_Is_Missing()
     {
         var mapper = CreateMapper(new MissingNestedMappingProfile());
