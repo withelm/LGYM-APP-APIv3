@@ -1,19 +1,19 @@
-# LGYM APP - Konfiguracja deweloperska
+# LGYM APP - Development Setup
 
-## Przygotowanie środowiska
+## Environment setup
 
-### 1. Pliki konfiguracyjne
+### 1. Configuration files
 
-Po sklonowaniu repozytorium utwórz następujące pliki z własnymi danymi:
+After cloning the repository, create the following files with your local values:
 
 #### `LgymApi.Api/appsettings.Development.json`
 ```json
 {
   "ConnectionStrings": {
-    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=TWOJE_HASLO;TimeZone=Europe/Warsaw"
+    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=YOUR_PASSWORD;TimeZone=Europe/Warsaw"
   },
   "Jwt": {
-    "SigningKey": "TWOJ_JWT_SIGNING_KEY_MIN_32_ZNAKI"
+    "SigningKey": "YOUR_JWT_SIGNING_KEY_MIN_32_CHARS"
   },
   "Logging": {
     "LogLevel": {
@@ -28,10 +28,10 @@ Po sklonowaniu repozytorium utwórz następujące pliki z własnymi danymi:
 ```json
 {
   "ConnectionStrings": {
-    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=TWOJE_HASLO;TimeZone=Europe/Warsaw"
+    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=YOUR_PASSWORD;TimeZone=Europe/Warsaw"
   },
   "Mongo": {
-    "ConnectionString": "TWOJ_MONGODB_CONNECTION_STRING",
+    "ConnectionString": "YOUR_MONGODB_CONNECTION_STRING",
     "Database": "test"
   },
   "Migrator": {
@@ -40,13 +40,13 @@ Po sklonowaniu repozytorium utwórz następujące pliki z własnymi danymi:
 }
 ```
 
-### 2. Wymagania
+### 2. Requirements
 
 - .NET 8 SDK
-- PostgreSQL (domyślnie port 5433)
-- MongoDB (dla migratora)
+- PostgreSQL (default port 5433)
+- MongoDB (for the migrator)
 
-### 3. Uruchomienie
+### 3. Running the apps
 
 ```bash
 # API
@@ -58,8 +58,8 @@ cd LgymApi.Migrator
 dotnet run
 ```
 
-## Uwagi bezpieczeństwa
+## Security notes
 
-**NIGDY nie commituj plików `appsettings.Development.json` ani innych plików z hasłami.**
+**Never commit `appsettings.Development.json` or any file with credentials.**
 
-Te pliki są ignorowane przez `.gitignore` i powinny pozostać tylko lokalnie.
+These files are ignored by `.gitignore` and should remain local only.
