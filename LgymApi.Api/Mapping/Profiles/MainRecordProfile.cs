@@ -1,6 +1,7 @@
 using LgymApi.Api.Features.Enum;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.MainRecords.Contracts;
+using LgymApi.Application.Features.MainRecords.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 
@@ -44,6 +45,14 @@ public sealed class MainRecordProfile : IMappingProfile
                     ? new ExerciseResponseDto()
                     : context!.Map<Exercise, ExerciseResponseDto>(exercise)
             };
+        });
+
+        configuration.CreateMap<PossibleRecordResult, PossibleRecordForExerciseDto>((source, _) => new PossibleRecordForExerciseDto
+        {
+            Weight = source.Weight,
+            Reps = source.Reps,
+            Unit = source.Unit.ToLookup(),
+            Date = source.Date
         });
     }
 }
