@@ -89,4 +89,5 @@ public sealed class EndpointResponseTypeTests
             "Endpoints missing ProducesResponseType(StatusCodes.Status200OK or StatusCodes.Status201Created): " +
             string.Join(", ", missing));
     }
+
 }

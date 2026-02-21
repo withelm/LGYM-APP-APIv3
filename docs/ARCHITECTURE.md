@@ -48,6 +48,9 @@ The solution uses a custom mapping system (not AutoMapper):
 
 When adding new responses, prefer profile-based mapping and keep controllers thin.
 
+Controller rule (enforced): controllers must not construct response DTOs directly (`new *Dto`).
+Controllers should call services and return mapped outputs through `IMapper` / mapping profiles.
+
 ### 4.1 Nested Mapper Composition Rules
 
 Use `context.Map<TSource, TTarget>(...)` and `context.MapList<TSource, TTarget>(...)` inside profile delegates when mapping nested objects/lists that already have a registered map.

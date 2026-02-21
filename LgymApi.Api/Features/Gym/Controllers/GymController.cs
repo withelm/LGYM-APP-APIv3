@@ -31,7 +31,7 @@ public sealed class GymController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         await _gymService.AddGymAsync(user!, routeUserId, form.Name, form.Address);
-        return Ok(new ResponseMessageDto { Message = Messages.Created });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
     [HttpPost("gym/{id}/deleteGym")]
@@ -44,7 +44,7 @@ public sealed class GymController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         var gymId = Guid.TryParse(id, out var parsedGymId) ? parsedGymId : Guid.Empty;
         await _gymService.DeleteGymAsync(user!, gymId);
-        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
     [HttpGet("gym/{id}/getGyms")]
@@ -87,6 +87,6 @@ public sealed class GymController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         var gymId = Guid.TryParse(form.Id, out var parsedGymId) ? parsedGymId : Guid.Empty;
         await _gymService.UpdateGymAsync(user!, gymId, form.Name, form.Address);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

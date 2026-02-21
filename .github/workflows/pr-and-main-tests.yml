@@ -38,6 +38,9 @@ jobs:
       - name: Run unit tests
         run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=unit-tests.trx" --results-directory ./TestResults/Unit
 
+      - name: Run architecture tests
+        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=architecture-tests.trx" --results-directory ./TestResults/Architecture
+
       - name: Run integration tests
         run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=integration-tests.trx" --results-directory ./TestResults/Integration
 
@@ -65,4 +68,13 @@ jobs:
         with:
           name: Integration Tests
           path: TestResults/Integration/*.trx
+          reporter: dotnet-trx
+
+      - name: Publish architecture test summary
+        if: always()
+        continue-on-error: true
+        uses: dorny/test-reporter@v1
+        with:
+          name: Architecture Tests
+          path: TestResults/Architecture/*.trx
           reporter: dotnet-trx
