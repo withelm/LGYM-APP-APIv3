@@ -100,6 +100,7 @@ public sealed class SeriesScoreWithGymDto
 public sealed class LastExerciseScoresRequestDto
 {
     [JsonPropertyName("series")]
+    [JsonRequired]
     public int Series { get; set; }
 
     [JsonPropertyName("exerciseId")]

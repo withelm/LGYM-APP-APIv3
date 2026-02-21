@@ -1,19 +1,25 @@
-# LGYM APP - Konfiguracja deweloperska
+# LGYM APP - Development Setup
 
-## Przygotowanie œrodowiska
+## Environment setup
 
-### 1. Pliki konfiguracyjne
+### 1. Configuration files
 
-Po sklonowaniu repozytorium, utwórz nastêpuj¹ce pliki z w³asnymi danymi:
+After cloning the repository, create the following files with your local values:
 
 #### `LgymApi.Api/appsettings.Development.json`
 ```json
 {
   "ConnectionStrings": {
-    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=TWOJE_HASLO;TimeZone=Europe/Warsaw"
+    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=YOUR_PASSWORD;TimeZone=Europe/Warsaw"
   },
   "Jwt": {
-    "Secret": "TWOJ_JWT_SECRET_MIN_64_ZNAKI"
+    "SigningKey": "YOUR_JWT_SIGNING_KEY_MIN_32_CHARS"
+  },
+  "Cors": {
+    "AllowedOrigins": [
+      "http://localhost:3000",
+      "http://localhost:5173"
+    ]
   },
   "Logging": {
     "LogLevel": {
@@ -28,10 +34,10 @@ Po sklonowaniu repozytorium, utwórz nastêpuj¹ce pliki z w³asnymi danymi:
 ```json
 {
   "ConnectionStrings": {
-    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=TWOJE_HASLO;TimeZone=Europe/Warsaw"
+    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=YOUR_PASSWORD;TimeZone=Europe/Warsaw"
   },
   "Mongo": {
-    "ConnectionString": "TWOJ_MONGODB_CONNECTION_STRING",
+    "ConnectionString": "YOUR_MONGODB_CONNECTION_STRING",
     "Database": "test"
   },
   "Migrator": {
@@ -40,13 +46,13 @@ Po sklonowaniu repozytorium, utwórz nastêpuj¹ce pliki z w³asnymi danymi:
 }
 ```
 
-### 2. Wymagania
+### 2. Requirements
 
-- .NET 8 SDK
-- PostgreSQL (domyœlnie port 5433)
-- MongoDB (dla migratora)
+- .NET 10 SDK
+- PostgreSQL (default port 5433)
+- MongoDB (for the migrator)
 
-### 3. Uruchomienie
+### 3. Running the apps
 
 ```bash
 # API
@@ -58,8 +64,10 @@ cd LgymApi.Migrator
 dotnet run
 ```
 
-## Uwagi bezpieczeñstwa
+## Security notes
 
-?? **NIGDY nie commituj plików `appsettings.Development.json` ani innych plików z has³ami!**
+**Never commit `appsettings.Development.json` or any file with credentials.**
 
-Te pliki s¹ ignorowane przez `.gitignore` i powinny pozostaæ tylko lokalnie.
+These files are ignored by `.gitignore` and should remain local only.
+
+Set `Cors:AllowedOrigins` to your real frontend origins in each environment.

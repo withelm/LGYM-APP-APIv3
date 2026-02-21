@@ -55,6 +55,7 @@ public sealed class TrainingFormDto
     public string TypePlanDayId { get; set; } = string.Empty;
 
     [JsonPropertyName("createdAt")]
+    [JsonRequired]
     public DateTime CreatedAt { get; set; }
 
     [JsonPropertyName("gym")]
@@ -85,6 +86,7 @@ public class LastTrainingInfoDto
 public sealed class TrainingByDateRequestDto
 {
     [JsonPropertyName("createdAt")]
+    [JsonRequired]
     public DateTime CreatedAt { get; set; }
 }
 

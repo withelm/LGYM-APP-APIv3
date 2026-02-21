@@ -70,6 +70,7 @@ public sealed class ExerciseRepository : IExerciseRepository
 
         var normalizedCultures = cultures
             .Select(c => c.Trim().ToLowerInvariant())
+            .Where(c => c.Length > 0)
             .Distinct(StringComparer.Ordinal)
             .ToList();
 

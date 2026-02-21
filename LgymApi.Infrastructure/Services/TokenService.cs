@@ -18,13 +18,13 @@ public sealed class TokenService : ITokenService
 
     public string CreateToken(Guid userId)
     {
-        var secret = _configuration["Jwt:Secret"];
-        if (string.IsNullOrWhiteSpace(secret) || secret.Length < 32)
+        var signingKey = _configuration["Jwt:SigningKey"];
+        if (string.IsNullOrWhiteSpace(signingKey) || signingKey.Length < 32)
         {
-            throw new InvalidOperationException("Jwt:Secret is not configured or is too short. Set a strong secret value.");
+            throw new InvalidOperationException("Jwt:SigningKey is not configured or is too short. Set a strong key value.");
         }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
