@@ -36,5 +36,6 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         });
 
         builder.UseSetting("Jwt:SigningKey", TestJwtSigningKey);
+        builder.UseSetting("Cors:AllowedOrigins:0", "http://localhost");
     }
 }

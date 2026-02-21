@@ -52,12 +52,6 @@ builder.Services.AddCors(options =>
             return;
         }
 
-        if (builder.Environment.IsEnvironment("Testing"))
-        {
-            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-            return;
-        }
-
         throw new InvalidOperationException("No CORS allowed origins are configured. Configure 'Cors:AllowedOrigins' or disable CORS explicitly.");
     });
 });
