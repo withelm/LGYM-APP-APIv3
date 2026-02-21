@@ -220,7 +220,9 @@ public sealed class TrainingTests : IntegrationTestBase
 
         var body = await response.Content.ReadFromJsonAsync<LastTrainingResponse>();
         body.Should().NotBeNull();
+        body!.TypePlanDayId.Should().Be(planDayId.ToString());
         body!.PlanDay.Should().NotBeNull();
+        body.PlanDay!.Id.Should().Be(planDayId.ToString());
         body.PlanDay!.Name.Should().Be("Arms Day");
     }
 
