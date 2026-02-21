@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Globalization;
+using LgymApi.Api.Configuration;
 using Microsoft.AspNetCore.Localization;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Serialization;
@@ -38,24 +39,8 @@ builder.Services.AddSwaggerGen(options =>
     options.UseInlineDefinitionsForEnums();
     options.SchemaFilter<EnumAsStringSchemaFilter>();
 });
-var corsAllowedOrigins = builder.Configuration
-    .GetSection("Cors:AllowedOrigins")
-    .Get<string[]>()
-    ?.Where(origin => !string.IsNullOrWhiteSpace(origin))
-    .Select(origin => origin.Trim())
-    .Distinct(StringComparer.OrdinalIgnoreCase)
-    .ToArray() ?? [];
-
-if (builder.Environment.IsDevelopment() && corsAllowedOrigins.Length == 0)
-{
-    corsAllowedOrigins =
-    [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    ];
-}
+var configuredCorsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var corsAllowedOrigins = CorsOriginResolver.ResolveAllowedOrigins(configuredCorsOrigins, builder.Environment.IsDevelopment());
 
 builder.Services.AddCors(options =>
 {

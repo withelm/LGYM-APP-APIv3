@@ -342,8 +342,7 @@ public sealed class ExerciseService : IExerciseService
         var latestScores = await _exerciseScoreRepository.GetLatestByUserExerciseSeriesAsync(currentUserId, exerciseId, gymId);
         var latestBySeries = latestScores.ToDictionary(s => s.Series, s => s);
 
-        const int MaxSeriesLimit = 30;
-        var safeSeriesLimit = Math.Clamp(series, 1, MaxSeriesLimit);
+        var safeSeriesLimit = Math.Clamp(series, 1, ExerciseLimits.MaxSeries);
 
         var seriesScores = new List<SeriesScoreResult>(safeSeriesLimit);
         for (var i = 1; i <= safeSeriesLimit; i++)
