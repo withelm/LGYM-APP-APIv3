@@ -174,4 +174,13 @@
   <data name="DashboardStatusInvalid" xml:space="preserve">
     <value>Nieprawidłowa wartość status.</value>
   </data>
+  <data name="ReportFieldValidationFailed" xml:space="preserve">
+    <value>Przesłane pola raportu są nieprawidłowe.</value>
+  </data>
+  <data name="ReportRequestNotPending" xml:space="preserve">
+    <value>Zgłoszenie raportu nie jest już oczekujące.</value>
+  </data>
+  <data name="ReportRequestExpired" xml:space="preserve">
+    <value>Termin zgłoszenia raportu minął.</value>
+  </data>
 </root>

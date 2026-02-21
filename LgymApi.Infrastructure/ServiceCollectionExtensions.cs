@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ITrainerRelationshipRepository, TrainerRelationshipRepository>();
+        services.AddScoped<IReportingRepository, ReportingRepository>();
         services.AddScoped<IEmailNotificationLogRepository, EmailNotificationLogRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IPlanDayRepository, PlanDayRepository>();
