@@ -13,6 +13,7 @@ public sealed class ControllerDtoConstructionGuardTests
         var repoRoot = ResolveRepositoryRoot();
         var controllersRoot = Path.Combine(repoRoot, "LgymApi.Api", "Features");
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
+        var metadataReferences = ResolveMetadataReferences();
 
         Assert.That(
             Directory.Exists(controllersRoot),
@@ -45,21 +46,21 @@ public sealed class ControllerDtoConstructionGuardTests
                 $"Failed to parse controller source file '{file}':{Environment.NewLine}{string.Join(Environment.NewLine, parseErrors)}");
 
             var root = tree.GetCompilationUnitRoot();
+            var compilation = CSharpCompilation.Create(
+                "ControllerDtoGuard",
+                new[] { tree },
+                metadataReferences,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var semanticModel = compilation.GetSemanticModel(tree, ignoreAccessibility: true);
 
-            foreach (var creation in root.DescendantNodes().OfType<ObjectCreationExpressionSyntax>())
+            foreach (var creation in root.DescendantNodes().OfType<BaseObjectCreationExpressionSyntax>())
             {
-                var dtoType = TryGetDtoTypeName(creation.Type);
-                if (dtoType == null)
+                if (!IsInResponsePath(creation))
                 {
                     continue;
                 }
 
-                violations.Add(CreateViolation(repoRoot, tree, creation, dtoType));
-            }
-
-            foreach (var creation in root.DescendantNodes().OfType<ImplicitObjectCreationExpressionSyntax>())
-            {
-                var dtoType = TryInferDtoTypeFromContext(creation);
+                var dtoType = TryGetDtoTypeName(creation, semanticModel);
                 if (dtoType == null)
                 {
                     continue;
@@ -84,59 +85,42 @@ public sealed class ControllerDtoConstructionGuardTests
         return new Violation(relativePath, line, dtoType);
     }
 
-    private static string? TryInferDtoTypeFromContext(ImplicitObjectCreationExpressionSyntax creation)
+    private static string? TryGetDtoTypeName(BaseObjectCreationExpressionSyntax creation, SemanticModel semanticModel)
     {
-        if (creation.Parent is EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax { Parent: VariableDeclarationSyntax declaration } })
+        var type = semanticModel.GetTypeInfo(creation).Type as INamedTypeSymbol;
+        if (type == null)
         {
-            return TryGetDtoTypeName(declaration.Type);
+            return null;
         }
 
-        if (creation.Parent is ReturnStatementSyntax)
-        {
-            var method = creation.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-            if (method != null)
-            {
-                return TryGetDtoTypeName(method.ReturnType);
-            }
-
-            var localFunction = creation.Ancestors().OfType<LocalFunctionStatementSyntax>().FirstOrDefault();
-            if (localFunction != null)
-            {
-                return TryGetDtoTypeName(localFunction.ReturnType);
-            }
-        }
-
-        if (creation.Parent is ArrowExpressionClauseSyntax)
-        {
-            var method = creation.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-            if (method != null)
-            {
-                return TryGetDtoTypeName(method.ReturnType);
-            }
-
-            var property = creation.Ancestors().OfType<PropertyDeclarationSyntax>().FirstOrDefault();
-            if (property != null)
-            {
-                return TryGetDtoTypeName(property.Type);
-            }
-        }
-
-        return null;
+        return type.Name.EndsWith("Dto", StringComparison.Ordinal) ? type.Name : null;
     }
 
-    private static string? TryGetDtoTypeName(TypeSyntax type)
+    private static bool IsInResponsePath(SyntaxNode node)
     {
-        string typeName = type switch
+        if (node.Ancestors().OfType<ReturnStatementSyntax>().Any())
         {
-            IdentifierNameSyntax identifier => identifier.Identifier.Text,
-            GenericNameSyntax generic => generic.Identifier.Text,
-            QualifiedNameSyntax qualified => qualified.Right.Identifier.Text,
-            AliasQualifiedNameSyntax aliasQualified => aliasQualified.Name.Identifier.Text,
-            NullableTypeSyntax nullable => TryGetDtoTypeName(nullable.ElementType) ?? string.Empty,
-            _ => type.ToString().Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? string.Empty
-        };
+            return true;
+        }
 
-        return typeName.EndsWith("Dto", StringComparison.Ordinal) ? typeName : null;
+        if (node.Ancestors().OfType<ArrowExpressionClauseSyntax>().Any())
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static List<MetadataReference> ResolveMetadataReferences()
+    {
+        return AppDomain.CurrentDomain
+            .GetAssemblies()
+            .Where(assembly => !assembly.IsDynamic)
+            .Select(assembly => assembly.Location)
+            .Where(location => !string.IsNullOrWhiteSpace(location) && File.Exists(location))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(location => (MetadataReference)MetadataReference.CreateFromFile(location))
+            .ToList();
     }
 
     private static string ResolveRepositoryRoot()
