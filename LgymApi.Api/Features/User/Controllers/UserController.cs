@@ -3,6 +3,8 @@ using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Mapping.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,10 +15,12 @@ namespace LgymApi.Api.Features.User.Controllers;
 public sealed class UserController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IMapper _mapper;
 
-    public UserController(IUserService userService)
+    public UserController(IUserService userService, IMapper mapper)
     {
         _userService = userService;
+        _mapper = mapper;
     }
 
     [HttpPost("register")]
@@ -25,8 +29,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
         await _userService.RegisterAsync(request.Name, request.Email, request.Password, request.ConfirmPassword, request.IsVisibleInRanking);
-
-        return Ok(new ResponseMessageDto { Message = Messages.Created });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
     [HttpPost("login")]
@@ -35,27 +38,8 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await _userService.LoginAsync(request.Name, request.Password);
-        return Ok(new LoginResponseDto
-        {
-            Token = result.Token,
-            PermissionClaims = result.PermissionClaims,
-            User = new UserInfoDto
-            {
-                Name = result.User.Name,
-                Id = result.User.Id.ToString(),
-                Email = result.User.Email,
-                Avatar = result.User.Avatar,
-                ProfileRank = result.User.ProfileRank,
-                CreatedAt = result.User.CreatedAt,
-                UpdatedAt = result.User.UpdatedAt,
-                Elo = result.User.Elo,
-                NextRank = result.User.NextRank == null ? null : new RankDto { Name = result.User.NextRank.Name, NeedElo = result.User.NextRank.NeedElo },
-                IsDeleted = result.User.IsDeleted,
-                IsVisibleInRanking = result.User.IsVisibleInRanking,
-                Roles = result.User.Roles,
-                PermissionClaims = result.User.PermissionClaims
-            }
-        });
+        var mapped = _mapper.Map<LoginResult, LoginResponseDto>(result);
+        return Ok(mapped);
     }
 
     [HttpGet("{id}/isAdmin")]
@@ -73,22 +57,8 @@ public sealed class UserController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var result = await _userService.CheckTokenAsync(user!);
-        return Ok(new UserInfoDto
-        {
-            Name = result.Name,
-            Id = result.Id.ToString(),
-            Email = result.Email,
-            Avatar = result.Avatar,
-            ProfileRank = result.ProfileRank,
-            CreatedAt = result.CreatedAt,
-            UpdatedAt = result.UpdatedAt,
-            Elo = result.Elo,
-            NextRank = result.NextRank == null ? null : new RankDto { Name = result.NextRank.Name, NeedElo = result.NextRank.NeedElo },
-            IsDeleted = result.IsDeleted,
-            IsVisibleInRanking = result.IsVisibleInRanking,
-            Roles = result.Roles,
-            PermissionClaims = result.PermissionClaims
-        });
+        var mapped = _mapper.Map<UserInfoResult, UserInfoDto>(result);
+        return Ok(mapped);
     }
 
     [HttpPost("logout")]
@@ -105,13 +75,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> GetUsersRanking()
     {
         var result = await _userService.GetUsersRankingAsync();
-        var mapped = result.Select(u => new UserBaseInfoDto
-        {
-            Name = u.Name,
-            Avatar = u.Avatar,
-            Elo = u.Elo,
-            ProfileRank = u.ProfileRank
-        }).ToList();
+        var mapped = _mapper.MapList<RankingEntry, UserBaseInfoDto>(result);
         return Ok(mapped);
     }
 
@@ -121,7 +85,7 @@ public sealed class UserController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var elo = await _userService.GetUserEloAsync(userId);
-        return Ok(new UserEloDto { Elo = elo });
+        return Ok(_mapper.Map<int, UserEloDto>(elo));
     }
 
     [HttpGet("deleteAccount")]
@@ -130,7 +94,7 @@ public sealed class UserController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         await _userService.DeleteAccountAsync(user!);
-        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
     [HttpPost("changeVisibilityInRanking")]
@@ -144,6 +108,6 @@ public sealed class UserController : ControllerBase
 
         var user = HttpContext.GetCurrentUser();
         await _userService.ChangeVisibilityInRankingAsync(user!, isVisible);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

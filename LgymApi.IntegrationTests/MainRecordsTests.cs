@@ -156,7 +156,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetLastMainRecords_WithRecords_ReturnsLatestPerExercise()
+    public async Task GetLastMainRecords_WithRecords_ReturnsGreatestPerExercise()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "lastuser2",
@@ -194,6 +194,49 @@ public sealed class MainRecordsTests : IntegrationTestBase
         body.Should().NotBeNull();
         body.Should().HaveCount(1);
         body![0].Weight.Should().Be(55.0);
+        body[0].ExerciseDetails.Id.Should().Be(exerciseId.ToString());
+        body[0].ExerciseDetails.Name.Should().Be("OHP");
+    }
+
+    [Test]
+    public async Task GetLastMainRecords_WhenLatestIsNotGreatest_ReturnsGreatestPerExercise()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "lastuser3",
+            email: "last3@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Strict OHP", BodyParts.Shoulders);
+
+        var heavierOlderRequest = new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 60.0,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = DateTime.UtcNow.AddDays(-2)
+        };
+        await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", heavierOlderRequest);
+
+        var lighterLatestRequest = new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 55.0,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = DateTime.UtcNow
+        };
+        await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", lighterLatestRequest);
+
+        var response = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<MainRecordWithExerciseResponse>>();
+        body.Should().NotBeNull();
+        body.Should().HaveCount(1);
+        body![0].Weight.Should().Be(60.0);
     }
 
     [Test]
@@ -325,7 +368,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetRecordOrPossibleRecordInExercise_WithNoRecordButScores_ReturnsBestScore()
+    public async Task GetRecordOrPossibleRecordInExercise_WithTrainingCreatedRecord_ReturnsMainRecordShape()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "possibleuser2",
@@ -362,7 +405,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var body = await response.Content.ReadFromJsonAsync<PossibleRecordResponse>();
         body.Should().NotBeNull();
-        body!.Reps.Should().Be(12);
+        body!.Reps.Should().Be(1);
     }
 
     [Test]
@@ -437,6 +480,18 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         [JsonPropertyName("weight")]
         public double Weight { get; set; }
+
+        [JsonPropertyName("exerciseDetails")]
+        public ExerciseDetailsResponse ExerciseDetails { get; set; } = new();
+    }
+
+    private sealed class ExerciseDetailsResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
     }
 
     private sealed class PossibleRecordResponse

@@ -40,7 +40,7 @@ public sealed class PlanDayController : ControllerBase
             })
             .ToList();
         await _planDayService.CreatePlanDayAsync(user!, planId, form.Name, exercises);
-        return Ok(new ResponseMessageDto { Message = Messages.Created });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
     [HttpPost("planDay/updatePlanDay")]
@@ -60,7 +60,7 @@ public sealed class PlanDayController : ControllerBase
             })
             .ToList();
         await _planDayService.UpdatePlanDayAsync(user!, form.Id ?? string.Empty, form.Name, exercises);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpGet("planDay/{id}/getPlanDay")]
@@ -117,7 +117,7 @@ public sealed class PlanDayController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         var planDayId = Guid.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
         await _planDayService.DeletePlanDayAsync(user!, planDayId);
-        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
     [HttpGet("planDay/{id}/getPlanDaysInfo")]

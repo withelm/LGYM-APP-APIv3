@@ -6,6 +6,7 @@ using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Exercise;
+using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Mapping.Core;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using LgymApi.Domain.Entities;
@@ -34,7 +35,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> AddExercise([FromBody] ExerciseFormDto form)
     {
         await _exerciseService.AddExerciseAsync(form.Name, form.BodyPart, form.Description, form.Image);
-        return Ok(new ResponseMessageDto { Message = Messages.Created });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
     [HttpPost("exercise/{id}/addUserExercise")]
@@ -45,7 +46,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         await _exerciseService.AddUserExerciseAsync(userId, form.Name, form.BodyPart, form.Description, form.Image);
-        return Ok(new ResponseMessageDto { Message = Messages.Created });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
     [HttpPost("exercise/{id}/deleteExercise")]
@@ -63,7 +64,7 @@ public sealed class ExerciseController : ControllerBase
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var exerciseId = Guid.TryParse(exerciseIdString, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
         await _exerciseService.DeleteExerciseAsync(userId, exerciseId);
-        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
     [HttpPost("exercise/updateExercise")]
@@ -73,7 +74,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> UpdateExercise([FromBody] ExerciseFormDto form)
     {
         await _exerciseService.UpdateExerciseAsync(form.Id ?? string.Empty, form.Name, form.BodyPart, form.Description, form.Image);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpPost("exercise/{id}/addGlobalTranslation")]
@@ -87,7 +88,7 @@ public sealed class ExerciseController : ControllerBase
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         await _exerciseService.AddGlobalTranslationAsync(currentUser!, routeUserId, form.ExerciseId, form.Culture, form.Name);
 
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpGet("exercise/{id}/getAllExercises")]
@@ -174,18 +175,7 @@ public sealed class ExerciseController : ControllerBase
         }
 
         var result = await _exerciseService.GetLastExerciseScoresAsync(routeUserId, currentUserId, exerciseId, request.Series, gymId, request.ExerciseName);
-        var seriesScores = result.SeriesScores.Select(series => new SeriesScoreWithGymDto
-        {
-            Series = series.Series,
-            Score = series.Score == null ? null : _mapper.Map<ExerciseScore, ScoreWithGymDto>(series.Score)
-        }).ToList();
-
-        return Ok(new LastExerciseScoresResponseDto
-        {
-            ExerciseId = result.ExerciseId.ToString(),
-            ExerciseName = result.ExerciseName,
-            SeriesScores = seriesScores
-        });
+        return Ok(_mapper.Map<LastExerciseScoresResult, LastExerciseScoresResponseDto>(result));
     }
 
     [HttpPost("exercise/getExerciseScoresFromTrainingByExercise")]
@@ -197,18 +187,7 @@ public sealed class ExerciseController : ControllerBase
         var currentUserId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
         var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync(currentUserId, exerciseId);
-        var mapped = result.Select(item => new ExerciseTrainingHistoryItemDto
-        {
-            Id = item.Id.ToString(),
-            Date = item.Date,
-            GymName = item.GymName,
-            TrainingName = item.TrainingName,
-            SeriesScores = item.SeriesScores.Select(score => new SeriesScoreDto
-            {
-                Series = score.Series,
-                Score = score.Score == null ? null : _mapper.Map<ExerciseScore, ScoreDto>(score.Score)
-            }).ToList()
-        }).ToList();
+        var mapped = _mapper.MapList<ExerciseTrainingHistoryItem, ExerciseTrainingHistoryItemDto>(result);
 
         return Ok(mapped);
     }

@@ -4,6 +4,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Mapping.Core;
 using Microsoft.AspNetCore.Mvc;
+using Measurement = LgymApi.Domain.Entities.Measurement;
 
 namespace LgymApi.Api.Features.Measurements.Controllers;
 
@@ -28,7 +29,7 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
         var user = HttpContext.GetCurrentUser();
         await _measurementsService.AddMeasurementAsync(user!, form.BodyPart, form.Unit, form.Value);
 
-        return Ok(new ResponseMessageDto { Message = Messages.Created });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
     [HttpGet("measurements:/{id}/getMeasurementDetail")]
@@ -40,7 +41,7 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
         var user = HttpContext.GetCurrentUser();
         var measurementId = Guid.TryParse(id, out var parsedId) ? parsedId : Guid.Empty;
         var measurement = await _measurementsService.GetMeasurementDetailAsync(user!, measurementId);
-        return Ok(_mapper.Map<LgymApi.Domain.Entities.Measurement, MeasurementResponseDto>(measurement));
+        return Ok(_mapper.Map<Measurement, MeasurementResponseDto>(measurement));
     }
 
     [HttpGet("measurements/{id}/getHistory")]
@@ -52,12 +53,7 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var measurements = await _measurementsService.GetMeasurementsHistoryAsync(user!, routeUserId, request?.BodyPart);
-        var result = new MeasurementsHistoryDto
-        {
-            Measurements = measurements
-                .Select(m => _mapper.Map<LgymApi.Domain.Entities.Measurement, MeasurementResponseDto>(m))
-                .ToList()
-        };
+        var result = _mapper.Map<List<Measurement>, MeasurementsHistoryDto>(measurements);
 
         return Ok(result);
     }

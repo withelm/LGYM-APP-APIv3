@@ -27,13 +27,9 @@ public sealed class Mapper : IMapper
             throw new ArgumentNullException(nameof(source));
         }
 
-        var key = (Source: typeof(TSource), Target: typeof(TTarget));
-        if (!_mappings.TryGetValue(key, out var mapper))
-        {
-            throw new InvalidOperationException($"Mapping from {key.Source.Name} to {key.Target.Name} is not registered.");
-        }
+        var effectiveContext = PrepareContext(context);
 
-        return (TTarget)mapper(source!, context);
+        return MapInternal<TSource, TTarget>(source, effectiveContext);
     }
 
     public List<TTarget> MapList<TSource, TTarget>(IEnumerable<TSource> source, MappingContext? context = null)
@@ -43,6 +39,25 @@ public sealed class Mapper : IMapper
             throw new ArgumentNullException(nameof(source));
         }
 
+        var effectiveContext = PrepareContext(context);
+
+        return MapListInternal<TSource, TTarget>(source, effectiveContext);
+    }
+
+    internal TTarget MapInternal<TSource, TTarget>(TSource source, MappingContext context)
+    {
+        var key = (Source: typeof(TSource), Target: typeof(TTarget));
+        if (!_mappings.TryGetValue(key, out var mapper))
+        {
+            throw new InvalidOperationException($"Mapping from {key.Source.Name} to {key.Target.Name} is not registered.");
+        }
+
+        using var scope = context.EnterMappingScope(key.Source, key.Target, source!);
+        return (TTarget)mapper(source!, context);
+    }
+
+    internal List<TTarget> MapListInternal<TSource, TTarget>(IEnumerable<TSource> source, MappingContext context)
+    {
         var key = (Source: typeof(TSource), Target: typeof(TTarget));
         if (!_mappings.TryGetValue(key, out var mapper))
         {
@@ -57,6 +72,7 @@ public sealed class Mapper : IMapper
                 continue;
             }
 
+            using var scope = context.EnterMappingScope(key.Source, key.Target, item);
             result.Add((TTarget)mapper(item!, context));
         }
 
@@ -89,12 +105,22 @@ public sealed class Mapper : IMapper
                 continue;
             }
 
-            mapper(instance, new MappingContext(_allowedContextKeys));
+            var context = CreateContext();
+            mapper(instance, context);
         }
     }
 
     public MappingContext CreateContext()
     {
-        return new MappingContext(_allowedContextKeys);
+        var context = new MappingContext(_allowedContextKeys);
+        context.AttachMapper(this);
+        return context;
+    }
+
+    private MappingContext PrepareContext(MappingContext? context)
+    {
+        var effectiveContext = context ?? CreateContext();
+        effectiveContext.AttachMapper(this);
+        return effectiveContext;
     }
 }

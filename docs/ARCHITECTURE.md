@@ -48,6 +48,32 @@ The solution uses a custom mapping system (not AutoMapper):
 
 When adding new responses, prefer profile-based mapping and keep controllers thin.
 
+Controller rule (enforced): controllers must not construct response DTOs directly (`new *Dto`).
+Controllers should call services and return mapped outputs through `IMapper` / mapping profiles.
+
+### 4.1 Nested Mapper Composition Rules
+
+Use `context.Map<TSource, TTarget>(...)` and `context.MapList<TSource, TTarget>(...)` inside profile delegates when mapping nested objects/lists that already have a registered map.
+
+- Prefer nested composition over duplicated inline nested DTO construction.
+- Keep manual nested mapping only when:
+  - domain-specific shape changes are required for that endpoint,
+  - contextual key logic cannot be represented by existing nested maps,
+  - fallback payload rules differ from shared DTO mapping behavior.
+- Always reuse the same `MappingContext` for nested calls so context keys and guards propagate consistently.
+- Ensure nested source/target pairs are registered; missing registrations should fail fast in tests.
+- Avoid recursive self-mapping loops in profile delegates; cycle protection is built-in and should not be bypassed.
+
+### 4.2 Mapper Review Checklist
+
+When reviewing mapper changes:
+
+1. Is nested DTO mapping reusing existing maps (`context.Map`/`context.MapList`) where possible?
+2. Are any manual nested mappings justified by endpoint-specific behavior?
+3. Do context keys required by nested maps remain available and allowed?
+4. Are regression tests present for nested object/list success paths and missing-map/cycle failure paths?
+5. Do affected integration tests still verify response contract compatibility?
+
 ## 5. Error and Auth Pipeline
 
 - Use `AppException` for controlled domain/application errors (`BadRequest`, `Forbidden`, `NotFound`, etc.).

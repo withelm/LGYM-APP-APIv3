@@ -19,6 +19,11 @@ public sealed class MeasurementProfile : IMappingProfile
             CreatedAt = source.CreatedAt.UtcDateTime,
             UpdatedAt = source.UpdatedAt.UtcDateTime
         });
+
+        configuration.CreateMap<List<Measurement>, MeasurementsHistoryDto>((source, context) => new MeasurementsHistoryDto
+        {
+            Measurements = context!.MapList<Measurement, MeasurementResponseDto>(source)
+        });
     }
 
     private static HeightUnits ParseUnit(string? unit)
