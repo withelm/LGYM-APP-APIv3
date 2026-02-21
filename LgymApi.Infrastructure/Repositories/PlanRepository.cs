@@ -62,6 +62,13 @@ public sealed class PlanRepository : IPlanRepository
             .StageUpdateAsync(_dbContext, p => p.IsActive, p => true, cancellationToken);
     }
 
+    public Task ClearActivePlansAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Plans
+            .Where(p => p.UserId == userId && !p.IsDeleted)
+            .StageUpdateAsync(_dbContext, p => p.IsActive, p => false, cancellationToken);
+    }
+
     public async Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Guid userId, CancellationToken cancellationToken = default)
     {
         // 1. Find plan by ShareCode

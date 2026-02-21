@@ -16,6 +16,7 @@ using LgymApi.Domain.Security;
 using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
 using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
+using PlanEntity = LgymApi.Domain.Entities.Plan;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.TrainerRelationships;
@@ -25,6 +26,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly IPlanRepository _planRepository;
     private readonly IInvitationEmailScheduler _invitationEmailScheduler;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly ITrainingService _trainingService;
@@ -38,6 +40,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         ITrainerRelationshipRepository trainerRelationshipRepository,
+        IPlanRepository planRepository,
         IInvitationEmailScheduler invitationEmailScheduler,
         IEmailNotificationsFeature emailNotificationsFeature,
         ITrainingService trainingService,
@@ -50,6 +53,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _trainerRelationshipRepository = trainerRelationshipRepository;
+        _planRepository = planRepository;
         _invitationEmailScheduler = invitationEmailScheduler;
         _emailNotificationsFeature = emailNotificationsFeature;
         _trainingService = trainingService;
@@ -213,6 +217,155 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return await _mainRecordsService.GetMainRecordsHistoryAsync(traineeId);
     }
 
+    public async Task<List<TrainerManagedPlanResult>> GetTraineePlansAsync(UserEntity currentTrainer, Guid traineeId)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+        var plans = await _planRepository.GetByUserIdAsync(traineeId);
+
+        return plans
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(MapPlan)
+            .ToList();
+    }
+
+    public async Task<TrainerManagedPlanResult> CreateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, string name)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        var plan = new PlanEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = traineeId,
+            Name = name.Trim(),
+            IsActive = false,
+            IsDeleted = false
+        };
+
+        await _planRepository.AddAsync(plan);
+        await _unitOfWork.SaveChangesAsync();
+        return MapPlan(plan);
+    }
+
+    public async Task<TrainerManagedPlanResult> UpdateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, string name)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+
+        if (planId == Guid.Empty || string.IsNullOrWhiteSpace(name))
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        var plan = await _planRepository.FindByIdAsync(planId);
+        if (plan == null || plan.UserId != traineeId)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        plan.Name = name.Trim();
+        await _planRepository.UpdateAsync(plan);
+        await _unitOfWork.SaveChangesAsync();
+        return MapPlan(plan);
+    }
+
+    public async Task DeleteTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+
+        if (planId == Guid.Empty)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        var plan = await _planRepository.FindByIdAsync(planId);
+        if (plan == null || plan.UserId != traineeId)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var trainee = await _userRepository.FindByIdAsync(traineeId);
+        if (trainee == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        plan.IsActive = false;
+        plan.IsDeleted = true;
+        await _planRepository.UpdateAsync(plan);
+
+        if (trainee.PlanId == plan.Id)
+        {
+            trainee.PlanId = null;
+            await _userRepository.UpdateAsync(trainee);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task AssignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+
+        if (planId == Guid.Empty)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        var plan = await _planRepository.FindByIdAsync(planId);
+        if (plan == null || plan.UserId != traineeId)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var trainee = await _userRepository.FindByIdAsync(traineeId);
+        if (trainee == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        await _planRepository.SetActivePlanAsync(traineeId, planId);
+        trainee.PlanId = planId;
+        await _userRepository.UpdateAsync(trainee);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task UnassignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId)
+    {
+        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
+
+        var trainee = await _userRepository.FindByIdAsync(traineeId);
+        if (trainee == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        await _planRepository.ClearActivePlansAsync(traineeId);
+        trainee.PlanId = null;
+        await _userRepository.UpdateAsync(trainee);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task<TrainerManagedPlanResult> GetActiveAssignedPlanAsync(UserEntity currentTrainee)
+    {
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTraineeIdAsync(currentTrainee.Id);
+        if (link == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var activePlan = await _planRepository.FindActiveByUserIdAsync(currentTrainee.Id);
+        if (activePlan == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        return MapPlan(activePlan);
+    }
+
     public async Task AcceptInvitationAsync(UserEntity currentTrainee, Guid invitationId)
     {
         if (invitationId == Guid.Empty)
@@ -373,6 +526,17 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             ExpiresAt = invitation.ExpiresAt,
             RespondedAt = invitation.RespondedAt,
             CreatedAt = invitation.CreatedAt
+        };
+    }
+
+    private static TrainerManagedPlanResult MapPlan(PlanEntity plan)
+    {
+        return new TrainerManagedPlanResult
+        {
+            Id = plan.Id,
+            Name = plan.Name,
+            IsActive = plan.IsActive,
+            CreatedAt = plan.CreatedAt
         };
     }
 

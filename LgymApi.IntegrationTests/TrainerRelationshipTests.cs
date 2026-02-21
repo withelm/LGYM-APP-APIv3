@@ -1091,6 +1091,83 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         link.Should().BeNull();
     }
 
+    [Test]
+    public async Task TrainerPlanManagement_AssignAndUnassignPlan_UpdatesTraineeActivePlan()
+    {
+        var trainer = await SeedTrainerAsync("trainer-plan-assign", "trainer-plan-assign@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-plan-assign", email: "trainee-plan-assign@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        var createResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans", new
+        {
+            name = "Trainer Owned Plan"
+        });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var createdPlan = await createResponse.Content.ReadFromJsonAsync<TrainerManagedPlanResponse>();
+        createdPlan.Should().NotBeNull();
+        createdPlan!.Name.Should().Be("Trainer Owned Plan");
+        createdPlan.IsActive.Should().BeFalse();
+
+        var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{createdPlan.Id}/assign", null);
+        assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        SetAuthorizationHeader(trainee.Id);
+        var activeResponse = await Client.GetAsync("/api/trainee/plan/active");
+        activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var activePlan = await activeResponse.Content.ReadFromJsonAsync<TrainerManagedPlanResponse>();
+        activePlan.Should().NotBeNull();
+        activePlan!.Id.Should().Be(createdPlan.Id);
+        activePlan.IsActive.Should().BeTrue();
+
+        SetAuthorizationHeader(trainer.Id);
+        var unassignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/unassign", null);
+        unassignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        SetAuthorizationHeader(trainee.Id);
+        var noActiveResponse = await Client.GetAsync("/api/trainee/plan/active");
+        noActiveResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task TrainerPlanManagement_WhenTrainerDoesNotOwnTrainee_ReturnsNotFound()
+    {
+        var trainerA = await SeedTrainerAsync("trainer-plan-owner-a", "trainer-plan-owner-a@example.com");
+        var trainerB = await SeedTrainerAsync("trainer-plan-owner-b", "trainer-plan-owner-b@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-plan-owner", email: "trainee-plan-owner@example.com", password: "password123");
+
+        Guid planId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await LinkTrainerAndTraineeAsync(db, trainerB.Id, trainee.Id);
+
+            var plan = new Plan
+            {
+                Id = Guid.NewGuid(),
+                UserId = trainee.Id,
+                Name = "Foreign Plan",
+                IsActive = false,
+                IsDeleted = false
+            };
+
+            db.Plans.Add(plan);
+            await db.SaveChangesAsync();
+            planId = plan.Id;
+        }
+
+        SetAuthorizationHeader(trainerA.Id);
+        var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{planId}/assign", null);
+        assignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     private static async Task LinkTrainerAndTraineeAsync(AppDbContext db, Guid trainerId, Guid traineeId)
     {
         var existing = await db.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainerId && x.TraineeId == traineeId);
@@ -1223,6 +1300,18 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         [JsonPropertyName("weight")]
         public double Weight { get; set; }
+    }
+
+    private sealed class TrainerManagedPlanResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("isActive")]
+        public bool IsActive { get; set; }
     }
 
     private sealed class MessageResponse
