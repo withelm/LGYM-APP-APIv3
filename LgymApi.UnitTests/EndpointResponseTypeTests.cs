@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -88,5 +89,56 @@ public sealed class EndpointResponseTypeTests
             Is.Empty,
             "Endpoints missing ProducesResponseType(StatusCodes.Status200OK or StatusCodes.Status201Created): " +
             string.Join(", ", missing));
+    }
+
+    [Test]
+    public void Controllers_ShouldNotConstructResponseDtosDirectly()
+    {
+        var repoRoot = ResolveRepositoryRoot();
+        var controllersRoot = Path.Combine(repoRoot, "LgymApi.Api", "Features");
+        var controllerFiles = Directory
+            .EnumerateFiles(controllersRoot, "*Controller.cs", SearchOption.AllDirectories)
+            .ToList();
+
+        var dtoConstructorPattern = new Regex(@"new\s+[A-Za-z_][A-Za-z0-9_]*Dto\b", RegexOptions.Compiled);
+        var violations = new List<string>();
+
+        foreach (var file in controllerFiles)
+        {
+            var lines = File.ReadAllLines(file);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                if (!dtoConstructorPattern.IsMatch(lines[i]))
+                {
+                    continue;
+                }
+
+                var relativePath = Path.GetRelativePath(repoRoot, file);
+                violations.Add($"{relativePath}:{i + 1}: {lines[i].Trim()}");
+            }
+        }
+
+        Assert.That(
+            violations,
+            Is.Empty,
+            "Controllers must use mapper profiles for response DTO mapping. Violations: " +
+            string.Join(" | ", violations));
+    }
+
+    private static string ResolveRepositoryRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current != null)
+        {
+            var apiProjectDir = Path.Combine(current.FullName, "LgymApi.Api");
+            if (Directory.Exists(apiProjectDir))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("Unable to locate repository root for architecture checks.");
     }
 }
