@@ -1,112 +1,56 @@
-# LGYM .NET Backend
+# LGYM API (.NET)
 
-This backend replaces the Node/Mongo implementation with .NET 10, EF Core, and PostgreSQL.
-All API routes and payloads remain 1:1 compatible with the existing frontend.
+Backend API for the LGYM application built on .NET 10, EF Core, and PostgreSQL.
+The project exposes endpoints used by clients for user auth, training plans, workouts, exercises,
+gyms, measurements, records, scores, and application configuration.
+
+## What this project does
+
+- Serves REST API endpoints for core LGYM domain modules.
+- Handles authentication and user context with JWT.
+- Persists application data in PostgreSQL through EF Core.
+- Preserves legacy client contract shape (including `_id`, `msg`, and route conventions).
+
+## Solution structure
+
+- `LgymApi.Api` - HTTP API layer (controllers, DTOs, validation, middleware, mapping profiles).
+- `LgymApi.Application` - use-case orchestration and business services.
+- `LgymApi.Domain` - domain entities and core model.
+- `LgymApi.Infrastructure` - EF Core persistence, repositories, Unit of Work, migrations.
+- `LgymApi.UnitTests` / `LgymApi.IntegrationTests` - automated tests.
 
 ## Requirements
 
 - .NET SDK 10.x
 - PostgreSQL
-- MongoDB (only needed for offline migration)
 
 ## Configuration
 
-Update the following files or provide environment variables:
+Configure via `appsettings.json` files or environment variables:
 
 - API: `LgymApi.Api/appsettings.json`
-- Migrator: `LgymApi.Migrator/appsettings.json`
 
-Supported environment variable overrides:
+Common environment variable overrides:
 
 - `ConnectionStrings__Postgres`
-- `Mongo__ConnectionString`
-- `Mongo__Database`
 - `Jwt__Secret`
 
-## Scripts
+## Quick start
 
-All scripts live in `scripts`.
-
-### 1) Apply EF Core migrations
-
-PowerShell:
-
-```powershell
-scripts\migrate-db.ps1 -ConnectionString "Host=...;Database=...;Username=...;Password=..."
-```
-
-CMD:
-
-```cmd
-scripts\migrate-db.cmd "Host=...;Database=...;Username=...;Password=..."
-```
-
-### 2) Run offline Mongo → Postgres migration
-
-PowerShell:
-
-```powershell
-scripts\run-migrator.ps1 -MongoConnection "mongodb://..." -MongoDatabase "db" -PostgresConnection "Host=...;Database=...;Username=...;Password=..."
-```
-
-CMD:
-
-```cmd
-scripts\run-migrator.cmd "mongodb://..." "db" "Host=...;Database=...;Username=...;Password=..."
-```
-
-### 3) Run everything (migrate DB + data)
-
-PowerShell:
-
-```powershell
-scripts\setup-all.ps1 -MongoConnection "mongodb://..." -MongoDatabase "db" -PostgresConnection "Host=...;Database=...;Username=...;Password=..."
-```
-
-CMD:
-
-```cmd
-scripts\setup-all.cmd "Host=...;Database=...;Username=...;Password=..." "mongodb://..." "db"
-```
-
-### 4) Generate SQL migration script
-
-PowerShell:
-
-```powershell
-scripts\generate-migration-sql.ps1 -OutputPath "C:\temp\migration.sql"
-scripts\generate-migration-sql.ps1 -FromMigration "InitialCreate" -ToMigration "InitialCreate" -OutputPath "C:\temp\migration.sql"
-```
-
-CMD:
-
-```cmd
-scripts\generate-migration-sql.cmd "C:\temp\migration.sql"
-scripts\generate-migration-sql.cmd "C:\temp\migration.sql" InitialCreate InitialCreate
-```
-
-## Running the API
+Run the API:
 
 ```bash
 dotnet run --project LgymApi.Api
 ```
 
+## Persistence conventions (Unit of Work)
+
+- Repositories stage changes (`Add`, `Update`, `Remove`) and do not call `SaveChangesAsync`.
+- Application services define commit timing (`IUnitOfWork.SaveChangesAsync`) at use-case boundaries.
+- Multi-step write flows use explicit `IUnitOfWork` transactions in services.
+- Read-only queries should prefer `AsNoTracking()` unless tracking is required.
+
 ## Notes
 
 - Password verification uses legacy `passport-local-mongoose` PBKDF2 settings (sha256, 25000 iterations, keylen 512, hex).
-- All IDs are GUIDs in Postgres; responses return `_id` as a string GUID.
-
-## Persistence Conventions (UoW)
-
-The project uses Unit of Work semantics for writes.
-
-- Repositories stage entity changes (`Add`, `Update`, `Remove`) and do not call `SaveChangesAsync`.
-- Application services own commit timing (`IUnitOfWork.SaveChangesAsync`) at use-case boundaries.
-- Multi-step write flows use explicit `IUnitOfWork` transactions in the service layer.
-- Read-only repository queries should prefer `AsNoTracking()` unless tracking is explicitly needed.
-
-### Transaction Ownership
-
-- The top-level application service method owns the transaction scope.
-- Repository methods are transaction-agnostic and should not begin/commit/rollback transactions.
-- On failures in transactional flows, service code rolls back and propagates domain/application errors.
+- In PostgreSQL all IDs are GUIDs; API responses return `_id` as string GUID values.
