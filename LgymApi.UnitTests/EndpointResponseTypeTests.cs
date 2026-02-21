@@ -96,6 +96,12 @@ public sealed class EndpointResponseTypeTests
     {
         var repoRoot = ResolveRepositoryRoot();
         var controllersRoot = Path.Combine(repoRoot, "LgymApi.Api", "Features");
+
+        Assert.That(
+            Directory.Exists(controllersRoot),
+            Is.True,
+            $"Controllers root directory '{controllersRoot}' does not exist. Check the repository layout and controllersRoot path.");
+
         var controllerFiles = Directory
             .EnumerateFiles(controllersRoot, "*Controller.cs", SearchOption.AllDirectories)
             .ToList();
@@ -114,16 +120,19 @@ public sealed class EndpointResponseTypeTests
 
         foreach (var file in controllerFiles)
         {
-            var lines = File.ReadAllLines(file);
-            for (var i = 0; i < lines.Length; i++)
+            var fileText = File.ReadAllText(file);
+            if (string.IsNullOrWhiteSpace(fileText))
             {
-                if (!dtoConstructorPattern.IsMatch(lines[i]))
-                {
-                    continue;
-                }
+                continue;
+            }
 
+            var matches = dtoConstructorPattern.Matches(fileText);
+            foreach (Match match in matches)
+            {
+                var lineNumber = GetLineNumber(fileText, match.Index);
+                var lineText = GetLineText(fileText, lineNumber);
                 var relativePath = Path.GetRelativePath(repoRoot, file);
-                violations.Add($"{relativePath}:{i + 1}: {lines[i].Trim()}");
+                violations.Add($"{relativePath}:{lineNumber}: {lineText.Trim()}");
             }
         }
 
@@ -149,5 +158,52 @@ public sealed class EndpointResponseTypeTests
         }
 
         throw new InvalidOperationException("Unable to locate repository root for architecture checks.");
+    }
+
+    private static int GetLineNumber(string text, int charIndex)
+    {
+        var line = 1;
+        for (var i = 0; i < charIndex && i < text.Length; i++)
+        {
+            if (text[i] == '\n')
+            {
+                line++;
+            }
+        }
+
+        return line;
+    }
+
+    private static string GetLineText(string text, int lineNumber)
+    {
+        var currentLine = 1;
+        var lineStart = 0;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (currentLine == lineNumber)
+            {
+                lineStart = i;
+                break;
+            }
+
+            if (text[i] == '\n')
+            {
+                currentLine++;
+            }
+        }
+
+        if (currentLine != lineNumber)
+        {
+            return string.Empty;
+        }
+
+        var lineEnd = text.IndexOf('\n', lineStart);
+        if (lineEnd == -1)
+        {
+            lineEnd = text.Length;
+        }
+
+        return text.Substring(lineStart, lineEnd - lineStart);
     }
 }
