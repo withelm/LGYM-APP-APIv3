@@ -100,7 +100,14 @@ public sealed class EndpointResponseTypeTests
             .EnumerateFiles(controllersRoot, "*Controller.cs", SearchOption.AllDirectories)
             .ToList();
 
-        var dtoConstructorPattern = new Regex(@"new\s+[A-Za-z_][A-Za-z0-9_]*Dto\b", RegexOptions.Compiled);
+        Assert.That(
+            controllerFiles,
+            Is.Not.Empty,
+            $"No controller files found in '{controllersRoot}'. Check the controllersRoot path and *Controller.cs naming.");
+
+        var dtoConstructorPattern = new Regex(
+            @"new\s+([A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*Dto\b",
+            RegexOptions.Compiled);
         var violations = new List<string>();
 
         foreach (var file in controllerFiles)
