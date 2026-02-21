@@ -42,19 +42,25 @@ var corsAllowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>()
     ?.Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(origin => origin.Trim())
     .Distinct(StringComparer.OrdinalIgnoreCase)
     .ToArray() ?? [];
+
+if (builder.Environment.IsDevelopment() && corsAllowedOrigins.Length == 0)
+{
+    corsAllowedOrigins =
+    [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ];
+}
 
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        if (builder.Environment.IsDevelopment() && corsAllowedOrigins.Length == 0)
-        {
-            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-            return;
-        }
-
         if (corsAllowedOrigins.Length > 0)
         {
             policy.WithOrigins(corsAllowedOrigins).AllowAnyMethod().AllowAnyHeader();

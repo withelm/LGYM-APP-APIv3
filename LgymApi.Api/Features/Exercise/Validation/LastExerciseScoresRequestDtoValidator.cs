@@ -12,8 +12,9 @@ public class LastExerciseScoresRequestDtoValidator : AbstractValidator<LastExerc
     {
         RuleFor(x => x.Series)
             .GreaterThan(0)
+            .WithMessage(Messages.SeriesMustBeGreaterThanZero)
             .LessThanOrEqualTo(MaxSeriesLimit)
-            .WithMessage(Messages.SeriesMustBeGreaterThanZero);
+            .WithMessage(Messages.SeriesMustBeBetweenOneAndThirty);
 
         RuleFor(x => x.ExerciseId)
             .NotEmpty()

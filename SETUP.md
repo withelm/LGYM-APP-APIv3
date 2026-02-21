@@ -1,10 +1,10 @@
 # LGYM APP - Konfiguracja deweloperska
 
-## Przygotowanie �rodowiska
+## Przygotowanie środowiska
 
 ### 1. Pliki konfiguracyjne
 
-Po sklonowaniu repozytorium, utw�rz nast�puj�ce pliki z w�asnymi danymi:
+Po sklonowaniu repozytorium utwórz następujące pliki z własnymi danymi:
 
 #### `LgymApi.Api/appsettings.Development.json`
 ```json
@@ -13,7 +13,7 @@ Po sklonowaniu repozytorium, utw�rz nast�puj�ce pliki z w�asnymi danymi:
     "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=TWOJE_HASLO;TimeZone=Europe/Warsaw"
   },
   "Jwt": {
-    "SigningKey": "TWOJ_JWT_SIGNING_KEY_MIN_64_ZNAKI"
+    "SigningKey": "TWOJ_JWT_SIGNING_KEY_MIN_32_ZNAKI"
   },
   "Logging": {
     "LogLevel": {
@@ -43,7 +43,7 @@ Po sklonowaniu repozytorium, utw�rz nast�puj�ce pliki z w�asnymi danymi:
 ### 2. Wymagania
 
 - .NET 8 SDK
-- PostgreSQL (domy�lnie port 5433)
+- PostgreSQL (domyślnie port 5433)
 - MongoDB (dla migratora)
 
 ### 3. Uruchomienie
@@ -58,8 +58,8 @@ cd LgymApi.Migrator
 dotnet run
 ```
 
-## Uwagi bezpiecze�stwa
+## Uwagi bezpieczeństwa
 
-?? **NIGDY nie commituj plik�w `appsettings.Development.json` ani innych plik�w z has�ami!**
+**NIGDY nie commituj plików `appsettings.Development.json` ani innych plików z hasłami.**
 
-Te pliki s� ignorowane przez `.gitignore` i powinny pozosta� tylko lokalnie.
+Te pliki są ignorowane przez `.gitignore` i powinny pozostać tylko lokalnie.
