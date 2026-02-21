@@ -12,6 +12,7 @@ public sealed class ControllerDtoConstructionGuardTests
     {
         var repoRoot = ResolveRepositoryRoot();
         var controllersRoot = Path.Combine(repoRoot, "LgymApi.Api", "Features");
+        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
 
         Assert.That(
             Directory.Exists(controllersRoot),
@@ -32,7 +33,17 @@ public sealed class ControllerDtoConstructionGuardTests
         foreach (var file in controllerFiles)
         {
             var source = File.ReadAllText(file);
-            var tree = CSharpSyntaxTree.ParseText(source, path: file);
+            var tree = CSharpSyntaxTree.ParseText(source, options: parseOptions, path: file);
+            var parseErrors = tree
+                .GetDiagnostics()
+                .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                .ToList();
+
+            Assert.That(
+                parseErrors,
+                Is.Empty,
+                $"Failed to parse controller source file '{file}':{Environment.NewLine}{string.Join(Environment.NewLine, parseErrors)}");
+
             var root = tree.GetCompilationUnitRoot();
 
             foreach (var creation in root.DescendantNodes().OfType<ObjectCreationExpressionSyntax>())
@@ -61,8 +72,8 @@ public sealed class ControllerDtoConstructionGuardTests
         Assert.That(
             violations,
             Is.Empty,
-            "Controllers must not construct DTOs directly. " +
-            string.Join(" | ", violations.Select(v => v.ToString())));
+            "Controllers must not construct DTOs directly. Violations count: " + violations.Count + Environment.NewLine +
+            string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
     }
 
     private static Violation CreateViolation(string repoRoot, SyntaxTree tree, SyntaxNode node, string dtoType)
@@ -70,7 +81,7 @@ public sealed class ControllerDtoConstructionGuardTests
         var span = tree.GetLineSpan(node.Span);
         var line = span.StartLinePosition.Line + 1;
         var relativePath = Path.GetRelativePath(repoRoot, tree.FilePath);
-        return new Violation(relativePath, line, dtoType, node.ToString());
+        return new Violation(relativePath, line, dtoType);
     }
 
     private static string? TryInferDtoTypeFromContext(ImplicitObjectCreationExpressionSyntax creation)
@@ -145,8 +156,8 @@ public sealed class ControllerDtoConstructionGuardTests
         throw new InvalidOperationException("Unable to locate repository root.");
     }
 
-    private sealed record Violation(string File, int Line, string DtoType, string Code)
+    private sealed record Violation(string File, int Line, string DtoType)
     {
-        public override string ToString() => $"{File}:{Line} [{DtoType}] {Code}";
+        public override string ToString() => $"{File}:{Line} [{DtoType}]";
     }
 }
