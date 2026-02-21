@@ -1,7 +1,9 @@
 using LgymApi.Api.Features.Common.Contracts;
+using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.TrainerRelationships;
+using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
@@ -58,5 +60,14 @@ public sealed class TraineeRelationshipController : ControllerBase
         var trainee = HttpContext.GetCurrentUser();
         await _trainerRelationshipService.DetachFromTrainerAsync(trainee!);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
+    }
+
+    [HttpGet("plan/active")]
+    [ProducesResponseType(typeof(TrainerManagedPlanDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetActiveAssignedPlan()
+    {
+        var trainee = HttpContext.GetCurrentUser();
+        var plan = await _trainerRelationshipService.GetActiveAssignedPlanAsync(trainee!);
+        return Ok(_mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(plan));
     }
 }

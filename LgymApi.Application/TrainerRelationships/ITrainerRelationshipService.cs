@@ -17,6 +17,13 @@ public interface ITrainerRelationshipService
     Task<List<ExerciseScoresChartData>> GetTraineeExerciseScoresChartDataAsync(UserEntity currentTrainer, Guid traineeId, Guid exerciseId);
     Task<List<EloRegistryChartEntry>> GetTraineeEloChartAsync(UserEntity currentTrainer, Guid traineeId);
     Task<List<MainRecordEntity>> GetTraineeMainRecordsHistoryAsync(UserEntity currentTrainer, Guid traineeId);
+    Task<List<TrainerManagedPlanResult>> GetTraineePlansAsync(UserEntity currentTrainer, Guid traineeId);
+    Task<TrainerManagedPlanResult> CreateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, string name);
+    Task<TrainerManagedPlanResult> UpdateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, string name);
+    Task DeleteTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId);
+    Task AssignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId);
+    Task UnassignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId);
+    Task<TrainerManagedPlanResult> GetActiveAssignedPlanAsync(UserEntity currentTrainee);
     Task AcceptInvitationAsync(UserEntity currentTrainee, Guid invitationId);
     Task RejectInvitationAsync(UserEntity currentTrainee, Guid invitationId);
     Task UnlinkTraineeAsync(UserEntity currentTrainer, Guid traineeId);

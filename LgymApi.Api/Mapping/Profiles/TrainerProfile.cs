@@ -35,5 +35,13 @@ public sealed class TrainerProfile : IMappingProfile
             LastInvitationRespondedAt = source.LastInvitationRespondedAt
         });
 
+        configuration.CreateMap<TrainerManagedPlanResult, TrainerManagedPlanDto>((source, _) => new TrainerManagedPlanDto
+        {
+            Id = source.Id.ToString(),
+            Name = source.Name,
+            IsActive = source.IsActive,
+            CreatedAt = source.CreatedAt
+        });
+
     }
 }

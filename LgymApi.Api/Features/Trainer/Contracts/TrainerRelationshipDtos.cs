@@ -107,3 +107,24 @@ public sealed class TrainerDashboardTraineesResponse
     [JsonPropertyName("items")]
     public List<TrainerDashboardTraineeDto> Items { get; set; } = [];
 }
+
+public sealed class TrainerPlanFormRequest
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+}
+
+public sealed class TrainerManagedPlanDto
+{
+    [JsonPropertyName("_id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("isActive")]
+    public bool IsActive { get; set; }
+
+    [JsonPropertyName("createdAt")]
+    public DateTimeOffset CreatedAt { get; set; }
+}
