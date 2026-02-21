@@ -49,8 +49,10 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         token.GetString().Should().NotBeNullOrWhiteSpace();
 
         json.RootElement.TryGetProperty("req", out var req).Should().BeTrue();
-        req.TryGetProperty("_id", out _).Should().BeTrue();
-        req.TryGetProperty("name", out _).Should().BeTrue();
+        req.TryGetProperty("_id", out var userId).Should().BeTrue();
+        userId.GetString().Should().NotBeNullOrWhiteSpace();
+        req.TryGetProperty("name", out var userName).Should().BeTrue();
+        userName.GetString().Should().Be("contract_login");
 
         // Contract guard: login payload must keep `req` (legacy shape), not `user`.
         json.RootElement.TryGetProperty("user", out _).Should().BeFalse();
