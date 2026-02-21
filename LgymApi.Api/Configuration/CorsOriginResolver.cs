@@ -23,6 +23,6 @@ public static class CorsOriginResolver
             return normalizedOrigins;
         }
 
-        return isDevelopment ? DevelopmentFallbackOrigins : [];
+        return isDevelopment ? DevelopmentFallbackOrigins.ToArray() : [];
     }
 }

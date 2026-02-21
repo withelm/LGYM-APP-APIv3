@@ -5,18 +5,26 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class CorsOriginResolverTests
 {
+    private static readonly string[] ExpectedDevelopmentOrigins =
+    [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ];
+
+    private static readonly string[] ExpectedNormalizedConfiguredOrigins =
+    [
+        "https://app.example.com",
+        "https://admin.example.com"
+    ];
+
     [Test]
     public void ResolveAllowedOrigins_InDevelopmentWithoutConfiguredOrigins_ReturnsFallbackOrigins()
     {
         var result = CorsOriginResolver.ResolveAllowedOrigins(null, isDevelopment: true);
 
-        Assert.That(result, Is.EqualTo(new[]
-        {
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173"
-        }));
+        Assert.That(result, Is.EqualTo(ExpectedDevelopmentOrigins));
     }
 
     [Test]
@@ -41,6 +49,6 @@ public sealed class CorsOriginResolverTests
 
         var result = CorsOriginResolver.ResolveAllowedOrigins(configuredOrigins, isDevelopment: true);
 
-        Assert.That(result, Is.EqualTo(new[] { "https://app.example.com", "https://admin.example.com" }));
+        Assert.That(result, Is.EqualTo(ExpectedNormalizedConfiguredOrigins));
     }
 }
