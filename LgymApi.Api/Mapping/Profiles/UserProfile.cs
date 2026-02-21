@@ -35,7 +35,9 @@ public sealed class UserProfile : IMappingProfile
         configuration.CreateMap<LoginResult, LoginResponseDto>((source, context) => new LoginResponseDto
         {
             Token = source.Token,
-            User = context!.Map<UserInfoResult, UserInfoDto>(source.User)
+            User = source.User == null
+                ? null
+                : context!.Map<UserInfoResult, UserInfoDto>(source.User)
         });
 
         configuration.CreateMap<RankingEntry, UserBaseInfoDto>((source, _) => new UserBaseInfoDto

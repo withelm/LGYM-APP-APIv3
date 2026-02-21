@@ -24,7 +24,9 @@ public sealed class TrainingProfile : IMappingProfile
         configuration.CreateMap<SeriesComparison, SeriesComparisonDto>((source, context) => new SeriesComparisonDto
         {
             Series = source.Series,
-            CurrentResult = context!.Map<ScoreResult, ScoreResultDto>(source.CurrentResult),
+            CurrentResult = source.CurrentResult == null
+                ? new ScoreResultDto()
+                : context!.Map<ScoreResult, ScoreResultDto>(source.CurrentResult),
             PreviousResult = source.PreviousResult == null
                 ? null
                 : context!.Map<ScoreResult, ScoreResultDto>(source.PreviousResult)
@@ -50,7 +52,9 @@ public sealed class TrainingProfile : IMappingProfile
         configuration.CreateMap<EnrichedExercise, EnrichedExerciseDto>((source, context) => new EnrichedExerciseDto
         {
             ExerciseScoreId = source.ExerciseScoreId.ToString(),
-            ExerciseDetails = context!.Map<Exercise, ExerciseResponseDto>(source.ExerciseDetails),
+            ExerciseDetails = source.ExerciseDetails == null
+                ? new ExerciseResponseDto()
+                : context!.Map<Exercise, ExerciseResponseDto>(source.ExerciseDetails),
             ScoresDetails = context!.MapList<ExerciseScore, ExerciseScoreResponseDto>(source.ScoresDetails)
         });
 
