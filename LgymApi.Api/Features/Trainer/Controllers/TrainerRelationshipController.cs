@@ -177,6 +177,6 @@ public sealed class TrainerRelationshipController : ControllerBase
 
         var trainer = HttpContext.GetCurrentUser();
         await _trainerRelationshipService.UnlinkTraineeAsync(trainer!, parsedTraineeId);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

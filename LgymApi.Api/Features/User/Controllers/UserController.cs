@@ -67,7 +67,7 @@ public sealed class UserController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         await _userService.LogoutAsync(user!);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpGet("getUsersRanking")]

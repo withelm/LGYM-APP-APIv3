@@ -28,7 +28,7 @@ public sealed class TrainerAuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
         await _userService.RegisterTrainerAsync(request.Name, request.Email, request.Password, request.ConfirmPassword);
-        return Ok(new ResponseMessageDto { Message = Messages.Created });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
     [HttpPost("login")]

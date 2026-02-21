@@ -44,13 +44,5 @@ public sealed class ExerciseScoreProfile : IMappingProfile
             };
         });
 
-        configuration.CreateMap<ExerciseScoresChartData, ExerciseScoresChartDataDto>((source, _) => new ExerciseScoresChartDataDto
-        {
-            Id = source.Id,
-            Value = source.Value,
-            Date = source.Date,
-            ExerciseName = source.ExerciseName,
-            ExerciseId = source.ExerciseId
-        });
     }
 }
