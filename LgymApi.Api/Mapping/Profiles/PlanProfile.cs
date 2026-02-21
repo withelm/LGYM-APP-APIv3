@@ -22,5 +22,7 @@ public sealed class PlanProfile : IMappingProfile
             IsActive = source.IsActive,
             UserId = source.UserId
         });
+
+        configuration.CreateMap<string, ShareCodeResponseDto>((source, _) => new ShareCodeResponseDto(source));
     }
 }

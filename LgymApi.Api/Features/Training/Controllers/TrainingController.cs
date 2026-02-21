@@ -1,9 +1,5 @@
 using LgymApi.Api.Features.Common.Contracts;
-using LgymApi.Api.Features.Enum;
-using LgymApi.Api.Features.Exercise.Contracts;
-using LgymApi.Api.Features.PlanDay.Contracts;
 using LgymApi.Api.Features.Training.Contracts;
-using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
@@ -44,40 +40,8 @@ public sealed class TrainingController : ControllerBase
             }).ToList();
 
         var result = await _trainingService.AddTrainingAsync(userId, gymId, planDayId, form.CreatedAt, exercises);
-
-        var comparison = result.Comparison.Select(group => new GroupedExerciseComparisonDto
-        {
-            ExerciseId = group.ExerciseId.ToString(),
-            ExerciseName = group.ExerciseName,
-            SeriesComparisons = group.SeriesComparisons.Select(series => new SeriesComparisonDto
-            {
-                Series = series.Series,
-                CurrentResult = new ScoreResultDto
-                {
-                    Reps = series.CurrentResult.Reps,
-                    Weight = series.CurrentResult.Weight,
-                    Unit = series.CurrentResult.Unit.ToLookup()
-                },
-                PreviousResult = series.PreviousResult == null
-                    ? null
-                    : new ScoreResultDto
-                    {
-                        Reps = series.PreviousResult.Reps,
-                        Weight = series.PreviousResult.Weight,
-                        Unit = series.PreviousResult.Unit.ToLookup()
-                    }
-            }).ToList()
-        }).ToList();
-
-        return Ok(new TrainingSummaryDto
-        {
-            Comparison = comparison,
-            GainElo = result.GainElo,
-            UserOldElo = result.UserOldElo,
-            ProfileRank = result.ProfileRank == null ? null : new RankDto { Name = result.ProfileRank.Name, NeedElo = result.ProfileRank.NeedElo },
-            NextRank = result.NextRank == null ? null : new RankDto { Name = result.NextRank.Name, NeedElo = result.NextRank.NeedElo },
-            Message = result.Message
-        });
+        var mapped = _mapper.Map<TrainingSummaryResult, TrainingSummaryDto>(result);
+        return Ok(mapped);
     }
 
     [HttpGet("{id}/getLastTraining")]
@@ -97,25 +61,7 @@ public sealed class TrainingController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var result = await _trainingService.GetTrainingByDateAsync(userId, request.CreatedAt);
-        var mapped = result.Select(training => new TrainingByDateDetailsDto
-        {
-            Id = training.Id.ToString(),
-            TypePlanDayId = training.TypePlanDayId.ToString(),
-            CreatedAt = training.CreatedAt,
-            PlanDay = training.PlanDay == null ? new PlanDayChooseDto() : new PlanDayChooseDto
-            {
-                Id = training.PlanDay.Id.ToString(),
-                Name = training.PlanDay.Name
-            },
-            Gym = training.Gym,
-            Exercises = training.Exercises.Select(exercise => new EnrichedExerciseDto
-            {
-                ExerciseScoreId = exercise.ExerciseScoreId.ToString(),
-                ExerciseDetails = _mapper.Map<LgymApi.Domain.Entities.Exercise, ExerciseResponseDto>(exercise.ExerciseDetails),
-                ScoresDetails = exercise.ScoresDetails.Select(score => _mapper.Map<LgymApi.Domain.Entities.ExerciseScore, ExerciseScoreResponseDto>(score)).ToList()
-            }).ToList()
-        }).ToList();
-
+        var mapped = _mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result);
         return Ok(mapped);
     }
 

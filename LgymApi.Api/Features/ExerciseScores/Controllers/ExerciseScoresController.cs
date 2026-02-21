@@ -2,6 +2,8 @@ using System.Globalization;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.ExerciseScores.Contracts;
 using LgymApi.Application.Features.ExerciseScores;
+using LgymApi.Application.Features.ExerciseScores.Models;
+using LgymApi.Application.Mapping.Core;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Features.ExerciseScores.Controllers;
@@ -11,10 +13,12 @@ namespace LgymApi.Api.Features.ExerciseScores.Controllers;
 public sealed class ExerciseScoresController : ControllerBase
 {
     private readonly IExerciseScoresService _exerciseScoresService;
+    private readonly IMapper _mapper;
 
-    public ExerciseScoresController(IExerciseScoresService exerciseScoresService)
+    public ExerciseScoresController(IExerciseScoresService exerciseScoresService, IMapper mapper)
     {
         _exerciseScoresService = exerciseScoresService;
+        _mapper = mapper;
     }
 
     [HttpPost("exerciseScores/{id}/getExerciseScoresChartData")]
@@ -25,14 +29,7 @@ public sealed class ExerciseScoresController : ControllerBase
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
         var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, exerciseId);
-        var mapped = result.Select(entry => new ExerciseScoresChartDataDto
-        {
-            Id = entry.Id,
-            Value = entry.Value,
-            Date = entry.Date,
-            ExerciseName = entry.ExerciseName,
-            ExerciseId = entry.ExerciseId
-        }).ToList();
+        var mapped = _mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result);
         return Ok(mapped);
     }
 }

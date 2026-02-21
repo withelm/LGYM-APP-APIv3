@@ -1,6 +1,7 @@
 using LgymApi.Api.Features.AppConfig.Contracts;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Application.Features.AppConfig;
+using LgymApi.Application.Mapping.Core;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
@@ -11,10 +12,12 @@ namespace LgymApi.Api.Features.AppConfig.Controllers;
 public sealed class AppConfigController : ControllerBase
 {
     private readonly IAppConfigService _appConfigService;
+    private readonly IMapper _mapper;
 
-    public AppConfigController(IAppConfigService appConfigService)
+    public AppConfigController(IAppConfigService appConfigService, IMapper mapper)
     {
         _appConfigService = appConfigService;
+        _mapper = mapper;
     }
 
     [HttpPost("appConfig/getAppVersion")]
@@ -25,15 +28,7 @@ public sealed class AppConfigController : ControllerBase
     public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request)
     {
         var config = await _appConfigService.GetLatestByPlatformAsync(request.Platform);
-
-        return Ok(new AppConfigInfoDto
-        {
-            MinRequiredVersion = config.MinRequiredVersion,
-            LatestVersion = config.LatestVersion,
-            ForceUpdate = config.ForceUpdate,
-            UpdateUrl = config.UpdateUrl,
-            ReleaseNotes = config.ReleaseNotes
-        });
+        return Ok(_mapper.Map<LgymApi.Domain.Entities.AppConfig, AppConfigInfoDto>(config));
     }
 
     [HttpPost("appConfig/createNewAppVersion/{id}")]
@@ -51,6 +46,6 @@ public sealed class AppConfigController : ControllerBase
             form.ForceUpdate,
             form.UpdateUrl,
             form.ReleaseNotes);
-        return StatusCode(StatusCodes.Status201Created, new ResponseMessageDto { Message = Messages.Created });
+        return StatusCode(StatusCodes.Status201Created, _mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 }

@@ -29,7 +29,7 @@ public sealed class MainRecordsController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         await _mainRecordsService.AddNewRecordAsync(userId, form.ExerciseId, form.Weight, form.Unit, form.Date);
-        return Ok(new ResponseMessageDto { Message = Messages.Created });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
     [HttpGet("mainRecords/{id}/getMainRecordsHistory")]
@@ -64,7 +64,7 @@ public sealed class MainRecordsController : ControllerBase
     {
         var recordId = Guid.TryParse(id, out var parsedRecordId) ? parsedRecordId : Guid.Empty;
         await _mainRecordsService.DeleteMainRecordAsync(recordId);
-        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
     [HttpPost("mainRecords/{id}/updateMainRecords")]
@@ -74,7 +74,7 @@ public sealed class MainRecordsController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         await _mainRecordsService.UpdateMainRecordAsync(userId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpPost("mainRecords/getRecordOrPossibleRecordInExercise")]
@@ -84,12 +84,6 @@ public sealed class MainRecordsController : ControllerBase
     {
         var userId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
         var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, request.ExerciseId);
-        return Ok(new PossibleRecordForExerciseDto
-        {
-            Weight = result.Weight,
-            Reps = result.Reps,
-            Unit = result.Unit.ToLookup(),
-            Date = result.Date
-        });
+        return Ok(_mapper.Map<LgymApi.Application.Features.MainRecords.Models.PossibleRecordResult, PossibleRecordForExerciseDto>(result));
     }
 }
