@@ -38,10 +38,31 @@ builder.Services.AddSwaggerGen(options =>
     options.UseInlineDefinitionsForEnums();
     options.SchemaFilter<EnumAsStringSchemaFilter>();
 });
+var corsAllowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>()
+    ?.Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray() ?? [];
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    {
+        if (builder.Environment.IsDevelopment() && corsAllowedOrigins.Length == 0)
+        {
+            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+            return;
+        }
+
+        if (corsAllowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(corsAllowedOrigins).AllowAnyMethod().AllowAnyHeader();
+            return;
+        }
+
+        policy.DisallowCredentials();
+    });
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddLocalization();
@@ -50,10 +71,10 @@ builder.Services.AddApplicationServices();
 
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
 
-var jwtSecret = builder.Configuration["Jwt:Secret"];
-if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
 {
-    throw new InvalidOperationException("Jwt:Secret is not configured or is too short. Set a strong secret value.");
+    throw new InvalidOperationException("Jwt:SigningKey is not configured or is too short. Set a strong key value.");
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -64,7 +85,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
             ClockSkew = TimeSpan.Zero
         };
         options.Events = new JwtBearerEvents
@@ -172,7 +193,7 @@ app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
 
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();
 
 // For WebApplicationFactory in integration tests
 public partial class Program { }
