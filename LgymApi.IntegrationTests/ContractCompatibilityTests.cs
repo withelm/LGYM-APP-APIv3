@@ -27,6 +27,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         using var json = await ReadJsonAsync(response);
         json.RootElement.TryGetProperty("msg", out var msg).Should().BeTrue();
         msg.GetString().Should().NotBeNullOrWhiteSpace();
+        // Contract guard: legacy clients expect `msg`; an accidental switch to `message` would break them.
         json.RootElement.TryGetProperty("message", out _).Should().BeFalse();
     }
 
@@ -51,6 +52,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         req.TryGetProperty("_id", out _).Should().BeTrue();
         req.TryGetProperty("name", out _).Should().BeTrue();
 
+        // Contract guard: login payload must keep `req` (legacy shape), not `user`.
         json.RootElement.TryGetProperty("user", out _).Should().BeFalse();
     }
 
@@ -115,8 +117,10 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         json.RootElement.TryGetProperty("date", out _).Should().BeTrue();
 
         json.RootElement.TryGetProperty("unit", out var unit).Should().BeTrue();
-        unit.TryGetProperty("name", out _).Should().BeTrue();
-        unit.TryGetProperty("displayName", out _).Should().BeTrue();
+        unit.TryGetProperty("name", out var unitName).Should().BeTrue();
+        unitName.GetString().Should().NotBeNullOrWhiteSpace();
+        unit.TryGetProperty("displayName", out var unitDisplayName).Should().BeTrue();
+        unitDisplayName.GetString().Should().NotBeNullOrWhiteSpace();
     }
 
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response)

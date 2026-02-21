@@ -108,6 +108,8 @@ public sealed class EndpointResponseTypeTests
         var dtoConstructorPattern = new Regex(
             @"new\s+([A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*Dto\b",
             RegexOptions.Compiled);
+        // This regex intentionally targets explicit constructions (`new SomeDto(...)`), including namespace-qualified names.
+        // Detecting target-typed `new()` requires syntax-tree analysis and is outside this lightweight guard.
         var violations = new List<string>();
 
         foreach (var file in controllerFiles)
