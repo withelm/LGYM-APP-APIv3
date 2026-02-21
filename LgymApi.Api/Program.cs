@@ -52,7 +52,7 @@ builder.Services.AddCors(options =>
             return;
         }
 
-        policy.DisallowCredentials();
+        throw new InvalidOperationException("No CORS allowed origins are configured. Configure 'Cors:AllowedOrigins' or disable CORS explicitly.");
     });
 });
 builder.Services.AddHttpContextAccessor();
