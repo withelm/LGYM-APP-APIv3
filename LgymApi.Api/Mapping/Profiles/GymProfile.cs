@@ -15,6 +15,20 @@ public sealed class GymProfile : IMappingProfile
     {
         configuration.AllowContextKey(Keys.LastTrainingMap);
 
+        configuration.CreateMap<PlanDay, LastTrainingGymPlanDayInfoDto>((source, _) => new LastTrainingGymPlanDayInfoDto
+        {
+            Id = source.Id.ToString(),
+            Name = source.Name
+        });
+
+        configuration.CreateMap<LgymApi.Domain.Entities.Training, LastTrainingGymInfoDto>((source, context) => new LastTrainingGymInfoDto
+        {
+            Id = source.Id.ToString(),
+            CreatedAt = source.CreatedAt.UtcDateTime,
+            Type = source.PlanDay == null ? null : context!.Map<PlanDay, LastTrainingGymPlanDayInfoDto>(source.PlanDay),
+            Name = source.PlanDay?.Name
+        });
+
         configuration.CreateMap<Gym, GymFormDto>((source, _) => new GymFormDto
         {
             Id = source.Id.ToString(),
@@ -36,17 +50,7 @@ public sealed class GymProfile : IMappingProfile
                 Id = source.Id.ToString(),
                 Name = source.Name,
                 Address = source.AddressId?.ToString(),
-                LastTrainingInfo = training == null ? null : new LastTrainingGymInfoDto
-                {
-                    Id = training.Id.ToString(),
-                    CreatedAt = training.CreatedAt.UtcDateTime,
-                    Type = training.PlanDay == null ? null : new LastTrainingGymPlanDayInfoDto
-                    {
-                        Id = training.PlanDay.Id.ToString(),
-                        Name = training.PlanDay.Name
-                    },
-                    Name = training.PlanDay?.Name
-                }
+                LastTrainingInfo = training == null ? null : context!.Map<LgymApi.Domain.Entities.Training, LastTrainingGymInfoDto>(training)
             };
         });
     }

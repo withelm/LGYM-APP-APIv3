@@ -40,7 +40,7 @@ public sealed class PlanDayProfile : IMappingProfile
                 {
                     Series = exercise.Series,
                     Reps = exercise.Reps,
-                    Exercise = ResolveExerciseDto(exercise, exerciseMap)
+                    Exercise = ResolveExerciseDto(exercise, exerciseMap, context)
                 })
                 .ToList();
 
@@ -73,19 +73,11 @@ public sealed class PlanDayProfile : IMappingProfile
         });
     }
 
-    private static ExerciseResponseDto ResolveExerciseDto(PlanDayExercise exercise, IReadOnlyDictionary<Guid, Exercise>? exerciseMap)
+    private static ExerciseResponseDto ResolveExerciseDto(PlanDayExercise exercise, IReadOnlyDictionary<Guid, Exercise>? exerciseMap, MappingContext? context)
     {
         if (exerciseMap != null && exerciseMap.TryGetValue(exercise.ExerciseId, out var entity))
         {
-            return new ExerciseResponseDto
-            {
-                Id = entity.Id.ToString(),
-                Name = entity.Name,
-                BodyPart = entity.BodyPart.ToLookup(),
-                Description = entity.Description,
-                Image = entity.Image,
-                UserId = entity.UserId?.ToString()
-            };
+            return context!.Map<Exercise, ExerciseResponseDto>(entity);
         }
 
         return new ExerciseResponseDto();

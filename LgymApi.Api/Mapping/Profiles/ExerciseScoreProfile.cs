@@ -30,22 +30,19 @@ public sealed class ExerciseScoreProfile : IMappingProfile
             Unit = source.Unit.ToLookup()
         });
 
-        configuration.CreateMap<ExerciseScore, ScoreWithGymDto>((source, _) => new ScoreWithGymDto
+        configuration.CreateMap<ExerciseScore, ScoreWithGymDto>((source, context) =>
         {
-            Id = source.Id.ToString(),
-            Reps = source.Reps,
-            Weight = source.Weight,
-            Unit = source.Unit.ToLookup(),
-            GymName = source.Training?.Gym?.Name
+            var score = context!.Map<ExerciseScore, ScoreDto>(source);
+
+            return new ScoreWithGymDto
+            {
+                Id = score.Id,
+                Reps = score.Reps,
+                Weight = score.Weight,
+                Unit = score.Unit,
+                GymName = source.Training?.Gym?.Name
+            };
         });
 
-        configuration.CreateMap<ExerciseScoresChartData, ExerciseScoresChartDataDto>((source, _) => new ExerciseScoresChartDataDto
-        {
-            Id = source.Id,
-            Value = source.Value,
-            Date = source.Date,
-            ExerciseName = source.ExerciseName,
-            ExerciseId = source.ExerciseId
-        });
     }
 }

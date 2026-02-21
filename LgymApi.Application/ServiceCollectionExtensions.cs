@@ -13,6 +13,8 @@ using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Units;
+using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.Application;
@@ -37,6 +39,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IInvitationEmailScheduler, InvitationEmailSchedulerService>();
         services.AddScoped<IInvitationEmailJobHandler, InvitationEmailJobHandlerService>();
+
+        services.AddSingleton<ILinearUnitStrategy<WeightUnits>, WeightLinearUnitStrategy>();
+        services.AddSingleton<IUnitConverter<WeightUnits>, LinearUnitConverter<WeightUnits>>();
 
         return services;
     }

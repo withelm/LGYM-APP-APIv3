@@ -66,7 +66,7 @@ public sealed class RoleController : ControllerBase
     {
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
         await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpPost("{id}/delete")]
@@ -76,7 +76,7 @@ public sealed class RoleController : ControllerBase
     {
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
         await _roleService.DeleteRoleAsync(roleId);
-        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
     [HttpPost("users/{id}/roles")]
@@ -87,7 +87,7 @@ public sealed class RoleController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         await _roleService.UpdateUserRolesAsync(userId, request.Roles);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
 }

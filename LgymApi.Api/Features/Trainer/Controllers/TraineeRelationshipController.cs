@@ -2,6 +2,7 @@ using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.TrainerRelationships;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,12 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 public sealed class TraineeRelationshipController : ControllerBase
 {
     private readonly ITrainerRelationshipService _trainerRelationshipService;
+    private readonly IMapper _mapper;
 
-    public TraineeRelationshipController(ITrainerRelationshipService trainerRelationshipService)
+    public TraineeRelationshipController(ITrainerRelationshipService trainerRelationshipService, IMapper mapper)
     {
         _trainerRelationshipService = trainerRelationshipService;
+        _mapper = mapper;
     }
 
     [HttpPost("invitations/{invitationId}/accept")]
@@ -31,7 +34,7 @@ public sealed class TraineeRelationshipController : ControllerBase
 
         var trainee = HttpContext.GetCurrentUser();
         await _trainerRelationshipService.AcceptInvitationAsync(trainee!, parsedInvitationId);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpPost("invitations/{invitationId}/reject")]
@@ -45,7 +48,7 @@ public sealed class TraineeRelationshipController : ControllerBase
 
         var trainee = HttpContext.GetCurrentUser();
         await _trainerRelationshipService.RejectInvitationAsync(trainee!, parsedInvitationId);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpPost("trainer/detach")]
@@ -54,6 +57,6 @@ public sealed class TraineeRelationshipController : ControllerBase
     {
         var trainee = HttpContext.GetCurrentUser();
         await _trainerRelationshipService.DetachFromTrainerAsync(trainee!);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

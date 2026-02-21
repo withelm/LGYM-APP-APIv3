@@ -30,7 +30,7 @@ public sealed class PlanController : ControllerBase
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         await _planService.CreatePlanAsync(user!, routeUserId, form.Name);
 
-        return Ok(new ResponseMessageDto { Message = Messages.Created });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
     [HttpPost("{id}/updatePlan")]
@@ -43,7 +43,7 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         await _planService.UpdatePlanAsync(user!, routeUserId, form.Id ?? string.Empty, form.Name);
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpGet("{id}/getPlanConfig")]
@@ -94,7 +94,7 @@ public sealed class PlanController : ControllerBase
         var planId = Guid.TryParse(form.Id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
         await _planService.SetNewActivePlanAsync(user!, routeUserId, planId);
 
-        return Ok(new ResponseMessageDto { Message = Messages.Updated });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpPost("copy")]
@@ -118,7 +118,7 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
         var shareCode = await _planService.GenerateShareCodeAsync(user!, planId);
-        return Ok(new ShareCodeResponseDto(shareCode));
+        return Ok(_mapper.Map<string, ShareCodeResponseDto>(shareCode));
     }
 
     [HttpPost("{id}/deletePlan")]
@@ -130,7 +130,7 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
         await _planService.DeletePlanAsync(user!, planId);
-        return Ok(new ResponseMessageDto { Message = Messages.Deleted });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 }
 
