@@ -51,13 +51,13 @@ jobs:
         run: dotnet build LgymApi.sln --configuration Release --no-restore
 
       - name: Run unit tests with coverage
-        run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Unit/coverage.opencover.xml
+        run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Unit/coverage.opencover.xml
 
       - name: Run architecture tests with coverage
-        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Architecture/coverage.opencover.xml
+        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Architecture/coverage.opencover.xml
 
       - name: Run integration tests with coverage
-        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Integration/coverage.opencover.xml
+        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Integration/coverage.opencover.xml
 
       - name: Sonar End
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
@@ -96,13 +96,13 @@ jobs:
         run: dotnet build LgymApi.sln --configuration Release --no-restore
 
       - name: Run unit tests with coverage
-        run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Unit/coverage.opencover.xml
+        run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Unit/coverage.opencover.xml
 
       - name: Run architecture tests with coverage
-        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Architecture/coverage.opencover.xml
+        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Architecture/coverage.opencover.xml
 
       - name: Run integration tests with coverage
-        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Integration/coverage.opencover.xml
+        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Integration/coverage.opencover.xml
 
       - name: Sonar End
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
@@ -140,13 +140,13 @@ jobs:
         run: dotnet build LgymApi.sln --configuration Release --no-restore
 
       - name: Run unit tests with coverage
-        run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Unit/coverage.opencover.xml
+        run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Unit/coverage.opencover.xml
 
       - name: Run architecture tests with coverage
-        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Architecture/coverage.opencover.xml
+        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Architecture/coverage.opencover.xml
 
       - name: Run integration tests with coverage
-        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Integration/coverage.opencover.xml
+        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Integration/coverage.opencover.xml
 
       - name: Sonar End
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"

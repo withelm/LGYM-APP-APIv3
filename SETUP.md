@@ -15,6 +15,12 @@ After cloning the repository, create the following files with your local values:
   "Jwt": {
     "SigningKey": "YOUR_JWT_SIGNING_KEY_MIN_32_CHARS"
   },
+  "Cors": {
+    "AllowedOrigins": [
+      "http://localhost:3000",
+      "http://localhost:5173"
+    ]
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",
@@ -42,7 +48,7 @@ After cloning the repository, create the following files with your local values:
 
 ### 2. Requirements
 
-- .NET 8 SDK
+- .NET 10 SDK
 - PostgreSQL (default port 5433)
 - MongoDB (for the migrator)
 
@@ -63,3 +69,5 @@ dotnet run
 **Never commit `appsettings.Development.json` or any file with credentials.**
 
 These files are ignored by `.gitignore` and should remain local only.
+
+Set `Cors:AllowedOrigins` to your real frontend origins in each environment.

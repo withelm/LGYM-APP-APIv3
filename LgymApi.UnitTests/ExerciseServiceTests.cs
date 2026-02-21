@@ -28,10 +28,13 @@ public sealed class ExerciseServiceTests
 
         var result = await service.GetLastExerciseScoresAsync(userId, userId, exerciseId, 100, null, "Bench press");
 
-        Assert.That(result.SeriesScores, Has.Count.EqualTo(30));
-        Assert.That(result.SeriesScores[0].Score, Is.Not.Null);
-        Assert.That(result.SeriesScores[1].Score, Is.Not.Null);
-        Assert.That(result.SeriesScores[^1].Series, Is.EqualTo(30));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.SeriesScores, Has.Count.EqualTo(30));
+            Assert.That(result.SeriesScores[0].Score, Is.Not.Null);
+            Assert.That(result.SeriesScores[1].Score, Is.Not.Null);
+            Assert.That(result.SeriesScores[^1].Series, Is.EqualTo(30));
+        });
     }
 
     private sealed class StubExerciseScoreRepository : IExerciseScoreRepository
