@@ -20,6 +20,8 @@ using LgymApi.Domain.Security;
 using Hangfire;
 using LgymApi.Api.Serialization;
 
+const string TestingEnvironment = "Testing";
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
@@ -65,7 +67,7 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructure(
     builder.Configuration,
     builder.Environment.IsDevelopment(),
-    builder.Environment.IsEnvironment("Testing"));
+    builder.Environment.IsEnvironment(TestingEnvironment));
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
@@ -121,7 +123,7 @@ builder.Services
     .AddPolicy(AuthConstants.Policies.TrainerAccess, policy =>
         policy.RequireRole(AuthConstants.Roles.Trainer));
 
-if (!builder.Environment.IsEnvironment("Testing"))
+if (!builder.Environment.IsEnvironment(TestingEnvironment))
 {
     builder.Services.AddRateLimiter(options =>
     {
@@ -184,9 +186,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsEnvironment(TestingEnvironment))
 {
-    app.UseHangfireDashboard("/hangfire");
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
+    });
 }
 
 app.UseRequestLocalization(localizationOptions);
@@ -194,7 +199,7 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
-if (!app.Environment.IsEnvironment("Testing"))
+if (!app.Environment.IsEnvironment(TestingEnvironment))
 {
     app.UseRateLimiter();
 }

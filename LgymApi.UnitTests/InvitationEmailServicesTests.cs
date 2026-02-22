@@ -16,12 +16,14 @@ public sealed class InvitationEmailServicesTests
         var repository = new FakeNotificationRepository();
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
+        var metrics = new FakeInvitationEmailMetrics();
 
         var service = new InvitationEmailSchedulerService(
             repository,
             scheduler,
             unitOfWork,
             new EnabledFeature(),
+            metrics,
             NullLogger<InvitationEmailSchedulerService>.Instance);
 
         await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
@@ -39,6 +41,8 @@ public sealed class InvitationEmailServicesTests
             Assert.That(repository.Added, Has.Count.EqualTo(1));
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
             Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
+            Assert.That(metrics.Enqueued, Is.EqualTo(1));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
@@ -59,12 +63,14 @@ public sealed class InvitationEmailServicesTests
         var repository = new FakeNotificationRepository { ExistingByCorrelation = existing };
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
+        var metrics = new FakeInvitationEmailMetrics();
 
         var service = new InvitationEmailSchedulerService(
             repository,
             scheduler,
             unitOfWork,
             new EnabledFeature(),
+            metrics,
             NullLogger<InvitationEmailSchedulerService>.Instance);
 
         await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
@@ -81,6 +87,8 @@ public sealed class InvitationEmailServicesTests
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
             Assert.That(repository.Added, Is.Empty);
+            Assert.That(metrics.Enqueued, Is.EqualTo(0));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
@@ -90,12 +98,14 @@ public sealed class InvitationEmailServicesTests
         var repository = new FakeNotificationRepository();
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
+        var metrics = new FakeInvitationEmailMetrics();
 
         var service = new InvitationEmailSchedulerService(
             repository,
             scheduler,
             unitOfWork,
             new DisabledFeature(),
+            metrics,
             NullLogger<InvitationEmailSchedulerService>.Instance);
 
         await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
@@ -113,6 +123,8 @@ public sealed class InvitationEmailServicesTests
             Assert.That(repository.Added, Is.Empty);
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(metrics.Enqueued, Is.EqualTo(0));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
@@ -135,12 +147,14 @@ public sealed class InvitationEmailServicesTests
         };
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork { ThrowOnSave = true };
+        var metrics = new FakeInvitationEmailMetrics();
 
         var service = new InvitationEmailSchedulerService(
             repository,
             scheduler,
             unitOfWork,
             new EnabledFeature(),
+            metrics,
             NullLogger<InvitationEmailSchedulerService>.Instance);
 
         await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
@@ -157,6 +171,8 @@ public sealed class InvitationEmailServicesTests
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
             Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
+            Assert.That(metrics.Enqueued, Is.EqualTo(1));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
@@ -176,11 +192,13 @@ public sealed class InvitationEmailServicesTests
 
         var repository = new FakeNotificationRepository { ExistingById = notification };
         var unitOfWork = new FakeUnitOfWork();
+        var metrics = new FakeInvitationEmailMetrics();
         var handler = new InvitationEmailJobHandlerService(
             repository,
             new ThrowingComposer(),
             new FakeEmailSender(),
             unitOfWork,
+            metrics,
             NullLogger<InvitationEmailJobHandlerService>.Instance);
 
         Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notification.Id));
@@ -189,6 +207,7 @@ public sealed class InvitationEmailServicesTests
             Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
             Assert.That(notification.LastError, Does.StartWith("InvalidOperationException"));
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(metrics.Failed, Is.EqualTo(1));
         });
     }
 
@@ -209,11 +228,13 @@ public sealed class InvitationEmailServicesTests
         var repository = new FakeNotificationRepository { ExistingById = notification };
         var unitOfWork = new FakeUnitOfWork();
         var sender = new FakeEmailSender();
+        var metrics = new FakeInvitationEmailMetrics();
         var handler = new InvitationEmailJobHandlerService(
             repository,
             new PassThroughComposer(),
             sender,
             unitOfWork,
+            metrics,
             NullLogger<InvitationEmailJobHandlerService>.Instance);
 
         await handler.ProcessAsync(notification.Id);
@@ -223,6 +244,9 @@ public sealed class InvitationEmailServicesTests
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
             Assert.That(sender.SendCalls, Is.EqualTo(0));
             Assert.That(notification.Attempts, Is.EqualTo(2));
+            Assert.That(metrics.Sent, Is.EqualTo(0));
+            Assert.That(metrics.Failed, Is.EqualTo(0));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
@@ -331,6 +355,19 @@ public sealed class InvitationEmailServicesTests
     private sealed class EnabledFeature : IEmailNotificationsFeature
     {
         public bool Enabled => true;
+    }
+
+    private sealed class FakeInvitationEmailMetrics : IInvitationEmailMetrics
+    {
+        public int Enqueued { get; private set; }
+        public int Sent { get; private set; }
+        public int Failed { get; private set; }
+        public int Retried { get; private set; }
+
+        public void RecordEnqueued() => Enqueued += 1;
+        public void RecordSent() => Sent += 1;
+        public void RecordFailed() => Failed += 1;
+        public void RecordRetried() => Retried += 1;
     }
 
     private sealed class DisabledFeature : IEmailNotificationsFeature

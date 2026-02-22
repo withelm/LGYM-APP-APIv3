@@ -21,7 +21,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     [SetUp]
     public void ResetEmailCapture()
     {
-        Factory.EmailSender.SentMessages.Clear();
+        Factory.EmailSender.Reset();
     }
 
     [Test]
@@ -167,6 +167,92 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
             await handler.ProcessAsync(notificationId);
             await handler.ProcessAsync(notificationId);
+        }
+
+        Factory.EmailSender.SentMessages.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task InvitationEmailJob_WhenSenderFails_MarksNotificationAsFailed()
+    {
+        var trainer = await SeedTrainerAsync("trainer-email-fail", "trainer-email-fail@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-email-fail", email: "trainee-email-fail@example.com", password: "password123");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+        {
+            traineeId = trainee.Id.ToString()
+        });
+        var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        Guid notificationId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            notificationId = log.Id;
+        }
+
+        Factory.EmailSender.FailuresRemaining = 1;
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notificationId));
+        }
+
+        using (var verifyScope = Factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var log = await db.EmailNotificationLogs.FirstAsync(x => x.Id == notificationId);
+            log.Status.Should().Be(EmailNotificationStatus.Failed);
+            log.Attempts.Should().Be(1);
+            log.LastError.Should().NotBeNullOrWhiteSpace();
+            log.SentAt.Should().BeNull();
+        }
+
+        Factory.EmailSender.SentMessages.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task InvitationEmailJob_AfterRetry_SetsSentStatusAndKeepsAuditTrail()
+    {
+        var trainer = await SeedTrainerAsync("trainer-email-retry", "trainer-email-retry@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-email-retry", email: "trainee-email-retry@example.com", password: "password123");
+        SetAuthorizationHeader(trainer.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+        {
+            traineeId = trainee.Id.ToString()
+        });
+        var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        Guid notificationId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            notificationId = log.Id;
+        }
+
+        Factory.EmailSender.FailuresRemaining = 1;
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notificationId));
+            await handler.ProcessAsync(notificationId);
+        }
+
+        using (var verifyScope = Factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var log = await db.EmailNotificationLogs.FirstAsync(x => x.Id == notificationId);
+            log.Status.Should().Be(EmailNotificationStatus.Sent);
+            log.Attempts.Should().Be(2);
+            log.SentAt.Should().NotBeNull();
+            log.LastError.Should().BeNull();
+            log.LastAttemptAt.Should().NotBeNull();
         }
 
         Factory.EmailSender.SentMessages.Should().ContainSingle();

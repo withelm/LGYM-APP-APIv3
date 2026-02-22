@@ -25,6 +25,8 @@ public static class ServiceCollectionExtensions
         var emailOptions = new EmailOptions
         {
             Enabled = bool.TryParse(configuration["Email:Enabled"], out var enabled) && enabled,
+            DeliveryMode = ResolveEmailDeliveryMode(configuration["Email:DeliveryMode"]),
+            DummyOutputDirectory = configuration["Email:DummyOutputDirectory"] ?? "EmailOutbox",
             FromAddress = configuration["Email:FromAddress"] ?? string.Empty,
             FromName = configuration["Email:FromName"] ?? "LGYM Trainer",
             SmtpHost = configuration["Email:SmtpHost"] ?? string.Empty,
@@ -40,6 +42,7 @@ public static class ServiceCollectionExtensions
         ValidateEmailOptions(emailOptions);
         services.AddSingleton(emailOptions);
         services.AddSingleton<IEmailNotificationsFeature, EmailNotificationsFeature>();
+        services.AddSingleton<IInvitationEmailMetrics, InvitationEmailMetrics>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
@@ -83,7 +86,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<LgymApi.Application.Services.IRankService, LgymApi.Application.Services.RankService>();
         services.AddSingleton<IUserSessionCache, UserSessionCache>();
         services.AddScoped<IEmailTemplateComposer, TrainerInvitationEmailTemplateComposer>();
-        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<SmtpEmailSender>();
+        services.AddScoped<DummyEmailSender>();
+        services.AddScoped<IEmailSender>(sp =>
+        {
+            var options = sp.GetRequiredService<EmailOptions>();
+            return options.DeliveryMode == EmailDeliveryMode.Dummy
+                ? sp.GetRequiredService<DummyEmailSender>()
+                : sp.GetRequiredService<SmtpEmailSender>();
+        });
         services.AddScoped<InvitationEmailJob>();
 
         services.AddScoped<IUserRepository, UserRepository>();
@@ -150,6 +161,16 @@ public static class ServiceCollectionExtensions
             throw new InvalidOperationException("Email:FromAddress must be a valid email address.");
         }
 
+        if (options.DeliveryMode == EmailDeliveryMode.Dummy)
+        {
+            if (string.IsNullOrWhiteSpace(options.DummyOutputDirectory))
+            {
+                throw new InvalidOperationException("Email:DummyOutputDirectory is required when Email:DeliveryMode is Dummy.");
+            }
+
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(options.SmtpHost))
         {
             throw new InvalidOperationException("Email:SmtpHost is required when email is enabled.");
@@ -181,5 +202,20 @@ public static class ServiceCollectionExtensions
     private static bool GetBooleanOrDefault(string? value, bool defaultValue)
     {
         return bool.TryParse(value, out var parsed) ? parsed : defaultValue;
+    }
+
+    private static EmailDeliveryMode ResolveEmailDeliveryMode(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return EmailDeliveryMode.Smtp;
+        }
+
+        if (Enum.TryParse<EmailDeliveryMode>(value, ignoreCase: true, out var mode))
+        {
+            return mode;
+        }
+
+        throw new InvalidOperationException("Email:DeliveryMode must be one of: Smtp, Dummy.");
     }
 }

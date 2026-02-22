@@ -16,6 +16,7 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
     private readonly IInvitationEmailBackgroundScheduler _backgroundScheduler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
+    private readonly IInvitationEmailMetrics _metrics;
     private readonly ILogger<InvitationEmailSchedulerService> _logger;
 
     public InvitationEmailSchedulerService(
@@ -23,12 +24,14 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         IInvitationEmailBackgroundScheduler backgroundScheduler,
         IUnitOfWork unitOfWork,
         IEmailNotificationsFeature emailNotificationsFeature,
+        IInvitationEmailMetrics metrics,
         ILogger<InvitationEmailSchedulerService> logger)
     {
         _notificationLogRepository = notificationLogRepository;
         _backgroundScheduler = backgroundScheduler;
         _unitOfWork = unitOfWork;
         _emailNotificationsFeature = emailNotificationsFeature;
+        _metrics = metrics;
         _logger = logger;
     }
 
@@ -66,6 +69,7 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         }
 
         _backgroundScheduler.Enqueue(log.Id);
+        _metrics.RecordEnqueued();
         _logger.LogInformation(
             "Created and enqueued invitation email notification {NotificationId} for invitation {InvitationId}.",
             log.Id,
@@ -106,6 +110,7 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         }
 
         _backgroundScheduler.Enqueue(existing.Id);
+        _metrics.RecordRetried();
         _logger.LogInformation(
             "Re-enqueued failed invitation email notification {NotificationId} (attempts: {Attempts}).",
             existing.Id,
@@ -142,6 +147,7 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
                 payload.InvitationId,
                 concurrent.Id);
             _backgroundScheduler.Enqueue(concurrent.Id);
+            _metrics.RecordEnqueued();
             return false;
         }
     }

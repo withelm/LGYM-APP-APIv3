@@ -25,6 +25,65 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
         Assert.That(scheduler, Is.TypeOf<NoOpInvitationEmailBackgroundScheduler>());
     }
 
+    [Test]
+    public void AddInfrastructure_UsesSmtpDeliveryModeByDefault()
+    {
+        var services = new ServiceCollection();
+        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        values.Remove("Email:DeliveryMode");
+        var configuration = BuildConfiguration(values);
+
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+
+        using var provider = services.BuildServiceProvider();
+        var sender = provider.GetRequiredService<IEmailSender>();
+        Assert.That(sender, Is.TypeOf<SmtpEmailSender>());
+    }
+
+    [Test]
+    public void AddInfrastructure_UsesDummyEmailSender_WhenModeIsDummy()
+    {
+        var services = new ServiceCollection();
+        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        values["Email:DeliveryMode"] = "Dummy";
+        values["Email:DummyOutputDirectory"] = "DummyOutbox";
+        values["Email:SmtpHost"] = string.Empty;
+        var configuration = BuildConfiguration(values);
+
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+
+        using var provider = services.BuildServiceProvider();
+        var sender = provider.GetRequiredService<IEmailSender>();
+        Assert.That(sender, Is.TypeOf<DummyEmailSender>());
+    }
+
+    [Test]
+    public void AddInfrastructure_Throws_WhenDeliveryModeInvalid()
+    {
+        var services = new ServiceCollection();
+        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        values["Email:DeliveryMode"] = "something-else";
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            services.AddInfrastructure(BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
+
+        Assert.That(exception!.Message, Is.EqualTo("Email:DeliveryMode must be one of: Smtp, Dummy."));
+    }
+
+    [Test]
+    public void AddInfrastructure_Throws_WhenDummyOutputDirectoryMissingInDummyMode()
+    {
+        var services = new ServiceCollection();
+        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        values["Email:DeliveryMode"] = "Dummy";
+        values["Email:DummyOutputDirectory"] = "   ";
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            services.AddInfrastructure(BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
+
+        Assert.That(exception!.Message, Is.EqualTo("Email:DummyOutputDirectory is required when Email:DeliveryMode is Dummy."));
+    }
+
     [TestCase(null, "Email:InvitationBaseUrl is required.")]
     [TestCase("not-an-url", "Email:InvitationBaseUrl must be a valid absolute URL.")]
     public void AddInfrastructure_Throws_ForInvalidInvitationBaseUrl(string? invitationBaseUrl, string expectedMessage)
