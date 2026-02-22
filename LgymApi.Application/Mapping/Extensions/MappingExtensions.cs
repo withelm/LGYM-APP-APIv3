@@ -9,14 +9,14 @@ public static class MappingExtensions
         return mapper.Map<TTarget>(source, context);
     }
 
-    public static List<TTarget> MapToList<TTarget>(this System.Collections.IEnumerable source, IMapper mapper, MappingContext? context = null)
-    {
-        return mapper.MapList<TTarget>(source, context);
-    }
-
     public static TTarget MapTo<TSource, TTarget>(this TSource source, IMapper mapper, MappingContext? context = null)
     {
         return mapper.Map<TSource, TTarget>(source, context);
+    }
+
+    public static List<TTarget> MapToList<TTarget>(this System.Collections.IEnumerable source, IMapper mapper, MappingContext? context = null)
+    {
+        return mapper.MapList<TTarget>(source, context);
     }
 
     public static List<TTarget> MapToList<TSource, TTarget>(this IEnumerable<TSource> source, IMapper mapper, MappingContext? context = null)

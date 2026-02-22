@@ -22,10 +22,7 @@ public sealed class Mapper : IMapper
 
     public TTarget Map<TTarget>(object source, MappingContext? context = null)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(source);
 
         var effectiveContext = PrepareContext(context);
 
@@ -58,10 +55,7 @@ public sealed class Mapper : IMapper
 
     public List<TTarget> MapList<TTarget>(System.Collections.IEnumerable source, MappingContext? context = null)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(source);
 
         var effectiveContext = PrepareContext(context);
         var result = new List<TTarget>();

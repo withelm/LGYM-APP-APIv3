@@ -7,6 +7,10 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class MapperNestedCompositionTests
 {
+    private static readonly string[] ExpectedSinglePushResult = ["push!"];
+    private static readonly string[] ExpectedPullPressResults = ["pull!", "press!"];
+    private static readonly string[] ExpectedBaseDerivedMarkers = ["base", "derived"];
+
     [Test]
     public void Map_Should_Support_Nested_Object_And_List_Mapping_With_Context_Propagation()
     {
@@ -100,7 +104,7 @@ public sealed class MapperNestedCompositionTests
         Assert.Multiple(() =>
         {
             Assert.That(result.Child?.Name, Is.EqualTo("pull!"));
-            Assert.That(result.Children.Select(c => c.Name), Is.EqualTo(new[] { "push!" }));
+            Assert.That(result.Children.Select(c => c.Name), Is.EqualTo(ExpectedSinglePushResult));
         });
     }
 
@@ -141,7 +145,7 @@ public sealed class MapperNestedCompositionTests
 
         var result = mapper.MapList<ChildTarget>(source, context);
 
-        Assert.That(result.Select(x => x.Name), Is.EqualTo(new[] { "pull!", "press!" }));
+        Assert.That(result.Select(x => x.Name), Is.EqualTo(ExpectedPullPressResults));
     }
 
     [Test]
@@ -156,7 +160,7 @@ public sealed class MapperNestedCompositionTests
 
         var result = mapper.MapList<PolymorphicTarget>(source);
 
-        Assert.That(result.Select(x => x.Marker), Is.EqualTo(new[] { "base", "derived" }));
+        Assert.That(result.Select(x => x.Marker), Is.EqualTo(ExpectedBaseDerivedMarkers));
     }
 
     [Test]
@@ -182,7 +186,7 @@ public sealed class MapperNestedCompositionTests
 
         var result = source.MapToList<PolymorphicTarget>(mapper);
 
-        Assert.That(result.Select(x => x.Marker), Is.EqualTo(new[] { "base", "derived" }));
+        Assert.That(result.Select(x => x.Marker), Is.EqualTo(ExpectedBaseDerivedMarkers));
     }
 
     [Test]

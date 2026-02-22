@@ -36,10 +36,7 @@ public sealed class MappingContext : IMappingContext
 
     public TTarget Map<TTarget>(object source)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(source);
 
         return GetMapper().MapInternal<TTarget>(source.GetType(), source, this);
     }
@@ -56,10 +53,7 @@ public sealed class MappingContext : IMappingContext
 
     public List<TTarget> MapList<TTarget>(System.Collections.IEnumerable source)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(source);
 
         var mapper = GetMapper();
         var result = new List<TTarget>();
