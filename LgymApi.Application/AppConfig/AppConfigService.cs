@@ -57,10 +57,10 @@ public sealed class AppConfigService : IAppConfigService
         {
             Id = Guid.NewGuid(),
             Platform = input.Platform,
-            MinRequiredVersion = input.MinRequiredVersion,
-            LatestVersion = input.LatestVersion,
+            MinRequiredVersion = input.MinRequiredVersion ?? string.Empty,
+            LatestVersion = input.LatestVersion ?? string.Empty,
             ForceUpdate = input.ForceUpdate,
-            UpdateUrl = input.UpdateUrl,
+            UpdateUrl = input.UpdateUrl ?? string.Empty,
             ReleaseNotes = input.ReleaseNotes
         };
 
