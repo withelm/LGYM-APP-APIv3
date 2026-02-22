@@ -266,9 +266,13 @@ public sealed class PlanService : IPlanService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return shareCode;
         }
-        catch (InvalidOperationException)
+        catch (KeyNotFoundException)
         {
             throw AppException.NotFound(Messages.DidntFind);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException || exception.GetType().Name == "DbUpdateException")
+        {
+            throw AppException.Internal(Messages.TryAgain);
         }
         catch (UnauthorizedAccessException)
         {
