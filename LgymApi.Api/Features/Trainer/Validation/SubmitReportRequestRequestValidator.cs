@@ -9,7 +9,7 @@ public sealed class SubmitReportRequestRequestValidator : AbstractValidator<Subm
     public SubmitReportRequestRequestValidator()
     {
         RuleFor(x => x.Answers)
-            .NotEmpty()
+            .NotNull()
             .WithMessage(Messages.FieldRequired);
     }
 }

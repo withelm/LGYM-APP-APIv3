@@ -167,7 +167,7 @@ public sealed class ReportingService : IReportingService
 
     public async Task<ReportSubmissionResult> SubmitReportRequestAsync(UserEntity currentTrainee, Guid requestId, SubmitReportRequestCommand command)
     {
-        if (requestId == Guid.Empty || command.Answers.Count == 0)
+        if (requestId == Guid.Empty || command.Answers == null)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -408,14 +408,18 @@ public sealed class ReportingService : IReportingService
 
     private static ReportSubmissionResult MapSubmission(ReportSubmission submission)
     {
+        var answersRaw = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(submission.PayloadJson);
+        var answers = answersRaw == null
+            ? new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, JsonElement>(answersRaw, StringComparer.OrdinalIgnoreCase);
+
         return new ReportSubmissionResult
         {
             Id = submission.Id,
             ReportRequestId = submission.ReportRequestId,
             TraineeId = submission.TraineeId,
             SubmittedAt = submission.CreatedAt,
-            Answers = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(submission.PayloadJson)
-                ?? new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase),
+            Answers = answers,
             Request = MapRequest(submission.ReportRequest)
         };
     }

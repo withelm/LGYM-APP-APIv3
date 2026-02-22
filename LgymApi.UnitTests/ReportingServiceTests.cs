@@ -104,8 +104,47 @@ public sealed class ReportingServiceTests
         });
 
         Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
-        Assert.That(result.Answers.ContainsKey("Weight") || result.Answers.ContainsKey("weight"), Is.True);
+        Assert.That(result.Answers.ContainsKey("WEIGHT"), Is.True);
         Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+    }
+
+    [Test]
+    public async Task SubmitReportRequestAsync_AllowsEmptyAnswers_WhenAllFieldsOptional()
+    {
+        var trainee = NewUser();
+        var trainer = NewUser();
+        var template = NewTemplate(trainer.Id, "OptionalOnly", [NewField("notes", ReportFieldType.Text, false)]);
+        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+        _reportingRepository.Requests.Add(request);
+
+        var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement>()
+        });
+
+        Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
+        Assert.That(result.Answers, Is.Empty);
+        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+    }
+
+    [Test]
+    public void SubmitReportRequestAsync_ThrowsBadRequest_WhenRequiredFieldMissing()
+    {
+        var trainee = NewUser();
+        var trainer = NewUser();
+        var template = NewTemplate(trainer.Id, "Required", [NewField("weight", ReportFieldType.Number, true)]);
+        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+        _reportingRepository.Requests.Add(request);
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
+            {
+                Answers = new Dictionary<string, JsonElement>()
+            }));
+
+        Assert.That(exception, Is.Not.Null);
+        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.That(exception.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
     }
 
     [Test]

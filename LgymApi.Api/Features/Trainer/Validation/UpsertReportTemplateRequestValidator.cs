@@ -27,8 +27,7 @@ public sealed class UpsertReportTemplateRequestValidator : AbstractValidator<Ups
                 .WithMessage(Messages.FieldRequired);
 
             fields.RuleFor(f => f.Order)
-                .GreaterThanOrEqualTo(0)
-                .WithMessage(Messages.FieldRequired);
+                .GreaterThanOrEqualTo(0);
         });
     }
 }
