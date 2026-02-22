@@ -1,6 +1,7 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Repositories;
 using LgymApi.Resources;
+using Microsoft.EntityFrameworkCore;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -266,11 +267,15 @@ public sealed class PlanService : IPlanService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return shareCode;
         }
-        catch (InvalidOperationException exception) when (exception.Message == "Plan not found")
+        catch (KeyNotFoundException)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
         catch (InvalidOperationException)
+        {
+            throw AppException.Internal("Unable to generate share code");
+        }
+        catch (DbUpdateException)
         {
             throw AppException.Internal("Unable to generate share code");
         }

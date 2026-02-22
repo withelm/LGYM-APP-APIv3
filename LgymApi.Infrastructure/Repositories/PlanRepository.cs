@@ -9,7 +9,14 @@ namespace LgymApi.Infrastructure.Repositories;
 
 public sealed class PlanRepository : IPlanRepository
 {
+    /// <summary>
+    /// Length of generated share codes.
+    /// </summary>
     private const int ShareCodeLength = 10;
+
+    /// <summary>
+    /// Upper bound for collision retry attempts.
+    /// </summary>
     private const int ShareCodeGenerationMaxAttempts = 10;
 
     private readonly AppDbContext _dbContext;
@@ -172,7 +179,7 @@ public sealed class PlanRepository : IPlanRepository
         var plan = await _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == planId && !p.IsDeleted, cancellationToken);
 
         if (plan == null)
-            throw new InvalidOperationException("Plan not found");
+            throw new KeyNotFoundException("Plan not found");
 
         if (plan.UserId != userId)
             throw new UnauthorizedAccessException("Only the plan owner can generate a share code");
@@ -184,6 +191,8 @@ public sealed class PlanRepository : IPlanRepository
             {
                 return plan.ShareCode;
             }
+
+            plan.ShareCode = null;
         }
 
         for (var attempt = 0; attempt < ShareCodeGenerationMaxAttempts; attempt++)
