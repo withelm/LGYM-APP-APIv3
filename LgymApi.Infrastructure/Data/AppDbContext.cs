@@ -36,6 +36,9 @@ public sealed class AppDbContext : DbContext
     public DbSet<ReportTemplateField> ReportTemplateFields => Set<ReportTemplateField>();
     public DbSet<ReportRequest> ReportRequests => Set<ReportRequest>();
     public DbSet<ReportSubmission> ReportSubmissions => Set<ReportSubmission>();
+    public DbSet<SupplementPlan> SupplementPlans => Set<SupplementPlan>();
+    public DbSet<SupplementPlanItem> SupplementPlanItems => Set<SupplementPlanItem>();
+    public DbSet<SupplementIntakeLog> SupplementIntakeLogs => Set<SupplementIntakeLog>();
 
     public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
@@ -389,6 +392,49 @@ public sealed class AppDbContext : DbContext
             entity.HasOne(e => e.Trainee)
                 .WithMany()
                 .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SupplementPlan>(entity =>
+        {
+            entity.ToTable("SupplementPlans");
+            entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.CreatedAt });
+            entity.HasIndex(e => new { e.TraineeId, e.IsActive });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SupplementPlanItem>(entity =>
+        {
+            entity.ToTable("SupplementPlanItems");
+            entity.Property(e => e.SupplementName).HasMaxLength(160).IsRequired();
+            entity.Property(e => e.Dosage).HasMaxLength(120).IsRequired();
+            entity.HasIndex(e => new { e.PlanId, e.Order, e.TimeOfDay });
+            entity.HasOne(e => e.Plan)
+                .WithMany(e => e.Items)
+                .HasForeignKey(e => e.PlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SupplementIntakeLog>(entity =>
+        {
+            entity.ToTable("SupplementIntakeLogs");
+            entity.HasIndex(e => new { e.TraineeId, e.PlanItemId, e.IntakeDate }).IsUnique();
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.PlanItem)
+                .WithMany()
+                .HasForeignKey(e => e.PlanItemId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
