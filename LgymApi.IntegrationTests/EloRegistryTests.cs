@@ -50,7 +50,7 @@ public sealed class EloRegistryTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetEloRegistryChart_WithInvalidUserId_ReturnsNotFound()
+    public async Task GetEloRegistryChart_WithMismatchedRouteUserId_ReturnsForbidden()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "authuser",
@@ -60,10 +60,14 @@ public sealed class EloRegistryTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = 
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var nonExistentId = Guid.NewGuid();
-        var response = await Client.GetAsync($"/api/eloRegistry/{nonExistentId}/getEloRegistryChart");
+        var (otherUserId, _) = await RegisterUserViaEndpointAsync(
+            name: "eloother",
+            email: "eloother@example.com",
+            password: "password123");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var response = await Client.GetAsync($"/api/eloRegistry/{otherUserId}/getEloRegistryChart");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Test]

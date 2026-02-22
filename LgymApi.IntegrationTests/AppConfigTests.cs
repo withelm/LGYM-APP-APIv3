@@ -104,6 +104,32 @@ public sealed class AppConfigTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreateNewAppVersion_AsAdminWithMismatchedRouteUserId_ReturnsForbidden()
+    {
+        var admin = await SeedAdminAsync();
+        SetAuthorizationHeader(admin.Id);
+
+        var otherAdmin = await SeedUserAsync(
+            name: "otheradmin",
+            email: "otheradmin@example.com",
+            isAdmin: true);
+
+        var request = new
+        {
+            platform = Platforms.Ios.ToString(),
+            minRequiredVersion = "1.5.0",
+            latestVersion = "3.0.0",
+            forceUpdate = true,
+            updateUrl = "https://apps.apple.com/app/lgym",
+            releaseNotes = "Major update"
+        };
+
+        var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{otherAdmin.Id}", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
     public async Task CreateNewAppVersion_AsNonAdmin_ReturnsForbidden()
     {
         var user = await SeedUserAsync(name: "normaluser", email: "normal@example.com");

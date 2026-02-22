@@ -23,11 +23,12 @@ public sealed class TrainingController : ControllerBase
 
     [HttpPost("{id}/addTraining")]
     [ProducesResponseType(typeof(TrainingSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> AddTraining([FromRoute] string id, [FromBody] TrainingFormDto form)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var gymId = Guid.TryParse(form.GymId, out var parsedGymId) ? parsedGymId : Guid.Empty;
         var planDayId = Guid.TryParse(form.TypePlanDayId, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
         var exercises = form.Exercises.Select(exercise => new TrainingExerciseInput
@@ -46,20 +47,22 @@ public sealed class TrainingController : ControllerBase
 
     [HttpGet("{id}/getLastTraining")]
     [ProducesResponseType(typeof(LastTrainingInfoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLastTraining([FromRoute] string id)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var training = await _trainingService.GetLastTrainingAsync(userId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Domain.Entities.Training, LastTrainingInfoDto>(training));
     }
 
     [HttpPost("{id}/getTrainingByDate")]
     [ProducesResponseType(typeof(List<TrainingByDateDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTrainingByDate([FromRoute] string id, [FromBody] TrainingByDateRequestDto request)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var result = await _trainingService.GetTrainingByDateAsync(userId, request.CreatedAt, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result);
         return Ok(mapped);
@@ -67,10 +70,11 @@ public sealed class TrainingController : ControllerBase
 
     [HttpGet("{id}/getTrainingDates")]
     [ProducesResponseType(typeof(List<DateTime>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTrainingDates([FromRoute] string id)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var dates = await _trainingService.GetTrainingDatesAsync(userId, HttpContext.RequestAborted);
         return Ok(dates);
     }
