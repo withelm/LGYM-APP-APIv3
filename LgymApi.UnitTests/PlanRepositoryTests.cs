@@ -8,6 +8,8 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class PlanRepositoryTests
 {
+    private const int ExpectedShareCodeGenerationAttempts = 10;
+
     [Test]
     public async Task GenerateShareCodeAsync_WhenPlanAlreadyHasUniqueCode_ReturnsExistingCode()
     {
@@ -173,6 +175,6 @@ public sealed class PlanRepositoryTests
             await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None));
 
         Assert.That(exception!.Message, Is.EqualTo("Unable to generate unique share code"));
-        Assert.That(generationCount, Is.EqualTo(10));
+        Assert.That(generationCount, Is.EqualTo(ExpectedShareCodeGenerationAttempts));
     }
 }

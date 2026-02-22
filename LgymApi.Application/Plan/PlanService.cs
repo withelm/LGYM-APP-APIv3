@@ -1,7 +1,6 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Repositories;
 using LgymApi.Resources;
-using Microsoft.EntityFrameworkCore;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -271,11 +270,7 @@ public sealed class PlanService : IPlanService
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
-        catch (InvalidOperationException)
-        {
-            throw AppException.Internal(Messages.TryAgain);
-        }
-        catch (DbUpdateException)
+        catch (Exception exception) when (exception is InvalidOperationException || exception.GetType().Name == "DbUpdateException")
         {
             throw AppException.Internal(Messages.TryAgain);
         }

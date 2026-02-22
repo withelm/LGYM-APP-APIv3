@@ -18,9 +18,10 @@ public sealed class PlanRepository : IPlanRepository
     /// Upper bound for collision retry attempts.
     /// </summary>
     private const int ShareCodeGenerationMaxAttempts = 10;
+    private const string ShareCodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static readonly HashSet<char> ShareCodeAllowedCharacters =
     [
-        .."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        ..ShareCodeAlphabet
     ];
 
     private readonly AppDbContext _dbContext;
@@ -239,12 +240,11 @@ public sealed class PlanRepository : IPlanRepository
 
     private static string GenerateSecureAlphanumericCode(int length)
     {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         var result = new char[length];
 
         for (int i = 0; i < length; i++)
         {
-            result[i] = chars[RandomNumberGenerator.GetInt32(chars.Length)];
+            result[i] = ShareCodeAlphabet[RandomNumberGenerator.GetInt32(ShareCodeAlphabet.Length)];
         }
 
         return new string(result);
