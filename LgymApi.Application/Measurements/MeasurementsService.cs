@@ -94,9 +94,14 @@ public sealed class MeasurementsService : IMeasurementsService
     {
         ValidateAccess(currentUser, routeUserId);
 
-        if (bodyPart == BodyParts.Unknown || unit == HeightUnits.Unknown)
+        if (!System.Enum.IsDefined(bodyPart) || bodyPart == BodyParts.Unknown)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            throw AppException.BadRequest(Messages.BodyPartRequired);
+        }
+
+        if (!System.Enum.IsDefined(unit) || unit == HeightUnits.Unknown)
+        {
+            throw AppException.BadRequest(Messages.UnitRequired);
         }
 
         var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart);
@@ -113,6 +118,7 @@ public sealed class MeasurementsService : IMeasurementsService
         var startValue = convertedValues[0];
         var currentValue = convertedValues[^1];
         var change = currentValue - startValue;
+        var roundedChange = Math.Round(change, 2);
         var changePercentage = startValue == 0d ? 0d : (change / startValue) * 100d;
 
         return new MeasurementTrendResult
@@ -121,9 +127,9 @@ public sealed class MeasurementsService : IMeasurementsService
             Unit = unit,
             StartValue = Math.Round(startValue, 2),
             CurrentValue = Math.Round(currentValue, 2),
-            Change = Math.Round(change, 2),
+            Change = roundedChange,
             ChangePercentage = Math.Round(changePercentage, 2),
-            Direction = ResolveDirection(change),
+            Direction = ResolveDirection(roundedChange),
             Points = ordered.Count
         };
     }
@@ -137,12 +143,12 @@ public sealed class MeasurementsService : IMeasurementsService
     {
         ValidateAccess(currentUser, routeUserId);
 
-        if (bodyPart.HasValue && bodyPart.Value == BodyParts.Unknown)
+        if (bodyPart.HasValue && (!System.Enum.IsDefined(bodyPart.Value) || bodyPart.Value == BodyParts.Unknown))
         {
             throw AppException.BadRequest(Messages.BodyPartRequired);
         }
 
-        if (unit.HasValue && unit.Value == HeightUnits.Unknown)
+        if (unit.HasValue && (!System.Enum.IsDefined(unit.Value) || unit.Value == HeightUnits.Unknown))
         {
             throw AppException.BadRequest(Messages.UnitRequired);
         }

@@ -47,6 +47,7 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
 
     [HttpGet("measurements/{id}/getHistory")]
     [ProducesResponseType(typeof(MeasurementsHistoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMeasurementsHistory([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request)
@@ -61,6 +62,7 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
 
     [HttpGet("measurements/{id}/list")]
     [ProducesResponseType(typeof(MeasurementsListDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMeasurementsList([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request)
@@ -74,6 +76,7 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
 
     [HttpGet("measurements/{id}/trend")]
     [ProducesResponseType(typeof(MeasurementTrendDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMeasurementsTrend([FromRoute] string id, [FromQuery] MeasurementTrendRequestDto request)
