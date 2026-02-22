@@ -1,0 +1,161 @@
+name: SonarCloud Analysis
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonar-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SONAR_HOST_URL: https://sonarcloud.io
+  SONAR_ORG: ${{ vars.SONAR_ORG != '' && vars.SONAR_ORG || secrets.SONAR_ORG }}
+  SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY != '' && vars.SONAR_PROJECT_KEY || secrets.SONAR_PROJECT_KEY }}
+
+jobs:
+  sonar-required:
+    name: sonar-required
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Sonar Begin
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
+
+      - name: Restore
+        run: dotnet restore LgymApi.sln
+
+      - name: Build
+        run: dotnet build LgymApi.sln --configuration Release --no-restore
+
+      - name: Create coverage directories
+        run: mkdir -p "${{ github.workspace }}/TestResults/Unit" "${{ github.workspace }}/TestResults/Architecture" "${{ github.workspace }}/TestResults/Integration"
+
+      - name: Run unit tests with coverage
+        run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Unit/coverage.opencover.xml
+
+      - name: Run architecture tests with coverage
+        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Architecture/coverage.opencover.xml
+
+      - name: Run integration tests with coverage
+        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Integration/coverage.opencover.xml
+
+      - name: Sonar End
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+  sonar-optional:
+    name: sonar-optional
+    if: github.event_name == 'pull_request' && github.base_ref != 'main' && github.event.pull_request.head.repo.fork == false
+    continue-on-error: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Sonar Begin
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
+
+      - name: Restore
+        run: dotnet restore LgymApi.sln
+
+      - name: Build
+        run: dotnet build LgymApi.sln --configuration Release --no-restore
+
+      - name: Create coverage directories
+        run: mkdir -p "${{ github.workspace }}/TestResults/Unit" "${{ github.workspace }}/TestResults/Architecture" "${{ github.workspace }}/TestResults/Integration"
+
+      - name: Run unit tests with coverage
+        run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Unit/coverage.opencover.xml
+
+      - name: Run architecture tests with coverage
+        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Architecture/coverage.opencover.xml
+
+      - name: Run integration tests with coverage
+        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Integration/coverage.opencover.xml
+
+      - name: Sonar End
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+  sonar-main:
+    name: sonar-main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Sonar Begin
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
+
+      - name: Restore
+        run: dotnet restore LgymApi.sln
+
+      - name: Build
+        run: dotnet build LgymApi.sln --configuration Release --no-restore
+
+      - name: Create coverage directories
+        run: mkdir -p "${{ github.workspace }}/TestResults/Unit" "${{ github.workspace }}/TestResults/Architecture" "${{ github.workspace }}/TestResults/Integration"
+
+      - name: Run unit tests with coverage
+        run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Unit/coverage.opencover.xml
+
+      - name: Run architecture tests with coverage
+        run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Architecture/coverage.opencover.xml
+
+      - name: Run integration tests with coverage
+        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Integration/coverage.opencover.xml
+
+      - name: Sonar End
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"

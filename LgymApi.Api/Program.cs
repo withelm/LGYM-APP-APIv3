@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Globalization;
+using LgymApi.Api.Configuration;
 using Microsoft.AspNetCore.Localization;
 using LgymApi.Api.Middleware;
 using LgymApi.Domain.Security;
@@ -40,10 +41,21 @@ builder.Services.AddSwaggerGen(options =>
     options.UseInlineDefinitionsForEnums();
     options.SchemaFilter<EnumAsStringSchemaFilter>();
 });
+var configuredCorsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var corsAllowedOrigins = CorsOriginResolver.ResolveAllowedOrigins(configuredCorsOrigins, builder.Environment.IsDevelopment());
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    {
+        if (corsAllowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(corsAllowedOrigins).AllowAnyMethod().AllowAnyHeader();
+            return;
+        }
+
+        throw new InvalidOperationException("No CORS allowed origins are configured. Configure 'Cors:AllowedOrigins' or disable CORS explicitly.");
+    });
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddLocalization();
@@ -55,10 +67,10 @@ builder.Services.AddInfrastructure(
     builder.Environment.IsDevelopment(),
     builder.Environment.IsEnvironment("Testing"));
 
-var jwtSecret = builder.Configuration["Jwt:Secret"];
-if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
 {
-    throw new InvalidOperationException("Jwt:Secret is not configured or is too short. Set a strong secret value.");
+    throw new InvalidOperationException("Jwt:SigningKey is not configured or is too short. Set a strong key value.");
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -69,7 +81,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
             ClockSkew = TimeSpan.Zero
         };
         options.Events = new JwtBearerEvents
@@ -192,7 +204,7 @@ app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
 
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();
 
 // For WebApplicationFactory in integration tests
 public partial class Program { }

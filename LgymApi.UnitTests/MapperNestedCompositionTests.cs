@@ -1,11 +1,16 @@
 using System.Reflection;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Mapping.Extensions;
 
 namespace LgymApi.UnitTests;
 
 [TestFixture]
 public sealed class MapperNestedCompositionTests
 {
+    private static readonly string[] ExpectedSinglePushResult = ["push!"];
+    private static readonly string[] ExpectedPullPressResults = ["pull!", "press!"];
+    private static readonly string[] ExpectedBaseDerivedMarkers = ["base", "derived"];
+
     [Test]
     public void Map_Should_Support_Nested_Object_And_List_Mapping_With_Context_Propagation()
     {
@@ -76,6 +81,112 @@ public sealed class MapperNestedCompositionTests
             Assert.That(result.Child, Is.Null);
             Assert.That(result.Children.Select(c => c.Name), Is.EqualTo(new[] { "row!", "curl!" }));
         });
+    }
+
+    [Test]
+    public void Map_With_Runtime_Source_Type_Should_Support_New_Single_Generic_Overload()
+    {
+        var mapper = CreateMapper(new NestedCompositionProfile());
+        var context = mapper.CreateContext();
+        context.Set(NestedCompositionProfile.Keys.Suffix, "!");
+
+        object source = new ParentSource
+        {
+            Child = new ChildSource { Name = "pull" },
+            Children =
+            [
+                new ChildSource { Name = "push" }
+            ]
+        };
+
+        var result = mapper.Map<ParentTarget>(source, context);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Child?.Name, Is.EqualTo("pull!"));
+            Assert.That(result.Children.Select(c => c.Name), Is.EqualTo(ExpectedSinglePushResult));
+        });
+    }
+
+    [Test]
+    public void Map_With_Runtime_Source_Type_Should_Select_Runtime_Mapping_Over_Compile_Time_Type()
+    {
+        var mapper = CreateMapper(new RuntimePolymorphismProfile());
+        BaseSource source = new DerivedSource();
+
+        var result = mapper.Map<PolymorphicTarget>(source);
+
+        Assert.That(result.Marker, Is.EqualTo("derived"));
+    }
+
+    [Test]
+    public void Map_With_Runtime_Source_Type_Should_Throw_Clear_Error_When_Mapping_Is_Missing()
+    {
+        var mapper = CreateMapper(new MissingNestedMappingProfile());
+        object source = new MissingChildSource();
+
+        var ex = Assert.Throws<InvalidOperationException>(() => mapper.Map<MissingChildTarget>(source));
+
+        Assert.That(ex!.Message, Does.Contain("Mapping from MissingChildSource to MissingChildTarget is not registered."));
+    }
+
+    [Test]
+    public void MapList_With_Runtime_Source_Type_Should_Map_All_Items()
+    {
+        var mapper = CreateMapper(new NestedCompositionProfile());
+        var context = mapper.CreateContext();
+        context.Set(NestedCompositionProfile.Keys.Suffix, "!");
+
+        System.Collections.IEnumerable source = new object[]
+        {
+            new ChildSource { Name = "pull" },
+            new ChildSource { Name = "press" }
+        };
+
+        var result = mapper.MapList<ChildTarget>(source, context);
+
+        Assert.That(result.Select(x => x.Name), Is.EqualTo(ExpectedPullPressResults));
+    }
+
+    [Test]
+    public void MapList_With_Runtime_Source_Type_Should_Select_Runtime_Mapping_Per_Item()
+    {
+        var mapper = CreateMapper(new RuntimePolymorphismProfile());
+        System.Collections.IEnumerable source = new BaseSource[]
+        {
+            new BaseSource(),
+            new DerivedSource()
+        };
+
+        var result = mapper.MapList<PolymorphicTarget>(source);
+
+        Assert.That(result.Select(x => x.Marker), Is.EqualTo(ExpectedBaseDerivedMarkers));
+    }
+
+    [Test]
+    public void MapTo_Extension_Should_Use_Runtime_Source_Type()
+    {
+        var mapper = CreateMapper(new RuntimePolymorphismProfile());
+        object source = new DerivedSource();
+
+        var result = source.MapTo<PolymorphicTarget>(mapper);
+
+        Assert.That(result.Marker, Is.EqualTo("derived"));
+    }
+
+    [Test]
+    public void MapToList_Extension_Should_Use_Runtime_Source_Type_Per_Item()
+    {
+        var mapper = CreateMapper(new RuntimePolymorphismProfile());
+        System.Collections.IEnumerable source = new BaseSource[]
+        {
+            new BaseSource(),
+            new DerivedSource()
+        };
+
+        var result = source.MapToList<PolymorphicTarget>(mapper);
+
+        Assert.That(result.Select(x => x.Marker), Is.EqualTo(ExpectedBaseDerivedMarkers));
     }
 
     [Test]
@@ -186,8 +297,8 @@ public sealed class MapperNestedCompositionTests
 
             configuration.CreateMap<ParentSource, ParentTarget>((source, context) => new ParentTarget
             {
-                Child = source.Child == null ? null : context!.Map<ChildSource, ChildTarget>(source.Child),
-                Children = context!.MapList<ChildSource, ChildTarget>(source.Children)
+                Child = source.Child == null ? null : context!.Map<ChildTarget>(source.Child),
+                Children = context!.MapList<ChildTarget>(source.Children)
             });
         }
     }
@@ -198,7 +309,7 @@ public sealed class MapperNestedCompositionTests
         {
             configuration.CreateMap<MissingParentSource, MissingParentTarget>((source, context) => new MissingParentTarget
             {
-                Child = source.Child == null ? null : context!.Map<MissingChildSource, MissingChildTarget>(source.Child)
+                Child = source.Child == null ? null : context!.Map<MissingChildTarget>(source.Child)
             });
         }
     }
@@ -211,7 +322,7 @@ public sealed class MapperNestedCompositionTests
             {
                 if (source.TriggerCycle)
                 {
-                    return context!.Map<CyclicSource, CyclicTarget>(source);
+                    return context!.Map<CyclicTarget>(source);
                 }
 
                 return new CyclicTarget();
@@ -227,7 +338,7 @@ public sealed class MapperNestedCompositionTests
             {
                 if (source == 1)
                 {
-                    return context!.Map<int, int>(source);
+                    return context!.Map<int>(source);
                 }
 
                 return source;
@@ -255,6 +366,15 @@ public sealed class MapperNestedCompositionTests
         public void Configure(MappingConfiguration configuration)
         {
             configuration.CreateMap<int, int>((source, _) => source);
+        }
+    }
+
+    private sealed class RuntimePolymorphismProfile : IMappingProfile
+    {
+        public void Configure(MappingConfiguration configuration)
+        {
+            configuration.CreateMap<BaseSource, PolymorphicTarget>((_, _) => new PolymorphicTarget { Marker = "base" });
+            configuration.CreateMap<DerivedSource, PolymorphicTarget>((_, _) => new PolymorphicTarget { Marker = "derived" });
         }
     }
 
@@ -315,4 +435,13 @@ public sealed class MapperNestedCompositionTests
     }
 
     private sealed class CyclicTarget;
+
+    private class BaseSource;
+
+    private sealed class DerivedSource : BaseSource;
+
+    private sealed class PolymorphicTarget
+    {
+        public string Marker { get; init; } = string.Empty;
+    }
 }
