@@ -183,6 +183,24 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Test]
+    public async Task CreatePlan_WithNullItems_ReturnsBadRequest()
+    {
+        var trainer = await SeedTrainerAsync("trainer-supp-null-items", "trainer-supp-null-items@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-supp-null-items", email: "trainee-supp-null-items@example.com", password: "password123");
+        await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
+
+        SetAuthorizationHeader(trainer.Id);
+        var response = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans", new
+        {
+            name = "Plan",
+            notes = "n",
+            items = (object?)null
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     private async Task<User> SeedTrainerAsync(string name, string email)
     {
         var trainer = await SeedUserAsync(name: name, email: email, password: "password123");

@@ -93,6 +93,27 @@ public sealed class SupplementationServiceTests
     }
 
     [Test]
+    public async Task GetActiveScheduleForDateAsync_OrdersByOrderThenTime()
+    {
+        var trainee = NewTrainee();
+        var date = DateOnly.FromDateTime(new DateTime(2026, 2, 23));
+        var mask = MaskForDate(date);
+        var firstExpected = NewPlanItem("First", "1", "21:00", mask, 0);
+        var secondExpected = NewPlanItem("Second", "1", "08:00", mask, 1);
+        var activePlan = NewPlan(Guid.NewGuid(), trainee.Id, isActive: true, "Cut", secondExpected, firstExpected);
+        _supplementationRepository.Plans.Add(activePlan);
+
+        var result = await _service.GetActiveScheduleForDateAsync(trainee, date);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Has.Count.EqualTo(2));
+            Assert.That(result[0].SupplementName, Is.EqualTo("First"));
+            Assert.That(result[1].SupplementName, Is.EqualTo("Second"));
+        });
+    }
+
+    [Test]
     public void GetComplianceSummaryAsync_ThrowsBadRequest_WhenRangeTooLarge()
     {
         var trainer = NewTrainer();
@@ -108,6 +129,32 @@ public sealed class SupplementationServiceTests
             Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
             Assert.That(exception.Message, Is.EqualTo(Messages.FieldRequired));
         });
+    }
+
+    [Test]
+    public async Task GetComplianceSummaryAsync_AllowsRangeAtLimit()
+    {
+        var trainer = NewTrainer();
+        var trainee = NewTrainee();
+        Link(trainer.Id, trainee.Id);
+
+        var result = await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1));
+
+        Assert.That(result.TraineeId, Is.EqualTo(trainee.Id));
+    }
+
+    [Test]
+    public void GetComplianceSummaryAsync_ThrowsBadRequest_WhenRangeExceedsLimitByOneDay()
+    {
+        var trainer = NewTrainer();
+        var trainee = NewTrainee();
+        Link(trainer.Id, trainee.Id);
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 2)));
+
+        Assert.That(exception, Is.Not.Null);
+        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
     }
 
     [Test]

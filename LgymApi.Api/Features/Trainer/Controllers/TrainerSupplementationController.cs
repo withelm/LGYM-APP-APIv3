@@ -145,14 +145,14 @@ public sealed class TrainerSupplementationController : ControllerBase
         {
             Name = request.Name,
             Notes = request.Notes,
-            Items = request.Items.Select(item => new UpsertSupplementPlanItemCommand
+            Items = request.Items?.Select(item => new UpsertSupplementPlanItemCommand
             {
                 SupplementName = item.SupplementName,
                 Dosage = item.Dosage,
                 TimeOfDay = item.TimeOfDay,
                 DaysOfWeekMask = item.DaysOfWeekMask,
                 Order = item.Order
-            }).ToList()
+            }).ToList() ?? []
         };
     }
 }

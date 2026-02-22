@@ -154,8 +154,8 @@ public sealed class SupplementationService : ISupplementationService
 
         return activePlan.Items
             .Where(item => IsScheduledOnDate(item.DaysOfWeekMask, date))
-            .OrderBy(item => item.TimeOfDay)
-            .ThenBy(item => item.Order)
+            .OrderBy(item => item.Order)
+            .ThenBy(item => item.TimeOfDay)
             .ThenBy(item => item.CreatedAt)
             .Select(item =>
             {
@@ -234,8 +234,8 @@ public sealed class SupplementationService : ISupplementationService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var rangeDays = toDate.DayNumber - fromDate.DayNumber;
-        if (rangeDays > MaxComplianceRangeDays)
+        var inclusiveRangeDays = toDate.DayNumber - fromDate.DayNumber + 1;
+        if (inclusiveRangeDays > MaxComplianceRangeDays)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
