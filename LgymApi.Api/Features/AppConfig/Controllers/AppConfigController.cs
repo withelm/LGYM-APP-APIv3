@@ -39,15 +39,14 @@ public sealed class AppConfigController : ControllerBase
     public async Task<IActionResult> CreateNewAppVersion([FromRoute] string id, [FromBody] AppConfigInfoWithPlatformDto form)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _appConfigService.CreateNewAppVersionAsync(
-            userId,
+        var input = new CreateAppVersionInput(
             form.Platform,
             form.MinRequiredVersion,
             form.LatestVersion,
             form.ForceUpdate,
             form.UpdateUrl,
-            form.ReleaseNotes,
-            HttpContext.RequestAborted);
+            form.ReleaseNotes);
+        await _appConfigService.CreateNewAppVersionAsync(userId, input, HttpContext.RequestAborted);
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 }

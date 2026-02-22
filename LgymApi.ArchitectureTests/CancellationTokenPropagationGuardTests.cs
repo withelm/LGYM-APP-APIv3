@@ -8,7 +8,7 @@ namespace LgymApi.ArchitectureTests;
 public sealed class CancellationTokenPropagationGuardTests
 {
     [Test]
-    public void Controllers_Should_Pass_RequestAborted_To_Service_Async_Calls()
+    public void Controllers_Should_Pass_Request_Cancellation_Token_To_Service_Async_Calls()
     {
         var repoRoot = ResolveRepositoryRoot();
         var controllersRoot = Path.Combine(repoRoot, "LgymApi.Api", "Features");
@@ -35,19 +35,19 @@ public sealed class CancellationTokenPropagationGuardTests
                     continue;
                 }
 
-                if (ContainsRequestAborted(invocation.ArgumentList))
+                if (ContainsControllerCancellationArgument(invocation.ArgumentList))
                 {
                     continue;
                 }
 
-                violations.Add(CreateViolation(repoRoot, tree, invocation, "Missing HttpContext.RequestAborted in service async call"));
+                violations.Add(CreateViolation(repoRoot, tree, invocation, "Missing request cancellation token in service async call"));
             }
         }
 
         Assert.That(
             violations,
             Is.Empty,
-            "Controllers must pass HttpContext.RequestAborted to async service calls. Violations count: " + violations.Count + Environment.NewLine +
+            "Controllers must pass request cancellation token to async service calls. Violations count: " + violations.Count + Environment.NewLine +
             string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
     }
 
@@ -93,7 +93,7 @@ public sealed class CancellationTokenPropagationGuardTests
                         continue;
                     }
 
-                    if (ContainsCancellationTokenArgument(invocation.ArgumentList))
+                    if (ContainsCancellationArgument(invocation))
                     {
                         continue;
                     }
@@ -129,18 +129,16 @@ public sealed class CancellationTokenPropagationGuardTests
         }
 
         var receiverName = receiver.Identifier.ValueText;
-        return receiverName.StartsWith("_", StringComparison.Ordinal)
+        return receiverName.StartsWith('_')
             && receiverName.EndsWith("Service", StringComparison.Ordinal);
     }
 
-    private static bool ContainsRequestAborted(ArgumentListSyntax argumentList)
+    private static bool ContainsControllerCancellationArgument(ArgumentListSyntax argumentList)
     {
         return argumentList.Arguments.Any(argument =>
-            argument.Expression is MemberAccessExpressionSyntax
-            {
-                Expression: IdentifierNameSyntax { Identifier.ValueText: "HttpContext" },
-                Name: IdentifierNameSyntax { Identifier.ValueText: "RequestAborted" }
-            });
+            IsNamedCancellationToken(argument)
+            || argument.Expression is IdentifierNameSyntax { Identifier.ValueText: "cancellationToken" }
+            || argument.Expression is MemberAccessExpressionSyntax { Name.Identifier.ValueText: "RequestAborted" });
     }
 
     private static bool IsPublicAsyncContractMethod(MethodDeclarationSyntax method)
@@ -187,7 +185,7 @@ public sealed class CancellationTokenPropagationGuardTests
                 return true;
             }
 
-            if (receiverName.StartsWith("_", StringComparison.Ordinal) && receiverName.EndsWith("Repository", StringComparison.Ordinal))
+            if (receiverName.StartsWith('_') && receiverName.EndsWith("Repository", StringComparison.Ordinal))
             {
                 return true;
             }
@@ -196,11 +194,48 @@ public sealed class CancellationTokenPropagationGuardTests
         return false;
     }
 
-    private static bool ContainsCancellationTokenArgument(ArgumentListSyntax argumentList)
+    private static bool ContainsCancellationArgument(InvocationExpressionSyntax invocation)
     {
-        return argumentList.Arguments.Any(argument =>
-            argument.Expression is IdentifierNameSyntax { Identifier.ValueText: "cancellationToken" }
-            || argument.Expression.ToString().Contains("cancellationToken", StringComparison.Ordinal));
+        var argumentList = invocation.ArgumentList;
+
+        if (argumentList.Arguments.Any(argument =>
+            IsNamedCancellationToken(argument)
+            || argument.Expression is IdentifierNameSyntax { Identifier.ValueText: "cancellationToken" }))
+        {
+            return true;
+        }
+
+        if (!IsTransactionRollbackCall(invocation))
+        {
+            return false;
+        }
+
+        return argumentList.Arguments.Any(argument => IsCancellationTokenNone(argument.Expression));
+    }
+
+    private static bool IsNamedCancellationToken(ArgumentSyntax argument)
+    {
+        return argument.NameColon?.Name.Identifier.ValueText == "cancellationToken";
+    }
+
+    private static bool IsTransactionRollbackCall(InvocationExpressionSyntax invocation)
+    {
+        if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+        {
+            return false;
+        }
+
+        return memberAccess.Expression is IdentifierNameSyntax { Identifier.ValueText: "transaction" }
+            && memberAccess.Name.Identifier.ValueText == "RollbackAsync";
+    }
+
+    private static bool IsCancellationTokenNone(ExpressionSyntax expression)
+    {
+        return expression is MemberAccessExpressionSyntax
+        {
+            Expression: IdentifierNameSyntax { Identifier.ValueText: "CancellationToken" },
+            Name: IdentifierNameSyntax { Identifier.ValueText: "None" }
+        };
     }
 
     private static Violation CreateViolation(string repoRoot, SyntaxTree tree, SyntaxNode node, string reason)

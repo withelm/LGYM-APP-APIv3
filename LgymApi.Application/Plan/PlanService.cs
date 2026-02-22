@@ -220,7 +220,7 @@ public sealed class PlanService : IPlanService
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
     }
@@ -243,12 +243,12 @@ public sealed class PlanService : IPlanService
         }
         catch (InvalidOperationException)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await transaction.RollbackAsync(CancellationToken.None);
             throw AppException.NotFound(Messages.DidntFind);
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
     }

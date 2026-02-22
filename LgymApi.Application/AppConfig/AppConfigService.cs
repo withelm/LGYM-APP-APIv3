@@ -35,15 +35,7 @@ public sealed class AppConfigService : IAppConfigService
         return config;
     }
 
-    public async Task CreateNewAppVersionAsync(
-        Guid userId,
-        Platforms platform,
-        string? minRequiredVersion,
-        string? latestVersion,
-        bool forceUpdate,
-        string? updateUrl,
-        string? releaseNotes,
-        CancellationToken cancellationToken = default)
+    public async Task CreateNewAppVersionAsync(Guid userId, CreateAppVersionInput input, CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
@@ -56,7 +48,7 @@ public sealed class AppConfigService : IAppConfigService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (platform == Platforms.Unknown)
+        if (input.Platform == Platforms.Unknown)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -64,15 +56,15 @@ public sealed class AppConfigService : IAppConfigService
         var config = new AppConfigEntity
         {
             Id = Guid.NewGuid(),
-            Platform = platform,
-            MinRequiredVersion = minRequiredVersion,
-            LatestVersion = latestVersion,
-            ForceUpdate = forceUpdate,
-            UpdateUrl = updateUrl,
-            ReleaseNotes = releaseNotes
+            Platform = input.Platform,
+            MinRequiredVersion = input.MinRequiredVersion,
+            LatestVersion = input.LatestVersion,
+            ForceUpdate = input.ForceUpdate,
+            UpdateUrl = input.UpdateUrl,
+            ReleaseNotes = input.ReleaseNotes
         };
 
-        await _appConfigRepository.AddAsync((global::LgymApi.Domain.Entities.AppConfig)config, cancellationToken);
+        await _appConfigRepository.AddAsync(config, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
