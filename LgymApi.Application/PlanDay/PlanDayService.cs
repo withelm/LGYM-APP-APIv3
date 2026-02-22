@@ -128,37 +128,47 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        planDay.Name = name;
-        await _planDayRepository.UpdateAsync(planDay, cancellationToken);
-
-        await _planDayExerciseRepository.RemoveByPlanDayIdAsync(planDay.Id, cancellationToken);
-
-        var exercisesToAdd = new List<PlanDayExerciseEntity>();
-        var order = 0;
-        foreach (var exercise in exercises)
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
         {
-            if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
+            planDay.Name = name;
+            await _planDayRepository.UpdateAsync(planDay, cancellationToken);
+
+            await _planDayExerciseRepository.RemoveByPlanDayIdAsync(planDay.Id, cancellationToken);
+
+            var exercisesToAdd = new List<PlanDayExerciseEntity>();
+            var order = 0;
+            foreach (var exercise in exercises)
             {
-                continue;
+                if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
+                {
+                    continue;
+                }
+
+                exercisesToAdd.Add(new PlanDayExerciseEntity
+                {
+                    Id = Guid.NewGuid(),
+                    PlanDayId = planDay.Id,
+                    ExerciseId = exerciseId,
+                    Order = order++,
+                    Series = exercise.Series,
+                    Reps = exercise.Reps
+                });
             }
 
-            exercisesToAdd.Add(new PlanDayExerciseEntity
+            if (exercisesToAdd.Count > 0)
             {
-                Id = Guid.NewGuid(),
-                PlanDayId = planDay.Id,
-                ExerciseId = exerciseId,
-                Order = order++,
-                Series = exercise.Series,
-                Reps = exercise.Reps
-            });
-        }
+                await _planDayExerciseRepository.AddRangeAsync(exercisesToAdd, cancellationToken);
+            }
 
-        if (exercisesToAdd.Count > 0)
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
         {
-            await _planDayExerciseRepository.AddRangeAsync(exercisesToAdd, cancellationToken);
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
         }
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<PlanDayDetailsContext> GetPlanDayAsync(UserEntity currentUser, Guid planDayId, CancellationToken cancellationToken = default)
