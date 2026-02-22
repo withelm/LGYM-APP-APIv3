@@ -1,5 +1,6 @@
 using LgymApi.Api.Features.AppConfig.Contracts;
 using LgymApi.Api.Features.Common.Contracts;
+using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.AppConfig;
 using LgymApi.Application.Mapping.Core;
 using Microsoft.AspNetCore.Mvc;
@@ -38,7 +39,7 @@ public sealed class AppConfigController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateNewAppVersion([FromRoute] string id, [FromBody] AppConfigInfoWithPlatformDto form)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = HttpContext.ParseRouteUserIdForCurrentAdmin(id);
         var input = new CreateAppVersionInput(
             form.Platform,
             form.MinRequiredVersion,

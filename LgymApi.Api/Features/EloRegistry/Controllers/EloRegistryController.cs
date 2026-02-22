@@ -1,6 +1,7 @@
 using System.Globalization;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.EloRegistry.Contracts;
+using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.EloRegistry.Models;
 using LgymApi.Application.Mapping.Core;
@@ -23,10 +24,11 @@ public sealed class EloRegistryController : ControllerBase
 
     [HttpGet("eloRegistry/{id}/getEloRegistryChart")]
     [ProducesResponseType(typeof(List<EloRegistryBaseChartDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetEloRegistryChart([FromRoute] string id)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var result = await _eloRegistryService.GetChartAsync(userId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result);
         return Ok(mapped);

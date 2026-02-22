@@ -76,7 +76,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetExerciseScoresChartData_WithInvalidUserId_ReturnsNotFound()
+    public async Task GetExerciseScoresChartData_WithMismatchedRouteUserId_ReturnsForbidden()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "authuser",
@@ -88,11 +88,15 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
 
         var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Auth Exercise", BodyParts.Chest);
 
-        var nonExistentId = Guid.NewGuid();
-        var request = new { exerciseId = exerciseId.ToString() };
-        var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{nonExistentId}/getExerciseScoresChartData", request);
+        var (otherUserId, _) = await RegisterUserViaEndpointAsync(
+            name: "chartother",
+            email: "chartother@example.com",
+            password: "password123");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var request = new { exerciseId = exerciseId.ToString() };
+        var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{otherUserId}/getExerciseScoresChartData", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Test]

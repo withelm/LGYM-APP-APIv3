@@ -40,7 +40,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddNewRecord_WithInvalidUserId_ReturnsNotFound()
+    public async Task AddNewRecord_WithMismatchedRouteUserId_ReturnsForbidden()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "recorduser2",
@@ -52,7 +52,11 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Deadlift", BodyParts.Back);
 
-        var nonExistentId = Guid.NewGuid();
+        var (otherUserId, _) = await RegisterUserViaEndpointAsync(
+            name: "recordother",
+            email: "recordother@example.com",
+            password: "password123");
+
         var request = new
         {
             exercise = exerciseId.ToString(),
@@ -61,9 +65,51 @@ public sealed class MainRecordsTests : IntegrationTestBase
             date = DateTime.UtcNow
         };
 
-        var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{nonExistentId}/addNewRecord", request);
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{otherUserId}/addNewRecord", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task GetMainRecordsHistory_WithMismatchedRouteUserId_ReturnsForbidden()
+    {
+        var (_, userAToken) = await RegisterUserViaEndpointAsync(
+            name: "historymismatch-a",
+            email: "historymismatch-a@example.com",
+            password: "password123");
+
+        var (userBId, _) = await RegisterUserViaEndpointAsync(
+            name: "historymismatch-b",
+            email: "historymismatch-b@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userAToken);
+
+        var response = await Client.GetAsync($"/api/mainRecords/{userBId}/getMainRecordsHistory");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task GetLastMainRecords_WithMismatchedRouteUserId_ReturnsForbidden()
+    {
+        var (_, userAToken) = await RegisterUserViaEndpointAsync(
+            name: "lastmainmismatch-a",
+            email: "lastmainmismatch-a@example.com",
+            password: "password123");
+
+        var (userBId, _) = await RegisterUserViaEndpointAsync(
+            name: "lastmainmismatch-b",
+            email: "lastmainmismatch-b@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userAToken);
+
+        var response = await Client.GetAsync($"/api/mainRecords/{userBId}/getLastMainRecords");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Test]

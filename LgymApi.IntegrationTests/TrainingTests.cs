@@ -56,7 +56,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithInvalidUserId_ReturnsNotFound()
+    public async Task AddTraining_WithMismatchedRouteUserId_ReturnsForbidden()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "traininguser2",
@@ -74,7 +74,11 @@ public sealed class TrainingTests : IntegrationTestBase
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
         });
 
-        var nonExistentId = Guid.NewGuid();
+        var (otherUserId, _) = await RegisterUserViaEndpointAsync(
+            name: "trainingother",
+            email: "trainingother@example.com",
+            password: "password123");
+
         var request = new
         {
             gym = gymId.ToString(),
@@ -86,9 +90,9 @@ public sealed class TrainingTests : IntegrationTestBase
             }
         };
 
-        var response = await PostAsJsonWithApiOptionsAsync($"/api/{nonExistentId}/addTraining", request);
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{otherUserId}/addTraining", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Test]
@@ -227,6 +231,27 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetLastTraining_WithMismatchedRouteUserId_ReturnsForbidden()
+    {
+        var (_, userAToken) = await RegisterUserViaEndpointAsync(
+            name: "lastmismatch-a",
+            email: "lastmismatch-a@example.com",
+            password: "password123");
+
+        var (userBId, _) = await RegisterUserViaEndpointAsync(
+            name: "lastmismatch-b",
+            email: "lastmismatch-b@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userAToken);
+
+        var response = await Client.GetAsync($"/api/{userBId}/getLastTraining");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
     public async Task GetTrainingByDate_WithNoTrainings_ReturnsNotFound()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
@@ -289,6 +314,28 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetTrainingByDate_WithMismatchedRouteUserId_ReturnsForbidden()
+    {
+        var (_, userAToken) = await RegisterUserViaEndpointAsync(
+            name: "bydatemismatch-a",
+            email: "bydatemismatch-a@example.com",
+            password: "password123");
+
+        var (userBId, _) = await RegisterUserViaEndpointAsync(
+            name: "bydatemismatch-b",
+            email: "bydatemismatch-b@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userAToken);
+
+        var request = new { createdAt = DateTime.UtcNow };
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userBId}/getTrainingByDate", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
     public async Task GetTrainingDates_WithNoTrainings_ReturnsNotFound()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
@@ -345,7 +392,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetTrainingDates_WithInvalidUserId_ReturnsNotFound()
+    public async Task GetTrainingDates_WithMismatchedRouteUserId_ReturnsForbidden()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "datesuser3",
@@ -355,10 +402,14 @@ public sealed class TrainingTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var nonExistentId = Guid.NewGuid();
-        var response = await Client.GetAsync($"/api/{nonExistentId}/getTrainingDates");
+        var (otherUserId, _) = await RegisterUserViaEndpointAsync(
+            name: "datesother",
+            email: "datesother@example.com",
+            password: "password123");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var response = await Client.GetAsync($"/api/{otherUserId}/getTrainingDates");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Test]
