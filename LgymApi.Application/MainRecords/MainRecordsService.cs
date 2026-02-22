@@ -137,9 +137,9 @@ public sealed class MainRecordsService : IMainRecordsService
         };
     }
 
-    public async Task DeleteMainRecordAsync(Guid recordId, CancellationToken cancellationToken = default)
+    public async Task DeleteMainRecordAsync(Guid currentUserId, Guid recordId, CancellationToken cancellationToken = default)
     {
-        if (recordId == Guid.Empty)
+        if (currentUserId == Guid.Empty || recordId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -150,21 +150,25 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
+        if (record.UserId != currentUserId)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
+        }
+
         await _mainRecordRepository.DeleteAsync(record, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateMainRecordAsync(Guid userId, string recordId, string exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default)
+    public async Task UpdateMainRecordAsync(Guid routeUserId, Guid currentUserId, string recordId, string exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (routeUserId == Guid.Empty || currentUserId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
-        if (user == null)
+        if (routeUserId != currentUserId)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
         if (!Guid.TryParse(recordId, out var recordGuid))
@@ -176,6 +180,11 @@ public sealed class MainRecordsService : IMainRecordsService
         if (existingRecord == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        if (existingRecord.UserId != currentUserId)
+        {
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
         if (!Guid.TryParse(exerciseId, out var exerciseGuid))
@@ -194,7 +203,6 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        existingRecord.UserId = user.Id;
         existingRecord.ExerciseId = exercise.Id;
         existingRecord.Weight = weight;
         existingRecord.Unit = unit;

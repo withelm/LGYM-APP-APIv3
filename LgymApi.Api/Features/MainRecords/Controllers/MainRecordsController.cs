@@ -60,21 +60,25 @@ public sealed class MainRecordsController : ControllerBase
 
     [HttpGet("mainRecords/{id}/deleteMainRecord")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteMainRecord([FromRoute] string id)
     {
+        var currentUserId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
         var recordId = Guid.TryParse(id, out var parsedRecordId) ? parsedRecordId : Guid.Empty;
-        await _mainRecordsService.DeleteMainRecordAsync(recordId, HttpContext.RequestAborted);
+        await _mainRecordsService.DeleteMainRecordAsync(currentUserId, recordId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
     [HttpPost("mainRecords/{id}/updateMainRecords")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMainRecords([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _mainRecordsService.UpdateMainRecordAsync(userId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date, HttpContext.RequestAborted);
+        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var currentUserId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
+        await _mainRecordsService.UpdateMainRecordAsync(routeUserId, currentUserId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
