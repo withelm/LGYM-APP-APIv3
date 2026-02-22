@@ -206,7 +206,9 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("Roles");
             entity.Property(e => e.Name).IsRequired();
-            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasIndex(e => e.Name)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasData(
                 new Role
                 {
@@ -261,7 +263,9 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("RoleClaims");
             entity.Property(e => e.ClaimType).IsRequired();
             entity.Property(e => e.ClaimValue).IsRequired();
-            entity.HasIndex(e => new { e.RoleId, e.ClaimType, e.ClaimValue }).IsUnique();
+            entity.HasIndex(e => new { e.RoleId, e.ClaimType, e.ClaimValue })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasOne(e => e.Role)
                 .WithMany(r => r.RoleClaims)
                 .HasForeignKey(e => e.RoleId)
@@ -310,7 +314,9 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("TrainerInvitations");
             entity.Property(e => e.Code).IsRequired();
             entity.Property(e => e.Status).HasConversion<string>();
-            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => e.Code)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasOne(e => e.Trainer)
                 .WithMany()
                 .HasForeignKey(e => e.TrainerId)
@@ -324,7 +330,9 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<TrainerTraineeLink>(entity =>
         {
             entity.ToTable("TrainerTraineeLinks");
-            entity.HasIndex(e => e.TraineeId).IsUnique();
+            entity.HasIndex(e => e.TraineeId)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasIndex(e => new { e.TrainerId, e.TraineeId });
             entity.HasOne(e => e.Trainer)
                 .WithMany()
@@ -344,7 +352,9 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.PayloadJson).IsRequired();
             entity.Property(e => e.Status).HasConversion<string>();
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
-            entity.HasIndex(e => new { e.Type, e.CorrelationId, e.RecipientEmail }).IsUnique();
+            entity.HasIndex(e => new { e.Type, e.CorrelationId, e.RecipientEmail })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
         });
 
         modelBuilder.Entity<ReportTemplate>(entity =>
@@ -365,7 +375,9 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.Key).HasMaxLength(64).IsRequired();
             entity.Property(e => e.Label).HasMaxLength(120).IsRequired();
             entity.Property(e => e.Type).HasConversion<string>();
-            entity.HasIndex(e => new { e.TemplateId, e.Key }).IsUnique();
+            entity.HasIndex(e => new { e.TemplateId, e.Key })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasOne(e => e.Template)
                 .WithMany(e => e.Fields)
                 .HasForeignKey(e => e.TemplateId)
@@ -401,7 +413,9 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("ReportSubmissions");
             entity.Property(e => e.PayloadJson).IsRequired();
-            entity.HasIndex(e => e.ReportRequestId).IsUnique();
+            entity.HasIndex(e => e.ReportRequestId)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasOne(e => e.Trainee)
                 .WithMany()
                 .HasForeignKey(e => e.TraineeId)
@@ -440,7 +454,9 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<SupplementIntakeLog>(entity =>
         {
             entity.ToTable("SupplementIntakeLogs");
-            entity.HasIndex(e => new { e.TraineeId, e.PlanItemId, e.IntakeDate }).IsUnique();
+            entity.HasIndex(e => new { e.TraineeId, e.PlanItemId, e.IntakeDate })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasOne(e => e.Trainee)
                 .WithMany()
                 .HasForeignKey(e => e.TraineeId)
