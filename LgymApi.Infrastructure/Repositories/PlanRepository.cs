@@ -18,6 +18,10 @@ public sealed class PlanRepository : IPlanRepository
     /// Upper bound for collision retry attempts.
     /// </summary>
     private const int ShareCodeGenerationMaxAttempts = 10;
+    private static readonly HashSet<char> ShareCodeAllowedCharacters =
+    [
+        .."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    ];
 
     private readonly AppDbContext _dbContext;
     private readonly Func<int, string> _shareCodeGenerator;
@@ -198,6 +202,11 @@ public sealed class PlanRepository : IPlanRepository
         for (var attempt = 0; attempt < ShareCodeGenerationMaxAttempts; attempt++)
         {
             var candidateCode = _shareCodeGenerator(ShareCodeLength);
+            if (!IsValidShareCode(candidateCode))
+            {
+                continue;
+            }
+
             var isTaken = await IsShareCodeTakenAsync(candidateCode, plan.Id, cancellationToken);
             if (isTaken)
             {
@@ -216,6 +225,16 @@ public sealed class PlanRepository : IPlanRepository
         return _dbContext.Plans.AnyAsync(
             p => p.Id != currentPlanId && p.ShareCode == shareCode && !p.IsDeleted,
             cancellationToken);
+    }
+
+    private static bool IsValidShareCode(string? shareCode)
+    {
+        if (string.IsNullOrWhiteSpace(shareCode) || shareCode.Length != ShareCodeLength)
+        {
+            return false;
+        }
+
+        return shareCode.All(ShareCodeAllowedCharacters.Contains);
     }
 
     private static string GenerateSecureAlphanumericCode(int length)
