@@ -127,7 +127,7 @@ public sealed class SupplementationServiceTests
         {
             Assert.That(exception, Is.Not.Null);
             Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-            Assert.That(exception.Message, Is.EqualTo(Messages.FieldRequired));
+            Assert.That(exception.Message, Is.EqualTo(Messages.DateRangeTooLarge));
         });
     }
 

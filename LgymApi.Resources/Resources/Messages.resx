@@ -186,4 +186,10 @@
   <data name="ReportRequestExpired" xml:space="preserve">
     <value>Report request has expired.</value>
   </data>
+  <data name="InvalidDateRange" xml:space="preserve">
+    <value>Invalid date range. toDate must be on or after fromDate.</value>
+  </data>
+  <data name="DateRangeTooLarge" xml:space="preserve">
+    <value>Date range exceeds the maximum allowed duration.</value>
+  </data>
 </root>

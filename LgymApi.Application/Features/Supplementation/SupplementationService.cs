@@ -231,13 +231,13 @@ public sealed class SupplementationService : ISupplementationService
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
         if (toDate < fromDate)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            throw AppException.BadRequest(Messages.InvalidDateRange);
         }
 
         var inclusiveRangeDays = toDate.DayNumber - fromDate.DayNumber + 1;
         if (inclusiveRangeDays > MaxComplianceRangeDays)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            throw AppException.BadRequest(Messages.DateRangeTooLarge);
         }
 
         var activePlan = await _supplementationRepository.GetActivePlanForTraineeAsync(traineeId);

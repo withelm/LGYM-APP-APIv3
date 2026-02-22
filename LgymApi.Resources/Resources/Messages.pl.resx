@@ -186,4 +186,10 @@
   <data name="ReportRequestExpired" xml:space="preserve">
     <value>Termin zgłoszenia raportu minął.</value>
   </data>
+  <data name="InvalidDateRange" xml:space="preserve">
+    <value>Nieprawidłowy zakres dat. toDate musi być równe lub późniejsze niż fromDate.</value>
+  </data>
+  <data name="DateRangeTooLarge" xml:space="preserve">
+    <value>Zakres dat przekracza maksymalny dozwolony przedział.</value>
+  </data>
 </root>
