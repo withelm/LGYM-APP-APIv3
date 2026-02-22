@@ -186,6 +186,94 @@ public sealed class SupplementationServiceTests
     }
 
     [Test]
+    public void CreateTraineePlanAsync_ThrowsBadRequest_WhenNameExceedsMaxLength()
+    {
+        var trainer = NewTrainer();
+        var trainee = NewTrainee();
+        Link(trainer.Id, trainee.Id);
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await _service.CreateTraineePlanAsync(trainer, trainee.Id, new UpsertSupplementPlanCommand
+            {
+                Name = new string('A', 121),
+                Items =
+                [
+                    new UpsertSupplementPlanItemCommand
+                    {
+                        SupplementName = "Omega",
+                        Dosage = "1",
+                        TimeOfDay = "08:00",
+                        DaysOfWeekMask = 127,
+                        Order = 0
+                    }
+                ]
+            }));
+
+        Assert.That(exception, Is.Not.Null);
+        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public void CheckOffIntakeAsync_ThrowsBadRequest_WhenIntakeDateIsDefault()
+    {
+        var trainee = NewTrainee();
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await _service.CheckOffIntakeAsync(trainee, new CheckOffSupplementIntakeCommand
+            {
+                PlanItemId = Guid.NewGuid(),
+                IntakeDate = default
+            }));
+
+        Assert.That(exception, Is.Not.Null);
+        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.That(exception.Message, Is.EqualTo(Messages.DateRequired));
+    }
+
+    [Test]
+    public async Task CheckOffIntakeAsync_WhenInsertRaceOccurs_ReturnsPersistedEntry()
+    {
+        var trainee = NewTrainee();
+        var date = DateOnly.FromDateTime(new DateTime(2026, 2, 23));
+        var mask = MaskForDate(date);
+        var item = NewPlanItem("Omega", "2", "08:00", mask, 0);
+        var activePlan = NewPlan(Guid.NewGuid(), trainee.Id, isActive: true, "Cut", item);
+        _supplementationRepository.Plans.Add(activePlan);
+        _unitOfWork.ThrowOnNextSave = true;
+        var findCallCount = 0;
+        _supplementationRepository.OnFindIntakeLog = (traineeId, planItemId, intakeDate) =>
+        {
+            findCallCount++;
+            if (findCallCount == 1)
+            {
+                return null;
+            }
+
+            return new SupplementIntakeLog
+            {
+                Id = Guid.NewGuid(),
+                TraineeId = traineeId,
+                PlanItemId = planItemId,
+                IntakeDate = intakeDate,
+                TakenAt = DateTimeOffset.UtcNow,
+                PlanItem = item
+            };
+        };
+
+        var result = await _service.CheckOffIntakeAsync(trainee, new CheckOffSupplementIntakeCommand
+        {
+            PlanItemId = item.Id,
+            IntakeDate = date
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Taken, Is.True);
+            Assert.That(result.TakenAt, Is.Not.Null);
+        });
+    }
+
+    [Test]
     public async Task AssignTraineePlanAsync_DeactivatesOtherActivePlans()
     {
         var trainer = NewTrainer();
@@ -378,6 +466,7 @@ public sealed class SupplementationServiceTests
     {
         public List<SupplementPlan> Plans { get; } = [];
         public List<SupplementIntakeLog> IntakeLogs { get; } = [];
+        public Func<Guid, Guid, DateOnly, SupplementIntakeLog?>? OnFindIntakeLog { get; set; }
 
         public Task AddPlanAsync(SupplementPlan plan, CancellationToken cancellationToken = default)
         {
@@ -413,7 +502,15 @@ public sealed class SupplementationServiceTests
         }
 
         public Task<SupplementIntakeLog?> FindIntakeLogAsync(Guid traineeId, Guid planItemId, DateOnly intakeDate, CancellationToken cancellationToken = default)
-            => Task.FromResult(IntakeLogs.FirstOrDefault(x => x.TraineeId == traineeId && x.PlanItemId == planItemId && x.IntakeDate == intakeDate));
+        {
+            var overrideResult = OnFindIntakeLog?.Invoke(traineeId, planItemId, intakeDate);
+            if (overrideResult != null)
+            {
+                return Task.FromResult<SupplementIntakeLog?>(overrideResult);
+            }
+
+            return Task.FromResult(IntakeLogs.FirstOrDefault(x => x.TraineeId == traineeId && x.PlanItemId == planItemId && x.IntakeDate == intakeDate));
+        }
 
         public Task AddIntakeLogAsync(SupplementIntakeLog intakeLog, CancellationToken cancellationToken = default)
         {
@@ -425,9 +522,16 @@ public sealed class SupplementationServiceTests
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
         public int SaveChangesCalls { get; private set; }
+        public bool ThrowOnNextSave { get; set; }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
+            if (ThrowOnNextSave)
+            {
+                ThrowOnNextSave = false;
+                throw new InvalidOperationException("simulated unique constraint violation");
+            }
+
             SaveChangesCalls++;
             return Task.FromResult(1);
         }

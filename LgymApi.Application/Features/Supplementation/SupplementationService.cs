@@ -11,6 +11,10 @@ namespace LgymApi.Application.Features.Supplementation;
 public sealed class SupplementationService : ISupplementationService
 {
     private const int MaxComplianceRangeDays = 366;
+    private const int PlanNameMaxLength = 120;
+    private const int PlanNotesMaxLength = 1000;
+    private const int SupplementNameMaxLength = 160;
+    private const int DosageMaxLength = 120;
 
     private readonly IRoleRepository _roleRepository;
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
@@ -181,6 +185,11 @@ public sealed class SupplementationService : ISupplementationService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
+        if (command.IntakeDate == default)
+        {
+            throw AppException.BadRequest(Messages.DateRequired);
+        }
+
         var activePlan = await _supplementationRepository.GetActivePlanForTraineeAsync(currentTrainee.Id);
         if (activePlan == null)
         {
@@ -206,13 +215,27 @@ public sealed class SupplementationService : ISupplementationService
             };
 
             await _supplementationRepository.AddIntakeLogAsync(existing);
+
+            try
+            {
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch
+            {
+                var persisted = await _supplementationRepository.FindIntakeLogAsync(currentTrainee.Id, command.PlanItemId, command.IntakeDate);
+                if (persisted == null)
+                {
+                    throw;
+                }
+
+                existing = persisted;
+            }
         }
         else
         {
             existing.TakenAt = command.TakenAt ?? existing.TakenAt;
+            await _unitOfWork.SaveChangesAsync();
         }
-
-        await _unitOfWork.SaveChangesAsync();
 
         return new SupplementScheduleEntryResult
         {
@@ -316,7 +339,14 @@ public sealed class SupplementationService : ISupplementationService
 
     private static List<NormalizedPlanItem> ValidateAndNormalizeItems(UpsertSupplementPlanCommand command)
     {
-        if (string.IsNullOrWhiteSpace(command.Name) || command.Items.Count == 0)
+        if (string.IsNullOrWhiteSpace(command.Name)
+            || command.Name.Trim().Length > PlanNameMaxLength
+            || command.Items.Count == 0)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        if (command.Notes?.Trim().Length > PlanNotesMaxLength)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -327,6 +357,12 @@ public sealed class SupplementationService : ISupplementationService
             if (string.IsNullOrWhiteSpace(item.SupplementName)
                 || string.IsNullOrWhiteSpace(item.Dosage)
                 || string.IsNullOrWhiteSpace(item.TimeOfDay))
+            {
+                throw AppException.BadRequest(Messages.FieldRequired);
+            }
+
+            if (item.SupplementName.Trim().Length > SupplementNameMaxLength
+                || item.Dosage.Trim().Length > DosageMaxLength)
             {
                 throw AppException.BadRequest(Messages.FieldRequired);
             }
