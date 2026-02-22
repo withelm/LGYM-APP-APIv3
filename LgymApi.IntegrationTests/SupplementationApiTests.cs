@@ -108,6 +108,81 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         badPlanIdResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Test]
+    public async Task TrainerSupplementPlanCrudEndpoints_Work()
+    {
+        var trainer = await SeedTrainerAsync("trainer-supp-crud", "trainer-supp-crud@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-supp-crud", email: "trainee-supp-crud@example.com", password: "password123");
+        await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
+
+        SetAuthorizationHeader(trainer.Id);
+        var createResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans", new
+        {
+            name = "Bulk",
+            notes = "v1",
+            items = new object[]
+            {
+                new { supplementName = "Magnesium", dosage = "1 tab", timeOfDay = "21:00", daysOfWeekMask = 127, order = 0 }
+            }
+        });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await createResponse.Content.ReadFromJsonAsync<SupplementPlanResponse>();
+
+        var listResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans");
+        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var plans = await listResponse.Content.ReadFromJsonAsync<List<SupplementPlanResponse>>();
+        plans.Should().NotBeNull();
+        plans!.Any(x => x.Id == created!.Id).Should().BeTrue();
+
+        var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{created!.Id}/update", new
+        {
+            name = "Bulk v2",
+            notes = "v2",
+            items = new object[]
+            {
+                new { supplementName = "Magnesium", dosage = "2 tabs", timeOfDay = "22:00", daysOfWeekMask = 127, order = 0 }
+            }
+        });
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updated = await updateResponse.Content.ReadFromJsonAsync<SupplementPlanResponse>();
+        updated.Should().NotBeNull();
+        updated!.Id.Should().NotBe(created.Id);
+
+        var unassignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/unassign", content: null);
+        unassignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var deleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{updated.Id}/delete", content: null);
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Test]
+    public async Task TraineeCheckOff_WithInvalidPlanItemId_ReturnsBadRequest()
+    {
+        var trainee = await SeedUserAsync(name: "trainee-invalid-check", email: "trainee-invalid-check@example.com", password: "password123");
+        SetAuthorizationHeader(trainee.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/trainee/supplements/intakes/check-off", new
+        {
+            planItemId = "not-a-guid",
+            intakeDate = DateOnly.FromDateTime(DateTime.UtcNow)
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task Compliance_WithTooLargeDateRange_ReturnsBadRequest()
+    {
+        var trainer = await SeedTrainerAsync("trainer-supp-range", "trainer-supp-range@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-supp-range", email: "trainee-supp-range@example.com", password: "password123");
+        await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
+
+        SetAuthorizationHeader(trainer.Id);
+        var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance?fromDate=2025-01-01&toDate=2026-12-31");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     private async Task<User> SeedTrainerAsync(string name, string email)
     {
         var trainer = await SeedUserAsync(name: name, email: email, password: "password123");
@@ -151,6 +226,9 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     {
         [JsonPropertyName("_id")]
         public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("isActive")]
+        public bool IsActive { get; set; }
     }
 
     private sealed class SupplementScheduleEntryResponse

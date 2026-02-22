@@ -51,6 +51,7 @@ public sealed class SupplementationRepository : ISupplementationRepository
                         && x.PlanItem.PlanId == planId
                         && x.IntakeDate >= fromDate
                         && x.IntakeDate <= toDate)
+            .Include(x => x.PlanItem)
             .OrderBy(x => x.IntakeDate)
             .ThenBy(x => x.TakenAt)
             .ToListAsync(cancellationToken);

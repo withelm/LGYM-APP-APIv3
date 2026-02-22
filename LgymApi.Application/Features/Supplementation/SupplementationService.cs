@@ -10,6 +10,8 @@ namespace LgymApi.Application.Features.Supplementation;
 
 public sealed class SupplementationService : ISupplementationService
 {
+    private const int MaxComplianceRangeDays = 366;
+
     private readonly IRoleRepository _roleRepository;
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly ISupplementationRepository _supplementationRepository;
@@ -70,26 +72,35 @@ public sealed class SupplementationService : ISupplementationService
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
         var normalizedItems = ValidateAndNormalizeItems(command);
         var plan = await EnsureOwnedPlanAsync(currentTrainer, traineeId, planId);
+        var wasActive = plan.IsActive;
 
-        plan.Name = command.Name.Trim();
-        plan.Notes = string.IsNullOrWhiteSpace(command.Notes) ? null : command.Notes.Trim();
-        plan.Items.Clear();
-        foreach (var item in normalizedItems)
+        plan.IsDeleted = true;
+        plan.IsActive = false;
+
+        var newPlan = new SupplementPlan
         {
-            plan.Items.Add(new SupplementPlanItem
+            Id = Guid.NewGuid(),
+            TrainerId = currentTrainer.Id,
+            TraineeId = traineeId,
+            Name = command.Name.Trim(),
+            Notes = string.IsNullOrWhiteSpace(command.Notes) ? null : command.Notes.Trim(),
+            IsActive = wasActive,
+            IsDeleted = false,
+            Items = normalizedItems.Select(item => new SupplementPlanItem
             {
                 Id = Guid.NewGuid(),
-                PlanId = plan.Id,
                 SupplementName = item.SupplementName,
                 Dosage = item.Dosage,
                 TimeOfDay = item.TimeOfDay,
                 DaysOfWeekMask = item.DaysOfWeekMask,
                 Order = item.Order
-            });
-        }
+            }).ToList()
+        };
+
+        await _supplementationRepository.AddPlanAsync(newPlan);
 
         await _unitOfWork.SaveChangesAsync();
-        return MapPlan(plan);
+        return MapPlan(newPlan);
     }
 
     public async Task DeleteTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId)
@@ -146,15 +157,19 @@ public sealed class SupplementationService : ISupplementationService
             .OrderBy(item => item.TimeOfDay)
             .ThenBy(item => item.Order)
             .ThenBy(item => item.CreatedAt)
-            .Select(item => new SupplementScheduleEntryResult
+            .Select(item =>
             {
-                PlanItemId = item.Id,
-                SupplementName = item.SupplementName,
-                Dosage = item.Dosage,
-                TimeOfDay = FormatTime(item.TimeOfDay),
-                IntakeDate = date,
-                Taken = logsByPlanItem.TryGetValue(item.Id, out _),
-                TakenAt = logsByPlanItem.TryGetValue(item.Id, out var log) ? log.TakenAt : null
+                var hasLog = logsByPlanItem.TryGetValue(item.Id, out var log);
+                return new SupplementScheduleEntryResult
+                {
+                    PlanItemId = item.Id,
+                    SupplementName = item.SupplementName,
+                    Dosage = item.Dosage,
+                    TimeOfDay = FormatTime(item.TimeOfDay),
+                    IntakeDate = date,
+                    Taken = hasLog,
+                    TakenAt = hasLog ? log!.TakenAt : null
+                };
             })
             .ToList();
     }
@@ -215,6 +230,12 @@ public sealed class SupplementationService : ISupplementationService
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId);
         if (toDate < fromDate)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        var rangeDays = toDate.DayNumber - fromDate.DayNumber;
+        if (rangeDays > MaxComplianceRangeDays)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
