@@ -273,11 +273,11 @@ public sealed class PlanService : IPlanService
         }
         catch (InvalidOperationException)
         {
-            throw AppException.Internal("Unable to generate share code");
+            throw AppException.Internal(Messages.TryAgain);
         }
         catch (DbUpdateException)
         {
-            throw AppException.Internal("Unable to generate share code");
+            throw AppException.Internal(Messages.TryAgain);
         }
         catch (UnauthorizedAccessException)
         {
