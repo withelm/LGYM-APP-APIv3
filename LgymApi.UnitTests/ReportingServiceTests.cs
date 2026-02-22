@@ -51,6 +51,44 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
+    public async Task CreateTemplateAsync_CreatesTemplate_WithTrimmedValuesAndOrderedFields()
+    {
+        var trainer = NewUser();
+
+        var result = await _service.CreateTemplateAsync(trainer, new CreateReportTemplateCommand
+        {
+            Name = "  Weekly Report  ",
+            Description = "  Notes  ",
+            Fields =
+            [
+                new ReportTemplateFieldCommand { Key = " bKey ", Label = " B ", Type = ReportFieldType.Text, IsRequired = false, Order = 2 },
+                new ReportTemplateFieldCommand { Key = " aKey ", Label = " A ", Type = ReportFieldType.Number, IsRequired = true, Order = 1 }
+            ]
+        });
+
+        Assert.That(result.Name, Is.EqualTo("Weekly Report"));
+        Assert.That(result.Description, Is.EqualTo("Notes"));
+        Assert.That(result.Fields.Select(f => f.Key).ToArray(), Is.EqualTo(new[] { "aKey", "bKey" }));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void CreateTemplateAsync_ThrowsForbidden_WhenUserIsNotTrainer()
+    {
+        var notTrainer = NewPlainUser();
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await _service.CreateTemplateAsync(notTrainer, new CreateReportTemplateCommand
+            {
+                Name = "Weekly",
+                Fields = [new ReportTemplateFieldCommand { Key = "weight", Label = "Weight", Type = ReportFieldType.Number, IsRequired = true, Order = 0 }]
+            }));
+
+        Assert.That(exception, Is.Not.Null);
+        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+    }
+
+    [Test]
     public async Task GetPendingRequestsForTraineeAsync_ExpiresOverdueAndPersists()
     {
         var trainee = NewUser();
@@ -84,6 +122,30 @@ public sealed class ReportingServiceTests
         Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
         Assert.That(result, Has.Count.EqualTo(1));
         Assert.That(_reportingRepository.Requests.Count(r => r.Status == ReportRequestStatus.Expired), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task GetPendingRequestsForTraineeAsync_DoesNotSave_WhenNothingExpires()
+    {
+        var trainee = NewUser();
+        var trainer = NewUser();
+        var template = NewTemplate(trainer.Id, "T2", [NewField("sleep", ReportFieldType.Boolean, false)]);
+
+        _reportingRepository.Requests.Add(new ReportRequest
+        {
+            Id = Guid.NewGuid(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            TemplateId = template.Id,
+            Template = template,
+            DueAt = DateTimeOffset.UtcNow.AddDays(1),
+            Status = ReportRequestStatus.Pending
+        });
+
+        var result = await _service.GetPendingRequestsForTraineeAsync(trainee);
+
+        Assert.That(result, Has.Count.EqualTo(1));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -192,6 +254,92 @@ public sealed class ReportingServiceTests
         Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
     }
 
+    [Test]
+    public void SubmitReportRequestAsync_ThrowsNotFound_WhenRequestMissing()
+    {
+        var trainee = NewUser();
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await _service.SubmitReportRequestAsync(trainee, Guid.NewGuid(), new SubmitReportRequestCommand
+            {
+                Answers = new Dictionary<string, JsonElement>()
+            }));
+
+        Assert.That(exception, Is.Not.Null);
+        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
+    }
+
+    [Test]
+    public void SubmitReportRequestAsync_ThrowsBadRequest_WhenStatusNotPending()
+    {
+        var trainee = NewUser();
+        var trainer = NewUser();
+        var template = NewTemplate(trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
+        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+        request.Status = ReportRequestStatus.Submitted;
+        _reportingRepository.Requests.Add(request);
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
+            {
+                Answers = new Dictionary<string, JsonElement>
+                {
+                    ["weight"] = JsonSerializer.SerializeToElement(80)
+                }
+            }));
+
+        Assert.That(exception, Is.Not.Null);
+        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+    }
+
+    [Test]
+    public void SubmitReportRequestAsync_ThrowsBadRequest_WhenExpired()
+    {
+        var trainee = NewUser();
+        var trainer = NewUser();
+        var template = NewTemplate(trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
+        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+        request.DueAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        _reportingRepository.Requests.Add(request);
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
+            {
+                Answers = new Dictionary<string, JsonElement>
+                {
+                    ["weight"] = JsonSerializer.SerializeToElement(80)
+                }
+            }));
+
+        Assert.That(exception, Is.Not.Null);
+        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Expired));
+    }
+
+    [Test]
+    public async Task GetTraineeSubmissionsAsync_ReturnsMappedSubmissions()
+    {
+        var trainer = NewUser();
+        var trainee = NewUser();
+        var template = NewTemplate(trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
+        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+
+        _reportingRepository.Submissions.Add(new ReportSubmission
+        {
+            Id = Guid.NewGuid(),
+            ReportRequestId = request.Id,
+            TraineeId = trainee.Id,
+            PayloadJson = "{\"weight\": 81}",
+            ReportRequest = request
+        });
+
+        var result = await _service.GetTraineeSubmissionsAsync(trainer, trainee.Id);
+
+        Assert.That(result, Has.Count.EqualTo(1));
+        Assert.That(result[0].Answers.ContainsKey("WEIGHT"), Is.True);
+    }
+
     private User NewUser()
     {
         var user = new User
@@ -203,6 +351,16 @@ public sealed class ReportingServiceTests
 
         _roleRepository.TrainerUserIds.Add(user.Id);
         return user;
+    }
+
+    private static User NewPlainUser()
+    {
+        return new User
+        {
+            Id = Guid.NewGuid(),
+            Name = $"u-{Guid.NewGuid():N}",
+            Email = $"{Guid.NewGuid():N}@example.com"
+        };
     }
 
     private static ReportTemplate NewTemplate(Guid trainerId, string name, IReadOnlyList<ReportTemplateField> fields)
