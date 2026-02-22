@@ -190,21 +190,29 @@ public sealed class ReportingService : IReportingService
             throw AppException.BadRequest(Messages.ReportRequestExpired);
         }
 
-        ValidateAnswersAgainstTemplate(request.Template, command.Answers);
+        var normalizedAnswers = NormalizeAnswers(command.Answers);
+        ValidateAnswersAgainstTemplate(request.Template, normalizedAnswers);
 
         var submission = new ReportSubmission
         {
             Id = Guid.NewGuid(),
             ReportRequestId = request.Id,
             TraineeId = currentTrainee.Id,
-            PayloadJson = JsonSerializer.Serialize(command.Answers)
+            PayloadJson = JsonSerializer.Serialize(normalizedAnswers)
         };
 
         request.SubmittedAt = DateTimeOffset.UtcNow;
         request.Status = ReportRequestStatus.Submitted;
 
         await _reportingRepository.AddSubmissionAsync(submission);
-        await _unitOfWork.SaveChangesAsync();
+        try
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch (Exception exception) when (IsDuplicateSubmissionException(exception))
+        {
+            throw AppException.BadRequest(Messages.ReportRequestNotPending);
+        }
 
         submission.ReportRequest = request;
         return MapSubmission(submission);
@@ -224,6 +232,14 @@ public sealed class ReportingService : IReportingService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
+        foreach (var field in command.Fields)
+        {
+            if (string.IsNullOrWhiteSpace(field.Key) || string.IsNullOrWhiteSpace(field.Label))
+            {
+                throw AppException.BadRequest(Messages.FieldRequired);
+            }
+        }
+
         var duplicateKey = command.Fields
             .GroupBy(x => x.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault(x => x.Count() > 1);
@@ -233,13 +249,6 @@ public sealed class ReportingService : IReportingService
             throw AppException.BadRequest(Messages.ReportFieldValidationFailed);
         }
 
-        foreach (var field in command.Fields)
-        {
-            if (string.IsNullOrWhiteSpace(field.Key) || string.IsNullOrWhiteSpace(field.Label))
-            {
-                throw AppException.BadRequest(Messages.FieldRequired);
-            }
-        }
     }
 
     private static void ValidateAnswersAgainstTemplate(ReportTemplate template, IReadOnlyDictionary<string, JsonElement> answers)
@@ -261,11 +270,46 @@ public sealed class ReportingService : IReportingService
                 throw AppException.BadRequest(Messages.ReportFieldValidationFailed);
             }
 
+            if (answer.Value.ValueKind == JsonValueKind.Null)
+            {
+                if (field.IsRequired)
+                {
+                    throw AppException.BadRequest(Messages.ReportFieldValidationFailed);
+                }
+
+                continue;
+            }
+
             if (!IsValueValidForType(answer.Value, field.Type))
             {
                 throw AppException.BadRequest(Messages.ReportFieldValidationFailed);
             }
         }
+    }
+
+    private static Dictionary<string, JsonElement> NormalizeAnswers(IReadOnlyDictionary<string, JsonElement> answers)
+    {
+        var normalizedAnswers = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var answer in answers)
+        {
+            normalizedAnswers[answer.Key] = answer.Value;
+        }
+
+        return normalizedAnswers;
+    }
+
+    private static bool IsDuplicateSubmissionException(Exception exception)
+    {
+        var message = exception.ToString();
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        return message.Contains("ReportRequestId", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("ReportSubmissions", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("unique", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsValueValidForType(JsonElement value, ReportFieldType type)

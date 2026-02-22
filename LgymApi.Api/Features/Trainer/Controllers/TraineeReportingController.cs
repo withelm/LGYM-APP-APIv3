@@ -47,7 +47,7 @@ public sealed class TraineeReportingController : ControllerBase
         var trainee = HttpContext.GetCurrentUser();
         var submission = await _reportingService.SubmitReportRequestAsync(trainee!, parsedRequestId, new SubmitReportRequestCommand
         {
-            Answers = request.Answers
+            Answers = new Dictionary<string, System.Text.Json.JsonElement>(request.Answers, StringComparer.OrdinalIgnoreCase)
         });
 
         return Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(submission));

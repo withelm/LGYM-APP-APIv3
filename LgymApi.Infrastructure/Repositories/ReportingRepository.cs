@@ -54,7 +54,6 @@ public sealed class ReportingRepository : IReportingRepository
     public Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ReportRequests
-            .AsNoTracking()
             .Where(x => x.TraineeId == traineeId && x.Status == ReportRequestStatus.Pending)
             .Include(x => x.Template)
             .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
@@ -74,6 +73,7 @@ public sealed class ReportingRepository : IReportingRepository
             .Where(x => x.ReportRequest.TrainerId == trainerId && x.TraineeId == traineeId)
             .Include(x => x.ReportRequest)
             .ThenInclude(x => x.Template)
+            .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
     }
