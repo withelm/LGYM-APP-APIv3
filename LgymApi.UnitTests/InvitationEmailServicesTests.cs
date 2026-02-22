@@ -34,9 +34,12 @@ public sealed class InvitationEmailServicesTests
             CultureName = "en-US"
         });
 
-        Assert.That(repository.Added.Count, Is.EqualTo(1));
-        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        Assert.That(scheduler.EnqueuedNotificationIds.Count, Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(repository.Added, Has.Count.EqualTo(1));
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
+        });
     }
 
     [Test]
@@ -74,8 +77,11 @@ public sealed class InvitationEmailServicesTests
             CultureName = "en-US"
         });
 
-        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
-        Assert.That(repository.Added, Is.Empty);
+        Assert.Multiple(() =>
+        {
+            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(repository.Added, Is.Empty);
+        });
     }
 
     [Test]
@@ -102,9 +108,12 @@ public sealed class InvitationEmailServicesTests
             CultureName = "en-US"
         });
 
-        Assert.That(repository.Added, Is.Empty);
-        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        Assert.Multiple(() =>
+        {
+            Assert.That(repository.Added, Is.Empty);
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        });
     }
 
     [Test]
@@ -144,8 +153,11 @@ public sealed class InvitationEmailServicesTests
             CultureName = "en-US"
         });
 
-        Assert.That(scheduler.EnqueuedNotificationIds.Count, Is.EqualTo(1));
-        Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
+        Assert.Multiple(() =>
+        {
+            Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
+            Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
+        });
     }
 
     [Test]
@@ -172,9 +184,12 @@ public sealed class InvitationEmailServicesTests
             NullLogger<InvitationEmailJobHandlerService>.Instance);
 
         Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notification.Id));
-        Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
-        Assert.That(notification.LastError, Does.StartWith("InvalidOperationException"));
-        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
+            Assert.That(notification.LastError, Does.StartWith("InvalidOperationException"));
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        });
     }
 
     [Test]
@@ -203,9 +218,12 @@ public sealed class InvitationEmailServicesTests
 
         await handler.ProcessAsync(notification.Id);
 
-        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-        Assert.That(sender.SendCalls, Is.EqualTo(0));
-        Assert.That(notification.Attempts, Is.EqualTo(2));
+        Assert.Multiple(() =>
+        {
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+            Assert.That(sender.SendCalls, Is.EqualTo(0));
+            Assert.That(notification.Attempts, Is.EqualTo(2));
+        });
     }
 
     private sealed class FakeNotificationRepository : IEmailNotificationLogRepository

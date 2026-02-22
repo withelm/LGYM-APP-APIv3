@@ -21,6 +21,7 @@ public sealed class UserService : IUserService
     private readonly IUserSessionCache _userSessionCache;
     private readonly IUnitOfWork _unitOfWork;
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "User service coordinates auth, ranking, roles, and session concerns.")]
     public UserService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,

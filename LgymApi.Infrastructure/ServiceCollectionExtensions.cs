@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
     {
         var emailOptions = new EmailOptions
         {
-            Enabled = bool.TryParse(configuration["Email:Enabled"], out var enabled) ? enabled : false,
+            Enabled = bool.TryParse(configuration["Email:Enabled"], out var enabled) && enabled,
             FromAddress = configuration["Email:FromAddress"] ?? string.Empty,
             FromName = configuration["Email:FromName"] ?? "LGYM Trainer",
             SmtpHost = configuration["Email:SmtpHost"] ?? string.Empty,
@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ITrainerRelationshipRepository, TrainerRelationshipRepository>();
+        services.AddScoped<IReportingRepository, ReportingRepository>();
         services.AddScoped<IEmailNotificationLogRepository, EmailNotificationLogRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IPlanDayRepository, PlanDayRepository>();

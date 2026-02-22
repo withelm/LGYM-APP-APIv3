@@ -17,6 +17,7 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class TrainerRelationshipTests : IntegrationTestBase
 {
+    private static readonly double[] ExpectedMainRecordWeights = [140d, 150d];
     [SetUp]
     public void ResetEmailCapture()
     {
@@ -860,7 +861,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var records = await response.Content.ReadFromJsonAsync<List<MainRecordResponse>>();
         records.Should().NotBeNull();
         records!.Count.Should().Be(2);
-        records.Select(x => x.Weight).Should().Contain(new[] { 140d, 150d });
+        records.Select(x => x.Weight).Should().Contain(ExpectedMainRecordWeights);
     }
 
     [Test]

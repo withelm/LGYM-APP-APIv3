@@ -65,6 +65,65 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         var page = query.Page < 1 ? 1 : query.Page;
         var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 100);
         var now = DateTimeOffset.UtcNow;
+        var sortBy = query.SortBy?.Trim().ToLowerInvariant();
+        var sortDescending = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+        var baseQuery = BuildDashboardBaseQuery(trainerId);
+        baseQuery = ApplySearch(baseQuery, query.Search);
+        baseQuery = ApplyStatusFilter(baseQuery, query.Status, now);
+        baseQuery = ApplySorting(baseQuery, sortBy, sortDescending);
+
+        var offset = CalculateOffset(page, pageSize);
+        var total = await baseQuery.CountAsync(cancellationToken);
+        List<DashboardTraineeProjection> projections;
+
+        if (sortBy == "status")
+        {
+            var allItems = await baseQuery.ToListAsync(cancellationToken);
+            var ordered = sortDescending
+                ? allItems.OrderByDescending(x => GetStatusSortOrder(x, now)).ThenBy(x => x.Name)
+                : allItems.OrderBy(x => GetStatusSortOrder(x, now)).ThenBy(x => x.Name);
+
+            projections = ordered
+                .Skip(offset)
+                .Take(pageSize)
+                .ToList();
+        }
+        else
+        {
+            projections = await baseQuery
+                .Skip(offset)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        var items = projections.Select(x => new TrainerDashboardTraineeResult
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Email = x.Email,
+                Avatar = x.Avatar,
+                Status = ResolveTraineeStatus(x, now),
+                IsLinked = x.LinkedAt != null,
+                HasPendingInvitation = HasPendingInvitation(x, now),
+                HasExpiredInvitation = HasExpiredInvitation(x, now),
+                LinkedAt = x.LinkedAt,
+                LastInvitationExpiresAt = x.LastInvitationExpiresAt,
+                LastInvitationRespondedAt = x.LastInvitationRespondedAt
+            })
+            .ToList();
+
+        return new TrainerDashboardTraineeListResult
+        {
+            Page = page,
+            PageSize = pageSize,
+            Total = total,
+            Items = items
+        };
+    }
+
+    private IQueryable<DashboardTraineeProjection> BuildDashboardBaseQuery(Guid trainerId)
+    {
 
         var trainerLinks = _dbContext.TrainerTraineeLinks
             .AsNoTracking()
@@ -79,7 +138,7 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
             .Union(trainerInvitations.Select(x => x.TraineeId))
             .Distinct();
 
-        var baseQuery =
+        return
             from user in _dbContext.Users.AsNoTracking()
             where !user.IsDeleted && ownedTraineeIds.Contains(user.Id)
             select new DashboardTraineeProjection
@@ -112,90 +171,92 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
                     .Select(i => i.RespondedAt)
                     .FirstOrDefault()
             };
+    }
 
-        if (!string.IsNullOrWhiteSpace(query.Search))
+    private IQueryable<DashboardTraineeProjection> ApplySearch(IQueryable<DashboardTraineeProjection> baseQuery, string? searchValue)
+    {
+        if (string.IsNullOrWhiteSpace(searchValue))
         {
-            var search = query.Search.Trim();
-            var pattern = $"%{search}%";
-            var isNpgsql = _dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
-            baseQuery = isNpgsql
-                ? baseQuery.Where(x => EF.Functions.ILike(x.Name, pattern) || EF.Functions.ILike(x.Email, pattern))
-                : baseQuery.Where(x => EF.Functions.Like(x.Name, pattern) || EF.Functions.Like(x.Email, pattern));
+            return baseQuery;
         }
 
-        if (Enum.TryParse<TrainerDashboardTraineeStatus>(query.Status, true, out var statusFilter))
+        var search = searchValue.Trim();
+        var pattern = $"%{search}%";
+        var isNpgsql = _dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+        return isNpgsql
+            ? baseQuery.Where(x => EF.Functions.ILike(x.Name, pattern) || EF.Functions.ILike(x.Email, pattern))
+            : baseQuery.Where(x => EF.Functions.Like(x.Name, pattern) || EF.Functions.Like(x.Email, pattern));
+    }
+
+    private static IQueryable<DashboardTraineeProjection> ApplyStatusFilter(
+        IQueryable<DashboardTraineeProjection> baseQuery,
+        string? status,
+        DateTimeOffset now)
+    {
+        if (!Enum.TryParse<TrainerDashboardTraineeStatus>(status, true, out var statusFilter))
         {
-            baseQuery = statusFilter switch
-            {
-                TrainerDashboardTraineeStatus.Linked => baseQuery.Where(x => x.LinkedAt != null),
-                TrainerDashboardTraineeStatus.InvitationPending => baseQuery.Where(x =>
-                    x.LinkedAt == null
-                    && x.LastInvitationStatus == TrainerInvitationStatus.Pending
-                    && x.LastInvitationExpiresAt > now),
-                TrainerDashboardTraineeStatus.InvitationExpired => baseQuery.Where(x =>
-                    x.LinkedAt == null
-                    && (x.LastInvitationStatus == TrainerInvitationStatus.Expired
-                        || (x.LastInvitationStatus == TrainerInvitationStatus.Pending && x.LastInvitationExpiresAt <= now))),
-                TrainerDashboardTraineeStatus.InvitationRejected => baseQuery.Where(x =>
-                    x.LinkedAt == null
-                    && x.LastInvitationStatus == TrainerInvitationStatus.Rejected),
-                TrainerDashboardTraineeStatus.InvitationAccepted => baseQuery.Where(x =>
-                    x.LinkedAt == null
-                    && x.LastInvitationStatus == TrainerInvitationStatus.Accepted),
-                TrainerDashboardTraineeStatus.NoRelationship => baseQuery.Where(x =>
-                    x.LinkedAt == null
-                    && x.LastInvitationStatus == null),
-                _ => baseQuery
-            };
+            return baseQuery;
         }
 
-        var sortBy = query.SortBy?.Trim().ToLowerInvariant();
-        var sortDescending = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        return statusFilter switch
+        {
+            TrainerDashboardTraineeStatus.Linked => baseQuery.Where(x => x.LinkedAt != null),
+            TrainerDashboardTraineeStatus.InvitationPending => baseQuery.Where(x =>
+                x.LinkedAt == null
+                && x.LastInvitationStatus == TrainerInvitationStatus.Pending
+                && x.LastInvitationExpiresAt > now),
+            TrainerDashboardTraineeStatus.InvitationExpired => baseQuery.Where(x =>
+                x.LinkedAt == null
+                && (x.LastInvitationStatus == TrainerInvitationStatus.Expired
+                    || (x.LastInvitationStatus == TrainerInvitationStatus.Pending && x.LastInvitationExpiresAt <= now))),
+            TrainerDashboardTraineeStatus.InvitationRejected => baseQuery.Where(x =>
+                x.LinkedAt == null
+                && x.LastInvitationStatus == TrainerInvitationStatus.Rejected),
+            TrainerDashboardTraineeStatus.InvitationAccepted => baseQuery.Where(x =>
+                x.LinkedAt == null
+                && x.LastInvitationStatus == TrainerInvitationStatus.Accepted),
+            TrainerDashboardTraineeStatus.NoRelationship => baseQuery.Where(x =>
+                x.LinkedAt == null
+                && x.LastInvitationStatus == null),
+            _ => baseQuery
+        };
+    }
 
-        baseQuery = (sortBy, sortDescending) switch
+    private static IQueryable<DashboardTraineeProjection> ApplySorting(
+        IQueryable<DashboardTraineeProjection> baseQuery,
+        string? sortBy,
+        bool sortDescending)
+    {
+        return (sortBy, sortDescending) switch
         {
             ("createdat", true) => baseQuery.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Name),
             ("createdat", false) => baseQuery.OrderBy(x => x.CreatedAt).ThenBy(x => x.Name),
-            ("status", true) => baseQuery
-                .OrderByDescending(x =>
-                    x.LinkedAt != null ? 0 :
-                    (x.LinkedAt == null
-                        && x.LastInvitationStatus == TrainerInvitationStatus.Pending
-                        && x.LastInvitationExpiresAt > now) ? 1 :
-                    (x.LinkedAt == null
-                        && (x.LastInvitationStatus == TrainerInvitationStatus.Expired
-                            || (x.LastInvitationStatus == TrainerInvitationStatus.Pending
-                                && x.LastInvitationExpiresAt <= now))) ? 2 :
-                    (x.LinkedAt == null
-                        && x.LastInvitationStatus == TrainerInvitationStatus.Rejected) ? 3 :
-                    (x.LinkedAt == null
-                        && x.LastInvitationStatus == TrainerInvitationStatus.Accepted) ? 4 :
-                    (x.LinkedAt == null
-                        && x.LastInvitationStatus == null) ? 5 :
-                    6)
-                .ThenBy(x => x.Name),
-            ("status", false) => baseQuery
-                .OrderBy(x =>
-                    x.LinkedAt != null ? 0 :
-                    (x.LinkedAt == null
-                        && x.LastInvitationStatus == TrainerInvitationStatus.Pending
-                        && x.LastInvitationExpiresAt > now) ? 1 :
-                    (x.LinkedAt == null
-                        && (x.LastInvitationStatus == TrainerInvitationStatus.Expired
-                            || (x.LastInvitationStatus == TrainerInvitationStatus.Pending
-                                && x.LastInvitationExpiresAt <= now))) ? 2 :
-                    (x.LinkedAt == null
-                        && x.LastInvitationStatus == TrainerInvitationStatus.Rejected) ? 3 :
-                    (x.LinkedAt == null
-                        && x.LastInvitationStatus == TrainerInvitationStatus.Accepted) ? 4 :
-                    (x.LinkedAt == null
-                        && x.LastInvitationStatus == null) ? 5 :
-                    6)
-                .ThenBy(x => x.Name),
             (_, true) => baseQuery.OrderByDescending(x => x.Name),
             _ => baseQuery.OrderBy(x => x.Name)
         };
+    }
 
+    private static int GetStatusSortOrder(DashboardTraineeProjection projection, DateTimeOffset now)
+    {
+        if (projection.LinkedAt != null)
+        {
+            return 0;
+        }
+
+        return projection.LastInvitationStatus switch
+        {
+            TrainerInvitationStatus.Pending when projection.LastInvitationExpiresAt > now => 1,
+            TrainerInvitationStatus.Pending => 2,
+            TrainerInvitationStatus.Expired => 2,
+            TrainerInvitationStatus.Rejected => 3,
+            TrainerInvitationStatus.Accepted => 4,
+            null => 5,
+            _ => 6
+        };
+    }
+
+    private static int CalculateOffset(int page, int pageSize)
+    {
         var offsetLong = ((long)page - 1L) * pageSize;
         if (offsetLong < 0)
         {
@@ -206,51 +267,44 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
             offsetLong = int.MaxValue;
         }
 
-        var offset = (int)offsetLong;
+        return (int)offsetLong;
+    }
 
-        var total = await baseQuery.CountAsync(cancellationToken);
-        var items = await baseQuery
-            .Skip(offset)
-            .Take(pageSize)
-            .Select(x => new TrainerDashboardTraineeResult
-            {
-                Id = x.Id,
-                Name = x.Name,
-                Email = x.Email,
-                Avatar = x.Avatar,
-                Status = x.LinkedAt != null
-                    ? TrainerDashboardTraineeStatus.Linked
-                    : x.LastInvitationStatus == null
-                        ? TrainerDashboardTraineeStatus.NoRelationship
-                        : x.LastInvitationStatus == TrainerInvitationStatus.Accepted
-                            ? TrainerDashboardTraineeStatus.InvitationAccepted
-                            : x.LastInvitationStatus == TrainerInvitationStatus.Rejected
-                                ? TrainerDashboardTraineeStatus.InvitationRejected
-                                : x.LastInvitationStatus == TrainerInvitationStatus.Expired
-                                    || (x.LastInvitationStatus == TrainerInvitationStatus.Pending && x.LastInvitationExpiresAt <= now)
-                                        ? TrainerDashboardTraineeStatus.InvitationExpired
-                                        : x.LastInvitationStatus == TrainerInvitationStatus.Pending
-                                            ? TrainerDashboardTraineeStatus.InvitationPending
-                                            : TrainerDashboardTraineeStatus.NoRelationship,
-                IsLinked = x.LinkedAt != null,
-                HasPendingInvitation = x.LinkedAt == null
-                    && x.LastInvitationStatus == TrainerInvitationStatus.Pending
-                    && x.LastInvitationExpiresAt > now,
-                HasExpiredInvitation = x.LinkedAt == null
-                    && (x.LastInvitationStatus == TrainerInvitationStatus.Expired
-                        || (x.LastInvitationStatus == TrainerInvitationStatus.Pending && x.LastInvitationExpiresAt <= now)),
-                LinkedAt = x.LinkedAt,
-                LastInvitationExpiresAt = x.LastInvitationExpiresAt,
-                LastInvitationRespondedAt = x.LastInvitationRespondedAt
-            })
-            .ToListAsync(cancellationToken);
+    private static bool HasPendingInvitation(DashboardTraineeProjection projection, DateTimeOffset now)
+    {
+        return projection.LinkedAt == null
+               && projection.LastInvitationStatus == TrainerInvitationStatus.Pending
+               && projection.LastInvitationExpiresAt > now;
+    }
 
-        return new TrainerDashboardTraineeListResult
+    private static bool HasExpiredInvitation(DashboardTraineeProjection projection, DateTimeOffset now)
+    {
+        return projection.LinkedAt == null
+               && (projection.LastInvitationStatus == TrainerInvitationStatus.Expired
+                   || (projection.LastInvitationStatus == TrainerInvitationStatus.Pending
+                       && projection.LastInvitationExpiresAt <= now));
+    }
+
+    private static TrainerDashboardTraineeStatus ResolveTraineeStatus(DashboardTraineeProjection projection, DateTimeOffset now)
+    {
+        if (projection.LinkedAt != null)
         {
-            Page = page,
-            PageSize = pageSize,
-            Total = total,
-            Items = items
+            return TrainerDashboardTraineeStatus.Linked;
+        }
+
+        if (projection.LastInvitationStatus == null)
+        {
+            return TrainerDashboardTraineeStatus.NoRelationship;
+        }
+
+        return projection.LastInvitationStatus switch
+        {
+            TrainerInvitationStatus.Accepted => TrainerDashboardTraineeStatus.InvitationAccepted,
+            TrainerInvitationStatus.Rejected => TrainerDashboardTraineeStatus.InvitationRejected,
+            TrainerInvitationStatus.Expired => TrainerDashboardTraineeStatus.InvitationExpired,
+            TrainerInvitationStatus.Pending when projection.LastInvitationExpiresAt <= now => TrainerDashboardTraineeStatus.InvitationExpired,
+            TrainerInvitationStatus.Pending => TrainerDashboardTraineeStatus.InvitationPending,
+            _ => TrainerDashboardTraineeStatus.NoRelationship
         };
     }
 

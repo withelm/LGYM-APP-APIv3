@@ -10,6 +10,8 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class RoleServiceTests
 {
+    private static readonly string[] ManageGlobalExercisesClaim = [AuthConstants.Permissions.ManageGlobalExercises];
+
     private RoleService _service = null!;
     private InMemoryRoleRepository _roleRepository = null!;
     private InMemoryUserRepository _userRepository = null!;
@@ -37,9 +39,12 @@ public sealed class RoleServiceTests
 
         var roles = await _service.GetRolesAsync();
 
-        Assert.That(roles, Has.Count.EqualTo(1));
-        Assert.That(roles[0].Name, Is.EqualTo("Coach"));
-        Assert.That(roles[0].PermissionClaims, Is.EquivalentTo(_roleRepository.RoleClaims[roleId]));
+        Assert.Multiple(() =>
+        {
+            Assert.That(roles, Has.Count.EqualTo(1));
+            Assert.That(roles[0].Name, Is.EqualTo("Coach"));
+            Assert.That(roles[0].PermissionClaims, Is.EquivalentTo(_roleRepository.RoleClaims[roleId]));
+        });
     }
 
     [Test]
@@ -63,15 +68,18 @@ public sealed class RoleServiceTests
                 AuthConstants.Permissions.ManageAppConfig
             ]);
 
-        Assert.That(result.Name, Is.EqualTo("Coach"));
-        Assert.That(result.Description, Is.EqualTo("Training tools"));
-        Assert.That(result.PermissionClaims, Is.EqualTo(new[]
+        Assert.Multiple(() =>
         {
-            AuthConstants.Permissions.ManageAppConfig,
-            AuthConstants.Permissions.ManageUserRoles
-        }));
-        Assert.That(_roleRepository.Roles.Any(r => r.Id == result.Id), Is.True);
-        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(result.Name, Is.EqualTo("Coach"));
+            Assert.That(result.Description, Is.EqualTo("Training tools"));
+            Assert.That(result.PermissionClaims, Is.EqualTo(new[]
+            {
+                AuthConstants.Permissions.ManageAppConfig,
+                AuthConstants.Permissions.ManageUserRoles
+            }));
+            Assert.That(_roleRepository.Roles.Any(r => r.Id == result.Id), Is.True);
+            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        });
     }
 
     [Test]
@@ -111,13 +119,16 @@ public sealed class RoleServiceTests
             roleId,
             "  Senior Coach  ",
             "  New desc  ",
-            [AuthConstants.Permissions.ManageGlobalExercises]);
+            ManageGlobalExercisesClaim);
 
         var updated = _roleRepository.Roles.Single(r => r.Id == roleId);
-        Assert.That(updated.Name, Is.EqualTo("Senior Coach"));
-        Assert.That(updated.Description, Is.EqualTo("New desc"));
-        Assert.That(_roleRepository.RoleClaims[roleId], Is.EqualTo(new[] { AuthConstants.Permissions.ManageGlobalExercises }));
-        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(updated.Name, Is.EqualTo("Senior Coach"));
+            Assert.That(updated.Description, Is.EqualTo("New desc"));
+            Assert.That(_roleRepository.RoleClaims[roleId], Is.EqualTo(ManageGlobalExercisesClaim));
+            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        });
     }
 
     [Test]
@@ -140,8 +151,11 @@ public sealed class RoleServiceTests
 
         await _service.DeleteRoleAsync(role.Id);
 
-        Assert.That(_roleRepository.Roles.Any(r => r.Id == role.Id), Is.False);
-        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(_roleRepository.Roles.Any(r => r.Id == role.Id), Is.False);
+            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        });
     }
 
     [Test]
@@ -156,9 +170,12 @@ public sealed class RoleServiceTests
 
         await _service.UpdateUserRolesAsync(userId, [" coach ", "ANALYST", "coach"]);
 
-        Assert.That(_roleRepository.UserRoleAssignments.TryGetValue(userId, out var roles), Is.True);
-        Assert.That(roles!, Is.EquivalentTo(new[] { coach.Id, analyst.Id }));
-        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(_roleRepository.UserRoleAssignments.TryGetValue(userId, out var roles), Is.True);
+            Assert.That(roles!, Is.EquivalentTo(new[] { coach.Id, analyst.Id }));
+            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        });
     }
 
     [Test]
@@ -189,9 +206,12 @@ public sealed class RoleServiceTests
     {
         var claims = _service.GetAvailablePermissionClaims();
 
-        Assert.That(claims.Select(c => c.ClaimValue), Is.EqualTo(AuthConstants.Permissions.All.OrderBy(c => c, StringComparer.Ordinal).ToList()));
-        Assert.That(claims.All(c => c.ClaimType == AuthConstants.PermissionClaimType), Is.True);
-        Assert.That(claims.All(c => !string.IsNullOrWhiteSpace(c.DisplayName)), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(claims.Select(c => c.ClaimValue), Is.EqualTo(AuthConstants.Permissions.All.OrderBy(c => c, StringComparer.Ordinal).ToList()));
+            Assert.That(claims.All(c => c.ClaimType == AuthConstants.PermissionClaimType), Is.True);
+            Assert.That(claims.All(c => !string.IsNullOrWhiteSpace(c.DisplayName)), Is.True);
+        });
     }
 
     private sealed class InMemoryUserRepository : IUserRepository

@@ -36,6 +36,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<TrainerRelationshipService> _logger;
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Service orchestrates trainer relationship aggregate and depends on dedicated domain services.")]
     public TrainerRelationshipService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
@@ -90,16 +91,10 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         }
 
         var existingPending = await _trainerRelationshipRepository.FindPendingInvitationAsync(currentTrainer.Id, traineeId);
-        if (existingPending != null)
+        var reusableInvitation = await HandleExistingPendingInvitationAsync(existingPending);
+        if (reusableInvitation != null)
         {
-            if (existingPending.ExpiresAt > DateTimeOffset.UtcNow)
-            {
-                return MapInvitation(existingPending);
-            }
-
-            existingPending.Status = TrainerInvitationStatus.Expired;
-            existingPending.RespondedAt = DateTimeOffset.UtcNow;
-            await _unitOfWork.SaveChangesAsync();
+            return reusableInvitation;
         }
 
         var invitation = new TrainerInvitation
@@ -115,44 +110,68 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         await _trainerRelationshipRepository.AddInvitationAsync(invitation);
         await _unitOfWork.SaveChangesAsync();
 
-        if (_emailNotificationsFeature.Enabled && !string.IsNullOrWhiteSpace(trainee.Email))
+        await TryScheduleInvitationEmailAsync(currentTrainer, trainee, invitation);
+
+        return MapInvitation(invitation);
+    }
+
+    private async Task<TrainerInvitationResult?> HandleExistingPendingInvitationAsync(TrainerInvitation? existingPending)
+    {
+        if (existingPending == null)
         {
-            try
-            {
-                await _invitationEmailScheduler.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
-                {
-                    InvitationId = invitation.Id,
-                    InvitationCode = invitation.Code,
-                    ExpiresAt = invitation.ExpiresAt,
-                    TrainerName = currentTrainer.Name,
-                    RecipientEmail = trainee.Email,
-                    CultureName = string.IsNullOrWhiteSpace(currentTrainer.PreferredLanguage)
-                        ? "en-US"
-                        : currentTrainer.PreferredLanguage
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Failed to schedule invitation email for invitation {InvitationId}. Invitation creation is still successful.",
-                    invitation.Id);
-            }
+            return null;
         }
-        else if (!_emailNotificationsFeature.Enabled)
+
+        if (existingPending.ExpiresAt > DateTimeOffset.UtcNow)
+        {
+            return MapInvitation(existingPending);
+        }
+
+        existingPending.Status = TrainerInvitationStatus.Expired;
+        existingPending.RespondedAt = DateTimeOffset.UtcNow;
+        await _unitOfWork.SaveChangesAsync();
+        return null;
+    }
+
+    private async Task TryScheduleInvitationEmailAsync(UserEntity currentTrainer, UserEntity trainee, TrainerInvitation invitation)
+    {
+        if (!_emailNotificationsFeature.Enabled)
         {
             _logger.LogInformation(
                 "Email notifications are disabled; invitation {InvitationId} created without scheduling email.",
                 invitation.Id);
+            return;
         }
-        else
+
+        if (string.IsNullOrWhiteSpace(trainee.Email))
         {
             _logger.LogInformation(
                 "Trainee email is empty; invitation {InvitationId} created without scheduling email.",
                 invitation.Id);
+            return;
         }
 
-        return MapInvitation(invitation);
+        try
+        {
+            await _invitationEmailScheduler.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+            {
+                InvitationId = invitation.Id,
+                InvitationCode = invitation.Code,
+                ExpiresAt = invitation.ExpiresAt,
+                TrainerName = currentTrainer.Name,
+                RecipientEmail = trainee.Email,
+                CultureName = string.IsNullOrWhiteSpace(currentTrainer.PreferredLanguage)
+                    ? "en-US"
+                    : currentTrainer.PreferredLanguage
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to schedule invitation email for invitation {InvitationId}. Invitation creation is still successful.",
+                invitation.Id);
+        }
     }
 
     public async Task<List<TrainerInvitationResult>> GetTrainerInvitationsAsync(UserEntity currentTrainer)

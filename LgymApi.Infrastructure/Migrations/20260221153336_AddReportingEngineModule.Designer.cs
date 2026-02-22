@@ -3,6 +3,7 @@ using System;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LgymApi.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221153336_AddReportingEngineModule")]
+    partial class AddReportingEngineModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -48,6 +51,9 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<double>("Latitude")
                         .HasColumnType("double precision");
+
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
 
                     b.Property<double>("Longitude")
                         .HasColumnType("double precision");
@@ -94,6 +100,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
+
                     b.Property<string>("MinRequiredVersion")
                         .IsRequired()
                         .HasColumnType("text");
@@ -131,6 +140,9 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<int>("Elo")
                         .HasColumnType("integer");
+
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("TrainingId")
                         .HasColumnType("uuid");
@@ -228,6 +240,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -256,6 +271,9 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<Guid>("ExerciseId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
 
                     b.Property<int>("Reps")
                         .HasColumnType("integer");
@@ -307,6 +325,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid>("ExerciseId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -337,6 +358,9 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -371,6 +395,9 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<Guid>("ExerciseId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
 
                     b.Property<string>("Unit")
                         .IsRequired()
@@ -407,6 +434,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasColumnType("text");
@@ -442,6 +472,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -474,6 +507,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -502,6 +538,9 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<Guid>("ExerciseId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
@@ -921,6 +960,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid>("GymId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("TypePlanDayId")
                         .HasColumnType("uuid");
 
@@ -952,6 +994,9 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<Guid>("ExerciseScoreId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
 
                     b.Property<Guid>("TrainingId")
                         .HasColumnType("uuid");
@@ -1001,6 +1046,9 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<int?>("LegacyKeyLength")
                         .HasColumnType("integer");
+
+                    b.Property<string>("LegacyMongoId")
+                        .HasColumnType("text");
 
                     b.Property<string>("LegacySalt")
                         .HasColumnType("text");

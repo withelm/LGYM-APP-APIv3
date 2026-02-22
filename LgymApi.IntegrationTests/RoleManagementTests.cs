@@ -14,6 +14,7 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class RoleManagementTests : IntegrationTestBase
 {
+    private static readonly string[] UnknownRole = ["UnknownRole"];
     [Test]
     public async Task PermissionClaimsCatalog_AsAdmin_ReturnsLocalizedClaims()
     {
@@ -161,7 +162,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/roles/users/{targetUser.Id}/roles", new
         {
-            roles = new[] { "UnknownRole" }
+            roles = UnknownRole
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

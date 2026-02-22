@@ -37,9 +37,18 @@ public sealed class RoleRepository : IRoleRepository
 
     public Task<bool> ExistsByNameAsync(string roleName, Guid? excludeRoleId = null, CancellationToken cancellationToken = default)
     {
-        var normalizedName = roleName.Trim().ToLowerInvariant();
-        return _dbContext.Roles.AnyAsync(r =>
-                r.Name.ToLower() == normalizedName &&
+        var normalizedName = roleName.Trim();
+        var query = _dbContext.Roles.AsQueryable();
+        if (_dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return query.AnyAsync(r =>
+                EF.Functions.ILike(r.Name, normalizedName) &&
+                (!excludeRoleId.HasValue || r.Id != excludeRoleId.Value),
+            cancellationToken);
+        }
+
+        return query.AnyAsync(r =>
+                string.Equals(r.Name, normalizedName, StringComparison.OrdinalIgnoreCase) &&
                 (!excludeRoleId.HasValue || r.Id != excludeRoleId.Value),
             cancellationToken);
     }
