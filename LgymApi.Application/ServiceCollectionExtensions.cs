@@ -10,6 +10,7 @@ using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.PlanDay;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Role;
+using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
@@ -36,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlanDayService, PlanDayService>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IRoleService, RoleService>();
+        services.AddScoped<ISupplementationService, SupplementationService>();
         services.AddScoped<ITrainingService, TrainingService>();
         services.AddScoped<ITrainerRelationshipService, TrainerRelationshipService>();
         services.AddScoped<IUserService, UserService>();
