@@ -26,8 +26,11 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
-        Assert.That(result.Errors.Any(e => e.PropertyName.Contains("Order", StringComparison.Ordinal)), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsValid, Is.False);
+            Assert.That(result.Errors.Any(e => e.PropertyName.Contains("Order", StringComparison.Ordinal)), Is.True);
+        });
     }
 
     [Test]

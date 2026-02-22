@@ -19,12 +19,15 @@ public sealed class HangfireInvitationEmailBackgroundSchedulerTests
 
         scheduler.Enqueue(notificationId);
 
-        Assert.That(client.CreatedJobs, Has.Count.EqualTo(1));
-        var created = client.CreatedJobs[0];
-        Assert.That(created.Job.Type, Is.EqualTo(typeof(InvitationEmailJob)));
-        Assert.That(created.Job.Method.Name, Is.EqualTo("ExecuteAsync"));
-        Assert.That(created.Job.Args[0], Is.EqualTo(notificationId));
-        Assert.That(created.State, Is.TypeOf<EnqueuedState>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.CreatedJobs, Has.Count.EqualTo(1));
+            var created = client.CreatedJobs[0];
+            Assert.That(created.Job.Type, Is.EqualTo(typeof(InvitationEmailJob)));
+            Assert.That(created.Job.Method.Name, Is.EqualTo("ExecuteAsync"));
+            Assert.That(created.Job.Args[0], Is.EqualTo(notificationId));
+            Assert.That(created.State, Is.TypeOf<EnqueuedState>());
+        });
     }
 
     private sealed class FakeBackgroundJobClient : IBackgroundJobClient

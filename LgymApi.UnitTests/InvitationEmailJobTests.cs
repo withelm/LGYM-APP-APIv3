@@ -15,8 +15,11 @@ public sealed class InvitationEmailJobTests
 
         await job.ExecuteAsync(notificationId);
 
-        Assert.That(handler.Calls, Is.EqualTo(1));
-        Assert.That(handler.LastNotificationId, Is.EqualTo(notificationId));
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Calls, Is.EqualTo(1));
+            Assert.That(handler.LastNotificationId, Is.EqualTo(notificationId));
+        });
     }
 
     private sealed class FakeInvitationEmailJobHandler : IInvitationEmailJobHandler

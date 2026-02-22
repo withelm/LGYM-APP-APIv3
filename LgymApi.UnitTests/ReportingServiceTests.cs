@@ -14,6 +14,8 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class ReportingServiceTests
 {
+    private static readonly string[] OrderedTemplateKeys = ["aKey", "bKey"];
+
     private ReportingService _service = null!;
     private FakeRoleRepository _roleRepository = null!;
     private FakeTrainerRelationshipRepository _trainerRelationshipRepository = null!;
@@ -45,9 +47,12 @@ public sealed class ReportingServiceTests
                 ]
             }));
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-        Assert.That(exception.Message, Is.EqualTo(Messages.FieldRequired));
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+            Assert.That(exception.Message, Is.EqualTo(Messages.FieldRequired));
+        });
     }
 
     [Test]
@@ -66,10 +71,13 @@ public sealed class ReportingServiceTests
             ]
         });
 
-        Assert.That(result.Name, Is.EqualTo("Weekly Report"));
-        Assert.That(result.Description, Is.EqualTo("Notes"));
-        Assert.That(result.Fields.Select(f => f.Key).ToArray(), Is.EqualTo(new[] { "aKey", "bKey" }));
-        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Name, Is.EqualTo("Weekly Report"));
+            Assert.That(result.Description, Is.EqualTo("Notes"));
+            Assert.That(result.Fields.Select(f => f.Key).ToArray(), Is.EqualTo(OrderedTemplateKeys));
+            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        });
     }
 
     [Test]
@@ -84,8 +92,11 @@ public sealed class ReportingServiceTests
                 Fields = [new ReportTemplateFieldCommand { Key = "weight", Label = "Weight", Type = ReportFieldType.Number, IsRequired = true, Order = 0 }]
             }));
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        });
     }
 
     [Test]
@@ -119,9 +130,12 @@ public sealed class ReportingServiceTests
 
         var result = await _service.GetPendingRequestsForTraineeAsync(trainee);
 
-        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        Assert.That(result, Has.Count.EqualTo(1));
-        Assert.That(_reportingRepository.Requests.Count(r => r.Status == ReportRequestStatus.Expired), Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(result, Has.Count.EqualTo(1));
+            Assert.That(_reportingRepository.Requests.Count(r => r.Status == ReportRequestStatus.Expired), Is.EqualTo(1));
+        });
     }
 
     [Test]
@@ -144,8 +158,11 @@ public sealed class ReportingServiceTests
 
         var result = await _service.GetPendingRequestsForTraineeAsync(trainee);
 
-        Assert.That(result, Has.Count.EqualTo(1));
-        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Has.Count.EqualTo(1));
+            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        });
     }
 
     [Test]
@@ -165,9 +182,12 @@ public sealed class ReportingServiceTests
             }
         });
 
-        Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
-        Assert.That(result.Answers.ContainsKey("WEIGHT"), Is.True);
-        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
+            Assert.That(result.Answers.ContainsKey("WEIGHT"), Is.True);
+            Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        });
     }
 
     [Test]
@@ -184,9 +204,12 @@ public sealed class ReportingServiceTests
             Answers = new Dictionary<string, JsonElement>()
         });
 
-        Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
-        Assert.That(result.Answers, Is.Empty);
-        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
+            Assert.That(result.Answers, Is.Empty);
+            Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        });
     }
 
     [Test]
@@ -204,9 +227,12 @@ public sealed class ReportingServiceTests
                 Answers = new Dictionary<string, JsonElement>()
             }));
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-        Assert.That(exception.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+            Assert.That(exception.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
+        });
     }
 
     [Test]
@@ -226,8 +252,11 @@ public sealed class ReportingServiceTests
             }
         });
 
-        Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
-        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
+            Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        });
     }
 
     [Test]
@@ -249,9 +278,12 @@ public sealed class ReportingServiceTests
                 }
             }));
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-        Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+            Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+        });
     }
 
     [Test]
@@ -265,8 +297,11 @@ public sealed class ReportingServiceTests
                 Answers = new Dictionary<string, JsonElement>()
             }));
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
+        });
     }
 
     [Test]
@@ -288,9 +323,12 @@ public sealed class ReportingServiceTests
                 }
             }));
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-        Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+            Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+        });
     }
 
     [Test]
@@ -312,9 +350,12 @@ public sealed class ReportingServiceTests
                 }
             }));
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Expired));
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+            Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Expired));
+        });
     }
 
     [Test]
@@ -336,8 +377,11 @@ public sealed class ReportingServiceTests
 
         var result = await _service.GetTraineeSubmissionsAsync(trainer, trainee.Id);
 
-        Assert.That(result, Has.Count.EqualTo(1));
-        Assert.That(result[0].Answers.ContainsKey("WEIGHT"), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Has.Count.EqualTo(1));
+            Assert.That(result[0].Answers.ContainsKey("WEIGHT"), Is.True);
+        });
     }
 
     private User NewUser()

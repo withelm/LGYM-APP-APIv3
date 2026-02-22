@@ -34,14 +34,8 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
 
     public async Task ScheduleInvitationCreatedAsync(InvitationEmailPayload payload, CancellationToken cancellationToken = default)
     {
-        if (!_emailNotificationsFeature.Enabled)
+        if (!IsSchedulingEnabled(payload.InvitationId))
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation(
-                    "Email notifications are disabled; skipping invitation email scheduling for invitation {InvitationId}.",
-                    payload.InvitationId);
-            }
             return;
         }
 
@@ -53,38 +47,7 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
 
         if (existing != null)
         {
-            if (existing.Status == EmailNotificationStatus.Failed)
-            {
-                if (existing.Attempts < MaxManualRequeueAttempts)
-                {
-                    _backgroundScheduler.Enqueue(existing.Id);
-                    if (_logger.IsEnabled(LogLevel.Information))
-                    {
-                        _logger.LogInformation(
-                            "Re-enqueued failed invitation email notification {NotificationId} (attempts: {Attempts}).",
-                            existing.Id,
-                            existing.Attempts);
-                    }
-                }
-                else
-                {
-                _logger.LogWarning(
-                    "Skipping re-enqueue for notification {NotificationId} because attempts reached limit {MaxAttempts}.",
-                    existing.Id,
-                    MaxManualRequeueAttempts);
-                }
-            }
-            else
-            {
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation(
-                        "Found existing invitation email notification {NotificationId} with status {Status}; no new notification created.",
-                        existing.Id,
-                        existing.Status);
-                }
-            }
-
+            HandleExistingNotification(existing);
             return;
         }
 
@@ -97,10 +60,68 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
             PayloadJson = JsonSerializer.Serialize(payload)
         };
 
+        if (!await TryPersistNotificationAsync(payload, log, cancellationToken))
+        {
+            return;
+        }
+
+        _backgroundScheduler.Enqueue(log.Id);
+        LogInfo(
+            "Created and enqueued invitation email notification {NotificationId} for invitation {InvitationId}.",
+            log.Id,
+            payload.InvitationId);
+    }
+
+    private bool IsSchedulingEnabled(Guid invitationId)
+    {
+        if (_emailNotificationsFeature.Enabled)
+        {
+            return true;
+        }
+
+        LogInfo(
+            "Email notifications are disabled; skipping invitation email scheduling for invitation {InvitationId}.",
+            invitationId);
+        return false;
+    }
+
+    private void HandleExistingNotification(EmailNotificationLog existing)
+    {
+        if (existing.Status != EmailNotificationStatus.Failed)
+        {
+            LogInfo(
+                "Found existing invitation email notification {NotificationId} with status {Status}; no new notification created.",
+                existing.Id,
+                existing.Status);
+            return;
+        }
+
+        if (existing.Attempts >= MaxManualRequeueAttempts)
+        {
+            _logger.LogWarning(
+                "Skipping re-enqueue for notification {NotificationId} because attempts reached limit {MaxAttempts}.",
+                existing.Id,
+                MaxManualRequeueAttempts);
+            return;
+        }
+
+        _backgroundScheduler.Enqueue(existing.Id);
+        LogInfo(
+            "Re-enqueued failed invitation email notification {NotificationId} (attempts: {Attempts}).",
+            existing.Id,
+            existing.Attempts);
+    }
+
+    private async Task<bool> TryPersistNotificationAsync(
+        InvitationEmailPayload payload,
+        EmailNotificationLog log,
+        CancellationToken cancellationToken)
+    {
         try
         {
             await _notificationLogRepository.AddAsync(log, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return true;
         }
         catch (Exception ex)
         {
@@ -121,16 +142,15 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
                 payload.InvitationId,
                 concurrent.Id);
             _backgroundScheduler.Enqueue(concurrent.Id);
-            return;
+            return false;
         }
+    }
 
-        _backgroundScheduler.Enqueue(log.Id);
+    private void LogInfo(string message, params object?[] args)
+    {
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation(
-                "Created and enqueued invitation email notification {NotificationId} for invitation {InvitationId}.",
-                log.Id,
-                payload.InvitationId);
+            _logger.LogInformation(message, args);
         }
     }
 }

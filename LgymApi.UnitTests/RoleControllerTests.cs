@@ -14,6 +14,8 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class RoleControllerTests
 {
+    private static readonly List<string> ManageUserRolesClaim = ["users.roles.manage"];
+
     [Test]
     public async Task CreateRole_ReturnsMappedRoleDto()
     {
@@ -24,7 +26,7 @@ public sealed class RoleControllerTests
                 Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 Name = "Coach",
                 Description = "desc",
-                PermissionClaims = ["users.roles.manage"]
+                PermissionClaims = ManageUserRolesClaim
             })
         };
         var controller = new RoleController(fakeService, BuildMapper());
@@ -33,16 +35,19 @@ public sealed class RoleControllerTests
         {
             Name = "Coach",
             Description = "desc",
-            PermissionClaims = ["users.roles.manage"]
+            PermissionClaims = ManageUserRolesClaim
         });
 
         var ok = action as OkObjectResult;
         Assert.That(ok, Is.Not.Null);
         var dto = ok!.Value as RoleDto;
-        Assert.That(dto, Is.Not.Null);
-        Assert.That(dto!.Id, Is.EqualTo("11111111-1111-1111-1111-111111111111"));
-        Assert.That(dto.Name, Is.EqualTo("Coach"));
-        Assert.That(dto.PermissionClaims, Is.EqualTo(new[] { "users.roles.manage" }));
+        Assert.Multiple(() =>
+        {
+            Assert.That(dto, Is.Not.Null);
+            Assert.That(dto!.Id, Is.EqualTo("11111111-1111-1111-1111-111111111111"));
+            Assert.That(dto.Name, Is.EqualTo("Coach"));
+            Assert.That(dto.PermissionClaims, Is.EqualTo(ManageUserRolesClaim));
+        });
     }
 
     private static IMapper BuildMapper()
@@ -61,24 +66,30 @@ public sealed class RoleControllerTests
         var delete = type.GetMethod(nameof(RoleController.DeleteRole), BindingFlags.Public | BindingFlags.Instance);
         var updateUserRoles = type.GetMethod(nameof(RoleController.UpdateUserRoles), BindingFlags.Public | BindingFlags.Instance);
 
-        Assert.That(update, Is.Not.Null);
-        Assert.That(delete, Is.Not.Null);
-        Assert.That(updateUserRoles, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(update, Is.Not.Null);
+            Assert.That(delete, Is.Not.Null);
+            Assert.That(updateUserRoles, Is.Not.Null);
+        });
 
         var updateHttpPost = update!.GetCustomAttribute<HttpPostAttribute>();
         var deleteHttpPost = delete!.GetCustomAttribute<HttpPostAttribute>();
         var updateUserRolesHttpPost = updateUserRoles!.GetCustomAttribute<HttpPostAttribute>();
 
-        Assert.That(updateHttpPost, Is.Not.Null);
-        Assert.That(updateHttpPost!.Template, Is.EqualTo("{id}/update"));
-        Assert.That(deleteHttpPost, Is.Not.Null);
-        Assert.That(deleteHttpPost!.Template, Is.EqualTo("{id}/delete"));
-        Assert.That(updateUserRolesHttpPost, Is.Not.Null);
-        Assert.That(updateUserRolesHttpPost!.Template, Is.EqualTo("users/{id}/roles"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(updateHttpPost, Is.Not.Null);
+            Assert.That(updateHttpPost!.Template, Is.EqualTo("{id}/update"));
+            Assert.That(deleteHttpPost, Is.Not.Null);
+            Assert.That(deleteHttpPost!.Template, Is.EqualTo("{id}/delete"));
+            Assert.That(updateUserRolesHttpPost, Is.Not.Null);
+            Assert.That(updateUserRolesHttpPost!.Template, Is.EqualTo("users/{id}/roles"));
 
-        Assert.That(update.GetCustomAttribute<HttpPutAttribute>(), Is.Null);
-        Assert.That(delete.GetCustomAttribute<HttpDeleteAttribute>(), Is.Null);
-        Assert.That(updateUserRoles.GetCustomAttribute<HttpPutAttribute>(), Is.Null);
+            Assert.That(update.GetCustomAttribute<HttpPutAttribute>(), Is.Null);
+            Assert.That(delete.GetCustomAttribute<HttpDeleteAttribute>(), Is.Null);
+            Assert.That(updateUserRoles.GetCustomAttribute<HttpPutAttribute>(), Is.Null);
+        });
     }
 
     private sealed class StubRoleService : IRoleService

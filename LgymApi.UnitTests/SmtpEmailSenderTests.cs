@@ -46,9 +46,12 @@ public sealed class SmtpEmailSenderTests
                 Body = "y"
             }));
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.InnerException, Is.TypeOf<FormatException>());
-        Assert.That(exception.Message, Is.EqualTo("Recipient email address is invalid."));
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.InnerException, Is.TypeOf<FormatException>());
+            Assert.That(exception.Message, Is.EqualTo("Recipient email address is invalid."));
+        });
     }
 
     [Test]

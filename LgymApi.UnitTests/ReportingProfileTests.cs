@@ -53,8 +53,11 @@ public sealed class ReportingProfileTests
         };
 
         var submissionDto = mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(submissionResult);
-        Assert.That(submissionDto.Answers, Is.Empty);
-        Assert.That(submissionDto.Request, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(submissionDto.Answers, Is.Empty);
+            Assert.That(submissionDto.Request, Is.Not.Null);
+        });
     }
 
     [Test]

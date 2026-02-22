@@ -50,13 +50,16 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var message = composer.ComposeTrainerInvitation(payload);
 
-        Assert.That(message.To, Is.EqualTo("trainee@example.com"));
-        Assert.That(message.Subject, Is.EqualTo("Zaproszenie od Coach Mike"));
-        Assert.That(message.Body, Does.Contain("Kod: ABC123XYZ789"));
-        Assert.That(message.Body, Does.Contain("Akceptuj:"));
-        Assert.That(message.Body, Does.Contain("Wygasa:"));
-        Assert.That(message.Body, Does.Contain($"/accept/{invitationId}"));
-        Assert.That(message.Body, Does.Contain($"/reject/{invitationId}"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(message.To, Is.EqualTo("trainee@example.com"));
+            Assert.That(message.Subject, Is.EqualTo("Zaproszenie od Coach Mike"));
+            Assert.That(message.Body, Does.Contain("Kod: ABC123XYZ789"));
+            Assert.That(message.Body, Does.Contain("Akceptuj:"));
+            Assert.That(message.Body, Does.Contain("Wygasa:"));
+            Assert.That(message.Body, Does.Contain($"/accept/{invitationId}"));
+            Assert.That(message.Body, Does.Contain($"/reject/{invitationId}"));
+        });
     }
 
     [Test]
@@ -77,9 +80,12 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var message = composer.ComposeTrainerInvitation(payload);
 
-        Assert.That(message.Subject, Is.EqualTo("Trainer invitation from Coach Jane"));
-        Assert.That(message.Body, Does.Contain("Invitation ZZZ999YYY888"));
-        Assert.That(message.Body, Does.Contain("Accept:"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(message.Subject, Is.EqualTo("Trainer invitation from Coach Jane"));
+            Assert.That(message.Body, Does.Contain("Invitation ZZZ999YYY888"));
+            Assert.That(message.Body, Does.Contain("Accept:"));
+        });
     }
 
     private TrainerInvitationEmailTemplateComposer CreateComposer()

@@ -12,6 +12,8 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class TrainerAuthTests : IntegrationTestBase
 {
+    private static readonly string[] ExpectedTrainerRoles = ["User", "Trainer"];
+
     [Test]
     public async Task RegisterTrainer_WithValidData_CreatesTrainerRoleAssignment()
     {
@@ -38,7 +40,7 @@ public sealed class TrainerAuthTests : IntegrationTestBase
             .Select(ur => ur.Role.Name)
             .ToListAsync();
 
-        roleNames.Should().Contain(new[] { "User", "Trainer" });
+        roleNames.Should().Contain(ExpectedTrainerRoles);
     }
 
     [Test]
