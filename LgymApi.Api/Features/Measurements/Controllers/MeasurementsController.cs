@@ -2,6 +2,7 @@ using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Measurements.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Measurements;
+using LgymApi.Application.Features.Measurements.Models;
 using LgymApi.Application.Mapping.Core;
 using Microsoft.AspNetCore.Mvc;
 using Measurement = LgymApi.Domain.Entities.Measurement;
@@ -46,16 +47,44 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
 
     [HttpGet("measurements/{id}/getHistory")]
     [ProducesResponseType(typeof(MeasurementsHistoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMeasurementsHistory([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request)
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var measurements = await _measurementsService.GetMeasurementsHistoryAsync(user!, routeUserId, request?.BodyPart);
+        var measurements = await _measurementsService.GetMeasurementsHistoryAsync(user!, routeUserId, request?.BodyPart, request?.Unit);
         var result = _mapper.Map<List<Measurement>, MeasurementsHistoryDto>(measurements);
 
         return Ok(result);
+    }
+
+    [HttpGet("measurements/{id}/list")]
+    [ProducesResponseType(typeof(MeasurementsListDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMeasurementsList([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request)
+    {
+        var user = HttpContext.GetCurrentUser();
+        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var measurements = await _measurementsService.GetMeasurementsListAsync(user!, routeUserId, request?.BodyPart, request?.Unit);
+        var result = _mapper.Map<List<Measurement>, MeasurementsListDto>(measurements);
+        return Ok(result);
+    }
+
+    [HttpGet("measurements/{id}/trend")]
+    [ProducesResponseType(typeof(MeasurementTrendDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMeasurementsTrend([FromRoute] string id, [FromQuery] MeasurementTrendRequestDto request)
+    {
+        var user = HttpContext.GetCurrentUser();
+        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var trend = await _measurementsService.GetMeasurementsTrendAsync(user!, routeUserId, request.BodyPart, request.Unit);
+        return Ok(_mapper.Map<MeasurementTrendResult, MeasurementTrendDto>(trend));
     }
 
 }
