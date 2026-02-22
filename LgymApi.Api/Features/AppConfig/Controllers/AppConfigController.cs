@@ -28,7 +28,7 @@ public sealed class AppConfigController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request)
     {
-        var config = await _appConfigService.GetLatestByPlatformAsync(request.Platform);
+        var config = await _appConfigService.GetLatestByPlatformAsync(request.Platform, HttpContext.RequestAborted);
         return Ok(_mapper.Map<AppConfigEntity, AppConfigInfoDto>(config));
     }
 
@@ -46,7 +46,8 @@ public sealed class AppConfigController : ControllerBase
             form.LatestVersion,
             form.ForceUpdate,
             form.UpdateUrl,
-            form.ReleaseNotes);
+            form.ReleaseNotes,
+            HttpContext.RequestAborted);
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 }

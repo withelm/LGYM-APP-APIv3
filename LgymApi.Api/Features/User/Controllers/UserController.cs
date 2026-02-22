@@ -28,7 +28,7 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
-        await _userService.RegisterAsync(request.Name, request.Email, request.Password, request.ConfirmPassword, request.IsVisibleInRanking);
+        await _userService.RegisterAsync(request.Name, request.Email, request.Password, request.ConfirmPassword, request.IsVisibleInRanking, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -37,7 +37,7 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var result = await _userService.LoginAsync(request.Name, request.Password);
+        var result = await _userService.LoginAsync(request.Name, request.Password, HttpContext.RequestAborted);
         var mapped = _mapper.Map<LoginResult, LoginResponseDto>(result);
         return Ok(mapped);
     }
@@ -47,7 +47,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> IsAdmin([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var result = await _userService.IsAdminAsync(userId);
+        var result = await _userService.IsAdminAsync(userId, HttpContext.RequestAborted);
         return Ok(result);
     }
 
@@ -56,7 +56,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> CheckToken()
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.CheckTokenAsync(user!);
+        var result = await _userService.CheckTokenAsync(user!, HttpContext.RequestAborted);
         var mapped = _mapper.Map<UserInfoResult, UserInfoDto>(result);
         return Ok(mapped);
     }
@@ -65,7 +65,7 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(List<UserBaseInfoDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUsersRanking()
     {
-        var result = await _userService.GetUsersRankingAsync();
+        var result = await _userService.GetUsersRankingAsync(HttpContext.RequestAborted);
         var mapped = _mapper.MapList<RankingEntry, UserBaseInfoDto>(result);
         return Ok(mapped);
     }
@@ -75,7 +75,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> GetUserElo([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var elo = await _userService.GetUserEloAsync(userId);
+        var elo = await _userService.GetUserEloAsync(userId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<int, UserEloDto>(elo));
     }
 
@@ -84,7 +84,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> DeleteAccount()
     {
         var user = HttpContext.GetCurrentUser();
-        await _userService.DeleteAccountAsync(user!);
+        await _userService.DeleteAccountAsync(user!, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -98,7 +98,7 @@ public sealed class UserController : ControllerBase
         }
 
         var user = HttpContext.GetCurrentUser();
-        await _userService.ChangeVisibilityInRankingAsync(user!, isVisible);
+        await _userService.ChangeVisibilityInRankingAsync(user!, isVisible, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

@@ -17,20 +17,20 @@ public sealed class ExerciseScoresService : IExerciseScoresService
         _exerciseScoreRepository = exerciseScoreRepository;
     }
 
-    public async Task<List<ExerciseScoresChartData>> GetExerciseScoresChartDataAsync(Guid userId, Guid exerciseId)
+    public async Task<List<ExerciseScoresChartData>> GetExerciseScoresChartDataAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty || exerciseId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
+        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(user.Id, exerciseId);
+        var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(user.Id, exerciseId, cancellationToken);
         scores = scores.OrderBy(s => s.CreatedAt).ToList();
 
         var bestSeries = new Dictionary<string, ExerciseScoresChartData>();

@@ -27,7 +27,7 @@ public sealed class EloRegistryController : ControllerBase
     public async Task<IActionResult> GetEloRegistryChart([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var result = await _eloRegistryService.GetChartAsync(userId);
+        var result = await _eloRegistryService.GetChartAsync(userId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result);
         return Ok(mapped);
     }

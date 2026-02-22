@@ -56,7 +56,8 @@ public sealed class TrainingService : ITrainingService
         Guid gymId,
         Guid planDayId,
         DateTime createdAt,
-        IReadOnlyCollection<TrainingExerciseInput> exercises)
+        IReadOnlyCollection<TrainingExerciseInput> exercises,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -65,13 +66,13 @@ public sealed class TrainingService : ITrainingService
                 throw AppException.NotFound(Messages.DidntFind);
             }
 
-            var user = await _userRepository.FindByIdAsync(userId);
+            var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
             if (user == null)
             {
                 throw AppException.NotFound(Messages.DidntFind);
             }
 
-            var gym = await _gymRepository.FindByIdAsync(gymId);
+            var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
             if (gym == null)
             {
                 throw AppException.NotFound(Messages.DidntFind);
@@ -84,12 +85,12 @@ public sealed class TrainingService : ITrainingService
                 .Select(Guid.Parse)
                 .ToList();
 
-            var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds);
+            var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds, cancellationToken);
             var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
 
-            var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds);
+            var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds, cancellationToken);
 
-            await using var transaction = await _unitOfWork.BeginTransactionAsync();
+            await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
             try
             {
                 var createdAtUtc = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
@@ -102,7 +103,7 @@ public sealed class TrainingService : ITrainingService
                     GymId = gym.Id
                 };
 
-                await _trainingRepository.AddAsync(training);
+                await _trainingRepository.AddAsync(training, cancellationToken);
 
                 var savedScoreIds = new List<Guid>();
                 var totalElo = 0;
@@ -144,7 +145,7 @@ public sealed class TrainingService : ITrainingService
 
                 if (scoresToAdd.Count > 0)
                 {
-                    await _exerciseScoreRepository.AddRangeAsync(scoresToAdd);
+                    await _exerciseScoreRepository.AddRangeAsync(scoresToAdd, cancellationToken);
                 }
 
                 var trainingScores = savedScoreIds.Select(scoreId => new TrainingExerciseScore
@@ -156,12 +157,12 @@ public sealed class TrainingService : ITrainingService
 
                 if (trainingScores.Count > 0)
                 {
-                    await _trainingExerciseScoreRepository.AddRangeAsync(trainingScores);
+                    await _trainingExerciseScoreRepository.AddRangeAsync(trainingScores, cancellationToken);
                 }
 
-                await SynchronizeMainRecordsAsync(user.Id, exercises, createdAtUtc);
+                await SynchronizeMainRecordsAsync(user.Id, exercises, createdAtUtc, cancellationToken);
 
-                var eloEntry = await _eloRepository.GetLatestEntryAsync(user.Id);
+                var eloEntry = await _eloRepository.GetLatestEntryAsync(user.Id, cancellationToken);
                 if (eloEntry == null)
                 {
                     throw AppException.Internal(Messages.TryAgain);
@@ -179,13 +180,13 @@ public sealed class TrainingService : ITrainingService
                     Date = DateTimeOffset.UtcNow,
                     Elo = newElo,
                     TrainingId = training.Id
-                });
-                await _userRepository.UpdateAsync(user);
-                await _unitOfWork.SaveChangesAsync();
+                }, cancellationToken);
+                await _userRepository.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
 
-                await transaction.CommitAsync();
+                await transaction.CommitAsync(cancellationToken);
 
                 return new TrainingSummaryResult
                 {
@@ -199,7 +200,7 @@ public sealed class TrainingService : ITrainingService
             }
             catch
             {
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
         }
@@ -213,7 +214,7 @@ public sealed class TrainingService : ITrainingService
         }
     }
 
-    private async Task SynchronizeMainRecordsAsync(Guid userId, IReadOnlyCollection<TrainingExerciseInput> exercises, DateTime createdAtUtc)
+    private async Task SynchronizeMainRecordsAsync(Guid userId, IReadOnlyCollection<TrainingExerciseInput> exercises, DateTime createdAtUtc, CancellationToken cancellationToken)
     {
         var bestScoresByExercise = new Dictionary<Guid, TrainingExerciseInput>();
 
@@ -241,7 +242,7 @@ public sealed class TrainingService : ITrainingService
             return;
         }
 
-        var existingRecords = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, bestScoresByExercise.Keys.ToList());
+        var existingRecords = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, bestScoresByExercise.Keys.ToList(), cancellationToken);
         var existingRecordsByExercise = existingRecords
             .GroupBy(r => r.ExerciseId)
             .ToDictionary(g => g.Key, g => g.ToList());
@@ -267,7 +268,7 @@ public sealed class TrainingService : ITrainingService
                     Weight = bestScore.Weight,
                     Unit = bestScore.Unit,
                     Date = recordDate
-                });
+                }, cancellationToken);
                 continue;
             }
 
@@ -291,25 +292,25 @@ public sealed class TrainingService : ITrainingService
                     Weight = bestScore.Weight,
                     Unit = bestScore.Unit,
                     Date = recordDate
-                });
+                }, cancellationToken);
             }
         }
     }
 
-    public async Task<TrainingEntity> GetLastTrainingAsync(Guid userId)
+    public async Task<TrainingEntity> GetLastTrainingAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
+        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var training = await _trainingRepository.GetLastByUserIdAsync(user.Id);
+        var training = await _trainingRepository.GetLastByUserIdAsync(user.Id, cancellationToken);
         if (training == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -318,14 +319,14 @@ public sealed class TrainingService : ITrainingService
         return training;
     }
 
-    public async Task<List<TrainingByDateDetails>> GetTrainingByDateAsync(Guid userId, DateTime createdAt)
+    public async Task<List<TrainingByDateDetails>> GetTrainingByDateAsync(Guid userId, DateTime createdAt, CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
+        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -334,17 +335,17 @@ public sealed class TrainingService : ITrainingService
         var startOfDay = new DateTimeOffset(DateTime.SpecifyKind(createdAt.Date, DateTimeKind.Utc));
         var endOfDay = startOfDay.AddDays(1).AddTicks(-1);
 
-        var trainings = await _trainingRepository.GetByUserIdAndDateAsync(user.Id, startOfDay, endOfDay);
+        var trainings = await _trainingRepository.GetByUserIdAndDateAsync(user.Id, startOfDay, endOfDay, cancellationToken);
         if (trainings.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
         var trainingIds = trainings.Select(t => t.Id).ToList();
-        var trainingScoreRefs = await _trainingExerciseScoreRepository.GetByTrainingIdsAsync(trainingIds);
+        var trainingScoreRefs = await _trainingExerciseScoreRepository.GetByTrainingIdsAsync(trainingIds, cancellationToken);
 
         var scoreIds = trainingScoreRefs.Select(t => t.ExerciseScoreId).Distinct().ToList();
-        var scores = await _exerciseScoreRepository.GetByIdsAsync(scoreIds);
+        var scores = await _exerciseScoreRepository.GetByIdsAsync(scoreIds, cancellationToken);
         var scoreMap = scores.ToDictionary(s => s.Id, s => s);
 
         var result = new List<TrainingByDateDetails>();
@@ -387,14 +388,14 @@ public sealed class TrainingService : ITrainingService
         return result;
     }
 
-    public async Task<List<DateTime>> GetTrainingDatesAsync(Guid userId)
+    public async Task<List<DateTime>> GetTrainingDatesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var trainings = await _trainingRepository.GetDatesByUserIdAsync(userId);
+        var trainings = await _trainingRepository.GetDatesByUserIdAsync(userId, cancellationToken);
         if (trainings.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -452,9 +453,9 @@ public sealed class TrainingService : ITrainingService
         return (int)Math.Round(points);
     }
 
-    private async Task<Dictionary<string, ExerciseScore>> FetchPreviousScores(Guid userId, Guid gymId, List<Guid> exerciseIds)
+    private async Task<Dictionary<string, ExerciseScore>> FetchPreviousScores(Guid userId, Guid gymId, List<Guid> exerciseIds, CancellationToken cancellationToken)
     {
-        var scores = await _exerciseScoreRepository.GetByUserAndExercisesAsync(userId, exerciseIds);
+        var scores = await _exerciseScoreRepository.GetByUserAndExercisesAsync(userId, exerciseIds, cancellationToken);
         scores = scores
             .Where(s => s.Training != null && s.Training.GymId == gymId)
             .OrderByDescending(s => s.CreatedAt)

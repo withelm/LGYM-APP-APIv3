@@ -39,7 +39,7 @@ public sealed class TrainingController : ControllerBase
                 Unit = exercise.Unit
             }).ToList();
 
-        var result = await _trainingService.AddTrainingAsync(userId, gymId, planDayId, form.CreatedAt, exercises);
+        var result = await _trainingService.AddTrainingAsync(userId, gymId, planDayId, form.CreatedAt, exercises, HttpContext.RequestAborted);
         var mapped = _mapper.Map<TrainingSummaryResult, TrainingSummaryDto>(result);
         return Ok(mapped);
     }
@@ -50,7 +50,7 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> GetLastTraining([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var training = await _trainingService.GetLastTrainingAsync(userId);
+        var training = await _trainingService.GetLastTrainingAsync(userId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Domain.Entities.Training, LastTrainingInfoDto>(training));
     }
 
@@ -60,7 +60,7 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> GetTrainingByDate([FromRoute] string id, [FromBody] TrainingByDateRequestDto request)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var result = await _trainingService.GetTrainingByDateAsync(userId, request.CreatedAt);
+        var result = await _trainingService.GetTrainingByDateAsync(userId, request.CreatedAt, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result);
         return Ok(mapped);
     }
@@ -71,7 +71,7 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> GetTrainingDates([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var dates = await _trainingService.GetTrainingDatesAsync(userId);
+        var dates = await _trainingService.GetTrainingDatesAsync(userId, HttpContext.RequestAborted);
         return Ok(dates);
     }
 }

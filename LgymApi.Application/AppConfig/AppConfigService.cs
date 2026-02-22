@@ -19,14 +19,14 @@ public sealed class AppConfigService : IAppConfigService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<AppConfigEntity> GetLatestByPlatformAsync(Platforms platform)
+    public async Task<AppConfigEntity> GetLatestByPlatformAsync(Platforms platform, CancellationToken cancellationToken = default)
     {
         if (platform == Platforms.Unknown)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        AppConfigEntity? config = await _appConfigRepository.GetLatestByPlatformAsync(platform);
+        AppConfigEntity? config = await _appConfigRepository.GetLatestByPlatformAsync(platform, cancellationToken);
         if (config == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -42,14 +42,15 @@ public sealed class AppConfigService : IAppConfigService
         string? latestVersion,
         bool forceUpdate,
         string? updateUrl,
-        string? releaseNotes)
+        string? releaseNotes,
+        CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
+        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
         if (user == null || user.Admin != true)
         {
             throw AppException.Forbidden(Messages.Forbidden);
@@ -71,7 +72,7 @@ public sealed class AppConfigService : IAppConfigService
             ReleaseNotes = releaseNotes
         };
 
-        await _appConfigRepository.AddAsync((global::LgymApi.Domain.Entities.AppConfig)config);
-        await _unitOfWork.SaveChangesAsync();
+        await _appConfigRepository.AddAsync((global::LgymApi.Domain.Entities.AppConfig)config, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

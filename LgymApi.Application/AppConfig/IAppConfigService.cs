@@ -5,7 +5,7 @@ namespace LgymApi.Application.Features.AppConfig;
 
 public interface IAppConfigService
 {
-    Task<AppConfigEntity> GetLatestByPlatformAsync(Platforms platform);
+    Task<AppConfigEntity> GetLatestByPlatformAsync(Platforms platform, CancellationToken cancellationToken = default);
     Task CreateNewAppVersionAsync(
         Guid userId,
         Platforms platform,
@@ -13,5 +13,6 @@ public interface IAppConfigService
         string? latestVersion,
         bool forceUpdate,
         string? updateUrl,
-        string? releaseNotes);
+        string? releaseNotes,
+        CancellationToken cancellationToken = default);
 }

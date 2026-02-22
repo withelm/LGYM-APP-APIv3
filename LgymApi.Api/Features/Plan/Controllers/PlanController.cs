@@ -28,7 +28,7 @@ public sealed class PlanController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _planService.CreatePlanAsync(user!, routeUserId, form.Name);
+        await _planService.CreatePlanAsync(user!, routeUserId, form.Name, HttpContext.RequestAborted);
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
@@ -42,7 +42,7 @@ public sealed class PlanController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _planService.UpdatePlanAsync(user!, routeUserId, form.Id ?? string.Empty, form.Name);
+        await _planService.UpdatePlanAsync(user!, routeUserId, form.Id ?? string.Empty, form.Name, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -54,7 +54,7 @@ public sealed class PlanController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var plan = await _planService.GetPlanConfigAsync(user!, routeUserId);
+        var plan = await _planService.GetPlanConfigAsync(user!, routeUserId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Domain.Entities.Plan, PlanFormDto>(plan));
     }
 
@@ -66,7 +66,7 @@ public sealed class PlanController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var result = await _planService.CheckIsUserHavePlanAsync(user!, routeUserId);
+        var result = await _planService.CheckIsUserHavePlanAsync(user!, routeUserId, HttpContext.RequestAborted);
         return Ok(result);
     }
 
@@ -78,7 +78,7 @@ public sealed class PlanController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var plans = await _planService.GetPlansListAsync(user!, routeUserId);
+        var plans = await _planService.GetPlansListAsync(user!, routeUserId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<LgymApi.Domain.Entities.Plan, PlanFormDto>(plans);
         return Ok(mapped);
     }
@@ -92,7 +92,7 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var planId = Guid.TryParse(form.Id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
-        await _planService.SetNewActivePlanAsync(user!, routeUserId, planId);
+        await _planService.SetNewActivePlanAsync(user!, routeUserId, planId, HttpContext.RequestAborted);
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
@@ -104,7 +104,7 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> CopyPlan([FromBody] CopyPlanDto dto)
     {
         var user = HttpContext.GetCurrentUser();
-        var copiedPlan = await _planService.CopyPlanAsync(user!, dto.ShareCode);
+        var copiedPlan = await _planService.CopyPlanAsync(user!, dto.ShareCode, HttpContext.RequestAborted);
         var planDto = _mapper.Map<LgymApi.Domain.Entities.Plan, PlanDto>(copiedPlan);
         return StatusCode(StatusCodes.Status201Created, planDto);
     }
@@ -117,7 +117,7 @@ public sealed class PlanController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
-        var shareCode = await _planService.GenerateShareCodeAsync(user!, planId);
+        var shareCode = await _planService.GenerateShareCodeAsync(user!, planId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ShareCodeResponseDto>(shareCode));
     }
 
@@ -129,7 +129,7 @@ public sealed class PlanController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
-        await _planService.DeletePlanAsync(user!, planId);
+        await _planService.DeletePlanAsync(user!, planId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 }

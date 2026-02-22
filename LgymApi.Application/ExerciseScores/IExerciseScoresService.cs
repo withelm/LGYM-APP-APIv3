@@ -4,5 +4,5 @@ namespace LgymApi.Application.Features.ExerciseScores;
 
 public interface IExerciseScoresService
 {
-    Task<List<ExerciseScoresChartData>> GetExerciseScoresChartDataAsync(Guid userId, Guid exerciseId);
+    Task<List<ExerciseScoresChartData>> GetExerciseScoresChartDataAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default);
 }

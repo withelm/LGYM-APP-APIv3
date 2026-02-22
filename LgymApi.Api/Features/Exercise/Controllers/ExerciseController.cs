@@ -34,7 +34,7 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AddExercise([FromBody] ExerciseFormDto form)
     {
-        await _exerciseService.AddExerciseAsync(form.Name, form.BodyPart, form.Description, form.Image);
+        await _exerciseService.AddExerciseAsync(form.Name, form.BodyPart, form.Description, form.Image, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -45,7 +45,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> AddUserExercise([FromRoute] string id, [FromBody] ExerciseFormDto form)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _exerciseService.AddUserExerciseAsync(userId, form.Name, form.BodyPart, form.Description, form.Image);
+        await _exerciseService.AddUserExerciseAsync(userId, form.Name, form.BodyPart, form.Description, form.Image, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -63,7 +63,7 @@ public sealed class ExerciseController : ControllerBase
 
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var exerciseId = Guid.TryParse(exerciseIdString, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        await _exerciseService.DeleteExerciseAsync(userId, exerciseId);
+        await _exerciseService.DeleteExerciseAsync(userId, exerciseId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -73,7 +73,7 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateExercise([FromBody] ExerciseFormDto form)
     {
-        await _exerciseService.UpdateExerciseAsync(form.Id ?? string.Empty, form.Name, form.BodyPart, form.Description, form.Image);
+        await _exerciseService.UpdateExerciseAsync(form.Id ?? string.Empty, form.Name, form.BodyPart, form.Description, form.Image, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -86,7 +86,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var currentUser = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _exerciseService.AddGlobalTranslationAsync(currentUser!, routeUserId, form.ExerciseId, form.Culture, form.Name);
+        await _exerciseService.AddGlobalTranslationAsync(currentUser!, routeUserId, form.ExerciseId, form.Culture, form.Name, HttpContext.RequestAborted);
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
@@ -98,7 +98,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var cultures = GetCulturePreferences();
-        var context = await _exerciseService.GetAllExercisesAsync(userId, cultures);
+        var context = await _exerciseService.GetAllExercisesAsync(userId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var result = _mapper.MapList<ExerciseEntity, ExerciseResponseDto>(context.Exercises, mappingContext);
@@ -112,7 +112,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var cultures = GetCulturePreferences();
-        var context = await _exerciseService.GetAllUserExercisesAsync(userId, cultures);
+        var context = await _exerciseService.GetAllUserExercisesAsync(userId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var result = _mapper.MapList<ExerciseEntity, ExerciseResponseDto>(context.Exercises, mappingContext);
@@ -125,7 +125,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> GetAllGlobalExercises()
     {
         var cultures = GetCulturePreferences();
-        var context = await _exerciseService.GetAllGlobalExercisesAsync(cultures);
+        var context = await _exerciseService.GetAllGlobalExercisesAsync(cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var result = _mapper.MapList<ExerciseEntity, ExerciseResponseDto>(context.Exercises, mappingContext);
@@ -140,7 +140,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var cultures = GetCulturePreferences();
-        var context = await _exerciseService.GetExerciseByBodyPartAsync(userId, request.BodyPart, cultures);
+        var context = await _exerciseService.GetExerciseByBodyPartAsync(userId, request.BodyPart, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var result = _mapper.MapList<ExerciseEntity, ExerciseResponseDto>(context.Exercises, mappingContext);
@@ -154,7 +154,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var exerciseId = Guid.TryParse(id, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
         var cultures = GetCulturePreferences();
-        var context = await _exerciseService.GetExerciseAsync(exerciseId, cultures);
+        var context = await _exerciseService.GetExerciseAsync(exerciseId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         return Ok(_mapper.Map<ExerciseEntity, ExerciseResponseDto>(context.Exercise, mappingContext));
@@ -174,7 +174,7 @@ public sealed class ExerciseController : ControllerBase
             gymId = parsedGymId;
         }
 
-        var result = await _exerciseService.GetLastExerciseScoresAsync(routeUserId, currentUserId, exerciseId, request.Series, gymId, request.ExerciseName);
+        var result = await _exerciseService.GetLastExerciseScoresAsync(routeUserId, currentUserId, exerciseId, request.Series, gymId, request.ExerciseName, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LastExerciseScoresResult, LastExerciseScoresResponseDto>(result));
     }
 
@@ -186,7 +186,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var currentUserId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync(currentUserId, exerciseId);
+        var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync(currentUserId, exerciseId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<ExerciseTrainingHistoryItem, ExerciseTrainingHistoryItemDto>(result);
 
         return Ok(mapped);

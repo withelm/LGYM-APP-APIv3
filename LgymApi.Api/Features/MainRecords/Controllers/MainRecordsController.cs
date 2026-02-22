@@ -29,7 +29,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> AddNewRecord([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _mainRecordsService.AddNewRecordAsync(userId, form.ExerciseId, form.Weight, form.Unit, form.Date);
+        await _mainRecordsService.AddNewRecordAsync(userId, form.ExerciseId, form.Weight, form.Unit, form.Date, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -39,7 +39,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetMainRecordsHistory([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var records = await _mainRecordsService.GetMainRecordsHistoryAsync(userId);
+        var records = await _mainRecordsService.GetMainRecordsHistoryAsync(userId, HttpContext.RequestAborted);
         var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(records);
         return Ok(mappedRecords);
     }
@@ -51,7 +51,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetLastMainRecords([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var context = await _mainRecordsService.GetLastMainRecordsAsync(userId);
+        var context = await _mainRecordsService.GetLastMainRecordsAsync(userId, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(MainRecordProfile.Keys.ExerciseMap, context.ExerciseMap);
         var mapped = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordsLastDto>(context.Records, mappingContext);
@@ -64,7 +64,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> DeleteMainRecord([FromRoute] string id)
     {
         var recordId = Guid.TryParse(id, out var parsedRecordId) ? parsedRecordId : Guid.Empty;
-        await _mainRecordsService.DeleteMainRecordAsync(recordId);
+        await _mainRecordsService.DeleteMainRecordAsync(recordId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -74,7 +74,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> UpdateMainRecords([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _mainRecordsService.UpdateMainRecordAsync(userId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date);
+        await _mainRecordsService.UpdateMainRecordAsync(userId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -84,7 +84,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetRecordOrPossibleRecordInExercise([FromBody] RecordOrPossibleRequestDto request)
     {
         var userId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
-        var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, request.ExerciseId);
+        var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, request.ExerciseId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<PossibleRecordResult, PossibleRecordForExerciseDto>(result));
     }
 }

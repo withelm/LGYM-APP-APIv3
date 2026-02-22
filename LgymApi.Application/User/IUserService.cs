@@ -5,12 +5,12 @@ namespace LgymApi.Application.Features.User;
 
 public interface IUserService
 {
-    Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking);
-    Task<LoginResult> LoginAsync(string name, string password);
-    Task<bool> IsAdminAsync(Guid userId);
-    Task<UserInfoResult> CheckTokenAsync(UserEntity currentUser);
-    Task<List<RankingEntry>> GetUsersRankingAsync();
-    Task<int> GetUserEloAsync(Guid userId);
-    Task DeleteAccountAsync(UserEntity currentUser);
-    Task ChangeVisibilityInRankingAsync(UserEntity currentUser, bool isVisibleInRanking);
+    Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, CancellationToken cancellationToken = default);
+    Task<LoginResult> LoginAsync(string name, string password, CancellationToken cancellationToken = default);
+    Task<bool> IsAdminAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<UserInfoResult> CheckTokenAsync(UserEntity currentUser, CancellationToken cancellationToken = default);
+    Task<List<RankingEntry>> GetUsersRankingAsync(CancellationToken cancellationToken = default);
+    Task<int> GetUserEloAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task DeleteAccountAsync(UserEntity currentUser, CancellationToken cancellationToken = default);
+    Task ChangeVisibilityInRankingAsync(UserEntity currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default);
 }
