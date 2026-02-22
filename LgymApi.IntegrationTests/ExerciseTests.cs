@@ -121,7 +121,9 @@ public sealed class ExerciseTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var deletedExercise = await db.Exercises.FirstOrDefaultAsync(e => e.Id == exercise.Id);
+        var deletedExercise = await db.Exercises
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.Id == exercise.Id);
         deletedExercise.Should().NotBeNull();
         deletedExercise!.IsDeleted.Should().BeTrue();
     }
@@ -145,7 +147,9 @@ public sealed class ExerciseTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var deletedExercise = await db.Exercises.FirstOrDefaultAsync(e => e.Id == exercise.Id);
+        var deletedExercise = await db.Exercises
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.Id == exercise.Id);
         deletedExercise!.IsDeleted.Should().BeTrue();
     }
 

@@ -1,6 +1,8 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using System.Linq.Expressions;
 
 namespace LgymApi.Infrastructure.Data;
 
@@ -30,11 +32,17 @@ public sealed class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        ApplySoftDeleteQueryFilters(modelBuilder);
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("Users");
-            entity.HasIndex(u => u.Email).IsUnique();
-            entity.HasIndex(u => u.Name).IsUnique();
+            entity.HasIndex(u => u.Email)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(u => u.Name)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasOne(u => u.Plan)
                 .WithMany()
                 .HasForeignKey(u => u.PlanId)
@@ -79,7 +87,9 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("ExerciseTranslations");
             entity.Property(e => e.Culture).HasMaxLength(16).IsRequired();
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-            entity.HasIndex(e => new { e.ExerciseId, e.Culture }).IsUnique();
+            entity.HasIndex(e => new { e.ExerciseId, e.Culture })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasOne(e => e.Exercise)
                 .WithMany(e => e.Translations)
                 .HasForeignKey(e => e.ExerciseId)
@@ -164,6 +174,35 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("AppConfigs");
             entity.Property(e => e.Platform).HasConversion<string>();
         });
+    }
+
+    private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (entityType.IsOwned())
+            {
+                continue;
+            }
+
+            var clrType = entityType.ClrType;
+            if (!typeof(EntityBase).IsAssignableFrom(clrType))
+            {
+                continue;
+            }
+
+            var parameter = Expression.Parameter(clrType, "entity");
+            var isDeletedProperty = Expression.Call(
+                typeof(EF),
+                nameof(EF.Property),
+                new[] { typeof(bool) },
+                parameter,
+                Expression.Constant(nameof(EntityBase.IsDeleted)));
+            var compareExpression = Expression.Equal(isDeletedProperty, Expression.Constant(false));
+            var lambda = Expression.Lambda(compareExpression, parameter);
+
+            modelBuilder.Entity(clrType).HasQueryFilter(lambda);
+        }
     }
 
     public override int SaveChanges()

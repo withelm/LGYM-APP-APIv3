@@ -307,7 +307,9 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var updatedUser = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var updatedUser = await db.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == user.Id);
 
         updatedUser.Should().NotBeNull();
         updatedUser!.IsDeleted.Should().BeTrue();

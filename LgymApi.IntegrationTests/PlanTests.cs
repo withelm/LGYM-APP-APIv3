@@ -213,12 +213,17 @@ public sealed class PlanTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var updatedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId);
+        var updatedPlan = await db.Plans
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == planId);
         updatedPlan.Should().NotBeNull();
         updatedPlan!.IsActive.Should().BeFalse();
         updatedPlan.IsDeleted.Should().BeTrue();
 
-        var planDays = await db.PlanDays.Where(pd => pd.PlanId == planId).ToListAsync();
+        var planDays = await db.PlanDays
+            .IgnoreQueryFilters()
+            .Where(pd => pd.PlanId == planId)
+            .ToListAsync();
         planDays.Should().HaveCount(3);
         planDays.All(pd => pd.IsDeleted).Should().BeTrue();
 
@@ -290,12 +295,17 @@ public sealed class PlanTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var updatedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId);
+        var updatedPlan = await db.Plans
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == planId);
         updatedPlan.Should().NotBeNull();
         updatedPlan!.IsActive.Should().BeFalse();
         updatedPlan.IsDeleted.Should().BeTrue();
 
-        var planDays = await db.PlanDays.Where(pd => pd.PlanId == planId).ToListAsync();
+        var planDays = await db.PlanDays
+            .IgnoreQueryFilters()
+            .Where(pd => pd.PlanId == planId)
+            .ToListAsync();
         planDays.Should().HaveCount(2);
         planDays.All(pd => pd.IsDeleted).Should().BeTrue();
 
@@ -375,7 +385,9 @@ public sealed class PlanTests : IntegrationTestBase
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var deletedPlan = await verifyDb.Plans.FirstOrDefaultAsync(p => p.Id == inactivePlan.Id);
+        var deletedPlan = await verifyDb.Plans
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == inactivePlan.Id);
         deletedPlan.Should().NotBeNull();
         deletedPlan!.IsActive.Should().BeFalse();
         deletedPlan.IsDeleted.Should().BeTrue();
@@ -410,7 +422,9 @@ public sealed class PlanTests : IntegrationTestBase
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var deletedPlan = await verifyDb.Plans.FirstOrDefaultAsync(p => p.Id == activePlan.Id);
+        var deletedPlan = await verifyDb.Plans
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == activePlan.Id);
         deletedPlan.Should().NotBeNull();
         deletedPlan!.IsDeleted.Should().BeTrue();
         deletedPlan.IsActive.Should().BeFalse();
@@ -456,7 +470,9 @@ public sealed class PlanTests : IntegrationTestBase
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var unchangedFallback = await verifyDb.Plans.FirstOrDefaultAsync(p => p.Id == deletedFallbackPlan.Id);
+        var unchangedFallback = await verifyDb.Plans
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == deletedFallbackPlan.Id);
         unchangedFallback.Should().NotBeNull();
         unchangedFallback!.IsDeleted.Should().BeTrue();
         unchangedFallback.IsActive.Should().BeFalse();

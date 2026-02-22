@@ -10,7 +10,6 @@ public sealed class User : EntityBase
     public Guid? PlanId { get; set; }
     public string ProfileRank { get; set; } = string.Empty;
     public string? Avatar { get; set; }
-    public bool IsDeleted { get; set; }
     public bool IsTester { get; set; }
     public bool IsVisibleInRanking { get; set; } = true;
 
