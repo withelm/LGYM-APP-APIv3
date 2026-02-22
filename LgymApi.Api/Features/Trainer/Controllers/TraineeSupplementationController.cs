@@ -30,7 +30,7 @@ public sealed class TraineeSupplementationController : ControllerBase
     public async Task<IActionResult> GetSchedule([FromQuery] DateOnly? date)
     {
         var trainee = HttpContext.GetCurrentUser();
-        var schedule = await _supplementationService.GetActiveScheduleForDateAsync(trainee!, date ?? DateOnly.FromDateTime(DateTime.UtcNow));
+        var schedule = await _supplementationService.GetActiveScheduleForDateAsync(trainee!, date ?? DateOnly.FromDateTime(DateTime.UtcNow), HttpContext.RequestAborted);
         return Ok(_mapper.MapList<SupplementScheduleEntryResult, SupplementScheduleEntryDto>(schedule));
     }
 
@@ -55,7 +55,7 @@ public sealed class TraineeSupplementationController : ControllerBase
             PlanItemId = parsedPlanItemId,
             IntakeDate = request.IntakeDate,
             TakenAt = request.TakenAt
-        });
+        }, HttpContext.RequestAborted);
 
         return Ok(_mapper.Map<SupplementScheduleEntryResult, SupplementScheduleEntryDto>(result));
     }

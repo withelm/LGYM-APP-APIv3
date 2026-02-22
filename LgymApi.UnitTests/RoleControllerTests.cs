@@ -96,23 +96,23 @@ public sealed class RoleControllerTests
     {
         public Func<string, string?, IReadOnlyCollection<string>, Task<RoleResult>>? CreateRoleHandler { get; init; }
 
-        public Task<List<RoleResult>> GetRolesAsync() => Task.FromResult(new List<RoleResult>());
-        public Task<RoleResult> GetRoleAsync(Guid roleId) => Task.FromResult(new RoleResult { Id = roleId });
+        public Task<List<RoleResult>> GetRolesAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<RoleResult>());
+        public Task<RoleResult> GetRoleAsync(Guid roleId, CancellationToken cancellationToken = default) => Task.FromResult(new RoleResult { Id = roleId });
 
-        public Task<RoleResult> CreateRoleAsync(string name, string? description, IReadOnlyCollection<string> permissionClaims)
+        public Task<RoleResult> CreateRoleAsync(string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
             => CreateRoleHandler?.Invoke(name, description, permissionClaims)
                ?? Task.FromResult(new RoleResult { Id = Guid.NewGuid(), Name = name, Description = description, PermissionClaims = permissionClaims.ToList() });
 
-        public Task UpdateRoleAsync(Guid roleId, string name, string? description, IReadOnlyCollection<string> permissionClaims)
+        public Task UpdateRoleAsync(Guid roleId, string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
-        public Task DeleteRoleAsync(Guid roleId)
+        public Task DeleteRoleAsync(Guid roleId, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
         public List<PermissionClaimLookupResult> GetAvailablePermissionClaims()
             => new();
 
-        public Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roleNames)
+        public Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
     }
 }

@@ -43,7 +43,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var invitation = await _trainerRelationshipService.CreateInvitationAsync(trainer!, traineeId);
+        var invitation = await _trainerRelationshipService.CreateInvitationAsync(trainer!, traineeId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(invitation));
     }
 
@@ -52,7 +52,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     public async Task<IActionResult> GetInvitations()
     {
         var trainer = HttpContext.GetCurrentUser();
-        var invitations = await _trainerRelationshipService.GetTrainerInvitationsAsync(trainer!);
+        var invitations = await _trainerRelationshipService.GetTrainerInvitationsAsync(trainer!, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(invitations));
     }
 
@@ -69,7 +69,7 @@ public sealed class TrainerRelationshipController : ControllerBase
             SortDirection = request.SortDirection,
             Page = request.Page,
             PageSize = request.PageSize
-        });
+        }, HttpContext.RequestAborted);
 
         return Ok(new TrainerDashboardTraineesResponse
         {
@@ -92,7 +92,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var dates = await _trainerRelationshipService.GetTraineeTrainingDatesAsync(trainer!, parsedTraineeId);
+        var dates = await _trainerRelationshipService.GetTraineeTrainingDatesAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(dates);
     }
 
@@ -108,7 +108,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeTrainingByDateAsync(trainer!, parsedTraineeId, request.CreatedAt);
+        var result = await _trainerRelationshipService.GetTraineeTrainingByDateAsync(trainer!, parsedTraineeId, request.CreatedAt, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result));
     }
 
@@ -129,7 +129,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, parsedTraineeId, parsedExerciseId);
+        var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, parsedTraineeId, parsedExerciseId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result));
     }
 
@@ -145,7 +145,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeEloChartAsync(trainer!, parsedTraineeId);
+        var result = await _trainerRelationshipService.GetTraineeEloChartAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result));
     }
 
@@ -161,7 +161,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var records = await _trainerRelationshipService.GetTraineeMainRecordsHistoryAsync(trainer!, parsedTraineeId);
+        var records = await _trainerRelationshipService.GetTraineeMainRecordsHistoryAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(records);
         return Ok(mappedRecords);
     }
@@ -176,7 +176,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.UnlinkTraineeAsync(trainer!, parsedTraineeId);
+        await _trainerRelationshipService.UnlinkTraineeAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -190,7 +190,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plans = await _trainerRelationshipService.GetTraineePlansAsync(trainer!, parsedTraineeId);
+        var plans = await _trainerRelationshipService.GetTraineePlansAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<TrainerManagedPlanResult, TrainerManagedPlanDto>(plans));
     }
 
@@ -204,7 +204,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _trainerRelationshipService.CreateTraineePlanAsync(trainer!, parsedTraineeId, request.Name);
+        var plan = await _trainerRelationshipService.CreateTraineePlanAsync(trainer!, parsedTraineeId, request.Name, HttpContext.RequestAborted);
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(plan));
     }
 
@@ -223,7 +223,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _trainerRelationshipService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, request.Name);
+        var plan = await _trainerRelationshipService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, request.Name, HttpContext.RequestAborted);
         return Ok(_mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(plan));
     }
 
@@ -242,7 +242,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId);
+        await _trainerRelationshipService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -261,7 +261,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId);
+        await _trainerRelationshipService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -275,7 +275,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.UnassignTraineePlanAsync(trainer!, parsedTraineeId);
+        await _trainerRelationshipService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

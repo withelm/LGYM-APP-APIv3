@@ -27,7 +27,7 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(List<RoleDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRoles()
     {
-        var roles = await _roleService.GetRolesAsync();
+        var roles = await _roleService.GetRolesAsync(HttpContext.RequestAborted);
         return Ok(_mapper.MapList<RoleResult, RoleDto>(roles));
     }
 
@@ -37,7 +37,7 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> GetRole([FromRoute] string id)
     {
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        var role = await _roleService.GetRoleAsync(roleId);
+        var role = await _roleService.GetRoleAsync(roleId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<RoleResult, RoleDto>(role));
     }
 
@@ -54,7 +54,7 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateRole([FromBody] UpsertRoleRequest request)
     {
-        var role = await _roleService.CreateRoleAsync(request.Name, request.Description, request.PermissionClaims);
+        var role = await _roleService.CreateRoleAsync(request.Name, request.Description, request.PermissionClaims, HttpContext.RequestAborted);
         return Ok(_mapper.Map<RoleResult, RoleDto>(role));
     }
 
@@ -65,7 +65,7 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> UpdateRole([FromRoute] string id, [FromBody] UpsertRoleRequest request)
     {
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims);
+        await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -75,7 +75,7 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> DeleteRole([FromRoute] string id)
     {
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        await _roleService.DeleteRoleAsync(roleId);
+        await _roleService.DeleteRoleAsync(roleId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -86,7 +86,7 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> UpdateUserRoles([FromRoute] string id, [FromBody] UpdateUserRolesRequest request)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _roleService.UpdateUserRolesAsync(userId, request.Roles);
+        await _roleService.UpdateUserRolesAsync(userId, request.Roles, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 

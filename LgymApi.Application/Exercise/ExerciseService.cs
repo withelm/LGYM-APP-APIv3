@@ -105,7 +105,7 @@ public sealed class ExerciseService : IExerciseService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (await _roleRepository.UserHasPermissionAsync(user.Id, AuthConstants.Permissions.ManageGlobalExercises))
+        if (await _roleRepository.UserHasPermissionAsync(user.Id, AuthConstants.Permissions.ManageGlobalExercises, cancellationToken))
         {
             exercise.IsDeleted = true;
         }
@@ -170,7 +170,7 @@ public sealed class ExerciseService : IExerciseService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (!await _roleRepository.UserHasPermissionAsync(currentUser.Id, AuthConstants.Permissions.ManageGlobalExercises))
+        if (!await _roleRepository.UserHasPermissionAsync(currentUser.Id, AuthConstants.Permissions.ManageGlobalExercises, cancellationToken))
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }

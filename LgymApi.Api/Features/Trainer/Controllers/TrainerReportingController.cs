@@ -36,7 +36,7 @@ public sealed class TrainerReportingController : ControllerBase
             Name = request.Name,
             Description = request.Description,
             Fields = request.Fields.Select(MapField).ToList()
-        });
+        }, HttpContext.RequestAborted);
 
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<ReportTemplateResult, ReportTemplateDto>(template));
     }
@@ -46,7 +46,7 @@ public sealed class TrainerReportingController : ControllerBase
     public async Task<IActionResult> GetTemplates()
     {
         var trainer = HttpContext.GetCurrentUser();
-        var templates = await _reportingService.GetTrainerTemplatesAsync(trainer!);
+        var templates = await _reportingService.GetTrainerTemplatesAsync(trainer!, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<ReportTemplateResult, ReportTemplateDto>(templates));
     }
 
@@ -61,7 +61,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var template = await _reportingService.GetTrainerTemplateAsync(trainer!, parsedTemplateId);
+        var template = await _reportingService.GetTrainerTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<ReportTemplateResult, ReportTemplateDto>(template));
     }
 
@@ -81,7 +81,7 @@ public sealed class TrainerReportingController : ControllerBase
             Name = request.Name,
             Description = request.Description,
             Fields = request.Fields.Select(MapField).ToList()
-        });
+        }, HttpContext.RequestAborted);
 
         return Ok(_mapper.Map<ReportTemplateResult, ReportTemplateDto>(template));
     }
@@ -97,7 +97,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _reportingService.DeleteTemplateAsync(trainer!, parsedTemplateId);
+        await _reportingService.DeleteTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -122,7 +122,7 @@ public sealed class TrainerReportingController : ControllerBase
             TemplateId = parsedTemplateId,
             DueAt = request.DueAt,
             Note = request.Note
-        });
+        }, HttpContext.RequestAborted);
 
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<ReportRequestResult, ReportRequestDto>(result));
     }
@@ -138,7 +138,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var submissions = await _reportingService.GetTraineeSubmissionsAsync(trainer!, parsedTraineeId);
+        var submissions = await _reportingService.GetTraineeSubmissionsAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<ReportSubmissionResult, ReportSubmissionDto>(submissions));
     }
 

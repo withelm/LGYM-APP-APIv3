@@ -35,7 +35,7 @@ public sealed class TraineeRelationshipController : ControllerBase
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.AcceptInvitationAsync(trainee!, parsedInvitationId);
+        await _trainerRelationshipService.AcceptInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -49,7 +49,7 @@ public sealed class TraineeRelationshipController : ControllerBase
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.RejectInvitationAsync(trainee!, parsedInvitationId);
+        await _trainerRelationshipService.RejectInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -58,7 +58,7 @@ public sealed class TraineeRelationshipController : ControllerBase
     public async Task<IActionResult> DetachFromTrainer()
     {
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.DetachFromTrainerAsync(trainee!);
+        await _trainerRelationshipService.DetachFromTrainerAsync(trainee!, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -67,7 +67,7 @@ public sealed class TraineeRelationshipController : ControllerBase
     public async Task<IActionResult> GetActiveAssignedPlan()
     {
         var trainee = HttpContext.GetCurrentUser();
-        var plan = await _trainerRelationshipService.GetActiveAssignedPlanAsync(trainee!);
+        var plan = await _trainerRelationshipService.GetActiveAssignedPlanAsync(trainee!, HttpContext.RequestAborted);
         return Ok(_mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(plan));
     }
 }

@@ -36,7 +36,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plans = await _supplementationService.GetTraineePlansAsync(trainer!, parsedTraineeId);
+        var plans = await _supplementationService.GetTraineePlansAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<SupplementPlanResult, SupplementPlanDto>(plans));
     }
 
@@ -50,7 +50,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _supplementationService.CreateTraineePlanAsync(trainer!, parsedTraineeId, MapPlanCommand(request));
+        var plan = await _supplementationService.CreateTraineePlanAsync(trainer!, parsedTraineeId, MapPlanCommand(request), HttpContext.RequestAborted);
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<SupplementPlanResult, SupplementPlanDto>(plan));
     }
 
@@ -69,7 +69,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _supplementationService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, MapPlanCommand(request));
+        var plan = await _supplementationService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, MapPlanCommand(request), HttpContext.RequestAborted);
         return Ok(_mapper.Map<SupplementPlanResult, SupplementPlanDto>(plan));
     }
 
@@ -88,7 +88,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _supplementationService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId);
+        await _supplementationService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -107,7 +107,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _supplementationService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId);
+        await _supplementationService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -121,7 +121,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _supplementationService.UnassignTraineePlanAsync(trainer!, parsedTraineeId);
+        await _supplementationService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -140,7 +140,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var summary = await _supplementationService.GetComplianceSummaryAsync(trainer!, parsedTraineeId, fromDate.Value, toDate.Value);
+        var summary = await _supplementationService.GetComplianceSummaryAsync(trainer!, parsedTraineeId, fromDate.Value, toDate.Value, HttpContext.RequestAborted);
         return Ok(_mapper.Map<SupplementComplianceSummaryResult, SupplementComplianceSummaryDto>(summary));
     }
 

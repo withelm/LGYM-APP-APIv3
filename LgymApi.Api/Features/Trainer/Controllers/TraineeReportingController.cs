@@ -30,7 +30,7 @@ public sealed class TraineeReportingController : ControllerBase
     public async Task<IActionResult> GetPendingRequests()
     {
         var trainee = HttpContext.GetCurrentUser();
-        var requests = await _reportingService.GetPendingRequestsForTraineeAsync(trainee!);
+        var requests = await _reportingService.GetPendingRequestsForTraineeAsync(trainee!, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<ReportRequestResult, ReportRequestDto>(requests));
     }
 
@@ -48,7 +48,7 @@ public sealed class TraineeReportingController : ControllerBase
         var submission = await _reportingService.SubmitReportRequestAsync(trainee!, parsedRequestId, new SubmitReportRequestCommand
         {
             Answers = new Dictionary<string, System.Text.Json.JsonElement>(request.Answers, StringComparer.OrdinalIgnoreCase)
-        });
+        }, HttpContext.RequestAborted);
 
         return Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(submission));
     }
