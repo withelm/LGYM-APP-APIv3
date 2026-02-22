@@ -53,7 +53,7 @@ Controllers should call services and return mapped outputs through `IMapper` / m
 
 ### 4.1 Nested Mapper Composition Rules
 
-Use `context.Map<TSource, TTarget>(...)` and `context.MapList<TSource, TTarget>(...)` inside profile delegates when mapping nested objects/lists that already have a registered map.
+Prefer `context.Map<TTarget>(source)` and `context.MapList<TTarget>(sourceList)` inside profile delegates when mapping nested objects/lists that already have a registered map. Use `Map<TSource, TTarget>` / `MapList<TSource, TTarget>` only when you intentionally need compile-time source typing.
 
 - Prefer nested composition over duplicated inline nested DTO construction.
 - Keep manual nested mapping only when:

@@ -20,6 +20,15 @@ public sealed class Mapper : IMapper
         ValidateMappings();
     }
 
+    public TTarget Map<TTarget>(object source, MappingContext? context = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var effectiveContext = PrepareContext(context);
+
+        return MapInternal<TTarget>(source.GetType(), source, effectiveContext);
+    }
+
     public TTarget Map<TSource, TTarget>(TSource source, MappingContext? context = null)
     {
         if (source is null)
@@ -29,7 +38,7 @@ public sealed class Mapper : IMapper
 
         var effectiveContext = PrepareContext(context);
 
-        return MapInternal<TSource, TTarget>(source, effectiveContext);
+        return MapInternal<TTarget>(typeof(TSource), source!, effectiveContext);
     }
 
     public List<TTarget> MapList<TSource, TTarget>(IEnumerable<TSource> source, MappingContext? context = null)
@@ -44,16 +53,41 @@ public sealed class Mapper : IMapper
         return MapListInternal<TSource, TTarget>(source, effectiveContext);
     }
 
+    public List<TTarget> MapList<TTarget>(System.Collections.IEnumerable source, MappingContext? context = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var effectiveContext = PrepareContext(context);
+        var result = new List<TTarget>();
+
+        foreach (var item in source)
+        {
+            if (item is null)
+            {
+                continue;
+            }
+
+            result.Add(MapInternal<TTarget>(item.GetType(), item, effectiveContext));
+        }
+
+        return result;
+    }
+
     internal TTarget MapInternal<TSource, TTarget>(TSource source, MappingContext context)
     {
-        var key = (Source: typeof(TSource), Target: typeof(TTarget));
+        return MapInternal<TTarget>(typeof(TSource), source!, context);
+    }
+
+    internal TTarget MapInternal<TTarget>(Type sourceType, object source, MappingContext context)
+    {
+        var key = (Source: sourceType, Target: typeof(TTarget));
         if (!_mappings.TryGetValue(key, out var mapper))
         {
             throw new InvalidOperationException($"Mapping from {key.Source.Name} to {key.Target.Name} is not registered.");
         }
 
-        using var scope = context.EnterMappingScope(key.Source, key.Target, source!);
-        return (TTarget)mapper(source!, context);
+        using var scope = context.EnterMappingScope(key.Source, key.Target, source);
+        return (TTarget)mapper(source, context);
     }
 
     internal List<TTarget> MapListInternal<TSource, TTarget>(IEnumerable<TSource> source, MappingContext context)

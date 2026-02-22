@@ -34,6 +34,13 @@ public sealed class MappingContext : IMappingContext
         _items[new ContextKey<object>(key.Name)] = value;
     }
 
+    public TTarget Map<TTarget>(object source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        return GetMapper().MapInternal<TTarget>(source.GetType(), source, this);
+    }
+
     public TTarget Map<TSource, TTarget>(TSource source)
     {
         if (source is null)
@@ -42,6 +49,25 @@ public sealed class MappingContext : IMappingContext
         }
 
         return GetMapper().MapInternal<TSource, TTarget>(source, this);
+    }
+
+    public List<TTarget> MapList<TTarget>(System.Collections.IEnumerable source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var mapper = GetMapper();
+        var result = new List<TTarget>();
+        foreach (var item in source)
+        {
+            if (item is null)
+            {
+                continue;
+            }
+
+            result.Add(mapper.MapInternal<TTarget>(item.GetType(), item, this));
+        }
+
+        return result;
     }
 
     public List<TTarget> MapList<TSource, TTarget>(IEnumerable<TSource> source)
