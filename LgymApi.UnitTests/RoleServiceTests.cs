@@ -221,6 +221,9 @@ public sealed class RoleServiceTests
         public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
 
+        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Name == name));
 

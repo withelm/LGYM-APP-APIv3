@@ -29,7 +29,7 @@ public static class RouteUserAccessGuard
     public static Guid ParseRouteUserIdForCurrentAdmin(this HttpContext context, string routeUserId)
     {
         var currentUser = context.GetCurrentUser();
-        if (currentUser == null || currentUser.Id == Guid.Empty || currentUser.Admin != true)
+        if (currentUser == null || currentUser.Id == Guid.Empty)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }

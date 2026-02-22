@@ -218,6 +218,8 @@ public sealed class ServiceTransactionBehaviorTests
             return Task.CompletedTask;
         }
 
+        public Task ClearActivePlansAsync(Guid userId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
         public Task<Plan?> FindActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Plan?> FindLastActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<Plan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
