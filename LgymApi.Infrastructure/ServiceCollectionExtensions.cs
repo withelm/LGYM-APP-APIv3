@@ -211,11 +211,6 @@ public static class ServiceCollectionExtensions
             return EmailDeliveryMode.Smtp;
         }
 
-        if (string.Equals(value, "Irl", StringComparison.OrdinalIgnoreCase))
-        {
-            return EmailDeliveryMode.Smtp;
-        }
-
         if (Enum.TryParse<EmailDeliveryMode>(value, ignoreCase: true, out var mode))
         {
             return mode;

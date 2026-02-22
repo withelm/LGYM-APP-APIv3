@@ -73,7 +73,10 @@ public sealed class DummyEmailSenderTests
             Body = "y"
         });
 
-        Assert.That(result, Is.False);
-        Assert.That(Directory.Exists(_tempDirectory), Is.False);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.False);
+            Assert.That(Directory.Exists(_tempDirectory), Is.False);
+        });
     }
 }

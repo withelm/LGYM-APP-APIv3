@@ -1,6 +1,5 @@
 using Hangfire.Dashboard;
 using LgymApi.Domain.Security;
-using System.Security.Claims;
 
 namespace LgymApi.Api.Configuration;
 
@@ -21,7 +20,6 @@ public sealed class HangfireDashboardAuthorizationFilter : IDashboardAuthorizati
             return true;
         }
 
-        return user.HasClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.AdminAccess)
-            || user.HasClaim(ClaimTypes.Role, AuthConstants.Roles.Admin);
+        return user.HasClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.AdminAccess);
     }
 }

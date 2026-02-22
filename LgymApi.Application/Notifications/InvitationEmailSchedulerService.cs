@@ -147,7 +147,7 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
                 payload.InvitationId,
                 concurrent.Id);
             _backgroundScheduler.Enqueue(concurrent.Id);
-            _metrics.RecordRetried();
+            _metrics.RecordEnqueued();
             return false;
         }
     }

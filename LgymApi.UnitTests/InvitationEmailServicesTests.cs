@@ -41,6 +41,8 @@ public sealed class InvitationEmailServicesTests
             Assert.That(repository.Added, Has.Count.EqualTo(1));
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
             Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
+            Assert.That(metrics.Enqueued, Is.EqualTo(1));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
@@ -85,6 +87,8 @@ public sealed class InvitationEmailServicesTests
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
             Assert.That(repository.Added, Is.Empty);
+            Assert.That(metrics.Enqueued, Is.EqualTo(0));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
@@ -119,6 +123,8 @@ public sealed class InvitationEmailServicesTests
             Assert.That(repository.Added, Is.Empty);
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(metrics.Enqueued, Is.EqualTo(0));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
@@ -165,6 +171,8 @@ public sealed class InvitationEmailServicesTests
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
             Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
+            Assert.That(metrics.Enqueued, Is.EqualTo(1));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
@@ -199,6 +207,7 @@ public sealed class InvitationEmailServicesTests
             Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
             Assert.That(notification.LastError, Does.StartWith("InvalidOperationException"));
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(metrics.Failed, Is.EqualTo(1));
         });
     }
 
@@ -235,6 +244,9 @@ public sealed class InvitationEmailServicesTests
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
             Assert.That(sender.SendCalls, Is.EqualTo(0));
             Assert.That(notification.Attempts, Is.EqualTo(2));
+            Assert.That(metrics.Sent, Is.EqualTo(0));
+            Assert.That(metrics.Failed, Is.EqualTo(0));
+            Assert.That(metrics.Retried, Is.EqualTo(0));
         });
     }
 
