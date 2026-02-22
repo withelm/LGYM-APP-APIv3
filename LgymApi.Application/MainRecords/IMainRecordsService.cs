@@ -6,11 +6,11 @@ namespace LgymApi.Application.Features.MainRecords;
 
 public interface IMainRecordsService
 {
-    Task AddNewRecordAsync(Guid userId, string exerciseId, double weight, WeightUnits unit, DateTime date);
-    Task<List<MainRecordEntity>> GetMainRecordsHistoryAsync(Guid userId);
+    Task AddNewRecordAsync(Guid userId, string exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default);
+    Task<List<MainRecordEntity>> GetMainRecordsHistoryAsync(Guid userId, CancellationToken cancellationToken = default);
     // Legacy name kept for backward compatibility: this returns the best (max) record per exercise.
-    Task<MainRecordsLastContext> GetLastMainRecordsAsync(Guid userId);
-    Task DeleteMainRecordAsync(Guid recordId);
-    Task UpdateMainRecordAsync(Guid userId, string recordId, string exerciseId, double weight, WeightUnits unit, DateTime date);
-    Task<PossibleRecordResult> GetRecordOrPossibleRecordInExerciseAsync(Guid userId, string exerciseId);
+    Task<MainRecordsLastContext> GetLastMainRecordsAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task DeleteMainRecordAsync(Guid currentUserId, Guid recordId, CancellationToken cancellationToken = default);
+    Task UpdateMainRecordAsync(Guid routeUserId, Guid currentUserId, string recordId, string exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default);
+    Task<PossibleRecordResult> GetRecordOrPossibleRecordInExerciseAsync(Guid userId, string exerciseId, CancellationToken cancellationToken = default);
 }

@@ -27,7 +27,7 @@ public sealed class TrainerAuthController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
-        await _userService.RegisterTrainerAsync(request.Name, request.Email, request.Password, request.ConfirmPassword);
+        await _userService.RegisterTrainerAsync(request.Name, request.Email, request.Password, request.ConfirmPassword, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -36,7 +36,7 @@ public sealed class TrainerAuthController : ControllerBase
     [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var result = await _userService.LoginTrainerAsync(request.Name, request.Password);
+        var result = await _userService.LoginTrainerAsync(request.Name, request.Password, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.LoginResult, LoginResponseDto>(result));
     }
 
@@ -46,7 +46,7 @@ public sealed class TrainerAuthController : ControllerBase
     public async Task<IActionResult> CheckToken()
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.CheckTokenAsync(user!);
+        var result = await _userService.CheckTokenAsync(user!, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.UserInfoResult, UserInfoDto>(result));
     }
 }

@@ -26,14 +26,14 @@ public sealed class AppConfigService : IAppConfigService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<AppConfigEntity> GetLatestByPlatformAsync(Platforms platform)
+    public async Task<AppConfigEntity> GetLatestByPlatformAsync(Platforms platform, CancellationToken cancellationToken = default)
     {
         if (platform == Platforms.Unknown)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        AppConfigEntity? config = await _appConfigRepository.GetLatestByPlatformAsync(platform);
+        AppConfigEntity? config = await _appConfigRepository.GetLatestByPlatformAsync(platform, cancellationToken);
         if (config == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -42,27 +42,20 @@ public sealed class AppConfigService : IAppConfigService
         return config;
     }
 
-    public async Task CreateNewAppVersionAsync(
-        Guid userId,
-        Platforms platform,
-        string? minRequiredVersion,
-        string? latestVersion,
-        bool forceUpdate,
-        string? updateUrl,
-        string? releaseNotes)
+    public async Task CreateNewAppVersionAsync(Guid userId, CreateAppVersionInput input, CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
-        if (user == null || !await _roleRepository.UserHasPermissionAsync(userId, AuthConstants.Permissions.ManageAppConfig))
+        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        if (user == null || !await _roleRepository.UserHasPermissionAsync(userId, AuthConstants.Permissions.ManageAppConfig, cancellationToken))
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (platform == Platforms.Unknown)
+        if (input.Platform == Platforms.Unknown)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -70,15 +63,15 @@ public sealed class AppConfigService : IAppConfigService
         var config = new AppConfigEntity
         {
             Id = Guid.NewGuid(),
-            Platform = platform,
-            MinRequiredVersion = minRequiredVersion,
-            LatestVersion = latestVersion,
-            ForceUpdate = forceUpdate,
-            UpdateUrl = updateUrl,
-            ReleaseNotes = releaseNotes
+            Platform = input.Platform,
+            MinRequiredVersion = input.MinRequiredVersion ?? string.Empty,
+            LatestVersion = input.LatestVersion ?? string.Empty,
+            ForceUpdate = input.ForceUpdate,
+            UpdateUrl = input.UpdateUrl ?? string.Empty,
+            ReleaseNotes = input.ReleaseNotes
         };
 
-        await _appConfigRepository.AddAsync((global::LgymApi.Domain.Entities.AppConfig)config);
-        await _unitOfWork.SaveChangesAsync();
+        await _appConfigRepository.AddAsync(config, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

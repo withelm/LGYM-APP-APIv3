@@ -17,20 +17,20 @@ public sealed class EloRegistryService : IEloRegistryService
         _eloRepository = eloRepository;
     }
 
-    public async Task<List<EloRegistryChartEntry>> GetChartAsync(Guid userId)
+    public async Task<List<EloRegistryChartEntry>> GetChartAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
+        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var eloRegistry = await _eloRepository.GetByUserIdAsync(user.Id);
+        var eloRegistry = await _eloRepository.GetByUserIdAsync(user.Id, cancellationToken);
         if (eloRegistry.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);

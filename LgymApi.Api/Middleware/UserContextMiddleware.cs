@@ -30,7 +30,7 @@ public sealed class UserContextMiddleware
             return;
         }
 
-        var user = await userRepository.FindByIdAsync(userId);
+        var user = await userRepository.FindByIdIncludingDeletedAsync(userId);
         if (user == null)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;

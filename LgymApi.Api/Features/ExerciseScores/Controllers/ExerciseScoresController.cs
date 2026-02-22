@@ -1,6 +1,7 @@
 using System.Globalization;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.ExerciseScores.Contracts;
+using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.ExerciseScores;
 using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Mapping.Core;
@@ -23,12 +24,13 @@ public sealed class ExerciseScoresController : ControllerBase
 
     [HttpPost("exerciseScores/{id}/getExerciseScoresChartData")]
     [ProducesResponseType(typeof(List<ExerciseScoresChartDataDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetExerciseScoresChartData([FromRoute] string id, [FromBody] ExerciseScoresChartRequestDto request)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, exerciseId);
+        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, exerciseId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result);
         return Ok(mapped);
     }

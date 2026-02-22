@@ -64,6 +64,7 @@ public sealed class ExerciseServiceTests
     private sealed class NoOpUserRepository : IUserRepository
     {
         public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<LgymApi.Application.Models.UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();

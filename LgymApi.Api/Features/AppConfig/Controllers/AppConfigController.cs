@@ -1,5 +1,6 @@
 using LgymApi.Api.Features.AppConfig.Contracts;
 using LgymApi.Api.Features.Common.Contracts;
+using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.AppConfig;
 using LgymApi.Application.Mapping.Core;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +29,7 @@ public sealed class AppConfigController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request)
     {
-        var config = await _appConfigService.GetLatestByPlatformAsync(request.Platform);
+        var config = await _appConfigService.GetLatestByPlatformAsync(request.Platform, HttpContext.RequestAborted);
         return Ok(_mapper.Map<AppConfigEntity, AppConfigInfoDto>(config));
     }
 
@@ -38,15 +39,15 @@ public sealed class AppConfigController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateNewAppVersion([FromRoute] string id, [FromBody] AppConfigInfoWithPlatformDto form)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _appConfigService.CreateNewAppVersionAsync(
-            userId,
+        var userId = HttpContext.ParseRouteUserIdForCurrentAdmin(id);
+        var input = new CreateAppVersionInput(
             form.Platform,
             form.MinRequiredVersion,
             form.LatestVersion,
             form.ForceUpdate,
             form.UpdateUrl,
             form.ReleaseNotes);
+        await _appConfigService.CreateNewAppVersionAsync(userId, input, HttpContext.RequestAborted);
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 }

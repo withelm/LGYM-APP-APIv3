@@ -45,6 +45,12 @@ public sealed class EfExecuteUpdateUsageTests
     private static bool IsIgnoredPath(string relativePath)
     {
         var separator = Path.DirectorySeparatorChar;
+
+        if (relativePath.EndsWith($"Extensions{separator}ExecuteUpdateExtensions.cs", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
         return relativePath.Contains($"{separator}bin{separator}")
             || relativePath.Contains($"{separator}obj{separator}");
     }

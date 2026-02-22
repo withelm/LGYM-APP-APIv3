@@ -9,11 +9,28 @@ namespace LgymApi.Infrastructure.Repositories;
 
 public sealed class PlanRepository : IPlanRepository
 {
-    private readonly AppDbContext _dbContext;
+    /// <summary>
+    /// Length of generated share codes.
+    /// </summary>
+    private const int ShareCodeLength = 10;
 
-    public PlanRepository(AppDbContext dbContext)
+    /// <summary>
+    /// Upper bound for collision retry attempts.
+    /// </summary>
+    private const int ShareCodeGenerationMaxAttempts = 10;
+    private const string ShareCodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static readonly HashSet<char> ShareCodeAllowedCharacters =
+    [
+        ..ShareCodeAlphabet
+    ];
+
+    private readonly AppDbContext _dbContext;
+    private readonly Func<int, string> _shareCodeGenerator;
+
+    public PlanRepository(AppDbContext dbContext, Func<int, string>? shareCodeGenerator = null)
     {
         _dbContext = dbContext;
+        _shareCodeGenerator = shareCodeGenerator ?? GenerateSecureAlphanumericCode;
     }
 
     public Task<Plan?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -174,27 +191,67 @@ public sealed class PlanRepository : IPlanRepository
         var plan = await _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == planId && !p.IsDeleted, cancellationToken);
 
         if (plan == null)
-            throw new InvalidOperationException("Plan not found");
+            throw new KeyNotFoundException("Plan not found");
 
         if (plan.UserId != userId)
             throw new UnauthorizedAccessException("Only the plan owner can generate a share code");
 
         if (!string.IsNullOrEmpty(plan.ShareCode))
+        {
+            var isCurrentCodeTaken = await IsShareCodeTakenAsync(plan.ShareCode, plan.Id, cancellationToken);
+            if (!isCurrentCodeTaken)
+            {
+                return plan.ShareCode;
+            }
+
+            plan.ShareCode = null;
+        }
+
+        for (var attempt = 0; attempt < ShareCodeGenerationMaxAttempts; attempt++)
+        {
+            var candidateCode = _shareCodeGenerator(ShareCodeLength);
+            if (!IsValidShareCode(candidateCode))
+            {
+                continue;
+            }
+
+            var isTaken = await IsShareCodeTakenAsync(candidateCode, plan.Id, cancellationToken);
+            if (isTaken)
+            {
+                continue;
+            }
+
+            plan.ShareCode = candidateCode;
             return plan.ShareCode;
+        }
 
-        plan.ShareCode = GenerateSecureAlphanumericCode(10);
+        throw new InvalidOperationException("Unable to generate unique share code");
+    }
 
-        return plan.ShareCode;
+    private Task<bool> IsShareCodeTakenAsync(string shareCode, Guid currentPlanId, CancellationToken cancellationToken)
+    {
+        return _dbContext.Plans.AnyAsync(
+            p => p.Id != currentPlanId && p.ShareCode == shareCode && !p.IsDeleted,
+            cancellationToken);
+    }
+
+    private static bool IsValidShareCode(string? shareCode)
+    {
+        if (string.IsNullOrWhiteSpace(shareCode) || shareCode.Length != ShareCodeLength)
+        {
+            return false;
+        }
+
+        return shareCode.All(ShareCodeAllowedCharacters.Contains);
     }
 
     private static string GenerateSecureAlphanumericCode(int length)
     {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         var result = new char[length];
 
         for (int i = 0; i < length; i++)
         {
-            result[i] = chars[RandomNumberGenerator.GetInt32(chars.Length)];
+            result[i] = ShareCodeAlphabet[RandomNumberGenerator.GetInt32(ShareCodeAlphabet.Length)];
         }
 
         return new string(result);

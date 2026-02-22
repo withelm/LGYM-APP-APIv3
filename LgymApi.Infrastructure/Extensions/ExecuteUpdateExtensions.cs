@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using LgymApi.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,17 +21,21 @@ public static class ExecuteUpdateExtensions
         CancellationToken cancellationToken = default)
         where TSource : class
     {
-
-        var entities = await source.ToListAsync(cancellationToken);
-        var propertyInfo = GetPropertyInfo(propertySelector);
-        var valueFunc = valueExpression.Compile();
-
-        foreach (var entity in entities)
+        if (!CanUseSetBasedUpdate(dbContext))
         {
-            propertyInfo.SetValue(entity, valueFunc(entity));
+            var entities = await source.ToListAsync(cancellationToken);
+            var propertyInfo = GetPropertyInfo(propertySelector);
+            var valueFunc = valueExpression.Compile();
+
+            foreach (var entity in entities)
+            {
+                propertyInfo.SetValue(entity, valueFunc(entity));
+            }
+
+            return entities.Count;
         }
 
-        return entities.Count;
+        return await ExecuteSetBasedUpdateAsync(source, propertySelector, valueExpression, cancellationToken);
     }
 
     [Obsolete("Use StageUpdateAsync for UoW-friendly staged updates.")]
@@ -107,5 +112,52 @@ public static class ExecuteUpdateExtensions
         }
 
         throw new InvalidOperationException("Property selector must target a property.");
+    }
+
+    private static bool CanUseSetBasedUpdate(DbContext dbContext)
+    {
+        var providerName = dbContext.Database.ProviderName;
+        if (providerName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static Task<int> ExecuteSetBasedUpdateAsync<TSource, TProperty>(
+        IQueryable<TSource> source,
+        Expression<Func<TSource, TProperty>> propertySelector,
+        Expression<Func<TSource, TProperty>> valueExpression,
+        CancellationToken cancellationToken)
+        where TSource : class
+    {
+        if (typeof(EntityBase).IsAssignableFrom(typeof(TSource))
+            && !IsUpdatedAtProperty(propertySelector))
+        {
+            var utcNow = DateTimeOffset.UtcNow;
+            var updatedAtPropertySelector = BuildUpdatedAtSelector<TSource>();
+            return source.ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(propertySelector, valueExpression)
+                    .SetProperty(updatedAtPropertySelector, _ => utcNow),
+                cancellationToken);
+        }
+
+        return source.ExecuteUpdateAsync(
+            setters => setters.SetProperty(propertySelector, valueExpression),
+            cancellationToken);
+    }
+
+    private static bool IsUpdatedAtProperty<TSource, TProperty>(Expression<Func<TSource, TProperty>> propertySelector)
+    {
+        return GetPropertyInfo(propertySelector).Name == nameof(EntityBase.UpdatedAt);
+    }
+
+    private static Expression<Func<TSource, DateTimeOffset>> BuildUpdatedAtSelector<TSource>()
+    {
+        var entityParameter = Expression.Parameter(typeof(TSource), "entity");
+        var updatedAtProperty = Expression.Property(entityParameter, nameof(EntityBase.UpdatedAt));
+        return Expression.Lambda<Func<TSource, DateTimeOffset>>(updatedAtProperty, entityParameter);
     }
 }

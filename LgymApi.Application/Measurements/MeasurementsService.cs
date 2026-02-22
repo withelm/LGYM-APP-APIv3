@@ -25,7 +25,7 @@ public sealed class MeasurementsService : IMeasurementsService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, HeightUnits unit, double value)
+    public async Task AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, HeightUnits unit, double value, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -46,11 +46,11 @@ public sealed class MeasurementsService : IMeasurementsService
             Value = value
         };
 
-        await _measurementRepository.AddAsync(measurement);
-        await _unitOfWork.SaveChangesAsync();
+        await _measurementRepository.AddAsync(measurement, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<MeasurementEntity> GetMeasurementDetailAsync(UserEntity currentUser, Guid measurementId)
+    public async Task<MeasurementEntity> GetMeasurementDetailAsync(UserEntity currentUser, Guid measurementId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -62,7 +62,7 @@ public sealed class MeasurementsService : IMeasurementsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var measurement = await _measurementRepository.FindByIdAsync(measurementId);
+        var measurement = await _measurementRepository.FindByIdAsync(measurementId, cancellationToken);
         if (measurement == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -76,21 +76,22 @@ public sealed class MeasurementsService : IMeasurementsService
         return measurement;
     }
 
-    public Task<List<MeasurementEntity>> GetMeasurementsListAsync(UserEntity currentUser, Guid routeUserId, BodyParts? bodyPart, HeightUnits? unit)
+    public Task<List<MeasurementEntity>> GetMeasurementsListAsync(UserEntity currentUser, Guid routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
     {
-        return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: false);
+        return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: false, cancellationToken);
     }
 
-    public Task<List<MeasurementEntity>> GetMeasurementsHistoryAsync(UserEntity currentUser, Guid routeUserId, BodyParts? bodyPart, HeightUnits? unit)
+    public Task<List<MeasurementEntity>> GetMeasurementsHistoryAsync(UserEntity currentUser, Guid routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
     {
-        return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: true);
+        return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: true, cancellationToken);
     }
 
     public async Task<MeasurementTrendResult> GetMeasurementsTrendAsync(
         UserEntity currentUser,
         Guid routeUserId,
         BodyParts bodyPart,
-        HeightUnits unit)
+        HeightUnits unit,
+        CancellationToken cancellationToken = default)
     {
         ValidateAccess(currentUser, routeUserId);
 
@@ -104,7 +105,7 @@ public sealed class MeasurementsService : IMeasurementsService
             throw AppException.BadRequest(Messages.UnitRequired);
         }
 
-        var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart);
+        var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart, cancellationToken);
         if (measurements.Count < 1)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -142,7 +143,8 @@ public sealed class MeasurementsService : IMeasurementsService
         Guid routeUserId,
         BodyParts? bodyPart,
         HeightUnits? unit,
-        bool orderAscending)
+        bool orderAscending,
+        CancellationToken cancellationToken)
     {
         ValidateAccess(currentUser, routeUserId);
 
@@ -156,7 +158,7 @@ public sealed class MeasurementsService : IMeasurementsService
             throw AppException.BadRequest(Messages.UnitRequired);
         }
 
-        var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart);
+        var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart, cancellationToken);
         if (measurements.Count < 1)
         {
             throw AppException.NotFound(Messages.DidntFind);

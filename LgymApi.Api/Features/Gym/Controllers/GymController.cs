@@ -30,7 +30,7 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _gymService.AddGymAsync(user!, routeUserId, form.Name, form.Address);
+        await _gymService.AddGymAsync(user!, routeUserId, form.Name, form.Address, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -43,7 +43,7 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var gymId = Guid.TryParse(id, out var parsedGymId) ? parsedGymId : Guid.Empty;
-        await _gymService.DeleteGymAsync(user!, gymId);
+        await _gymService.DeleteGymAsync(user!, gymId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -55,7 +55,7 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var context = await _gymService.GetGymsAsync(user!, routeUserId);
+        var context = await _gymService.GetGymsAsync(user!, routeUserId, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(GymProfile.Keys.LastTrainingMap, context.LastTrainings);
 
@@ -73,7 +73,7 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var gymId = Guid.TryParse(id, out var parsedGymId) ? parsedGymId : Guid.Empty;
-        var gym = await _gymService.GetGymAsync(user!, gymId);
+        var gym = await _gymService.GetGymAsync(user!, gymId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Domain.Entities.Gym, GymFormDto>(gym));
     }
 
@@ -86,7 +86,7 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var gymId = Guid.TryParse(form.Id, out var parsedGymId) ? parsedGymId : Guid.Empty;
-        await _gymService.UpdateGymAsync(user!, gymId, form.Name, form.Address);
+        await _gymService.UpdateGymAsync(user!, gymId, form.Name, form.Address, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }
