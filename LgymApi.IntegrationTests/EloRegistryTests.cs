@@ -71,7 +71,7 @@ public sealed class EloRegistryTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetEloRegistryChart_WithInvalidGuidFormat_ReturnsNotFound()
+    public async Task GetEloRegistryChart_WithInvalidGuidFormat_ReturnsForbidden()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "authuser2",
@@ -83,7 +83,7 @@ public sealed class EloRegistryTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/eloRegistry/invalid-guid/getEloRegistryChart");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Test]

@@ -80,8 +80,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> UpdateMainRecords([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         var routeUserId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var currentUserId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
-        await _mainRecordsService.UpdateMainRecordAsync(routeUserId, currentUserId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date, HttpContext.RequestAborted);
+        await _mainRecordsService.UpdateMainRecordAsync(routeUserId, routeUserId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 

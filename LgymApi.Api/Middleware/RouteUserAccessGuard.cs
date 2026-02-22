@@ -15,7 +15,7 @@ public static class RouteUserAccessGuard
 
         if (!Guid.TryParse(routeUserId, out var parsedRouteUserId))
         {
-            return Guid.Empty;
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
         if (parsedRouteUserId != currentUserId)
@@ -36,7 +36,7 @@ public static class RouteUserAccessGuard
 
         if (!Guid.TryParse(routeUserId, out var parsedRouteUserId))
         {
-            return Guid.Empty;
+            throw AppException.Forbidden(Messages.Forbidden);
         }
 
         if (parsedRouteUserId != currentUser.Id)
