@@ -219,7 +219,7 @@ public sealed class RoleService : IRoleService
         return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
     }
 
-    private static IReadOnlyList<string> NormalizeAndValidateClaims(IReadOnlyCollection<string> permissionClaims)
+    private static List<string> NormalizeAndValidateClaims(IReadOnlyCollection<string> permissionClaims)
     {
         var normalizedClaims = permissionClaims
             .Where(c => !string.IsNullOrWhiteSpace(c))

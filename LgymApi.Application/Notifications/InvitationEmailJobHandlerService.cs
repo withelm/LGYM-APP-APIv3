@@ -58,7 +58,7 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
             notification.LastError = ToSafeError(ex);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             _logger.LogError(ex, "Failed to deserialize invitation email payload for notification {NotificationId}.", notificationId);
-            throw;
+            throw new InvalidOperationException($"Failed to deserialize invitation email payload for notification {notificationId}.", ex);
         }
 
         if (payload == null)
@@ -80,7 +80,7 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
             notification.LastError = ToSafeError(ex);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             _logger.LogError(ex, "Failed to compose invitation email template for notification {NotificationId}.", notificationId);
-            throw;
+            throw new InvalidOperationException($"Failed to compose invitation email template for notification {notificationId}.", ex);
         }
 
         try
@@ -108,7 +108,7 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
             notification.LastError = ToSafeError(ex);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             _logger.LogError(ex, "Failed to send invitation email for notification {NotificationId}.", notificationId);
-            throw;
+            throw new InvalidOperationException($"Failed to send invitation email for notification {notificationId}.", ex);
         }
     }
 

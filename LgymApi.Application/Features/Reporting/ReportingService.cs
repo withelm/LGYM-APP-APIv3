@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Repositories;
@@ -232,12 +233,9 @@ public sealed class ReportingService : IReportingService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        foreach (var field in command.Fields)
+        if (command.Fields.Any(field => string.IsNullOrWhiteSpace(field.Key) || string.IsNullOrWhiteSpace(field.Label)))
         {
-            if (string.IsNullOrWhiteSpace(field.Key) || string.IsNullOrWhiteSpace(field.Label))
-            {
-                throw AppException.BadRequest(Messages.FieldRequired);
-            }
+            throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var duplicateKey = command.Fields
@@ -251,7 +249,7 @@ public sealed class ReportingService : IReportingService
 
     }
 
-    private static void ValidateAnswersAgainstTemplate(ReportTemplate template, IReadOnlyDictionary<string, JsonElement> answers)
+    private static void ValidateAnswersAgainstTemplate(ReportTemplate template, Dictionary<string, JsonElement> answers)
     {
         var expected = template.Fields.ToDictionary(x => x.Key, x => x, StringComparer.OrdinalIgnoreCase);
 
@@ -319,7 +317,8 @@ public sealed class ReportingService : IReportingService
             ReportFieldType.Text => value.ValueKind == JsonValueKind.String,
             ReportFieldType.Number => value.ValueKind == JsonValueKind.Number,
             ReportFieldType.Boolean => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
-            ReportFieldType.Date => value.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(value.GetString(), out _),
+            ReportFieldType.Date => value.ValueKind == JsonValueKind.String
+                && DateTimeOffset.TryParse(value.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _),
             _ => false
         };
     }

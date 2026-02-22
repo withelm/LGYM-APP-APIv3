@@ -110,17 +110,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy(AuthConstants.Policies.ManageUserRoles, policy =>
-        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageUserRoles));
-    options.AddPolicy(AuthConstants.Policies.ManageAppConfig, policy =>
-        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageAppConfig));
-    options.AddPolicy(AuthConstants.Policies.ManageGlobalExercises, policy =>
-        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageGlobalExercises));
-    options.AddPolicy(AuthConstants.Policies.TrainerAccess, policy =>
+builder.Services
+    .AddAuthorizationBuilder()
+    .AddPolicy(AuthConstants.Policies.ManageUserRoles, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageUserRoles))
+    .AddPolicy(AuthConstants.Policies.ManageAppConfig, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageAppConfig))
+    .AddPolicy(AuthConstants.Policies.ManageGlobalExercises, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageGlobalExercises))
+    .AddPolicy(AuthConstants.Policies.TrainerAccess, policy =>
         policy.RequireRole(AuthConstants.Roles.Trainer));
-});
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {

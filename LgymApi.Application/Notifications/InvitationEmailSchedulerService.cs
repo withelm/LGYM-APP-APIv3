@@ -36,9 +36,12 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
     {
         if (!_emailNotificationsFeature.Enabled)
         {
-            _logger.LogInformation(
-                "Email notifications are disabled; skipping invitation email scheduling for invitation {InvitationId}.",
-                payload.InvitationId);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Email notifications are disabled; skipping invitation email scheduling for invitation {InvitationId}.",
+                    payload.InvitationId);
+            }
             return;
         }
 
@@ -55,25 +58,31 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
                 if (existing.Attempts < MaxManualRequeueAttempts)
                 {
                     _backgroundScheduler.Enqueue(existing.Id);
-                    _logger.LogInformation(
-                        "Re-enqueued failed invitation email notification {NotificationId} (attempts: {Attempts}).",
-                        existing.Id,
-                        existing.Attempts);
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation(
+                            "Re-enqueued failed invitation email notification {NotificationId} (attempts: {Attempts}).",
+                            existing.Id,
+                            existing.Attempts);
+                    }
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "Skipping re-enqueue for notification {NotificationId} because attempts reached limit {MaxAttempts}.",
-                        existing.Id,
-                        MaxManualRequeueAttempts);
+                _logger.LogWarning(
+                    "Skipping re-enqueue for notification {NotificationId} because attempts reached limit {MaxAttempts}.",
+                    existing.Id,
+                    MaxManualRequeueAttempts);
                 }
             }
             else
             {
-                _logger.LogInformation(
-                    "Found existing invitation email notification {NotificationId} with status {Status}; no new notification created.",
-                    existing.Id,
-                    existing.Status);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Found existing invitation email notification {NotificationId} with status {Status}; no new notification created.",
+                        existing.Id,
+                        existing.Status);
+                }
             }
 
             return;
@@ -116,9 +125,12 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         }
 
         _backgroundScheduler.Enqueue(log.Id);
-        _logger.LogInformation(
-            "Created and enqueued invitation email notification {NotificationId} for invitation {InvitationId}.",
-            log.Id,
-            payload.InvitationId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Created and enqueued invitation email notification {NotificationId} for invitation {InvitationId}.",
+                log.Id,
+                payload.InvitationId);
+        }
     }
 }

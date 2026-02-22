@@ -24,7 +24,7 @@ public sealed class ReportingProfile : IMappingProfile
             Name = source?.Name ?? string.Empty,
             Description = source?.Description,
             CreatedAt = source?.CreatedAt ?? default,
-            Fields = source == null || source.Fields.Count == 0
+            Fields = source?.Fields == null || source.Fields.Count == 0
                 ? []
                 : mapper.MapList<ReportTemplateFieldResult, ReportTemplateFieldDto>(source.Fields)
         });
@@ -40,7 +40,7 @@ public sealed class ReportingProfile : IMappingProfile
             Note = source?.Note,
             CreatedAt = source?.CreatedAt ?? default,
             SubmittedAt = source?.SubmittedAt,
-            Template = source == null
+            Template = source?.Template == null
                 ? new ReportTemplateDto()
                 : mapper.Map<ReportTemplateResult, ReportTemplateDto>(source.Template) ?? new ReportTemplateDto()
         });
@@ -52,7 +52,7 @@ public sealed class ReportingProfile : IMappingProfile
             TraineeId = source?.TraineeId.ToString() ?? string.Empty,
             SubmittedAt = source?.SubmittedAt ?? default,
             Answers = source?.Answers ?? new Dictionary<string, System.Text.Json.JsonElement>(StringComparer.OrdinalIgnoreCase),
-            Request = source == null
+            Request = source?.Request == null
                 ? new ReportRequestDto()
                 : mapper.Map<ReportRequestResult, ReportRequestDto>(source.Request) ?? new ReportRequestDto()
         });

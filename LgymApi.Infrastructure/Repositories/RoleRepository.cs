@@ -37,9 +37,9 @@ public sealed class RoleRepository : IRoleRepository
 
     public Task<bool> ExistsByNameAsync(string roleName, Guid? excludeRoleId = null, CancellationToken cancellationToken = default)
     {
-        var normalizedName = roleName.Trim().ToLowerInvariant();
+        var normalizedName = roleName.Trim();
         return _dbContext.Roles.AnyAsync(r =>
-                r.Name.ToLower() == normalizedName &&
+                r.Name.ToUpper() == normalizedName.ToUpper() &&
                 (!excludeRoleId.HasValue || r.Id != excludeRoleId.Value),
             cancellationToken);
     }
