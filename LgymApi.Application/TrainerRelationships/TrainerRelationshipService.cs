@@ -137,7 +137,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     {
         if (!_emailNotificationsFeature.Enabled)
         {
-            LogInfo(
+            _logger.LogInformation(
                 "Email notifications are disabled; invitation {InvitationId} created without scheduling email.",
                 invitation.Id);
             return;
@@ -145,7 +145,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         if (string.IsNullOrWhiteSpace(trainee.Email))
         {
-            LogInfo(
+            _logger.LogInformation(
                 "Trainee email is empty; invitation {InvitationId} created without scheduling email.",
                 invitation.Id);
             return;
@@ -171,14 +171,6 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
                 ex,
                 "Failed to schedule invitation email for invitation {InvitationId}. Invitation creation is still successful.",
                 invitation.Id);
-        }
-    }
-
-    private void LogInfo(string message, params object?[] args)
-    {
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(message, args);
         }
     }
 
