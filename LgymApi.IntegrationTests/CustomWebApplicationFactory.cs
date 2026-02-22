@@ -16,7 +16,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public string DatabaseName { get; } = $"LgymTests_{Guid.NewGuid()}";
     public TestEmailSender EmailSender { get; } = new();
 
-    public const string TestJwtSecret = "IntegrationTestSecretKey_MustBeAtLeast32Characters!";
+    public const string TestJwtSigningKey = "IntegrationTestSigningKey_MustBeAtLeast32Characters!";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -125,7 +125,8 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             }
         });
 
-        builder.UseSetting("Jwt:Secret", TestJwtSecret);
+        builder.UseSetting("Jwt:SigningKey", TestJwtSigningKey);
+        builder.UseSetting("Cors:AllowedOrigins:0", "http://localhost");
         builder.UseSetting("Email:Enabled", "true");
         builder.UseSetting("Email:FromAddress", "no-reply@test.local");
         builder.UseSetting("Email:SmtpHost", "localhost");

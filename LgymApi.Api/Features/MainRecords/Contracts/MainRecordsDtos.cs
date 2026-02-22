@@ -11,12 +11,15 @@ public class MainRecordsFormDto
     public string? Id { get; set; }
 
     [JsonPropertyName("weight")]
+    [JsonRequired]
     public double Weight { get; set; }
 
     [JsonPropertyName("date")]
+    [JsonRequired]
     public DateTime Date { get; set; }
 
     [JsonPropertyName("unit")]
+    [JsonRequired]
     public WeightUnits Unit { get; set; }
 
     [JsonPropertyName("exercise")]

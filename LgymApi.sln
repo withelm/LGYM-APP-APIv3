@@ -11,8 +11,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.Application", "Lgym
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.Infrastructure", "LgymApi.Infrastructure\LgymApi.Infrastructure.csproj", "{2026508E-C113-4EA2-9131-FC93DF9DF6F4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.Migrator", "LgymApi.Migrator\LgymApi.Migrator.csproj", "{A918B90A-F30A-4639-8769-11F98F116292}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.Resources", "LgymApi.Resources\LgymApi.Resources.csproj", "{A675BEED-7E14-4804-91B9-78D25A9B811E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.Resources.Generator", "LgymApi.Resources.Generator\LgymApi.Resources.Generator.csproj", "{7ED7B688-051B-4B94-9ABA-ECA68D2CD290}"
@@ -81,18 +79,6 @@ Global
 		{2026508E-C113-4EA2-9131-FC93DF9DF6F4}.Release|x64.Build.0 = Release|Any CPU
 		{2026508E-C113-4EA2-9131-FC93DF9DF6F4}.Release|x86.ActiveCfg = Release|Any CPU
 		{2026508E-C113-4EA2-9131-FC93DF9DF6F4}.Release|x86.Build.0 = Release|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Debug|x64.Build.0 = Debug|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Debug|x86.Build.0 = Debug|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Release|x64.ActiveCfg = Release|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Release|x64.Build.0 = Release|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Release|x86.ActiveCfg = Release|Any CPU
-		{A918B90A-F30A-4639-8769-11F98F116292}.Release|x86.Build.0 = Release|Any CPU
 		{A675BEED-7E14-4804-91B9-78D25A9B811E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A675BEED-7E14-4804-91B9-78D25A9B811E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A675BEED-7E14-4804-91B9-78D25A9B811E}.Debug|x64.ActiveCfg = Debug|Any CPU

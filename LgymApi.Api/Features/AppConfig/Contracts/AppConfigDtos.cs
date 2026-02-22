@@ -30,5 +30,6 @@ public class AppConfigInfoWithPlatformDto : AppConfigInfoDto
 public sealed class AppConfigVersionRequestDto
 {
     [JsonPropertyName("platform")]
+    [JsonRequired]
     public Platforms Platform { get; set; }
 }

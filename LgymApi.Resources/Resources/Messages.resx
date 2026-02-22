@@ -78,6 +78,9 @@
   <data name="SeriesMustBeGreaterThanZero" xml:space="preserve">
     <value>Series must be greater than 0.</value>
   </data>
+  <data name="SeriesMustBeBetweenOneAndThirty" xml:space="preserve">
+    <value>Series must be between 1 and 30.</value>
+  </data>
   <data name="ExerciseNameRequired" xml:space="preserve">
     <value>Exercise name is required.</value>
   </data>

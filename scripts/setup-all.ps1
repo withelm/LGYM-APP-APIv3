@@ -1,11 +1,12 @@
 param(
+    [string]$PostgresConnection = "",
     [string]$MongoConnection = "",
-    [string]$MongoDatabase = "",
-    [string]$PostgresConnection = ""
+    [string]$MongoDatabase = ""
 )
 
-& "${PSScriptRoot}\migrate-db.ps1" -ConnectionString $PostgresConnection
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if ($MongoConnection -or $MongoDatabase) {
+    Write-Warning "The -MongoConnection and -MongoDatabase parameters are deprecated and ignored by scripts/setup-all.ps1."
+}
 
-& "${PSScriptRoot}\run-migrator.ps1" -MongoConnection $MongoConnection -MongoDatabase $MongoDatabase -PostgresConnection $PostgresConnection
+& "${PSScriptRoot}\migrate-db.ps1" -ConnectionString $PostgresConnection
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -127,6 +127,31 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetLastExerciseScores_WithSeriesAboveLimit_ReturnsBadRequest()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "lastscoresuser-limit",
+            email: "lastscores-limit@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "LastScores Limit Exercise", BodyParts.Back);
+
+        var request = new
+        {
+            exerciseId = exerciseId.ToString(),
+            exerciseName = "LastScores Limit Exercise",
+            series = 31
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/getLastExerciseScores", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
     public async Task GetLastExerciseScores_WithExistingScores_ReturnsPreviousScores()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(

@@ -10,7 +10,6 @@ This document explains how the backend is structured and how to add a new module
 - `LgymApi.Infrastructure` - persistence and technical implementations (EF Core `DbContext`, repository implementations, UoW, migrations).
 - `LgymApi.UnitTests` - focused unit tests and architecture guard tests.
 - `LgymApi.IntegrationTests` - end-to-end API tests with `WebApplicationFactory` and in-memory database.
-- `LgymApi.Migrator` - offline MongoDB to PostgreSQL data migration utility.
 - `LgymApi.Resources` and `LgymApi.Resources.Generator` - localized resources and source generators for strongly-typed message access.
 
 ## 2. Request Flow
@@ -53,7 +52,7 @@ Controllers should call services and return mapped outputs through `IMapper` / m
 
 ### 4.1 Nested Mapper Composition Rules
 
-Use `context.Map<TSource, TTarget>(...)` and `context.MapList<TSource, TTarget>(...)` inside profile delegates when mapping nested objects/lists that already have a registered map.
+Prefer `context.Map<TTarget>(source)` and `context.MapList<TTarget>(sourceList)` inside profile delegates when mapping nested objects/lists that already have a registered map. Use `Map<TSource, TTarget>` / `MapList<TSource, TTarget>` only when you intentionally need compile-time source typing.
 
 - Prefer nested composition over duplicated inline nested DTO construction.
 - Keep manual nested mapping only when:
