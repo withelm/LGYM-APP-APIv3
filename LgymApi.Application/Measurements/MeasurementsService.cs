@@ -119,7 +119,10 @@ public sealed class MeasurementsService : IMeasurementsService
         var currentValue = convertedValues[^1];
         var change = currentValue - startValue;
         var roundedChange = Math.Round(change, 2);
-        var changePercentage = startValue == 0d ? 0d : (change / startValue) * 100d;
+        const double percentageEpsilon = 0.0001d;
+        var changePercentage = Math.Abs(startValue) <= percentageEpsilon
+            ? 0d
+            : (change / startValue) * 100d;
 
         return new MeasurementTrendResult
         {
