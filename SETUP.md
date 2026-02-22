@@ -30,37 +30,16 @@ After cloning the repository, create the following files with your local values:
 }
 ```
 
-#### `LgymApi.Migrator/appsettings.Development.json`
-```json
-{
-  "ConnectionStrings": {
-    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=YOUR_PASSWORD;TimeZone=Europe/Warsaw"
-  },
-  "Mongo": {
-    "ConnectionString": "YOUR_MONGODB_CONNECTION_STRING",
-    "Database": "test"
-  },
-  "Migrator": {
-    "BatchSize": "1000"
-  }
-}
-```
-
 ### 2. Requirements
 
 - .NET 10 SDK
 - PostgreSQL (default port 5433)
-- MongoDB (for the migrator)
 
 ### 3. Running the apps
 
 ```bash
 # API
 cd LgymApi.Api
-dotnet run
-
-# Migrator
-cd LgymApi.Migrator
 dotnet run
 ```
 

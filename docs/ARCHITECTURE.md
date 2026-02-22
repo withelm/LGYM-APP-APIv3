@@ -10,7 +10,6 @@ This document explains how the backend is structured and how to add a new module
 - `LgymApi.Infrastructure` - persistence and technical implementations (EF Core `DbContext`, repository implementations, UoW, migrations).
 - `LgymApi.UnitTests` - focused unit tests and architecture guard tests.
 - `LgymApi.IntegrationTests` - end-to-end API tests with `WebApplicationFactory` and in-memory database.
-- `LgymApi.Migrator` - offline MongoDB to PostgreSQL data migration utility.
 - `LgymApi.Resources` and `LgymApi.Resources.Generator` - localized resources and source generators for strongly-typed message access.
 
 ## 2. Request Flow
