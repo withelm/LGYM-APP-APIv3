@@ -134,6 +134,69 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         submitResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Test]
+    public async Task TrainerReportingController_InvalidIds_ReturnBadRequest()
+    {
+        var trainer = await SeedTrainerAsync("trainer-report-invalid-ids", "trainer-report-invalid-ids@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var getTemplate = await Client.GetAsync("/api/trainer/report-templates/not-a-guid");
+        var updateTemplate = await Client.PostAsJsonAsync("/api/trainer/report-templates/not-a-guid/update", new
+        {
+            name = "x",
+            fields = new object[] { new { key = "k", label = "l", type = "Text", isRequired = false, order = 0 } }
+        });
+        var deleteTemplate = await Client.PostAsync("/api/trainer/report-templates/not-a-guid/delete", content: null);
+        var createRequestBadTrainee = await Client.PostAsJsonAsync("/api/trainer/trainees/not-a-guid/report-requests", new
+        {
+            templateId = Guid.NewGuid().ToString()
+        });
+        var createRequestBadTemplate = await Client.PostAsJsonAsync($"/api/trainer/trainees/{Guid.NewGuid()}/report-requests", new
+        {
+            templateId = "not-a-guid"
+        });
+        var getSubmissionsBadTrainee = await Client.GetAsync("/api/trainer/trainees/not-a-guid/report-submissions");
+
+        getTemplate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        updateTemplate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        deleteTemplate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        createRequestBadTrainee.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        createRequestBadTemplate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        getSubmissionsBadTrainee.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task TrainerReportingController_TemplateCreateAndReadFlow_Works()
+    {
+        var trainer = await SeedTrainerAsync("trainer-report-crud", "trainer-report-crud@example.com");
+        SetAuthorizationHeader(trainer.Id);
+
+        var createTemplateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
+        {
+            name = "Weekly CRUD",
+            description = "v1",
+            fields = new object[]
+            {
+                new { key = "weight", label = "Weight", type = "Number", isRequired = true, order = 0 }
+            }
+        });
+        createTemplateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await createTemplateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
+        created.Should().NotBeNull();
+
+        var getAllResponse = await Client.GetAsync("/api/trainer/report-templates");
+        getAllResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var allTemplates = await getAllResponse.Content.ReadFromJsonAsync<List<ReportTemplateResponse>>();
+        allTemplates.Should().NotBeNull();
+        allTemplates!.Any(x => x.Id == created!.Id).Should().BeTrue();
+
+        var getOneResponse = await Client.GetAsync($"/api/trainer/report-templates/{created!.Id}");
+        getOneResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var deleteResponse = await Client.PostAsync($"/api/trainer/report-templates/{created.Id}/delete", content: null);
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private async Task<User> SeedTrainerAsync(string name, string email)
     {
         var trainer = await SeedUserAsync(name: name, email: email, password: "password123");
@@ -158,6 +221,9 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     {
         [JsonPropertyName("_id")]
         public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
 
         [JsonPropertyName("fields")]
         public List<ReportTemplateFieldResponse> Fields { get; set; } = [];
