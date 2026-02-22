@@ -9,11 +9,16 @@ namespace LgymApi.Infrastructure.Repositories;
 
 public sealed class PlanRepository : IPlanRepository
 {
-    private readonly AppDbContext _dbContext;
+    private const int ShareCodeLength = 10;
+    private const int ShareCodeGenerationMaxAttempts = 10;
 
-    public PlanRepository(AppDbContext dbContext)
+    private readonly AppDbContext _dbContext;
+    private readonly Func<int, string> _shareCodeGenerator;
+
+    public PlanRepository(AppDbContext dbContext, Func<int, string>? shareCodeGenerator = null)
     {
         _dbContext = dbContext;
+        _shareCodeGenerator = shareCodeGenerator ?? GenerateSecureAlphanumericCode;
     }
 
     public Task<Plan?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -173,11 +178,35 @@ public sealed class PlanRepository : IPlanRepository
             throw new UnauthorizedAccessException("Only the plan owner can generate a share code");
 
         if (!string.IsNullOrEmpty(plan.ShareCode))
+        {
+            var isCurrentCodeTaken = await IsShareCodeTakenAsync(plan.ShareCode, plan.Id, cancellationToken);
+            if (!isCurrentCodeTaken)
+            {
+                return plan.ShareCode;
+            }
+        }
+
+        for (var attempt = 0; attempt < ShareCodeGenerationMaxAttempts; attempt++)
+        {
+            var candidateCode = _shareCodeGenerator(ShareCodeLength);
+            var isTaken = await IsShareCodeTakenAsync(candidateCode, plan.Id, cancellationToken);
+            if (isTaken)
+            {
+                continue;
+            }
+
+            plan.ShareCode = candidateCode;
             return plan.ShareCode;
+        }
 
-        plan.ShareCode = GenerateSecureAlphanumericCode(10);
+        throw new InvalidOperationException("Unable to generate unique share code");
+    }
 
-        return plan.ShareCode;
+    private Task<bool> IsShareCodeTakenAsync(string shareCode, Guid currentPlanId, CancellationToken cancellationToken)
+    {
+        return _dbContext.Plans.AnyAsync(
+            p => p.Id != currentPlanId && p.ShareCode == shareCode && !p.IsDeleted,
+            cancellationToken);
     }
 
     private static string GenerateSecureAlphanumericCode(int length)

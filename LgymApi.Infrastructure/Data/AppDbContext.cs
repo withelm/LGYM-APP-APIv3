@@ -52,6 +52,9 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<Plan>(entity =>
         {
             entity.ToTable("Plans");
+            entity.HasIndex(p => p.ShareCode)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE AND \"ShareCode\" IS NOT NULL");
             entity.HasOne(p => p.User)
                 .WithMany(u => u.Plans)
                 .HasForeignKey(p => p.UserId);

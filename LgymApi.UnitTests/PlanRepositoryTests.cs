@@ -1,0 +1,73 @@
+using LgymApi.Domain.Entities;
+using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Repositories;
+using Microsoft.EntityFrameworkCore;
+
+namespace LgymApi.UnitTests;
+
+[TestFixture]
+public sealed class PlanRepositoryTests
+{
+    [Test]
+    public async Task GenerateShareCodeAsync_WhenPlanAlreadyHasUniqueCode_ReturnsExistingCode()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"plan-repo-existing-{Guid.NewGuid()}")
+            .Options;
+
+        var userId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+
+        await using var dbContext = new AppDbContext(options);
+        dbContext.Plans.Add(new Plan
+        {
+            Id = planId,
+            UserId = userId,
+            Name = "Plan",
+            ShareCode = "EXISTING01"
+        });
+        await dbContext.SaveChangesAsync();
+
+        var repository = new PlanRepository(dbContext, _ => "NEVERUSED1");
+
+        var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
+
+        Assert.That(result, Is.EqualTo("EXISTING01"));
+    }
+
+    [Test]
+    public async Task GenerateShareCodeAsync_WhenGeneratedCodeCollides_RetriesUntilUnique()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"plan-repo-collision-{Guid.NewGuid()}")
+            .Options;
+
+        var userId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+
+        await using var dbContext = new AppDbContext(options);
+        dbContext.Plans.AddRange(
+            new Plan
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Name = "Owner Plan",
+                ShareCode = "COLLIDE001"
+            },
+            new Plan
+            {
+                Id = planId,
+                UserId = userId,
+                Name = "Target Plan",
+                ShareCode = null
+            });
+        await dbContext.SaveChangesAsync();
+
+        var generatedCodes = new Queue<string>(["COLLIDE001", "UNIQUE0001"]);
+        var repository = new PlanRepository(dbContext, _ => generatedCodes.Dequeue());
+
+        var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
+
+        Assert.That(result, Is.EqualTo("UNIQUE0001"));
+    }
+}

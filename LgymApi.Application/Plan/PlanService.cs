@@ -266,9 +266,13 @@ public sealed class PlanService : IPlanService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return shareCode;
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException exception) when (exception.Message == "Plan not found")
         {
             throw AppException.NotFound(Messages.DidntFind);
+        }
+        catch (InvalidOperationException)
+        {
+            throw AppException.Internal("Unable to generate share code");
         }
         catch (UnauthorizedAccessException)
         {
