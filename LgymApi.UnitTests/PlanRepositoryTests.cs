@@ -70,4 +70,47 @@ public sealed class PlanRepositoryTests
 
         Assert.That(result, Is.EqualTo("UNIQUE0001"));
     }
+
+    [Test]
+    public async Task GenerateShareCodeAsync_WhenAllAttemptsCollide_ThrowsInvalidOperationException()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"plan-repo-max-attempts-{Guid.NewGuid()}")
+            .Options;
+
+        var userId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var generationCount = 0;
+
+        await using var dbContext = new AppDbContext(options);
+        dbContext.Plans.AddRange(
+            new Plan
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Name = "Existing Plan",
+                ShareCode = "COLLIDE001"
+            },
+            new Plan
+            {
+                Id = planId,
+                UserId = userId,
+                Name = "Target Plan"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var repository = new PlanRepository(
+            dbContext,
+            _ =>
+            {
+                generationCount++;
+                return "COLLIDE001";
+            });
+
+        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None));
+
+        Assert.That(exception!.Message, Is.EqualTo("Unable to generate unique share code"));
+        Assert.That(generationCount, Is.EqualTo(10));
+    }
 }
