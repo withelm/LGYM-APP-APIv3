@@ -79,6 +79,86 @@ public sealed class MapperNestedCompositionTests
     }
 
     [Test]
+    public void Map_With_Runtime_Source_Type_Should_Support_New_Single_Generic_Overload()
+    {
+        var mapper = CreateMapper(new NestedCompositionProfile());
+        var context = mapper.CreateContext();
+        context.Set(NestedCompositionProfile.Keys.Suffix, "!");
+
+        object source = new ParentSource
+        {
+            Child = new ChildSource { Name = "pull" },
+            Children =
+            [
+                new ChildSource { Name = "push" }
+            ]
+        };
+
+        var result = mapper.Map<ParentTarget>(source, context);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Child?.Name, Is.EqualTo("pull!"));
+            Assert.That(result.Children.Select(c => c.Name), Is.EqualTo(new[] { "push!" }));
+        });
+    }
+
+    [Test]
+    public void Map_With_Runtime_Source_Type_Should_Select_Runtime_Mapping_Over_Compile_Time_Type()
+    {
+        var mapper = CreateMapper(new RuntimePolymorphismProfile());
+        BaseSource source = new DerivedSource();
+
+        var result = mapper.Map<PolymorphicTarget>(source);
+
+        Assert.That(result.Marker, Is.EqualTo("derived"));
+    }
+
+    [Test]
+    public void Map_With_Runtime_Source_Type_Should_Throw_Clear_Error_When_Mapping_Is_Missing()
+    {
+        var mapper = CreateMapper(new MissingNestedMappingProfile());
+        object source = new MissingChildSource();
+
+        var ex = Assert.Throws<InvalidOperationException>(() => mapper.Map<MissingChildTarget>(source));
+
+        Assert.That(ex!.Message, Does.Contain("Mapping from MissingChildSource to MissingChildTarget is not registered."));
+    }
+
+    [Test]
+    public void MapList_With_Runtime_Source_Type_Should_Map_All_Items()
+    {
+        var mapper = CreateMapper(new NestedCompositionProfile());
+        var context = mapper.CreateContext();
+        context.Set(NestedCompositionProfile.Keys.Suffix, "!");
+
+        System.Collections.IEnumerable source = new object[]
+        {
+            new ChildSource { Name = "pull" },
+            new ChildSource { Name = "press" }
+        };
+
+        var result = mapper.MapList<ChildTarget>(source, context);
+
+        Assert.That(result.Select(x => x.Name), Is.EqualTo(new[] { "pull!", "press!" }));
+    }
+
+    [Test]
+    public void MapList_With_Runtime_Source_Type_Should_Select_Runtime_Mapping_Per_Item()
+    {
+        var mapper = CreateMapper(new RuntimePolymorphismProfile());
+        System.Collections.IEnumerable source = new BaseSource[]
+        {
+            new BaseSource(),
+            new DerivedSource()
+        };
+
+        var result = mapper.MapList<PolymorphicTarget>(source);
+
+        Assert.That(result.Select(x => x.Marker), Is.EqualTo(new[] { "base", "derived" }));
+    }
+
+    [Test]
     public void Map_Should_Throw_Clear_Error_When_Nested_Mapping_Is_Missing()
     {
         var mapper = CreateMapper(new MissingNestedMappingProfile());
@@ -258,6 +338,15 @@ public sealed class MapperNestedCompositionTests
         }
     }
 
+    private sealed class RuntimePolymorphismProfile : IMappingProfile
+    {
+        public void Configure(MappingConfiguration configuration)
+        {
+            configuration.CreateMap<BaseSource, PolymorphicTarget>((_, _) => new PolymorphicTarget { Marker = "base" });
+            configuration.CreateMap<DerivedSource, PolymorphicTarget>((_, _) => new PolymorphicTarget { Marker = "derived" });
+        }
+    }
+
     private static MapAttemptResult TryMap(IMapper mapper, MappingContext context)
     {
         try
@@ -315,4 +404,13 @@ public sealed class MapperNestedCompositionTests
     }
 
     private sealed class CyclicTarget;
+
+    private class BaseSource;
+
+    private sealed class DerivedSource : BaseSource;
+
+    private sealed class PolymorphicTarget
+    {
+        public string Marker { get; init; } = string.Empty;
+    }
 }
