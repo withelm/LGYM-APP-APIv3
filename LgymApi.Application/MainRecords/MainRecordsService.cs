@@ -109,7 +109,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(user.Id, cancellationToken: cancellationToken);
+        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(user.Id, null, cancellationToken);
         if (records.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);
