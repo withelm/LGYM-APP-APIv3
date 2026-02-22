@@ -5,6 +5,8 @@ namespace LgymApi.Infrastructure.Options;
 public sealed class EmailOptions
 {
     public bool Enabled { get; set; } = true;
+    public EmailDeliveryMode DeliveryMode { get; set; } = EmailDeliveryMode.Smtp;
+    public string DummyOutputDirectory { get; set; } = "EmailOutbox";
     public string FromAddress { get; set; } = string.Empty;
     public string FromName { get; set; } = "LGYM Trainer";
     public string SmtpHost { get; set; } = string.Empty;
