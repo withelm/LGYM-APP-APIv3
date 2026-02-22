@@ -2,15 +2,12 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using System.Reflection;
+using System.Linq.Expressions;
 
 namespace LgymApi.Infrastructure.Data;
 
 public sealed class AppDbContext : DbContext
 {
-    private static readonly MethodInfo SetSoftDeleteFilterMethod =
-        typeof(AppDbContext).GetMethod(nameof(SetSoftDeleteFilter), BindingFlags.NonPublic | BindingFlags.Static)!;
-
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
@@ -40,8 +37,12 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("Users");
-            entity.HasIndex(u => u.Email).IsUnique();
-            entity.HasIndex(u => u.Name).IsUnique();
+            entity.HasIndex(u => u.Email)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(u => u.Name)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasOne(u => u.Plan)
                 .WithMany()
                 .HasForeignKey(u => u.PlanId)
@@ -86,7 +87,9 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("ExerciseTranslations");
             entity.Property(e => e.Culture).HasMaxLength(16).IsRequired();
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-            entity.HasIndex(e => new { e.ExerciseId, e.Culture }).IsUnique();
+            entity.HasIndex(e => new { e.ExerciseId, e.Culture })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
             entity.HasOne(e => e.Exercise)
                 .WithMany(e => e.Translations)
                 .HasForeignKey(e => e.ExerciseId)
@@ -188,14 +191,18 @@ public sealed class AppDbContext : DbContext
                 continue;
             }
 
-            SetSoftDeleteFilterMethod.MakeGenericMethod(clrType).Invoke(null, new object[] { modelBuilder });
-        }
-    }
+            var parameter = Expression.Parameter(clrType, "entity");
+            var isDeletedProperty = Expression.Call(
+                typeof(EF),
+                nameof(EF.Property),
+                new[] { typeof(bool) },
+                parameter,
+                Expression.Constant(nameof(EntityBase.IsDeleted)));
+            var compareExpression = Expression.Equal(isDeletedProperty, Expression.Constant(false));
+            var lambda = Expression.Lambda(compareExpression, parameter);
 
-    private static void SetSoftDeleteFilter<TEntity>(ModelBuilder modelBuilder)
-        where TEntity : EntityBase
-    {
-        modelBuilder.Entity<TEntity>().HasQueryFilter(entity => !entity.IsDeleted);
+            modelBuilder.Entity(clrType).HasQueryFilter(lambda);
+        }
     }
 
     public override int SaveChanges()
