@@ -168,10 +168,20 @@ public sealed class PlanService : IPlanService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        await _planRepository.SetActivePlanAsync(currentUser.Id, planId, cancellationToken);
-        currentUser.PlanId = planId;
-        await _userRepository.UpdateAsync(currentUser, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await _planRepository.SetActivePlanAsync(currentUser.Id, planId, cancellationToken);
+            currentUser.PlanId = planId;
+            await _userRepository.UpdateAsync(currentUser, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     public async Task DeletePlanAsync(UserEntity currentUser, Guid planId, CancellationToken cancellationToken = default)
