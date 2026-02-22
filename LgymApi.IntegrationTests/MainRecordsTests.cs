@@ -291,6 +291,45 @@ public sealed class MainRecordsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task DeleteMainRecord_WithOtherUsersRecord_ReturnsForbidden()
+    {
+        var (_, userAToken) = await RegisterUserViaEndpointAsync(
+            name: "deletenonowner-a",
+            email: "deletenonowner-a@example.com",
+            password: "password123");
+
+        var (userBId, userBToken) = await RegisterUserViaEndpointAsync(
+            name: "deletenonowner-b",
+            email: "deletenonowner-b@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userBToken);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userBId, "Delete NonOwner", BodyParts.Back);
+
+        var addRequest = new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 66.0,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = DateTime.UtcNow
+        };
+        await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userBId}/addNewRecord", addRequest);
+
+        var historyResponse = await Client.GetAsync($"/api/mainRecords/{userBId}/getMainRecordsHistory");
+        var records = await historyResponse.Content.ReadFromJsonAsync<List<MainRecordResponse>>();
+        var recordId = records![0].Id;
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userAToken);
+
+        var deleteResponse = await Client.GetAsync($"/api/mainRecords/{recordId}/deleteMainRecord");
+
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
     public async Task UpdateMainRecords_WithValidData_UpdatesRecord()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
@@ -332,6 +371,54 @@ public sealed class MainRecordsTests : IntegrationTestBase
         var verifyResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getMainRecordsHistory");
         var updatedRecords = await verifyResponse.Content.ReadFromJsonAsync<List<MainRecordResponse>>();
         updatedRecords![0].Weight.Should().Be(80.0);
+    }
+
+    [Test]
+    public async Task UpdateMainRecords_WithOtherUsersRecord_ReturnsForbidden()
+    {
+        var (_, userAToken) = await RegisterUserViaEndpointAsync(
+            name: "updatenonowner-a",
+            email: "updatenonowner-a@example.com",
+            password: "password123");
+
+        var (userBId, userBToken) = await RegisterUserViaEndpointAsync(
+            name: "updatenonowner-b",
+            email: "updatenonowner-b@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userBToken);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userBId, "Update NonOwner", BodyParts.Shoulders);
+
+        var addRequest = new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 45.0,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = DateTime.UtcNow
+        };
+        await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userBId}/addNewRecord", addRequest);
+
+        var historyResponse = await Client.GetAsync($"/api/mainRecords/{userBId}/getMainRecordsHistory");
+        var records = await historyResponse.Content.ReadFromJsonAsync<List<MainRecordResponse>>();
+        var recordId = records![0].Id;
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userAToken);
+
+        var updateRequest = new
+        {
+            _id = recordId,
+            exercise = exerciseId.ToString(),
+            weight = 47.5,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = DateTime.UtcNow
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userBId}/updateMainRecords", updateRequest);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Test]
