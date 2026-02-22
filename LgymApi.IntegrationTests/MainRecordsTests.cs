@@ -374,9 +374,9 @@ public sealed class MainRecordsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task UpdateMainRecords_WithOtherUsersRecord_ReturnsForbidden()
+    public async Task UpdateMainRecords_WithOtherUsersRecordAndOwnRouteUserId_ReturnsForbidden()
     {
-        var (_, userAToken) = await RegisterUserViaEndpointAsync(
+        var (userAId, userAToken) = await RegisterUserViaEndpointAsync(
             name: "updatenonowner-a",
             email: "updatenonowner-a@example.com",
             password: "password123");
@@ -390,6 +390,54 @@ public sealed class MainRecordsTests : IntegrationTestBase
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userBToken);
 
         var exerciseId = await CreateExerciseViaEndpointAsync(userBId, "Update NonOwner", BodyParts.Shoulders);
+
+        var addRequest = new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 45.0,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = DateTime.UtcNow
+        };
+        await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userBId}/addNewRecord", addRequest);
+
+        var historyResponse = await Client.GetAsync($"/api/mainRecords/{userBId}/getMainRecordsHistory");
+        var records = await historyResponse.Content.ReadFromJsonAsync<List<MainRecordResponse>>();
+        var recordId = records![0].Id;
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userAToken);
+
+        var updateRequest = new
+        {
+            _id = recordId,
+            exercise = exerciseId.ToString(),
+            weight = 47.5,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = DateTime.UtcNow
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userAId}/updateMainRecords", updateRequest);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task UpdateMainRecords_WithMismatchedRouteUserId_ReturnsForbidden()
+    {
+        var (_, userAToken) = await RegisterUserViaEndpointAsync(
+            name: "updateroute-a",
+            email: "updateroute-a@example.com",
+            password: "password123");
+
+        var (userBId, userBToken) = await RegisterUserViaEndpointAsync(
+            name: "updateroute-b",
+            email: "updateroute-b@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userBToken);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userBId, "Update Route Mismatch", BodyParts.Shoulders);
 
         var addRequest = new
         {
