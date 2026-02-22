@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -49,16 +50,10 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
 
     public async Task RemoveByPlanDayIdAsync(Guid planDayId, CancellationToken cancellationToken = default)
     {
-        var existing = await _dbContext.PlanDayExercises
+        await _dbContext.PlanDayExercises
             .Where(e => e.PlanDayId == planDayId)
-            .ToListAsync(cancellationToken);
+            .StageUpdateAsync(_dbContext, e => e.IsDeleted, _ => true, cancellationToken);
 
-        if (existing.Count == 0)
-        {
-            return;
-        }
-
-        _dbContext.PlanDayExercises.RemoveRange(existing);
         await NormalizeOrdersAsync(new[] { planDayId }, cancellationToken);
     }
 

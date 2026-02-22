@@ -6,6 +6,7 @@ namespace LgymApi.Application.Repositories;
 public interface IUserRepository
 {
     Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default);
     Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default);
     Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default);
     Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default);

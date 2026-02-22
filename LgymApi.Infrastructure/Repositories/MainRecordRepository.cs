@@ -75,7 +75,8 @@ public sealed class MainRecordRepository : IMainRecordRepository
 
     public Task DeleteAsync(MainRecord record, CancellationToken cancellationToken = default)
     {
-        _dbContext.MainRecords.Remove(record);
+        record.IsDeleted = true;
+        _dbContext.MainRecords.Update(record);
         return Task.CompletedTask;
     }
 

@@ -1,11 +1,16 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using System.Reflection;
 
 namespace LgymApi.Infrastructure.Data;
 
 public sealed class AppDbContext : DbContext
 {
+    private static readonly MethodInfo SetSoftDeleteFilterMethod =
+        typeof(AppDbContext).GetMethod(nameof(SetSoftDeleteFilter), BindingFlags.NonPublic | BindingFlags.Static)!;
+
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
@@ -29,6 +34,8 @@ public sealed class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        ApplySoftDeleteQueryFilters(modelBuilder);
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -164,6 +171,31 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("AppConfigs");
             entity.Property(e => e.Platform).HasConversion<string>();
         });
+    }
+
+    private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (entityType.IsOwned())
+            {
+                continue;
+            }
+
+            var clrType = entityType.ClrType;
+            if (!typeof(EntityBase).IsAssignableFrom(clrType))
+            {
+                continue;
+            }
+
+            SetSoftDeleteFilterMethod.MakeGenericMethod(clrType).Invoke(null, new object[] { modelBuilder });
+        }
+    }
+
+    private static void SetSoftDeleteFilter<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : EntityBase
+    {
+        modelBuilder.Entity<TEntity>().HasQueryFilter(entity => !entity.IsDeleted);
     }
 
     public override int SaveChanges()

@@ -88,7 +88,9 @@ public sealed class GymTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var updatedGym = await db.Gyms.FirstOrDefaultAsync(g => g.Id == gym.Id);
+        var updatedGym = await db.Gyms
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(g => g.Id == gym.Id);
         updatedGym.Should().NotBeNull();
         updatedGym!.IsDeleted.Should().BeTrue();
     }

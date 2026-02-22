@@ -9,7 +9,6 @@ public sealed class Exercise : EntityBase
     public string? Description { get; set; }
     public string? Image { get; set; }
     public Guid? UserId { get; set; }
-    public bool IsDeleted { get; set; }
 
     public User? User { get; set; }
     public ICollection<ExerciseScore> ExerciseScores { get; set; } = new List<ExerciseScore>();
