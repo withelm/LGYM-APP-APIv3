@@ -28,7 +28,7 @@ public sealed class ExerciseScoresController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, exerciseId);
+        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, exerciseId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result);
         return Ok(mapped);
     }

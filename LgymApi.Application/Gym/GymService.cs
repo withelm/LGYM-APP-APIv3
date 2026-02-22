@@ -20,7 +20,7 @@ public sealed class GymService : IGymService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddGymAsync(UserEntity currentUser, Guid routeUserId, string name, string? address)
+    public async Task AddGymAsync(UserEntity currentUser, Guid routeUserId, string name, string? address, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId == Guid.Empty)
         {
@@ -52,11 +52,11 @@ public sealed class GymService : IGymService
             IsDeleted = false
         };
 
-        await _gymRepository.AddAsync(gym);
-        await _unitOfWork.SaveChangesAsync();
+        await _gymRepository.AddAsync(gym, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteGymAsync(UserEntity currentUser, Guid gymId)
+    public async Task DeleteGymAsync(UserEntity currentUser, Guid gymId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -68,7 +68,7 @@ public sealed class GymService : IGymService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var gym = await _gymRepository.FindByIdAsync(gymId);
+        var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
         if (gym == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -80,11 +80,11 @@ public sealed class GymService : IGymService
         }
 
         gym.IsDeleted = true;
-        await _gymRepository.UpdateAsync(gym);
-        await _unitOfWork.SaveChangesAsync();
+        await _gymRepository.UpdateAsync(gym, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<GymListContext> GetGymsAsync(UserEntity currentUser, Guid routeUserId)
+    public async Task<GymListContext> GetGymsAsync(UserEntity currentUser, Guid routeUserId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId == Guid.Empty)
         {
@@ -96,9 +96,9 @@ public sealed class GymService : IGymService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        var gyms = await _gymRepository.GetByUserIdAsync(currentUser.Id);
+        var gyms = await _gymRepository.GetByUserIdAsync(currentUser.Id, cancellationToken);
         var gymIds = gyms.Select(g => g.Id).ToList();
-        var trainings = await _trainingRepository.GetByGymIdsAsync(gymIds);
+        var trainings = await _trainingRepository.GetByGymIdsAsync(gymIds, cancellationToken);
         var lastTrainings = trainings
             .GroupBy(t => t.GymId)
             .Select(g => g.OrderByDescending(t => t.CreatedAt).FirstOrDefault())
@@ -112,7 +112,7 @@ public sealed class GymService : IGymService
         };
     }
 
-    public async Task<GymEntity> GetGymAsync(UserEntity currentUser, Guid gymId)
+    public async Task<GymEntity> GetGymAsync(UserEntity currentUser, Guid gymId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -124,7 +124,7 @@ public sealed class GymService : IGymService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var gym = await _gymRepository.FindByIdAsync(gymId);
+        var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
         if (gym == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -138,7 +138,7 @@ public sealed class GymService : IGymService
         return gym;
     }
 
-    public async Task UpdateGymAsync(UserEntity currentUser, Guid gymId, string name, string? address)
+    public async Task UpdateGymAsync(UserEntity currentUser, Guid gymId, string name, string? address, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -150,7 +150,7 @@ public sealed class GymService : IGymService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var gym = await _gymRepository.FindByIdAsync(gymId);
+        var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
         if (gym == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -167,7 +167,7 @@ public sealed class GymService : IGymService
             gym.AddressId = addressId;
         }
 
-        await _gymRepository.UpdateAsync(gym);
-        await _unitOfWork.SaveChangesAsync();
+        await _gymRepository.UpdateAsync(gym, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

@@ -34,7 +34,7 @@ public sealed class UserService : IUserService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking)
+    public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -57,7 +57,7 @@ public sealed class UserService : IUserService
             throw AppException.NotFound(Messages.SamePassword);
         }
 
-        var existingUser = await _userRepository.FindByNameOrEmailAsync(name, normalizedEmail!);
+        var existingUser = await _userRepository.FindByNameOrEmailAsync(name, normalizedEmail!, cancellationToken);
         if (existingUser != null)
         {
             if (string.Equals(existingUser.Name, name, StringComparison.Ordinal))
@@ -84,25 +84,25 @@ public sealed class UserService : IUserService
             LegacyDigest = passwordData.Digest
         };
 
-        await _userRepository.AddAsync(user);
+        await _userRepository.AddAsync(user, cancellationToken);
         await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
             Date = DateTimeOffset.UtcNow,
             Elo = 1000
-        });
-        await _unitOfWork.SaveChangesAsync();
+        }, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<LoginResult> LoginAsync(string name, string password)
+    public async Task<LoginResult> LoginAsync(string name, string password, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(password))
         {
             throw AppException.Unauthorized(Messages.Unauthorized);
         }
 
-        var user = await _userRepository.FindByNameAsync(name);
+        var user = await _userRepository.FindByNameAsync(name, cancellationToken);
         if (user == null || string.IsNullOrWhiteSpace(user.LegacyHash) || string.IsNullOrWhiteSpace(user.LegacySalt))
         {
             throw AppException.Unauthorized(Messages.Unauthorized);
@@ -122,7 +122,7 @@ public sealed class UserService : IUserService
         }
 
         var token = _tokenService.CreateToken(user.Id);
-        var elo = await _eloRepository.GetLatestEloAsync(user.Id) ?? 1000;
+        var elo = await _eloRepository.GetLatestEloAsync(user.Id, cancellationToken) ?? 1000;
         var nextRank = _rankService.GetNextRank(user.ProfileRank);
 
         return new LoginResult
@@ -147,18 +147,18 @@ public sealed class UserService : IUserService
         };
     }
 
-    public async Task<bool> IsAdminAsync(Guid userId)
+    public async Task<bool> IsAdminAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
             return false;
         }
 
-        var user = await _userRepository.FindByIdAsync(userId);
+        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
         return user != null && user.Admin == true;
     }
 
-    public async Task<UserInfoResult> CheckTokenAsync(UserEntity currentUser)
+    public async Task<UserInfoResult> CheckTokenAsync(UserEntity currentUser, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -166,7 +166,7 @@ public sealed class UserService : IUserService
         }
 
         var nextRank = _rankService.GetNextRank(currentUser.ProfileRank);
-        var elo = await _eloRepository.GetLatestEloAsync(currentUser.Id) ?? 1000;
+        var elo = await _eloRepository.GetLatestEloAsync(currentUser.Id, cancellationToken) ?? 1000;
 
         return new UserInfoResult
         {
@@ -186,9 +186,9 @@ public sealed class UserService : IUserService
         };
     }
 
-    public async Task<List<RankingEntry>> GetUsersRankingAsync()
+    public async Task<List<RankingEntry>> GetUsersRankingAsync(CancellationToken cancellationToken = default)
     {
-        var users = await _userRepository.GetRankingAsync();
+        var users = await _userRepository.GetRankingAsync(cancellationToken);
         if (users.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -203,14 +203,14 @@ public sealed class UserService : IUserService
         }).ToList();
     }
 
-    public async Task<int> GetUserEloAsync(Guid userId)
+    public async Task<int> GetUserEloAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var result = await _eloRepository.GetLatestEloAsync(userId);
+        var result = await _eloRepository.GetLatestEloAsync(userId, cancellationToken);
         if (!result.HasValue)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -219,7 +219,7 @@ public sealed class UserService : IUserService
         return result.Value;
     }
 
-    public async Task DeleteAccountAsync(UserEntity currentUser)
+    public async Task DeleteAccountAsync(UserEntity currentUser, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -230,11 +230,11 @@ public sealed class UserService : IUserService
         currentUser.Name = $"anonymized_user_{currentUser.Id}";
         currentUser.IsDeleted = true;
 
-        await _userRepository.UpdateAsync(currentUser);
-        await _unitOfWork.SaveChangesAsync();
+        await _userRepository.UpdateAsync(currentUser, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task ChangeVisibilityInRankingAsync(UserEntity currentUser, bool isVisibleInRanking)
+    public async Task ChangeVisibilityInRankingAsync(UserEntity currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -242,7 +242,7 @@ public sealed class UserService : IUserService
         }
 
         currentUser.IsVisibleInRanking = isVisibleInRanking;
-        await _userRepository.UpdateAsync(currentUser);
-        await _unitOfWork.SaveChangesAsync();
+        await _userRepository.UpdateAsync(currentUser, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

@@ -18,7 +18,7 @@ public sealed class MeasurementsService : IMeasurementsService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, HeightUnits unit, double value)
+    public async Task AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, HeightUnits unit, double value, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -39,11 +39,11 @@ public sealed class MeasurementsService : IMeasurementsService
             Value = value
         };
 
-        await _measurementRepository.AddAsync(measurement);
-        await _unitOfWork.SaveChangesAsync();
+        await _measurementRepository.AddAsync(measurement, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<MeasurementEntity> GetMeasurementDetailAsync(UserEntity currentUser, Guid measurementId)
+    public async Task<MeasurementEntity> GetMeasurementDetailAsync(UserEntity currentUser, Guid measurementId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -55,7 +55,7 @@ public sealed class MeasurementsService : IMeasurementsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var measurement = await _measurementRepository.FindByIdAsync(measurementId);
+        var measurement = await _measurementRepository.FindByIdAsync(measurementId, cancellationToken);
         if (measurement == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -69,7 +69,7 @@ public sealed class MeasurementsService : IMeasurementsService
         return measurement;
     }
 
-    public async Task<List<MeasurementEntity>> GetMeasurementsHistoryAsync(UserEntity currentUser, Guid routeUserId, BodyParts? bodyPart)
+    public async Task<List<MeasurementEntity>> GetMeasurementsHistoryAsync(UserEntity currentUser, Guid routeUserId, BodyParts? bodyPart, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId == Guid.Empty)
         {
@@ -81,7 +81,7 @@ public sealed class MeasurementsService : IMeasurementsService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart);
+        var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart, cancellationToken);
         if (measurements.Count < 1)
         {
             throw AppException.NotFound(Messages.DidntFind);
