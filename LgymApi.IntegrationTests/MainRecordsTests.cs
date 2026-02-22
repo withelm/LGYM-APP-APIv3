@@ -291,6 +291,33 @@ public sealed class MainRecordsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task DeleteMainRecord_WithNonGuidRouteId_ReturnsNotFound()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "deleteuser3",
+            email: "delete3@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Delete Invalid Route", BodyParts.Back);
+
+        var addRequest = new
+        {
+            exercise = exerciseId.ToString(),
+            weight = 42.0,
+            unit = WeightUnits.Kilograms.ToString(),
+            date = DateTime.UtcNow
+        };
+        await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", addRequest);
+
+        var response = await Client.GetAsync("/api/mainRecords/not-a-guid/deleteMainRecord");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
     public async Task DeleteMainRecord_WithOtherUsersRecord_ReturnsForbidden()
     {
         var (_, userAToken) = await RegisterUserViaEndpointAsync(
