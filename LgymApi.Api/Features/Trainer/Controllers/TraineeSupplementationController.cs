@@ -44,6 +44,11 @@ public sealed class TraineeSupplementationController : ControllerBase
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
+        if (request.IntakeDate == default)
+        {
+            throw AppException.BadRequest(Messages.DateRequired);
+        }
+
         var trainee = HttpContext.GetCurrentUser();
         var result = await _supplementationService.CheckOffIntakeAsync(trainee!, new CheckOffSupplementIntakeCommand
         {

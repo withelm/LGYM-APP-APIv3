@@ -192,4 +192,7 @@
   <data name="DateRangeTooLarge" xml:space="preserve">
     <value>Date range exceeds the maximum allowed duration.</value>
   </data>
+  <data name="DateRangeRequired" xml:space="preserve">
+    <value>fromDate and toDate query parameters are required.</value>
+  </data>
 </root>

@@ -184,6 +184,19 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Compliance_WithoutRequiredQueryDates_ReturnsBadRequest()
+    {
+        var trainer = await SeedTrainerAsync("trainer-supp-missing-dates", "trainer-supp-missing-dates@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-supp-missing-dates", email: "trainee-supp-missing-dates@example.com", password: "password123");
+        await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
+
+        SetAuthorizationHeader(trainer.Id);
+        var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
     public async Task CreatePlan_WithNullItems_ReturnsBadRequest()
     {
         var trainer = await SeedTrainerAsync("trainer-supp-null-items", "trainer-supp-null-items@example.com");
@@ -196,6 +209,20 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             name = "Plan",
             notes = "n",
             items = (object?)null
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task TraineeCheckOff_WithoutIntakeDate_ReturnsBadRequest()
+    {
+        var trainee = await SeedUserAsync(name: "trainee-missing-intake-date", email: "trainee-missing-intake-date@example.com", password: "password123");
+        SetAuthorizationHeader(trainee.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/trainee/supplements/intakes/check-off", new
+        {
+            planItemId = Guid.NewGuid().ToString()
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

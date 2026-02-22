@@ -192,4 +192,7 @@
   <data name="DateRangeTooLarge" xml:space="preserve">
     <value>Zakres dat przekracza maksymalny dozwolony przedział.</value>
   </data>
+  <data name="DateRangeRequired" xml:space="preserve">
+    <value>Parametry zapytania fromDate i toDate są wymagane.</value>
+  </data>
 </root>

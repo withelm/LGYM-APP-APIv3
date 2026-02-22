@@ -395,12 +395,22 @@ public sealed class SupplementationServiceTests
             => Task.FromResult(Plans.FirstOrDefault(x => x.TraineeId == traineeId && x.IsActive && !x.IsDeleted));
 
         public Task<List<SupplementIntakeLog>> GetIntakeLogsForPlanAsync(Guid traineeId, Guid planId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
-            => Task.FromResult(IntakeLogs
+        {
+            var planItemIds = Plans
+                .Where(p => p.Id == planId)
+                .SelectMany(p => p.Items)
+                .Select(i => i.Id)
+                .ToHashSet();
+
+            var logs = IntakeLogs
                 .Where(x => x.TraineeId == traineeId
-                            && x.PlanItem.PlanId == planId
+                            && planItemIds.Contains(x.PlanItemId)
                             && x.IntakeDate >= fromDate
                             && x.IntakeDate <= toDate)
-                .ToList());
+                .ToList();
+
+            return Task.FromResult(logs);
+        }
 
         public Task<SupplementIntakeLog?> FindIntakeLogAsync(Guid traineeId, Guid planItemId, DateOnly intakeDate, CancellationToken cancellationToken = default)
             => Task.FromResult(IntakeLogs.FirstOrDefault(x => x.TraineeId == traineeId && x.PlanItemId == planItemId && x.IntakeDate == intakeDate));

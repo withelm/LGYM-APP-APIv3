@@ -127,15 +127,20 @@ public sealed class TrainerSupplementationController : ControllerBase
 
     [HttpGet("trainees/{traineeId}/supplements/compliance")]
     [ProducesResponseType(typeof(SupplementComplianceSummaryDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetComplianceSummary([FromRoute] string traineeId, [FromQuery] DateOnly fromDate, [FromQuery] DateOnly toDate)
+    public async Task<IActionResult> GetComplianceSummary([FromRoute] string traineeId, [FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate)
     {
         if (!Guid.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
+        if (fromDate is null || toDate is null)
+        {
+            throw AppException.BadRequest(Messages.DateRangeRequired);
+        }
+
         var trainer = HttpContext.GetCurrentUser();
-        var summary = await _supplementationService.GetComplianceSummaryAsync(trainer!, parsedTraineeId, fromDate, toDate);
+        var summary = await _supplementationService.GetComplianceSummaryAsync(trainer!, parsedTraineeId, fromDate.Value, toDate.Value);
         return Ok(_mapper.Map<SupplementComplianceSummaryResult, SupplementComplianceSummaryDto>(summary));
     }
 
