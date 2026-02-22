@@ -209,8 +209,8 @@ public sealed class MapperRegistrationGuardTests
             QualifiedNameSyntax qualified => NormalizeType(qualified.Right, aliases),
             AliasQualifiedNameSyntax aliasQualified => NormalizeType(aliasQualified.Name, aliases),
             GenericNameSyntax generic => $"{generic.Identifier.ValueText}<{string.Join(",", generic.TypeArgumentList.Arguments.Select(arg => NormalizeType(arg, aliases)))}>",
-            NullableTypeSyntax nullable => NormalizeType(nullable.ElementType, aliases),
-            ArrayTypeSyntax array => $"{NormalizeType(array.ElementType, aliases)}{string.Concat(array.RankSpecifiers.Select(_ => "[]"))}",
+            NullableTypeSyntax nullable => $"{NormalizeType(nullable.ElementType, aliases)}?",
+            ArrayTypeSyntax array => $"{NormalizeType(array.ElementType, aliases)}{string.Concat(array.RankSpecifiers.Select(rank => $"[{new string(',', rank.Sizes.SeparatorCount)}]"))}",
             TupleTypeSyntax tuple => $"({string.Join(",", tuple.Elements.Select(element => NormalizeType(element.Type, aliases)))})",
             _ => type.ToString().Replace("global::", string.Empty, StringComparison.Ordinal).Replace(" ", string.Empty, StringComparison.Ordinal)
         };

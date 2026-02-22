@@ -1,5 +1,6 @@
 using System.Reflection;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Mapping.Extensions;
 
 namespace LgymApi.UnitTests;
 
@@ -159,6 +160,32 @@ public sealed class MapperNestedCompositionTests
     }
 
     [Test]
+    public void MapTo_Extension_Should_Use_Runtime_Source_Type()
+    {
+        var mapper = CreateMapper(new RuntimePolymorphismProfile());
+        object source = new DerivedSource();
+
+        var result = source.MapTo<PolymorphicTarget>(mapper);
+
+        Assert.That(result.Marker, Is.EqualTo("derived"));
+    }
+
+    [Test]
+    public void MapToList_Extension_Should_Use_Runtime_Source_Type_Per_Item()
+    {
+        var mapper = CreateMapper(new RuntimePolymorphismProfile());
+        System.Collections.IEnumerable source = new BaseSource[]
+        {
+            new BaseSource(),
+            new DerivedSource()
+        };
+
+        var result = source.MapToList<PolymorphicTarget>(mapper);
+
+        Assert.That(result.Select(x => x.Marker), Is.EqualTo(new[] { "base", "derived" }));
+    }
+
+    [Test]
     public void Map_Should_Throw_Clear_Error_When_Nested_Mapping_Is_Missing()
     {
         var mapper = CreateMapper(new MissingNestedMappingProfile());
@@ -266,8 +293,8 @@ public sealed class MapperNestedCompositionTests
 
             configuration.CreateMap<ParentSource, ParentTarget>((source, context) => new ParentTarget
             {
-                Child = source.Child == null ? null : context!.Map<ChildSource, ChildTarget>(source.Child),
-                Children = context!.MapList<ChildSource, ChildTarget>(source.Children)
+                Child = source.Child == null ? null : context!.Map<ChildTarget>(source.Child),
+                Children = context!.MapList<ChildTarget>(source.Children)
             });
         }
     }
@@ -278,7 +305,7 @@ public sealed class MapperNestedCompositionTests
         {
             configuration.CreateMap<MissingParentSource, MissingParentTarget>((source, context) => new MissingParentTarget
             {
-                Child = source.Child == null ? null : context!.Map<MissingChildSource, MissingChildTarget>(source.Child)
+                Child = source.Child == null ? null : context!.Map<MissingChildTarget>(source.Child)
             });
         }
     }
@@ -291,7 +318,7 @@ public sealed class MapperNestedCompositionTests
             {
                 if (source.TriggerCycle)
                 {
-                    return context!.Map<CyclicSource, CyclicTarget>(source);
+                    return context!.Map<CyclicTarget>(source);
                 }
 
                 return new CyclicTarget();
@@ -307,7 +334,7 @@ public sealed class MapperNestedCompositionTests
             {
                 if (source == 1)
                 {
-                    return context!.Map<int, int>(source);
+                    return context!.Map<int>(source);
                 }
 
                 return source;
