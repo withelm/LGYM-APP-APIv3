@@ -39,7 +39,7 @@ public sealed class RankDto
     public int NeedElo { get; set; }
 }
 
-public sealed class UserInfoDto
+public sealed class UserInfoDto : IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -81,7 +81,7 @@ public sealed class UserInfoDto
     public bool IsVisibleInRanking { get; set; }
 }
 
-public sealed class UserBaseInfoDto
+public sealed class UserBaseInfoDto : IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -96,13 +96,13 @@ public sealed class UserBaseInfoDto
     public string ProfileRank { get; set; } = string.Empty;
 }
 
-public sealed class UserEloDto
+public sealed class UserEloDto : IResultDto
 {
     [JsonPropertyName("elo")]
     public int Elo { get; set; }
 }
 
-public sealed class LoginResponseDto
+public sealed class LoginResponseDto : IResultDto
 {
     [JsonPropertyName("token")]
     public string Token { get; set; } = string.Empty;

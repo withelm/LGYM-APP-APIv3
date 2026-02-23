@@ -26,7 +26,7 @@ public sealed class ExerciseFormDto : IDto
     public string? Image { get; set; }
 }
 
-public sealed class ExerciseResponseDto
+public sealed class ExerciseResponseDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }
@@ -114,7 +114,7 @@ public sealed class LastExerciseScoresRequestDto : IDto
     public string ExerciseName { get; set; } = string.Empty;
 }
 
-public sealed class LastExerciseScoresResponseDto
+public sealed class LastExerciseScoresResponseDto : IResultDto
 {
     [JsonPropertyName("exerciseId")]
     public string ExerciseId { get; set; } = string.Empty;
@@ -133,7 +133,7 @@ public sealed class ExerciseByBodyPartRequestDto : IDto
     public BodyParts BodyPart { get; set; }
 }
 
-public sealed class ExerciseTrainingHistoryItemDto
+public sealed class ExerciseTrainingHistoryItemDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;

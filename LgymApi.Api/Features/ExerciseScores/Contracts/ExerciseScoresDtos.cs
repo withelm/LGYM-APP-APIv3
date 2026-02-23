@@ -4,7 +4,7 @@ using LgymApi.Api.Features.Training.Contracts;
 
 namespace LgymApi.Api.Features.ExerciseScores.Contracts;
 
-public sealed class ExerciseScoresChartDataDto
+public sealed class ExerciseScoresChartDataDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
