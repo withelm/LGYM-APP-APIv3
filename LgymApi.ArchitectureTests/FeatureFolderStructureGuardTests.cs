@@ -34,8 +34,6 @@ public sealed class FeatureFolderStructureGuardTests
 
         foreach (var featureDirectory in featureDirectories)
         {
-            var featureName = Path.GetFileName(featureDirectory);
-
             var hasController = Directory
                 .EnumerateFiles(featureDirectory, "*Controller.cs", SearchOption.AllDirectories)
                 .Any();
