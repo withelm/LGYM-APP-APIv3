@@ -7,18 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="appsettings.Development.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="appsettings.Development.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="..\LgymApi.Infrastructure\EmailTemplates\**\*.email">
       <Link>EmailTemplates\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="appsettings.Development.json.example" />
   </ItemGroup>
 
   <ItemGroup>
