@@ -10,7 +10,7 @@ namespace LgymApi.ArchitectureTests;
 public sealed class ControllerProducesResponseTypeDtoGuardTests
 {
     [Test]
-    public void ProducesResponseType_ShouldUseDtoTypesImplementingIDto()
+    public void MethodsWithProducesResponseType_ShouldUseIDtoForClassArguments()
     {
         var repoRoot = ResolveRepositoryRoot();
         var apiRoot = Path.Combine(repoRoot, "LgymApi.Api");
@@ -56,8 +56,8 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
         Assert.That(idtoSymbol, Is.Not.Null, "Unable to resolve IDto symbol.");
 
         var violations = new List<Violation>();
-        var producesAttributesFound = 0;
-        var projectClassTypesFound = 0;
+        var producesMethodsFound = 0;
+        var projectArgumentTypesFound = 0;
 
         foreach (var tree in syntaxTrees)
         {
@@ -77,6 +77,8 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
                     continue;
                 }
 
+                var hasProducesResponseType = false;
+
                 foreach (var attributeSyntax in methodDeclaration.AttributeLists.SelectMany(list => list.Attributes))
                 {
                     var symbolInfo = semanticModel.GetSymbolInfo(attributeSyntax);
@@ -93,43 +95,59 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
                         continue;
                     }
 
-                    producesAttributesFound++;
+                    hasProducesResponseType = true;
+                    break;
+                }
 
-                    var typeOfExpression = attributeSyntax.ArgumentList?.Arguments.FirstOrDefault()?.Expression as TypeOfExpressionSyntax;
-                    if (typeOfExpression == null)
-                    {
-                        continue;
-                    }
+                if (!hasProducesResponseType)
+                {
+                    continue;
+                }
 
-                    var responseTypeSymbol = semanticModel.GetTypeInfo(typeOfExpression.Type).Type;
-                    if (responseTypeSymbol == null)
-                    {
-                        continue;
-                    }
+                producesMethodsFound++;
 
-                    foreach (var classType in EnumerateClassTypes(responseTypeSymbol))
+                foreach (var parameter in methodSymbol.Parameters)
+                {
+                    foreach (var candidateType in EnumerateDtoCandidateTypes(parameter.Type))
                     {
-                        if (!IsProjectType(classType, compilation.Assembly))
+                        if (!IsProjectType(candidateType, compilation.Assembly))
                         {
                             continue;
                         }
 
-                        projectClassTypesFound++;
+                        projectArgumentTypesFound++;
 
-                        if (classType.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, idtoSymbol)))
+                        var reasons = new List<string>();
+
+                        if (!candidateType.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, idtoSymbol)))
+                        {
+                            reasons.Add("does not implement IDto");
+                        }
+
+                        if (candidateType.TypeKind == TypeKind.Class && !candidateType.IsSealed)
+                        {
+                            reasons.Add("class/record is not sealed");
+                        }
+
+                        if (reasons.Count == 0)
                         {
                             continue;
                         }
 
-                        var line = attributeSyntax.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
-                        var filePath = attributeSyntax.SyntaxTree.FilePath;
+                        var parameterSyntax = methodDeclaration.ParameterList.Parameters
+                            .FirstOrDefault(p => string.Equals(p.Identifier.ValueText, parameter.Name, StringComparison.Ordinal));
+                        var line = parameterSyntax?.GetLocation().GetLineSpan().StartLinePosition.Line + 1
+                            ?? methodDeclaration.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
+                        var filePath = methodDeclaration.SyntaxTree.FilePath;
                         var relativePath = Path.GetRelativePath(repoRoot, filePath);
                         violations.Add(new Violation(
                             relativePath,
                             line,
                             methodSymbol.ContainingType.Name,
                             methodSymbol.Name,
-                            classType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+                            candidateType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+                            parameter.Name,
+                            string.Join(", ", reasons)));
                     }
                 }
             }
@@ -138,15 +156,15 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
         Assert.That(
             violations,
             Is.Empty,
-            "Every class used in ProducesResponseType(typeof(...)) within ControllerBase descendants must implement IDto. Violations count: " +
+            "Every project class/struct type used as a parameter in methods decorated with ProducesResponseType must implement IDto, and class/record types must be sealed. Violations count: " +
             violations.Count + Environment.NewLine +
             string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
 
-        Assert.That(producesAttributesFound, Is.GreaterThan(0), "No ProducesResponseType attributes were analyzed.");
+        Assert.That(producesMethodsFound, Is.GreaterThan(0), "No controller methods with ProducesResponseType were analyzed.");
         Assert.That(
-            projectClassTypesFound,
+            projectArgumentTypesFound,
             Is.GreaterThan(0),
-            "No project class types were found in ProducesResponseType(typeof(...)).");
+            "No project class/struct argument types were found in methods with ProducesResponseType.");
     }
 
     private static bool InheritsFromControllerBase(INamedTypeSymbol type, INamedTypeSymbol controllerBaseSymbol)
@@ -165,12 +183,12 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
         return false;
     }
 
-    private static IEnumerable<INamedTypeSymbol> EnumerateClassTypes(ITypeSymbol typeSymbol)
+    private static IEnumerable<INamedTypeSymbol> EnumerateDtoCandidateTypes(ITypeSymbol typeSymbol)
     {
         switch (typeSymbol)
         {
             case IArrayTypeSymbol arrayType:
-                foreach (var nested in EnumerateClassTypes(arrayType.ElementType))
+                foreach (var nested in EnumerateDtoCandidateTypes(arrayType.ElementType))
                 {
                     yield return nested;
                 }
@@ -178,14 +196,14 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
                 yield break;
 
             case INamedTypeSymbol namedType:
-                if (namedType.TypeKind == TypeKind.Class)
+                if (namedType.TypeKind is TypeKind.Class or TypeKind.Struct)
                 {
                     yield return namedType;
                 }
 
                 foreach (var typeArgument in namedType.TypeArguments)
                 {
-                    foreach (var nested in EnumerateClassTypes(typeArgument))
+                    foreach (var nested in EnumerateDtoCandidateTypes(typeArgument))
                     {
                         yield return nested;
                     }
@@ -229,8 +247,8 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
         throw new InvalidOperationException("Unable to locate repository root.");
     }
 
-    private sealed record Violation(string File, int Line, string Controller, string Method, string TypeName)
+    private sealed record Violation(string File, int Line, string Controller, string Method, string TypeName, string ParameterName, string Reason)
     {
-        public override string ToString() => $"{File}:{Line} [{Controller}.{Method}] -> {TypeName}";
+        public override string ToString() => $"{File}:{Line} [{Controller}.{Method}] param '{ParameterName}' -> {TypeName} ({Reason})";
     }
 }
