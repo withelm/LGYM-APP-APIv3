@@ -3,7 +3,7 @@ using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.Gym.Contracts;
 
-public sealed class GymFormDto : IDto
+public sealed class GymFormDto : IDto, IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -39,7 +39,7 @@ public sealed class LastTrainingGymInfoDto
     public string? Name { get; set; }
 }
 
-public sealed class GymChoiceInfoDto
+public sealed class GymChoiceInfoDto : IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;

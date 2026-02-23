@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.Enum.Contracts;
 
@@ -11,7 +12,7 @@ public sealed class EnumLookupDto
     public string DisplayName { get; set; } = string.Empty;
 }
 
-public sealed class EnumLookupResponseDto
+public sealed class EnumLookupResponseDto : IResultDto
 {
     [JsonPropertyName("enumType")]
     public string EnumType { get; set; } = string.Empty;

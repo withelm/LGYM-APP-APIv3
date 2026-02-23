@@ -4,7 +4,7 @@ using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.AppConfig.Contracts;
 
-public class AppConfigInfoDto
+public sealed class AppConfigInfoDto : IResultDto
 {
     [JsonPropertyName("minRequiredVersion")]
     public string MinRequiredVersion { get; set; } = string.Empty;
@@ -22,8 +22,23 @@ public class AppConfigInfoDto
     public string? ReleaseNotes { get; set; }
 }
 
-public sealed class AppConfigInfoWithPlatformDto : AppConfigInfoDto, IDto
+public sealed class AppConfigInfoWithPlatformDto : IDto, IResultDto
 {
+    [JsonPropertyName("minRequiredVersion")]
+    public string MinRequiredVersion { get; set; } = string.Empty;
+
+    [JsonPropertyName("latestVersion")]
+    public string LatestVersion { get; set; } = string.Empty;
+
+    [JsonPropertyName("forceUpdate")]
+    public bool ForceUpdate { get; set; }
+
+    [JsonPropertyName("updateUrl")]
+    public string UpdateUrl { get; set; } = string.Empty;
+
+    [JsonPropertyName("releaseNotes")]
+    public string? ReleaseNotes { get; set; }
+
     [JsonPropertyName("platform")]
     public Platforms Platform { get; set; }
 }

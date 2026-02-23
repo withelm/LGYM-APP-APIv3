@@ -66,7 +66,7 @@ public sealed class TrainingFormDto : IDto
     public List<ExerciseScoresTrainingFormDto> Exercises { get; set; } = new();
 }
 
-public class LastTrainingInfoDto
+public sealed class LastTrainingInfoDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -97,8 +97,23 @@ public sealed class TrainingExerciseScoreRefDto
     public string ExerciseScoreId { get; set; } = string.Empty;
 }
 
-public class TrainingByDateDto : LastTrainingInfoDto
+public sealed class TrainingByDateDto : IResultDto
 {
+    [JsonPropertyName("_id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public string TypePlanDayId { get; set; } = string.Empty;
+
+    [JsonPropertyName("createdAt")]
+    public DateTime CreatedAt { get; set; }
+
+    [JsonPropertyName("planDay")]
+    public PlanDayChooseDto PlanDay { get; set; } = new();
+
+    [JsonPropertyName("gym")]
+    public string? Gym { get; set; }
+
     [JsonPropertyName("exercises")]
     public List<TrainingExerciseScoreRefDto> Exercises { get; set; } = new();
 }
@@ -115,8 +130,23 @@ public sealed class EnrichedExerciseDto
     public ExerciseResponseDto ExerciseDetails { get; set; } = new();
 }
 
-public class TrainingByDateDetailsDto : LastTrainingInfoDto
+public sealed class TrainingByDateDetailsDto : IResultDto
 {
+    [JsonPropertyName("_id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public string TypePlanDayId { get; set; } = string.Empty;
+
+    [JsonPropertyName("createdAt")]
+    public DateTime CreatedAt { get; set; }
+
+    [JsonPropertyName("planDay")]
+    public PlanDayChooseDto PlanDay { get; set; } = new();
+
+    [JsonPropertyName("gym")]
+    public string? Gym { get; set; }
+
     [JsonPropertyName("exercises")]
     public List<EnrichedExerciseDto> Exercises { get; set; } = new();
 }
@@ -157,7 +187,7 @@ public sealed class GroupedExerciseComparisonDto
     public List<SeriesComparisonDto> SeriesComparisons { get; set; } = new();
 }
 
-public sealed class TrainingSummaryDto
+public sealed class TrainingSummaryDto : IResultDto
 {
     [JsonPropertyName("comparison")]
     public List<GroupedExerciseComparisonDto> Comparison { get; set; } = new();

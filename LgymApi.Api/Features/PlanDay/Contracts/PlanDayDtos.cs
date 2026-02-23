@@ -40,7 +40,7 @@ public sealed class PlanDayExerciseVmDto
     public ExerciseResponseDto Exercise { get; set; } = new();
 }
 
-public sealed class PlanDayVmDto
+public sealed class PlanDayVmDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -52,7 +52,7 @@ public sealed class PlanDayVmDto
     public List<PlanDayExerciseVmDto> Exercises { get; set; } = new();
 }
 
-public sealed class PlanDayChooseDto
+public sealed class PlanDayChooseDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -61,7 +61,7 @@ public sealed class PlanDayChooseDto
     public string Name { get; set; } = string.Empty;
 }
 
-public sealed class PlanDayBaseInfoDto
+public sealed class PlanDayBaseInfoDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;

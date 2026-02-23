@@ -29,7 +29,7 @@ public sealed class MeasurementFormDto : IDto
     public DateTime? UpdatedAt { get; set; }
 }
 
-public sealed class MeasurementResponseDto
+public sealed class MeasurementResponseDto : IResultDto
 {
     [JsonPropertyName("user")]
     public string UserId { get; set; } = string.Empty;
@@ -56,7 +56,7 @@ public sealed class MeasurementsHistoryRequestDto : IDto
     public BodyParts? BodyPart { get; set; }
 }
 
-public sealed class MeasurementsHistoryDto
+public sealed class MeasurementsHistoryDto : IResultDto
 {
     [JsonPropertyName("measurements")]
     public List<MeasurementResponseDto> Measurements { get; set; } = new();
