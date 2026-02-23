@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.PlanDay.Contracts;
 
@@ -15,7 +16,7 @@ public sealed class PlanDayExerciseInputDto
     public string ExerciseId { get; set; } = string.Empty;
 }
 
-public sealed class PlanDayFormDto
+public sealed class PlanDayFormDto : IDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }

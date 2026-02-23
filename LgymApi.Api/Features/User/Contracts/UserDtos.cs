@@ -1,8 +1,9 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.User.Contracts;
 
-public sealed class RegisterUserRequest
+public sealed class RegisterUserRequest : IDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -20,7 +21,7 @@ public sealed class RegisterUserRequest
     public bool? IsVisibleInRanking { get; set; }
 }
 
-public sealed class LoginRequest
+public sealed class LoginRequest : IDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
