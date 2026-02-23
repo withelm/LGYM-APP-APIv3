@@ -10,7 +10,7 @@ namespace LgymApi.ArchitectureTests;
 public sealed class ControllerProducesResponseTypeDtoGuardTests
 {
     [Test]
-    public void MethodsWithProducesResponseType_ShouldUseIDtoForClassArguments()
+    public void MethodsWithProducesResponseType_ShouldUseSealedIDtoForArguments()
     {
         var repoRoot = ResolveRepositoryRoot();
         var apiRoot = Path.Combine(repoRoot, "LgymApi.Api");
@@ -20,6 +20,7 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
 
         var sourceFiles = Directory
             .EnumerateFiles(apiRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !IsInBuildArtifacts(path))
             .ToList();
 
         Assert.That(sourceFiles, Is.Not.Empty, $"No source files found in '{apiRoot}'.");
@@ -51,9 +52,12 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
         var producesResponseTypeAttributeSymbol = compilation.GetTypeByMetadataName(typeof(ProducesResponseTypeAttribute).FullName!);
         var idtoSymbol = compilation.GetTypeByMetadataName(typeof(IDto).FullName!);
 
-        Assert.That(controllerBaseSymbol, Is.Not.Null, "Unable to resolve ControllerBase symbol.");
-        Assert.That(producesResponseTypeAttributeSymbol, Is.Not.Null, "Unable to resolve ProducesResponseTypeAttribute symbol.");
-        Assert.That(idtoSymbol, Is.Not.Null, "Unable to resolve IDto symbol.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(controllerBaseSymbol, Is.Not.Null, "Unable to resolve ControllerBase symbol.");
+            Assert.That(producesResponseTypeAttributeSymbol, Is.Not.Null, "Unable to resolve ProducesResponseTypeAttribute symbol.");
+            Assert.That(idtoSymbol, Is.Not.Null, "Unable to resolve IDto symbol.");
+        });
 
         var violations = new List<Violation>();
         var producesMethodsFound = 0;
@@ -153,18 +157,21 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
             }
         }
 
-        Assert.That(
-            violations,
-            Is.Empty,
-            "Every project class/struct type used as a parameter in methods decorated with ProducesResponseType must implement IDto, and class/record types must be sealed. Violations count: " +
-            violations.Count + Environment.NewLine +
-            string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                violations,
+                Is.Empty,
+                "Every project class/struct type used as a parameter in methods decorated with ProducesResponseType must implement IDto, and class/record types must be sealed. Violations count: " +
+                violations.Count + Environment.NewLine +
+                string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
 
-        Assert.That(producesMethodsFound, Is.GreaterThan(0), "No controller methods with ProducesResponseType were analyzed.");
-        Assert.That(
-            projectArgumentTypesFound,
-            Is.GreaterThan(0),
-            "No project class/struct argument types were found in methods with ProducesResponseType.");
+            Assert.That(producesMethodsFound, Is.GreaterThan(0), "No controller methods with ProducesResponseType were analyzed.");
+            Assert.That(
+                projectArgumentTypesFound,
+                Is.GreaterThan(0),
+                "No project class/struct argument types were found in methods with ProducesResponseType.");
+        });
     }
 
     private static bool InheritsFromControllerBase(INamedTypeSymbol type, INamedTypeSymbol controllerBaseSymbol)
@@ -245,6 +252,13 @@ public sealed class ControllerProducesResponseTypeDtoGuardTests
         }
 
         throw new InvalidOperationException("Unable to locate repository root.");
+    }
+
+    private static bool IsInBuildArtifacts(string path)
+    {
+        var normalized = path.Replace('\\', '/');
+        return normalized.Contains("/bin/", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed record Violation(string File, int Line, string Controller, string Method, string TypeName, string ParameterName, string Reason)
