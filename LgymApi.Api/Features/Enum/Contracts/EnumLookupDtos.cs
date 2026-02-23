@@ -3,7 +3,7 @@ using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.Enum.Contracts;
 
-public sealed class EnumLookupDto
+public sealed class EnumLookupDto : IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;

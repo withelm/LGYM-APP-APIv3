@@ -4,7 +4,7 @@ using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.PlanDay.Contracts;
 
-public sealed class PlanDayExerciseInputDto
+public sealed class PlanDayExerciseInputDto : IResultDto
 {
     [JsonPropertyName("series")]
     public int Series { get; set; }
@@ -28,7 +28,7 @@ public sealed class PlanDayFormDto : IDto
     public List<PlanDayExerciseInputDto> Exercises { get; set; } = new();
 }
 
-public sealed class PlanDayExerciseVmDto
+public sealed class PlanDayExerciseVmDto : IResultDto
 {
     [JsonPropertyName("series")]
     public int Series { get; set; }

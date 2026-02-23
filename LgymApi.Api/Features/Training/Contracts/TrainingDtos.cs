@@ -8,7 +8,7 @@ using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.Training.Contracts;
 
-public class ExerciseScoresTrainingFormDto
+public class ExerciseScoresTrainingFormDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }
@@ -29,7 +29,7 @@ public class ExerciseScoresTrainingFormDto
     public int Series { get; set; }
 }
 
-public sealed class ExerciseScoreResponseDto
+public sealed class ExerciseScoreResponseDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }
@@ -91,7 +91,7 @@ public sealed class TrainingByDateRequestDto : IDto
     public DateTime CreatedAt { get; set; }
 }
 
-public sealed class TrainingExerciseScoreRefDto
+public sealed class TrainingExerciseScoreRefDto : IResultDto
 {
     [JsonPropertyName("exerciseScoreId")]
     public string ExerciseScoreId { get; set; } = string.Empty;
@@ -118,7 +118,7 @@ public sealed class TrainingByDateDto : IResultDto
     public List<TrainingExerciseScoreRefDto> Exercises { get; set; } = new();
 }
 
-public sealed class EnrichedExerciseDto
+public sealed class EnrichedExerciseDto : IResultDto
 {
     [JsonPropertyName("exerciseScoreId")]
     public string ExerciseScoreId { get; set; } = string.Empty;
@@ -151,7 +151,7 @@ public sealed class TrainingByDateDetailsDto : IResultDto
     public List<EnrichedExerciseDto> Exercises { get; set; } = new();
 }
 
-public sealed class SeriesComparisonDto
+public sealed class SeriesComparisonDto : IResultDto
 {
     [JsonPropertyName("series")]
     public int Series { get; set; }
@@ -163,7 +163,7 @@ public sealed class SeriesComparisonDto
     public ScoreResultDto? PreviousResult { get; set; }
 }
 
-public sealed class ScoreResultDto
+public sealed class ScoreResultDto : IResultDto
 {
     [JsonPropertyName("reps")]
     public int Reps { get; set; }
@@ -175,7 +175,7 @@ public sealed class ScoreResultDto
     public EnumLookupDto Unit { get; set; } = new();
 }
 
-public sealed class GroupedExerciseComparisonDto
+public sealed class GroupedExerciseComparisonDto : IResultDto
 {
     [JsonPropertyName("exerciseId")]
     public string ExerciseId { get; set; } = string.Empty;

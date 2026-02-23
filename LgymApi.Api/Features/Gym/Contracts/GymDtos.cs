@@ -15,7 +15,7 @@ public sealed class GymFormDto : IDto, IResultDto
     public string? Id { get; set; }
 }
 
-public sealed class LastTrainingGymPlanDayInfoDto
+public sealed class LastTrainingGymPlanDayInfoDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -24,7 +24,7 @@ public sealed class LastTrainingGymPlanDayInfoDto
     public string Name { get; set; } = string.Empty;
 }
 
-public sealed class LastTrainingGymInfoDto
+public sealed class LastTrainingGymInfoDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;

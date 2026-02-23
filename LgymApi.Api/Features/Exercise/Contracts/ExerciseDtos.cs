@@ -59,7 +59,7 @@ public sealed class ExerciseTranslationDto : IDto
     public string Name { get; set; } = string.Empty;
 }
 
-public sealed class SeriesScoreDto
+public sealed class SeriesScoreDto : IResultDto
 {
     [JsonPropertyName("series")]
     public int Series { get; set; }
@@ -68,7 +68,7 @@ public sealed class SeriesScoreDto
     public ScoreDto? Score { get; set; }
 }
 
-public class ScoreDto
+public class ScoreDto : IResultDto
 {
     [JsonPropertyName("reps")]
     public int Reps { get; set; }
@@ -89,7 +89,7 @@ public class ScoreWithGymDto : ScoreDto
     public string? GymName { get; set; }
 }
 
-public sealed class SeriesScoreWithGymDto
+public sealed class SeriesScoreWithGymDto : IResultDto
 {
     [JsonPropertyName("series")]
     public int Series { get; set; }

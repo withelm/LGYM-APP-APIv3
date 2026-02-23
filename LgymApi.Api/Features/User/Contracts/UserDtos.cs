@@ -30,7 +30,7 @@ public sealed class LoginRequest : IDto
     public string Password { get; set; } = string.Empty;
 }
 
-public sealed class RankDto
+public sealed class RankDto : IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;

@@ -28,7 +28,7 @@ public sealed class ExerciseScoresChartRequestDto : IDto
     public string ExerciseId { get; set; } = string.Empty;
 }
 
-public class ExerciseScoresFormDto : ExerciseScoresTrainingFormDto
+public class ExerciseScoresFormDto : ExerciseScoresTrainingFormDto, IResultDto
 {
     [JsonPropertyName("user")]
     public string UserId { get; set; } = string.Empty;
