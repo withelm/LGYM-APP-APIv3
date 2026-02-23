@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.AppConfig.Contracts;
@@ -21,13 +22,13 @@ public class AppConfigInfoDto
     public string? ReleaseNotes { get; set; }
 }
 
-public class AppConfigInfoWithPlatformDto : AppConfigInfoDto
+public sealed class AppConfigInfoWithPlatformDto : AppConfigInfoDto, IDto
 {
     [JsonPropertyName("platform")]
     public Platforms Platform { get; set; }
 }
 
-public sealed class AppConfigVersionRequestDto
+public sealed class AppConfigVersionRequestDto : IDto
 {
     [JsonPropertyName("platform")]
     [JsonRequired]

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 using LgymApi.Api.Features.Training.Contracts;
 
 namespace LgymApi.Api.Features.ExerciseScores.Contracts;
@@ -21,7 +22,7 @@ public sealed class ExerciseScoresChartDataDto
     public string ExerciseId { get; set; } = string.Empty;
 }
 
-public sealed class ExerciseScoresChartRequestDto
+public sealed class ExerciseScoresChartRequestDto : IDto
 {
     [JsonPropertyName("exerciseId")]
     public string ExerciseId { get; set; } = string.Empty;

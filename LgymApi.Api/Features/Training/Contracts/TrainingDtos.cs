@@ -3,6 +3,7 @@ using LgymApi.Api.Features.Enum.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.PlanDay.Contracts;
 using LgymApi.Api.Features.User.Contracts;
+using LgymApi.Api.Interfaces;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.Training.Contracts;
@@ -49,7 +50,7 @@ public sealed class ExerciseScoreResponseDto
     public int Series { get; set; }
 }
 
-public sealed class TrainingFormDto
+public sealed class TrainingFormDto : IDto
 {
     [JsonPropertyName("type")]
     public string TypePlanDayId { get; set; } = string.Empty;
@@ -83,7 +84,7 @@ public class LastTrainingInfoDto
     public string? Gym { get; set; }
 }
 
-public sealed class TrainingByDateRequestDto
+public sealed class TrainingByDateRequestDto : IDto
 {
     [JsonPropertyName("createdAt")]
     [JsonRequired]

@@ -1,11 +1,12 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Enum.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Interfaces;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.MainRecords.Contracts;
 
-public class MainRecordsFormDto
+public sealed class MainRecordsFormDto : IDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }
@@ -65,7 +66,7 @@ public sealed class PossibleRecordForExerciseDto
     public DateTime Date { get; set; }
 }
 
-public sealed class RecordOrPossibleRequestDto
+public sealed class RecordOrPossibleRequestDto : IDto
 {
     [JsonPropertyName("exerciseId")]
     public string ExerciseId { get; set; } = string.Empty;
