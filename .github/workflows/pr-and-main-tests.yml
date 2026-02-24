@@ -44,6 +44,9 @@ jobs:
       - name: Run integration tests
         run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=integration-tests.trx" --results-directory ./TestResults/Integration
 
+      - name: Run DataSeeder tests
+        run: dotnet test LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=dataseeder-tests.trx" --results-directory ./TestResults/DataSeeder
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -68,6 +71,15 @@ jobs:
         with:
           name: Integration Tests
           path: TestResults/Integration/*.trx
+          reporter: dotnet-trx
+
+      - name: Publish DataSeeder test summary
+        if: always()
+        continue-on-error: true
+        uses: dorny/test-reporter@v1
+        with:
+          name: DataSeeder Tests
+          path: TestResults/DataSeeder/*.trx
           reporter: dotnet-trx
 
       - name: Publish architecture test summary

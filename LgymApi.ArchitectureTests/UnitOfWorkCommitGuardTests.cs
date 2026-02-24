@@ -12,6 +12,7 @@ public sealed class UnitOfWorkCommitGuardTests
         "/LgymApi.Application/",
         "/LgymApi.Infrastructure/UnitOfWork/",
         "/LgymApi.Infrastructure/Data/",
+        "/LgymApi.DataSeeder/",
         "/LgymApi.ArchitectureTests/"
     };
 
@@ -19,6 +20,7 @@ public sealed class UnitOfWorkCommitGuardTests
     {
         "/LgymApi.UnitTests/",
         "/LgymApi.IntegrationTests/",
+        "/LgymApi.DataSeeder.Tests/",
         "/LgymApi.ArchitectureTests/"
     };
 
