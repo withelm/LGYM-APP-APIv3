@@ -83,7 +83,7 @@ public class ScoreDto : IResultDto
     public string Id { get; set; } = string.Empty;
 }
 
-public class ScoreWithGymDto : ScoreDto
+public sealed class ScoreWithGymDto : ScoreDto, IResultDto
 {
     [JsonPropertyName("gymName")]
     public string? GymName { get; set; }

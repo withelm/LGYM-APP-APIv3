@@ -1,8 +1,9 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.Trainer.Contracts;
 
-public sealed class UpsertSupplementPlanRequest
+public sealed class UpsertSupplementPlanRequest : IDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -14,7 +15,7 @@ public sealed class UpsertSupplementPlanRequest
     public List<UpsertSupplementPlanItemRequest> Items { get; set; } = [];
 }
 
-public sealed class UpsertSupplementPlanItemRequest
+public sealed class UpsertSupplementPlanItemRequest : IDto
 {
     [JsonPropertyName("supplementName")]
     public string SupplementName { get; set; } = string.Empty;
@@ -32,7 +33,7 @@ public sealed class UpsertSupplementPlanItemRequest
     public int Order { get; set; }
 }
 
-public sealed class SupplementPlanDto
+public sealed class SupplementPlanDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -59,7 +60,7 @@ public sealed class SupplementPlanDto
     public List<SupplementPlanItemDto> Items { get; set; } = [];
 }
 
-public sealed class SupplementPlanItemDto
+public sealed class SupplementPlanItemDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -80,7 +81,7 @@ public sealed class SupplementPlanItemDto
     public int Order { get; set; }
 }
 
-public sealed class CheckOffSupplementIntakeRequest
+public sealed class CheckOffSupplementIntakeRequest : IDto
 {
     [JsonPropertyName("planItemId")]
     public string PlanItemId { get; set; } = string.Empty;
@@ -92,7 +93,7 @@ public sealed class CheckOffSupplementIntakeRequest
     public DateTimeOffset? TakenAt { get; set; }
 }
 
-public sealed class SupplementScheduleEntryDto
+public sealed class SupplementScheduleEntryDto : IResultDto
 {
     [JsonPropertyName("planItemId")]
     public string PlanItemId { get; set; } = string.Empty;
@@ -116,7 +117,7 @@ public sealed class SupplementScheduleEntryDto
     public DateTimeOffset? TakenAt { get; set; }
 }
 
-public sealed class SupplementComplianceSummaryDto
+public sealed class SupplementComplianceSummaryDto : IResultDto
 {
     [JsonPropertyName("traineeId")]
     public string TraineeId { get; set; } = string.Empty;

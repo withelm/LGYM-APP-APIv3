@@ -1,15 +1,16 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 
 namespace LgymApi.Api.Features.Trainer.Contracts;
 
-public sealed class CreateTrainerInvitationRequest
+public sealed class CreateTrainerInvitationRequest : IDto
 {
     [JsonPropertyName("traineeId")]
     public string TraineeId { get; set; } = string.Empty;
 }
 
-public sealed class TrainerInvitationDto
+public sealed class TrainerInvitationDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -36,7 +37,7 @@ public sealed class TrainerInvitationDto
     public DateTimeOffset CreatedAt { get; set; }
 }
 
-public sealed class TrainerDashboardTraineesRequest
+public sealed class TrainerDashboardTraineesRequest : IDto
 {
     [JsonPropertyName("search")]
     public string? Search { get; set; }
@@ -57,7 +58,7 @@ public sealed class TrainerDashboardTraineesRequest
     public int PageSize { get; set; } = 20;
 }
 
-public sealed class TrainerDashboardTraineeDto
+public sealed class TrainerDashboardTraineeDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -93,7 +94,7 @@ public sealed class TrainerDashboardTraineeDto
     public DateTimeOffset? LastInvitationRespondedAt { get; set; }
 }
 
-public sealed class TrainerDashboardTraineesResponse
+public sealed class TrainerDashboardTraineesResponse : IResultDto
 {
     [JsonPropertyName("page")]
     public int Page { get; set; }
@@ -108,13 +109,13 @@ public sealed class TrainerDashboardTraineesResponse
     public List<TrainerDashboardTraineeDto> Items { get; set; } = [];
 }
 
-public sealed class TrainerPlanFormRequest
+public sealed class TrainerPlanFormRequest : IDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 }
 
-public sealed class TrainerManagedPlanDto
+public sealed class TrainerManagedPlanDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
