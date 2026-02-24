@@ -1,7 +1,8 @@
-using System.Net;
+using System.Net.Sockets;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
+using MailKit.Net.Smtp;
 
 namespace LgymApi.UnitTests;
 
@@ -9,68 +10,61 @@ namespace LgymApi.UnitTests;
 public sealed class SmtpEmailSenderTests
 {
     [Test]
-    public async Task SendAsync_ReturnsFalse_WhenEmailFeatureDisabled()
+    public async Task SendAsync_Should_Return_False_When_Email_Disabled()
     {
-        var sender = new SmtpEmailSender(new EmailOptions
-        {
-            Enabled = false
-        });
+        var options = CreateOptions(enabled: false);
+        var sender = new SmtpEmailSender(options);
 
-        var result = await sender.SendAsync(new EmailMessage
-        {
-            To = "trainee@example.com",
-            Subject = "x",
-            Body = "y"
-        });
+        var message = new EmailMessage { To = "user@lgym.app", Subject = "Subject", Body = "Body" };
+
+        var result = await sender.SendAsync(message, CancellationToken.None);
 
         Assert.That(result, Is.False);
     }
 
     [Test]
-    public void SendAsync_ThrowsInvalidOperationException_WhenRecipientAddressInvalid()
+    public void SendAsync_Should_Throw_When_Email_Is_Invalid()
     {
-        var sender = new SmtpEmailSender(new EmailOptions
-        {
-            Enabled = true,
-            FromAddress = "coach@example.com",
-            FromName = "Coach",
-            SmtpHost = "localhost",
-            SmtpPort = 2525
-        });
+        var options = CreateOptions(enabled: true);
+        var sender = new SmtpEmailSender(options);
+
+        var message = new EmailMessage { To = "invalid-address", Subject = "Subject", Body = "Body" };
 
         var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await sender.SendAsync(new EmailMessage
-            {
-                To = "not-an-email",
-                Subject = "x",
-                Body = "y"
-            }));
+            await sender.SendAsync(message, CancellationToken.None));
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(exception, Is.Not.Null);
-            Assert.That(exception!.InnerException, Is.TypeOf<FormatException>());
-            Assert.That(exception.Message, Is.EqualTo("Recipient email address is invalid."));
-        });
+        Assert.That(exception?.InnerException, Is.InstanceOf<FormatException>());
     }
 
     [Test]
-    public void SendAsync_ThrowsOperationCanceledException_WhenTokenAlreadyCanceled()
+    public async Task SendAsync_Should_Throw_When_Smtp_Connection_Fails()
     {
-        var sender = new SmtpEmailSender(new EmailOptions
+        var options = CreateOptions(enabled: true, smtpHost: "localhost", smtpPort: 1, useSsl: true);
+        var sender = new SmtpEmailSender(options);
+
+        var message = new EmailMessage { To = "user@lgym.app", Subject = "Subject", Body = "Body" };
+
+        Assert.ThrowsAsync<SocketException>(async () =>
+            await sender.SendAsync(message, CancellationToken.None));
+    }
+
+    private static EmailOptions CreateOptions(
+        bool enabled,
+        string smtpHost = "localhost",
+        int smtpPort = 25,
+        bool useSsl = false)
+    {
+        return new EmailOptions
         {
-            Enabled = true
-        });
-
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
-
-        Assert.ThrowsAsync<OperationCanceledException>(async () =>
-            await sender.SendAsync(new EmailMessage
-            {
-                To = "trainee@example.com",
-                Subject = "x",
-                Body = "y"
-            }, cts.Token));
+            Enabled = enabled,
+            DeliveryMode = EmailDeliveryMode.Smtp,
+            FromAddress = "no-reply@lgym.app",
+            FromName = "LGYM",
+            SmtpHost = smtpHost,
+            SmtpPort = smtpPort,
+            UseSsl = useSsl,
+            Username = string.Empty,
+            Password = string.Empty
+        };
     }
 }

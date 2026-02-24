@@ -49,6 +49,27 @@ public static class Program
             return 0;
         }
 
+        await using var provider = BuildServiceProvider(configuration, connectionString);
+        await using var scope = provider.CreateAsyncScope();
+
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var orchestrator = scope.ServiceProvider.GetRequiredService<SeedOrchestrator>();
+
+        var seedContext = new SeedContext();
+        await orchestrator.RunAsync(context, seedContext, options, CancellationToken.None);
+        Console.WriteLine("All done! Database is ready.");
+        return 0;
+    }
+
+    private static bool IsTestModeEnabled()
+    {
+        var value = Environment.GetEnvironmentVariable("LGYM_SEEDER_TEST_MODE");
+        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static ServiceProvider BuildServiceProvider(IConfiguration configuration, string connectionString)
+    {
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
         services.AddDbContext<AppDbContext>(optionsBuilder =>
@@ -82,23 +103,6 @@ public static class Program
         services.AddScoped<IEntitySeeder, SupplementPlanItemSeeder>();
         services.AddScoped<IEntitySeeder, SupplementIntakeLogSeeder>();
         services.AddScoped<SeedOrchestrator>();
-
-        await using var provider = services.BuildServiceProvider();
-        await using var scope = provider.CreateAsyncScope();
-
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var orchestrator = scope.ServiceProvider.GetRequiredService<SeedOrchestrator>();
-
-        var seedContext = new SeedContext();
-        await orchestrator.RunAsync(context, seedContext, options, CancellationToken.None);
-        Console.WriteLine("All done! Database is ready.");
-        return 0;
-    }
-
-    private static bool IsTestModeEnabled()
-    {
-        var value = Environment.GetEnvironmentVariable("LGYM_SEEDER_TEST_MODE");
-        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase)
-               || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+        return services.BuildServiceProvider();
     }
 }
