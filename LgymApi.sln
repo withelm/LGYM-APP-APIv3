@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.ArchitectureTests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.DataSeeder", "LgymApi.DataSeeder\LgymApi.DataSeeder.csproj", "{9C5583D5-51BE-4F96-92C2-1EA1E9F9A3A4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.DataSeeder.Tests", "LgymApi.DataSeeder.Tests\LgymApi.DataSeeder.Tests.csproj", "{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -153,6 +155,18 @@ Global
 		{9C5583D5-51BE-4F96-92C2-1EA1E9F9A3A4}.Release|x64.Build.0 = Release|Any CPU
 		{9C5583D5-51BE-4F96-92C2-1EA1E9F9A3A4}.Release|x86.ActiveCfg = Release|Any CPU
 		{9C5583D5-51BE-4F96-92C2-1EA1E9F9A3A4}.Release|x86.Build.0 = Release|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Debug|x64.Build.0 = Debug|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Debug|x86.Build.0 = Debug|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Release|x64.ActiveCfg = Release|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Release|x64.Build.0 = Release|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Release|x86.ActiveCfg = Release|Any CPU
+		{3A4F2A8B-47A2-4E75-A0C0-2D1A7A3A4CF7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
