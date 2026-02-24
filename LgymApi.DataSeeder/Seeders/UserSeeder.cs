@@ -1,0 +1,91 @@
+using LgymApi.Application.Services;
+using LgymApi.Domain.Entities;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace LgymApi.DataSeeder.Seeders;
+
+public sealed class UserSeeder : IEntitySeeder
+{
+    private readonly ILegacyPasswordService _legacyPasswordService;
+
+    public UserSeeder(ILegacyPasswordService legacyPasswordService)
+    {
+        _legacyPasswordService = legacyPasswordService;
+    }
+
+    public int Order => 0;
+
+    public async Task SeedAsync(AppDbContext context, SeedContext seedContext, CancellationToken cancellationToken)
+    {
+        SeedOperationConsole.Start("users");
+        seedContext.AdminUser ??= await EnsureUserAsync(context, "Admin", "admin@lgym.app", true, false, cancellationToken);
+        seedContext.TesterUser ??= await EnsureUserAsync(context, "Tester", "tester@lgym.app", false, true, cancellationToken);
+
+        if (seedContext.AdminUser == null || seedContext.TesterUser == null)
+        {
+            SeedOperationConsole.Skip("users");
+            return;
+        }
+
+        if (!seedContext.SeedDemoData || seedContext.DemoUsers.Any())
+        {
+            SeedOperationConsole.Done("users");
+            return;
+        }
+
+        var demoUsers = new[]
+        {
+            (Name: "DemoUser1", Email: "demo1@lgym.app"),
+            (Name: "DemoUser2", Email: "demo2@lgym.app")
+        };
+
+        foreach (var demo in demoUsers)
+        {
+            var user = await EnsureUserAsync(context, demo.Name, demo.Email, false, false, cancellationToken);
+            if (user != null)
+            {
+                seedContext.DemoUsers.Add(user);
+            }
+        }
+
+        SeedOperationConsole.Done("users");
+    }
+
+    private async Task<User?> EnsureUserAsync(
+        AppDbContext context,
+        string name,
+        string email,
+        bool isAdmin,
+        bool isTester,
+        CancellationToken cancellationToken)
+    {
+        var existing = await context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(user => user.Name == name, cancellationToken);
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        var passwordData = _legacyPasswordService.Create(name);
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Email = email,
+            Admin = isAdmin,
+            IsTester = isTester,
+            IsVisibleInRanking = true,
+            ProfileRank = "Junior 1",
+            LegacyHash = passwordData.Hash,
+            LegacySalt = passwordData.Salt,
+            LegacyIterations = passwordData.Iterations,
+            LegacyKeyLength = passwordData.KeyLength,
+            LegacyDigest = passwordData.Digest
+        };
+
+        await context.Users.AddAsync(user, cancellationToken);
+        return user;
+    }
+}
