@@ -1,4 +1,5 @@
 using LgymApi.DataSeeder.Seeders;
+using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,9 @@ public sealed class SeedOrchestrator
         CancellationToken cancellationToken)
     {
         seedContext.SeedDemoData = options.SeedDemoData;
+        seedContext.AdminUser ??= await FindExistingUserAsync(context, "Admin", cancellationToken);
+        seedContext.TesterUser ??= await FindExistingUserAsync(context, "Tester", cancellationToken);
+
         if (options.DropDatabase)
         {
             Console.WriteLine("Dropping existing database...");
@@ -73,5 +77,15 @@ public sealed class SeedOrchestrator
         }
 
         SeedStatisticsPrinter.PrintSummary(seedContext);
+    }
+
+    private static Task<User?> FindExistingUserAsync(
+        AppDbContext context,
+        string name,
+        CancellationToken cancellationToken)
+    {
+        return context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(user => user.Name == name, cancellationToken);
     }
 }

@@ -19,8 +19,10 @@ public sealed class UserSeeder : IEntitySeeder
     public async Task SeedAsync(AppDbContext context, SeedContext seedContext, CancellationToken cancellationToken)
     {
         SeedOperationConsole.Start("users");
-        seedContext.AdminUser ??= await EnsureUserAsync(context, "Admin", "admin@lgym.app", true, false, cancellationToken);
-        seedContext.TesterUser ??= await EnsureUserAsync(context, "Tester", "tester@lgym.app", false, true, cancellationToken);
+        var adminEmail = seedContext.AdminUser?.Email ?? "admin@lgym.app";
+        var testerEmail = seedContext.TesterUser?.Email ?? "tester@lgym.app";
+        seedContext.AdminUser ??= await EnsureUserAsync(context, "Admin", adminEmail, true, false, cancellationToken);
+        seedContext.TesterUser ??= await EnsureUserAsync(context, "Tester", testerEmail, false, true, cancellationToken);
 
         if (seedContext.AdminUser == null || seedContext.TesterUser == null)
         {

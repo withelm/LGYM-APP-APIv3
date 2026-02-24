@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 Console.WriteLine("=== LgymApi DataSeeder ===");
 
-var configuration = BuildConfiguration();
+var configuration = DataSeederProgram.BuildConfiguration(AppContext.BaseDirectory);
 var connectionString = configuration.GetConnectionString("Postgres") ?? string.Empty;
 Console.WriteLine("Reading configuration from LgymApi.Api/appsettings.json...");
 Console.WriteLine($"Connection: {MaskConnectionString(connectionString)}");
@@ -68,63 +68,7 @@ var seedContext = new SeedContext();
 await orchestrator.RunAsync(context, seedContext, options, CancellationToken.None);
 Console.WriteLine("All done! Database is ready.");
 
-static IConfiguration BuildConfiguration()
-{
-    var basePath = AppContext.BaseDirectory;
-    var repoRoot = ResolveRepositoryRoot(basePath);
-    var apiRoot = Path.Combine(repoRoot, "LgymApi.Api");
-    var appSettingsPath = Path.Combine(apiRoot, "appsettings.json");
-
-    var builder = new ConfigurationBuilder()
-        .SetBasePath(repoRoot)
-        .AddJsonFile(appSettingsPath, optional: false, reloadOnChange: false);
-
-    var optionalSettings = Directory
-        .EnumerateFiles(apiRoot, "appsettings.*.json", SearchOption.TopDirectoryOnly)
-        .Where(path => !path.EndsWith("appsettings.json", StringComparison.OrdinalIgnoreCase))
-        .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
-
-    foreach (var optionalPath in optionalSettings)
-    {
-        builder.AddJsonFile(optionalPath, optional: true, reloadOnChange: false);
-    }
-
-    return builder
-        .AddEnvironmentVariables()
-        .Build();
-}
-
-static string ResolveRepositoryRoot(string startPath)
-{
-    var current = new DirectoryInfo(startPath);
-    while (current != null)
-    {
-        if (File.Exists(Path.Combine(current.FullName, "LgymApi.sln")))
-        {
-            return current.FullName;
-        }
-
-        current = current.Parent;
-    }
-
-    throw new InvalidOperationException("Unable to locate repository root.");
-}
-
 static string MaskConnectionString(string connectionString)
 {
-    if (string.IsNullOrWhiteSpace(connectionString))
-    {
-        return "<empty>";
-    }
-
-    var parts = connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    for (var i = 0; i < parts.Length; i++)
-    {
-        if (parts[i].StartsWith("Password=", StringComparison.OrdinalIgnoreCase))
-        {
-            parts[i] = "Password=***";
-        }
-    }
-
-    return string.Join(';', parts);
+    return DataSeederProgram.MaskConnectionString(connectionString);
 }
