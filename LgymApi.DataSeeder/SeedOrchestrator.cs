@@ -50,7 +50,7 @@ public sealed class SeedOrchestrator
         foreach (var seeder in alwaysSeeders)
         {
             await seeder.SeedAsync(context, seedContext, cancellationToken);
-            await context.CommitChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
         }
 
         if (!options.SeedDemoData)
@@ -66,7 +66,7 @@ public sealed class SeedOrchestrator
             foreach (var seeder in demoSeeders)
             {
                 await seeder.SeedAsync(context, seedContext, cancellationToken);
-                await context.CommitChangesAsync(cancellationToken);
+                await context.SaveChangesAsync(cancellationToken);
             }
 
             Console.WriteLine("Demo data seeding completed.");
