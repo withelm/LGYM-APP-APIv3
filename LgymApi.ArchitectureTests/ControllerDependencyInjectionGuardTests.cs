@@ -29,29 +29,25 @@ public sealed class ControllerDependencyInjectionGuardTests
             var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(file), parseOptions, file);
             var root = tree.GetCompilationUnitRoot();
 
-            var ctorDeclarations = root.DescendantNodes().OfType<ConstructorDeclarationSyntax>();
+            var controllerClasses = root
+                .DescendantNodes()
+                .OfType<ClassDeclarationSyntax>()
+                .Where(cls => cls.Identifier.ValueText.EndsWith("Controller", StringComparison.Ordinal))
+                .ToList();
 
-            foreach (var ctor in ctorDeclarations)
+            foreach (var controllerClass in controllerClasses)
             {
-                foreach (var statement in ctor.Body?.Statements.OfType<ExpressionStatementSyntax>() ?? Enumerable.Empty<ExpressionStatementSyntax>())
+                foreach (var member in controllerClass.Members)
                 {
-                    if (statement.Expression is not AssignmentExpressionSyntax assignment)
+                    switch (member)
                     {
-                        continue;
+                        case ConstructorDeclarationSyntax ctor:
+                            InspectBody(repoRoot, tree, ctor.Body, ctor.ExpressionBody?.Expression, violations);
+                            break;
+                        case MethodDeclarationSyntax method:
+                            InspectBody(repoRoot, tree, method.Body, method.ExpressionBody?.Expression, violations);
+                            break;
                     }
-
-                    if (assignment.Right is not ObjectCreationExpressionSyntax objectCreation)
-                    {
-                        continue;
-                    }
-
-                    var typeName = objectCreation.Type.ToString();
-                    if (!typeName.EndsWith("Service", StringComparison.Ordinal) && !typeName.EndsWith("Repository", StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    violations.Add(CreateViolation(repoRoot, tree, assignment, typeName));
                 }
             }
         }
@@ -61,6 +57,44 @@ public sealed class ControllerDependencyInjectionGuardTests
             Is.Empty,
             "Controllers must receive services/repositories via DI. Instantiations detected:" + Environment.NewLine +
             string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
+    }
+
+    private static void InspectBody(
+        string repoRoot,
+        SyntaxTree tree,
+        BlockSyntax? body,
+        ExpressionSyntax? expressionBody,
+        ICollection<Violation> violations)
+    {
+        if (body != null)
+        {
+            InspectNode(repoRoot, tree, body, violations);
+        }
+
+        if (expressionBody != null)
+        {
+            InspectNode(repoRoot, tree, expressionBody, violations);
+        }
+    }
+
+    private static void InspectNode(string repoRoot, SyntaxTree tree, SyntaxNode node, ICollection<Violation> violations)
+    {
+        foreach (var objectCreation in node.DescendantNodesAndSelf().OfType<ObjectCreationExpressionSyntax>())
+        {
+            var typeName = objectCreation.Type.ToString();
+            if (!IsForbiddenType(typeName))
+            {
+                continue;
+            }
+
+            violations.Add(CreateViolation(repoRoot, tree, objectCreation, typeName));
+        }
+    }
+
+    private static bool IsForbiddenType(string typeName)
+    {
+        return typeName.EndsWith("Service", StringComparison.Ordinal)
+            || typeName.EndsWith("Repository", StringComparison.Ordinal);
     }
 
     private static Violation CreateViolation(string repoRoot, SyntaxTree tree, SyntaxNode node, string type)
