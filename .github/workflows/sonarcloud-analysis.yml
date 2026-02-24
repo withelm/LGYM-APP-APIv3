@@ -51,7 +51,7 @@ jobs:
         run: dotnet build LgymApi.sln --configuration Release --no-restore
 
       - name: Create coverage directories
-        run: mkdir -p "${{ github.workspace }}/TestResults/Unit" "${{ github.workspace }}/TestResults/Architecture" "${{ github.workspace }}/TestResults/Integration"
+        run: mkdir -p "${{ github.workspace }}/TestResults/Unit" "${{ github.workspace }}/TestResults/Architecture" "${{ github.workspace }}/TestResults/Integration" "${{ github.workspace }}/TestResults/DataSeeder"
 
       - name: Run unit tests with coverage
         run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Unit/coverage.opencover.xml
@@ -61,6 +61,9 @@ jobs:
 
       - name: Run integration tests with coverage
         run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Integration/coverage.opencover.xml
+
+      - name: Run DataSeeder tests with coverage
+        run: dotnet test LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/DataSeeder/coverage.opencover.xml
 
       - name: Sonar End
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
@@ -99,7 +102,7 @@ jobs:
         run: dotnet build LgymApi.sln --configuration Release --no-restore
 
       - name: Create coverage directories
-        run: mkdir -p "${{ github.workspace }}/TestResults/Unit" "${{ github.workspace }}/TestResults/Architecture" "${{ github.workspace }}/TestResults/Integration"
+        run: mkdir -p "${{ github.workspace }}/TestResults/Unit" "${{ github.workspace }}/TestResults/Architecture" "${{ github.workspace }}/TestResults/Integration" "${{ github.workspace }}/TestResults/DataSeeder"
 
       - name: Run unit tests with coverage
         run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Unit/coverage.opencover.xml
@@ -109,6 +112,9 @@ jobs:
 
       - name: Run integration tests with coverage
         run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Integration/coverage.opencover.xml
+
+      - name: Run DataSeeder tests with coverage
+        run: dotnet test LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/DataSeeder/coverage.opencover.xml
 
       - name: Sonar End
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
@@ -146,7 +152,7 @@ jobs:
         run: dotnet build LgymApi.sln --configuration Release --no-restore
 
       - name: Create coverage directories
-        run: mkdir -p "${{ github.workspace }}/TestResults/Unit" "${{ github.workspace }}/TestResults/Architecture" "${{ github.workspace }}/TestResults/Integration"
+        run: mkdir -p "${{ github.workspace }}/TestResults/Unit" "${{ github.workspace }}/TestResults/Architecture" "${{ github.workspace }}/TestResults/Integration" "${{ github.workspace }}/TestResults/DataSeeder"
 
       - name: Run unit tests with coverage
         run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Unit/coverage.opencover.xml
@@ -156,6 +162,9 @@ jobs:
 
       - name: Run integration tests with coverage
         run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/Integration/coverage.opencover.xml
+
+      - name: Run DataSeeder tests with coverage
+        run: dotnet test LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=${{ github.workspace }}/TestResults/DataSeeder/coverage.opencover.xml
 
       - name: Sonar End
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
