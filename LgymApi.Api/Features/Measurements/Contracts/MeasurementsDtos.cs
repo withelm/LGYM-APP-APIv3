@@ -65,13 +65,13 @@ public sealed class MeasurementsHistoryDto : IResultDto
     public List<MeasurementResponseDto> Measurements { get; set; } = new();
 }
 
-public sealed class MeasurementsListDto
+public sealed class MeasurementsListDto : IResultDto
 {
     [JsonPropertyName("measurements")]
     public List<MeasurementResponseDto> Measurements { get; set; } = new();
 }
 
-public sealed class MeasurementTrendRequestDto
+public sealed class MeasurementTrendRequestDto : IDto
 {
     [JsonPropertyName("bodyPart")]
     [JsonRequired]
@@ -82,7 +82,7 @@ public sealed class MeasurementTrendRequestDto
     public HeightUnits Unit { get; set; }
 }
 
-public sealed class MeasurementTrendDto
+public sealed class MeasurementTrendDto : IResultDto
 {
     [JsonPropertyName("bodyPart")]
     public EnumLookupDto BodyPart { get; set; } = new();

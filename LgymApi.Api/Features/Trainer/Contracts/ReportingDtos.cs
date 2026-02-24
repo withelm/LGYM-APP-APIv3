@@ -1,10 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.Trainer.Contracts;
 
-public sealed class UpsertReportTemplateRequest
+public sealed class UpsertReportTemplateRequest : IDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -16,7 +17,7 @@ public sealed class UpsertReportTemplateRequest
     public List<ReportTemplateFieldRequest> Fields { get; set; } = [];
 }
 
-public sealed class ReportTemplateFieldRequest
+public sealed class ReportTemplateFieldRequest : IDto
 {
     [JsonPropertyName("key")]
     public string Key { get; set; } = string.Empty;
@@ -34,7 +35,7 @@ public sealed class ReportTemplateFieldRequest
     public int Order { get; set; }
 }
 
-public sealed class ReportTemplateDto
+public sealed class ReportTemplateDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -55,7 +56,7 @@ public sealed class ReportTemplateDto
     public List<ReportTemplateFieldDto> Fields { get; set; } = [];
 }
 
-public sealed class ReportTemplateFieldDto
+public sealed class ReportTemplateFieldDto : IResultDto
 {
     [JsonPropertyName("key")]
     public string Key { get; set; } = string.Empty;
@@ -73,7 +74,7 @@ public sealed class ReportTemplateFieldDto
     public int Order { get; set; }
 }
 
-public sealed class CreateReportRequestRequest
+public sealed class CreateReportRequestRequest : IDto
 {
     [JsonPropertyName("templateId")]
     public string TemplateId { get; set; } = string.Empty;
@@ -85,7 +86,7 @@ public sealed class CreateReportRequestRequest
     public string? Note { get; set; }
 }
 
-public sealed class ReportRequestDto
+public sealed class ReportRequestDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -118,13 +119,13 @@ public sealed class ReportRequestDto
     public ReportTemplateDto Template { get; set; } = new();
 }
 
-public sealed class SubmitReportRequestRequest
+public sealed class SubmitReportRequestRequest : IDto
 {
     [JsonPropertyName("answers")]
     public Dictionary<string, JsonElement> Answers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
-public sealed class ReportSubmissionDto
+public sealed class ReportSubmissionDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
