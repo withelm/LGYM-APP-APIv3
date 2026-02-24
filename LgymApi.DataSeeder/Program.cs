@@ -56,6 +56,8 @@ public static class Program
         services.AddScoped<ILegacyPasswordService, LegacyPasswordService>();
         services.AddScoped<IEntitySeeder, UserSeeder>();
         services.AddScoped<IEntitySeeder, EloRegistrySeeder>();
+        services.AddScoped<IEntitySeeder, RoleSeeder>();
+        services.AddScoped<IEntitySeeder, RoleClaimSeeder>();
         services.AddScoped<IEntitySeeder, ExerciseSeeder>();
         services.AddScoped<IEntitySeeder, ExerciseTranslationSeeder>();
         services.AddScoped<IEntitySeeder, AddressSeeder>();
@@ -69,6 +71,16 @@ public static class Program
         services.AddScoped<IEntitySeeder, MeasurementSeeder>();
         services.AddScoped<IEntitySeeder, MainRecordSeeder>();
         services.AddScoped<IEntitySeeder, AppConfigSeeder>();
+        services.AddScoped<IEntitySeeder, TrainerInvitationSeeder>();
+        services.AddScoped<IEntitySeeder, TrainerTraineeLinkSeeder>();
+        services.AddScoped<IEntitySeeder, EmailNotificationLogSeeder>();
+        services.AddScoped<IEntitySeeder, ReportTemplateSeeder>();
+        services.AddScoped<IEntitySeeder, ReportTemplateFieldSeeder>();
+        services.AddScoped<IEntitySeeder, ReportRequestSeeder>();
+        services.AddScoped<IEntitySeeder, ReportSubmissionSeeder>();
+        services.AddScoped<IEntitySeeder, SupplementPlanSeeder>();
+        services.AddScoped<IEntitySeeder, SupplementPlanItemSeeder>();
+        services.AddScoped<IEntitySeeder, SupplementIntakeLogSeeder>();
         services.AddScoped<SeedOrchestrator>();
 
         await using var provider = services.BuildServiceProvider();

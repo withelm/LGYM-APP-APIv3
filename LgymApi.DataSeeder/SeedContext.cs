@@ -22,4 +22,16 @@ public sealed class SeedContext
     public List<MainRecord> MainRecords { get; } = new();
     public List<EloRegistry> EloRegistries { get; } = new();
     public List<AppConfig> AppConfigs { get; } = new();
+    public List<Role> Roles { get; } = new();
+    public List<RoleClaim> RoleClaims { get; } = new();
+    public List<TrainerInvitation> TrainerInvitations { get; } = new();
+    public List<TrainerTraineeLink> TrainerTraineeLinks { get; } = new();
+    public List<EmailNotificationLog> EmailNotificationLogs { get; } = new();
+    public List<ReportTemplate> ReportTemplates { get; } = new();
+    public List<ReportTemplateField> ReportTemplateFields { get; } = new();
+    public List<ReportRequest> ReportRequests { get; } = new();
+    public List<ReportSubmission> ReportSubmissions { get; } = new();
+    public List<SupplementPlan> SupplementPlans { get; } = new();
+    public List<SupplementPlanItem> SupplementPlanItems { get; } = new();
+    public List<SupplementIntakeLog> SupplementIntakeLogs { get; } = new();
 }
