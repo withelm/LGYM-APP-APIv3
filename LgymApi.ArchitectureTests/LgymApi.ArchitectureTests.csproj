@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LgymApi.Api\LgymApi.Api.csproj" />
+    <ProjectReference Include="..\LgymApi.Application\LgymApi.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
