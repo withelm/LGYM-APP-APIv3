@@ -95,7 +95,7 @@ public sealed class RepositoryRegistrationGuardTests
         foreach (var baseType in typeDeclaration.BaseList.Types.OfType<SimpleBaseTypeSyntax>())
         {
             var identifier = baseType.Type.ToString();
-            if (identifier.StartsWith("I", StringComparison.Ordinal) && identifier.EndsWith("Repository", StringComparison.Ordinal))
+            if (identifier.StartsWith('I') && identifier.EndsWith("Repository", StringComparison.Ordinal))
             {
                 return NormalizeType(baseType.Type);
             }
