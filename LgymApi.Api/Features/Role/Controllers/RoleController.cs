@@ -27,7 +27,8 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(List<RoleDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRoles()
     {
-        var roles = await _roleService.GetRolesAsync(HttpContext.RequestAborted);
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var roles = await _roleService.GetRolesAsync(cancellationToken);
         return Ok(_mapper.MapList<RoleResult, RoleDto>(roles));
     }
 
@@ -36,8 +37,9 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRole([FromRoute] string id)
     {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        var role = await _roleService.GetRoleAsync(roleId, HttpContext.RequestAborted);
+        var role = await _roleService.GetRoleAsync(roleId, cancellationToken);
         return Ok(_mapper.Map<RoleResult, RoleDto>(role));
     }
 
@@ -54,7 +56,8 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateRole([FromBody] UpsertRoleRequest request)
     {
-        var role = await _roleService.CreateRoleAsync(request.Name, request.Description, request.PermissionClaims, HttpContext.RequestAborted);
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var role = await _roleService.CreateRoleAsync(request.Name, request.Description, request.PermissionClaims, cancellationToken);
         return Ok(_mapper.Map<RoleResult, RoleDto>(role));
     }
 
@@ -64,8 +67,9 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateRole([FromRoute] string id, [FromBody] UpsertRoleRequest request)
     {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims, HttpContext.RequestAborted);
+        await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims, cancellationToken);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -74,8 +78,9 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteRole([FromRoute] string id)
     {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        await _roleService.DeleteRoleAsync(roleId, HttpContext.RequestAborted);
+        await _roleService.DeleteRoleAsync(roleId, cancellationToken);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -85,8 +90,9 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateUserRoles([FromRoute] string id, [FromBody] UpdateUserRolesRequest request)
     {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _roleService.UpdateUserRolesAsync(userId, request.Roles, HttpContext.RequestAborted);
+        await _roleService.UpdateUserRolesAsync(userId, request.Roles, cancellationToken);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
