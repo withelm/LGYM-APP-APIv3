@@ -1,8 +1,9 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.EloRegistry.Contracts;
 
-public sealed class EloRegistryBaseChartDto
+public sealed class EloRegistryBaseChartDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;

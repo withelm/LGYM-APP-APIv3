@@ -1,8 +1,9 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.Gym.Contracts;
 
-public class GymFormDto
+public sealed class GymFormDto : IDto, IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -14,7 +15,7 @@ public class GymFormDto
     public string? Id { get; set; }
 }
 
-public sealed class LastTrainingGymPlanDayInfoDto
+public sealed class LastTrainingGymPlanDayInfoDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -23,7 +24,7 @@ public sealed class LastTrainingGymPlanDayInfoDto
     public string Name { get; set; } = string.Empty;
 }
 
-public sealed class LastTrainingGymInfoDto
+public sealed class LastTrainingGymInfoDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -38,8 +39,17 @@ public sealed class LastTrainingGymInfoDto
     public string? Name { get; set; }
 }
 
-public class GymChoiceInfoDto : GymFormDto
+public sealed class GymChoiceInfoDto : IResultDto
 {
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("address")]
+    public string? Address { get; set; }
+
+    [JsonPropertyName("_id")]
+    public string? Id { get; set; }
+
     [JsonPropertyName("lastTrainingInfo")]
     public LastTrainingGymInfoDto? LastTrainingInfo { get; set; }
 }

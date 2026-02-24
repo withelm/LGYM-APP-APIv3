@@ -1,9 +1,10 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 using LgymApi.Api.Features.Training.Contracts;
 
 namespace LgymApi.Api.Features.ExerciseScores.Contracts;
 
-public sealed class ExerciseScoresChartDataDto
+public sealed class ExerciseScoresChartDataDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -21,13 +22,13 @@ public sealed class ExerciseScoresChartDataDto
     public string ExerciseId { get; set; } = string.Empty;
 }
 
-public sealed class ExerciseScoresChartRequestDto
+public sealed class ExerciseScoresChartRequestDto : IDto
 {
     [JsonPropertyName("exerciseId")]
     public string ExerciseId { get; set; } = string.Empty;
 }
 
-public class ExerciseScoresFormDto : ExerciseScoresTrainingFormDto
+public class ExerciseScoresFormDto : ExerciseScoresTrainingFormDto, IResultDto
 {
     [JsonPropertyName("user")]
     public string UserId { get; set; } = string.Empty;

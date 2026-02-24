@@ -1,11 +1,12 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Enum.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Interfaces;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.MainRecords.Contracts;
 
-public class MainRecordsFormDto
+public sealed class MainRecordsFormDto : IDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }
@@ -26,7 +27,7 @@ public class MainRecordsFormDto
     public string ExerciseId { get; set; } = string.Empty;
 }
 
-public class MainRecordResponseDto
+public sealed class MainRecordResponseDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }
@@ -44,13 +45,28 @@ public class MainRecordResponseDto
     public string ExerciseId { get; set; } = string.Empty;
 }
 
-public class MainRecordsLastDto : MainRecordResponseDto
+public sealed class MainRecordsLastDto : IResultDto
 {
+    [JsonPropertyName("_id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("weight")]
+    public double Weight { get; set; }
+
+    [JsonPropertyName("date")]
+    public DateTime Date { get; set; }
+
+    [JsonPropertyName("unit")]
+    public EnumLookupDto Unit { get; set; } = new();
+
+    [JsonPropertyName("exercise")]
+    public string ExerciseId { get; set; } = string.Empty;
+
     [JsonPropertyName("exerciseDetails")]
     public ExerciseResponseDto ExerciseDetails { get; set; } = new();
 }
 
-public sealed class PossibleRecordForExerciseDto
+public sealed class PossibleRecordForExerciseDto : IResultDto
 {
     [JsonPropertyName("weight")]
     public double Weight { get; set; }
@@ -65,7 +81,7 @@ public sealed class PossibleRecordForExerciseDto
     public DateTime Date { get; set; }
 }
 
-public sealed class RecordOrPossibleRequestDto
+public sealed class RecordOrPossibleRequestDto : IDto
 {
     [JsonPropertyName("exerciseId")]
     public string ExerciseId { get; set; } = string.Empty;

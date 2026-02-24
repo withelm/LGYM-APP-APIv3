@@ -1,8 +1,9 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.User.Contracts;
 
-public sealed class RegisterUserRequest
+public sealed class RegisterUserRequest : IDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -20,7 +21,7 @@ public sealed class RegisterUserRequest
     public bool? IsVisibleInRanking { get; set; }
 }
 
-public sealed class LoginRequest
+public sealed class LoginRequest : IDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -29,7 +30,7 @@ public sealed class LoginRequest
     public string Password { get; set; } = string.Empty;
 }
 
-public sealed class RankDto
+public sealed class RankDto : IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -38,7 +39,7 @@ public sealed class RankDto
     public int NeedElo { get; set; }
 }
 
-public sealed class UserInfoDto
+public sealed class UserInfoDto : IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -80,7 +81,7 @@ public sealed class UserInfoDto
     public List<string> PermissionClaims { get; set; } = new();
 }
 
-public sealed class UserBaseInfoDto
+public sealed class UserBaseInfoDto : IResultDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -95,13 +96,13 @@ public sealed class UserBaseInfoDto
     public string ProfileRank { get; set; } = string.Empty;
 }
 
-public sealed class UserEloDto
+public sealed class UserEloDto : IResultDto
 {
     [JsonPropertyName("elo")]
     public int Elo { get; set; }
 }
 
-public sealed class LoginResponseDto
+public sealed class LoginResponseDto : IResultDto
 {
     [JsonPropertyName("token")]
     public string Token { get; set; } = string.Empty;

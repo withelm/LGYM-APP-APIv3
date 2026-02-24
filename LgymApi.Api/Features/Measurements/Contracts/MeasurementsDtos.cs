@@ -1,10 +1,11 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Enum.Contracts;
+using LgymApi.Api.Interfaces;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.Measurements.Contracts;
 
-public sealed class MeasurementFormDto
+public sealed class MeasurementFormDto : IDto
 {
     [JsonPropertyName("user")]
     public string UserId { get; set; } = string.Empty;
@@ -28,7 +29,7 @@ public sealed class MeasurementFormDto
     public DateTime? UpdatedAt { get; set; }
 }
 
-public sealed class MeasurementResponseDto
+public sealed class MeasurementResponseDto : IResultDto
 {
     [JsonPropertyName("user")]
     public string UserId { get; set; } = string.Empty;
@@ -49,7 +50,7 @@ public sealed class MeasurementResponseDto
     public DateTime? UpdatedAt { get; set; }
 }
 
-public sealed class MeasurementsHistoryRequestDto
+public sealed class MeasurementsHistoryRequestDto : IDto
 {
     [JsonPropertyName("bodyPart")]
     public BodyParts? BodyPart { get; set; }
@@ -58,7 +59,7 @@ public sealed class MeasurementsHistoryRequestDto
     public HeightUnits? Unit { get; set; }
 }
 
-public sealed class MeasurementsHistoryDto
+public sealed class MeasurementsHistoryDto : IResultDto
 {
     [JsonPropertyName("measurements")]
     public List<MeasurementResponseDto> Measurements { get; set; } = new();

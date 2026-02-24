@@ -1,10 +1,11 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Enum.Contracts;
+using LgymApi.Api.Interfaces;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.Exercise.Contracts;
 
-public sealed class ExerciseFormDto
+public sealed class ExerciseFormDto : IDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }
@@ -25,7 +26,7 @@ public sealed class ExerciseFormDto
     public string? Image { get; set; }
 }
 
-public sealed class ExerciseResponseDto
+public sealed class ExerciseResponseDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }
@@ -46,7 +47,7 @@ public sealed class ExerciseResponseDto
     public string? Image { get; set; }
 }
 
-public sealed class ExerciseTranslationDto
+public sealed class ExerciseTranslationDto : IDto
 {
     [JsonPropertyName("exerciseId")]
     public string ExerciseId { get; set; } = string.Empty;
@@ -58,7 +59,7 @@ public sealed class ExerciseTranslationDto
     public string Name { get; set; } = string.Empty;
 }
 
-public sealed class SeriesScoreDto
+public sealed class SeriesScoreDto : IResultDto
 {
     [JsonPropertyName("series")]
     public int Series { get; set; }
@@ -67,7 +68,7 @@ public sealed class SeriesScoreDto
     public ScoreDto? Score { get; set; }
 }
 
-public class ScoreDto
+public class ScoreDto : IResultDto
 {
     [JsonPropertyName("reps")]
     public int Reps { get; set; }
@@ -88,7 +89,7 @@ public class ScoreWithGymDto : ScoreDto
     public string? GymName { get; set; }
 }
 
-public sealed class SeriesScoreWithGymDto
+public sealed class SeriesScoreWithGymDto : IResultDto
 {
     [JsonPropertyName("series")]
     public int Series { get; set; }
@@ -97,7 +98,7 @@ public sealed class SeriesScoreWithGymDto
     public ScoreWithGymDto? Score { get; set; }
 }
 
-public sealed class LastExerciseScoresRequestDto
+public sealed class LastExerciseScoresRequestDto : IDto
 {
     [JsonPropertyName("series")]
     [JsonRequired]
@@ -113,7 +114,7 @@ public sealed class LastExerciseScoresRequestDto
     public string ExerciseName { get; set; } = string.Empty;
 }
 
-public sealed class LastExerciseScoresResponseDto
+public sealed class LastExerciseScoresResponseDto : IResultDto
 {
     [JsonPropertyName("exerciseId")]
     public string ExerciseId { get; set; } = string.Empty;
@@ -125,14 +126,14 @@ public sealed class LastExerciseScoresResponseDto
     public List<SeriesScoreWithGymDto> SeriesScores { get; set; } = new();
 }
 
-public sealed class ExerciseByBodyPartRequestDto
+public sealed class ExerciseByBodyPartRequestDto : IDto
 {
     [JsonPropertyName("bodyPart")]
     [JsonRequired]
     public BodyParts BodyPart { get; set; }
 }
 
-public sealed class ExerciseTrainingHistoryItemDto
+public sealed class ExerciseTrainingHistoryItemDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;

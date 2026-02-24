@@ -1,9 +1,10 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.PlanDay.Contracts;
 
-public sealed class PlanDayExerciseInputDto
+public sealed class PlanDayExerciseInputDto : IResultDto
 {
     [JsonPropertyName("series")]
     public int Series { get; set; }
@@ -15,7 +16,7 @@ public sealed class PlanDayExerciseInputDto
     public string ExerciseId { get; set; } = string.Empty;
 }
 
-public sealed class PlanDayFormDto
+public sealed class PlanDayFormDto : IDto
 {
     [JsonPropertyName("_id")]
     public string? Id { get; set; }
@@ -27,7 +28,7 @@ public sealed class PlanDayFormDto
     public List<PlanDayExerciseInputDto> Exercises { get; set; } = new();
 }
 
-public sealed class PlanDayExerciseVmDto
+public sealed class PlanDayExerciseVmDto : IResultDto
 {
     [JsonPropertyName("series")]
     public int Series { get; set; }
@@ -39,7 +40,7 @@ public sealed class PlanDayExerciseVmDto
     public ExerciseResponseDto Exercise { get; set; } = new();
 }
 
-public sealed class PlanDayVmDto
+public sealed class PlanDayVmDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -51,7 +52,7 @@ public sealed class PlanDayVmDto
     public List<PlanDayExerciseVmDto> Exercises { get; set; } = new();
 }
 
-public sealed class PlanDayChooseDto
+public sealed class PlanDayChooseDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
@@ -60,7 +61,7 @@ public sealed class PlanDayChooseDto
     public string Name { get; set; } = string.Empty;
 }
 
-public sealed class PlanDayBaseInfoDto
+public sealed class PlanDayBaseInfoDto : IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
