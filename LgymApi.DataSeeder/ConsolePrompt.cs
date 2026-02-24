@@ -5,9 +5,10 @@ public static class ConsolePrompt
     public static bool Confirm(string prompt, bool defaultValue)
     {
         var suffix = defaultValue ? "[Y/n]" : "[y/N]";
+        var defaultLabel = defaultValue ? "Yes" : "No";
         while (true)
         {
-            Console.Write($"{prompt} {suffix}: ");
+            Console.Write($"{prompt} {suffix} (default: {defaultLabel}): ");
             var input = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(input))
             {
@@ -42,7 +43,7 @@ public static class ConsolePrompt
         while (true)
         {
             var optionsText = string.Join("/", normalizedOptions);
-            Console.Write($"{prompt} [{optionsText}]: ");
+            Console.Write($"{prompt} [{optionsText}] (default: {defaultValue}): ");
             var input = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(input))
             {
