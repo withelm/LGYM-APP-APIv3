@@ -20,6 +20,18 @@ public static class SeedStatisticsPrinter
         Console.WriteLine($"  - Main records: {context.MainRecords.Count}");
         Console.WriteLine($"  - Elo entries: {context.EloRegistries.Count}");
         Console.WriteLine($"  - App configs: {context.AppConfigs.Count}");
+        Console.WriteLine($"  - Roles: {context.Roles.Count}");
+        Console.WriteLine($"  - Role claims: {context.RoleClaims.Count}");
+        Console.WriteLine($"  - Trainer invitations: {context.TrainerInvitations.Count}");
+        Console.WriteLine($"  - Trainer trainee links: {context.TrainerTraineeLinks.Count}");
+        Console.WriteLine($"  - Email notification logs: {context.EmailNotificationLogs.Count}");
+        Console.WriteLine($"  - Report templates: {context.ReportTemplates.Count}");
+        Console.WriteLine($"  - Report template fields: {context.ReportTemplateFields.Count}");
+        Console.WriteLine($"  - Report requests: {context.ReportRequests.Count}");
+        Console.WriteLine($"  - Report submissions: {context.ReportSubmissions.Count}");
+        Console.WriteLine($"  - Supplement plans: {context.SupplementPlans.Count}");
+        Console.WriteLine($"  - Supplement plan items: {context.SupplementPlanItems.Count}");
+        Console.WriteLine($"  - Supplement intake logs: {context.SupplementIntakeLogs.Count}");
         Console.WriteLine();
     }
 

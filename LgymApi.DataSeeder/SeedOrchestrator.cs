@@ -21,8 +21,6 @@ public sealed class SeedOrchestrator
         CancellationToken cancellationToken)
     {
         seedContext.SeedDemoData = options.SeedDemoData;
-        seedContext.AdminUser ??= await FindExistingUserAsync(context, "Admin", cancellationToken);
-        seedContext.TesterUser ??= await FindExistingUserAsync(context, "Tester", cancellationToken);
 
         if (options.DropDatabase)
         {
@@ -40,6 +38,9 @@ public sealed class SeedOrchestrator
             Console.WriteLine("Ensuring database is created...");
             await context.Database.EnsureCreatedAsync(cancellationToken);
         }
+
+        seedContext.AdminUser ??= await FindExistingUserAsync(context, "Admin", cancellationToken);
+        seedContext.TesterUser ??= await FindExistingUserAsync(context, "Tester", cancellationToken);
 
         var alwaysSeederTypes = new HashSet<Type>
         {
