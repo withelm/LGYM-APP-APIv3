@@ -8,6 +8,19 @@ public sealed class ExerciseTranslationSeeder : IEntitySeeder
 {
     public int Order => 11;
 
+    private static readonly IReadOnlyDictionary<string, string> PolishNames =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Bench Press", "Wyciskanie leżąc" },
+            { "Back Squat", "Przysiad ze sztangą" },
+            { "Deadlift", "Martwy ciąg" },
+            { "Overhead Press", "Wyciskanie żołnierskie" },
+            { "Barbell Row", "Wiosłowanie sztangą" },
+            { "Pull-up", "Podciąganie na drążku" },
+            { "Biceps Curl", "Uginanie ramion ze sztangą" },
+            { "Triceps Extension", "Prostowanie ramion" }
+        };
+
     public async Task SeedAsync(AppDbContext context, SeedContext seedContext, CancellationToken cancellationToken)
     {
         SeedOperationConsole.Start("exercise translations");
@@ -37,7 +50,7 @@ public sealed class ExerciseTranslationSeeder : IEntitySeeder
 
             if (!existingCultures.Contains("pl", StringComparer.OrdinalIgnoreCase))
             {
-                var translation = CreateTranslation(exercise.Id, "pl", exercise.Name);
+                var translation = CreateTranslation(exercise.Id, "pl", ResolvePolishName(exercise.Name));
                 await context.ExerciseTranslations.AddAsync(translation, cancellationToken);
                 seedContext.ExerciseTranslations.Add(translation);
                 addedAny = true;
@@ -62,5 +75,12 @@ public sealed class ExerciseTranslationSeeder : IEntitySeeder
             Culture = culture,
             Name = name
         };
+    }
+
+    private static string ResolvePolishName(string name)
+    {
+        return PolishNames.TryGetValue(name, out var translated)
+            ? translated
+            : name;
     }
 }
