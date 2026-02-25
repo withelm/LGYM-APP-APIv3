@@ -1,0 +1,8 @@
+Subject: Welcome to LGYM, {{UserName}}!
+---
+Hi {{UserName}},
+
+Your account has been created successfully.
+
+See you at the gym!
+LGYM Team

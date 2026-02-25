@@ -3,6 +3,8 @@ using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
@@ -10,6 +12,7 @@ using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LgymApi.UnitTests;
 
@@ -82,6 +85,7 @@ public sealed class ServiceCommitBehaviorTests
         IRankService rankService = new RankService();
         IUserSessionCache userSessionCache = new NoOpUserSessionCache();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+        IWelcomeEmailScheduler welcomeEmailScheduler = new NoOpWelcomeEmailScheduler();
 
         var service = new UserService(
             userRepository,
@@ -91,7 +95,9 @@ public sealed class ServiceCommitBehaviorTests
             legacyPasswordService,
             rankService,
             userSessionCache,
-            unitOfWork);
+            welcomeEmailScheduler,
+            unitOfWork,
+            NullLogger<UserService>.Instance);
 
         await service.RegisterAsync("newuser", "newuser@example.com", "password123", "password123", true);
 
@@ -209,6 +215,14 @@ public sealed class ServiceCommitBehaviorTests
         public bool Contains(Guid userId)
         {
             return false;
+        }
+    }
+
+    private sealed class NoOpWelcomeEmailScheduler : IWelcomeEmailScheduler
+    {
+        public Task ScheduleWelcomeAsync(WelcomeEmailPayload payload, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
         }
     }
 }

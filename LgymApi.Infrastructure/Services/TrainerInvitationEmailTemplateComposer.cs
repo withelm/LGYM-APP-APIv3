@@ -45,6 +45,26 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
         };
     }
 
+    public EmailMessage ComposeWelcome(WelcomeEmailPayload payload)
+    {
+        var culture = payload.Culture;
+        var template = LoadTemplate("Welcome", culture);
+        var replacements = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["{{UserName}}"] = SanitizeTemplateValue(payload.UserName)
+        };
+
+        var subject = Render(template.Subject, replacements);
+        var body = Render(template.Body, replacements);
+
+        return new EmailMessage
+        {
+            To = payload.RecipientEmail,
+            Subject = subject,
+            Body = body
+        };
+    }
+
     private (string Subject, string Body) LoadTemplate(string templateName, CultureInfo culture)
     {
         var templatePath = ResolveTemplatePath(templateName, culture.Name);

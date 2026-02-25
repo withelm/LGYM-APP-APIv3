@@ -23,6 +23,8 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
         using var provider = services.BuildServiceProvider();
         var scheduler = provider.GetRequiredService<IInvitationEmailBackgroundScheduler>();
         Assert.That(scheduler, Is.TypeOf<NoOpInvitationEmailBackgroundScheduler>());
+        var welcomeScheduler = provider.GetRequiredService<IWelcomeEmailBackgroundScheduler>();
+        Assert.That(welcomeScheduler, Is.TypeOf<NoOpWelcomeEmailBackgroundScheduler>());
     }
 
     [Test]

@@ -3,9 +3,11 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Application.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
+using Microsoft.Extensions.Logging;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.User;
@@ -19,7 +21,9 @@ public sealed class UserService : IUserService
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
     private readonly IUserSessionCache _userSessionCache;
+    private readonly IWelcomeEmailScheduler _welcomeEmailScheduler;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<UserService> _logger;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "User service coordinates auth, ranking, roles, and session concerns.")]
     public UserService(
@@ -30,7 +34,9 @@ public sealed class UserService : IUserService
         ILegacyPasswordService legacyPasswordService,
         IRankService rankService,
         IUserSessionCache userSessionCache,
-        IUnitOfWork unitOfWork)
+        IWelcomeEmailScheduler welcomeEmailScheduler,
+        IUnitOfWork unitOfWork,
+        ILogger<UserService> logger)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -39,7 +45,9 @@ public sealed class UserService : IUserService
         _legacyPasswordService = legacyPasswordService;
         _rankService = rankService;
         _userSessionCache = userSessionCache;
+        _welcomeEmailScheduler = welcomeEmailScheduler;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, CancellationToken cancellationToken = default)
@@ -150,6 +158,36 @@ public sealed class UserService : IUserService
             Elo = 1000
         }, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await TryScheduleWelcomeEmailAsync(user, cancellationToken);
+    }
+
+    private async Task TryScheduleWelcomeEmailAsync(UserEntity user, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            _logger.LogInformation(
+                "User email is empty; welcome email will not be scheduled for user {UserId}.",
+                user.Id);
+            return;
+        }
+
+        try
+        {
+            await _welcomeEmailScheduler.ScheduleWelcomeAsync(new LgymApi.Application.Notifications.Models.WelcomeEmailPayload
+            {
+                UserId = user.Id,
+                UserName = user.Name,
+                RecipientEmail = user.Email,
+                CultureName = string.IsNullOrWhiteSpace(user.PreferredLanguage) ? "en-US" : user.PreferredLanguage
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to schedule welcome email for user {UserId}. Registration is still successful.",
+                user.Id);
+        }
     }
 
     private async Task<LoginResult> LoginCoreAsync(string name, string password, string? requiredRole, CancellationToken cancellationToken)

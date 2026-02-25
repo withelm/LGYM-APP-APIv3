@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(emailOptions);
         services.AddSingleton<IEmailNotificationsFeature, EmailNotificationsFeature>();
         services.AddSingleton<IInvitationEmailMetrics, InvitationEmailMetrics>();
+        services.AddSingleton<IWelcomeEmailMetrics, WelcomeEmailMetrics>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
@@ -75,10 +76,12 @@ public static class ServiceCollectionExtensions
             });
             services.AddHangfireServer();
             services.AddScoped<IInvitationEmailBackgroundScheduler, HangfireInvitationEmailBackgroundScheduler>();
+            services.AddScoped<IWelcomeEmailBackgroundScheduler, HangfireWelcomeEmailBackgroundScheduler>();
         }
         else
         {
             services.AddScoped<IInvitationEmailBackgroundScheduler, NoOpInvitationEmailBackgroundScheduler>();
+            services.AddScoped<IWelcomeEmailBackgroundScheduler, NoOpWelcomeEmailBackgroundScheduler>();
         }
 
         services.AddScoped<ITokenService, TokenService>();
@@ -96,6 +99,7 @@ public static class ServiceCollectionExtensions
                 : sp.GetRequiredService<SmtpEmailSender>();
         });
         services.AddScoped<InvitationEmailJob>();
+        services.AddScoped<WelcomeEmailJob>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
