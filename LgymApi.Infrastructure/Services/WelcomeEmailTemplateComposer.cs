@@ -7,51 +7,22 @@ using LgymApi.Infrastructure.Options;
 
 namespace LgymApi.Infrastructure.Services;
 
-public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateComposer
+public sealed class WelcomeEmailTemplateComposer : IEmailTemplateComposer
 {
     private readonly EmailOptions _emailOptions;
     private readonly ConcurrentDictionary<string, (string Subject, string Body)> _templateCache = new(StringComparer.OrdinalIgnoreCase);
 
-    public TrainerInvitationEmailTemplateComposer(EmailOptions emailOptions)
+    public WelcomeEmailTemplateComposer(EmailOptions emailOptions)
     {
         _emailOptions = emailOptions;
     }
 
-    public string NotificationType => EmailNotificationTypes.TrainerInvitation;
+    public string NotificationType => EmailNotificationTypes.Welcome;
 
     public EmailMessage Compose(string payloadJson)
     {
         var payload = DeserializePayload(payloadJson);
-        return ComposeTrainerInvitation(payload);
-    }
-
-    public EmailMessage ComposeTrainerInvitation(InvitationEmailPayload payload)
-    {
-        var culture = payload.Culture;
-        var template = LoadTemplate("TrainerInvitation", culture);
-        var baseUrl = _emailOptions.InvitationBaseUrl.TrimEnd('/');
-        var acceptUrl = $"{baseUrl}/accept/{payload.InvitationId}";
-        var rejectUrl = $"{baseUrl}/reject/{payload.InvitationId}";
-
-        var expiresAt = payload.ExpiresAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
-        var replacements = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["{{TrainerName}}"] = SanitizeTemplateValue(payload.TrainerName),
-            ["{{InvitationCode}}"] = SanitizeTemplateValue(payload.InvitationCode),
-            ["{{AcceptUrl}}"] = SanitizeTemplateValue(acceptUrl),
-            ["{{RejectUrl}}"] = SanitizeTemplateValue(rejectUrl),
-            ["{{ExpiresAt}}"] = expiresAt
-        };
-
-        var subject = Render(template.Subject, replacements);
-        var body = Render(template.Body, replacements);
-
-        return new EmailMessage
-        {
-            To = payload.RecipientEmail,
-            Subject = subject,
-            Body = body
-        };
+        return ComposeWelcome(payload);
     }
 
     public EmailMessage ComposeWelcome(WelcomeEmailPayload payload)
@@ -74,21 +45,21 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
         };
     }
 
-    private static InvitationEmailPayload DeserializePayload(string payloadJson)
+    private static WelcomeEmailPayload DeserializePayload(string payloadJson)
     {
         try
         {
-            var payload = JsonSerializer.Deserialize<InvitationEmailPayload>(payloadJson);
+            var payload = JsonSerializer.Deserialize<WelcomeEmailPayload>(payloadJson);
             if (payload == null)
             {
-                throw new InvalidOperationException("Invitation email payload is empty.");
+                throw new InvalidOperationException("Welcome email payload is empty.");
             }
 
             return payload;
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Failed to deserialize invitation email payload.", ex);
+            throw new InvalidOperationException("Failed to deserialize welcome email payload.", ex);
         }
     }
 
@@ -175,5 +146,4 @@ public sealed class TrainerInvitationEmailTemplateComposer : IEmailTemplateCompo
             .Replace("\n", " ", StringComparison.Ordinal)
             .Trim();
     }
-
 }

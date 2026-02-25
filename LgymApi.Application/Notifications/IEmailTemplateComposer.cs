@@ -4,6 +4,6 @@ namespace LgymApi.Application.Notifications;
 
 public interface IEmailTemplateComposer
 {
-    EmailMessage ComposeTrainerInvitation(InvitationEmailPayload payload);
-    EmailMessage ComposeWelcome(WelcomeEmailPayload payload);
+    string NotificationType { get; }
+    EmailMessage Compose(string payloadJson);
 }
