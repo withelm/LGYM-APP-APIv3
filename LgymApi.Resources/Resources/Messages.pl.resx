@@ -120,4 +120,79 @@
   <data name="UserIdRequired" xml:space="preserve">
     <value>ID użytkownika jest wymagane.</value>
   </data>
+  <data name="PermissionAdminAccess" xml:space="preserve">
+    <value>Dostęp administratora</value>
+  </data>
+  <data name="PermissionManageUserRoles" xml:space="preserve">
+    <value>Zarządzanie rolami użytkowników</value>
+  </data>
+  <data name="PermissionManageAppConfig" xml:space="preserve">
+    <value>Zarządzanie konfiguracją wersji aplikacji</value>
+  </data>
+  <data name="PermissionManageGlobalExercises" xml:space="preserve">
+    <value>Zarządzanie globalnymi ćwiczeniami</value>
+  </data>
+  <data name="RoleWithThatName" xml:space="preserve">
+    <value>Istnieje rola o takiej nazwie.</value>
+  </data>
+  <data name="InvalidRoleSelection" xml:space="preserve">
+    <value>Jedna lub więcej wybranych ról jest nieprawidłowa.</value>
+  </data>
+  <data name="InvalidPermissionClaims" xml:space="preserve">
+    <value>Jedno lub więcej wybranych uprawnień jest nieprawidłowe.</value>
+  </data>
+  <data name="DefaultRoleMissing" xml:space="preserve">
+    <value>Brakuje konfiguracji domyślnej roli użytkownika.</value>
+  </data>
+  <data name="TrainerRoleRequired" xml:space="preserve">
+    <value>Wymagana jest rola trenera.</value>
+  </data>
+  <data name="CannotInviteYourself" xml:space="preserve">
+    <value>Nie możesz zaprosić samego siebie.</value>
+  </data>
+  <data name="TraineeAlreadyLinked" xml:space="preserve">
+    <value>Ten podopieczny jest już powiązany z trenerem.</value>
+  </data>
+  <data name="InvitationNoLongerPending" xml:space="preserve">
+    <value>Zaproszenie nie jest już oczekujące.</value>
+  </data>
+  <data name="InvitationExpired" xml:space="preserve">
+    <value>Zaproszenie wygasło.</value>
+  </data>
+  <data name="DashboardPageMustBeGreaterThanZero" xml:space="preserve">
+    <value>Numer strony musi być większy niż 0.</value>
+  </data>
+  <data name="DashboardPageRange" xml:space="preserve">
+    <value>Numer strony musi mieścić się w zakresie od 1 do 21474837.</value>
+  </data>
+  <data name="DashboardPageSizeRange" xml:space="preserve">
+    <value>Rozmiar strony musi mieścić się w zakresie od 1 do 100.</value>
+  </data>
+  <data name="DashboardSortByInvalid" xml:space="preserve">
+    <value>Nieprawidłowa wartość sortBy. Dozwolone: name, createdAt, status.</value>
+  </data>
+  <data name="DashboardSortDirectionInvalid" xml:space="preserve">
+    <value>Nieprawidłowa wartość sortDirection. Dozwolone: asc, desc.</value>
+  </data>
+  <data name="DashboardStatusInvalid" xml:space="preserve">
+    <value>Nieprawidłowa wartość status.</value>
+  </data>
+  <data name="ReportFieldValidationFailed" xml:space="preserve">
+    <value>Przesłane pola raportu są nieprawidłowe.</value>
+  </data>
+  <data name="ReportRequestNotPending" xml:space="preserve">
+    <value>Zgłoszenie raportu nie jest już oczekujące.</value>
+  </data>
+  <data name="ReportRequestExpired" xml:space="preserve">
+    <value>Termin zgłoszenia raportu minął.</value>
+  </data>
+  <data name="InvalidDateRange" xml:space="preserve">
+    <value>Nieprawidłowy zakres dat. toDate musi być równe lub późniejsze niż fromDate.</value>
+  </data>
+  <data name="DateRangeTooLarge" xml:space="preserve">
+    <value>Zakres dat przekracza maksymalny dozwolony przedział.</value>
+  </data>
+  <data name="DateRangeRequired" xml:space="preserve">
+    <value>Parametry zapytania fromDate i toDate są wymagane.</value>
+  </data>
 </root>

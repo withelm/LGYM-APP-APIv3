@@ -8,8 +8,13 @@ using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.PlanDay;
+using LgymApi.Application.Features.Reporting;
+using LgymApi.Application.Features.Role;
+using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Training;
+using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Notifications;
 using LgymApi.Application.Units;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,11 +35,21 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMeasurementsService, MeasurementsService>();
         services.AddScoped<IPlanService, PlanService>();
         services.AddScoped<IPlanDayService, PlanDayService>();
+        services.AddScoped<IReportingService, ReportingService>();
+        services.AddScoped<IRoleService, RoleService>();
+        services.AddScoped<ISupplementationService, SupplementationService>();
         services.AddScoped<ITrainingService, TrainingService>();
+        services.AddScoped<ITrainerRelationshipService, TrainerRelationshipService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IInvitationEmailScheduler, InvitationEmailSchedulerService>();
+        services.AddScoped<IInvitationEmailJobHandler, InvitationEmailJobHandlerService>();
+        services.AddScoped<IWelcomeEmailScheduler, WelcomeEmailSchedulerService>();
+        services.AddScoped<IWelcomeEmailJobHandler, WelcomeEmailJobHandlerService>();
 
         services.AddSingleton<ILinearUnitStrategy<WeightUnits>, WeightLinearUnitStrategy>();
         services.AddSingleton<IUnitConverter<WeightUnits>, LinearUnitConverter<WeightUnits>>();
+        services.AddSingleton<ILinearUnitStrategy<HeightUnits>, HeightLinearUnitStrategy>();
+        services.AddSingleton<IUnitConverter<HeightUnits>, LinearUnitConverter<HeightUnits>>();
 
         return services;
     }

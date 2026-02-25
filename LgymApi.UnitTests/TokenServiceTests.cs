@@ -13,7 +13,8 @@ public sealed class TokenServiceTests
         var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
         var service = new TokenService(configuration);
 
-        Assert.Throws<InvalidOperationException>(() => service.CreateToken(Guid.NewGuid()));
+        Assert.Throws<InvalidOperationException>(() =>
+            service.CreateToken(Guid.NewGuid(), Array.Empty<string>(), Array.Empty<string>()));
     }
 
     [Test]
@@ -27,7 +28,7 @@ public sealed class TokenServiceTests
         var service = new TokenService(configuration);
 
         var userId = Guid.NewGuid();
-        var token = service.CreateToken(userId);
+        var token = service.CreateToken(userId, ["User"], ["admin:access"]);
 
         Assert.That(token, Is.Not.Null.And.Not.Empty);
 

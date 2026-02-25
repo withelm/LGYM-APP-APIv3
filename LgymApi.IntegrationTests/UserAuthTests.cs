@@ -292,6 +292,33 @@ public sealed class UserAuthTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Logout_InvalidatesCurrentJwt()
+    {
+        await SeedUserAsync(name: "logoutuser", email: "logout@example.com", password: "logoutpass");
+
+        var loginResponse = await Client.PostAsJsonAsync("/api/login", new
+        {
+            name = "logoutuser",
+            password = "logoutpass"
+        });
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
+        loginBody.Should().NotBeNull();
+
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginBody!.Token);
+
+        var logoutResponse = await Client.PostAsync("/api/logout", null);
+        logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var checkTokenResponse = await Client.GetAsync("/api/checkToken");
+        checkTokenResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var body = await checkTokenResponse.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
+        body.Should().NotBeNull();
+        body!.Message.Should().Be("Unauthorized");
+    }
+
+    [Test]
     public async Task DeleteAccount_WithValidToken_AnonymizesUserAndReturnsDeleted()
     {
         var user = await SeedUserAsync(name: "todelete", email: "todelete@example.com");

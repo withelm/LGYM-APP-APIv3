@@ -21,20 +21,21 @@ public sealed class UserProfile : IMappingProfile
             Id = source.Id.ToString(),
             Email = source.Email,
             Avatar = source.Avatar,
-            Admin = source.Admin,
             ProfileRank = source.ProfileRank,
             CreatedAt = source.CreatedAt,
             UpdatedAt = source.UpdatedAt,
             Elo = source.Elo,
             NextRank = source.NextRank == null ? null : context!.Map<RankInfo, RankDto>(source.NextRank),
             IsDeleted = source.IsDeleted,
-            IsTester = source.IsTester,
-            IsVisibleInRanking = source.IsVisibleInRanking
+            IsVisibleInRanking = source.IsVisibleInRanking,
+            Roles = source.Roles,
+            PermissionClaims = source.PermissionClaims
         });
 
         configuration.CreateMap<LoginResult, LoginResponseDto>((source, context) => new LoginResponseDto
         {
             Token = source.Token,
+            PermissionClaims = source.PermissionClaims,
             User = source.User == null
                 ? null
                 : context!.Map<UserInfoResult, UserInfoDto>(source.User)

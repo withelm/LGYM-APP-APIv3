@@ -41,7 +41,8 @@ public sealed class UserRepository : IUserRepository
     {
         var rankedUsers = await _dbContext.Users
             .AsNoTracking()
-            .Where(u => !u.IsTester && !u.IsDeleted && u.IsVisibleInRanking)
+            .Where(u => !u.IsDeleted && u.IsVisibleInRanking)
+            .Where(u => !u.UserRoles.Any(ur => ur.RoleId == AppDbContext.TesterRoleSeedId))
             .Select(u => new
             {
                 User = u,

@@ -21,8 +21,8 @@ public sealed class UserSeeder : IEntitySeeder
         SeedOperationConsole.Start("users");
         var adminEmail = seedContext.AdminUser?.Email ?? "admin@lgym.app";
         var testerEmail = seedContext.TesterUser?.Email ?? "tester@lgym.app";
-        seedContext.AdminUser ??= await EnsureUserAsync(context, "Admin", adminEmail, true, false, cancellationToken);
-        seedContext.TesterUser ??= await EnsureUserAsync(context, "Tester", testerEmail, false, true, cancellationToken);
+        seedContext.AdminUser ??= await EnsureUserAsync(context, "Admin", adminEmail, cancellationToken);
+        seedContext.TesterUser ??= await EnsureUserAsync(context, "Tester", testerEmail, cancellationToken);
 
         if (seedContext.AdminUser == null || seedContext.TesterUser == null)
         {
@@ -44,7 +44,7 @@ public sealed class UserSeeder : IEntitySeeder
 
         foreach (var demo in demoUsers)
         {
-            var user = await EnsureUserAsync(context, demo.Name, demo.Email, false, false, cancellationToken);
+            var user = await EnsureUserAsync(context, demo.Name, demo.Email, cancellationToken);
             if (user != null)
             {
                 seedContext.DemoUsers.Add(user);
@@ -58,8 +58,6 @@ public sealed class UserSeeder : IEntitySeeder
         AppDbContext context,
         string name,
         string email,
-        bool isAdmin,
-        bool isTester,
         CancellationToken cancellationToken)
     {
         var existing = await context.Users
@@ -76,8 +74,6 @@ public sealed class UserSeeder : IEntitySeeder
             Id = Guid.NewGuid(),
             Name = name,
             Email = email,
-            Admin = isAdmin,
-            IsTester = isTester,
             IsVisibleInRanking = true,
             ProfileRank = "Junior 1",
             LegacyHash = passwordData.Hash,

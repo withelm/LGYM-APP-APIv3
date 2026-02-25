@@ -159,6 +159,63 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("EloRegistries", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.EmailNotificationLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RecipientEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("Type", "CorrelationId", "RecipientEmail")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("EmailNotificationLogs", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Exercise", b =>
                 {
                     b.Property<Guid>("Id")
@@ -501,6 +558,522 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("PlanDayExercises", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DueAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TemplateId");
+
+                    b.HasIndex("TraineeId", "Status", "CreatedAt");
+
+                    b.HasIndex("TrainerId", "TraineeId", "CreatedAt");
+
+                    b.ToTable("ReportRequests", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ReportRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportRequestId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TraineeId");
+
+                    b.ToTable("ReportSubmissions", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TrainerId", "Name");
+
+                    b.ToTable("ReportTemplates", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportTemplateField", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TemplateId", "Key")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("ReportTemplateFields", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("Roles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("f124fe5f-9bf2-45df-bfd2-d5d6be920016"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Default role for all users",
+                            IsDeleted = false,
+                            Name = "User",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Administrative privileges",
+                            IsDeleted = false,
+                            Name = "Admin",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("f93f03af-ae11-4fd8-a60e-f970f89df6fb"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Excluded from ranking",
+                            IsDeleted = false,
+                            Name = "Tester",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("8c1a3db8-72a3-47cc-b3de-f5347c6ae501"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Trainer role for coach-facing APIs",
+                            IsDeleted = false,
+                            Name = "Trainer",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        });
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.RoleClaim", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClaimType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClaimValue")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId", "ClaimType", "ClaimValue")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("RoleClaims", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("9dbfd057-cf88-4597-b668-2fdf16a2def6"),
+                            ClaimType = "permission",
+                            ClaimValue = "admin.access",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            RoleId = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("97f7ea56-0032-4f18-8703-ab2d1485ad45"),
+                            ClaimType = "permission",
+                            ClaimValue = "users.roles.manage",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            RoleId = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("d12f9f84-48f4-4f4b-9614-843f31ea0f96"),
+                            ClaimType = "permission",
+                            ClaimValue = "appconfig.manage",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            RoleId = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("27965bf4-ff55-4261-8f98-218ccf00e537"),
+                            ClaimType = "permission",
+                            ClaimValue = "exercises.global.manage",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            RoleId = new Guid("1754c6f8-c021-41aa-b610-17088f9476f9"),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        });
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.SupplementIntakeLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("IntakeDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("PlanItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("TakenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanItemId");
+
+                    b.HasIndex("TraineeId", "PlanItemId", "IntakeDate")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("SupplementIntakeLogs", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.SupplementPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TraineeId", "IsActive");
+
+                    b.HasIndex("TrainerId", "TraineeId", "CreatedAt");
+
+                    b.ToTable("SupplementPlans", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.SupplementPlanItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DaysOfWeekMask")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Dosage")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SupplementName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<TimeSpan>("TimeOfDay")
+                        .HasColumnType("interval");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId", "Order", "TimeOfDay");
+
+                    b.ToTable("SupplementPlanItems", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TrainerInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TraineeId");
+
+                    b.HasIndex("TrainerId");
+
+                    b.ToTable("TrainerInvitations", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TrainerTraineeLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TraineeId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TrainerId", "TraineeId");
+
+                    b.ToTable("TrainerTraineeLinks", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Training", b =>
                 {
                     b.Property<Guid>("Id")
@@ -572,9 +1145,6 @@ namespace LgymApi.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<bool?>("Admin")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Avatar")
                         .HasColumnType("text");
 
@@ -586,9 +1156,6 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsTester")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsVisibleInRanking")
@@ -616,6 +1183,10 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid?>("PlanId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("PreferredLanguage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("ProfileRank")
                         .IsRequired()
                         .HasColumnType("text");
@@ -636,6 +1207,21 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasIndex("PlanId");
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.UserRole", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UserId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.EloRegistry", b =>
@@ -790,6 +1376,172 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("PlanDay");
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.ReportTemplate", "Template")
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Template");
+
+                    b.Navigation("Trainee");
+
+                    b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportSubmission", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.ReportRequest", "ReportRequest")
+                        .WithOne("Submission")
+                        .HasForeignKey("LgymApi.Domain.Entities.ReportSubmission", "ReportRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReportRequest");
+
+                    b.Navigation("Trainee");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportTemplate", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportTemplateField", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.ReportTemplate", "Template")
+                        .WithMany("Fields")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.RoleClaim", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.Role", "Role")
+                        .WithMany("RoleClaims")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.SupplementIntakeLog", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.SupplementPlanItem", "PlanItem")
+                        .WithMany()
+                        .HasForeignKey("PlanItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PlanItem");
+
+                    b.Navigation("Trainee");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.SupplementPlan", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trainee");
+
+                    b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.SupplementPlanItem", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.SupplementPlan", "Plan")
+                        .WithMany("Items")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TrainerInvitation", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trainee");
+
+                    b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TrainerTraineeLink", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trainee");
+
+                    b.Navigation("Trainer");
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Training", b =>
                 {
                     b.HasOne("LgymApi.Domain.Entities.Gym", "Gym")
@@ -846,6 +1598,25 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Plan");
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.UserRole", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.Role", "Role")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Exercise", b =>
                 {
                     b.Navigation("ExerciseScores");
@@ -868,6 +1639,28 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Exercises");
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>
+                {
+                    b.Navigation("Submission");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportTemplate", b =>
+                {
+                    b.Navigation("Fields");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.Role", b =>
+                {
+                    b.Navigation("RoleClaims");
+
+                    b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.SupplementPlan", b =>
+                {
+                    b.Navigation("Items");
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Training", b =>
                 {
                     b.Navigation("Exercises");
@@ -888,6 +1681,8 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Plans");
 
                     b.Navigation("Trainings");
+
+                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }

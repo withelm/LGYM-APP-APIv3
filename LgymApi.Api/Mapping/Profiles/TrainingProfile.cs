@@ -75,5 +75,6 @@ public sealed class TrainingProfile : IMappingProfile
                 ? new PlanDayChooseDto()
                 : context!.Map<PlanDay, PlanDayChooseDto>(source.PlanDay)
         });
+
     }
 }

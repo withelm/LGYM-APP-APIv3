@@ -22,6 +22,7 @@ public sealed class ExerciseServiceTests
 
         var service = new ExerciseService(
             new NoOpUserRepository(),
+            new NoOpRoleRepository(),
             new NoOpExerciseRepository(),
             new StubExerciseScoreRepository(scores),
             new NoOpUnitOfWork());
@@ -83,6 +84,27 @@ public sealed class ExerciseServiceTests
         public Task UpsertTranslationAsync(Guid exerciseId, string culture, string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
+    private sealed class NoOpRoleRepository : IRoleRepository
+    {
+        public Task<List<Role>> GetAllAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Role?> FindByIdAsync(Guid roleId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Role?> FindByNameAsync(string roleName, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Role>> GetByNamesAsync(IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> ExistsByNameAsync(string roleName, Guid? excludeRoleId = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<string>> GetRoleNamesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<string>> GetPermissionClaimsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Dictionary<Guid, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> UserHasRoleAsync(Guid userId, string roleName, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> UserHasPermissionAsync(Guid userId, string permission, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task AddRoleAsync(Role role, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task UpdateRoleAsync(Role role, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task DeleteRoleAsync(Role role, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task ReplaceRolePermissionClaimsAsync(Guid roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task AddUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task ReplaceUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class NoOpUnitOfWork : IUnitOfWork

@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System.Linq.Expressions;
@@ -27,6 +28,29 @@ public sealed class AppDbContext : DbContext
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<EloRegistry> EloRegistries => Set<EloRegistry>();
     public DbSet<AppConfig> AppConfigs => Set<AppConfig>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<RoleClaim> RoleClaims => Set<RoleClaim>();
+    public DbSet<TrainerInvitation> TrainerInvitations => Set<TrainerInvitation>();
+    public DbSet<TrainerTraineeLink> TrainerTraineeLinks => Set<TrainerTraineeLink>();
+    public DbSet<EmailNotificationLog> EmailNotificationLogs => Set<EmailNotificationLog>();
+    public DbSet<ReportTemplate> ReportTemplates => Set<ReportTemplate>();
+    public DbSet<ReportTemplateField> ReportTemplateFields => Set<ReportTemplateField>();
+    public DbSet<ReportRequest> ReportRequests => Set<ReportRequest>();
+    public DbSet<ReportSubmission> ReportSubmissions => Set<ReportSubmission>();
+    public DbSet<SupplementPlan> SupplementPlans => Set<SupplementPlan>();
+    public DbSet<SupplementPlanItem> SupplementPlanItems => Set<SupplementPlanItem>();
+    public DbSet<SupplementIntakeLog> SupplementIntakeLogs => Set<SupplementIntakeLog>();
+
+    public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
+    public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
+    public static readonly Guid TesterRoleSeedId = Guid.Parse("f93f03af-ae11-4fd8-a60e-f970f89df6fb");
+    public static readonly Guid TrainerRoleSeedId = Guid.Parse("8c1a3db8-72a3-47cc-b3de-f5347c6ae501");
+    public static readonly Guid AdminAccessClaimSeedId = Guid.Parse("9dbfd057-cf88-4597-b668-2fdf16a2def6");
+    public static readonly Guid ManageUserRolesClaimSeedId = Guid.Parse("97f7ea56-0032-4f18-8703-ab2d1485ad45");
+    public static readonly Guid ManageAppConfigClaimSeedId = Guid.Parse("d12f9f84-48f4-4f4b-9614-843f31ea0f96");
+    public static readonly Guid ManageGlobalExercisesClaimSeedId = Guid.Parse("27965bf4-ff55-4261-8f98-218ccf00e537");
+    private static readonly DateTimeOffset RoleSeedTimestamp = new(2026, 2, 15, 0, 0, 0, TimeSpan.Zero);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -176,6 +200,271 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("AppConfigs");
             entity.Property(e => e.Platform).HasConversion<string>();
+        });
+
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.ToTable("Roles");
+            entity.Property(e => e.Name).IsRequired();
+            entity.HasIndex(e => e.Name)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasData(
+                new Role
+                {
+                    Id = UserRoleSeedId,
+                    Name = AuthConstants.Roles.User,
+                    Description = "Default role for all users",
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new Role
+                {
+                    Id = AdminRoleSeedId,
+                    Name = AuthConstants.Roles.Admin,
+                    Description = "Administrative privileges",
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new Role
+                {
+                    Id = TesterRoleSeedId,
+                    Name = AuthConstants.Roles.Tester,
+                    Description = "Excluded from ranking",
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new Role
+                {
+                    Id = TrainerRoleSeedId,
+                    Name = AuthConstants.Roles.Trainer,
+                    Description = "Trainer role for coach-facing APIs",
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                });
+        });
+
+        modelBuilder.Entity<UserRole>(entity =>
+        {
+            entity.ToTable("UserRoles");
+            entity.HasKey(e => new { e.UserId, e.RoleId });
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RoleClaim>(entity =>
+        {
+            entity.ToTable("RoleClaims");
+            entity.Property(e => e.ClaimType).IsRequired();
+            entity.Property(e => e.ClaimValue).IsRequired();
+            entity.HasIndex(e => new { e.RoleId, e.ClaimType, e.ClaimValue })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.Role)
+                .WithMany(r => r.RoleClaims)
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasData(
+                new RoleClaim
+                {
+                    Id = AdminAccessClaimSeedId,
+                    RoleId = AdminRoleSeedId,
+                    ClaimType = AuthConstants.PermissionClaimType,
+                    ClaimValue = AuthConstants.Permissions.AdminAccess,
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new RoleClaim
+                {
+                    Id = ManageUserRolesClaimSeedId,
+                    RoleId = AdminRoleSeedId,
+                    ClaimType = AuthConstants.PermissionClaimType,
+                    ClaimValue = AuthConstants.Permissions.ManageUserRoles,
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new RoleClaim
+                {
+                    Id = ManageAppConfigClaimSeedId,
+                    RoleId = AdminRoleSeedId,
+                    ClaimType = AuthConstants.PermissionClaimType,
+                    ClaimValue = AuthConstants.Permissions.ManageAppConfig,
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new RoleClaim
+                {
+                    Id = ManageGlobalExercisesClaimSeedId,
+                    RoleId = AdminRoleSeedId,
+                    ClaimType = AuthConstants.PermissionClaimType,
+                    ClaimValue = AuthConstants.Permissions.ManageGlobalExercises,
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                });
+        });
+
+        modelBuilder.Entity<TrainerInvitation>(entity =>
+        {
+            entity.ToTable("TrainerInvitations");
+            entity.Property(e => e.Code).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.HasIndex(e => e.Code)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TrainerTraineeLink>(entity =>
+        {
+            entity.ToTable("TrainerTraineeLinks");
+            entity.HasIndex(e => e.TraineeId)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmailNotificationLog>(entity =>
+        {
+            entity.ToTable("EmailNotificationLogs");
+            entity.Property(e => e.Type).IsRequired();
+            entity.Property(e => e.RecipientEmail).IsRequired();
+            entity.Property(e => e.PayloadJson).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.HasIndex(e => new { e.Status, e.CreatedAt });
+            entity.HasIndex(e => new { e.Type, e.CorrelationId, e.RecipientEmail })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+        });
+
+        modelBuilder.Entity<ReportTemplate>(entity =>
+        {
+            entity.ToTable("ReportTemplates");
+            entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.TrainerId, e.Name });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReportTemplateField>(entity =>
+        {
+            entity.ToTable("ReportTemplateFields");
+            entity.Property(e => e.Key).HasMaxLength(64).IsRequired();
+            entity.Property(e => e.Label).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.Type).HasConversion<string>();
+            entity.HasIndex(e => new { e.TemplateId, e.Key })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.Template)
+                .WithMany(e => e.Fields)
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReportRequest>(entity =>
+        {
+            entity.ToTable("ReportRequests");
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.Note).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.CreatedAt });
+            entity.HasIndex(e => new { e.TraineeId, e.Status, e.CreatedAt });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Template)
+                .WithMany()
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Submission)
+                .WithOne(e => e.ReportRequest)
+                .HasForeignKey<ReportSubmission>(e => e.ReportRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReportSubmission>(entity =>
+        {
+            entity.ToTable("ReportSubmissions");
+            entity.Property(e => e.PayloadJson).IsRequired();
+            entity.HasIndex(e => e.ReportRequestId)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SupplementPlan>(entity =>
+        {
+            entity.ToTable("SupplementPlans");
+            entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.CreatedAt });
+            entity.HasIndex(e => new { e.TraineeId, e.IsActive });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SupplementPlanItem>(entity =>
+        {
+            entity.ToTable("SupplementPlanItems");
+            entity.Property(e => e.SupplementName).HasMaxLength(160).IsRequired();
+            entity.Property(e => e.Dosage).HasMaxLength(120).IsRequired();
+            entity.HasIndex(e => new { e.PlanId, e.Order, e.TimeOfDay });
+            entity.HasOne(e => e.Plan)
+                .WithMany(e => e.Items)
+                .HasForeignKey(e => e.PlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SupplementIntakeLog>(entity =>
+        {
+            entity.ToTable("SupplementIntakeLogs");
+            entity.HasIndex(e => new { e.TraineeId, e.PlanItemId, e.IntakeDate })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.PlanItem)
+                .WithMany()
+                .HasForeignKey(e => e.PlanItemId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

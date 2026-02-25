@@ -16,7 +16,11 @@ using System.Globalization;
 using LgymApi.Api.Configuration;
 using Microsoft.AspNetCore.Localization;
 using LgymApi.Api.Middleware;
+using LgymApi.Domain.Security;
+using Hangfire;
 using LgymApi.Api.Serialization;
+
+const string TestingEnvironment = "Testing";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,7 +64,10 @@ builder.Services.AddLocalization();
 builder.Services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
 builder.Services.AddApplicationServices();
 
-builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
+builder.Services.AddInfrastructure(
+    builder.Configuration,
+    builder.Environment.IsDevelopment(),
+    builder.Environment.IsEnvironment(TestingEnvironment));
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
@@ -105,9 +112,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services
+    .AddAuthorizationBuilder()
+    .AddPolicy(AuthConstants.Policies.ManageUserRoles, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageUserRoles))
+    .AddPolicy(AuthConstants.Policies.ManageAppConfig, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageAppConfig))
+    .AddPolicy(AuthConstants.Policies.ManageGlobalExercises, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageGlobalExercises))
+    .AddPolicy(AuthConstants.Policies.TrainerAccess, policy =>
+        policy.RequireRole(AuthConstants.Roles.Trainer));
 
-if (!builder.Environment.IsEnvironment("Testing"))
+if (!builder.Environment.IsEnvironment(TestingEnvironment))
 {
     builder.Services.AddRateLimiter(options =>
     {
@@ -170,12 +186,20 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+if (!app.Environment.IsEnvironment(TestingEnvironment))
+{
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
+    });
+}
+
 app.UseRequestLocalization(localizationOptions);
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
-if (!app.Environment.IsEnvironment("Testing"))
+if (!app.Environment.IsEnvironment(TestingEnvironment))
 {
     app.UseRateLimiter();
 }

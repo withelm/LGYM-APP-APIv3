@@ -37,7 +37,6 @@ public sealed class Mapper : IMapper
         }
 
         var effectiveContext = PrepareContext(context);
-
         return MapInternal<TTarget>(typeof(TSource), source!, effectiveContext);
     }
 
@@ -85,7 +84,6 @@ public sealed class Mapper : IMapper
         {
             throw new InvalidOperationException($"Mapping from {key.Source.Name} to {key.Target.Name} is not registered.");
         }
-
         using var scope = context.EnterMappingScope(key.Source, key.Target, source);
         return (TTarget)mapper(source, context);
     }

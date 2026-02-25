@@ -1,13 +1,18 @@
 using LgymApi.Application.Features.Plan;
+using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LgymApi.UnitTests;
 
@@ -64,20 +69,35 @@ public sealed class ServiceCommitBehaviorTests
 
         await using var dbContext = new AppDbContext(options);
 
+        dbContext.Roles.Add(new Role
+        {
+            Id = Guid.NewGuid(),
+            Name = AuthConstants.Roles.User,
+            Description = "Default user role"
+        });
+        await dbContext.SaveChangesAsync();
+
         IUserRepository userRepository = new UserRepository(dbContext);
+        IRoleRepository roleRepository = new RoleRepository(dbContext);
         IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
+        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+        IWelcomeEmailScheduler welcomeEmailScheduler = new NoOpWelcomeEmailScheduler();
 
         var service = new UserService(
             userRepository,
+            roleRepository,
             eloRepository,
             tokenService,
             legacyPasswordService,
             rankService,
-            unitOfWork);
+            userSessionCache,
+            welcomeEmailScheduler,
+            unitOfWork,
+            NullLogger<UserService>.Instance);
 
         await service.RegisterAsync("newuser", "newuser@example.com", "password123", "password123", true);
 
@@ -89,11 +109,120 @@ public sealed class ServiceCommitBehaviorTests
         Assert.That(savedElo!.Elo, Is.EqualTo(1000));
     }
 
+    [Test]
+    public async Task CreateRoleAsync_PersistsRoleAndClaims()
+    {
+        var dbName = $"service-commit-role-create-{Guid.NewGuid()}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+
+        await using var dbContext = new AppDbContext(options);
+
+        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IUserRepository userRepository = new UserRepository(dbContext);
+        IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+
+        var service = new RoleService(roleRepository, userRepository, unitOfWork);
+
+        var created = await service.CreateRoleAsync(
+            "Coach",
+            "Role for coaching",
+            [AuthConstants.Permissions.ManageGlobalExercises, AuthConstants.Permissions.ManageAppConfig]);
+
+        var savedRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == created.Id);
+        Assert.That(savedRole, Is.Not.Null);
+
+        var savedClaims = await dbContext.RoleClaims
+            .Where(rc => rc.RoleId == created.Id)
+            .Select(rc => rc.ClaimValue)
+            .OrderBy(v => v)
+            .ToListAsync();
+
+        Assert.That(savedClaims, Is.EquivalentTo(new[]
+        {
+            AuthConstants.Permissions.ManageAppConfig,
+            AuthConstants.Permissions.ManageGlobalExercises
+        }));
+    }
+
+    [Test]
+    public async Task UpdateUserRolesAsync_PersistsUserRoleAssignments()
+    {
+        var dbName = $"service-commit-role-assign-{Guid.NewGuid()}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+
+        await using var dbContext = new AppDbContext(options);
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = "role-user",
+            Email = "role-user@example.com",
+            ProfileRank = "Junior 1",
+            LegacyHash = "hash",
+            LegacySalt = "salt",
+            LegacyDigest = "sha256",
+            LegacyIterations = 25000,
+            LegacyKeyLength = 512
+        };
+
+        dbContext.Users.Add(user);
+        dbContext.Roles.Add(new Role { Id = Guid.NewGuid(), Name = AuthConstants.Roles.User, Description = "Default" });
+        dbContext.Roles.Add(new Role { Id = Guid.NewGuid(), Name = "Coach", Description = "Custom" });
+        await dbContext.SaveChangesAsync();
+
+        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IUserRepository userRepository = new UserRepository(dbContext);
+        IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+
+        var service = new RoleService(roleRepository, userRepository, unitOfWork);
+
+        await service.UpdateUserRolesAsync(user.Id, [AuthConstants.Roles.User, "Coach"]);
+
+        var assignedRoleNames = await dbContext.UserRoles
+            .Where(ur => ur.UserId == user.Id)
+            .Select(ur => ur.Role.Name)
+            .OrderBy(name => name)
+            .ToListAsync();
+
+        Assert.That(assignedRoleNames, Is.EquivalentTo(new[] { "Coach", AuthConstants.Roles.User }));
+    }
+
     private sealed class NoOpTokenService : ITokenService
     {
-        public string CreateToken(Guid userId)
+        public string CreateToken(Guid userId, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
         {
             return userId.ToString();
+        }
+    }
+
+    private sealed class NoOpUserSessionCache : IUserSessionCache
+    {
+        public int Count => 0;
+
+        public void AddOrRefresh(Guid userId)
+        {
+        }
+
+        public bool Remove(Guid userId)
+        {
+            return true;
+        }
+
+        public bool Contains(Guid userId)
+        {
+            return false;
+        }
+    }
+
+    private sealed class NoOpWelcomeEmailScheduler : IWelcomeEmailScheduler
+    {
+        public Task ScheduleWelcomeAsync(WelcomeEmailPayload payload, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
         }
     }
 }

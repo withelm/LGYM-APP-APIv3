@@ -120,4 +120,79 @@
   <data name="UserIdRequired" xml:space="preserve">
     <value>User ID is required.</value>
   </data>
+  <data name="PermissionAdminAccess" xml:space="preserve">
+    <value>Admin access</value>
+  </data>
+  <data name="PermissionManageUserRoles" xml:space="preserve">
+    <value>Manage user roles</value>
+  </data>
+  <data name="PermissionManageAppConfig" xml:space="preserve">
+    <value>Manage app version config</value>
+  </data>
+  <data name="PermissionManageGlobalExercises" xml:space="preserve">
+    <value>Manage global exercises</value>
+  </data>
+  <data name="RoleWithThatName" xml:space="preserve">
+    <value>A role with that name already exists.</value>
+  </data>
+  <data name="InvalidRoleSelection" xml:space="preserve">
+    <value>One or more selected roles are invalid.</value>
+  </data>
+  <data name="InvalidPermissionClaims" xml:space="preserve">
+    <value>One or more selected permission claims are invalid.</value>
+  </data>
+  <data name="DefaultRoleMissing" xml:space="preserve">
+    <value>Default user role configuration is missing.</value>
+  </data>
+  <data name="TrainerRoleRequired" xml:space="preserve">
+    <value>Trainer role is required.</value>
+  </data>
+  <data name="CannotInviteYourself" xml:space="preserve">
+    <value>You cannot invite yourself.</value>
+  </data>
+  <data name="TraineeAlreadyLinked" xml:space="preserve">
+    <value>This trainee is already linked to a trainer.</value>
+  </data>
+  <data name="InvitationNoLongerPending" xml:space="preserve">
+    <value>Invitation is no longer pending.</value>
+  </data>
+  <data name="InvitationExpired" xml:space="preserve">
+    <value>Invitation has expired.</value>
+  </data>
+  <data name="DashboardPageMustBeGreaterThanZero" xml:space="preserve">
+    <value>Page must be greater than 0.</value>
+  </data>
+  <data name="DashboardPageRange" xml:space="preserve">
+    <value>Page must be between 1 and 21474837.</value>
+  </data>
+  <data name="DashboardPageSizeRange" xml:space="preserve">
+    <value>Page size must be between 1 and 100.</value>
+  </data>
+  <data name="DashboardSortByInvalid" xml:space="preserve">
+    <value>Invalid sortBy value. Allowed: name, createdAt, status.</value>
+  </data>
+  <data name="DashboardSortDirectionInvalid" xml:space="preserve">
+    <value>Invalid sortDirection value. Allowed: asc, desc.</value>
+  </data>
+  <data name="DashboardStatusInvalid" xml:space="preserve">
+    <value>Invalid status value.</value>
+  </data>
+  <data name="ReportFieldValidationFailed" xml:space="preserve">
+    <value>Submitted report fields are invalid.</value>
+  </data>
+  <data name="ReportRequestNotPending" xml:space="preserve">
+    <value>Report request is no longer pending.</value>
+  </data>
+  <data name="ReportRequestExpired" xml:space="preserve">
+    <value>Report request has expired.</value>
+  </data>
+  <data name="InvalidDateRange" xml:space="preserve">
+    <value>Invalid date range. toDate must be on or after fromDate.</value>
+  </data>
+  <data name="DateRangeTooLarge" xml:space="preserve">
+    <value>Date range exceeds the maximum allowed duration.</value>
+  </data>
+  <data name="DateRangeRequired" xml:space="preserve">
+    <value>fromDate and toDate query parameters are required.</value>
+  </data>
 </root>
