@@ -4,17 +4,17 @@ using LgymApi.Infrastructure.Jobs;
 
 namespace LgymApi.Infrastructure.Services;
 
-public sealed class HangfireWelcomeEmailBackgroundScheduler : IWelcomeEmailBackgroundScheduler
+public sealed class HangfireEmailBackgroundScheduler : IEmailBackgroundScheduler
 {
     private readonly IBackgroundJobClient _backgroundJobClient;
 
-    public HangfireWelcomeEmailBackgroundScheduler(IBackgroundJobClient backgroundJobClient)
+    public HangfireEmailBackgroundScheduler(IBackgroundJobClient backgroundJobClient)
     {
         _backgroundJobClient = backgroundJobClient;
     }
 
     public void Enqueue(Guid notificationId)
     {
-        _backgroundJobClient.Enqueue<WelcomeEmailJob>(job => job.ExecuteAsync(notificationId));
+        _backgroundJobClient.Enqueue<EmailJob>(job => job.ExecuteAsync(notificationId));
     }
 }
