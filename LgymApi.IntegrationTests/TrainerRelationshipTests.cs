@@ -92,7 +92,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using (var scope = Factory.Services.CreateScope())
         {
-            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
             await handler.ProcessAsync(notificationId);
         }
 
@@ -132,7 +132,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using (var scope = Factory.Services.CreateScope())
         {
-            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
             await handler.ProcessAsync(notificationId);
         }
 
@@ -164,7 +164,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using (var scope = Factory.Services.CreateScope())
         {
-            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
             await handler.ProcessAsync(notificationId);
             await handler.ProcessAsync(notificationId);
         }
@@ -197,7 +197,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using (var scope = Factory.Services.CreateScope())
         {
-            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
             Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notificationId));
         }
 
@@ -239,7 +239,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using (var scope = Factory.Services.CreateScope())
         {
-            var handler = scope.ServiceProvider.GetRequiredService<IInvitationEmailJobHandler>();
+            var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
             Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notificationId));
             await handler.ProcessAsync(notificationId);
         }

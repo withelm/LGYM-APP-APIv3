@@ -21,10 +21,8 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
         services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
 
         using var provider = services.BuildServiceProvider();
-        var scheduler = provider.GetRequiredService<IInvitationEmailBackgroundScheduler>();
-        Assert.That(scheduler, Is.TypeOf<NoOpInvitationEmailBackgroundScheduler>());
-        var welcomeScheduler = provider.GetRequiredService<IWelcomeEmailBackgroundScheduler>();
-        Assert.That(welcomeScheduler, Is.TypeOf<NoOpWelcomeEmailBackgroundScheduler>());
+        var scheduler = provider.GetRequiredService<IEmailBackgroundScheduler>();
+        Assert.That(scheduler, Is.TypeOf<NoOpEmailBackgroundScheduler>());
     }
 
     [Test]

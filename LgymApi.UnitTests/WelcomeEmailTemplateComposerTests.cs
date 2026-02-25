@@ -75,9 +75,9 @@ public sealed class WelcomeEmailTemplateComposerTests
         });
     }
 
-    private TrainerInvitationEmailTemplateComposer CreateComposer()
+    private WelcomeEmailTemplateComposer CreateComposer()
     {
-        return new TrainerInvitationEmailTemplateComposer(new EmailOptions
+        return new WelcomeEmailTemplateComposer(new EmailOptions
         {
             InvitationBaseUrl = "https://app.example.com/invitations",
             TemplateRootPath = _templateRootPath,

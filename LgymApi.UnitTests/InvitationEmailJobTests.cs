@@ -10,7 +10,7 @@ public sealed class InvitationEmailJobTests
     public async Task ExecuteAsync_DelegatesToHandler()
     {
         var notificationId = Guid.NewGuid();
-        var handler = new FakeInvitationEmailJobHandler();
+        var handler = new FakeEmailJobHandler();
         var job = new InvitationEmailJob(handler);
 
         await job.ExecuteAsync(notificationId);
@@ -22,7 +22,7 @@ public sealed class InvitationEmailJobTests
         });
     }
 
-    private sealed class FakeInvitationEmailJobHandler : IInvitationEmailJobHandler
+    private sealed class FakeEmailJobHandler : IEmailJobHandler
     {
         public int Calls { get; private set; }
         public Guid LastNotificationId { get; private set; }

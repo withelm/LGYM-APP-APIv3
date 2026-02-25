@@ -16,17 +16,17 @@ public sealed class InvitationEmailServicesTests
         var repository = new FakeNotificationRepository();
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
-        var metrics = new FakeInvitationEmailMetrics();
+        var metrics = new FakeEmailMetrics();
 
-        var service = new InvitationEmailSchedulerService(
+        var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
             new EnabledFeature(),
             metrics,
-            NullLogger<InvitationEmailSchedulerService>.Instance);
+            NullLogger<EmailSchedulerService<InvitationEmailPayload>>.Instance);
 
-        await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+        await service.ScheduleAsync(new InvitationEmailPayload
         {
             InvitationId = Guid.NewGuid(),
             InvitationCode = "ABC123",
@@ -54,7 +54,7 @@ public sealed class InvitationEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Failed,
             Attempts = 5,
-            Type = InvitationEmailSchedulerService.NotificationType,
+            Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             RecipientEmail = "trainee@example.com",
             PayloadJson = "{}"
@@ -63,17 +63,17 @@ public sealed class InvitationEmailServicesTests
         var repository = new FakeNotificationRepository { ExistingByCorrelation = existing };
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
-        var metrics = new FakeInvitationEmailMetrics();
+        var metrics = new FakeEmailMetrics();
 
-        var service = new InvitationEmailSchedulerService(
+        var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
             new EnabledFeature(),
             metrics,
-            NullLogger<InvitationEmailSchedulerService>.Instance);
+            NullLogger<EmailSchedulerService<InvitationEmailPayload>>.Instance);
 
-        await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+        await service.ScheduleAsync(new InvitationEmailPayload
         {
             InvitationId = existing.CorrelationId,
             InvitationCode = "ABC123",
@@ -98,17 +98,17 @@ public sealed class InvitationEmailServicesTests
         var repository = new FakeNotificationRepository();
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
-        var metrics = new FakeInvitationEmailMetrics();
+        var metrics = new FakeEmailMetrics();
 
-        var service = new InvitationEmailSchedulerService(
+        var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
             new DisabledFeature(),
             metrics,
-            NullLogger<InvitationEmailSchedulerService>.Instance);
+            NullLogger<EmailSchedulerService<InvitationEmailPayload>>.Instance);
 
-        await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+        await service.ScheduleAsync(new InvitationEmailPayload
         {
             InvitationId = Guid.NewGuid(),
             InvitationCode = "ABC123",
@@ -135,7 +135,7 @@ public sealed class InvitationEmailServicesTests
         {
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
-            Type = InvitationEmailSchedulerService.NotificationType,
+            Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             RecipientEmail = "trainee@example.com",
             PayloadJson = "{}"
@@ -147,17 +147,17 @@ public sealed class InvitationEmailServicesTests
         };
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork { ThrowOnSave = true };
-        var metrics = new FakeInvitationEmailMetrics();
+        var metrics = new FakeEmailMetrics();
 
-        var service = new InvitationEmailSchedulerService(
+        var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
             new EnabledFeature(),
             metrics,
-            NullLogger<InvitationEmailSchedulerService>.Instance);
+            NullLogger<EmailSchedulerService<InvitationEmailPayload>>.Instance);
 
-        await service.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+        await service.ScheduleAsync(new InvitationEmailPayload
         {
             InvitationId = existing.CorrelationId,
             InvitationCode = "ABC123",
@@ -184,7 +184,7 @@ public sealed class InvitationEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
             Attempts = 0,
-            Type = InvitationEmailSchedulerService.NotificationType,
+            Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             RecipientEmail = "trainee@example.com",
             PayloadJson = "{\"invitationId\":\"d75e53b9-2701-4cb0-b2d1-c02f0dbf8aa0\",\"invitationCode\":\"ABC123\",\"expiresAt\":\"2026-03-01T10:00:00+00:00\",\"trainerName\":\"Coach\",\"recipientEmail\":\"trainee@example.com\",\"cultureName\":\"en-US\"}"
@@ -192,14 +192,14 @@ public sealed class InvitationEmailServicesTests
 
         var repository = new FakeNotificationRepository { ExistingById = notification };
         var unitOfWork = new FakeUnitOfWork();
-        var metrics = new FakeInvitationEmailMetrics();
-        var handler = new InvitationEmailJobHandlerService(
+        var metrics = new FakeEmailMetrics();
+        var handler = new EmailJobHandlerService(
             repository,
-            new ThrowingComposer(),
+            new FakeTemplateComposerFactory(new ThrowingComposer()),
             new FakeEmailSender(),
             unitOfWork,
             metrics,
-            NullLogger<InvitationEmailJobHandlerService>.Instance);
+            NullLogger<EmailJobHandlerService>.Instance);
 
         Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notification.Id));
         Assert.Multiple(() =>
@@ -219,7 +219,7 @@ public sealed class InvitationEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Sent,
             Attempts = 2,
-            Type = InvitationEmailSchedulerService.NotificationType,
+            Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             RecipientEmail = "trainee@example.com",
             PayloadJson = "{}"
@@ -228,14 +228,14 @@ public sealed class InvitationEmailServicesTests
         var repository = new FakeNotificationRepository { ExistingById = notification };
         var unitOfWork = new FakeUnitOfWork();
         var sender = new FakeEmailSender();
-        var metrics = new FakeInvitationEmailMetrics();
-        var handler = new InvitationEmailJobHandlerService(
+        var metrics = new FakeEmailMetrics();
+        var handler = new EmailJobHandlerService(
             repository,
-            new PassThroughComposer(),
+            new FakeTemplateComposerFactory(new PassThroughComposer()),
             sender,
             unitOfWork,
             metrics,
-            NullLogger<InvitationEmailJobHandlerService>.Instance);
+            NullLogger<EmailJobHandlerService>.Instance);
 
         await handler.ProcessAsync(notification.Id);
 
@@ -281,7 +281,7 @@ public sealed class InvitationEmailServicesTests
         }
     }
 
-    private sealed class FakeBackgroundScheduler : IInvitationEmailBackgroundScheduler
+    private sealed class FakeBackgroundScheduler : IEmailBackgroundScheduler
     {
         public List<Guid> EnqueuedNotificationIds { get; } = new();
 
@@ -322,12 +322,9 @@ public sealed class InvitationEmailServicesTests
 
     private sealed class ThrowingComposer : IEmailTemplateComposer
     {
-        public EmailMessage ComposeTrainerInvitation(InvitationEmailPayload payload)
-        {
-            throw new InvalidOperationException("Template missing");
-        }
+        public string NotificationType => EmailNotificationTypes.TrainerInvitation;
 
-        public EmailMessage ComposeWelcome(WelcomeEmailPayload payload)
+        public EmailMessage Compose(string payloadJson)
         {
             throw new InvalidOperationException("Template missing");
         }
@@ -335,21 +332,13 @@ public sealed class InvitationEmailServicesTests
 
     private sealed class PassThroughComposer : IEmailTemplateComposer
     {
-        public EmailMessage ComposeTrainerInvitation(InvitationEmailPayload payload)
-        {
-            return new EmailMessage
-            {
-                To = payload.RecipientEmail,
-                Subject = "x",
-                Body = "y"
-            };
-        }
+        public string NotificationType => EmailNotificationTypes.TrainerInvitation;
 
-        public EmailMessage ComposeWelcome(WelcomeEmailPayload payload)
+        public EmailMessage Compose(string payloadJson)
         {
             return new EmailMessage
             {
-                To = payload.RecipientEmail,
+                To = "trainee@example.com",
                 Subject = "x",
                 Body = "y"
             };
@@ -372,21 +361,36 @@ public sealed class InvitationEmailServicesTests
         public bool Enabled => true;
     }
 
-    private sealed class FakeInvitationEmailMetrics : IInvitationEmailMetrics
+    private sealed class FakeEmailMetrics : IEmailMetrics
     {
         public int Enqueued { get; private set; }
         public int Sent { get; private set; }
         public int Failed { get; private set; }
         public int Retried { get; private set; }
 
-        public void RecordEnqueued() => Enqueued += 1;
-        public void RecordSent() => Sent += 1;
-        public void RecordFailed() => Failed += 1;
-        public void RecordRetried() => Retried += 1;
+        public void RecordEnqueued(string notificationType) => Enqueued += 1;
+        public void RecordSent(string notificationType) => Sent += 1;
+        public void RecordFailed(string notificationType) => Failed += 1;
+        public void RecordRetried(string notificationType) => Retried += 1;
     }
 
     private sealed class DisabledFeature : IEmailNotificationsFeature
     {
         public bool Enabled => false;
+    }
+
+    private sealed class FakeTemplateComposerFactory : IEmailTemplateComposerFactory
+    {
+        private readonly IEmailTemplateComposer _composer;
+
+        public FakeTemplateComposerFactory(IEmailTemplateComposer composer)
+        {
+            _composer = composer;
+        }
+
+        public EmailMessage ComposeMessage(string notificationType, string payloadJson)
+        {
+            return _composer.Compose(payloadJson);
+        }
     }
 }

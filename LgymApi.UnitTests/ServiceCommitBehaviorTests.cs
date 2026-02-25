@@ -85,7 +85,7 @@ public sealed class ServiceCommitBehaviorTests
         IRankService rankService = new RankService();
         IUserSessionCache userSessionCache = new NoOpUserSessionCache();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
-        IWelcomeEmailScheduler welcomeEmailScheduler = new NoOpWelcomeEmailScheduler();
+        IEmailScheduler<WelcomeEmailPayload> welcomeEmailScheduler = new NoOpWelcomeEmailScheduler();
 
         var service = new UserService(
             userRepository,
@@ -218,9 +218,9 @@ public sealed class ServiceCommitBehaviorTests
         }
     }
 
-    private sealed class NoOpWelcomeEmailScheduler : IWelcomeEmailScheduler
+    private sealed class NoOpWelcomeEmailScheduler : IEmailScheduler<WelcomeEmailPayload>
     {
-        public Task ScheduleWelcomeAsync(WelcomeEmailPayload payload, CancellationToken cancellationToken = default)
+        public Task ScheduleAsync(WelcomeEmailPayload payload, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
