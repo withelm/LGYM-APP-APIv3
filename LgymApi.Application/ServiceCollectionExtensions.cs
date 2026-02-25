@@ -43,6 +43,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IInvitationEmailScheduler, InvitationEmailSchedulerService>();
         services.AddScoped<IInvitationEmailJobHandler, InvitationEmailJobHandlerService>();
+        services.AddScoped<IWelcomeEmailScheduler, WelcomeEmailSchedulerService>();
+        services.AddScoped<IWelcomeEmailJobHandler, WelcomeEmailJobHandlerService>();
 
         services.AddSingleton<ILinearUnitStrategy<WeightUnits>, WeightLinearUnitStrategy>();
         services.AddSingleton<IUnitConverter<WeightUnits>, LinearUnitConverter<WeightUnits>>();
