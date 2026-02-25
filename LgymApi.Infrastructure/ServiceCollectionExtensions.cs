@@ -42,8 +42,7 @@ public static class ServiceCollectionExtensions
         ValidateEmailOptions(emailOptions);
         services.AddSingleton(emailOptions);
         services.AddSingleton<IEmailNotificationsFeature, EmailNotificationsFeature>();
-        services.AddSingleton<IInvitationEmailMetrics, InvitationEmailMetrics>();
-        services.AddSingleton<IWelcomeEmailMetrics, WelcomeEmailMetrics>();
+        services.AddSingleton<IEmailMetrics, EmailMetrics>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
@@ -75,13 +74,11 @@ public static class ServiceCollectionExtensions
                     });
             });
             services.AddHangfireServer();
-            services.AddScoped<IInvitationEmailBackgroundScheduler, HangfireInvitationEmailBackgroundScheduler>();
-            services.AddScoped<IWelcomeEmailBackgroundScheduler, HangfireWelcomeEmailBackgroundScheduler>();
+            services.AddScoped<IEmailBackgroundScheduler, HangfireEmailBackgroundScheduler>();
         }
         else
         {
-            services.AddScoped<IInvitationEmailBackgroundScheduler, NoOpInvitationEmailBackgroundScheduler>();
-            services.AddScoped<IWelcomeEmailBackgroundScheduler, NoOpWelcomeEmailBackgroundScheduler>();
+            services.AddScoped<IEmailBackgroundScheduler, NoOpEmailBackgroundScheduler>();
         }
 
         services.AddScoped<ITokenService, TokenService>();
@@ -89,6 +86,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<LgymApi.Application.Services.IRankService, LgymApi.Application.Services.RankService>();
         services.AddSingleton<IUserSessionCache, UserSessionCache>();
         services.AddScoped<IEmailTemplateComposer, TrainerInvitationEmailTemplateComposer>();
+        services.AddScoped<IEmailTemplateComposer, WelcomeEmailTemplateComposer>();
+        services.AddScoped<IEmailTemplateComposerFactory, EmailTemplateComposerFactory>();
         services.AddScoped<SmtpEmailSender>();
         services.AddScoped<DummyEmailSender>();
         services.AddScoped<IEmailSender>(sp =>
@@ -100,6 +99,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddScoped<InvitationEmailJob>();
         services.AddScoped<WelcomeEmailJob>();
+        services.AddScoped<EmailJob>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();

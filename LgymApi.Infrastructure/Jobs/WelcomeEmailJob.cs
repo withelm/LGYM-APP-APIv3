@@ -5,9 +5,9 @@ namespace LgymApi.Infrastructure.Jobs;
 
 public sealed class WelcomeEmailJob
 {
-    private readonly IWelcomeEmailJobHandler _handler;
+    private readonly IEmailJobHandler _handler;
 
-    public WelcomeEmailJob(IWelcomeEmailJobHandler handler)
+    public WelcomeEmailJob(IEmailJobHandler handler)
     {
         _handler = handler;
     }
