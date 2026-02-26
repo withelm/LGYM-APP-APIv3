@@ -50,9 +50,17 @@ public sealed class UserService : IUserService
         _logger = logger;
     }
 
-    public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, CancellationToken cancellationToken = default)
+    public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, string? preferredLanguage = null, CancellationToken cancellationToken = default)
     {
         await RegisterCoreAsync(
+            name,
+            email,
+            password,
+            confirmPassword,
+            isVisibleInRanking,
+            [AuthConstants.Roles.User],
+            preferredLanguage,
+            cancellationToken);
             name,
             email,
             password,
@@ -91,6 +99,7 @@ public sealed class UserService : IUserService
         string confirmPassword,
         bool? isVisibleInRanking,
         IReadOnlyCollection<string> roleNames,
+        string? preferredLanguage,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -127,6 +136,19 @@ public sealed class UserService : IUserService
 
         var passwordData = _legacyPasswordService.Create(password);
         var user = new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Email = normalizedEmail!,
+            IsVisibleInRanking = isVisibleInRanking ?? true,
+            ProfileRank = "Junior 1",
+            LegacyHash = passwordData.Hash,
+            LegacySalt = passwordData.Salt,
+            LegacyIterations = passwordData.Iterations,
+            LegacyKeyLength = passwordData.KeyLength,
+            LegacyDigest = passwordData.Digest,
+            PreferredLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? "en-US" : preferredLanguage
+        };
         {
             Id = Guid.NewGuid(),
             Name = name,

@@ -46,6 +46,112 @@ public sealed class UserAuthTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Register_WithNoLanguageSpecified_SendsEnglishWelcomeEmail()
+    {
+        var request = new
+        {
+            name = "bob-en",
+            email = "bob-en@example.com",
+            password = "securepass",
+            cpassword = "securepass",
+            isVisibleInRanking = true
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/register", request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "bob-en");
+        user.Should().NotBeNull();
+        user!.PreferredLanguage.Should().StartWith("en");
+
+        var emailLog = await db.EmailNotificationLogs
+            .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
+            .FirstOrDefaultAsync(e => e.RecipientEmail == "bob-en@example.com" && e.Type == "Welcome");
+        emailLog.Should().NotBeNull();
+
+        var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
+        payload.Should().NotBeNull();
+        payload!.CultureName.Should().StartWith("en");
+        emailLog.PayloadJson.Should().Contain("en");
+    }
+    [Test]
+    public async Task Register_WithAcceptLanguage_Header_PlSendsPolishWelcomeEmail()
+    {
+        var request = new
+        {
+            name = "alicja-hdr",
+            email = "alicja-hdr@example.com",
+            password = "securepass",
+            cpassword = "securepass",
+            isVisibleInRanking = true
+        };
+
+        var msg = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, "/api/register")
+        {
+            Content = System.Net.Http.Json.JsonContent.Create(request)
+        };
+        msg.Headers.Add("Accept-Language", "pl;q=1.0");
+
+        var response = await Client.SendAsync(msg);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "alicja-hdr");
+        user.Should().NotBeNull();
+        user!.PreferredLanguage.Should().StartWith("pl");
+
+        var emailLog = await db.EmailNotificationLogs
+            .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
+            .FirstOrDefaultAsync(e => e.RecipientEmail == "alicja-hdr@example.com" && e.Type == "Welcome");
+        emailLog.Should().NotBeNull();
+
+        var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
+        payload.Should().NotBeNull();
+        payload!.CultureName.Should().StartWith("pl");
+
+        // The Polish template has a distinct subject and body.
+        emailLog.PayloadJson.Should().Contain("pl");
+        // Optionally check the subject/body as needed.
+    }
+    [Test]
+    public async Task Register_WithPreferredLanguage_PlSendsPolishWelcomeEmail()
+    {
+        var request = new
+        {
+            name = "alicja-pl",
+            email = "alicja-pl@example.com",
+            password = "securepass",
+            cpassword = "securepass",
+            isVisibleInRanking = true,
+            preferredLanguage = "pl-PL"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/register", request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "alicja-pl");
+        user.Should().NotBeNull();
+        user!.PreferredLanguage.Should().Be("pl-PL");
+
+        var emailLog = await db.EmailNotificationLogs
+            .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
+            .FirstOrDefaultAsync(e => e.RecipientEmail == "alicja-pl@example.com" && e.Type == "Welcome");
+        emailLog.Should().NotBeNull();
+
+        var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
+        payload.Should().NotBeNull();
+        payload!.CultureName.Should().Be("pl-PL");
+
+        // The Polish template has a distinct subject and body.
+        emailLog.PayloadJson.Should().Contain("pl-PL");
+        // Optionally check the subject/body if stored; else, template test ensures content.
+    }
+    [Test]
     public async Task Register_WithEmptyName_ReturnsError()
     {
         var request = new
