@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Application.Notifications;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,7 +69,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var emailLog = await db.EmailNotificationLogs
             .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
-            .FirstOrDefaultAsync(e => e.RecipientEmail == "bob-en@example.com" && e.Type == "Welcome");
+            .FirstOrDefaultAsync(e => e.RecipientEmail == "bob-en@example.com" && e.Type == EmailNotificationTypes.Welcome);
         emailLog.Should().NotBeNull();
 
         var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
@@ -105,7 +106,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var emailLog = await db.EmailNotificationLogs
             .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
-            .FirstOrDefaultAsync(e => e.RecipientEmail == "alicja-hdr@example.com" && e.Type == "Welcome");
+            .FirstOrDefaultAsync(e => e.RecipientEmail == "alicja-hdr@example.com" && e.Type == EmailNotificationTypes.Welcome);
         emailLog.Should().NotBeNull();
 
         var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
@@ -125,11 +126,16 @@ public sealed class UserAuthTests : IntegrationTestBase
             email = "alicja-pl@example.com",
             password = "securepass",
             cpassword = "securepass",
-            isVisibleInRanking = true,
-            preferredLanguage = "pl-PL"
+            isVisibleInRanking = true
         };
 
-        var response = await Client.PostAsJsonAsync("/api/register", request);
+        var msg = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, "/api/register")
+        {
+            Content = System.Net.Http.Json.JsonContent.Create(request)
+        };
+        msg.Headers.Add("Accept-Language", "pl-PL;q=1.0");
+
+        var response = await Client.SendAsync(msg);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var scope = Factory.Services.CreateScope();
@@ -140,7 +146,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var emailLog = await db.EmailNotificationLogs
             .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
-            .FirstOrDefaultAsync(e => e.RecipientEmail == "alicja-pl@example.com" && e.Type == "Welcome");
+            .FirstOrDefaultAsync(e => e.RecipientEmail == "alicja-pl@example.com" && e.Type == EmailNotificationTypes.Welcome);
         emailLog.Should().NotBeNull();
 
         var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);

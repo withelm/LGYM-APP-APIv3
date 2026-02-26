@@ -61,13 +61,6 @@ public sealed class UserService : IUserService
             [AuthConstants.Roles.User],
             preferredLanguage,
             cancellationToken);
-            name,
-            email,
-            password,
-            confirmPassword,
-            isVisibleInRanking,
-            [AuthConstants.Roles.User],
-            cancellationToken);
     }
 
     public async Task RegisterTrainerAsync(string name, string email, string password, string confirmPassword, CancellationToken cancellationToken = default)
@@ -79,6 +72,7 @@ public sealed class UserService : IUserService
             confirmPassword,
             isVisibleInRanking: false,
             [AuthConstants.Roles.User, AuthConstants.Roles.Trainer],
+            preferredLanguage: null,
             cancellationToken);
     }
 
@@ -148,18 +142,6 @@ public sealed class UserService : IUserService
             LegacyKeyLength = passwordData.KeyLength,
             LegacyDigest = passwordData.Digest,
             PreferredLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? "en-US" : preferredLanguage
-        };
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
-            Email = normalizedEmail!,
-            IsVisibleInRanking = isVisibleInRanking ?? true,
-            ProfileRank = "Junior 1",
-            LegacyHash = passwordData.Hash,
-            LegacySalt = passwordData.Salt,
-            LegacyIterations = passwordData.Iterations,
-            LegacyKeyLength = passwordData.KeyLength,
-            LegacyDigest = passwordData.Digest
         };
 
         await _userRepository.AddAsync(user, cancellationToken);

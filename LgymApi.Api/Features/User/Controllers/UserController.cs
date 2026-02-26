@@ -28,17 +28,25 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
-        // Try to get language from Accept-Language header if PreferredLanguage is not set
-        string? preferredLanguage = request.PreferredLanguage;
-        if (string.IsNullOrWhiteSpace(preferredLanguage) && Request.Headers.TryGetValue("Accept-Language", out var langs))
+        var preferredLanguage = "en-US";
+        if (Request.Headers.TryGetValue("Accept-Language", out var langs))
         {
-            preferredLanguage = langs.ToString().Split(',').FirstOrDefault()?.Trim();
+            preferredLanguage = langs
+                .ToString()
+                .Split(',')
+                .FirstOrDefault()?
+                .Split(';')
+                .FirstOrDefault()?
+                .Trim();
         }
-        await _userService.RegisterAsync(request.Name, request.Email, request.Password, request.ConfirmPassword, request.IsVisibleInRanking, preferredLanguage, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
-    }
-    {
-        await _userService.RegisterAsync(request.Name, request.Email, request.Password, request.ConfirmPassword, request.IsVisibleInRanking, HttpContext.RequestAborted);
+        await _userService.RegisterAsync(
+            request.Name,
+            request.Email,
+            request.Password,
+            request.ConfirmPassword,
+            request.IsVisibleInRanking,
+            preferredLanguage,
+            HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
