@@ -3,11 +3,15 @@ using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Application.Units;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
+using Microsoft.Extensions.Logging;
 using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
 using TrainingEntity = LgymApi.Domain.Entities.Training;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.Training;
 
@@ -19,11 +23,15 @@ public sealed class TrainingService : ITrainingService
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
     private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
+    private readonly IPlanDayRepository _planDayRepository;
+    private readonly IEmailNotificationSubscriptionRepository _emailNotificationSubscriptionRepository;
+    private readonly IEmailScheduler<TrainingCompletedEmailPayload> _trainingCompletedEmailScheduler;
     private readonly IMainRecordRepository _mainRecordRepository;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
     private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<TrainingService> _logger;
 
     public TrainingService(
         IUserRepository userRepository,
@@ -32,11 +40,15 @@ public sealed class TrainingService : ITrainingService
         IExerciseRepository exerciseRepository,
         IExerciseScoreRepository exerciseScoreRepository,
         ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
+        IPlanDayRepository planDayRepository,
+        IEmailNotificationSubscriptionRepository emailNotificationSubscriptionRepository,
+        IEmailScheduler<TrainingCompletedEmailPayload> trainingCompletedEmailScheduler,
         IMainRecordRepository mainRecordRepository,
         IEloRegistryRepository eloRepository,
         IRankService rankService,
         IUnitConverter<WeightUnits> weightUnitConverter,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<TrainingService> logger)
     {
         _userRepository = userRepository;
         _gymRepository = gymRepository;
@@ -44,11 +56,15 @@ public sealed class TrainingService : ITrainingService
         _exerciseRepository = exerciseRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
         _trainingExerciseScoreRepository = trainingExerciseScoreRepository;
+        _planDayRepository = planDayRepository;
+        _emailNotificationSubscriptionRepository = emailNotificationSubscriptionRepository;
+        _trainingCompletedEmailScheduler = trainingCompletedEmailScheduler;
         _mainRecordRepository = mainRecordRepository;
         _eloRepository = eloRepository;
         _rankService = rankService;
         _weightUnitConverter = weightUnitConverter;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<TrainingSummaryResult> AddTrainingAsync(
@@ -188,6 +204,15 @@ public sealed class TrainingService : ITrainingService
 
                 await transaction.CommitAsync(cancellationToken);
 
+                await TryScheduleTrainingCompletedEmailAsync(
+                    user,
+                    training,
+                    createdAtUtc,
+                    planDayId,
+                    exercises,
+                    exerciseDetailsMap,
+                    cancellationToken);
+
                 return new TrainingSummaryResult
                 {
                     Comparison = comparison,
@@ -295,6 +320,80 @@ public sealed class TrainingService : ITrainingService
                 }, cancellationToken);
             }
         }
+    }
+
+    private async Task TryScheduleTrainingCompletedEmailAsync(
+        UserEntity user,
+        TrainingEntity training,
+        DateTime createdAtUtc,
+        Guid planDayId,
+        IReadOnlyCollection<TrainingExerciseInput> exercises,
+        IReadOnlyDictionary<Guid, string> exerciseDetailsMap,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            _logger.LogInformation(
+                "User email is empty; training completed email will not be scheduled for user {UserId}.",
+                user.Id);
+            return;
+        }
+
+        var isSubscribed = await _emailNotificationSubscriptionRepository.IsSubscribedAsync(
+            user.Id,
+            EmailNotificationTypes.TrainingCompleted,
+            cancellationToken);
+        if (!isSubscribed)
+        {
+            return;
+        }
+
+        var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
+        var planDayName = planDay?.Name ?? string.Empty;
+        var cultureName = string.IsNullOrWhiteSpace(user.PreferredLanguage) ? "en-US" : user.PreferredLanguage;
+
+        try
+        {
+            var payload = new TrainingCompletedEmailPayload
+            {
+                UserId = user.Id,
+                TrainingId = training.Id,
+                RecipientEmail = user.Email,
+                CultureName = cultureName,
+                PlanDayName = planDayName,
+                TrainingDate = new DateTimeOffset(createdAtUtc),
+                Exercises = exercises
+                    .Where(e => Guid.TryParse(e.ExerciseId, out _))
+                    .Select(e => new TrainingExerciseSummary
+                    {
+                        ExerciseName = ResolveExerciseName(e.ExerciseId, exerciseDetailsMap),
+                        Series = e.Series,
+                        Reps = e.Reps,
+                        Weight = e.Weight,
+                        Unit = e.Unit
+                    })
+                    .ToList()
+            };
+
+            await _trainingCompletedEmailScheduler.ScheduleAsync(payload, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to schedule training completed email for training {TrainingId}.",
+                training.Id);
+        }
+    }
+
+    private static string ResolveExerciseName(string exerciseId, IReadOnlyDictionary<Guid, string> exerciseDetailsMap)
+    {
+        if (!Guid.TryParse(exerciseId, out var parsedId))
+        {
+            return string.Empty;
+        }
+
+        return exerciseDetailsMap.TryGetValue(parsedId, out var name) ? name : string.Empty;
     }
 
     public async Task<TrainingEntity> GetLastTrainingAsync(Guid userId, CancellationToken cancellationToken = default)

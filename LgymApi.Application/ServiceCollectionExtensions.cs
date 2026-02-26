@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITrainerRelationshipService, TrainerRelationshipService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IEmailScheduler<InvitationEmailPayload>, EmailSchedulerService<InvitationEmailPayload>>();
+        services.AddScoped<IEmailScheduler<TrainingCompletedEmailPayload>, EmailSchedulerService<TrainingCompletedEmailPayload>>();
         services.AddScoped<IEmailScheduler<WelcomeEmailPayload>, EmailSchedulerService<WelcomeEmailPayload>>();
         services.AddScoped<IEmailJobHandler, EmailJobHandlerService>();
 

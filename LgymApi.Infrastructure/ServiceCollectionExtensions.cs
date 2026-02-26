@@ -86,6 +86,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<LgymApi.Application.Services.IRankService, LgymApi.Application.Services.RankService>();
         services.AddSingleton<IUserSessionCache, UserSessionCache>();
         services.AddScoped<IEmailTemplateComposer, TrainerInvitationEmailTemplateComposer>();
+        services.AddScoped<IEmailTemplateComposer, TrainingCompletedEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposer, WelcomeEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposerFactory, EmailTemplateComposerFactory>();
         services.AddScoped<SmtpEmailSender>();
@@ -107,6 +108,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReportingRepository, ReportingRepository>();
         services.AddScoped<ISupplementationRepository, SupplementationRepository>();
         services.AddScoped<IEmailNotificationLogRepository, EmailNotificationLogRepository>();
+        services.AddScoped<IEmailNotificationSubscriptionRepository, EmailNotificationSubscriptionRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IPlanDayRepository, PlanDayRepository>();
         services.AddScoped<IPlanDayExerciseRepository, PlanDayExerciseRepository>();

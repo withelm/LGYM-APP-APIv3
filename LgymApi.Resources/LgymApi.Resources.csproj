@@ -9,10 +9,15 @@
   <ItemGroup>
     <AdditionalFiles Include="Resources\Messages.resx" />
     <AdditionalFiles Include="Resources\Enums.resx" />
+    <AdditionalFiles Include="Resources\Emails.resx" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LgymApi.Resources.Generator\LgymApi.Resources.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\LgymApi.Resources.Generator\LgymApi.Resources.Generator.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <Analyzer Include="..\LgymApi.Resources.Generator\obj\Debug\netstandard2.0\LgymApi.Resources.Generator.Debug.dll" />
   </ItemGroup>
 
 </Project>
