@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Application.Notifications;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +15,144 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class TrainingTests : IntegrationTestBase
 {
+    [SetUp]
+    public void ResetEmailCapture()
+    {
+        Factory.EmailSender.Reset();
+    }
+
+    [Test]
+    public async Task AddTraining_WhenSubscribed_SchedulesTrainingCompletedEmailWithNames()
+    {
+        const string userEmail = "training-email-subscribed@example.com";
+
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "training-email-subscribed",
+            email: userEmail,
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Bench Press", BodyParts.Chest);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Email Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Email Plan");
+        var planDayName = "Email Day";
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, planDayName, new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 2, Reps = "8" }
+        });
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.EmailNotificationSubscriptions.AddAsync(new EmailNotificationSubscription
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                NotificationType = EmailNotificationTypes.TrainingCompleted
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var request = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 8, weight = 100.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 2, reps = 6, weight = 105.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var verifyScope = Factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var log = await db.EmailNotificationLogs
+                .Where(x => x.Type == EmailNotificationTypes.TrainingCompleted && x.RecipientEmail == userEmail)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            log.Should().NotBeNull();
+            log!.Status.Should().Be(EmailNotificationStatus.Pending);
+
+            using var payload = JsonDocument.Parse(log.PayloadJson);
+            var root = payload.RootElement;
+            var planDayProperty = root.TryGetProperty("planDayName", out var camelPlanDay)
+                ? camelPlanDay
+                : root.GetProperty("PlanDayName");
+            planDayProperty.GetString().Should().Be(planDayName);
+
+            var exercisesProperty = root.TryGetProperty("exercises", out var camelExercises)
+                ? camelExercises
+                : root.GetProperty("Exercises");
+            var exercises = exercisesProperty.EnumerateArray().ToArray();
+            exercises.Length.Should().Be(2);
+            var firstExerciseName = exercises[0].TryGetProperty("exerciseName", out var camelExerciseName)
+                ? camelExerciseName
+                : exercises[0].GetProperty("ExerciseName");
+            firstExerciseName.GetString().Should().Be("Bench Press");
+
+            var firstSeries = exercises[0].TryGetProperty("series", out var camelSeries1)
+                ? camelSeries1
+                : exercises[0].GetProperty("Series");
+            var secondSeries = exercises[1].TryGetProperty("series", out var camelSeries2)
+                ? camelSeries2
+                : exercises[1].GetProperty("Series");
+            firstSeries.GetInt32().Should().Be(1);
+            secondSeries.GetInt32().Should().Be(2);
+        }
+    }
+
+    [Test]
+    public async Task AddTraining_WhenNotSubscribed_DoesNotScheduleTrainingCompletedEmail()
+    {
+        const string userEmail = "training-email-unsubscribed@example.com";
+
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "training-email-unsubscribed",
+            email: userEmail,
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Squat", BodyParts.Quads);
+        var gymId = await CreateGymViaEndpointAsync(userId, "No Email Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "No Email Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "No Email Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 1, Reps = "5" }
+        });
+
+        var request = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 5, weight = 120.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var logs = await db.EmailNotificationLogs
+            .Where(x => x.Type == EmailNotificationTypes.TrainingCompleted && x.RecipientEmail == userEmail)
+            .ToListAsync();
+
+        logs.Should().BeEmpty();
+    }
+
     [Test]
     public async Task AddTraining_WithValidData_CreatesTrainingAndReturnsComparison()
     {

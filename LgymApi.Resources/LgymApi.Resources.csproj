@@ -16,8 +16,4 @@
     <ProjectReference Include="..\LgymApi.Resources.Generator\LgymApi.Resources.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-    <Analyzer Include="..\LgymApi.Resources.Generator\obj\Debug\netstandard2.0\LgymApi.Resources.Generator.Debug.dll" />
-  </ItemGroup>
-
 </Project>

@@ -17,6 +17,11 @@ namespace LgymApi.Application.Features.Training;
 
 public sealed class TrainingService : ITrainingService
 {
+    private static readonly Action<ILogger, Guid, Exception?> UserEmailMissingLog = LoggerMessage.Define<Guid>(
+        LogLevel.Information,
+        new EventId(1001, nameof(UserEmailMissingLog)),
+        "User email is empty; training completed email will not be scheduled for user {UserId}.");
+
     private readonly IUserRepository _userRepository;
     private readonly IGymRepository _gymRepository;
     private readonly ITrainingRepository _trainingRepository;
@@ -333,9 +338,7 @@ public sealed class TrainingService : ITrainingService
     {
         if (string.IsNullOrWhiteSpace(user.Email))
         {
-            _logger.LogInformation(
-                "User email is empty; training completed email will not be scheduled for user {UserId}.",
-                user.Id);
+            UserEmailMissingLog(_logger, user.Id, null);
             return;
         }
 
