@@ -27,7 +27,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly IRoleRepository _roleRepository;
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IPlanRepository _planRepository;
-    private readonly IInvitationEmailScheduler _invitationEmailScheduler;
+    private readonly IEmailScheduler<InvitationEmailPayload> _invitationEmailScheduler;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly ITrainingService _trainingService;
     private readonly IExerciseScoresService _exerciseScoresService;
@@ -42,7 +42,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         IRoleRepository roleRepository,
         ITrainerRelationshipRepository trainerRelationshipRepository,
         IPlanRepository planRepository,
-        IInvitationEmailScheduler invitationEmailScheduler,
+        IEmailScheduler<InvitationEmailPayload> invitationEmailScheduler,
         IEmailNotificationsFeature emailNotificationsFeature,
         ITrainingService trainingService,
         IExerciseScoresService exerciseScoresService,
@@ -153,7 +153,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         try
         {
-            await _invitationEmailScheduler.ScheduleInvitationCreatedAsync(new InvitationEmailPayload
+            await _invitationEmailScheduler.ScheduleAsync(new InvitationEmailPayload
             {
                 InvitationId = invitation.Id,
                 InvitationCode = invitation.Code,

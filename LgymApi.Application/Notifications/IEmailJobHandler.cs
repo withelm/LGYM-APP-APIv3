@@ -1,6 +1,6 @@
 namespace LgymApi.Application.Notifications;
 
-public interface IWelcomeEmailJobHandler
+public interface IEmailJobHandler
 {
     Task ProcessAsync(Guid notificationId, CancellationToken cancellationToken = default);
 }

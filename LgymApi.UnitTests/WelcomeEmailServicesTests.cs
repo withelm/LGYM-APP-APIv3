@@ -16,17 +16,17 @@ public sealed class WelcomeEmailServicesTests
         var repository = new FakeNotificationRepository();
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
-        var metrics = new FakeWelcomeEmailMetrics();
+        var metrics = new FakeEmailMetrics();
 
-        var service = new WelcomeEmailSchedulerService(
+        var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
             new EnabledFeature(),
             metrics,
-            NullLogger<WelcomeEmailSchedulerService>.Instance);
+            NullLogger<EmailSchedulerService<WelcomeEmailPayload>>.Instance);
 
-        await service.ScheduleWelcomeAsync(new WelcomeEmailPayload
+        await service.ScheduleAsync(new WelcomeEmailPayload
         {
             UserId = Guid.NewGuid(),
             UserName = "Alex",
@@ -52,7 +52,7 @@ public sealed class WelcomeEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Failed,
             Attempts = 5,
-            Type = WelcomeEmailSchedulerService.NotificationType,
+            Type = EmailNotificationTypes.Welcome,
             CorrelationId = Guid.NewGuid(),
             RecipientEmail = "alex@example.com",
             PayloadJson = "{}"
@@ -61,17 +61,17 @@ public sealed class WelcomeEmailServicesTests
         var repository = new FakeNotificationRepository { ExistingByCorrelation = existing };
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
-        var metrics = new FakeWelcomeEmailMetrics();
+        var metrics = new FakeEmailMetrics();
 
-        var service = new WelcomeEmailSchedulerService(
+        var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
             new EnabledFeature(),
             metrics,
-            NullLogger<WelcomeEmailSchedulerService>.Instance);
+            NullLogger<EmailSchedulerService<WelcomeEmailPayload>>.Instance);
 
-        await service.ScheduleWelcomeAsync(new WelcomeEmailPayload
+        await service.ScheduleAsync(new WelcomeEmailPayload
         {
             UserId = existing.CorrelationId,
             UserName = "Alex",
@@ -94,17 +94,17 @@ public sealed class WelcomeEmailServicesTests
         var repository = new FakeNotificationRepository();
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
-        var metrics = new FakeWelcomeEmailMetrics();
+        var metrics = new FakeEmailMetrics();
 
-        var service = new WelcomeEmailSchedulerService(
+        var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
             new DisabledFeature(),
             metrics,
-            NullLogger<WelcomeEmailSchedulerService>.Instance);
+            NullLogger<EmailSchedulerService<WelcomeEmailPayload>>.Instance);
 
-        await service.ScheduleWelcomeAsync(new WelcomeEmailPayload
+        await service.ScheduleAsync(new WelcomeEmailPayload
         {
             UserId = Guid.NewGuid(),
             UserName = "Alex",
@@ -129,7 +129,7 @@ public sealed class WelcomeEmailServicesTests
         {
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
-            Type = WelcomeEmailSchedulerService.NotificationType,
+            Type = EmailNotificationTypes.Welcome,
             CorrelationId = Guid.NewGuid(),
             RecipientEmail = "alex@example.com",
             PayloadJson = "{}"
@@ -141,17 +141,17 @@ public sealed class WelcomeEmailServicesTests
         };
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork { ThrowOnSave = true };
-        var metrics = new FakeWelcomeEmailMetrics();
+        var metrics = new FakeEmailMetrics();
 
-        var service = new WelcomeEmailSchedulerService(
+        var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
             new EnabledFeature(),
             metrics,
-            NullLogger<WelcomeEmailSchedulerService>.Instance);
+            NullLogger<EmailSchedulerService<WelcomeEmailPayload>>.Instance);
 
-        await service.ScheduleWelcomeAsync(new WelcomeEmailPayload
+        await service.ScheduleAsync(new WelcomeEmailPayload
         {
             UserId = existing.CorrelationId,
             UserName = "Alex",
@@ -176,7 +176,7 @@ public sealed class WelcomeEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
             Attempts = 0,
-            Type = WelcomeEmailSchedulerService.NotificationType,
+            Type = EmailNotificationTypes.Welcome,
             CorrelationId = Guid.NewGuid(),
             RecipientEmail = "alex@example.com",
             PayloadJson = "{\"userId\":\"d75e53b9-2701-4cb0-b2d1-c02f0dbf8aa0\",\"userName\":\"Alex\",\"recipientEmail\":\"alex@example.com\",\"cultureName\":\"en-US\"}"
@@ -184,14 +184,14 @@ public sealed class WelcomeEmailServicesTests
 
         var repository = new FakeNotificationRepository { ExistingById = notification };
         var unitOfWork = new FakeUnitOfWork();
-        var metrics = new FakeWelcomeEmailMetrics();
-        var handler = new WelcomeEmailJobHandlerService(
+        var metrics = new FakeEmailMetrics();
+        var handler = new EmailJobHandlerService(
             repository,
-            new ThrowingComposer(),
+            new FakeTemplateComposerFactory(new ThrowingComposer()),
             new FakeEmailSender(),
             unitOfWork,
             metrics,
-            NullLogger<WelcomeEmailJobHandlerService>.Instance);
+            NullLogger<EmailJobHandlerService>.Instance);
 
         Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notification.Id));
         Assert.Multiple(() =>
@@ -199,7 +199,7 @@ public sealed class WelcomeEmailServicesTests
             Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
             Assert.That(notification.LastError, Does.StartWith("InvalidOperationException"));
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-            Assert.That(metrics.Failed, Is.EqualTo(1));
+        Assert.That(metrics.Failed, Is.EqualTo(1));
         });
     }
 
@@ -211,7 +211,7 @@ public sealed class WelcomeEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Sent,
             Attempts = 2,
-            Type = WelcomeEmailSchedulerService.NotificationType,
+            Type = EmailNotificationTypes.Welcome,
             CorrelationId = Guid.NewGuid(),
             RecipientEmail = "alex@example.com",
             PayloadJson = "{}"
@@ -220,14 +220,14 @@ public sealed class WelcomeEmailServicesTests
         var repository = new FakeNotificationRepository { ExistingById = notification };
         var unitOfWork = new FakeUnitOfWork();
         var sender = new FakeEmailSender();
-        var metrics = new FakeWelcomeEmailMetrics();
-        var handler = new WelcomeEmailJobHandlerService(
+        var metrics = new FakeEmailMetrics();
+        var handler = new EmailJobHandlerService(
             repository,
-            new PassThroughComposer(),
+            new FakeTemplateComposerFactory(new PassThroughComposer()),
             sender,
             unitOfWork,
             metrics,
-            NullLogger<WelcomeEmailJobHandlerService>.Instance);
+            NullLogger<EmailJobHandlerService>.Instance);
 
         await handler.ProcessAsync(notification.Id);
 
@@ -273,7 +273,7 @@ public sealed class WelcomeEmailServicesTests
         }
     }
 
-    private sealed class FakeBackgroundScheduler : IWelcomeEmailBackgroundScheduler
+    private sealed class FakeBackgroundScheduler : IEmailBackgroundScheduler
     {
         public List<Guid> EnqueuedNotificationIds { get; } = new();
 
@@ -314,12 +314,9 @@ public sealed class WelcomeEmailServicesTests
 
     private sealed class ThrowingComposer : IEmailTemplateComposer
     {
-        public EmailMessage ComposeTrainerInvitation(InvitationEmailPayload payload)
-        {
-            throw new InvalidOperationException("Template missing");
-        }
+        public string NotificationType => EmailNotificationTypes.Welcome;
 
-        public EmailMessage ComposeWelcome(WelcomeEmailPayload payload)
+        public EmailMessage Compose(string payloadJson)
         {
             throw new InvalidOperationException("Template missing");
         }
@@ -327,21 +324,13 @@ public sealed class WelcomeEmailServicesTests
 
     private sealed class PassThroughComposer : IEmailTemplateComposer
     {
-        public EmailMessage ComposeTrainerInvitation(InvitationEmailPayload payload)
-        {
-            return new EmailMessage
-            {
-                To = payload.RecipientEmail,
-                Subject = "x",
-                Body = "y"
-            };
-        }
+        public string NotificationType => EmailNotificationTypes.Welcome;
 
-        public EmailMessage ComposeWelcome(WelcomeEmailPayload payload)
+        public EmailMessage Compose(string payloadJson)
         {
             return new EmailMessage
             {
-                To = payload.RecipientEmail,
+                To = "alex@example.com",
                 Subject = "x",
                 Body = "y"
             };
@@ -364,17 +353,32 @@ public sealed class WelcomeEmailServicesTests
         public bool Enabled => true;
     }
 
-    private sealed class FakeWelcomeEmailMetrics : IWelcomeEmailMetrics
+    private sealed class FakeEmailMetrics : IEmailMetrics
     {
         public int Enqueued { get; private set; }
         public int Sent { get; private set; }
         public int Failed { get; private set; }
         public int Retried { get; private set; }
 
-        public void RecordEnqueued() => Enqueued += 1;
-        public void RecordSent() => Sent += 1;
-        public void RecordFailed() => Failed += 1;
-        public void RecordRetried() => Retried += 1;
+        public void RecordEnqueued(string notificationType) => Enqueued += 1;
+        public void RecordSent(string notificationType) => Sent += 1;
+        public void RecordFailed(string notificationType) => Failed += 1;
+        public void RecordRetried(string notificationType) => Retried += 1;
+    }
+
+    private sealed class FakeTemplateComposerFactory : IEmailTemplateComposerFactory
+    {
+        private readonly IEmailTemplateComposer _composer;
+
+        public FakeTemplateComposerFactory(IEmailTemplateComposer composer)
+        {
+            _composer = composer;
+        }
+
+        public EmailMessage ComposeMessage(string notificationType, string payloadJson)
+        {
+            return _composer.Compose(payloadJson);
+        }
     }
 
     private sealed class DisabledFeature : IEmailNotificationsFeature

@@ -1,6 +1,6 @@
 namespace LgymApi.Application.Notifications;
 
-public interface IWelcomeEmailBackgroundScheduler
+public interface IEmailBackgroundScheduler
 {
     void Enqueue(Guid notificationId);
 }

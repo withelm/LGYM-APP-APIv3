@@ -21,7 +21,7 @@ public sealed class UserService : IUserService
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
     private readonly IUserSessionCache _userSessionCache;
-    private readonly IWelcomeEmailScheduler _welcomeEmailScheduler;
+    private readonly IEmailScheduler<LgymApi.Application.Notifications.Models.WelcomeEmailPayload> _welcomeEmailScheduler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserService> _logger;
 
@@ -34,7 +34,7 @@ public sealed class UserService : IUserService
         ILegacyPasswordService legacyPasswordService,
         IRankService rankService,
         IUserSessionCache userSessionCache,
-        IWelcomeEmailScheduler welcomeEmailScheduler,
+        IEmailScheduler<LgymApi.Application.Notifications.Models.WelcomeEmailPayload> welcomeEmailScheduler,
         IUnitOfWork unitOfWork,
         ILogger<UserService> logger)
     {
@@ -50,7 +50,7 @@ public sealed class UserService : IUserService
         _logger = logger;
     }
 
-    public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, CancellationToken cancellationToken = default)
+    public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, string? preferredLanguage = null, CancellationToken cancellationToken = default)
     {
         await RegisterCoreAsync(
             name,
@@ -59,6 +59,7 @@ public sealed class UserService : IUserService
             confirmPassword,
             isVisibleInRanking,
             [AuthConstants.Roles.User],
+            preferredLanguage,
             cancellationToken);
     }
 
@@ -71,6 +72,7 @@ public sealed class UserService : IUserService
             confirmPassword,
             isVisibleInRanking: false,
             [AuthConstants.Roles.User, AuthConstants.Roles.Trainer],
+            preferredLanguage: null,
             cancellationToken);
     }
 
@@ -91,6 +93,7 @@ public sealed class UserService : IUserService
         string confirmPassword,
         bool? isVisibleInRanking,
         IReadOnlyCollection<string> roleNames,
+        string? preferredLanguage,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -137,7 +140,8 @@ public sealed class UserService : IUserService
             LegacySalt = passwordData.Salt,
             LegacyIterations = passwordData.Iterations,
             LegacyKeyLength = passwordData.KeyLength,
-            LegacyDigest = passwordData.Digest
+            LegacyDigest = passwordData.Digest,
+            PreferredLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? "en-US" : preferredLanguage
         };
 
         await _userRepository.AddAsync(user, cancellationToken);
@@ -173,7 +177,7 @@ public sealed class UserService : IUserService
 
         try
         {
-            await _welcomeEmailScheduler.ScheduleWelcomeAsync(new LgymApi.Application.Notifications.Models.WelcomeEmailPayload
+            await _welcomeEmailScheduler.ScheduleAsync(new LgymApi.Application.Notifications.Models.WelcomeEmailPayload
             {
                 UserId = user.Id,
                 UserName = user.Name,

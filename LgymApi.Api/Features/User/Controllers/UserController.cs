@@ -28,7 +28,25 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
-        await _userService.RegisterAsync(request.Name, request.Email, request.Password, request.ConfirmPassword, request.IsVisibleInRanking, HttpContext.RequestAborted);
+        var preferredLanguage = "en-US";
+        if (Request.Headers.TryGetValue("Accept-Language", out var langs))
+        {
+            preferredLanguage = langs
+                .ToString()
+                .Split(',')
+                .FirstOrDefault()?
+                .Split(';')
+                .FirstOrDefault()?
+                .Trim();
+        }
+        await _userService.RegisterAsync(
+            request.Name,
+            request.Email,
+            request.Password,
+            request.ConfirmPassword,
+            request.IsVisibleInRanking,
+            preferredLanguage,
+            HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 

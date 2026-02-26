@@ -3,11 +3,11 @@ using LgymApi.Application.Notifications;
 
 namespace LgymApi.Infrastructure.Jobs;
 
-public sealed class WelcomeEmailJob
+public sealed class EmailJob
 {
     private readonly IEmailJobHandler _handler;
 
-    public WelcomeEmailJob(IEmailJobHandler handler)
+    public EmailJob(IEmailJobHandler handler)
     {
         _handler = handler;
     }

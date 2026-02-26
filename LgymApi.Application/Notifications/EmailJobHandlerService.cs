@@ -1,4 +1,3 @@
-using System.Text.Json;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Enums;
@@ -6,25 +5,25 @@ using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Notifications;
 
-public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandler
+public sealed class EmailJobHandlerService : IEmailJobHandler
 {
     private readonly IEmailNotificationLogRepository _notificationLogRepository;
-    private readonly IEmailTemplateComposer _templateComposer;
+    private readonly IEmailTemplateComposerFactory _templateComposerFactory;
     private readonly IEmailSender _emailSender;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IInvitationEmailMetrics _metrics;
-    private readonly ILogger<InvitationEmailJobHandlerService> _logger;
+    private readonly IEmailMetrics _metrics;
+    private readonly ILogger<EmailJobHandlerService> _logger;
 
-    public InvitationEmailJobHandlerService(
+    public EmailJobHandlerService(
         IEmailNotificationLogRepository notificationLogRepository,
-        IEmailTemplateComposer templateComposer,
+        IEmailTemplateComposerFactory templateComposerFactory,
         IEmailSender emailSender,
         IUnitOfWork unitOfWork,
-        IInvitationEmailMetrics metrics,
-        ILogger<InvitationEmailJobHandlerService> logger)
+        IEmailMetrics metrics,
+        ILogger<EmailJobHandlerService> logger)
     {
         _notificationLogRepository = notificationLogRepository;
-        _templateComposer = templateComposer;
+        _templateComposerFactory = templateComposerFactory;
         _emailSender = emailSender;
         _unitOfWork = unitOfWork;
         _metrics = metrics;
@@ -37,7 +36,7 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
         if (notification == null)
         {
             _logger.LogWarning(
-                "Invitation email notification {NotificationId} was not found. The job will be skipped.",
+                "Email notification {NotificationId} was not found. The job will be skipped.",
                 notificationId);
             return;
         }
@@ -45,7 +44,7 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
         if (notification.Status == EmailNotificationStatus.Sent)
         {
             _logger.LogInformation(
-                "Invitation email notification {NotificationId} is already sent; skipping duplicate processing.",
+                "Email notification {NotificationId} is already sent; skipping duplicate processing.",
                 notificationId);
             return;
         }
@@ -55,50 +54,26 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
 
         if (notification.Attempts > 1)
         {
-            _metrics.RecordRetried();
+            _metrics.RecordRetried(notification.Type);
             _logger.LogInformation(
-                "Retrying invitation email notification {NotificationId} (attempt {Attempt}).",
+                "Retrying email notification {NotificationId} (attempt {Attempt}).",
                 notificationId,
                 notification.Attempts);
-        }
-
-        InvitationEmailPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize<InvitationEmailPayload>(notification.PayloadJson);
-        }
-        catch (Exception ex)
-        {
-            notification.Status = EmailNotificationStatus.Failed;
-            notification.LastError = ToSafeError(ex);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _metrics.RecordFailed();
-            _logger.LogError(ex, "Failed to deserialize invitation email payload for notification {NotificationId}.", notificationId);
-            throw new InvalidOperationException($"Failed to deserialize invitation email payload for notification {notificationId}.", ex);
-        }
-
-        if (payload == null)
-        {
-            notification.Status = EmailNotificationStatus.Failed;
-            notification.LastError = "Email payload is empty.";
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _metrics.RecordFailed();
-            return;
         }
 
         EmailMessage message;
         try
         {
-            message = _templateComposer.ComposeTrainerInvitation(payload);
+            message = _templateComposerFactory.ComposeMessage(notification.Type, notification.PayloadJson);
         }
         catch (Exception ex)
         {
             notification.Status = EmailNotificationStatus.Failed;
             notification.LastError = ToSafeError(ex);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _metrics.RecordFailed();
-            _logger.LogError(ex, "Failed to compose invitation email template for notification {NotificationId}.", notificationId);
-            throw new InvalidOperationException($"Failed to compose invitation email template for notification {notificationId}.", ex);
+            _metrics.RecordFailed(notification.Type);
+            _logger.LogError(ex, "Failed to compose email template for notification {NotificationId}.", notificationId);
+            throw new InvalidOperationException($"Failed to compose email template for notification {notificationId}.", ex);
         }
 
         try
@@ -109,7 +84,7 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
                 notification.Status = EmailNotificationStatus.Failed;
                 notification.LastError = "Email sender is disabled.";
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
-                _metrics.RecordFailed();
+                _metrics.RecordFailed(notification.Type);
                 _logger.LogWarning(
                     "Email sender is disabled; notification {NotificationId} was not delivered.",
                     notificationId);
@@ -120,9 +95,9 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
             notification.SentAt = DateTimeOffset.UtcNow;
             notification.LastError = null;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _metrics.RecordSent();
+            _metrics.RecordSent(notification.Type);
             _logger.LogInformation(
-                "Invitation email notification {NotificationId} sent successfully on attempt {Attempt}.",
+                "Email notification {NotificationId} sent successfully on attempt {Attempt}.",
                 notificationId,
                 notification.Attempts);
         }
@@ -131,9 +106,9 @@ public sealed class InvitationEmailJobHandlerService : IInvitationEmailJobHandle
             notification.Status = EmailNotificationStatus.Failed;
             notification.LastError = ToSafeError(ex);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _metrics.RecordFailed();
-            _logger.LogError(ex, "Failed to send invitation email for notification {NotificationId}.", notificationId);
-            throw new InvalidOperationException($"Failed to send invitation email for notification {notificationId}.", ex);
+            _metrics.RecordFailed(notification.Type);
+            _logger.LogError(ex, "Failed to send email for notification {NotificationId}.", notificationId);
+            throw new InvalidOperationException($"Failed to send email for notification {notificationId}.", ex);
         }
     }
 

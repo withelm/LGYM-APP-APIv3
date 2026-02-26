@@ -7,25 +7,25 @@ using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Notifications;
 
-public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
+public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
+    where TPayload : IEmailPayload
 {
-    public const string NotificationType = "trainer.invitation.created";
     private const int MaxManualRequeueAttempts = 5;
 
     private readonly IEmailNotificationLogRepository _notificationLogRepository;
-    private readonly IInvitationEmailBackgroundScheduler _backgroundScheduler;
+    private readonly IEmailBackgroundScheduler _backgroundScheduler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
-    private readonly IInvitationEmailMetrics _metrics;
-    private readonly ILogger<InvitationEmailSchedulerService> _logger;
+    private readonly IEmailMetrics _metrics;
+    private readonly ILogger<EmailSchedulerService<TPayload>> _logger;
 
-    public InvitationEmailSchedulerService(
+    public EmailSchedulerService(
         IEmailNotificationLogRepository notificationLogRepository,
-        IInvitationEmailBackgroundScheduler backgroundScheduler,
+        IEmailBackgroundScheduler backgroundScheduler,
         IUnitOfWork unitOfWork,
         IEmailNotificationsFeature emailNotificationsFeature,
-        IInvitationEmailMetrics metrics,
-        ILogger<InvitationEmailSchedulerService> logger)
+        IEmailMetrics metrics,
+        ILogger<EmailSchedulerService<TPayload>> logger)
     {
         _notificationLogRepository = notificationLogRepository;
         _backgroundScheduler = backgroundScheduler;
@@ -35,30 +35,30 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         _logger = logger;
     }
 
-    public async Task ScheduleInvitationCreatedAsync(InvitationEmailPayload payload, CancellationToken cancellationToken = default)
+    public async Task ScheduleAsync(TPayload payload, CancellationToken cancellationToken = default)
     {
-        if (!IsSchedulingEnabled(payload.InvitationId))
+        if (!IsSchedulingEnabled(payload.NotificationType, payload.CorrelationId))
         {
             return;
         }
 
         var existing = await _notificationLogRepository.FindByCorrelationAsync(
-            NotificationType,
-            payload.InvitationId,
+            payload.NotificationType,
+            payload.CorrelationId,
             payload.RecipientEmail,
             cancellationToken);
 
         if (existing != null)
         {
-            HandleExistingNotification(existing);
+            HandleExistingNotification(payload, existing);
             return;
         }
 
         var log = new EmailNotificationLog
         {
             Id = Guid.NewGuid(),
-            Type = NotificationType,
-            CorrelationId = payload.InvitationId,
+            Type = payload.NotificationType,
+            CorrelationId = payload.CorrelationId,
             RecipientEmail = payload.RecipientEmail,
             PayloadJson = JsonSerializer.Serialize(payload)
         };
@@ -69,14 +69,15 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         }
 
         _backgroundScheduler.Enqueue(log.Id);
-        _metrics.RecordEnqueued();
+        _metrics.RecordEnqueued(payload.NotificationType);
         _logger.LogInformation(
-            "Created and enqueued invitation email notification {NotificationId} for invitation {InvitationId}.",
+            "Created and enqueued email notification {NotificationId} for {NotificationType} correlation {CorrelationId}.",
             log.Id,
-            payload.InvitationId);
+            payload.NotificationType,
+            payload.CorrelationId);
     }
 
-    private bool IsSchedulingEnabled(Guid invitationId)
+    private bool IsSchedulingEnabled(string notificationType, Guid correlationId)
     {
         if (_emailNotificationsFeature.Enabled)
         {
@@ -84,17 +85,18 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         }
 
         _logger.LogInformation(
-            "Email notifications are disabled; skipping invitation email scheduling for invitation {InvitationId}.",
-            invitationId);
+            "Email notifications are disabled; skipping scheduling for {NotificationType} correlation {CorrelationId}.",
+            notificationType,
+            correlationId);
         return false;
     }
 
-    private void HandleExistingNotification(EmailNotificationLog existing)
+    private void HandleExistingNotification(TPayload payload, EmailNotificationLog existing)
     {
         if (existing.Status != EmailNotificationStatus.Failed)
         {
             _logger.LogInformation(
-                "Found existing invitation email notification {NotificationId} with status {Status}; no new notification created.",
+                "Found existing email notification {NotificationId} with status {Status}; no new notification created.",
                 existing.Id,
                 existing.Status);
             return;
@@ -110,15 +112,15 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         }
 
         _backgroundScheduler.Enqueue(existing.Id);
-        _metrics.RecordRetried();
+        _metrics.RecordRetried(payload.NotificationType);
         _logger.LogInformation(
-            "Re-enqueued failed invitation email notification {NotificationId} (attempts: {Attempts}).",
+            "Re-enqueued failed email notification {NotificationId} (attempts: {Attempts}).",
             existing.Id,
             existing.Attempts);
     }
 
     private async Task<bool> TryPersistNotificationAsync(
-        InvitationEmailPayload payload,
+        TPayload payload,
         EmailNotificationLog log,
         CancellationToken cancellationToken)
     {
@@ -131,8 +133,8 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
         catch (Exception ex)
         {
             var concurrent = await _notificationLogRepository.FindByCorrelationAsync(
-                NotificationType,
-                payload.InvitationId,
+                payload.NotificationType,
+                payload.CorrelationId,
                 payload.RecipientEmail,
                 cancellationToken);
 
@@ -143,11 +145,12 @@ public sealed class InvitationEmailSchedulerService : IInvitationEmailScheduler
 
             _logger.LogWarning(
                 ex,
-                "Detected concurrent invitation email scheduling for invitation {InvitationId}; using existing notification {NotificationId}.",
-                payload.InvitationId,
+                "Detected concurrent email scheduling for {NotificationType} correlation {CorrelationId}; using existing notification {NotificationId}.",
+                payload.NotificationType,
+                payload.CorrelationId,
                 concurrent.Id);
             _backgroundScheduler.Enqueue(concurrent.Id);
-            _metrics.RecordEnqueued();
+            _metrics.RecordEnqueued(payload.NotificationType);
             return false;
         }
     }

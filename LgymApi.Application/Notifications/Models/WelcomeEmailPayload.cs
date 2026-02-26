@@ -1,14 +1,18 @@
 using System.Globalization;
+using LgymApi.Application.Notifications;
 using System.Text.Json.Serialization;
 
 namespace LgymApi.Application.Notifications.Models;
 
-public sealed class WelcomeEmailPayload
+public sealed class WelcomeEmailPayload : IEmailPayload
 {
     public Guid UserId { get; init; }
     public string UserName { get; init; } = string.Empty;
     public string RecipientEmail { get; init; } = string.Empty;
     public string CultureName { get; init; } = "en-US";
+
+    public Guid CorrelationId => UserId;
+    public string NotificationType => EmailNotificationTypes.Welcome;
 
     [JsonIgnore]
     public CultureInfo Culture
