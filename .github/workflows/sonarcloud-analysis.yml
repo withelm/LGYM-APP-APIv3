@@ -16,6 +16,7 @@ env:
   SONAR_HOST_URL: https://sonarcloud.io
   SONAR_ORG: ${{ vars.SONAR_ORG != '' && vars.SONAR_ORG || secrets.SONAR_ORG }}
   SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY != '' && vars.SONAR_PROJECT_KEY || secrets.SONAR_PROJECT_KEY }}
+  SONAR_COVERAGE_EXCLUSIONS: "**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**"
 
 jobs:
   sonar-required:
@@ -42,7 +43,7 @@ jobs:
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Sonar Begin
-        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
 
       - name: Restore
         run: dotnet restore LgymApi.sln
@@ -93,7 +94,7 @@ jobs:
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Sonar Begin
-        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
 
       - name: Restore
         run: dotnet restore LgymApi.sln
@@ -143,7 +144,7 @@ jobs:
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Sonar Begin
-        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
 
       - name: Restore
         run: dotnet restore LgymApi.sln
