@@ -34,6 +34,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<TrainerInvitation> TrainerInvitations => Set<TrainerInvitation>();
     public DbSet<TrainerTraineeLink> TrainerTraineeLinks => Set<TrainerTraineeLink>();
     public DbSet<EmailNotificationLog> EmailNotificationLogs => Set<EmailNotificationLog>();
+    public DbSet<EmailNotificationSubscription> EmailNotificationSubscriptions => Set<EmailNotificationSubscription>();
     public DbSet<ReportTemplate> ReportTemplates => Set<ReportTemplate>();
     public DbSet<ReportTemplateField> ReportTemplateFields => Set<ReportTemplateField>();
     public DbSet<ReportRequest> ReportRequests => Set<ReportRequest>();
@@ -355,6 +356,19 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(e => new { e.Type, e.CorrelationId, e.RecipientEmail })
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
+        });
+
+        modelBuilder.Entity<EmailNotificationSubscription>(entity =>
+        {
+            entity.ToTable("EmailNotificationSubscriptions");
+            entity.Property(e => e.NotificationType).IsRequired();
+            entity.HasIndex(e => new { e.UserId, e.NotificationType })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ReportTemplate>(entity =>

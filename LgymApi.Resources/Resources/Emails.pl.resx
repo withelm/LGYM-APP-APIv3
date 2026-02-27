@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="TrainingTableHeaderExercise" xml:space="preserve">
+    <value>Cwiczenie</value>
+  </data>
+  <data name="TrainingTableHeaderSeries" xml:space="preserve">
+    <value>Seria</value>
+  </data>
+  <data name="TrainingTableHeaderReps" xml:space="preserve">
+    <value>Powt.</value>
+  </data>
+  <data name="TrainingTableHeaderWeight" xml:space="preserve">
+    <value>Ciezar</value>
+  </data>
+  <data name="TrainingTableHeaderUnit" xml:space="preserve">
+    <value>Jednostka</value>
+  </data>
+  <data name="TrainingSeriesLabel" xml:space="preserve">
+    <value>Seria</value>
+  </data>
+  <data name="TrainingRepsLabel" xml:space="preserve">
+    <value>Powt.</value>
+  </data>
+  <data name="TrainingWeightLabel" xml:space="preserve">
+    <value>Ciezar</value>
+  </data>
+  <data name="TrainingUnitLabel" xml:space="preserve">
+    <value>Jednostka</value>
+  </data>
+  <data name="TrainingNoExercises" xml:space="preserve">
+    <value>Brak cwiczen.</value>
+  </data>
+</root>

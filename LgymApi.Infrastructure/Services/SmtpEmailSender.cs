@@ -40,7 +40,8 @@ public sealed class SmtpEmailSender : IEmailSender
         mimeMessage.From.Add(new MailboxAddress(_emailOptions.FromName, _emailOptions.FromAddress));
         mimeMessage.To.Add(new MailboxAddress(string.Empty, recipientAddress.Address));
         mimeMessage.Subject = message.Subject;
-        mimeMessage.Body = new TextPart("plain")
+        var contentType = message.IsHtml ? "html" : "plain";
+        mimeMessage.Body = new TextPart(contentType)
         {
             Text = message.Body
         };

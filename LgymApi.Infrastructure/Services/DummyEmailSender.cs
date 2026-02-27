@@ -53,6 +53,7 @@ public sealed class DummyEmailSender : IEmailSender
         builder.AppendLine($"From: {_emailOptions.FromName} <{_emailOptions.FromAddress}>");
         builder.AppendLine($"To: {message.To}");
         builder.AppendLine($"Subject: {message.Subject}");
+        builder.AppendLine($"ContentType: {(message.IsHtml ? "text/html" : "text/plain")}");
         builder.AppendLine("---");
         builder.Append(message.Body);
         return builder.ToString();

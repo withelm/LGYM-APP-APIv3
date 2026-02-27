@@ -9,6 +9,7 @@
   <ItemGroup>
     <AdditionalFiles Include="Resources\Messages.resx" />
     <AdditionalFiles Include="Resources\Enums.resx" />
+    <AdditionalFiles Include="Resources\Emails.resx" />
   </ItemGroup>
 
   <ItemGroup>
