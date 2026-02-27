@@ -13,53 +13,53 @@ namespace LgymApi.Infrastructure.Migrations
         {
             migrationBuilder.Sql(
                 """
-                INSERT INTO \"NotificationMessages\" (
-                    \"Id\",
-                    \"Channel\",
-                    \"Type\",
-                    \"CorrelationId\",
-                    \"Recipient\",
-                    \"PayloadJson\",
-                    \"Status\",
-                    \"Attempts\",
-                    \"NextAttemptAt\",
-                    \"LastError\",
-                    \"LastAttemptAt\",
-                    \"SentAt\",
-                    \"CreatedAt\",
-                    \"UpdatedAt\",
-                    \"IsDeleted\"
+                INSERT INTO "NotificationMessages" (
+                    "Id",
+                    "Channel",
+                    "Type",
+                    "CorrelationId",
+                    "Recipient",
+                    "PayloadJson",
+                    "Status",
+                    "Attempts",
+                    "NextAttemptAt",
+                    "LastError",
+                    "LastAttemptAt",
+                    "SentAt",
+                    "CreatedAt",
+                    "UpdatedAt",
+                    "IsDeleted"
                 )
                 SELECT
-                    legacy.\"Id\",
+                    legacy."Id",
                     0,
-                    legacy.\"Type\",
-                    legacy.\"CorrelationId\",
-                    legacy.\"RecipientEmail\",
-                    legacy.\"PayloadJson\",
-                    CASE legacy.\"Status\"
+                    legacy."Type",
+                    legacy."CorrelationId",
+                    legacy."RecipientEmail",
+                    legacy."PayloadJson",
+                    CASE legacy."Status"
                         WHEN 'Pending' THEN 0
                         WHEN 'Sent' THEN 1
                         WHEN 'Failed' THEN 2
                         ELSE 0
                     END,
-                    legacy.\"Attempts\",
+                    legacy."Attempts",
                     NULL,
-                    legacy.\"LastError\",
-                    legacy.\"LastAttemptAt\",
-                    legacy.\"SentAt\",
-                    legacy.\"CreatedAt\",
-                    legacy.\"UpdatedAt\",
-                    legacy.\"IsDeleted\"
-                FROM \"EmailNotificationLogs\" AS legacy
+                    legacy."LastError",
+                    legacy."LastAttemptAt",
+                    legacy."SentAt",
+                    legacy."CreatedAt",
+                    legacy."UpdatedAt",
+                    legacy."IsDeleted"
+                FROM "EmailNotificationLogs" AS legacy
                 WHERE NOT EXISTS (
                     SELECT 1
-                    FROM \"NotificationMessages\" AS current
-                    WHERE current.\"Channel\" = 0
-                      AND current.\"Type\" = legacy.\"Type\"
-                      AND current.\"CorrelationId\" = legacy.\"CorrelationId\"
-                      AND current.\"Recipient\" = legacy.\"RecipientEmail\"
-                      AND current.\"IsDeleted\" = FALSE
+                    FROM "NotificationMessages" AS current
+                    WHERE current."Channel" = 0
+                      AND current."Type" = legacy."Type"
+                      AND current."CorrelationId" = legacy."CorrelationId"
+                      AND current."Recipient" = legacy."RecipientEmail"
+                      AND current."IsDeleted" = FALSE
                 );
                 """);
 
