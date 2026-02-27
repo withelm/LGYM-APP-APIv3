@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,20 +15,20 @@ public sealed class EmailNotificationLogRepository : IEmailNotificationLogReposi
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(EmailNotificationLog log, CancellationToken cancellationToken = default)
+    public async Task AddAsync(NotificationMessage message, CancellationToken cancellationToken = default)
     {
-        await _dbContext.EmailNotificationLogs.AddAsync(log, cancellationToken);
+        await _dbContext.NotificationMessages.AddAsync(message, cancellationToken);
     }
 
-    public Task<EmailNotificationLog?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<NotificationMessage?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.EmailNotificationLogs.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        return _dbContext.NotificationMessages.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
-    public Task<EmailNotificationLog?> FindByCorrelationAsync(string type, Guid correlationId, string recipientEmail, CancellationToken cancellationToken = default)
+    public Task<NotificationMessage?> FindByCorrelationAsync(string type, Guid correlationId, string recipient, CancellationToken cancellationToken = default)
     {
-        return _dbContext.EmailNotificationLogs.FirstOrDefaultAsync(
-            x => x.Type == type && x.CorrelationId == correlationId && x.RecipientEmail == recipientEmail,
+        return _dbContext.NotificationMessages.FirstOrDefaultAsync(
+            x => x.Channel == NotificationChannel.Email && x.Type == type && x.CorrelationId == correlationId && x.Recipient == recipient,
             cancellationToken);
     }
 }

@@ -73,8 +73,8 @@ public sealed class TrainingTests : IntegrationTestBase
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.EmailNotificationLogs
-                .Where(x => x.Type == EmailNotificationTypes.TrainingCompleted && x.RecipientEmail == userEmail)
+            var log = await db.NotificationMessages
+                .Where(x => x.Type == EmailNotificationTypes.TrainingCompleted && x.Recipient == userEmail)
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -146,8 +146,8 @@ public sealed class TrainingTests : IntegrationTestBase
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var logs = await db.EmailNotificationLogs
-            .Where(x => x.Type == EmailNotificationTypes.TrainingCompleted && x.RecipientEmail == userEmail)
+        var logs = await db.NotificationMessages
+            .Where(x => x.Type == EmailNotificationTypes.TrainingCompleted && x.Recipient == userEmail)
             .ToListAsync();
 
         logs.Should().BeEmpty();

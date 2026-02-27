@@ -5,35 +5,36 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.DataSeeder.Seeders;
 
-public sealed class EmailNotificationLogSeeder : IEntitySeeder
+public sealed class NotificationMessageSeeder : IEntitySeeder
 {
     public int Order => 70;
 
     public async Task SeedAsync(AppDbContext context, SeedContext seedContext, CancellationToken cancellationToken)
     {
         SeedOperationConsole.Start("email notification logs");
-        if (seedContext.EmailNotificationLogs.Count > 0)
+        if (seedContext.NotificationMessages.Count > 0)
         {
             SeedOperationConsole.Skip("email notification logs");
             return;
         }
 
-        var existing = await context.EmailNotificationLogs
+        var existing = await context.NotificationMessages
             .AsNoTracking()
-            .Select(log => new { log.Type, log.CorrelationId, log.RecipientEmail })
+            .Select(message => new { message.Channel, message.Type, message.CorrelationId, message.Recipient })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(string Type, Guid CorrelationId, string RecipientEmail)>(
-            existing.Select(entry => (entry.Type, entry.CorrelationId, entry.RecipientEmail)));
+        var existingSet = new HashSet<(NotificationChannel Channel, string Type, Guid CorrelationId, string Recipient)>(
+            existing.Select(entry => (entry.Channel, entry.Type, entry.CorrelationId, entry.Recipient)));
 
-        var logs = new List<EmailNotificationLog>
+        var messages = new List<NotificationMessage>
         {
             new()
             {
                 Id = Guid.NewGuid(),
+                Channel = NotificationChannel.Email,
                 Type = "TrainerInvitation",
                 CorrelationId = Guid.NewGuid(),
-                RecipientEmail = "trainee@lgym.app",
+                Recipient = "trainee@lgym.app",
                 PayloadJson = "{\"template\":\"trainer-invite\"}",
                 Status = EmailNotificationStatus.Sent,
                 Attempts = 1,
@@ -43,9 +44,10 @@ public sealed class EmailNotificationLogSeeder : IEntitySeeder
             new()
             {
                 Id = Guid.NewGuid(),
+                Channel = NotificationChannel.Email,
                 Type = "ReportRequest",
                 CorrelationId = Guid.NewGuid(),
-                RecipientEmail = "trainee@lgym.app",
+                Recipient = "trainee@lgym.app",
                 PayloadJson = "{\"template\":\"report-request\"}",
                 Status = EmailNotificationStatus.Pending,
                 Attempts = 0
@@ -53,15 +55,15 @@ public sealed class EmailNotificationLogSeeder : IEntitySeeder
         };
 
         var addedAny = false;
-        foreach (var log in logs)
+        foreach (var message in messages)
         {
-            if (!existingSet.Add((log.Type, log.CorrelationId, log.RecipientEmail)))
+            if (!existingSet.Add((message.Channel, message.Type, message.CorrelationId, message.Recipient)))
             {
                 continue;
             }
 
-            await context.EmailNotificationLogs.AddAsync(log, cancellationToken);
-            seedContext.EmailNotificationLogs.Add(log);
+            await context.NotificationMessages.AddAsync(message, cancellationToken);
+            seedContext.NotificationMessages.Add(message);
             addedAny = true;
         }
 

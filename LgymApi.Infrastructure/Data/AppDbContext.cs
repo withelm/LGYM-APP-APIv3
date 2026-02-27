@@ -33,7 +33,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<RoleClaim> RoleClaims => Set<RoleClaim>();
     public DbSet<TrainerInvitation> TrainerInvitations => Set<TrainerInvitation>();
     public DbSet<TrainerTraineeLink> TrainerTraineeLinks => Set<TrainerTraineeLink>();
-    public DbSet<EmailNotificationLog> EmailNotificationLogs => Set<EmailNotificationLog>();
+    public DbSet<NotificationMessage> NotificationMessages => Set<NotificationMessage>();
     public DbSet<EmailNotificationSubscription> EmailNotificationSubscriptions => Set<EmailNotificationSubscription>();
     public DbSet<ReportTemplate> ReportTemplates => Set<ReportTemplate>();
     public DbSet<ReportTemplateField> ReportTemplateFields => Set<ReportTemplateField>();
@@ -345,15 +345,14 @@ public sealed class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EmailNotificationLog>(entity =>
+        modelBuilder.Entity<NotificationMessage>(entity =>
         {
-            entity.ToTable("EmailNotificationLogs");
+            entity.ToTable("NotificationMessages");
             entity.Property(e => e.Type).IsRequired();
-            entity.Property(e => e.RecipientEmail).IsRequired();
+            entity.Property(e => e.Recipient).IsRequired();
             entity.Property(e => e.PayloadJson).IsRequired();
-            entity.Property(e => e.Status).HasConversion<string>();
-            entity.HasIndex(e => new { e.Status, e.CreatedAt });
-            entity.HasIndex(e => new { e.Type, e.CorrelationId, e.RecipientEmail })
+            entity.HasIndex(e => new { e.Status, e.NextAttemptAt, e.CreatedAt });
+            entity.HasIndex(e => new { e.Channel, e.Type, e.CorrelationId, e.Recipient })
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
         });

@@ -62,10 +62,10 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var log = await db.EmailNotificationLogs.FirstOrDefaultAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+        var log = await db.NotificationMessages.FirstOrDefaultAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
         log.Should().NotBeNull();
         log!.Status.Should().Be(EmailNotificationStatus.Pending);
-        log.RecipientEmail.Should().Be("trainee-email-log@example.com");
+        log.Recipient.Should().Be("trainee-email-log@example.com");
     }
 
     [Test]
@@ -86,7 +86,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
             notificationId = log.Id;
         }
 
@@ -99,7 +99,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.EmailNotificationLogs.FirstAsync(x => x.Id == notificationId);
+            var log = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
             log.Status.Should().Be(EmailNotificationStatus.Sent);
             log.SentAt.Should().NotBeNull();
             log.Attempts.Should().BeGreaterThanOrEqualTo(1);
@@ -126,7 +126,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
             notificationId = log.Id;
         }
 
@@ -158,7 +158,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
             notificationId = log.Id;
         }
 
@@ -189,7 +189,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
             notificationId = log.Id;
         }
 
@@ -204,7 +204,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.EmailNotificationLogs.FirstAsync(x => x.Id == notificationId);
+            var log = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
             log.Status.Should().Be(EmailNotificationStatus.Failed);
             log.Attempts.Should().Be(1);
             log.LastError.Should().NotBeNullOrWhiteSpace();
@@ -231,7 +231,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.EmailNotificationLogs.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
+            var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
             notificationId = log.Id;
         }
 
@@ -247,7 +247,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.EmailNotificationLogs.FirstAsync(x => x.Id == notificationId);
+            var log = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
             log.Status.Should().Be(EmailNotificationStatus.Sent);
             log.Attempts.Should().Be(2);
             log.SentAt.Should().NotBeNull();
@@ -279,7 +279,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var logsCount = await db.EmailNotificationLogs
+        var logsCount = await db.NotificationMessages
             .CountAsync(x => x.CorrelationId == Guid.Parse(firstBody.Id));
         logsCount.Should().Be(1);
     }

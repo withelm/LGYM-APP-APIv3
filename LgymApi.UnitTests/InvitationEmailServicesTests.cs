@@ -49,14 +49,14 @@ public sealed class InvitationEmailServicesTests
     [Test]
     public async Task Scheduler_WhenExistingFailedAtLimit_DoesNotEnqueue()
     {
-        var existing = new EmailNotificationLog
+        var existing = new NotificationMessage
         {
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Failed,
             Attempts = 5,
             Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
-            RecipientEmail = "trainee@example.com",
+            Recipient = "trainee@example.com",
             PayloadJson = "{}"
         };
 
@@ -79,7 +79,7 @@ public sealed class InvitationEmailServicesTests
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
-            RecipientEmail = existing.RecipientEmail,
+            RecipientEmail = existing.Recipient,
             CultureName = "en-US"
         });
 
@@ -131,13 +131,13 @@ public sealed class InvitationEmailServicesTests
     [Test]
     public async Task Scheduler_WhenConcurrentInsertDetected_EnqueuesExistingNotification()
     {
-        var existing = new EmailNotificationLog
+        var existing = new NotificationMessage
         {
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
             Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
-            RecipientEmail = "trainee@example.com",
+            Recipient = "trainee@example.com",
             PayloadJson = "{}"
         };
 
@@ -163,7 +163,7 @@ public sealed class InvitationEmailServicesTests
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
-            RecipientEmail = existing.RecipientEmail,
+            RecipientEmail = existing.Recipient,
             CultureName = "en-US"
         });
 
@@ -179,14 +179,14 @@ public sealed class InvitationEmailServicesTests
     [Test]
     public async Task JobHandler_WhenTemplateComposerThrows_MarksFailedAndSaves()
     {
-        var notification = new EmailNotificationLog
+        var notification = new NotificationMessage
         {
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
             Attempts = 0,
             Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
-            RecipientEmail = "trainee@example.com",
+            Recipient = "trainee@example.com",
             PayloadJson = "{\"invitationId\":\"d75e53b9-2701-4cb0-b2d1-c02f0dbf8aa0\",\"invitationCode\":\"ABC123\",\"expiresAt\":\"2026-03-01T10:00:00+00:00\",\"trainerName\":\"Coach\",\"recipientEmail\":\"trainee@example.com\",\"cultureName\":\"en-US\"}"
         };
 
@@ -214,14 +214,14 @@ public sealed class InvitationEmailServicesTests
     [Test]
     public async Task JobHandler_WhenAlreadySent_DoesNothing()
     {
-        var notification = new EmailNotificationLog
+        var notification = new NotificationMessage
         {
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Sent,
             Attempts = 2,
             Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
-            RecipientEmail = "trainee@example.com",
+            Recipient = "trainee@example.com",
             PayloadJson = "{}"
         };
 
@@ -252,29 +252,29 @@ public sealed class InvitationEmailServicesTests
 
     private sealed class FakeNotificationRepository : IEmailNotificationLogRepository
     {
-        public EmailNotificationLog? ExistingById { get; set; }
-        public EmailNotificationLog? ExistingByCorrelation { get; set; }
-        public EmailNotificationLog? ExistingByCorrelationOnSecondLookup { get; set; }
-        public List<EmailNotificationLog> Added { get; } = new();
+        public NotificationMessage? ExistingById { get; set; }
+        public NotificationMessage? ExistingByCorrelation { get; set; }
+        public NotificationMessage? ExistingByCorrelationOnSecondLookup { get; set; }
+        public List<NotificationMessage> Added { get; } = new();
         private int _correlationLookups;
 
-        public Task AddAsync(EmailNotificationLog log, CancellationToken cancellationToken = default)
+        public Task AddAsync(NotificationMessage message, CancellationToken cancellationToken = default)
         {
-            Added.Add(log);
+            Added.Add(message);
             return Task.CompletedTask;
         }
 
-        public Task<EmailNotificationLog?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<NotificationMessage?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(ExistingById);
         }
 
-        public Task<EmailNotificationLog?> FindByCorrelationAsync(string type, Guid correlationId, string recipientEmail, CancellationToken cancellationToken = default)
+        public Task<NotificationMessage?> FindByCorrelationAsync(string type, Guid correlationId, string recipient, CancellationToken cancellationToken = default)
         {
             _correlationLookups += 1;
             if (_correlationLookups >= 2 && ExistingByCorrelationOnSecondLookup != null)
             {
-                return Task.FromResult<EmailNotificationLog?>(ExistingByCorrelationOnSecondLookup);
+                return Task.FromResult<NotificationMessage?>(ExistingByCorrelationOnSecondLookup);
             }
 
             return Task.FromResult(ExistingByCorrelation);

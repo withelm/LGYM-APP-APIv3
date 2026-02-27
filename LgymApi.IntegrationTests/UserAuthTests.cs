@@ -67,9 +67,9 @@ public sealed class UserAuthTests : IntegrationTestBase
         user.Should().NotBeNull();
         user!.PreferredLanguage.Should().StartWith("en");
 
-        var emailLog = await db.EmailNotificationLogs
+        var emailLog = await db.NotificationMessages
             .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
-            .FirstOrDefaultAsync(e => e.RecipientEmail == "bob-en@example.com" && e.Type == EmailNotificationTypes.Welcome);
+            .FirstOrDefaultAsync(e => e.Recipient == "bob-en@example.com" && e.Type == EmailNotificationTypes.Welcome);
         emailLog.Should().NotBeNull();
 
         var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
@@ -104,9 +104,9 @@ public sealed class UserAuthTests : IntegrationTestBase
         user.Should().NotBeNull();
         user!.PreferredLanguage.Should().StartWith("pl");
 
-        var emailLog = await db.EmailNotificationLogs
+        var emailLog = await db.NotificationMessages
             .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
-            .FirstOrDefaultAsync(e => e.RecipientEmail == "alicja-hdr@example.com" && e.Type == EmailNotificationTypes.Welcome);
+            .FirstOrDefaultAsync(e => e.Recipient == "alicja-hdr@example.com" && e.Type == EmailNotificationTypes.Welcome);
         emailLog.Should().NotBeNull();
 
         var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
@@ -144,9 +144,9 @@ public sealed class UserAuthTests : IntegrationTestBase
         user.Should().NotBeNull();
         user!.PreferredLanguage.Should().Be("pl-PL");
 
-        var emailLog = await db.EmailNotificationLogs
+        var emailLog = await db.NotificationMessages
             .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
-            .FirstOrDefaultAsync(e => e.RecipientEmail == "alicja-pl@example.com" && e.Type == EmailNotificationTypes.Welcome);
+            .FirstOrDefaultAsync(e => e.Recipient == "alicja-pl@example.com" && e.Type == EmailNotificationTypes.Welcome);
         emailLog.Should().NotBeNull();
 
         var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);

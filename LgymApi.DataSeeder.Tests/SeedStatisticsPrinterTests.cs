@@ -35,7 +35,7 @@ public sealed class SeedStatisticsPrinterTests
         context.RoleClaims.Add(new RoleClaim { Id = Guid.NewGuid(), RoleId = Guid.NewGuid(), ClaimType = "permission", ClaimValue = "admin.access" });
         context.TrainerInvitations.Add(new TrainerInvitation { Id = Guid.NewGuid(), TrainerId = Guid.NewGuid(), TraineeId = Guid.NewGuid(), Code = "INV", ExpiresAt = DateTimeOffset.UtcNow });
         context.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Guid.NewGuid(), TrainerId = Guid.NewGuid(), TraineeId = Guid.NewGuid() });
-        context.EmailNotificationLogs.Add(new EmailNotificationLog { Id = Guid.NewGuid(), Type = "Invite", CorrelationId = Guid.NewGuid(), RecipientEmail = "test@lgym.app", PayloadJson = "{}" });
+        context.NotificationMessages.Add(new NotificationMessage { Id = Guid.NewGuid(), Channel = NotificationChannel.Email, Type = "Invite", CorrelationId = Guid.NewGuid(), Recipient = "test@lgym.app", PayloadJson = "{}" });
         context.ReportTemplates.Add(new ReportTemplate { Id = Guid.NewGuid(), TrainerId = Guid.NewGuid(), Name = "Report" });
         context.ReportTemplateFields.Add(new ReportTemplateField { Id = Guid.NewGuid(), TemplateId = context.ReportTemplates[0].Id, Key = "k", Label = "l", Type = ReportFieldType.Text, Order = 1 });
         context.ReportRequests.Add(new ReportRequest { Id = Guid.NewGuid(), TrainerId = Guid.NewGuid(), TraineeId = Guid.NewGuid(), TemplateId = context.ReportTemplates[0].Id });
@@ -79,7 +79,7 @@ public sealed class SeedStatisticsPrinterTests
             Assert.That(output, Does.Contain("Role claims: 1"));
             Assert.That(output, Does.Contain("Trainer invitations: 1"));
             Assert.That(output, Does.Contain("Trainer trainee links: 1"));
-            Assert.That(output, Does.Contain("Email notification logs: 1"));
+            Assert.That(output, Does.Contain("Notification messages: 1"));
             Assert.That(output, Does.Contain("Report templates: 1"));
             Assert.That(output, Does.Contain("Report template fields: 1"));
             Assert.That(output, Does.Contain("Report requests: 1"));
