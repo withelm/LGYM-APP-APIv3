@@ -151,16 +151,16 @@ public sealed class SeederSmokeExtensionTests
     }
 
     [Test]
-    public async Task EmailNotificationLogSeeder_Should_Add_Logs()
+    public async Task NotificationMessageSeeder_Should_Add_Messages()
     {
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var seeder = new EmailNotificationLogSeeder();
+        var seeder = new NotificationMessageSeeder();
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        Assert.That(await context.EmailNotificationLogs.CountAsync(), Is.EqualTo(2));
+        Assert.That(await context.NotificationMessages.CountAsync(), Is.EqualTo(2));
     }
 
     [Test]

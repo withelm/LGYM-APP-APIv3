@@ -24,7 +24,7 @@ public static class SeedStatisticsPrinter
         Console.WriteLine($"  - Role claims: {context.RoleClaims.Count}");
         Console.WriteLine($"  - Trainer invitations: {context.TrainerInvitations.Count}");
         Console.WriteLine($"  - Trainer trainee links: {context.TrainerTraineeLinks.Count}");
-        Console.WriteLine($"  - Email notification logs: {context.EmailNotificationLogs.Count}");
+        Console.WriteLine($"  - Notification messages: {context.NotificationMessages.Count}");
         Console.WriteLine($"  - Report templates: {context.ReportTemplates.Count}");
         Console.WriteLine($"  - Report template fields: {context.ReportTemplateFields.Count}");
         Console.WriteLine($"  - Report requests: {context.ReportRequests.Count}");

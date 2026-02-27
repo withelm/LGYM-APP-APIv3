@@ -54,25 +54,26 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
-        var log = new EmailNotificationLog
+        var message = new NotificationMessage
         {
             Id = Guid.NewGuid(),
+            Channel = NotificationChannel.Email,
             Type = payload.NotificationType,
             CorrelationId = payload.CorrelationId,
-            RecipientEmail = payload.RecipientEmail,
+            Recipient = payload.RecipientEmail,
             PayloadJson = JsonSerializer.Serialize(payload)
         };
 
-        if (!await TryPersistNotificationAsync(payload, log, cancellationToken))
+        if (!await TryPersistNotificationAsync(payload, message, cancellationToken))
         {
             return;
         }
 
-        _backgroundScheduler.Enqueue(log.Id);
+        _backgroundScheduler.Enqueue(message.Id);
         _metrics.RecordEnqueued(payload.NotificationType);
         _logger.LogInformation(
             "Created and enqueued email notification {NotificationId} for {NotificationType} correlation {CorrelationId}.",
-            log.Id,
+            message.Id,
             payload.NotificationType,
             payload.CorrelationId);
     }
@@ -91,7 +92,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
         return false;
     }
 
-    private void HandleExistingNotification(TPayload payload, EmailNotificationLog existing)
+    private void HandleExistingNotification(TPayload payload, NotificationMessage existing)
     {
         if (existing.Status != EmailNotificationStatus.Failed)
         {
@@ -121,12 +122,12 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
 
     private async Task<bool> TryPersistNotificationAsync(
         TPayload payload,
-        EmailNotificationLog log,
+        NotificationMessage message,
         CancellationToken cancellationToken)
     {
         try
         {
-            await _notificationLogRepository.AddAsync(log, cancellationToken);
+            await _notificationLogRepository.AddAsync(message, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return true;
         }
