@@ -1,6 +1,7 @@
 using LgymApi.DataSeeder.Seeders;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 
 namespace LgymApi.DataSeeder.Tests;
 
@@ -35,7 +36,7 @@ public sealed class SeedStatisticsPrinterTests
         context.RoleClaims.Add(new RoleClaim { Id = Guid.NewGuid(), RoleId = Guid.NewGuid(), ClaimType = "permission", ClaimValue = "admin.access" });
         context.TrainerInvitations.Add(new TrainerInvitation { Id = Guid.NewGuid(), TrainerId = Guid.NewGuid(), TraineeId = Guid.NewGuid(), Code = "INV", ExpiresAt = DateTimeOffset.UtcNow });
         context.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Guid.NewGuid(), TrainerId = Guid.NewGuid(), TraineeId = Guid.NewGuid() });
-        context.NotificationMessages.Add(new NotificationMessage { Id = Guid.NewGuid(), Channel = NotificationChannel.Email, Type = "Invite", CorrelationId = Guid.NewGuid(), Recipient = "test@lgym.app", PayloadJson = "{}" });
+        context.NotificationMessages.Add(new NotificationMessage { Id = Guid.NewGuid(), Channel = NotificationChannel.Email, Type = EmailNotificationTypes.TrainerInvitation, CorrelationId = Guid.NewGuid(), Recipient = "test@lgym.app", PayloadJson = "{}" });
         context.ReportTemplates.Add(new ReportTemplate { Id = Guid.NewGuid(), TrainerId = Guid.NewGuid(), Name = "Report" });
         context.ReportTemplateFields.Add(new ReportTemplateField { Id = Guid.NewGuid(), TemplateId = context.ReportTemplates[0].Id, Key = "k", Label = "l", Type = ReportFieldType.Text, Order = 1 });
         context.ReportRequests.Add(new ReportRequest { Id = Guid.NewGuid(), TrainerId = Guid.NewGuid(), TraineeId = Guid.NewGuid(), TemplateId = context.ReportTemplates[0].Id });

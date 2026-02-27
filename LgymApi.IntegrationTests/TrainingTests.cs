@@ -50,7 +50,7 @@ public sealed class TrainingTests : IntegrationTestBase
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                NotificationType = EmailNotificationTypes.TrainingCompleted
+                NotificationType = EmailNotificationTypes.TrainingCompleted.Value
             });
             await db.SaveChangesAsync();
         }

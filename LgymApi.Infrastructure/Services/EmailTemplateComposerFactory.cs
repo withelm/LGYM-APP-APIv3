@@ -1,18 +1,19 @@
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Domain.Notifications;
 
 namespace LgymApi.Infrastructure.Services;
 
 public sealed class EmailTemplateComposerFactory : IEmailTemplateComposerFactory
 {
-    private readonly IReadOnlyDictionary<string, IEmailTemplateComposer> _composers;
+    private readonly IReadOnlyDictionary<EmailNotificationType, IEmailTemplateComposer> _composers;
 
     public EmailTemplateComposerFactory(IEnumerable<IEmailTemplateComposer> composers)
     {
-        _composers = composers.ToDictionary(x => x.NotificationType, StringComparer.Ordinal);
+        _composers = composers.ToDictionary(x => x.NotificationType);
     }
 
-    public EmailMessage ComposeMessage(string notificationType, string payloadJson)
+    public EmailMessage ComposeMessage(EmailNotificationType notificationType, string payloadJson)
     {
         if (!_composers.TryGetValue(notificationType, out var composer))
         {

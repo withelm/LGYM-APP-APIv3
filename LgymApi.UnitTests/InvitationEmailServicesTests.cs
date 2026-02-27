@@ -6,6 +6,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.Logging.Abstractions;
+using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
 
 namespace LgymApi.UnitTests;
 
@@ -56,7 +57,7 @@ public sealed class InvitationEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Failed,
             Attempts = 5,
-            Type = EmailNotificationTypes.TrainerInvitation,
+            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             Recipient = "trainee@example.com",
             PayloadJson = "{}"
@@ -137,7 +138,7 @@ public sealed class InvitationEmailServicesTests
         {
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
-            Type = EmailNotificationTypes.TrainerInvitation,
+            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             Recipient = "trainee@example.com",
             PayloadJson = "{}"
@@ -186,7 +187,7 @@ public sealed class InvitationEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
             Attempts = 0,
-            Type = EmailNotificationTypes.TrainerInvitation,
+            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             Recipient = "trainee@example.com",
             PayloadJson = "{\"invitationId\":\"d75e53b9-2701-4cb0-b2d1-c02f0dbf8aa0\",\"invitationCode\":\"ABC123\",\"expiresAt\":\"2026-03-01T10:00:00+00:00\",\"trainerName\":\"Coach\",\"recipientEmail\":\"trainee@example.com\",\"cultureName\":\"en-US\"}"
@@ -221,7 +222,7 @@ public sealed class InvitationEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Sent,
             Attempts = 2,
-            Type = EmailNotificationTypes.TrainerInvitation,
+            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             Recipient = "trainee@example.com",
             PayloadJson = "{}"
@@ -271,7 +272,7 @@ public sealed class InvitationEmailServicesTests
             return Task.FromResult(ExistingById);
         }
 
-        public Task<NotificationMessage?> FindByCorrelationAsync(string type, Guid correlationId, string recipient, CancellationToken cancellationToken = default)
+        public Task<NotificationMessage?> FindByCorrelationAsync(EmailNotificationType type, Guid correlationId, string recipient, CancellationToken cancellationToken = default)
         {
             _correlationLookups += 1;
             if (_correlationLookups >= 2 && ExistingByCorrelationOnSecondLookup != null)
@@ -324,7 +325,7 @@ public sealed class InvitationEmailServicesTests
 
     private sealed class ThrowingComposer : IEmailTemplateComposer
     {
-        public string NotificationType => EmailNotificationTypes.TrainerInvitation;
+        public EmailNotificationType NotificationType => LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation;
 
         public EmailMessage Compose(string payloadJson)
         {
@@ -334,7 +335,7 @@ public sealed class InvitationEmailServicesTests
 
     private sealed class PassThroughComposer : IEmailTemplateComposer
     {
-        public string NotificationType => EmailNotificationTypes.TrainerInvitation;
+        public EmailNotificationType NotificationType => LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation;
 
         public EmailMessage Compose(string payloadJson)
         {
@@ -370,10 +371,10 @@ public sealed class InvitationEmailServicesTests
         public int Failed { get; private set; }
         public int Retried { get; private set; }
 
-        public void RecordEnqueued(string notificationType) => Enqueued += 1;
-        public void RecordSent(string notificationType) => Sent += 1;
-        public void RecordFailed(string notificationType) => Failed += 1;
-        public void RecordRetried(string notificationType) => Retried += 1;
+        public void RecordEnqueued(EmailNotificationType notificationType) => Enqueued += 1;
+        public void RecordSent(EmailNotificationType notificationType) => Sent += 1;
+        public void RecordFailed(EmailNotificationType notificationType) => Failed += 1;
+        public void RecordRetried(EmailNotificationType notificationType) => Retried += 1;
     }
 
     private sealed class DisabledFeature : IEmailNotificationsFeature
@@ -390,7 +391,7 @@ public sealed class InvitationEmailServicesTests
             _composer = composer;
         }
 
-        public EmailMessage ComposeMessage(string notificationType, string payloadJson)
+        public EmailMessage ComposeMessage(EmailNotificationType notificationType, string payloadJson)
         {
             return _composer.Compose(payloadJson);
         }

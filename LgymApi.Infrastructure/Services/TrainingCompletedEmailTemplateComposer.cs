@@ -5,6 +5,7 @@ using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Resources;
+using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
 
 namespace LgymApi.Infrastructure.Services;
 
@@ -15,7 +16,7 @@ public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateCompos
     {
     }
 
-    public string NotificationType => EmailNotificationTypes.TrainingCompleted;
+    public EmailNotificationType NotificationType => EmailNotificationTypes.TrainingCompleted;
 
     public EmailMessage Compose(string payloadJson)
     {

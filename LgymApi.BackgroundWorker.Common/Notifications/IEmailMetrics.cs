@@ -1,9 +1,11 @@
 namespace LgymApi.BackgroundWorker.Common.Notifications;
 
+using LgymApi.Domain.Notifications;
+
 public interface IEmailMetrics
 {
-    void RecordEnqueued(string notificationType);
-    void RecordSent(string notificationType);
-    void RecordFailed(string notificationType);
-    void RecordRetried(string notificationType);
+    void RecordEnqueued(EmailNotificationType notificationType);
+    void RecordSent(EmailNotificationType notificationType);
+    void RecordFailed(EmailNotificationType notificationType);
+    void RecordRetried(EmailNotificationType notificationType);
 }
