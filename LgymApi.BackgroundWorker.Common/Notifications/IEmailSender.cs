@@ -1,6 +1,6 @@
-using LgymApi.Application.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
 
-namespace LgymApi.Application.Notifications;
+namespace LgymApi.BackgroundWorker.Common.Notifications;
 
 public interface IEmailSender
 {

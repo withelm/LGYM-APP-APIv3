@@ -2,8 +2,8 @@ using System.Net.Mail;
 using MailKitSmtpClient = MailKit.Net.Smtp.SmtpClient;
 using MailKit.Security;
 using MimeKit;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Infrastructure.Options;
 
 namespace LgymApi.Infrastructure.Services;

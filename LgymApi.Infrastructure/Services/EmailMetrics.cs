@@ -1,5 +1,5 @@
 using System.Diagnostics.Metrics;
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
 
 namespace LgymApi.Infrastructure.Services;
 

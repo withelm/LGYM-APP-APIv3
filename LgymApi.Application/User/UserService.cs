@@ -3,7 +3,8 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
@@ -21,7 +22,7 @@ public sealed class UserService : IUserService
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
     private readonly IUserSessionCache _userSessionCache;
-    private readonly IEmailScheduler<LgymApi.Application.Notifications.Models.WelcomeEmailPayload> _welcomeEmailScheduler;
+    private readonly IEmailScheduler<WelcomeEmailPayload> _welcomeEmailScheduler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserService> _logger;
 
@@ -34,7 +35,7 @@ public sealed class UserService : IUserService
         ILegacyPasswordService legacyPasswordService,
         IRankService rankService,
         IUserSessionCache userSessionCache,
-        IEmailScheduler<LgymApi.Application.Notifications.Models.WelcomeEmailPayload> welcomeEmailScheduler,
+        IEmailScheduler<WelcomeEmailPayload> welcomeEmailScheduler,
         IUnitOfWork unitOfWork,
         ILogger<UserService> logger)
     {
@@ -177,7 +178,7 @@ public sealed class UserService : IUserService
 
         try
         {
-            await _welcomeEmailScheduler.ScheduleAsync(new LgymApi.Application.Notifications.Models.WelcomeEmailPayload
+            await _welcomeEmailScheduler.ScheduleAsync(new WelcomeEmailPayload
             {
                 UserId = user.Id,
                 UserName = user.Name,

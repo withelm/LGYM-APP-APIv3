@@ -1,8 +1,8 @@
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
-using LgymApi.Application.Notifications;
-using LgymApi.Infrastructure.Jobs;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Infrastructure.Services;
 
 namespace LgymApi.UnitTests;
@@ -23,7 +23,7 @@ public sealed class HangfireEmailBackgroundSchedulerTests
         {
             Assert.That(client.CreatedJobs, Has.Count.EqualTo(1));
             var created = client.CreatedJobs[0];
-            Assert.That(created.Job.Type, Is.EqualTo(typeof(EmailJob)));
+            Assert.That(created.Job.Type, Is.EqualTo(typeof(IEmailJob)));
             Assert.That(created.Job.Method.Name, Is.EqualTo("ExecuteAsync"));
             Assert.That(created.Job.Args[0], Is.EqualTo(notificationId));
             Assert.That(created.State, Is.TypeOf<EnqueuedState>());

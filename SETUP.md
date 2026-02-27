@@ -30,6 +30,7 @@ After cloning the repository, create the following files with your local values:
 }
 ```
 
+
 ### 2. Requirements
 
 - .NET 10 SDK

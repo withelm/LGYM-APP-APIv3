@@ -1,4 +1,4 @@
-namespace LgymApi.Application.Notifications.Models;
+namespace LgymApi.BackgroundWorker.Common.Notifications.Models;
 
 public sealed class EmailMessage
 {

@@ -1,6 +1,4 @@
-using LgymApi.Application.Notifications.Models;
-
-namespace LgymApi.Application.Notifications;
+namespace LgymApi.BackgroundWorker.Common.Notifications;
 
 public interface IEmailScheduler<in TPayload>
     where TPayload : IEmailPayload

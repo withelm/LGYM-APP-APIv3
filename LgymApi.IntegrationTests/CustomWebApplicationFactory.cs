@@ -1,6 +1,6 @@
 using LgymApi.Infrastructure.Data;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Hosting;

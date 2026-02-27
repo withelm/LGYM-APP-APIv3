@@ -14,6 +14,7 @@ gyms, measurements, records, scores, and application configuration.
 ## Solution structure
 
 - `LgymApi.Api` - HTTP API layer (controllers, DTOs, validation, middleware, mapping profiles).
+- `LgymApi.BackgroundWorker` - background job implementations (Hangfire jobs/schedulers) in a separate project.
 - `LgymApi.Application` - use-case orchestration and business services.
 - `LgymApi.Domain` - domain entities and core model.
 - `LgymApi.Infrastructure` - EF Core persistence, repositories, Unit of Work, migrations.

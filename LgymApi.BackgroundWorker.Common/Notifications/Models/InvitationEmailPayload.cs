@@ -1,8 +1,8 @@
 using System.Globalization;
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
 using System.Text.Json.Serialization;
 
-namespace LgymApi.Application.Notifications.Models;
+namespace LgymApi.BackgroundWorker.Common.Notifications.Models;
 
 public sealed class InvitationEmailPayload : IEmailPayload
 {

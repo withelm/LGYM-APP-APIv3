@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\LgymApi.BackgroundWorker.Common\LgymApi.BackgroundWorker.Common.csproj" />
     <ProjectReference Include="..\LgymApi.Domain\LgymApi.Domain.csproj" />
     <ProjectReference Include="..\LgymApi.Application\LgymApi.Application.csproj" />
   </ItemGroup>

@@ -1,4 +1,4 @@
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Infrastructure.Options;
 
 namespace LgymApi.Infrastructure.Services;

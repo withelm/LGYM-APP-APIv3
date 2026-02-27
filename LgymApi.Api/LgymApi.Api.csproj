@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LgymApi.BackgroundWorker\LgymApi.BackgroundWorker.csproj" />
     <ProjectReference Include="..\LgymApi.Application\LgymApi.Application.csproj" />
     <ProjectReference Include="..\LgymApi.Infrastructure\LgymApi.Infrastructure.csproj" />
     <ProjectReference Include="..\LgymApi.Domain\LgymApi.Domain.csproj" />
