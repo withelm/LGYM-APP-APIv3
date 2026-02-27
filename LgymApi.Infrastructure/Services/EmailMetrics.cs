@@ -1,5 +1,6 @@
 using System.Diagnostics.Metrics;
 using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.Domain.Notifications;
 
 namespace LgymApi.Infrastructure.Services;
 
@@ -11,23 +12,23 @@ public sealed class EmailMetrics : IEmailMetrics
     private static readonly Counter<long> FailedCounter = Meter.CreateCounter<long>("email_failed_total");
     private static readonly Counter<long> RetriedCounter = Meter.CreateCounter<long>("email_retried_total");
 
-    public void RecordEnqueued(string notificationType)
+    public void RecordEnqueued(EmailNotificationType notificationType)
     {
-        EnqueuedCounter.Add(1, new KeyValuePair<string, object?>("notification_type", notificationType));
+        EnqueuedCounter.Add(1, new KeyValuePair<string, object?>("notification_type", notificationType.Value));
     }
 
-    public void RecordSent(string notificationType)
+    public void RecordSent(EmailNotificationType notificationType)
     {
-        SentCounter.Add(1, new KeyValuePair<string, object?>("notification_type", notificationType));
+        SentCounter.Add(1, new KeyValuePair<string, object?>("notification_type", notificationType.Value));
     }
 
-    public void RecordFailed(string notificationType)
+    public void RecordFailed(EmailNotificationType notificationType)
     {
-        FailedCounter.Add(1, new KeyValuePair<string, object?>("notification_type", notificationType));
+        FailedCounter.Add(1, new KeyValuePair<string, object?>("notification_type", notificationType.Value));
     }
 
-    public void RecordRetried(string notificationType)
+    public void RecordRetried(EmailNotificationType notificationType)
     {
-        RetriedCounter.Add(1, new KeyValuePair<string, object?>("notification_type", notificationType));
+        RetriedCounter.Add(1, new KeyValuePair<string, object?>("notification_type", notificationType.Value));
     }
 }

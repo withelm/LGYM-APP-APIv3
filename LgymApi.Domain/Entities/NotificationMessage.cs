@@ -1,11 +1,13 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 
 namespace LgymApi.Domain.Entities;
 
-public sealed class NotificationMessage : EntityBase
+public abstract class NotificationMessage<TType> : EntityBase
+    where TType : notnull
 {
     public NotificationChannel Channel { get; set; } = NotificationChannel.Email;
-    public string Type { get; set; } = string.Empty;
+    public TType Type { get; set; } = default!;
     public Guid CorrelationId { get; set; }
     public string Recipient { get; set; } = string.Empty;
     public string PayloadJson { get; set; } = string.Empty;
@@ -15,4 +17,8 @@ public sealed class NotificationMessage : EntityBase
     public string? LastError { get; set; }
     public DateTimeOffset? LastAttemptAt { get; set; }
     public DateTimeOffset? SentAt { get; set; }
+}
+
+public sealed class NotificationMessage : NotificationMessage<EmailNotificationType>
+{
 }

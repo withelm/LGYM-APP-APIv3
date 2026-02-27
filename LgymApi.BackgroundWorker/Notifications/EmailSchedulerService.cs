@@ -5,6 +5,7 @@ using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Notifications;
@@ -80,7 +81,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             payload.CorrelationId);
     }
 
-    private bool IsSchedulingEnabled(string notificationType, Guid correlationId)
+    private bool IsSchedulingEnabled(EmailNotificationType notificationType, Guid correlationId)
     {
         if (_emailNotificationsFeature.Enabled)
         {

@@ -3,6 +3,7 @@ using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Infrastructure.Options;
+using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
 
 namespace LgymApi.Infrastructure.Services;
 
@@ -13,7 +14,7 @@ public sealed class TrainerInvitationEmailTemplateComposer : EmailTemplateCompos
     {
     }
 
-    public string NotificationType => EmailNotificationTypes.TrainerInvitation;
+    public EmailNotificationType NotificationType => EmailNotificationTypes.TrainerInvitation;
 
     public EmailMessage Compose(string payloadJson)
     {

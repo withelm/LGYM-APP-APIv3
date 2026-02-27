@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 
 namespace LgymApi.BackgroundWorker.Common.Notifications.Models;
 
@@ -16,7 +17,7 @@ public sealed class TrainingCompletedEmailPayload : IEmailPayload
     public IReadOnlyList<TrainingExerciseSummary> Exercises { get; init; } = Array.Empty<TrainingExerciseSummary>();
 
     public Guid CorrelationId => TrainingId;
-    public string NotificationType => EmailNotificationTypes.TrainingCompleted;
+    public EmailNotificationType NotificationType => EmailNotificationTypes.TrainingCompleted;
 
     [JsonIgnore]
     public CultureInfo Culture

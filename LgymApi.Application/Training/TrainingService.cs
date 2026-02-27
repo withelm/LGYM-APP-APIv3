@@ -344,7 +344,7 @@ public sealed class TrainingService : ITrainingService
 
         var isSubscribed = await _emailNotificationSubscriptionRepository.IsSubscribedAsync(
             user.Id,
-            EmailNotificationTypes.TrainingCompleted,
+            EmailNotificationTypes.TrainingCompleted.Value,
             cancellationToken);
         if (!isSubscribed)
         {

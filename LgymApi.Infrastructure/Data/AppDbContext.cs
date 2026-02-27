@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 using LgymApi.Domain.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -348,7 +349,11 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<NotificationMessage>(entity =>
         {
             entity.ToTable("NotificationMessages");
-            entity.Property(e => e.Type).IsRequired();
+            entity.Property(e => e.Type)
+                .HasConversion(
+                    notificationType => notificationType.Value,
+                    value => EmailNotificationType.Parse(value))
+                .IsRequired();
             entity.Property(e => e.Recipient).IsRequired();
             entity.Property(e => e.PayloadJson).IsRequired();
             entity.HasIndex(e => new { e.Status, e.NextAttemptAt, e.CreatedAt });

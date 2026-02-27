@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +24,7 @@ public sealed class NotificationMessageSeeder : IEntitySeeder
             .Select(message => new { message.Channel, message.Type, message.CorrelationId, message.Recipient })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(NotificationChannel Channel, string Type, Guid CorrelationId, string Recipient)>(
+        var existingSet = new HashSet<(NotificationChannel Channel, EmailNotificationType Type, Guid CorrelationId, string Recipient)>(
             existing.Select(entry => (entry.Channel, entry.Type, entry.CorrelationId, entry.Recipient)));
 
         var messages = new List<NotificationMessage>
@@ -32,7 +33,7 @@ public sealed class NotificationMessageSeeder : IEntitySeeder
             {
                 Id = Guid.NewGuid(),
                 Channel = NotificationChannel.Email,
-                Type = "TrainerInvitation",
+                Type = EmailNotificationTypes.TrainerInvitation,
                 CorrelationId = Guid.NewGuid(),
                 Recipient = "trainee@lgym.app",
                 PayloadJson = "{\"template\":\"trainer-invite\"}",
@@ -45,10 +46,10 @@ public sealed class NotificationMessageSeeder : IEntitySeeder
             {
                 Id = Guid.NewGuid(),
                 Channel = NotificationChannel.Email,
-                Type = "ReportRequest",
+                Type = EmailNotificationTypes.Welcome,
                 CorrelationId = Guid.NewGuid(),
                 Recipient = "trainee@lgym.app",
-                PayloadJson = "{\"template\":\"report-request\"}",
+                PayloadJson = "{\"template\":\"welcome\"}",
                 Status = EmailNotificationStatus.Pending,
                 Attempts = 0
             }
