@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Infrastructure.Options;
 
 namespace LgymApi.Infrastructure.Services;

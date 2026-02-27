@@ -1,5 +1,5 @@
 using System.Globalization;
-using LgymApi.Application.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;

@@ -1,4 +1,4 @@
-namespace LgymApi.Application.Notifications;
+namespace LgymApi.BackgroundWorker.Common;
 
 public interface IEmailBackgroundScheduler
 {

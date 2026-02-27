@@ -1,4 +1,6 @@
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker;
+using LgymApi.BackgroundWorker.Common;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +21,7 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
         });
 
         services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+        services.AddBackgroundWorkerServices(isTesting: true);
 
         using var provider = services.BuildServiceProvider();
         var scheduler = provider.GetRequiredService<IEmailBackgroundScheduler>();

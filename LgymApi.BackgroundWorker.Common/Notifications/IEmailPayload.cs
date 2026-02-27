@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace LgymApi.Application.Notifications.Models;
+namespace LgymApi.BackgroundWorker.Common.Notifications;
 
 public interface IEmailPayload
 {

@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Enums;
 
-namespace LgymApi.Application.Notifications.Models;
+namespace LgymApi.BackgroundWorker.Common.Notifications.Models;
 
 public sealed class TrainingCompletedEmailPayload : IEmailPayload
 {

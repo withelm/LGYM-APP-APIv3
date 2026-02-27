@@ -1,13 +1,14 @@
 using Hangfire;
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common.Jobs;
 
 namespace LgymApi.Infrastructure.Jobs;
 
-public sealed class EmailJob
+public sealed class WelcomeEmailJob : IWelcomeEmailJob
 {
     private readonly IEmailJobHandler _handler;
 
-    public EmailJob(IEmailJobHandler handler)
+    public WelcomeEmailJob(IEmailJobHandler handler)
     {
         _handler = handler;
     }

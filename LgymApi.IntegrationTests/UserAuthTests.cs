@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -72,7 +72,7 @@ public sealed class UserAuthTests : IntegrationTestBase
             .FirstOrDefaultAsync(e => e.Recipient == "bob-en@example.com" && e.Type == EmailNotificationTypes.Welcome);
         emailLog.Should().NotBeNull();
 
-        var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
+        var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.BackgroundWorker.Common.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
         payload.Should().NotBeNull();
         payload!.CultureName.Should().StartWith("en");
         emailLog.PayloadJson.Should().Contain("en");
@@ -109,7 +109,7 @@ public sealed class UserAuthTests : IntegrationTestBase
             .FirstOrDefaultAsync(e => e.Recipient == "alicja-hdr@example.com" && e.Type == EmailNotificationTypes.Welcome);
         emailLog.Should().NotBeNull();
 
-        var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
+        var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.BackgroundWorker.Common.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
         payload.Should().NotBeNull();
         payload!.CultureName.Should().StartWith("pl");
 
@@ -149,7 +149,7 @@ public sealed class UserAuthTests : IntegrationTestBase
             .FirstOrDefaultAsync(e => e.Recipient == "alicja-pl@example.com" && e.Type == EmailNotificationTypes.Welcome);
         emailLog.Should().NotBeNull();
 
-        var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.Application.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
+        var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.BackgroundWorker.Common.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson);
         payload.Should().NotBeNull();
         payload!.CultureName.Should().Be("pl-PL");
 

@@ -1,4 +1,4 @@
-namespace LgymApi.Application.Notifications;
+namespace LgymApi.BackgroundWorker.Common.Notifications;
 
 public interface IEmailJobHandler
 {

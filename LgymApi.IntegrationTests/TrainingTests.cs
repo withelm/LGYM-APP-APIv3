@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;

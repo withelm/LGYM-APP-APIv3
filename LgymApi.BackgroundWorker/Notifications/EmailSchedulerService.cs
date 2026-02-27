@@ -1,11 +1,13 @@
 using System.Text.Json;
-using LgymApi.Application.Notifications.Models;
+using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
-namespace LgymApi.Application.Notifications;
+namespace LgymApi.BackgroundWorker.Notifications;
 
 public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
     where TPayload : IEmailPayload

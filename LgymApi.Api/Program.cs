@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using LgymApi.BackgroundWorker;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application;
@@ -67,7 +68,9 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructure(
     builder.Configuration,
     builder.Environment.IsDevelopment(),
-    builder.Environment.IsEnvironment(TestingEnvironment));
+    builder.Environment.IsEnvironment(TestingEnvironment),
+    hostBackgroundServer: true);
+builder.Services.AddBackgroundWorkerServices(builder.Environment.IsEnvironment(TestingEnvironment));
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)

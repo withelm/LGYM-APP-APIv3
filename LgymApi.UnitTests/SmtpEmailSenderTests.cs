@@ -1,5 +1,5 @@
 using System.Net.Sockets;
-using LgymApi.Application.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using MailKit.Net.Smtp;

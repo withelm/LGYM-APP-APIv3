@@ -1,9 +1,8 @@
 using Hangfire;
 using Hangfire.PostgreSql;
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Data;
-using LgymApi.Infrastructure.Jobs;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
@@ -20,7 +19,12 @@ namespace LgymApi.Infrastructure;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool enableSensitiveLogging, bool isTesting = false)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool enableSensitiveLogging,
+        bool isTesting = false,
+        bool hostBackgroundServer = false)
     {
         var emailOptions = new EmailOptions
         {
@@ -73,12 +77,11 @@ public static class ServiceCollectionExtensions
                         storage.UseNpgsqlConnection(configuration.GetConnectionString("Postgres"));
                     });
             });
-            services.AddHangfireServer();
-            services.AddScoped<IEmailBackgroundScheduler, HangfireEmailBackgroundScheduler>();
-        }
-        else
-        {
-            services.AddScoped<IEmailBackgroundScheduler, NoOpEmailBackgroundScheduler>();
+
+            if (hostBackgroundServer)
+            {
+                services.AddHangfireServer();
+            }
         }
 
         services.AddScoped<ITokenService, TokenService>();
@@ -98,10 +101,6 @@ public static class ServiceCollectionExtensions
                 ? sp.GetRequiredService<DummyEmailSender>()
                 : sp.GetRequiredService<SmtpEmailSender>();
         });
-        services.AddScoped<InvitationEmailJob>();
-        services.AddScoped<WelcomeEmailJob>();
-        services.AddScoped<EmailJob>();
-
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ITrainerRelationshipRepository, TrainerRelationshipRepository>();

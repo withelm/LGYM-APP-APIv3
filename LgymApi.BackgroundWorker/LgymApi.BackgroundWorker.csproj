@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LgymApi.Application\LgymApi.Application.csproj" />
+    <ProjectReference Include="..\LgymApi.BackgroundWorker.Common\LgymApi.BackgroundWorker.Common.csproj" />
+  </ItemGroup>
+</Project>

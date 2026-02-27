@@ -10,6 +10,7 @@ public sealed class UnitOfWorkCommitGuardTests
     private static readonly string[] AllowedSegments =
     {
         "/LgymApi.Application/",
+        "/LgymApi.BackgroundWorker/Notifications/",
         "/LgymApi.Infrastructure/UnitOfWork/",
         "/LgymApi.Infrastructure/Data/",
         "/LgymApi.DataSeeder/",
