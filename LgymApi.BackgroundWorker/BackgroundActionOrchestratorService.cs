@@ -173,7 +173,7 @@ public sealed class BackgroundActionOrchestratorService
         // Record per-handler execution outcomes in durable ExecutionLog
         foreach (var result in results)
         {
-            var executionLog = new ExecutionLog
+            var executionLog = new ActionExecutionLog
             {
                 CommandEnvelopeId = envelope.Id,
                 ActionType = "HandlerExecution",

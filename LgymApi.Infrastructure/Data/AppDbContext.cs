@@ -44,7 +44,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<SupplementPlanItem> SupplementPlanItems => Set<SupplementPlanItem>();
     public DbSet<SupplementIntakeLog> SupplementIntakeLogs => Set<SupplementIntakeLog>();
     public DbSet<CommandEnvelope> CommandEnvelopes => Set<CommandEnvelope>();
-    public DbSet<ExecutionLog> ExecutionLogs => Set<ExecutionLog>();
+    public DbSet<ActionExecutionLog> ActionExecutionLogs => Set<ActionExecutionLog>();
 
     public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
@@ -509,9 +509,9 @@ public sealed class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<ExecutionLog>(entity =>
+        modelBuilder.Entity<ActionExecutionLog>(entity =>
         {
-            entity.ToTable("ExecutionLogs");
+            entity.ToTable("ActionExecutionLogs");
             entity.Property(e => e.ActionType).IsRequired();
             entity.Property(e => e.Status).HasConversion<string>();
             // Index for finding execution history by envelope and status

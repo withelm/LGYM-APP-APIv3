@@ -244,7 +244,7 @@ public sealed class BackgroundActionMessageRepositoryTests
     }
 
     [Test]
-    public async Task ExecutionLog_AddAsync_AddsLogToContext()
+    public async Task ActionExecutionLog_AddAsync_AddsLogToContext()
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -254,7 +254,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         await using var dbContext = new AppDbContext(options);
         var repository = new ExecutionLogRepository(dbContext);
 
-        var log = new ExecutionLog
+        var log = new ActionExecutionLog
         {
             CommandEnvelopeId = Guid.NewGuid(),
             ActionType = "Execute",
@@ -269,14 +269,14 @@ public sealed class BackgroundActionMessageRepositoryTests
         await dbContext.SaveChangesAsync();
 
         // Assert
-        var saved = await dbContext.ExecutionLogs.FindAsync(log.Id);
+        var saved = await dbContext.ActionExecutionLogs.FindAsync(log.Id);
         Assert.That(saved, Is.Not.Null);
         Assert.That(saved.AttemptNumber, Is.EqualTo(1));
         Assert.That(saved.Status, Is.EqualTo(ActionExecutionStatus.Processing));
     }
 
     [Test]
-    public async Task ExecutionLog_GetByCommandEnvelopeIdAsync_ReturnsLogsOrderedByAttempt()
+    public async Task ActionExecutionLog_GetByCommandEnvelopeIdAsync_ReturnsLogsOrderedByAttempt()
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -288,7 +288,7 @@ public sealed class BackgroundActionMessageRepositoryTests
 
         var envelopeId = Guid.NewGuid();
 
-        var log3 = new ExecutionLog
+        var log3 = new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId,
             ActionType = "Execute",
@@ -298,7 +298,7 @@ public sealed class BackgroundActionMessageRepositoryTests
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        var log1 = new ExecutionLog
+        var log1 = new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId,
             ActionType = "Execute",
@@ -308,7 +308,7 @@ public sealed class BackgroundActionMessageRepositoryTests
             UpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-10)
         };
 
-        var log2 = new ExecutionLog
+        var log2 = new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId,
             ActionType = "Execute",
@@ -334,7 +334,7 @@ public sealed class BackgroundActionMessageRepositoryTests
     }
 
     [Test]
-    public async Task ExecutionLog_GetByCommandEnvelopeIdAsync_ReturnsEmptyWhenNoLogs()
+    public async Task ActionExecutionLog_GetByCommandEnvelopeIdAsync_ReturnsEmptyWhenNoLogs()
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -352,7 +352,7 @@ public sealed class BackgroundActionMessageRepositoryTests
     }
 
     [Test]
-    public async Task ExecutionLog_GetByCommandEnvelopeIdAsync_IsolatesLogsByEnvelopeId()
+    public async Task ActionExecutionLog_GetByCommandEnvelopeIdAsync_IsolatesLogsByEnvelopeId()
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -365,7 +365,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         var envelopeId1 = Guid.NewGuid();
         var envelopeId2 = Guid.NewGuid();
 
-        await repository.AddAsync(new ExecutionLog
+        await repository.AddAsync(new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId1,
             ActionType = "Execute",
@@ -375,7 +375,7 @@ public sealed class BackgroundActionMessageRepositoryTests
             UpdatedAt = DateTimeOffset.UtcNow
         });
 
-        await repository.AddAsync(new ExecutionLog
+        await repository.AddAsync(new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId2,
             ActionType = "Execute",

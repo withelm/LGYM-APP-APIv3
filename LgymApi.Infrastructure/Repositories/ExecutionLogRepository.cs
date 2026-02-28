@@ -14,14 +14,14 @@ public sealed class ExecutionLogRepository : IExecutionLogRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(ExecutionLog log, CancellationToken cancellationToken = default)
+    public async Task AddAsync(ActionExecutionLog log, CancellationToken cancellationToken = default)
     {
-        await _dbContext.ExecutionLogs.AddAsync(log, cancellationToken);
+        await _dbContext.ActionExecutionLogs.AddAsync(log, cancellationToken);
     }
 
-    public async Task<List<ExecutionLog>> GetByCommandEnvelopeIdAsync(Guid commandEnvelopeId, CancellationToken cancellationToken = default)
+    public async Task<List<ActionExecutionLog>> GetByCommandEnvelopeIdAsync(Guid commandEnvelopeId, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.ExecutionLogs
+        return await _dbContext.ActionExecutionLogs
             .Where(x => x.CommandEnvelopeId == commandEnvelopeId)
             .OrderBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);

@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace LgymApi.UnitTests;
 
 /// <summary>
-/// Tests durable persistence behavior of CommandEnvelope and ExecutionLog entities.
+/// Tests durable persistence behavior of CommandEnvelope and ActionExecutionLog entities.
 /// Validates entity lifecycle, relationships, and index coverage.
 /// </summary>
 [TestFixture]
@@ -63,7 +63,7 @@ public class CommandEnvelopePersistenceTests
     }
 
     [Test]
-    public async Task ExecutionLog_CanBeLinked_ToCommandEnvelope()
+    public async Task ActionExecutionLog_CanBeLinked_ToCommandEnvelope()
     {
         // Arrange
         var envelopeId = Guid.NewGuid();
@@ -78,7 +78,7 @@ public class CommandEnvelopePersistenceTests
             UpdatedAt = DateTimeOffset.UtcNow,
         };
 
-        var log = new ExecutionLog
+        var log = new ActionExecutionLog
         {
             Id = Guid.NewGuid(),
             CommandEnvelopeId = envelopeId,
@@ -91,7 +91,7 @@ public class CommandEnvelopePersistenceTests
 
         // Act
         _context.CommandEnvelopes.Add(envelope);
-        _context.ExecutionLogs.Add(log);
+        _context.ActionExecutionLogs.Add(log);
         await _context.SaveChangesAsync();
 
         // Assert
@@ -105,7 +105,7 @@ public class CommandEnvelopePersistenceTests
     }
 
     [Test]
-    public async Task ExecutionLog_CanTrack_MultipleAttempts()
+    public async Task ActionExecutionLog_CanTrack_MultipleAttempts()
     {
         // Arrange
         var envelopeId = Guid.NewGuid();
@@ -123,7 +123,7 @@ public class CommandEnvelopePersistenceTests
         _context.CommandEnvelopes.Add(envelope);
         await _context.SaveChangesAsync();
 
-        var log1 = new ExecutionLog
+        var log1 = new ActionExecutionLog
         {
             Id = Guid.NewGuid(),
             CommandEnvelopeId = envelopeId,
@@ -135,7 +135,7 @@ public class CommandEnvelopePersistenceTests
             UpdatedAt = DateTimeOffset.UtcNow.AddSeconds(-10),
         };
 
-        var log2 = new ExecutionLog
+        var log2 = new ActionExecutionLog
         {
             Id = Guid.NewGuid(),
             CommandEnvelopeId = envelopeId,
@@ -147,11 +147,11 @@ public class CommandEnvelopePersistenceTests
         };
 
         // Act
-        _context.ExecutionLogs.AddRange(log1, log2);
+        _context.ActionExecutionLogs.AddRange(log1, log2);
         await _context.SaveChangesAsync();
 
         // Assert
-        var logs = await _context.ExecutionLogs
+        var logs = await _context.ActionExecutionLogs
             .Where(l => l.CommandEnvelopeId == envelopeId)
             .OrderBy(l => l.AttemptNumber)
             .ToListAsync();
@@ -226,7 +226,7 @@ public class CommandEnvelopePersistenceTests
     }
 
     [Test]
-    public async Task ExecutionLog_ErrorTracking_Persists()
+    public async Task ActionExecutionLog_ErrorTracking_Persists()
     {
         // Arrange
         var envelopeId = Guid.NewGuid();
@@ -241,7 +241,7 @@ public class CommandEnvelopePersistenceTests
             UpdatedAt = DateTimeOffset.UtcNow,
         };
 
-        var log = new ExecutionLog
+        var log = new ActionExecutionLog
         {
             Id = Guid.NewGuid(),
             CommandEnvelopeId = envelopeId,
@@ -256,11 +256,11 @@ public class CommandEnvelopePersistenceTests
 
         // Act
         _context.CommandEnvelopes.Add(envelope);
-        _context.ExecutionLogs.Add(log);
+        _context.ActionExecutionLogs.Add(log);
         await _context.SaveChangesAsync();
 
         // Assert
-        var retrieved = await _context.ExecutionLogs.FirstAsync();
+        var retrieved = await _context.ActionExecutionLogs.FirstAsync();
         Assert.That(retrieved.ErrorMessage, Is.EqualTo("Connection timeout"));
         Assert.That(retrieved.ErrorDetails, Does.Contain("TimeoutException"));
     }

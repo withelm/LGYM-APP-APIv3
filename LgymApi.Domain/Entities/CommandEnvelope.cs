@@ -53,7 +53,7 @@ public sealed class CommandEnvelope : EntityBase
     /// <summary>
     /// Related execution logs for this envelope (one-to-many).
     /// </summary>
-    public ICollection<ExecutionLog> ExecutionLogs { get; set; } = new List<ExecutionLog>();
+    public ICollection<ActionExecutionLog> ExecutionLogs { get; set; } = new List<ActionExecutionLog>();
 
     /// <summary>
     /// Increments the attempt counter and records an error on this envelope.
@@ -71,7 +71,7 @@ public sealed class CommandEnvelope : EntityBase
         var attemptNumber = ExecutionLogs.Count(log => log.ActionType == "Execute");
 
         // Record this failure in execution log
-        var executionLog = new ExecutionLog
+        var executionLog = new ActionExecutionLog
         {
             CommandEnvelopeId = Id,
             ActionType = "Execute",
@@ -116,7 +116,7 @@ public sealed class CommandEnvelope : EntityBase
         CompletedAt = DateTimeOffset.UtcNow;
 
         // Record dead-letter event in execution log
-        var executionLog = new ExecutionLog
+        var executionLog = new ActionExecutionLog
         {
             CommandEnvelopeId = Id,
             ActionType = "DeadLetter",
@@ -145,7 +145,7 @@ public sealed class CommandEnvelope : EntityBase
         NextAttemptAt = null;
 
         // Record success in execution log
-        var executionLog = new ExecutionLog
+        var executionLog = new ActionExecutionLog
         {
             CommandEnvelopeId = Id,
             ActionType = "Execute",
