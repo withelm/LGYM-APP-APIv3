@@ -157,6 +157,78 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
         Assert.That(exception!.Message, Is.EqualTo("Email:SmtpPort must be greater than 0 when email is enabled."));
     }
 
+    [Test]
+    public void AddBackgroundWorkerServices_RegistersCommandDispatcher()
+    {
+        var services = new ServiceCollection();
+        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+        });
+
+        services.AddLogging();
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+        services.AddBackgroundWorkerServices(isTesting: true);
+
+        using var provider = services.BuildServiceProvider();
+        var dispatcher = provider.GetRequiredService<ICommandDispatcher>();
+        Assert.That(dispatcher, Is.TypeOf<CommandDispatcher>());
+    }
+
+    [Test]
+    public void AddBackgroundWorkerServices_RegistersNoOpScheduler_WhenTesting()
+    {
+        var services = new ServiceCollection();
+        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+        });
+
+        services.AddLogging();
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+        services.AddBackgroundWorkerServices(isTesting: true);
+
+        using var provider = services.BuildServiceProvider();
+        var scheduler = provider.GetRequiredService<IActionMessageScheduler>();
+        Assert.That(scheduler, Is.TypeOf<NoOpActionMessageScheduler>());
+    }
+
+    [Test]
+    public void AddBackgroundWorkerServices_RegistersHangfireScheduler_WhenNotTesting()
+    {
+        var services = new ServiceCollection();
+        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+        });
+
+        services.AddLogging();
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: false);
+        services.AddBackgroundWorkerServices(isTesting: false);
+
+        using var provider = services.BuildServiceProvider();
+        var scheduler = provider.GetRequiredService<IActionMessageScheduler>();
+        Assert.That(scheduler, Is.TypeOf<HangfireActionMessageScheduler>());
+    }
+
+    [Test]
+    public void AddBackgroundWorkerServices_RegistersOrchestratorService()
+    {
+        var services = new ServiceCollection();
+        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+        });
+
+        services.AddLogging();
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+        services.AddBackgroundWorkerServices(isTesting: true);
+
+        using var provider = services.BuildServiceProvider();
+        var orchestrator = provider.GetRequiredService<BackgroundActionOrchestratorService>();
+        Assert.That(orchestrator, Is.Not.Null);
+    }
+
     private static IConfiguration BuildEnabledEmailConfiguration()
     {
         return BuildConfiguration(new Dictionary<string, string?>
