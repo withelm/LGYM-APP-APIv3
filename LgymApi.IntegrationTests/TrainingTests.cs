@@ -70,6 +70,8 @@ public sealed class TrainingTests : IntegrationTestBase
         var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        await ProcessPendingCommandsAsync();
+
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -143,6 +145,8 @@ public sealed class TrainingTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await ProcessPendingCommandsAsync();
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -665,6 +669,8 @@ public sealed class TrainingTests : IntegrationTestBase
         var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        await ProcessPendingCommandsAsync();
+
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var record = await db.MainRecords.SingleAsync(r => r.UserId == userId && r.ExerciseId == exerciseId);
@@ -715,6 +721,8 @@ public sealed class TrainingTests : IntegrationTestBase
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await ProcessPendingCommandsAsync();
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -770,6 +778,8 @@ public sealed class TrainingTests : IntegrationTestBase
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        await ProcessPendingCommandsAsync();
+
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var records = await db.MainRecords.Where(r => r.UserId == userId && r.ExerciseId == exerciseId).ToListAsync();
@@ -821,6 +831,8 @@ public sealed class TrainingTests : IntegrationTestBase
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await ProcessPendingCommandsAsync();
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -885,6 +897,9 @@ public sealed class TrainingTests : IntegrationTestBase
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
 
         var updatedMaxResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
         updatedMaxResponse.StatusCode.Should().Be(HttpStatusCode.OK);

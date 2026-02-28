@@ -3,15 +3,18 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
-using LgymApi.Domain.Entities;
-using LgymApi.Domain.Security;
+using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.BackgroundWorker;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+
 
 namespace LgymApi.IntegrationTests;
 
@@ -340,4 +343,31 @@ public abstract class IntegrationTestBase : IDisposable
         [System.Text.Json.Serialization.JsonPropertyName("reps")]
         public string Reps { get; set; } = string.Empty;
     }
+
+    protected async Task ProcessPendingCommandsAsync()
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var orchestrator = scope.ServiceProvider.GetRequiredService<BackgroundActionOrchestratorService>();
+
+        // Get all pending command envelopes from database
+        var pendingEnvelopes = await db.CommandEnvelopes
+            .Where(ce => ce.Status == ActionExecutionStatus.Pending)
+            .ToListAsync();
+
+        // Process each pending envelope
+        foreach (var envelope in pendingEnvelopes)
+        {
+            try
+            {
+                await orchestrator.OrchestrateAsync(envelope.Id, CancellationToken.None);
+            }
+            catch
+            {
+                // Suppress errors to allow tests to continue
+                // (mimics Hangfire behavior where job failures don't stop other processing)
+            }
+        }
+    }
+
 }

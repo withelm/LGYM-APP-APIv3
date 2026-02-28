@@ -57,6 +57,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         });
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
+
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
         invitation.Should().NotBeNull();
 
@@ -80,6 +83,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             traineeId = trainee.Id.ToString()
         });
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
         invitation.Should().NotBeNull();
 
         Guid notificationId;
@@ -122,6 +128,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         });
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
+
         Guid notificationId;
         using (var scope = Factory.Services.CreateScope())
         {
@@ -154,6 +163,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         });
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
+
         Guid notificationId;
         using (var scope = Factory.Services.CreateScope())
         {
@@ -184,6 +196,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             traineeId = trainee.Id.ToString()
         });
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
 
         Guid notificationId;
         using (var scope = Factory.Services.CreateScope())
@@ -227,6 +242,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         });
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
+
         Guid notificationId;
         using (var scope = Factory.Services.CreateScope())
         {
@@ -268,8 +286,14 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var first = await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
         var firstBody = await first.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
+
         var second = await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
         var secondBody = await second.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
 
         second.StatusCode.Should().Be(HttpStatusCode.OK);
         firstBody.Should().NotBeNull();
