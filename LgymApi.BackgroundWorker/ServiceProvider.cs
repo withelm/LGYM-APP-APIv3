@@ -1,4 +1,6 @@
+using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Jobs;
@@ -46,6 +48,12 @@ public static class ServiceProvider
         services.AddScoped<EmailJob>();
 
         services.AddScoped<BackgroundActionOrchestratorService>();
+
+        // Register typed background action handlers
+        services.AddBackgroundAction<UserRegisteredCommand, UserRegisteredCommandHandler>();
+        services.AddBackgroundAction<InvitationCreatedCommand, InvitationCreatedCommandHandler>();
+        services.AddBackgroundAction<TrainingCompletedCommand, TrainingCompletedMainRecordCommandHandler>();
+        services.AddBackgroundAction<TrainingCompletedCommand, TrainingCompletedEmailCommandHandler>();
 
         return services;
     }
