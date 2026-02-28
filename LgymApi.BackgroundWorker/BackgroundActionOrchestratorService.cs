@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Reflection;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
@@ -18,7 +19,6 @@ public sealed class BackgroundActionOrchestratorService
     private readonly IServiceProvider _serviceProvider;
     private readonly ICommandEnvelopeRepository _commandEnvelopeRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IActionMessageScheduler _scheduler;
     private readonly ILogger<BackgroundActionOrchestratorService> _logger;
 
     // Parallel execution configuration
@@ -28,13 +28,11 @@ public sealed class BackgroundActionOrchestratorService
         IServiceProvider serviceProvider,
         ICommandEnvelopeRepository commandEnvelopeRepository,
         IUnitOfWork unitOfWork,
-        IActionMessageScheduler scheduler,
         ILogger<BackgroundActionOrchestratorService> logger)
     {
         _serviceProvider = serviceProvider;
         _commandEnvelopeRepository = commandEnvelopeRepository;
         _unitOfWork = unitOfWork;
-        _scheduler = scheduler;
         _logger = logger;
     }
 
@@ -256,7 +254,8 @@ public sealed class BackgroundActionOrchestratorService
                 throw new InvalidOperationException($"Handler index {handlerIndex} out of range (count: {handlers.Count}).");
             }
 
-            var handler = handlers[handlerIndex];
+            var handler = handlers[handlerIndex]
+                ?? throw new InvalidOperationException($"Resolved handler at index {handlerIndex} is null.");
 
             // Invoke ExecuteAsync via reflection (handler is dynamic type)
             var executeMethod = handler.GetType().GetMethod("ExecuteAsync");
@@ -284,6 +283,10 @@ public sealed class BackgroundActionOrchestratorService
         }
         catch (Exception ex)
         {
+            var inner = ex is TargetInvocationException { InnerException: not null }
+                ? ex.InnerException
+                : ex;
+
             var handlerTypeName = $"Handler#{handlerIndex}";
             _logger.LogError(ex,
                 "Handler {HandlerType} failed for command {CommandType}.",
@@ -293,9 +296,9 @@ public sealed class BackgroundActionOrchestratorService
             return new HandlerExecutionResult
             {
                 Success = false,
-                ErrorMessage = $"{handlerTypeName}: {ex.Message}",
+                ErrorMessage = $"{handlerTypeName}: {inner.Message}",
                 HandlerTypeName = handlerTypeName,
-                ErrorDetails = ex.ToString() // Full exception with stack trace
+                ErrorDetails = inner.ToString() // Full exception with stack trace
             };
         }
     }

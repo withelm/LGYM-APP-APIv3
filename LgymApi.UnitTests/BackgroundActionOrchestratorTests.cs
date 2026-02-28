@@ -24,7 +24,6 @@ public sealed class BackgroundActionOrchestratorTests
 {
     private FakeCommandEnvelopeRepository _repository = null!;
     private FakeUnitOfWork _unitOfWork = null!;
-    private FakeActionMessageScheduler _scheduler = null!;
     private Microsoft.Extensions.DependencyInjection.ServiceProvider _serviceProvider = null!;
 
     [SetUp]
@@ -32,7 +31,6 @@ public sealed class BackgroundActionOrchestratorTests
     {
         _repository = new FakeCommandEnvelopeRepository();
         _unitOfWork = new FakeUnitOfWork();
-        _scheduler = new FakeActionMessageScheduler();
     }
 
     [TearDown]
@@ -91,7 +89,6 @@ public sealed class BackgroundActionOrchestratorTests
         // Assert - Failure recorded and exception thrown for Hangfire retry
         Assert.That(ex!.Message, Does.Contain("Retry scheduled"));
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
-        Assert.That(_scheduler.EnqueuedIds.Contains(envelopeId), Is.False, "Should NOT enqueue via scheduler - Hangfire AutomaticRetry handles it");
         Assert.That(envelope.ExecutionLogs.Count, Is.GreaterThanOrEqualTo(1));
     }
 
@@ -119,7 +116,6 @@ public sealed class BackgroundActionOrchestratorTests
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
         Assert.That(envelope.LastAttemptAt, Is.Not.Null);
         Assert.That(envelope.NextAttemptAt, Is.Not.Null);
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(0), "Hangfire AutomaticRetry handles scheduling");
     }
 
     [Test]
@@ -152,7 +148,6 @@ public sealed class BackgroundActionOrchestratorTests
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
         Assert.That(envelope.CompletedAt, Is.Not.Null);
         Assert.That(envelope.ExecutionLogs.Any(log => log.ActionType == "DeadLetter"), Is.True);
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(0));
     }
 
     [Test]
@@ -474,7 +469,6 @@ public sealed class BackgroundActionOrchestratorTests
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed), "Should be in Failed state");
         Assert.That(envelope.NextAttemptAt, Is.Not.Null, "NextAttemptAt should be scheduled");
         Assert.That(envelope.NextAttemptAt.Value, Is.GreaterThan(DateTimeOffset.UtcNow), "NextAttemptAt should be in future (backoff delay)");
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(0), "Should NOT enqueue via scheduler (Hangfire AutomaticRetry handles it)");
     }
 
     [Test]
@@ -503,7 +497,6 @@ public sealed class BackgroundActionOrchestratorTests
         Assert.That(ex!.Message, Does.Contain("Retry scheduled"), "Exception should indicate retry");
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
         Assert.That(envelope.ExecutionLogs.Count(log => log.ActionType == "Execute"), Is.EqualTo(2), "Should have 2 execution attempts");
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(0), "Hangfire AutomaticRetry handles scheduling, not manual enqueue");
     }
 
     [Test]
@@ -545,7 +538,6 @@ public sealed class BackgroundActionOrchestratorTests
             _serviceProvider,
             _repository,
             _unitOfWork,
-            _scheduler,
             new FakeLogger());
     }
 
@@ -744,16 +736,6 @@ public sealed class BackgroundActionOrchestratorTests
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
-        }
-    }
-
-    private sealed class FakeActionMessageScheduler : IActionMessageScheduler
-    {
-        public List<Guid> EnqueuedIds { get; } = new();
-
-        public void Enqueue(Guid actionMessageId)
-        {
-            EnqueuedIds.Add(actionMessageId);
         }
     }
 
