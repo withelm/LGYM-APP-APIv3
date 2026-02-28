@@ -24,16 +24,8 @@ public sealed class CommandDescriptor
     /// <exception cref="ArgumentException">Thrown when command type has no FullName (e.g., open generic).</exception>
     public CommandDescriptor(Type commandType)
     {
-        if (commandType == null)
-            throw new ArgumentNullException(nameof(commandType));
-
-        if (string.IsNullOrEmpty(commandType.FullName))
-            throw new ArgumentException(
-                $"Command type '{commandType}' must have a defined FullName (e.g., no open generics).",
-                nameof(commandType));
-
         CommandType = commandType;
-        TypeFullName = commandType.FullName;
+        TypeFullName = CommandTypeDiscriminatorPolicy.GetDiscriminator(commandType);
     }
 
     /// <summary>
@@ -68,7 +60,7 @@ public sealed class CommandDescriptor
             return false;
 
         // Exact string equality of type full name; no IsAssignableFrom.
-        return string.Equals(TypeFullName, other.TypeFullName, StringComparison.Ordinal);
+        return CommandTypeDiscriminatorPolicy.IsExactMatch(TypeFullName, other.TypeFullName);
     }
 
     /// <summary>
@@ -80,23 +72,7 @@ public sealed class CommandDescriptor
     /// <exception cref="InvalidOperationException">Thrown if type is not found in any loaded assembly.</exception>
     public static Type ResolveCommandType(string typeFullName)
     {
-        if (string.IsNullOrWhiteSpace(typeFullName))
-            throw new ArgumentException("Type full name must not be null or empty.", nameof(typeFullName));
-
-        var type = Type.GetType(typeFullName, throwOnError: false);
-        if (type != null)
-            return type;
-
-        // Search in all loaded assemblies if not found in default lookup.
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            type = assembly.GetType(typeFullName, throwOnError: false);
-            if (type != null)
-                return type;
-        }
-
-        throw new InvalidOperationException(
-            $"Cannot resolve command type '{typeFullName}'; type not found in any loaded assembly.");
+        return CommandTypeDiscriminatorPolicy.ResolveType(typeFullName);
     }
 
     public override string ToString() => TypeFullName;
