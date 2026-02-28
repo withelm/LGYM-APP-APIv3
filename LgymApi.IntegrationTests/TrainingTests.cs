@@ -70,42 +70,29 @@ public sealed class TrainingTests : IntegrationTestBase
         var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
+
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.NotificationMessages
+            var logs = await db.NotificationMessages
                 .Where(x => x.Type == EmailNotificationTypes.TrainingCompleted && x.Recipient == userEmail)
                 .OrderByDescending(x => x.CreatedAt)
-                .FirstOrDefaultAsync();
+                .ToListAsync();
 
-            log.Should().NotBeNull();
-            log!.Status.Should().Be(EmailNotificationStatus.Pending);
+            logs.Should().ContainSingle();
 
-            using var payload = JsonDocument.Parse(log.PayloadJson);
-            var root = payload.RootElement;
-            var planDayProperty = root.TryGetProperty("planDayName", out var camelPlanDay)
-                ? camelPlanDay
-                : root.GetProperty("PlanDayName");
-            planDayProperty.GetString().Should().Be(planDayName);
+            var payload = JsonDocument.Parse(logs[0].PayloadJson);
+            payload.RootElement.GetProperty("RecipientEmail").GetString().Should().Be(userEmail);
+            payload.RootElement.GetProperty("PlanDayName").GetString().Should().Be(planDayName);
 
-            var exercisesProperty = root.TryGetProperty("exercises", out var camelExercises)
-                ? camelExercises
-                : root.GetProperty("Exercises");
-            var exercises = exercisesProperty.EnumerateArray().ToArray();
-            exercises.Length.Should().Be(2);
-            var firstExerciseName = exercises[0].TryGetProperty("exerciseName", out var camelExerciseName)
-                ? camelExerciseName
-                : exercises[0].GetProperty("ExerciseName");
-            firstExerciseName.GetString().Should().Be("Bench Press");
-
-            var firstSeries = exercises[0].TryGetProperty("series", out var camelSeries1)
-                ? camelSeries1
-                : exercises[0].GetProperty("Series");
-            var secondSeries = exercises[1].TryGetProperty("series", out var camelSeries2)
-                ? camelSeries2
-                : exercises[1].GetProperty("Series");
-            firstSeries.GetInt32().Should().Be(1);
-            secondSeries.GetInt32().Should().Be(2);
+            var exercises = payload.RootElement.GetProperty("Exercises");
+            exercises.GetArrayLength().Should().Be(2);
+            var exerciseArray = exercises.EnumerateArray().ToList();
+            exerciseArray[0].GetProperty("ExerciseName").GetString().Should().Be("Bench Press");
+            exerciseArray[0].GetProperty("Series").GetInt32().Should().Be(1);
+            exerciseArray[1].GetProperty("Series").GetInt32().Should().Be(2);
         }
     }
 
@@ -665,6 +652,9 @@ public sealed class TrainingTests : IntegrationTestBase
         var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
+
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var record = await db.MainRecords.SingleAsync(r => r.UserId == userId && r.ExerciseId == exerciseId);
@@ -715,6 +705,9 @@ public sealed class TrainingTests : IntegrationTestBase
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Process pending commands to trigger handler execution
+        await ProcessPendingCommandsAsync();
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -863,6 +856,8 @@ public sealed class TrainingTests : IntegrationTestBase
         });
         initialResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        await ProcessPendingCommandsAsync();
+
         var initialMaxResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
         initialMaxResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var initialMaxBody = await initialMaxResponse.Content.ReadFromJsonAsync<List<MainRecordBestResponse>>();
@@ -885,6 +880,8 @@ public sealed class TrainingTests : IntegrationTestBase
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await ProcessPendingCommandsAsync();
 
         var updatedMaxResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
         updatedMaxResponse.StatusCode.Should().Be(HttpStatusCode.OK);

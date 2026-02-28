@@ -539,6 +539,290 @@ public sealed class BackgroundActionOrchestratorTests
         Assert.That(failedLog.ErrorDetails, Does.Contain("at "), "Should contain stack trace");
     }
 
+    /// <summary>
+    /// Tests for migrated command handler orchestration.
+    /// Verifies typed command handlers execute correctly through orchestrator.
+    /// </summary>
+    [TestFixture]
+    public sealed class MigratedCommandHandlerOrchestrationTests
+    {
+        private FakeCommandEnvelopeRepository _repository = null!;
+        private FakeUnitOfWork _unitOfWork = null!;
+        private FakeActionMessageScheduler _scheduler = null!;
+        private Microsoft.Extensions.DependencyInjection.ServiceProvider _serviceProvider = null!;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _repository = new FakeCommandEnvelopeRepository();
+            _unitOfWork = new FakeUnitOfWork();
+            _scheduler = new FakeActionMessageScheduler();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _serviceProvider?.Dispose();
+        }
+
+        [Test]
+        public async Task OrchestrateAsync_TrainingCompletedCommand_ExecutesMainRecordHandler()
+        {
+            // Arrange
+            var envelopeId = Guid.NewGuid();
+            var command = new LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand
+            {
+                UserId = Guid.NewGuid(),
+                TrainingId = Guid.NewGuid(),
+                CreatedAtUtc = DateTime.UtcNow,
+                RecipientEmail = "user@test.com",
+                CultureName = "en-US",
+                PlanDayName = "Upper",
+                Exercises = new[]
+                {
+                    new LgymApi.BackgroundWorker.Common.Commands.TrainingExerciseInput
+                    {
+                        ExerciseId = Guid.NewGuid().ToString(),
+                        Weight = 100,
+                        Reps = 10,
+                        Series = 3,
+                        Unit = WeightUnits.Kilograms
+                    }
+                },
+                ExerciseDetails = new[]
+                {
+                    new LgymApi.BackgroundWorker.Common.Commands.TrainingExerciseDetail
+                    {
+                        ExerciseName = "Bench Press",
+                        Series = 1,
+                        Reps = 10,
+                        Weight = 100,
+                        Unit = WeightUnits.Kilograms
+                    }
+                }
+            };
+            var envelope = CreateEnvelope(envelopeId, command);
+            _repository.AddEnvelope(envelope);
+
+            var services = new ServiceCollection();
+            // Register production-like handler chain for TrainingCompletedCommand
+            services.AddScoped<IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand>, TrainingCompletedMainRecordHandlerFake>();
+            services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
+            _serviceProvider = services.BuildServiceProvider();
+
+            var orchestrator = CreateOrchestrator();
+
+            // Act
+            await orchestrator.OrchestrateAsync(envelopeId);
+
+            // Assert
+            Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
+            Assert.That(envelope.CompletedAt, Is.Not.Null);
+            var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == "HandlerExecution").ToList();
+            Assert.That(handlerLogs, Has.Count.EqualTo(1), "Should execute main-record handler");
+            Assert.That(handlerLogs.All(log => log.Status == ActionExecutionStatus.Completed), Is.True);
+        }
+
+        [Test]
+        public async Task OrchestrateAsync_UserRegisteredCommand_ExecutesEmailHandler()
+        {
+            // Arrange
+            var envelopeId = Guid.NewGuid();
+            var command = new LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand
+            {
+                UserId = Guid.NewGuid(),
+                UserName = "TestUser",
+                RecipientEmail = "test@example.com",
+                CultureName = "en-US"
+            };
+            var envelope = CreateEnvelope(envelopeId, command);
+            _repository.AddEnvelope(envelope);
+
+            var services = new ServiceCollection();
+            services.AddScoped<IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand>, UserRegisteredHandlerFake>();
+            services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
+            _serviceProvider = services.BuildServiceProvider();
+
+            var orchestrator = CreateOrchestrator();
+
+            // Act
+            await orchestrator.OrchestrateAsync(envelopeId);
+
+            // Assert
+            Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
+            var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == "HandlerExecution").ToList();
+            Assert.That(handlerLogs, Has.Count.EqualTo(1), "Should execute email handler");
+        }
+
+        [Test]
+        public async Task OrchestrateAsync_InvitationCreatedCommand_ExecutesEmailHandler()
+        {
+            // Arrange
+            var envelopeId = Guid.NewGuid();
+            var command = new LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand
+            {
+                InvitationId = Guid.NewGuid(),
+                InvitationCode = "TEST123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerName = "Trainer",
+                RecipientEmail = "trainee@example.com",
+                CultureName = "en-US"
+            };
+            var envelope = CreateEnvelope(envelopeId, command);
+            _repository.AddEnvelope(envelope);
+
+            var services = new ServiceCollection();
+            services.AddScoped<IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand>, InvitationCreatedHandlerFake>();
+            services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
+            _serviceProvider = services.BuildServiceProvider();
+
+            var orchestrator = CreateOrchestrator();
+
+            // Act
+            await orchestrator.OrchestrateAsync(envelopeId);
+
+            // Assert
+            Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
+            var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == "HandlerExecution").ToList();
+            Assert.That(handlerLogs, Has.Count.EqualTo(1), "Should execute email handler");
+        }
+
+        private BackgroundActionOrchestratorService CreateOrchestrator()
+        {
+            return new BackgroundActionOrchestratorService(
+                _serviceProvider,
+                _repository,
+                _unitOfWork,
+                _scheduler,
+                new FakeLogger());
+        }
+
+        private static CommandEnvelope CreateEnvelope<TCommand>(Guid envelopeId, TCommand command)
+            where TCommand : IActionCommand
+        {
+            return new CommandEnvelope
+            {
+                Id = envelopeId,
+                CorrelationId = Guid.NewGuid(),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(command),
+                CommandTypeFullName = typeof(TCommand).AssemblyQualifiedName!,
+                Status = ActionExecutionStatus.Pending
+            };
+        }
+
+        // Fake handlers for migrated commands (lightweight, no-op implementations)
+        private sealed class TrainingCompletedMainRecordHandlerFake : IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand>
+        {
+            public Task ExecuteAsync(LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand command, CancellationToken cancellationToken = default)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
+        private sealed class UserRegisteredHandlerFake : IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand>
+        {
+            public Task ExecuteAsync(LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand command, CancellationToken cancellationToken = default)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
+        private sealed class InvitationCreatedHandlerFake : IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand>
+        {
+            public Task ExecuteAsync(LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand command, CancellationToken cancellationToken = default)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
+        // Shared fakes from parent class
+        private sealed class FakeCommandEnvelopeRepository : ICommandEnvelopeRepository
+        {
+            private readonly Dictionary<Guid, CommandEnvelope> _envelopes = new();
+            public int UpdateCallCount { get; private set; }
+
+            public void AddEnvelope(CommandEnvelope envelope)
+            {
+                _envelopes[envelope.Id] = envelope;
+            }
+
+            public Task AddAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
+            {
+                _envelopes[envelope.Id] = envelope;
+                return Task.CompletedTask;
+            }
+
+            public Task<CommandEnvelope?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+            {
+                _envelopes.TryGetValue(id, out var envelope);
+                return Task.FromResult(envelope);
+            }
+
+            public Task<CommandEnvelope?> FindByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult(_envelopes.Values.FirstOrDefault(e => e.CorrelationId == correlationId));
+            }
+
+            public Task<List<CommandEnvelope>> GetPendingRetriesAsync(CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult(_envelopes.Values
+                    .Where(e => e.Status == ActionExecutionStatus.Failed && e.NextAttemptAt <= DateTimeOffset.UtcNow)
+                    .ToList());
+            }
+
+            public Task UpdateAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
+            {
+                UpdateCallCount++;
+                return Task.CompletedTask;
+            }
+
+            public Task<CommandEnvelope> AddOrGetExistingAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
+            {
+                var existing = _envelopes.Values.FirstOrDefault(e => e.CorrelationId == envelope.CorrelationId);
+                if (existing != null)
+                {
+                    return Task.FromResult(existing);
+                }
+
+                _envelopes[envelope.Id] = envelope;
+                return Task.FromResult(envelope);
+            }
+        }
+
+        private sealed class FakeUnitOfWork : IUnitOfWork
+        {
+            public int SaveCallCount { get; private set; }
+
+            public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+            {
+                SaveCallCount++;
+                return Task.FromResult(1);
+            }
+
+            public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        private sealed class FakeActionMessageScheduler : IActionMessageScheduler
+        {
+            public List<Guid> EnqueuedIds { get; } = new();
+
+            public void Enqueue(Guid actionMessageId)
+            {
+                EnqueuedIds.Add(actionMessageId);
+            }
+        }
+
+        private sealed class FakeLogger : ILogger<BackgroundActionOrchestratorService>
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+            public bool IsEnabled(LogLevel logLevel) => false;
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+        }
+    }
+
     private BackgroundActionOrchestratorService CreateOrchestrator()
     {
         return new BackgroundActionOrchestratorService(

@@ -219,3 +219,103 @@ public sealed class BackgroundActionRegistrationTests
 
     #endregion
 }
+/// <summary>
+/// Tests validating production handler registrations for migrated typed commands.
+/// Verifies ServiceProvider.AddBackgroundWorkerServices registers expected handlers.
+/// </summary>
+[TestFixture]
+public sealed class MigratedCommandHandlerRegistrationTests
+{
+    [Test]
+    public void ServiceProvider_RegistersUserRegisteredCommandHandler()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddBackgroundWorkerServices(isTesting: true);
+
+        // Act
+        var descriptor = services.FirstOrDefault(sd =>
+            sd.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand>) &&
+            sd.ImplementationType?.Name == "UserRegisteredCommandHandler");
+
+        // Assert
+        Assert.That(descriptor, Is.Not.Null, "UserRegisteredCommandHandler should be registered");
+        Assert.That(descriptor!.Lifetime, Is.EqualTo(ServiceLifetime.Scoped), "Handler should have Scoped lifetime");
+    }
+
+    [Test]
+    public void ServiceProvider_RegistersInvitationCreatedCommandHandler()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddBackgroundWorkerServices(isTesting: true);
+
+        // Act
+        var descriptor = services.FirstOrDefault(sd =>
+            sd.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand>) &&
+            sd.ImplementationType?.Name == "InvitationCreatedCommandHandler");
+
+        // Assert
+        Assert.That(descriptor, Is.Not.Null, "InvitationCreatedCommandHandler should be registered");
+        Assert.That(descriptor!.Lifetime, Is.EqualTo(ServiceLifetime.Scoped), "Handler should have Scoped lifetime");
+    }
+
+    [Test]
+    public void ServiceProvider_RegistersTrainingCompletedMainRecordCommandHandler()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddBackgroundWorkerServices(isTesting: true);
+
+        // Act
+        var descriptor = services.FirstOrDefault(sd =>
+            sd.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand>) &&
+            sd.ImplementationType?.Name == "TrainingCompletedMainRecordCommandHandler");
+
+        // Assert - Currently only main-record handler is registered
+        Assert.That(descriptor, Is.Not.Null, "TrainingCompletedMainRecordCommandHandler should be registered");
+        Assert.That(descriptor!.Lifetime, Is.EqualTo(ServiceLifetime.Scoped), "Handler should have Scoped lifetime");
+    }
+
+    [Test]
+    public void ServiceProvider_AllMigratedHandlersAreRegistered()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddBackgroundWorkerServices(isTesting: true);
+
+        // Act - Find service descriptors for all three migrated command types
+        var userRegisteredDescriptor = services.FirstOrDefault(sd =>
+            sd.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand>));
+        var invitationCreatedDescriptor = services.FirstOrDefault(sd =>
+            sd.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand>));
+        var trainingCompletedDescriptor = services.FirstOrDefault(sd =>
+            sd.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand>));
+
+        // Assert - All three migrated command types should have handlers
+        Assert.That(userRegisteredDescriptor, Is.Not.Null, "UserRegisteredCommand handler should be registered");
+        Assert.That(invitationCreatedDescriptor, Is.Not.Null, "InvitationCreatedCommand handler should be registered");
+        Assert.That(trainingCompletedDescriptor, Is.Not.Null, "TrainingCompletedCommand handler should be registered");
+    }
+
+    [Test]
+    public void ServiceProvider_HandlersHaveScopedLifetime()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddBackgroundWorkerServices(isTesting: true);
+
+        // Act - Get all handler descriptors
+        var handlerDescriptors = services.Where(sd =>
+            sd.ServiceType.IsGenericType &&
+            sd.ServiceType.GetGenericTypeDefinition() == typeof(IBackgroundAction<>) &&
+            (sd.ImplementationType?.Name.Contains("UserRegisteredCommandHandler") == true ||
+             sd.ImplementationType?.Name.Contains("InvitationCreatedCommandHandler") == true ||
+             sd.ImplementationType?.Name.Contains("TrainingCompletedMainRecordCommandHandler") == true)).ToList();
+
+        // Assert - All migrated handlers should have Scoped lifetime
+        Assert.That(handlerDescriptors, Is.Not.Empty, "Should find at least one migrated handler");
+        Assert.That(handlerDescriptors.All(d => d.Lifetime == ServiceLifetime.Scoped),
+            Is.True, "All migrated handlers should have Scoped lifetime");
+    }
+}

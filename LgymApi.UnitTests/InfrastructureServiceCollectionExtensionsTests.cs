@@ -1,7 +1,10 @@
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.BackgroundWorker.Actions;
 using LgymApi.Infrastructure;
+using LgymApi.Application;
 using LgymApi.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -227,6 +230,40 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
         using var provider = services.BuildServiceProvider();
         var orchestrator = provider.GetRequiredService<BackgroundActionOrchestratorService>();
         Assert.That(orchestrator, Is.Not.Null);
+    }
+
+    [Test]
+    public void AddBackgroundWorkerServices_RegistersTypedCommandHandlers()
+    {
+        var services = new ServiceCollection();
+        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+        });
+
+services.AddLogging();
+        services.AddApplicationServices();
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+        services.AddBackgroundWorkerServices(isTesting: true);
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+        services.AddBackgroundWorkerServices(isTesting: true);
+
+        using var provider = services.BuildServiceProvider();
+        
+        // Verify UserRegisteredCommand handlers are registered
+        var userRegisteredHandlers = provider.GetServices<IBackgroundAction<UserRegisteredCommand>>();
+        Assert.That(userRegisteredHandlers, Is.Not.Empty, "UserRegisteredCommand handlers should be registered");
+        Assert.That(userRegisteredHandlers.OfType<UserRegisteredCommandHandler>().Count(), Is.GreaterThan(0));
+        
+        // Verify InvitationCreatedCommand handlers are registered
+        var invitationHandlers = provider.GetServices<IBackgroundAction<InvitationCreatedCommand>>();
+        Assert.That(invitationHandlers, Is.Not.Empty, "InvitationCreatedCommand handlers should be registered");
+        Assert.That(invitationHandlers.OfType<InvitationCreatedCommandHandler>().Count(), Is.GreaterThan(0));
+        
+        // Verify TrainingCompletedCommand handlers are registered (main-record)
+        var trainingHandlers = provider.GetServices<IBackgroundAction<TrainingCompletedCommand>>();
+        Assert.That(trainingHandlers, Is.Not.Empty, "TrainingCompletedCommand handlers should be registered");
+        Assert.That(trainingHandlers.OfType<TrainingCompletedMainRecordCommandHandler>().Count(), Is.GreaterThan(0));
     }
 
     private static IConfiguration BuildEnabledEmailConfiguration()

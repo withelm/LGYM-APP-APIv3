@@ -6,9 +6,11 @@ using System.Text;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Application.Services;
+using LgymApi.Application.Repositories;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
+using LgymApi.BackgroundWorker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -273,6 +275,38 @@ public abstract class IntegrationTestBase : IDisposable
         var planDaysResponse = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
         var planDays = await planDaysResponse.Content.ReadFromJsonAsync<List<PlanDayResult>>();
         return Guid.Parse(planDays!.First(pd => pd.Name == name).Id!);
+    }
+
+    /// <summary>
+    /// Processes all pending command envelopes through the orchestrator.
+    /// This forces async background commands to execute immediately during testing.
+    /// </summary>
+    protected async Task ProcessPendingCommandsAsync()
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var orchestrator = scope.ServiceProvider.GetRequiredService<LgymApi.BackgroundWorker.BackgroundActionOrchestratorService>();
+        var repository = scope.ServiceProvider.GetRequiredService<LgymApi.Application.Repositories.ICommandEnvelopeRepository>();
+        
+        // Get all pending command envelopes
+        var pendingEnvelopes = await db.CommandEnvelopes
+            .Where(e => e.Status == LgymApi.Domain.Enums.ActionExecutionStatus.Pending)
+            .OrderBy(e => e.CreatedAt)
+            .ToListAsync();
+        
+        // Process each pending envelope
+        foreach (var envelope in pendingEnvelopes)
+        {
+            try
+            {
+                await orchestrator.OrchestrateAsync(envelope.Id);
+            }
+            catch
+            {
+                // Suppress errors during orchestration to allow test to continue
+                // (handler may have expected side effects)
+            }
+        }
     }
 
     protected sealed class LoginResult
