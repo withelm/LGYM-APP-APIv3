@@ -122,6 +122,39 @@ public sealed class BackgroundActionRegistrationTests
     }
 
     [Test]
+    public void ServiceProvider_RegistersTrainingCompletedCommand_WithTwoHandlers()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Register all handlers as ServiceProvider does
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand, LgymApi.BackgroundWorker.Actions.SendRegistrationEmailHandler>();
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand, LgymApi.BackgroundWorker.Actions.SendInvitationEmailHandler>();
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand, LgymApi.BackgroundWorker.Actions.TrainingCompletedEmailCommandHandler>();
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand, LgymApi.BackgroundWorker.Actions.UpdateTrainingMainRecordsHandler>();
+
+        // Act
+        var trainingDescriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand>))
+            .ToList();
+        var userDescriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand>))
+            .ToList();
+        var invitationDescriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand>))
+            .ToList();
+
+        // Assert - TrainingCompletedCommand has exactly 2 handlers
+        Assert.That(trainingDescriptors, Has.Count.EqualTo(2), "TrainingCompletedCommand must have exactly 2 handlers");
+        Assert.That(trainingDescriptors.Any(d => d.ImplementationType == typeof(LgymApi.BackgroundWorker.Actions.TrainingCompletedEmailCommandHandler)), Is.True, "Email handler must be registered");
+        Assert.That(trainingDescriptors.Any(d => d.ImplementationType == typeof(LgymApi.BackgroundWorker.Actions.UpdateTrainingMainRecordsHandler)), Is.True, "Main record handler must be registered");
+
+        // Assert - Other commands have exactly 1 handler each
+        Assert.That(userDescriptors, Has.Count.EqualTo(1), "UserRegisteredCommand must have exactly 1 handler");
+        Assert.That(invitationDescriptors, Has.Count.EqualTo(1), "InvitationCreatedCommand must have exactly 1 handler");
+    }
+
+    [Test]
     public void AddBackgroundAction_HandlersAreScoped_NewInstancePerScope()
     {
         // Arrange

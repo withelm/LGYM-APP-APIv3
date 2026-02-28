@@ -2,6 +2,7 @@ using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Repositories;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,7 @@ namespace LgymApi.UnitTests;
 public sealed class TrainingCompletedEmailCommandHandlerTests
 {
     private TestEmailScheduler _testScheduler = null!;
+    private TestEmailNotificationSubscriptionRepository _testSubscriptionRepository = null!;
     private TestLogger _testLogger = null!;
     private TrainingCompletedEmailCommandHandler _handler = null!;
 
@@ -18,8 +20,9 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public void SetUp()
     {
         _testScheduler = new TestEmailScheduler();
+        _testSubscriptionRepository = new TestEmailNotificationSubscriptionRepository();
         _testLogger = new TestLogger();
-        _handler = new TrainingCompletedEmailCommandHandler(_testScheduler, _testLogger);
+        _handler = new TrainingCompletedEmailCommandHandler(_testSubscriptionRepository, _testScheduler, _testLogger);
     }
 
     [Test]
@@ -192,8 +195,16 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new TrainingCompletedEmailCommandHandler(null!, _testLogger));
+            new TrainingCompletedEmailCommandHandler(_testSubscriptionRepository, null!, _testLogger));
         Assert.That(ex.ParamName, Is.EqualTo("emailScheduler"));
+    }
+
+    [Test]
+    public void Constructor_WithNullSubscriptionRepository_ThrowsArgumentNullException()
+    {
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new TrainingCompletedEmailCommandHandler(null!, _testScheduler, _testLogger));
+        Assert.That(ex.ParamName, Is.EqualTo("emailNotificationSubscriptionRepository"));
     }
 
     [Test]
@@ -201,7 +212,7 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new TrainingCompletedEmailCommandHandler(_testScheduler, null!));
+            new TrainingCompletedEmailCommandHandler(_testSubscriptionRepository, _testScheduler, null!));
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 
@@ -278,6 +289,16 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
             ScheduledPayloads.Add(payload);
             ReceivedToken = cancellationToken;
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class TestEmailNotificationSubscriptionRepository : IEmailNotificationSubscriptionRepository
+    {
+        public bool IsSubscribed { get; set; } = true;
+
+        public Task<bool> IsSubscribedAsync(Guid userId, string notificationType, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(IsSubscribed);
         }
     }
 

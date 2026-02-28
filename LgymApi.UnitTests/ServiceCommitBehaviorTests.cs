@@ -5,6 +5,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
@@ -85,7 +86,7 @@ public sealed class ServiceCommitBehaviorTests
         IRankService rankService = new RankService();
         IUserSessionCache userSessionCache = new NoOpUserSessionCache();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
-        IEmailScheduler<WelcomeEmailPayload> welcomeEmailScheduler = new NoOpWelcomeEmailScheduler();
+        ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
         var service = new UserService(
             userRepository,
@@ -95,7 +96,7 @@ public sealed class ServiceCommitBehaviorTests
             legacyPasswordService,
             rankService,
             userSessionCache,
-            welcomeEmailScheduler,
+            commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance);
 
@@ -223,6 +224,17 @@ public sealed class ServiceCommitBehaviorTests
         public Task ScheduleAsync(WelcomeEmailPayload payload, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpCommandDispatcher : ICommandDispatcher
+    {
+        public Task DispatchAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default) where TCommand : IActionCommand
+        {
+            return Task.CompletedTask;
+        }
+        public void Enqueue<TCommand>(TCommand command) where TCommand : IActionCommand
+        {
         }
     }
 }

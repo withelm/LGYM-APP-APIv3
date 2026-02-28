@@ -875,6 +875,8 @@ public sealed class TrainingTests : IntegrationTestBase
         });
         initialResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        await ProcessPendingCommandsAsync();
+
         var initialMaxResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
         initialMaxResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var initialMaxBody = await initialMaxResponse.Content.ReadFromJsonAsync<List<MainRecordBestResponse>>();
