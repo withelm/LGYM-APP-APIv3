@@ -1,8 +1,8 @@
 namespace LgymApi.BackgroundWorker.Common;
 
 /// <summary>
-/// Generic interface for background action handlers.
-/// Handlers must be strongly typed to process specific command types.
+/// Generic interface for strongly-typed background action handlers.
+/// Implementations are matched only to the exact command type argument.
 /// </summary>
 /// <typeparam name="TCommand">The command type this handler processes. Must implement IActionCommand.</typeparam>
 public interface IBackgroundAction<in TCommand>

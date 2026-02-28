@@ -2,7 +2,7 @@ namespace LgymApi.BackgroundWorker.Common;
 
 /// <summary>
 /// Marker interface for strongly-typed background action commands.
-/// All commands must implement this interface to ensure type safety.
+/// Commands are routed by exact CLR type, never by string event name.
 /// </summary>
 public interface IActionCommand
 {
