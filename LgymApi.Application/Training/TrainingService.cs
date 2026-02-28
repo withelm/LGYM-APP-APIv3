@@ -3,7 +3,8 @@ using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Application.Units;
-using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -30,7 +31,7 @@ public sealed class TrainingService : ITrainingService
     private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
     private readonly IPlanDayRepository _planDayRepository;
     private readonly IEmailNotificationSubscriptionRepository _emailNotificationSubscriptionRepository;
-    private readonly IEmailScheduler<TrainingCompletedEmailPayload> _trainingCompletedEmailScheduler;
+    private readonly ICommandDispatcher _commandDispatcher;
     private readonly IMainRecordRepository _mainRecordRepository;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
@@ -47,7 +48,7 @@ public sealed class TrainingService : ITrainingService
         ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
         IPlanDayRepository planDayRepository,
         IEmailNotificationSubscriptionRepository emailNotificationSubscriptionRepository,
-        IEmailScheduler<TrainingCompletedEmailPayload> trainingCompletedEmailScheduler,
+        ICommandDispatcher commandDispatcher,
         IMainRecordRepository mainRecordRepository,
         IEloRegistryRepository eloRepository,
         IRankService rankService,
@@ -63,7 +64,7 @@ public sealed class TrainingService : ITrainingService
         _trainingExerciseScoreRepository = trainingExerciseScoreRepository;
         _planDayRepository = planDayRepository;
         _emailNotificationSubscriptionRepository = emailNotificationSubscriptionRepository;
-        _trainingCompletedEmailScheduler = trainingCompletedEmailScheduler;
+        _commandDispatcher = commandDispatcher;
         _mainRecordRepository = mainRecordRepository;
         _eloRepository = eloRepository;
         _rankService = rankService;
@@ -181,7 +182,6 @@ public sealed class TrainingService : ITrainingService
                     await _trainingExerciseScoreRepository.AddRangeAsync(trainingScores, cancellationToken);
                 }
 
-                await SynchronizeMainRecordsAsync(user.Id, exercises, createdAtUtc, cancellationToken);
 
                 var eloEntry = await _eloRepository.GetLatestEntryAsync(user.Id, cancellationToken);
                 if (eloEntry == null)
@@ -209,14 +209,13 @@ public sealed class TrainingService : ITrainingService
 
                 await transaction.CommitAsync(cancellationToken);
 
-                await TryScheduleTrainingCompletedEmailAsync(
+                await DispatchTrainingCompletedCommandAsync(
                     user,
                     training,
                     createdAtUtc,
                     planDayId,
                     exercises,
-                    exerciseDetailsMap,
-                    cancellationToken);
+                    exerciseDetailsMap);
 
                 return new TrainingSummaryResult
                 {
@@ -244,149 +243,52 @@ public sealed class TrainingService : ITrainingService
         }
     }
 
-    private async Task SynchronizeMainRecordsAsync(Guid userId, IReadOnlyCollection<TrainingExerciseInput> exercises, DateTime createdAtUtc, CancellationToken cancellationToken)
-    {
-        var bestScoresByExercise = new Dictionary<Guid, TrainingExerciseInput>();
 
-        foreach (var score in exercises)
-        {
-            if (!Guid.TryParse(score.ExerciseId, out var exerciseId) || score.Unit == WeightUnits.Unknown)
-            {
-                continue;
-            }
-
-            if (!bestScoresByExercise.TryGetValue(exerciseId, out var currentBest))
-            {
-                bestScoresByExercise[exerciseId] = score;
-                continue;
-            }
-
-            if (CompareWeights(score.Weight, score.Unit, currentBest.Weight, currentBest.Unit) > 0)
-            {
-                bestScoresByExercise[exerciseId] = score;
-            }
-        }
-
-        if (bestScoresByExercise.Count == 0)
-        {
-            return;
-        }
-
-        var existingRecords = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, bestScoresByExercise.Keys.ToList(), cancellationToken);
-        var existingRecordsByExercise = existingRecords
-            .GroupBy(r => r.ExerciseId)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        var recordDate = new DateTimeOffset(createdAtUtc);
-
-        foreach (var (exerciseId, bestScore) in bestScoresByExercise)
-        {
-            existingRecordsByExercise.TryGetValue(exerciseId, out var records);
-            records ??= new List<MainRecordEntity>();
-
-            var comparableRecords = records
-                .Where(r => r.Unit != WeightUnits.Unknown)
-                .ToList();
-
-            if (comparableRecords.Count == 0)
-            {
-                await _mainRecordRepository.AddAsync(new MainRecordEntity
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    ExerciseId = exerciseId,
-                    Weight = bestScore.Weight,
-                    Unit = bestScore.Unit,
-                    Date = recordDate
-                }, cancellationToken);
-                continue;
-            }
-
-            var currentBestRecord = comparableRecords[0];
-            foreach (var candidateRecord in comparableRecords.Skip(1))
-            {
-                if (CompareWeights(candidateRecord.Weight, candidateRecord.Unit, currentBestRecord.Weight, currentBestRecord.Unit) > 0)
-                {
-                    currentBestRecord = candidateRecord;
-                }
-            }
-
-            var comparison = CompareWeights(bestScore.Weight, bestScore.Unit, currentBestRecord.Weight, currentBestRecord.Unit);
-            if (comparison > 0)
-            {
-                await _mainRecordRepository.AddAsync(new MainRecordEntity
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    ExerciseId = exerciseId,
-                    Weight = bestScore.Weight,
-                    Unit = bestScore.Unit,
-                    Date = recordDate
-                }, cancellationToken);
-            }
-        }
-    }
-
-    private async Task TryScheduleTrainingCompletedEmailAsync(
+    private async Task DispatchTrainingCompletedCommandAsync(
         UserEntity user,
         TrainingEntity training,
         DateTime createdAtUtc,
         Guid planDayId,
         IReadOnlyCollection<TrainingExerciseInput> exercises,
-        IReadOnlyDictionary<Guid, string> exerciseDetailsMap,
-        CancellationToken cancellationToken)
+        IReadOnlyDictionary<Guid, string> exerciseDetailsMap)
     {
+        // Email checks will be performed by email handler
         if (string.IsNullOrWhiteSpace(user.Email))
         {
             UserEmailMissingLog(_logger, user.Id, null);
-            return;
         }
 
-        var isSubscribed = await _emailNotificationSubscriptionRepository.IsSubscribedAsync(
-            user.Id,
-            EmailNotificationTypes.TrainingCompleted.Value,
-            cancellationToken);
-        if (!isSubscribed)
-        {
-            return;
-        }
-
-        var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
-        var planDayName = planDay?.Name ?? string.Empty;
         var cultureName = string.IsNullOrWhiteSpace(user.PreferredLanguage) ? "en-US" : user.PreferredLanguage;
 
-        try
+        var planDay = await _planDayRepository.FindByIdAsync(planDayId, CancellationToken.None);
+
+        var command = new TrainingCompletedCommand
         {
-            var payload = new TrainingCompletedEmailPayload
-            {
-                UserId = user.Id,
-                TrainingId = training.Id,
-                RecipientEmail = user.Email,
-                CultureName = cultureName,
-                PlanDayName = planDayName,
-                TrainingDate = new DateTimeOffset(createdAtUtc),
-                Exercises = exercises
-                    .Where(e => Guid.TryParse(e.ExerciseId, out _))
-                    .Select(e => new TrainingExerciseSummary
+            UserId = user.Id,
+            TrainingId = training.Id,
+            RecipientEmail = user.Email ?? string.Empty,
+            CultureName = cultureName,
+            PlanDayName = planDay?.Name ?? string.Empty,
+            TrainingDate = new DateTimeOffset(createdAtUtc),
+            Exercises = exercises
+                .Where(e => Guid.TryParse(e.ExerciseId, out _))
+                .Select(e =>
+                {
+                    var parsedId = Guid.Parse(e.ExerciseId);
+                    return new TrainingExerciseSummary
                     {
+                        ExerciseId = e.ExerciseId,
                         ExerciseName = ResolveExerciseName(e.ExerciseId, exerciseDetailsMap),
                         Series = e.Series,
                         Reps = e.Reps,
                         Weight = e.Weight,
                         Unit = e.Unit
-                    })
-                    .ToList()
-            };
+                    };
+                })
+                .ToList()
+        };
 
-            await _trainingCompletedEmailScheduler.ScheduleAsync(payload, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Failed to schedule training completed email for training {TrainingId}.",
-                training.Id);
-        }
+        _commandDispatcher.Enqueue(command);
     }
 
     private static string ResolveExerciseName(string exerciseId, IReadOnlyDictionary<Guid, string> exerciseDetailsMap)
