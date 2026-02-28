@@ -66,6 +66,17 @@ public sealed class OutboxRepository : IOutboxRepository
             cancellationToken);
     }
 
+    public async Task<IReadOnlyList<OutboxDelivery>> GetDispatchableDeliveriesAsync(int batchSize, DateTimeOffset now, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.OutboxDeliveries
+            .Where(x => !x.IsDeleted
+                        && x.Status == OutboxDeliveryStatus.Pending
+                        && (x.NextAttemptAt == null || x.NextAttemptAt <= now))
+            .OrderBy(x => x.CreatedAt)
+            .Take(batchSize)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> TryMarkDeliveryProcessingAsync(Guid deliveryId, DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.OutboxDeliveries.FirstOrDefaultAsync(

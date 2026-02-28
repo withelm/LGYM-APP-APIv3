@@ -52,7 +52,7 @@ public sealed class OutboxPipelineTests
             Assert.That(savedMessage!.Status, Is.EqualTo(OutboxMessageStatus.Processed));
             Assert.That(delivery, Is.Not.Null);
             Assert.That(delivery!.Status, Is.EqualTo(OutboxDeliveryStatus.Pending));
-            Assert.That(scheduler.EnqueuedIds, Has.Count.EqualTo(1));
+            Assert.That(scheduler.EnqueuedIds, Contains.Item(delivery.Id));
         });
     }
 
@@ -147,6 +147,48 @@ public sealed class OutboxPipelineTests
             Assert.That(savedDelivery.LastError, Does.StartWith("InvalidOperationException"));
             Assert.That(savedDelivery.Attempts, Is.EqualTo(1));
         });
+    }
+
+    [Test]
+    public async Task Dispatcher_WhenPendingDeliveryIsDue_EnqueuesDelivery()
+    {
+        await using var dbContext = CreateDbContext();
+        var repository = new OutboxRepository(dbContext);
+        var unitOfWork = new EfUnitOfWork(dbContext);
+        var scheduler = new FakeDeliveryScheduler();
+
+        var message = new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            EventType = "event.due",
+            PayloadJson = "{}",
+            CorrelationId = Guid.NewGuid(),
+            Status = OutboxMessageStatus.Processed
+        };
+
+        var delivery = new OutboxDelivery
+        {
+            Id = Guid.NewGuid(),
+            EventId = message.Id,
+            HandlerName = "handler.due",
+            Status = OutboxDeliveryStatus.Pending,
+            NextAttemptAt = DateTimeOffset.UtcNow.AddMinutes(-1)
+        };
+
+        await repository.AddMessageAsync(message);
+        await repository.AddDeliveryAsync(delivery);
+        await unitOfWork.SaveChangesAsync();
+
+        var dispatcher = new OutboxDispatcherService(
+            repository,
+            scheduler,
+            unitOfWork,
+            [new PassThroughHandler("event.due", "handler.due")],
+            NullLogger<OutboxDispatcherService>.Instance);
+
+        await dispatcher.DispatchPendingAsync();
+
+        Assert.That(scheduler.EnqueuedIds, Contains.Item(delivery.Id));
     }
 
     private static AppDbContext CreateDbContext()

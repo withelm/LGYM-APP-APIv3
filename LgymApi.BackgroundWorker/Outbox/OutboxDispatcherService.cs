@@ -88,6 +88,12 @@ public sealed class OutboxDispatcherService : IOutboxDispatcher
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
+
+        var deliveries = await _outboxRepository.GetDispatchableDeliveriesAsync(DefaultBatchSize, now, cancellationToken);
+        foreach (var delivery in deliveries)
+        {
+            _deliveryScheduler.Enqueue(delivery.Id);
+        }
     }
 
     private static TimeSpan ComputeBackoff(int attempts)

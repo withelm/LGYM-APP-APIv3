@@ -25,7 +25,6 @@ public sealed class WelcomeEmailServicesTests
 
         var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             outboxPublisher,
             new EnabledFeature(),
@@ -45,6 +44,7 @@ public sealed class WelcomeEmailServicesTests
             Assert.That(repository.Added, Has.Count.EqualTo(1));
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(outboxPublisher.PublishedCount, Is.EqualTo(1));
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -72,7 +72,6 @@ public sealed class WelcomeEmailServicesTests
 
         var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             outboxPublisher,
             new EnabledFeature(),
@@ -91,6 +90,7 @@ public sealed class WelcomeEmailServicesTests
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
             Assert.That(repository.Added, Is.Empty);
+            Assert.That(outboxPublisher.PublishedCount, Is.EqualTo(0));
             Assert.That(metrics.Enqueued, Is.EqualTo(0));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -107,7 +107,6 @@ public sealed class WelcomeEmailServicesTests
 
         var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             outboxPublisher,
             new DisabledFeature(),
@@ -127,6 +126,7 @@ public sealed class WelcomeEmailServicesTests
             Assert.That(repository.Added, Is.Empty);
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(outboxPublisher.PublishedCount, Is.EqualTo(0));
             Assert.That(metrics.Enqueued, Is.EqualTo(0));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -156,7 +156,6 @@ public sealed class WelcomeEmailServicesTests
 
         var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             outboxPublisher,
             new EnabledFeature(),
@@ -174,6 +173,7 @@ public sealed class WelcomeEmailServicesTests
         Assert.Multiple(() =>
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(outboxPublisher.PublishedCount, Is.EqualTo(1));
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -250,6 +250,51 @@ public sealed class WelcomeEmailServicesTests
             Assert.That(metrics.Sent, Is.EqualTo(0));
             Assert.That(metrics.Failed, Is.EqualTo(0));
             Assert.That(metrics.Retried, Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public async Task Scheduler_WhenExistingFailedBelowLimit_RepublishesOutbox()
+    {
+        var existing = new NotificationMessage
+        {
+            Id = Guid.NewGuid(),
+            Status = EmailNotificationStatus.Failed,
+            Attempts = 2,
+            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.Welcome,
+            CorrelationId = Guid.NewGuid(),
+            Recipient = "alex@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository { ExistingByCorrelation = existing };
+        var scheduler = new FakeBackgroundScheduler();
+        var unitOfWork = new FakeUnitOfWork();
+        var outboxPublisher = new FakeOutboxPublisher();
+        var metrics = new FakeEmailMetrics();
+
+        var service = new EmailSchedulerService<WelcomeEmailPayload>(
+            repository,
+            unitOfWork,
+            outboxPublisher,
+            new EnabledFeature(),
+            metrics,
+            NullLogger<EmailSchedulerService<WelcomeEmailPayload>>.Instance);
+
+        await service.ScheduleAsync(new WelcomeEmailPayload
+        {
+            UserId = existing.CorrelationId,
+            UserName = "Alex",
+            RecipientEmail = existing.Recipient,
+            CultureName = "en-US"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(outboxPublisher.PublishedCount, Is.EqualTo(1));
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(metrics.Retried, Is.EqualTo(1));
         });
     }
 
@@ -379,8 +424,11 @@ public sealed class WelcomeEmailServicesTests
 
     private sealed class FakeOutboxPublisher : ITransactionalOutboxPublisher
     {
+        public int PublishedCount { get; private set; }
+
         public Task<Guid> PublishAsync(Application.Notifications.Models.OutboxEventEnvelope envelope, CancellationToken cancellationToken = default)
         {
+            PublishedCount += 1;
             return Task.FromResult(Guid.NewGuid());
         }
     }

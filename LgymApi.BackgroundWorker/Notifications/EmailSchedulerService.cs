@@ -1,5 +1,4 @@
 using System.Text.Json;
-using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Notifications;
@@ -18,7 +17,6 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
     private const int MaxManualRequeueAttempts = 5;
 
     private readonly IEmailNotificationLogRepository _notificationLogRepository;
-    private readonly IEmailBackgroundScheduler _backgroundScheduler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITransactionalOutboxPublisher _outboxPublisher;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
@@ -27,7 +25,6 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
 
     public EmailSchedulerService(
         IEmailNotificationLogRepository notificationLogRepository,
-        IEmailBackgroundScheduler backgroundScheduler,
         IUnitOfWork unitOfWork,
         ITransactionalOutboxPublisher outboxPublisher,
         IEmailNotificationsFeature emailNotificationsFeature,
@@ -35,7 +32,6 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
         ILogger<EmailSchedulerService<TPayload>> logger)
     {
         _notificationLogRepository = notificationLogRepository;
-        _backgroundScheduler = backgroundScheduler;
         _unitOfWork = unitOfWork;
         _outboxPublisher = outboxPublisher;
         _emailNotificationsFeature = emailNotificationsFeature;
@@ -58,7 +54,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
 
         if (existing != null)
         {
-            HandleExistingNotification(payload, existing);
+            await HandleExistingNotificationAsync(payload, existing, cancellationToken);
             return;
         }
 
@@ -99,7 +95,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
         return false;
     }
 
-    private void HandleExistingNotification(TPayload payload, NotificationMessage existing)
+    private async Task HandleExistingNotificationAsync(TPayload payload, NotificationMessage existing, CancellationToken cancellationToken)
     {
         if (existing.Status != EmailNotificationStatus.Failed)
         {
@@ -119,11 +115,27 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
+        await PublishOutboxForNotificationAsync(existing, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
         _metrics.RecordRetried(payload.NotificationType);
         _logger.LogInformation(
-            "Skipped duplicate enqueue for failed email notification {NotificationId}; outbox dispatch will handle retries (attempts: {Attempts}).",
+            "Republished outbox event for failed email notification {NotificationId} (attempts: {Attempts}).",
             existing.Id,
             existing.Attempts);
+    }
+
+    private Task<Guid> PublishOutboxForNotificationAsync(NotificationMessage message, CancellationToken cancellationToken)
+    {
+        return _outboxPublisher.PublishAsync(
+            new OutboxEventEnvelope(
+                OutboxEventTypes.EmailNotificationScheduled,
+                JsonSerializer.Serialize(new EmailNotificationScheduledEvent(
+                    message.Id,
+                    message.CorrelationId,
+                    message.Recipient,
+                    message.Type.Value)),
+                message.CorrelationId),
+            cancellationToken);
     }
 
     private async Task<bool> TryPersistNotificationAsync(
@@ -134,16 +146,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
         try
         {
             await _notificationLogRepository.AddAsync(message, cancellationToken);
-            await _outboxPublisher.PublishAsync(
-                new OutboxEventEnvelope(
-                    OutboxEventTypes.EmailNotificationScheduled,
-                    JsonSerializer.Serialize(new EmailNotificationScheduledEvent(
-                        message.Id,
-                        message.CorrelationId,
-                        message.Recipient,
-                        message.Type.Value)),
-                    message.CorrelationId),
-                cancellationToken);
+            await PublishOutboxForNotificationAsync(message, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return true;
         }

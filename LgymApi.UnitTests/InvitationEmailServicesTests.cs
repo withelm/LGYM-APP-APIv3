@@ -25,7 +25,6 @@ public sealed class InvitationEmailServicesTests
 
         var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             outboxPublisher,
             new EnabledFeature(),
@@ -47,6 +46,7 @@ public sealed class InvitationEmailServicesTests
             Assert.That(repository.Added, Has.Count.EqualTo(1));
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(outboxPublisher.PublishedCount, Is.EqualTo(1));
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -74,7 +74,6 @@ public sealed class InvitationEmailServicesTests
 
         var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             outboxPublisher,
             new EnabledFeature(),
@@ -95,6 +94,7 @@ public sealed class InvitationEmailServicesTests
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
             Assert.That(repository.Added, Is.Empty);
+            Assert.That(outboxPublisher.PublishedCount, Is.EqualTo(0));
             Assert.That(metrics.Enqueued, Is.EqualTo(0));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -111,7 +111,6 @@ public sealed class InvitationEmailServicesTests
 
         var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             outboxPublisher,
             new DisabledFeature(),
@@ -133,6 +132,7 @@ public sealed class InvitationEmailServicesTests
             Assert.That(repository.Added, Is.Empty);
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(outboxPublisher.PublishedCount, Is.EqualTo(0));
             Assert.That(metrics.Enqueued, Is.EqualTo(0));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -162,7 +162,6 @@ public sealed class InvitationEmailServicesTests
 
         var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             outboxPublisher,
             new EnabledFeature(),
@@ -182,6 +181,7 @@ public sealed class InvitationEmailServicesTests
         Assert.Multiple(() =>
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+            Assert.That(outboxPublisher.PublishedCount, Is.EqualTo(1));
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -392,8 +392,11 @@ public sealed class InvitationEmailServicesTests
 
     private sealed class FakeOutboxPublisher : ITransactionalOutboxPublisher
     {
+        public int PublishedCount { get; private set; }
+
         public Task<Guid> PublishAsync(Application.Notifications.Models.OutboxEventEnvelope envelope, CancellationToken cancellationToken = default)
         {
+            PublishedCount += 1;
             return Task.FromResult(Guid.NewGuid());
         }
     }
