@@ -50,7 +50,10 @@ public static class ServiceProvider
         services.AddScoped<BackgroundActionOrchestratorService>();
 
         // Register typed background action handlers
+        services.AddBackgroundAction<UserRegisteredCommand, SendRegistrationEmailHandler>();
+        services.AddBackgroundAction<InvitationCreatedCommand, SendInvitationEmailHandler>();
         services.AddBackgroundAction<TrainingCompletedCommand, TrainingCompletedEmailCommandHandler>();
+        services.AddBackgroundAction<TrainingCompletedCommand, UpdateTrainingMainRecordsHandler>();
 
 
         return services;

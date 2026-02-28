@@ -1,3 +1,4 @@
+using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
@@ -12,13 +13,16 @@ namespace LgymApi.BackgroundWorker.Actions;
 /// </summary>
 public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<TrainingCompletedCommand>
 {
+    private readonly IEmailNotificationSubscriptionRepository _emailNotificationSubscriptionRepository;
     private readonly IEmailScheduler<TrainingCompletedEmailPayload> _emailScheduler;
     private readonly ILogger<TrainingCompletedEmailCommandHandler> _logger;
 
     public TrainingCompletedEmailCommandHandler(
+        IEmailNotificationSubscriptionRepository emailNotificationSubscriptionRepository,
         IEmailScheduler<TrainingCompletedEmailPayload> emailScheduler,
         ILogger<TrainingCompletedEmailCommandHandler> logger)
     {
+        _emailNotificationSubscriptionRepository = emailNotificationSubscriptionRepository ?? throw new ArgumentNullException(nameof(emailNotificationSubscriptionRepository));
         _emailScheduler = emailScheduler ?? throw new ArgumentNullException(nameof(emailScheduler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -31,6 +35,20 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
             _logger.LogWarning(
                 "Training completed email skipped for Training {TrainingId} - no recipient email provided",
                 command.TrainingId);
+            return;
+        }
+
+        var isSubscribed = await _emailNotificationSubscriptionRepository.IsSubscribedAsync(
+            command.UserId,
+            EmailNotificationTypes.TrainingCompleted.Value,
+            cancellationToken);
+
+        if (!isSubscribed)
+        {
+            _logger.LogInformation(
+                "Training completed email skipped for Training {TrainingId} - subscription is disabled for user {UserId}",
+                command.TrainingId,
+                command.UserId);
             return;
         }
 
