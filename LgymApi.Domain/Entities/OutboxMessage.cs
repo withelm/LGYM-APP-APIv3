@@ -1,10 +1,12 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 
 namespace LgymApi.Domain.Entities;
 
-public sealed class OutboxMessage : EntityBase
+public abstract class OutboxMessage<TType> : EntityBase
+    where TType : notnull
 {
-    public string EventType { get; set; } = string.Empty;
+    public TType Type { get; set; } = default!;
     public string PayloadJson { get; set; } = string.Empty;
     public Guid CorrelationId { get; set; }
     public OutboxMessageStatus Status { get; set; } = OutboxMessageStatus.Pending;
@@ -13,4 +15,8 @@ public sealed class OutboxMessage : EntityBase
     public DateTimeOffset? ProcessedAt { get; set; }
     public string? LastError { get; set; }
     public ICollection<OutboxDelivery> Deliveries { get; set; } = new List<OutboxDelivery>();
+}
+
+public sealed class OutboxMessage : OutboxMessage<OutboxEventType>
+{
 }

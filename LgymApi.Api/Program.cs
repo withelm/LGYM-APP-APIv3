@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Localization;
 using LgymApi.Api.Middleware;
 using LgymApi.Domain.Security;
 using Hangfire;
-using LgymApi.BackgroundWorker.Common.Outbox;
 using LgymApi.Api.Serialization;
 
 const string TestingEnvironment = "Testing";
@@ -197,10 +196,7 @@ if (!app.Environment.IsEnvironment(TestingEnvironment))
         Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
     });
 
-    RecurringJob.AddOrUpdate<IOutboxDispatcherJob>(
-        "outbox-dispatcher",
-        job => job.ExecuteAsync(CancellationToken.None),
-        Cron.Minutely());
+    RecurringJobsRegistration.RegisterOutboxDispatcher();
 }
 
 app.UseRequestLocalization(localizationOptions);

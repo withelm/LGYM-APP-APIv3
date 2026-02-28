@@ -1,6 +1,5 @@
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
+using LgymApi.BackgroundWorker.Common.Outbox;
 using LgymApi.Domain.Entities;
 
 namespace LgymApi.Infrastructure.Services;
@@ -19,7 +18,7 @@ public sealed class TransactionalOutboxPublisher : ITransactionalOutboxPublisher
         var message = new OutboxMessage
         {
             Id = Guid.NewGuid(),
-            EventType = envelope.EventType,
+            Type = envelope.EventType,
             PayloadJson = envelope.PayloadJson,
             CorrelationId = envelope.CorrelationId,
             NextAttemptAt = envelope.NextAttemptAt
@@ -27,5 +26,17 @@ public sealed class TransactionalOutboxPublisher : ITransactionalOutboxPublisher
 
         await _outboxRepository.AddMessageAsync(message, cancellationToken);
         return message.Id;
+    }
+
+    public Task<Guid> PublishAsync<TPayload>(
+        OutboxEventDefinition<TPayload> eventDefinition,
+        TPayload payload,
+        Guid correlationId,
+        DateTimeOffset? nextAttemptAt = null,
+        CancellationToken cancellationToken = default)
+    {
+        return PublishAsync(
+            OutboxEventEnvelope.From(eventDefinition, payload, correlationId, nextAttemptAt),
+            cancellationToken);
     }
 }

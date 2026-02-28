@@ -1,6 +1,6 @@
 using Hangfire;
 using Hangfire.PostgreSql;
-using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Common.Outbox;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Data;

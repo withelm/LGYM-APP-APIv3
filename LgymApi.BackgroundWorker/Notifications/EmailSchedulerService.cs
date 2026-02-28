@@ -1,8 +1,7 @@
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Outbox;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -127,14 +126,14 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
     private Task<Guid> PublishOutboxForNotificationAsync(NotificationMessage message, CancellationToken cancellationToken)
     {
         return _outboxPublisher.PublishAsync(
-            new OutboxEventEnvelope(
-                OutboxEventTypes.EmailNotificationScheduled,
-                JsonSerializer.Serialize(new EmailNotificationScheduledEvent(
-                    message.Id,
-                    message.CorrelationId,
-                    message.Recipient,
-                    message.Type.Value)),
-                message.CorrelationId),
+            LgymApi.BackgroundWorker.Common.Outbox.OutboxEventTypes.EmailNotificationScheduled,
+            new EmailNotificationScheduledEvent(
+                message.Id,
+                message.CorrelationId,
+                message.Recipient,
+                message.Type.Value),
+            message.CorrelationId,
+            null,
             cancellationToken);
     }
 

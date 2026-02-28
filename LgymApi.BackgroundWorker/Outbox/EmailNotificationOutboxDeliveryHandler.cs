@@ -1,6 +1,3 @@
-using System.Text.Json;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Outbox;
 
@@ -10,11 +7,6 @@ public sealed class EmailNotificationOutboxDeliveryHandler : IOutboxDeliveryHand
 {
     public const string Name = "email.notification.enqueue";
 
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     private readonly IEmailBackgroundScheduler _emailBackgroundScheduler;
 
     public EmailNotificationOutboxDeliveryHandler(IEmailBackgroundScheduler emailBackgroundScheduler)
@@ -22,12 +14,12 @@ public sealed class EmailNotificationOutboxDeliveryHandler : IOutboxDeliveryHand
         _emailBackgroundScheduler = emailBackgroundScheduler;
     }
 
-    public string EventType => OutboxEventTypes.EmailNotificationScheduled;
+    public OutboxEventDefinition EventDefinition => OutboxEventTypes.EmailNotificationScheduled;
     public string HandlerName => Name;
 
     public Task HandleAsync(Guid eventId, Guid correlationId, string payloadJson, CancellationToken cancellationToken = default)
     {
-        var payload = JsonSerializer.Deserialize<EmailNotificationScheduledEvent>(payloadJson, SerializerOptions);
+        var payload = OutboxEventTypes.EmailNotificationScheduled.Deserialize(payloadJson);
         if (payload == null || payload.NotificationId == Guid.Empty)
         {
             throw new InvalidOperationException($"Invalid payload for outbox event {eventId}.");

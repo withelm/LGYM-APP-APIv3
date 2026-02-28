@@ -1,4 +1,4 @@
-namespace LgymApi.Application.Notifications.Models;
+namespace LgymApi.BackgroundWorker.Common.Outbox;
 
 public sealed record EmailNotificationScheduledEvent(
     Guid NotificationId,

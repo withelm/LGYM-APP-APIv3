@@ -3,6 +3,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Outbox;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.UnitOfWork;
@@ -25,7 +26,7 @@ public sealed class OutboxPipelineTests
         var message = new OutboxMessage
         {
             Id = Guid.NewGuid(),
-            EventType = "event.test",
+            Type = OutboxEventType.Define("event.test"),
             PayloadJson = "{}",
             CorrelationId = Guid.NewGuid(),
             Status = OutboxMessageStatus.Pending
@@ -66,7 +67,7 @@ public sealed class OutboxPipelineTests
         var message = new OutboxMessage
         {
             Id = Guid.NewGuid(),
-            EventType = "event.success",
+            Type = OutboxEventType.Define("event.success"),
             PayloadJson = "{}",
             CorrelationId = Guid.NewGuid(),
             Status = OutboxMessageStatus.Processed
@@ -112,7 +113,7 @@ public sealed class OutboxPipelineTests
         var message = new OutboxMessage
         {
             Id = Guid.NewGuid(),
-            EventType = "event.fail",
+            Type = OutboxEventType.Define("event.fail"),
             PayloadJson = "{}",
             CorrelationId = Guid.NewGuid(),
             Status = OutboxMessageStatus.Processed
@@ -160,7 +161,7 @@ public sealed class OutboxPipelineTests
         var message = new OutboxMessage
         {
             Id = Guid.NewGuid(),
-            EventType = "event.due",
+            Type = OutboxEventType.Define("event.due"),
             PayloadJson = "{}",
             CorrelationId = Guid.NewGuid(),
             Status = OutboxMessageStatus.Processed
@@ -213,11 +214,11 @@ public sealed class OutboxPipelineTests
     {
         public PassThroughHandler(string eventType, string handlerName)
         {
-            EventType = eventType;
+            EventDefinition = new OutboxEventDefinition<object>(OutboxEventType.Define(eventType));
             HandlerName = handlerName;
         }
 
-        public string EventType { get; }
+        public OutboxEventDefinition EventDefinition { get; }
         public string HandlerName { get; }
 
         public Task HandleAsync(Guid eventId, Guid correlationId, string payloadJson, CancellationToken cancellationToken = default)
@@ -230,11 +231,11 @@ public sealed class OutboxPipelineTests
     {
         public ThrowingHandler(string eventType, string handlerName)
         {
-            EventType = eventType;
+            EventDefinition = new OutboxEventDefinition<object>(OutboxEventType.Define(eventType));
             HandlerName = handlerName;
         }
 
-        public string EventType { get; }
+        public OutboxEventDefinition EventDefinition { get; }
         public string HandlerName { get; }
 
         public Task HandleAsync(Guid eventId, Guid correlationId, string payloadJson, CancellationToken cancellationToken = default)

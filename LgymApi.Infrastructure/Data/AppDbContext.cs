@@ -367,7 +367,13 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<OutboxMessage>(entity =>
         {
             entity.ToTable("OutboxMessages");
-            entity.Property(e => e.EventType).HasMaxLength(300).IsRequired();
+            entity.Property(e => e.Type)
+                .HasColumnName("EventType")
+                .HasConversion(
+                    outboxEventType => outboxEventType.Value,
+                    value => OutboxEventType.Parse(value))
+                .HasMaxLength(300)
+                .IsRequired();
             entity.Property(e => e.PayloadJson).IsRequired();
             entity.Property(e => e.Status).HasConversion<string>();
             entity.HasIndex(e => new { e.Status, e.NextAttemptAt, e.CreatedAt });

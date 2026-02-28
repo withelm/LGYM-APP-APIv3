@@ -52,7 +52,9 @@ public sealed class OutboxDispatcherService : IOutboxDispatcher
 
             try
             {
-                var handlers = _handlers.Where(x => string.Equals(x.EventType, message.EventType, StringComparison.Ordinal)).ToList();
+                var handlers = _handlers
+                    .Where(x => x.EventDefinition.EventType == message.Type)
+                    .ToList();
                 foreach (var handler in handlers)
                 {
                     var existing = await _outboxRepository.FindDeliveryAsync(message.Id, handler.HandlerName, cancellationToken);

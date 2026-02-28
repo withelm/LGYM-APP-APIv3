@@ -1,7 +1,7 @@
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Outbox;
 using LgymApi.BackgroundWorker.Notifications;
-using LgymApi.Application.Notifications;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
@@ -394,7 +394,18 @@ public sealed class InvitationEmailServicesTests
     {
         public int PublishedCount { get; private set; }
 
-        public Task<Guid> PublishAsync(Application.Notifications.Models.OutboxEventEnvelope envelope, CancellationToken cancellationToken = default)
+        public Task<Guid> PublishAsync(OutboxEventEnvelope envelope, CancellationToken cancellationToken = default)
+        {
+            PublishedCount += 1;
+            return Task.FromResult(Guid.NewGuid());
+        }
+
+        public Task<Guid> PublishAsync<TPayload>(
+            OutboxEventDefinition<TPayload> eventDefinition,
+            TPayload payload,
+            Guid correlationId,
+            DateTimeOffset? nextAttemptAt = null,
+            CancellationToken cancellationToken = default)
         {
             PublishedCount += 1;
             return Task.FromResult(Guid.NewGuid());

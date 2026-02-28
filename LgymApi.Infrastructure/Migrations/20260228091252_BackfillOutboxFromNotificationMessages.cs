@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using LgymApi.BackgroundWorker.Common.Outbox;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,7 +8,7 @@ namespace LgymApi.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class BackfillOutboxFromNotificationMessages : Migration
     {
-        private const string EmailNotificationScheduledEventType = "email.notification.scheduled";
+        private static readonly string EmailNotificationScheduledEventType = OutboxEventTypes.EmailNotificationScheduled.EventTypeValue;
 
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
