@@ -43,6 +43,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<SupplementPlan> SupplementPlans => Set<SupplementPlan>();
     public DbSet<SupplementPlanItem> SupplementPlanItems => Set<SupplementPlanItem>();
     public DbSet<SupplementIntakeLog> SupplementIntakeLogs => Set<SupplementIntakeLog>();
+    public DbSet<CommandEnvelope> CommandEnvelopes => Set<CommandEnvelope>();
+    public DbSet<ExecutionLog> ExecutionLogs => Set<ExecutionLog>();
 
     public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
@@ -483,6 +485,45 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.PlanItemId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CommandEnvelope>(entity =>
+        {
+            entity.ToTable("CommandEnvelopes");
+            entity.Property(e => e.PayloadJson).IsRequired();
+            entity.Property(e => e.CommandTypeFullName).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            // Idempotency index: (CorrelationId, Status) for checking duplicates
+            entity.HasIndex(e => new { e.CorrelationId, e.Status })
+                .HasFilter("\"IsDeleted\" = FALSE");
+            // Work retrieval index: (Status, NextAttemptAt) for pending retries
+            entity.HasIndex(e => new { e.Status, e.NextAttemptAt })
+                .HasFilter("\"IsDeleted\" = FALSE");
+            // Correlation lookup for tracing
+            entity.HasIndex(e => e.CorrelationId)
+                .HasFilter("\"IsDeleted\" = FALSE");
+            // One-to-many relationship with ExecutionLog
+            entity.HasMany(e => e.ExecutionLogs)
+                .WithOne(l => l.CommandEnvelope)
+                .HasForeignKey(l => l.CommandEnvelopeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExecutionLog>(entity =>
+        {
+            entity.ToTable("ExecutionLogs");
+            entity.Property(e => e.ActionType).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            // Index for finding execution history by envelope and status
+            entity.HasIndex(e => new { e.CommandEnvelopeId, e.Status })
+                .HasFilter("\"IsDeleted\" = FALSE");
+            // Index for finding logs by action type (supports filtering by operation kind)
+            entity.HasIndex(e => new { e.CommandEnvelopeId, e.ActionType })
+                .HasFilter("\"IsDeleted\" = FALSE");
+            // Timestamp index for retrieving recent logs efficiently
+            entity.HasIndex(e => e.CreatedAt)
+                .HasFilter("\"IsDeleted\" = FALSE");
+            // Foreign key is configured by CommandEnvelope HasMany
         });
     }
 

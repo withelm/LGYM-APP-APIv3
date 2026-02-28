@@ -120,6 +120,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGymRepository, GymRepository>();
         services.AddScoped<IEloRegistryRepository, EloRegistryRepository>();
         services.AddScoped<IAppConfigRepository, AppConfigRepository>();
+        services.AddScoped<ICommandEnvelopeRepository, CommandEnvelopeRepository>();
+        services.AddScoped<IExecutionLogRepository, ExecutionLogRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         return services;
