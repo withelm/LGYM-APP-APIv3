@@ -2,6 +2,8 @@ using System.Text.Json;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -18,6 +20,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
     private readonly IEmailNotificationLogRepository _notificationLogRepository;
     private readonly IEmailBackgroundScheduler _backgroundScheduler;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITransactionalOutboxPublisher _outboxPublisher;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly IEmailMetrics _metrics;
     private readonly ILogger<EmailSchedulerService<TPayload>> _logger;
@@ -26,6 +29,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
         IEmailNotificationLogRepository notificationLogRepository,
         IEmailBackgroundScheduler backgroundScheduler,
         IUnitOfWork unitOfWork,
+        ITransactionalOutboxPublisher outboxPublisher,
         IEmailNotificationsFeature emailNotificationsFeature,
         IEmailMetrics metrics,
         ILogger<EmailSchedulerService<TPayload>> logger)
@@ -33,6 +37,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
         _notificationLogRepository = notificationLogRepository;
         _backgroundScheduler = backgroundScheduler;
         _unitOfWork = unitOfWork;
+        _outboxPublisher = outboxPublisher;
         _emailNotificationsFeature = emailNotificationsFeature;
         _metrics = metrics;
         _logger = logger;
@@ -72,10 +77,9 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
-        _backgroundScheduler.Enqueue(message.Id);
         _metrics.RecordEnqueued(payload.NotificationType);
         _logger.LogInformation(
-            "Created and enqueued email notification {NotificationId} for {NotificationType} correlation {CorrelationId}.",
+            "Created email notification {NotificationId} and persisted outbox event for {NotificationType} correlation {CorrelationId}.",
             message.Id,
             payload.NotificationType,
             payload.CorrelationId);
@@ -115,10 +119,9 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
-        _backgroundScheduler.Enqueue(existing.Id);
         _metrics.RecordRetried(payload.NotificationType);
         _logger.LogInformation(
-            "Re-enqueued failed email notification {NotificationId} (attempts: {Attempts}).",
+            "Skipped duplicate enqueue for failed email notification {NotificationId}; outbox dispatch will handle retries (attempts: {Attempts}).",
             existing.Id,
             existing.Attempts);
     }
@@ -131,6 +134,16 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
         try
         {
             await _notificationLogRepository.AddAsync(message, cancellationToken);
+            await _outboxPublisher.PublishAsync(
+                new OutboxEventEnvelope(
+                    OutboxEventTypes.EmailNotificationScheduled,
+                    JsonSerializer.Serialize(new EmailNotificationScheduledEvent(
+                        message.Id,
+                        message.CorrelationId,
+                        message.Recipient,
+                        message.Type.Value)),
+                    message.CorrelationId),
+                cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return true;
         }
@@ -153,7 +166,6 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
                 payload.NotificationType,
                 payload.CorrelationId,
                 concurrent.Id);
-            _backgroundScheduler.Enqueue(concurrent.Id);
             _metrics.RecordEnqueued(payload.NotificationType);
             return false;
         }

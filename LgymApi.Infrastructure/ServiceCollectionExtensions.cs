@@ -1,5 +1,6 @@
 using Hangfire;
 using Hangfire.PostgreSql;
+using LgymApi.Application.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Data;
@@ -107,6 +108,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReportingRepository, ReportingRepository>();
         services.AddScoped<ISupplementationRepository, SupplementationRepository>();
         services.AddScoped<IEmailNotificationLogRepository, EmailNotificationLogRepository>();
+        services.AddScoped<IOutboxRepository, OutboxRepository>();
         services.AddScoped<IEmailNotificationSubscriptionRepository, EmailNotificationSubscriptionRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IPlanDayRepository, PlanDayRepository>();
@@ -121,6 +123,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEloRegistryRepository, EloRegistryRepository>();
         services.AddScoped<IAppConfigRepository, AppConfigRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+        services.AddScoped<ITransactionalOutboxPublisher, TransactionalOutboxPublisher>();
 
         return services;
     }

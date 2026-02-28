@@ -35,6 +35,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<TrainerInvitation> TrainerInvitations => Set<TrainerInvitation>();
     public DbSet<TrainerTraineeLink> TrainerTraineeLinks => Set<TrainerTraineeLink>();
     public DbSet<NotificationMessage> NotificationMessages => Set<NotificationMessage>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<OutboxDelivery> OutboxDeliveries => Set<OutboxDelivery>();
     public DbSet<EmailNotificationSubscription> EmailNotificationSubscriptions => Set<EmailNotificationSubscription>();
     public DbSet<ReportTemplate> ReportTemplates => Set<ReportTemplate>();
     public DbSet<ReportTemplateField> ReportTemplateFields => Set<ReportTemplateField>();
@@ -360,6 +362,30 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(e => new { e.Channel, e.Type, e.CorrelationId, e.Recipient })
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
+        });
+
+        modelBuilder.Entity<OutboxMessage>(entity =>
+        {
+            entity.ToTable("OutboxMessages");
+            entity.Property(e => e.EventType).HasMaxLength(300).IsRequired();
+            entity.Property(e => e.PayloadJson).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.HasIndex(e => new { e.Status, e.NextAttemptAt, e.CreatedAt });
+        });
+
+        modelBuilder.Entity<OutboxDelivery>(entity =>
+        {
+            entity.ToTable("OutboxDeliveries");
+            entity.Property(e => e.HandlerName).HasMaxLength(300).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.HasIndex(e => new { e.EventId, e.HandlerName })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.Status, e.NextAttemptAt, e.CreatedAt });
+            entity.HasOne(e => e.Event)
+                .WithMany(e => e.Deliveries)
+                .HasForeignKey(e => e.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<EmailNotificationSubscription>(entity =>

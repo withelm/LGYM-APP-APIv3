@@ -1,6 +1,7 @@
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Notifications;
+using LgymApi.Application.Notifications;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
@@ -19,12 +20,14 @@ public sealed class WelcomeEmailServicesTests
         var repository = new FakeNotificationRepository();
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
+        var outboxPublisher = new FakeOutboxPublisher();
         var metrics = new FakeEmailMetrics();
 
         var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
+            outboxPublisher,
             new EnabledFeature(),
             metrics,
             NullLogger<EmailSchedulerService<WelcomeEmailPayload>>.Instance);
@@ -41,7 +44,7 @@ public sealed class WelcomeEmailServicesTests
         {
             Assert.That(repository.Added, Has.Count.EqualTo(1));
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-            Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
+            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -64,12 +67,14 @@ public sealed class WelcomeEmailServicesTests
         var repository = new FakeNotificationRepository { ExistingByCorrelation = existing };
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
+        var outboxPublisher = new FakeOutboxPublisher();
         var metrics = new FakeEmailMetrics();
 
         var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
+            outboxPublisher,
             new EnabledFeature(),
             metrics,
             NullLogger<EmailSchedulerService<WelcomeEmailPayload>>.Instance);
@@ -97,12 +102,14 @@ public sealed class WelcomeEmailServicesTests
         var repository = new FakeNotificationRepository();
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork();
+        var outboxPublisher = new FakeOutboxPublisher();
         var metrics = new FakeEmailMetrics();
 
         var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
+            outboxPublisher,
             new DisabledFeature(),
             metrics,
             NullLogger<EmailSchedulerService<WelcomeEmailPayload>>.Instance);
@@ -144,12 +151,14 @@ public sealed class WelcomeEmailServicesTests
         };
         var scheduler = new FakeBackgroundScheduler();
         var unitOfWork = new FakeUnitOfWork { ThrowOnSave = true };
+        var outboxPublisher = new FakeOutboxPublisher();
         var metrics = new FakeEmailMetrics();
 
         var service = new EmailSchedulerService<WelcomeEmailPayload>(
             repository,
             scheduler,
             unitOfWork,
+            outboxPublisher,
             new EnabledFeature(),
             metrics,
             NullLogger<EmailSchedulerService<WelcomeEmailPayload>>.Instance);
@@ -164,8 +173,7 @@ public sealed class WelcomeEmailServicesTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
-            Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
+            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -367,6 +375,14 @@ public sealed class WelcomeEmailServicesTests
         public void RecordSent(EmailNotificationType notificationType) => Sent += 1;
         public void RecordFailed(EmailNotificationType notificationType) => Failed += 1;
         public void RecordRetried(EmailNotificationType notificationType) => Retried += 1;
+    }
+
+    private sealed class FakeOutboxPublisher : ITransactionalOutboxPublisher
+    {
+        public Task<Guid> PublishAsync(Application.Notifications.Models.OutboxEventEnvelope envelope, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Guid.NewGuid());
+        }
     }
 
     private sealed class FakeTemplateComposerFactory : IEmailTemplateComposerFactory
