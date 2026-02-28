@@ -196,6 +196,24 @@ public sealed class BackgroundActionRegistrationTests
         Assert.Pass("Generic constraint correctly requires IActionCommand");
     }
 
+    [Test]
+    public void ServiceProvider_RegistersTrainingCompletedCommand_WithTwoHandlers()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act - register two handlers for same training completed command
+        services.AddBackgroundAction<TrainingCompletedCommand, MockEmailCommandHandler>();
+        services.AddBackgroundAction<TrainingCompletedCommand, MockMainRecordsCommandHandler>();
+        var provider = services.BuildServiceProvider();
+
+        // Assert - verify both handlers are registered
+        var handlers = provider.GetServices<IBackgroundAction<TrainingCompletedCommand>>().ToList();
+        Assert.That(handlers, Has.Count.EqualTo(2));
+        Assert.That(handlers.Any(h => h is MockEmailCommandHandler), Is.True, "MockEmailCommandHandler should be registered");
+        Assert.That(handlers.Any(h => h is MockMainRecordsCommandHandler), Is.True, "MockMainRecordsCommandHandler should be registered");
+    }
+
     #region Test Fixtures
 
     private class TestCommand : IActionCommand
@@ -248,6 +266,26 @@ public sealed class BackgroundActionRegistrationTests
         {
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class MockEmailCommandHandler : IBackgroundAction<TrainingCompletedCommand>
+    {
+        public Task ExecuteAsync(TrainingCompletedCommand command, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class MockMainRecordsCommandHandler : IBackgroundAction<TrainingCompletedCommand>
+    {
+        public Task ExecuteAsync(TrainingCompletedCommand command, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class TrainingCompletedCommand : IActionCommand
+    {
     }
 
     #endregion
