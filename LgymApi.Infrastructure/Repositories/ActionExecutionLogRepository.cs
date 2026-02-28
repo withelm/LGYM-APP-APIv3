@@ -5,11 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
 
-public sealed class ExecutionLogRepository : IExecutionLogRepository
+public sealed class ActionExecutionLogRepository : IActionExecutionLogRepository
 {
     private readonly AppDbContext _dbContext;
 
-    public ExecutionLogRepository(AppDbContext dbContext)
+    public ActionExecutionLogRepository(AppDbContext dbContext)
     {
         _dbContext = dbContext;
     }

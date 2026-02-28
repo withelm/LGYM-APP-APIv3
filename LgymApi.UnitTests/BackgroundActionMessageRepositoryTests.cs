@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace LgymApi.UnitTests;
 
 /// <summary>
-/// Tests CommandEnvelopeRepository and ExecutionLogRepository from Task 9 infrastructure.
+/// Tests CommandEnvelopeRepository and ActionExecutionLogRepository from Task 9 infrastructure.
 /// Named to match BackgroundActionMessageRepository filter for QA discoverability.
 /// </summary>
 [TestFixture]
@@ -252,7 +252,7 @@ public sealed class BackgroundActionMessageRepositoryTests
             .Options;
 
         await using var dbContext = new AppDbContext(options);
-        var repository = new ExecutionLogRepository(dbContext);
+        var repository = new ActionExecutionLogRepository(dbContext);
 
         var log = new ActionExecutionLog
         {
@@ -284,7 +284,7 @@ public sealed class BackgroundActionMessageRepositoryTests
             .Options;
 
         await using var dbContext = new AppDbContext(options);
-        var repository = new ExecutionLogRepository(dbContext);
+        var repository = new ActionExecutionLogRepository(dbContext);
 
         var envelopeId = Guid.NewGuid();
 
@@ -342,7 +342,7 @@ public sealed class BackgroundActionMessageRepositoryTests
             .Options;
 
         await using var dbContext = new AppDbContext(options);
-        var repository = new ExecutionLogRepository(dbContext);
+        var repository = new ActionExecutionLogRepository(dbContext);
 
         // Act
         var logs = await repository.GetByCommandEnvelopeIdAsync(Guid.NewGuid());
@@ -360,7 +360,7 @@ public sealed class BackgroundActionMessageRepositoryTests
             .Options;
 
         await using var dbContext = new AppDbContext(options);
-        var repository = new ExecutionLogRepository(dbContext);
+        var repository = new ActionExecutionLogRepository(dbContext);
 
         var envelopeId1 = Guid.NewGuid();
         var envelopeId2 = Guid.NewGuid();
