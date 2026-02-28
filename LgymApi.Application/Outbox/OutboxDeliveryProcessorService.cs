@@ -1,10 +1,9 @@
-using LgymApi.BackgroundWorker.Common.Outbox;
 using LgymApi.Application.Repositories;
-using LgymApi.Domain.Entities;
+using LgymApi.BackgroundWorker.Common.Outbox;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
-namespace LgymApi.BackgroundWorker.Outbox;
+namespace LgymApi.Application.Outbox;
 
 public sealed class OutboxDeliveryProcessorService : IOutboxDeliveryProcessor
 {
@@ -34,6 +33,8 @@ public sealed class OutboxDeliveryProcessorService : IOutboxDeliveryProcessor
         {
             return;
         }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var delivery = await _outboxRepository.FindDeliveryByIdWithEventAsync(deliveryId, cancellationToken);
         if (delivery == null || delivery.Event == null)

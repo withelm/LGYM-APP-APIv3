@@ -50,7 +50,6 @@ public sealed class OutboxRepository : IOutboxRepository
         entity.Status = OutboxMessageStatus.Processing;
         entity.Attempts += 1;
         entity.UpdatedAt = now;
-        await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
 
@@ -94,7 +93,6 @@ public sealed class OutboxRepository : IOutboxRepository
         entity.Status = OutboxDeliveryStatus.Processing;
         entity.Attempts += 1;
         entity.UpdatedAt = now;
-        await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
 

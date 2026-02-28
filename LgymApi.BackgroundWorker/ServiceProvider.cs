@@ -3,6 +3,7 @@ using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.BackgroundWorker.Common.Outbox;
+using LgymApi.Application.Outbox;
 using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.BackgroundWorker.Outbox;
 using LgymApi.Infrastructure.Jobs;

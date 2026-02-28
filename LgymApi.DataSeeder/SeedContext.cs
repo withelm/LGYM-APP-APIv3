@@ -27,6 +27,8 @@ public sealed class SeedContext
     public List<TrainerInvitation> TrainerInvitations { get; } = new();
     public List<TrainerTraineeLink> TrainerTraineeLinks { get; } = new();
     public List<NotificationMessage> NotificationMessages { get; } = new();
+    public List<OutboxMessage> OutboxMessages { get; } = new();
+    public List<OutboxDelivery> OutboxDeliveries { get; } = new();
     public List<EmailNotificationSubscription> EmailNotificationSubscriptions { get; } = new();
     public List<ReportTemplate> ReportTemplates { get; } = new();
     public List<ReportTemplateField> ReportTemplateFields { get; } = new();

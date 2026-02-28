@@ -1,10 +1,10 @@
-using LgymApi.BackgroundWorker.Common.Outbox;
 using LgymApi.Application.Repositories;
+using LgymApi.BackgroundWorker.Common.Outbox;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
-namespace LgymApi.BackgroundWorker.Outbox;
+namespace LgymApi.Application.Outbox;
 
 public sealed class OutboxDispatcherService : IOutboxDispatcher
 {
@@ -41,6 +41,8 @@ public sealed class OutboxDispatcherService : IOutboxDispatcher
             {
                 continue;
             }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var message = await _outboxRepository.FindMessageByIdAsync(candidate.Id, cancellationToken);
             if (message == null)

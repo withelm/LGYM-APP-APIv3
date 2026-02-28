@@ -1,6 +1,6 @@
 using LgymApi.BackgroundWorker.Common.Outbox;
-using LgymApi.BackgroundWorker.Outbox;
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Outbox;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;

@@ -95,6 +95,8 @@ public static class Program
         services.AddScoped<IEntitySeeder, TrainerInvitationSeeder>();
         services.AddScoped<IEntitySeeder, TrainerTraineeLinkSeeder>();
         services.AddScoped<IEntitySeeder, NotificationMessageSeeder>();
+        services.AddScoped<IEntitySeeder, OutboxMessageSeeder>();
+        services.AddScoped<IEntitySeeder, OutboxDeliverySeeder>();
         services.AddScoped<IEntitySeeder, EmailNotificationSubscriptionSeeder>();
         services.AddScoped<IEntitySeeder, ReportTemplateSeeder>();
         services.AddScoped<IEntitySeeder, ReportTemplateFieldSeeder>();
