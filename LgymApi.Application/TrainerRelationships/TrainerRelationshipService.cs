@@ -7,6 +7,8 @@ using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
+using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Repositories;
@@ -28,6 +30,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IPlanRepository _planRepository;
     private readonly IEmailScheduler<InvitationEmailPayload> _invitationEmailScheduler;
+    private readonly ICommandDispatcher _commandDispatcher;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly ITrainingService _trainingService;
     private readonly IExerciseScoresService _exerciseScoresService;
@@ -43,6 +46,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         ITrainerRelationshipRepository trainerRelationshipRepository,
         IPlanRepository planRepository,
         IEmailScheduler<InvitationEmailPayload> invitationEmailScheduler,
+        ICommandDispatcher commandDispatcher,
         IEmailNotificationsFeature emailNotificationsFeature,
         ITrainingService trainingService,
         IExerciseScoresService exerciseScoresService,
@@ -56,6 +60,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         _trainerRelationshipRepository = trainerRelationshipRepository;
         _planRepository = planRepository;
         _invitationEmailScheduler = invitationEmailScheduler;
+        _commandDispatcher = commandDispatcher;
         _emailNotificationsFeature = emailNotificationsFeature;
         _trainingService = trainingService;
         _exerciseScoresService = exerciseScoresService;
@@ -153,7 +158,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         try
         {
-            await _invitationEmailScheduler.ScheduleAsync(new InvitationEmailPayload
+            _commandDispatcher.Enqueue(new InvitationCreatedCommand
             {
                 InvitationId = invitation.Id,
                 InvitationCode = invitation.Code,
@@ -163,13 +168,13 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
                 CultureName = string.IsNullOrWhiteSpace(currentTrainer.PreferredLanguage)
                     ? "en-US"
                     : currentTrainer.PreferredLanguage
-            }, cancellationToken);
+            });
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
-                "Failed to schedule invitation email for invitation {InvitationId}. Invitation creation is still successful.",
+                "Failed to enqueue invitation command for invitation {InvitationId}. Invitation creation is still successful.",
                 invitation.Id);
         }
     }

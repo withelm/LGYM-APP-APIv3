@@ -3,7 +3,8 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
-using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
@@ -22,7 +23,7 @@ public sealed class UserService : IUserService
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
     private readonly IUserSessionCache _userSessionCache;
-    private readonly IEmailScheduler<WelcomeEmailPayload> _welcomeEmailScheduler;
+    private readonly ICommandDispatcher _commandDispatcher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserService> _logger;
 
@@ -35,7 +36,7 @@ public sealed class UserService : IUserService
         ILegacyPasswordService legacyPasswordService,
         IRankService rankService,
         IUserSessionCache userSessionCache,
-        IEmailScheduler<WelcomeEmailPayload> welcomeEmailScheduler,
+        ICommandDispatcher commandDispatcher,
         IUnitOfWork unitOfWork,
         ILogger<UserService> logger)
     {
@@ -46,7 +47,7 @@ public sealed class UserService : IUserService
         _legacyPasswordService = legacyPasswordService;
         _rankService = rankService;
         _userSessionCache = userSessionCache;
-        _welcomeEmailScheduler = welcomeEmailScheduler;
+        _commandDispatcher = commandDispatcher;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -163,34 +164,36 @@ public sealed class UserService : IUserService
             Elo = 1000
         }, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await TryScheduleWelcomeEmailAsync(user, cancellationToken);
+        await TryDispatchUserRegisteredCommandAsync(user, cancellationToken);
+
     }
 
-    private async Task TryScheduleWelcomeEmailAsync(UserEntity user, CancellationToken cancellationToken)
+    private async Task TryDispatchUserRegisteredCommandAsync(UserEntity user, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(user.Email))
         {
             _logger.LogInformation(
-                "User email is empty; welcome email will not be scheduled for user {UserId}.",
+                "User email is empty; registration command will still dispatch but welcome email will not be scheduled for user {UserId}.",
                 user.Id);
-            return;
         }
 
         try
         {
-            await _welcomeEmailScheduler.ScheduleAsync(new WelcomeEmailPayload
+            var command = new UserRegisteredCommand
             {
                 UserId = user.Id,
                 UserName = user.Name,
-                RecipientEmail = user.Email,
+                RecipientEmail = user.Email ?? string.Empty,
                 CultureName = string.IsNullOrWhiteSpace(user.PreferredLanguage) ? "en-US" : user.PreferredLanguage
-            }, cancellationToken);
+            };
+
+            _commandDispatcher.Enqueue(command);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
-                "Failed to schedule welcome email for user {UserId}. Registration is still successful.",
+                "Failed to dispatch user registered command for user {UserId}. Registration is still successful.",
                 user.Id);
         }
     }
