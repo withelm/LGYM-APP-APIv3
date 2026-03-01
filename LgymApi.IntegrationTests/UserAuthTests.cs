@@ -61,6 +61,8 @@ public sealed class UserAuthTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/register", request);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        await ProcessPendingCommandsAsync();
+
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "bob-en");
@@ -97,6 +99,8 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.SendAsync(msg);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await ProcessPendingCommandsAsync();
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -137,6 +141,8 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.SendAsync(msg);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await ProcessPendingCommandsAsync();
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

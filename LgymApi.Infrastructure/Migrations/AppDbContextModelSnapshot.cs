@@ -22,6 +22,58 @@ namespace LgymApi.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.ActionExecutionLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("CommandEnvelopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorDetails")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HandlerTypeName")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("CommandEnvelopeId", "ActionType")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("CommandEnvelopeId", "Status")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("ActionExecutionLogs", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Address", b =>
                 {
                     b.Property<Guid>("Id")
@@ -121,6 +173,59 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AppConfigs", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.CommandEnvelope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CommandTypeFullName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("CorrelationId", "Status")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("Status", "NextAttemptAt")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("CommandEnvelopes", (string)null);
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.EloRegistry", b =>
@@ -1260,6 +1365,17 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("UserRoles", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.ActionExecutionLog", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.CommandEnvelope", "CommandEnvelope")
+                        .WithMany("ExecutionLogs")
+                        .HasForeignKey("CommandEnvelopeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CommandEnvelope");
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.EloRegistry", b =>
                 {
                     b.HasOne("LgymApi.Domain.Entities.Training", "Training")
@@ -1662,6 +1778,11 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.CommandEnvelope", b =>
+                {
+                    b.Navigation("ExecutionLogs");
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.Exercise", b =>

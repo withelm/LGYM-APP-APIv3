@@ -1,0 +1,7 @@
+Command: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --filter "FullyQualifiedName~CommandDescriptor|FullyQualifiedName~CommandTypeDiscriminatorPolicy" --configuration Release
+Date: 2026-02-28
+Result: Passed
+Passed: 22
+Failed: 0
+Skipped: 0
+Notes: Exact-type discriminator policy and descriptor round-trip behavior are green.

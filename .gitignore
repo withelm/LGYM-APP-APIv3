@@ -123,3 +123,7 @@ nul
 
 # Local deployment helper
 deploy.sh
+
+# Sisyphus orchestration artifacts
+.sisyphus/
+**/.sisyphus/

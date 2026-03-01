@@ -606,6 +606,8 @@ public sealed class MainRecordsTests : IntegrationTestBase
         };
         await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", trainingRequest);
 
+        await ProcessPendingCommandsAsync();
+
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", request);
 
