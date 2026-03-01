@@ -42,9 +42,9 @@ public sealed class CommandDispatcher : ICommandDispatcher
     /// Validates exact-type handler availability (1:1), checks idempotency, persists envelope, and enqueues orchestration job.
     /// Zero-handler path short-circuits safely with warning and no enqueue.
     /// </summary>
-    public void Enqueue<TCommand>(TCommand command) where TCommand : IActionCommand
+    public void Enqueue<TCommand>(TCommand command) where TCommand : class, IActionCommand
     {
-        if (command == null)
+        if (command == default(TCommand))
         {
             throw new ArgumentNullException(nameof(command));
         }

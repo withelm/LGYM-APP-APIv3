@@ -68,13 +68,13 @@ public sealed class CommandEnvelope : EntityBase
         }
 
         // Increment attempt number for next retry logic
-        var attemptNumber = ExecutionLogs.Count(log => log.ActionType == "Execute");
+        var attemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute);
 
         // Record this failure in execution log
         var executionLog = new ActionExecutionLog
         {
             CommandEnvelopeId = Id,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             Status = ActionExecutionStatus.Failed,
             AttemptNumber = attemptNumber,
             ErrorMessage = errorMessage,
@@ -119,9 +119,9 @@ public sealed class CommandEnvelope : EntityBase
         var executionLog = new ActionExecutionLog
         {
             CommandEnvelopeId = Id,
-            ActionType = "DeadLetter",
+            ActionType = ActionExecutionLogType.DeadLetter,
             Status = ActionExecutionStatus.DeadLettered,
-            AttemptNumber = ExecutionLogs.Count(log => log.ActionType == "Execute"),
+            AttemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute),
             ErrorMessage = "Dead-lettered after maximum retry attempts exceeded",
             ErrorDetails = null
         };
@@ -148,9 +148,9 @@ public sealed class CommandEnvelope : EntityBase
         var executionLog = new ActionExecutionLog
         {
             CommandEnvelopeId = Id,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             Status = ActionExecutionStatus.Completed,
-            AttemptNumber = ExecutionLogs.Count(log => log.ActionType == "Execute"),
+            AttemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute),
             ErrorMessage = null,
             ErrorDetails = null
         };
@@ -167,7 +167,7 @@ public sealed class CommandEnvelope : EntityBase
             return false;
         }
 
-        var executionLogCount = ExecutionLogs.Count(log => log.ActionType == "Execute");
+        var executionLogCount = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute);
         return executionLogCount <= MaxRetryAttempts;
     }
 }

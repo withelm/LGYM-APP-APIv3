@@ -12,5 +12,5 @@ public interface ICommandDispatcher
     /// <typeparam name="TCommand">The command type (must implement IActionCommand).</typeparam>
     /// <param name="command">The command instance to enqueue.</param>
     void Enqueue<TCommand>(TCommand command)
-        where TCommand : IActionCommand;
+        where TCommand : class, IActionCommand;
 }

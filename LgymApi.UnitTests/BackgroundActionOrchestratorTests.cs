@@ -147,7 +147,7 @@ public sealed class BackgroundActionOrchestratorTests
         // Assert
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
         Assert.That(envelope.CompletedAt, Is.Not.Null);
-        Assert.That(envelope.ExecutionLogs.Any(log => log.ActionType == "DeadLetter"), Is.True);
+        Assert.That(envelope.ExecutionLogs.Any(log => log.ActionType == ActionExecutionLogType.DeadLetter), Is.True);
     }
 
     [Test]
@@ -381,10 +381,11 @@ public sealed class BackgroundActionOrchestratorTests
         
         // Assert - Each handler execution should be tracked in ExecutionLogs
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
-        var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == "HandlerExecution").ToList();
+        var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
         Assert.That(handlerLogs.Count, Is.EqualTo(2), "Both handlers should have ExecutionLog entries");
         Assert.That(handlerLogs.Count(log => log.Status == ActionExecutionStatus.Completed), Is.EqualTo(1), "One handler succeeded");
         Assert.That(handlerLogs.Count(log => log.Status == ActionExecutionStatus.Failed), Is.EqualTo(1), "One handler failed");
+        Assert.That(handlerLogs.All(log => !string.IsNullOrWhiteSpace(log.HandlerTypeName)), Is.True, "Each handler log should include concrete handler type");
         Assert.That(handlerLogs.Single(log => log.Status == ActionExecutionStatus.Failed).ErrorMessage,
             Is.Not.Null.And.Not.Empty, "Failed handler should have error message");
     }
@@ -437,10 +438,12 @@ public sealed class BackgroundActionOrchestratorTests
         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert: Verify per-handler ExecutionLog entries exist for successful execution
-        var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == "HandlerExecution").ToList();
+        var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
         Assert.That(handlerLogs.Count, Is.EqualTo(2), "Should create ExecutionLog for each handler");
         Assert.That(handlerLogs.All(log => log.Status == ActionExecutionStatus.Completed),
             Is.True, "All handler logs should show Completed status");
+        Assert.That(handlerLogs.All(log => !string.IsNullOrWhiteSpace(log.HandlerTypeName)),
+            Is.True, "Successful handler logs should include concrete handler type");
         Assert.That(handlerLogs.All(log => log.ErrorMessage == null),
             Is.True, "Successful handlers should have no error message");
     }
@@ -496,7 +499,7 @@ public sealed class BackgroundActionOrchestratorTests
         
         Assert.That(ex!.Message, Does.Contain("Retry scheduled"), "Exception should indicate retry");
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
-        Assert.That(envelope.ExecutionLogs.Count(log => log.ActionType == "Execute"), Is.EqualTo(2), "Should have 2 execution attempts");
+        Assert.That(envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute), Is.EqualTo(2), "Should have 2 execution attempts");
     }
 
     [Test]
@@ -520,7 +523,7 @@ public sealed class BackgroundActionOrchestratorTests
             await orchestrator.OrchestrateAsync(envelopeId));
         
         // Assert - ExecutionLog should contain full exception details
-        var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == "HandlerExecution").ToList();
+        var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
         Assert.That(handlerLogs.Count, Is.EqualTo(1), "Should have one handler execution log");
         
         var failedLog = handlerLogs.Single();

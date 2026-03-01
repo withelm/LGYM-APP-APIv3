@@ -60,7 +60,7 @@ public sealed class DispatcherContractTests
         public List<object> EnqueuedCommands { get; } = new();
 
         public void Enqueue<TCommand>(TCommand command)
-            where TCommand : IActionCommand
+            where TCommand : class, IActionCommand
         {
             EnqueuedCommands.Add(command!);
         }

@@ -257,7 +257,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         var log = new ActionExecutionLog
         {
             CommandEnvelopeId = Guid.NewGuid(),
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             AttemptNumber = 1,
             Status = ActionExecutionStatus.Processing,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -291,7 +291,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         var log3 = new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             AttemptNumber = 3,
             Status = ActionExecutionStatus.Failed,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -301,7 +301,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         var log1 = new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             AttemptNumber = 1,
             Status = ActionExecutionStatus.Failed,
             CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-10),
@@ -311,7 +311,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         var log2 = new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             AttemptNumber = 2,
             Status = ActionExecutionStatus.Failed,
             CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
@@ -368,7 +368,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         await repository.AddAsync(new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId1,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             AttemptNumber = 1,
             Status = ActionExecutionStatus.Processing,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -378,7 +378,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         await repository.AddAsync(new ActionExecutionLog
         {
             CommandEnvelopeId = envelopeId2,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             AttemptNumber = 1,
             Status = ActionExecutionStatus.Processing,
             CreatedAt = DateTimeOffset.UtcNow,

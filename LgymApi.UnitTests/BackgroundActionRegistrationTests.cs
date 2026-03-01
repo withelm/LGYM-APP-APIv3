@@ -197,7 +197,7 @@ public sealed class BackgroundActionRegistrationTests
     }
 
     [Test]
-    public void ServiceProvider_RegistersTrainingCompletedCommand_WithTwoHandlers()
+    public void ServiceProvider_RegistersTrainingCompletedCommand_WithTwoEmailHandlers()
     {
         // Arrange
         var services = new ServiceCollection();

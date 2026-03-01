@@ -4,6 +4,7 @@ using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Jobs;
+using LgymApi.BackgroundWorker.Jobs;
 using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Infrastructure.Jobs;
 using LgymApi.Infrastructure.Services;
@@ -46,6 +47,8 @@ public static class ServiceProvider
         services.AddScoped<InvitationEmailJob>();
         services.AddScoped<WelcomeEmailJob>();
         services.AddScoped<EmailJob>();
+        services.AddScoped<IActionMessageJob, ActionMessageJob>();
+        services.AddScoped<ActionMessageJob>();
 
         services.AddScoped<BackgroundActionOrchestratorService>();
 

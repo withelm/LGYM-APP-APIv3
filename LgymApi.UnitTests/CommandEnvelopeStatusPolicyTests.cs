@@ -48,7 +48,7 @@ public class CommandEnvelopeStatusPolicyTests
 
         // Verify execution log entry created
         var logEntry = _envelope.ExecutionLogs.Single();
-        Assert.That(logEntry.ActionType, Is.EqualTo("Execute"));
+        Assert.That(logEntry.ActionType, Is.EqualTo(ActionExecutionLogType.Execute));
         Assert.That(logEntry.Status, Is.EqualTo(ActionExecutionStatus.Failed));
         Assert.That(logEntry.AttemptNumber, Is.EqualTo(0));
         Assert.That(logEntry.ErrorMessage, Is.EqualTo(errorMsg));
@@ -113,7 +113,7 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.RecordAttemptFailure(error2, error2Details);
 
         // Assert - full history preserved
-        var logs = _envelope.ExecutionLogs.Where(log => log.ActionType == "Execute").ToList();
+        var logs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.Execute).ToList();
         Assert.That(logs.Count, Is.EqualTo(2));
 
         Assert.That(logs[0].ErrorMessage, Is.EqualTo(error1));
@@ -146,7 +146,7 @@ public class CommandEnvelopeStatusPolicyTests
         
         // Last entry should be success
         var successLog = logs.Last();
-        Assert.That(successLog.ActionType, Is.EqualTo("Execute"));
+        Assert.That(successLog.ActionType, Is.EqualTo(ActionExecutionLogType.Execute));
         Assert.That(successLog.Status, Is.EqualTo(ActionExecutionStatus.Completed));
         Assert.That(successLog.ErrorMessage, Is.Null);
         Assert.That(successLog.ErrorDetails, Is.Null);
@@ -181,7 +181,7 @@ public class CommandEnvelopeStatusPolicyTests
         Assert.That(_envelope.NextAttemptAt!.Value, Is.EqualTo(expectedNextAttempt).Within(TimeSpan.FromSeconds(2)));
 
         // Verify 3 logs recorded
-        var executeLogs = _envelope.ExecutionLogs.Where(log => log.ActionType == "Execute").ToList();
+        var executeLogs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.Execute).ToList();
         Assert.That(executeLogs.Count, Is.EqualTo(3));
     }
 
@@ -201,7 +201,7 @@ public class CommandEnvelopeStatusPolicyTests
         Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
 
         // Verify 4 logs recorded
-        var executeLogs = _envelope.ExecutionLogs.Where(log => log.ActionType == "Execute").ToList();
+        var executeLogs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.Execute).ToList();
         Assert.That(executeLogs.Count, Is.EqualTo(4));
     }
 
@@ -223,7 +223,7 @@ public class CommandEnvelopeStatusPolicyTests
         Assert.That(_envelope.NextAttemptAt, Is.Null);
 
         // Verify dead-letter log entry created
-        var deadLetterLog = _envelope.ExecutionLogs.FirstOrDefault(log => log.ActionType == "DeadLetter");
+        var deadLetterLog = _envelope.ExecutionLogs.FirstOrDefault(log => log.ActionType == ActionExecutionLogType.DeadLetter);
         Assert.That(deadLetterLog, Is.Not.Null);
         Assert.That(deadLetterLog!.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
         Assert.That(deadLetterLog.ErrorMessage, Is.EqualTo("Dead-lettered after maximum retry attempts exceeded"));
@@ -243,7 +243,7 @@ public class CommandEnvelopeStatusPolicyTests
 
         // Assert - all error details preserved
         var logs = _envelope.ExecutionLogs.ToList();
-        var errorLogs = logs.Where(log => log.ActionType == "Execute" && log.Status == ActionExecutionStatus.Failed).ToList();
+        var errorLogs = logs.Where(log => log.ActionType == ActionExecutionLogType.Execute && log.Status == ActionExecutionStatus.Failed).ToList();
         
         Assert.That(errorLogs.Count, Is.EqualTo(4));
         Assert.That(errorLogs[0].ErrorMessage, Is.EqualTo("Network error"));
@@ -258,7 +258,7 @@ public class CommandEnvelopeStatusPolicyTests
         Assert.That(errorLogs[3].ErrorDetails, Is.EqualTo("System.FinalException"));
 
         // Dead-letter marker also present
-        var deadLetterLog = logs.FirstOrDefault(log => log.ActionType == "DeadLetter");
+        var deadLetterLog = logs.FirstOrDefault(log => log.ActionType == ActionExecutionLogType.DeadLetter);
         Assert.That(deadLetterLog, Is.Not.Null);
     }
 
@@ -426,7 +426,7 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.MarkCompleted();
 
         // Act
-        var logs = _envelope.ExecutionLogs.Where(log => log.ActionType == "Execute").ToList();
+        var logs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.Execute).ToList();
 
         // Assert
         Assert.That(logs[0].AttemptNumber, Is.EqualTo(0));

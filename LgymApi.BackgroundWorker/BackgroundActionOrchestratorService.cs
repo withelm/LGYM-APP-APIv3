@@ -118,9 +118,14 @@ public sealed class BackgroundActionOrchestratorService
 
         // Check if any handlers are registered (without materializing them)
         int handlerCount;
+        List<string> handlerTypeNames;
         using (var tempScope = _serviceProvider.CreateScope())
         {
-            handlerCount = tempScope.ServiceProvider.GetServices(handlerType).Count();
+            var handlers = tempScope.ServiceProvider.GetServices(handlerType).ToList();
+            handlerCount = handlers.Count;
+            handlerTypeNames = handlers
+                .Select(h => h?.GetType().FullName ?? "UnknownHandler")
+                .ToList();
         }
 
         if (handlerCount == 0)
@@ -149,12 +154,19 @@ public sealed class BackgroundActionOrchestratorService
         for (int i = 0; i < handlerCount; i++)
         {
             var handlerIndex = i;
+            var expectedHandlerTypeName = handlerTypeNames[handlerIndex];
             var task = Task.Run(async () =>
             {
                 await semaphore.WaitAsync(cancellationToken);
                 try
                 {
-                    return await ExecuteHandlerInIsolatedScopeAsync(handlerType, command, commandType, handlerIndex, cancellationToken);
+                    return await ExecuteHandlerInIsolatedScopeAsync(
+                        handlerType,
+                        command,
+                        commandType,
+                        handlerIndex,
+                        expectedHandlerTypeName,
+                        cancellationToken);
                 }
                 finally
                 {
@@ -174,9 +186,10 @@ public sealed class BackgroundActionOrchestratorService
             var executionLog = new ActionExecutionLog
             {
                 CommandEnvelopeId = envelope.Id,
-                ActionType = "HandlerExecution",
+                ActionType = ActionExecutionLogType.HandlerExecution,
                 Status = result.Success ? ActionExecutionStatus.Completed : ActionExecutionStatus.Failed,
-                AttemptNumber = envelope.ExecutionLogs.Count(log => log.ActionType == "Execute"),
+                AttemptNumber = envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute),
+                HandlerTypeName = result.HandlerTypeName,
                 ErrorMessage = result.Success ? null : result.ErrorMessage,
                 ErrorDetails = result.Success ? null : result.ErrorDetails
             };
@@ -197,7 +210,7 @@ public sealed class BackgroundActionOrchestratorService
             _logger.LogWarning(
                 "Envelope {EnvelopeId} has failures. Retry attempt {AttemptNumber}/{MaxAttempts}. Hangfire will retry after {NextAttemptAt}.",
                 envelopeId,
-                envelope.ExecutionLogs.Count(log => log.ActionType == "Execute"),
+                envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute),
                 CommandEnvelope.MaxRetryAttempts,
                 envelope.NextAttemptAt);
             
@@ -240,8 +253,10 @@ public sealed class BackgroundActionOrchestratorService
         object command,
         Type commandType,
         int handlerIndex,
+        string expectedHandlerTypeName,
         CancellationToken cancellationToken)
     {
+        var resolvedHandlerTypeName = expectedHandlerTypeName;
         try
         {
             // Create isolated scope for this handler
@@ -251,11 +266,13 @@ public sealed class BackgroundActionOrchestratorService
             var handlers = scope.ServiceProvider.GetServices(handlerType).ToList();
             if (handlerIndex >= handlers.Count)
             {
-                throw new InvalidOperationException($"Handler index {handlerIndex} out of range (count: {handlers.Count}).");
+                throw new InvalidOperationException(
+                    $"Handler index {handlerIndex} out of range (count: {handlers.Count}) for expected handler {expectedHandlerTypeName}.");
             }
 
             var handler = handlers[handlerIndex]
                 ?? throw new InvalidOperationException($"Resolved handler at index {handlerIndex} is null.");
+            resolvedHandlerTypeName = handler.GetType().FullName ?? expectedHandlerTypeName;
 
             // Invoke ExecuteAsync via reflection (handler is dynamic type)
             var executeMethod = handler.GetType().GetMethod("ExecuteAsync");
@@ -272,13 +289,13 @@ public sealed class BackgroundActionOrchestratorService
 
             _logger.LogInformation(
                 "Handler {HandlerType} executed successfully for command {CommandType}.",
-                handler.GetType().FullName,
+                resolvedHandlerTypeName,
                 commandType.FullName);
 
             return new HandlerExecutionResult
             {
                 Success = true,
-                HandlerTypeName = handler.GetType().FullName ?? "Unknown"
+                HandlerTypeName = resolvedHandlerTypeName
             };
         }
         catch (Exception ex)
@@ -287,17 +304,16 @@ public sealed class BackgroundActionOrchestratorService
                 ? ex.InnerException
                 : ex;
 
-            var handlerTypeName = $"Handler#{handlerIndex}";
             _logger.LogError(ex,
                 "Handler {HandlerType} failed for command {CommandType}.",
-                handlerTypeName,
+                resolvedHandlerTypeName,
                 commandType.FullName);
 
             return new HandlerExecutionResult
             {
                 Success = false,
-                ErrorMessage = $"{handlerTypeName}: {inner.Message}",
-                HandlerTypeName = handlerTypeName,
+                ErrorMessage = $"{resolvedHandlerTypeName}: {inner.Message}",
+                HandlerTypeName = resolvedHandlerTypeName,
                 ErrorDetails = inner.ToString() // Full exception with stack trace
             };
         }

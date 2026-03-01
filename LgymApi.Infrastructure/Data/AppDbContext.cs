@@ -512,7 +512,8 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<ActionExecutionLog>(entity =>
         {
             entity.ToTable("ActionExecutionLogs");
-            entity.Property(e => e.ActionType).IsRequired();
+            entity.Property(e => e.ActionType).HasConversion<string>();
+            entity.Property(e => e.HandlerTypeName);
             entity.Property(e => e.Status).HasConversion<string>();
             // Index for finding execution history by envelope and status
             entity.HasIndex(e => new { e.CommandEnvelopeId, e.Status })

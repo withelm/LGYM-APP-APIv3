@@ -7,11 +7,18 @@ namespace LgymApi.Domain.Entities;
 /// </summary>
 public sealed class ActionExecutionLog : EntityBase
 {
+    public ActionExecutionLog()
+    {
+
+    }
+
     public Guid CommandEnvelopeId { get; set; }
 
     public CommandEnvelope CommandEnvelope { get; set; } = null!;
 
-    public string ActionType { get; set; } = string.Empty;
+    public ActionExecutionLogType ActionType { get; set; }
+
+    public string? HandlerTypeName { get; set; }
 
     public ActionExecutionStatus Status { get; set; }
 

@@ -82,7 +82,7 @@ public class CommandEnvelopePersistenceTests
         {
             Id = Guid.NewGuid(),
             CommandEnvelopeId = envelopeId,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             Status = ActionExecutionStatus.Completed,
             AttemptNumber = 1,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -101,7 +101,7 @@ public class CommandEnvelopePersistenceTests
 
         Assert.That(retrievedEnvelope, Is.Not.Null);
         Assert.That(retrievedEnvelope!.ExecutionLogs, Has.Count.EqualTo(1));
-        Assert.That(retrievedEnvelope.ExecutionLogs.First().ActionType, Is.EqualTo("Execute"));
+        Assert.That(retrievedEnvelope.ExecutionLogs.First().ActionType, Is.EqualTo(ActionExecutionLogType.Execute));
     }
 
     [Test]
@@ -127,7 +127,7 @@ public class CommandEnvelopePersistenceTests
         {
             Id = Guid.NewGuid(),
             CommandEnvelopeId = envelopeId,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             Status = ActionExecutionStatus.Failed,
             AttemptNumber = 1,
             ErrorMessage = "Timeout",
@@ -139,7 +139,7 @@ public class CommandEnvelopePersistenceTests
         {
             Id = Guid.NewGuid(),
             CommandEnvelopeId = envelopeId,
-            ActionType = "Retry",
+            ActionType = ActionExecutionLogType.Retry,
             Status = ActionExecutionStatus.Processing,
             AttemptNumber = 2,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -245,7 +245,7 @@ public class CommandEnvelopePersistenceTests
         {
             Id = Guid.NewGuid(),
             CommandEnvelopeId = envelopeId,
-            ActionType = "Execute",
+            ActionType = ActionExecutionLogType.Execute,
             Status = ActionExecutionStatus.Failed,
             AttemptNumber = 1,
             ErrorMessage = "Connection timeout",

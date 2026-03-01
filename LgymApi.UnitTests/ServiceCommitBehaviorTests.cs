@@ -233,7 +233,7 @@ public sealed class ServiceCommitBehaviorTests
         {
             return Task.CompletedTask;
         }
-        public void Enqueue<TCommand>(TCommand command) where TCommand : IActionCommand
+        public void Enqueue<TCommand>(TCommand command) where TCommand : class, IActionCommand
         {
         }
     }

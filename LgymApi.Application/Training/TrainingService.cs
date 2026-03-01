@@ -207,8 +207,6 @@ public sealed class TrainingService : ITrainingService
 
                 var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
 
-                await transaction.CommitAsync(cancellationToken);
-
                 await DispatchTrainingCompletedCommandAsync(
                     user,
                     training,
@@ -217,6 +215,7 @@ public sealed class TrainingService : ITrainingService
                     exercises,
                     exerciseDetailsMap);
 
+                await transaction.CommitAsync(cancellationToken);
                 return new TrainingSummaryResult
                 {
                     Comparison = comparison,
