@@ -11,6 +11,7 @@ public sealed class ExerciseScore : EntityBase
     public double Weight { get; set; }
     public WeightUnits Unit { get; set; }
     public Guid TrainingId { get; set; }
+    public int Order { get; set; }
 
     public Exercise? Exercise { get; set; }
     public User? User { get; set; }

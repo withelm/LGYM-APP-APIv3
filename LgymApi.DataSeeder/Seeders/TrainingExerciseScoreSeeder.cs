@@ -64,4 +64,5 @@ public sealed class TrainingExerciseScoreSeeder : IEntitySeeder
 
         SeedOperationConsole.Done("training exercise scores");
     }
+
 }

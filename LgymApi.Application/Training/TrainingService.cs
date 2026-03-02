@@ -130,6 +130,7 @@ public sealed class TrainingService : ITrainingService
                 var savedScoreIds = new List<Guid>();
                 var totalElo = 0;
                 var scoresToAdd = new List<ExerciseScore>();
+                var index = 0;
                 foreach (var exercise in exercises)
                 {
                     if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
@@ -151,11 +152,13 @@ public sealed class TrainingService : ITrainingService
                         Series = exercise.Series,
                         Weight = exercise.Weight,
                         Unit = exercise.Unit,
-                        TrainingId = training.Id
+                        TrainingId = training.Id,
+                        Order = index
                     };
 
                     scoresToAdd.Add(scoreEntity);
                     savedScoreIds.Add(scoreEntity.Id);
+                    index++;
 
                     var key = $"{exerciseId}-{exercise.Series}";
                     if (previousScoresMap.TryGetValue(key, out var previousScore))
@@ -356,6 +359,7 @@ public sealed class TrainingService : ITrainingService
         {
             var exerciseRefs = trainingScoreRefs.Where(t => t.TrainingId == training.Id).ToList();
             var grouped = new Dictionary<Guid, EnrichedExercise>();
+            var exerciseOrderMap = new Dictionary<Guid, int>();
 
             foreach (var reference in exerciseRefs)
             {
@@ -369,13 +373,29 @@ public sealed class TrainingService : ITrainingService
                     group = new EnrichedExercise
                     {
                         ExerciseScoreId = reference.ExerciseScoreId,
-                        ExerciseDetails = score.Exercise
+                        ExerciseDetails = score.Exercise,
+                        ScoresDetails = new List<ExerciseScore>()
                     };
                     grouped[score.ExerciseId] = group;
+                    exerciseOrderMap[score.ExerciseId] = score.Order;
+                }
+                else
+                {
+                    exerciseOrderMap[score.ExerciseId] = Math.Min(exerciseOrderMap[score.ExerciseId], score.Order);
                 }
 
                 group.ScoresDetails.Add(score);
             }
+
+            var orderedExercises = grouped.Values
+                .OrderBy(ex => exerciseOrderMap[ex.ExerciseDetails.Id])
+                .Select(ex => new EnrichedExercise
+                {
+                    ExerciseScoreId = ex.ExerciseScoreId,
+                    ExerciseDetails = ex.ExerciseDetails,
+                    ScoresDetails = ex.ScoresDetails.OrderBy(s => s.Series).ToList()
+                })
+                .ToList();
 
             result.Add(new TrainingByDateDetails
             {
@@ -384,7 +404,7 @@ public sealed class TrainingService : ITrainingService
                 CreatedAt = training.CreatedAt.UtcDateTime,
                 PlanDay = training.PlanDay,
                 Gym = training.Gym?.Name,
-                Exercises = grouped.Values.ToList()
+                Exercises = orderedExercises
             });
         }
 
