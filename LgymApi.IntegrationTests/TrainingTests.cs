@@ -1058,7 +1058,7 @@ public sealed class TrainingTests : IntegrationTestBase
         public string? Gym { get; set; }
 
         [JsonPropertyName("exercises")]
-        public List<ExerciseScoreResponse> Exercises { get; set; } = new();
+        public List<EnrichedExerciseResponse> Exercises { get; set; } = new();
     }
 
     private sealed class ExerciseScoreResponse
@@ -1067,9 +1067,204 @@ public sealed class TrainingTests : IntegrationTestBase
         public string ExerciseScoreId { get; set; } = string.Empty;
     }
 
+    private sealed class EnrichedExerciseResponse
+    {
+        [JsonPropertyName("exerciseScoreId")]
+        public string ExerciseScoreId { get; set; } = string.Empty;
+
+        [JsonPropertyName("exerciseDetails")]
+        public ExerciseDetailsResponse? ExerciseDetails { get; set; }
+
+        [JsonPropertyName("scoresDetails")]
+        public List<ScoreDetailResponse> ScoresDetails { get; set; } = new();
+    }
+
+    private sealed class ExerciseDetailsResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class ScoreDetailResponse
+    {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("series")]
+        public int Series { get; set; }
+
+        [JsonPropertyName("reps")]
+        public int Reps { get; set; }
+
+        [JsonPropertyName("weight")]
+        public double Weight { get; set; }
+
+        [JsonPropertyName("unit")]
+        public object? Unit { get; set; }
+    }
+
     private sealed class MainRecordBestResponse
     {
         [JsonPropertyName("weight")]
         public double Weight { get; set; }
     }
+
+    [Test]
+    public async Task AddTraining_WithMultipleExercises_PreservesExerciseOrder()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "orderuser",
+            email: "order@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        // Create exercises in alphabetical order but will add to training in non-alphabetical order
+        var exerciseIdChest = await CreateExerciseViaEndpointAsync(userId, "Bench Press", BodyParts.Chest);
+        var exerciseIdShoulders = await CreateExerciseViaEndpointAsync(userId, "Overhead Press", BodyParts.Shoulders);
+        var exerciseIdBack = await CreateExerciseViaEndpointAsync(userId, "Rows", BodyParts.Back);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Order Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Order Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Order Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseIdBack.ToString(), Series = 2, Reps = "8" },
+            new() { ExerciseId = exerciseIdChest.ToString(), Series = 3, Reps = "10" },
+            new() { ExerciseId = exerciseIdShoulders.ToString(), Series = 2, Reps = "8" }
+        });
+
+        // Add training with exercises in deliberate non-alphabetical order: Shoulders → Back → Chest
+        var request = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseIdShoulders.ToString(), series = 1, reps = 8, weight = 40.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseIdShoulders.ToString(), series = 2, reps = 6, weight = 42.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseIdBack.ToString(), series = 1, reps = 8, weight = 60.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseIdBack.ToString(), series = 2, reps = 6, weight = 65.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseIdChest.ToString(), series = 1, reps = 10, weight = 80.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseIdChest.ToString(), series = 2, reps = 8, weight = 82.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseIdChest.ToString(), series = 3, reps = 6, weight = 85.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Retrieve training to verify order preservation
+        var getRequest = new { createdAt = DateTime.UtcNow };
+        var getResponse = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/getTrainingByDate", getRequest);
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await getResponse.Content.ReadFromJsonAsync<List<TrainingByDateResponse>>();
+        body.Should().NotBeNull();
+        body.Should().HaveCountGreaterThanOrEqualTo(1);
+
+        var training = body!.First(t => t.PlanDay?.Name == "Order Day");
+        var exercisesReturned = training.Exercises;
+
+        // Verify exercises returned in submission order: Shoulders → Back → Chest
+        exercisesReturned.Should().HaveCount(3);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var returnedExercises = new List<Guid>();
+        foreach (var ex in exercisesReturned)
+        {
+            var scoreId = Guid.Parse(ex.ExerciseScoreId);
+            var score = await db.ExerciseScores.FirstAsync(s => s.Id == scoreId);
+            returnedExercises.Add(score.ExerciseId);
+        }
+
+        returnedExercises[0].Should().Be(exerciseIdShoulders);
+        returnedExercises[1].Should().Be(exerciseIdBack);
+        returnedExercises[2].Should().Be(exerciseIdChest);
+    }
+
+    [Test]
+    public async Task AddTraining_WithMultipleSeries_ReturnsSeriesInOrder()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "seriesorderuser",
+            email: "seriesorder@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Squats", BodyParts.Quads);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Series Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Series Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Series Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "8" }
+        });
+
+        // Add training with series in non-sequential submission order: 3, 1, 4, 2
+        var request = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 3, reps = 8, weight = 120.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 1, reps = 8, weight = 100.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 4, reps = 8, weight = 125.0, unit = WeightUnits.Kilograms.ToString() },
+                new { exercise = exerciseId.ToString(), series = 2, reps = 8, weight = 110.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        };
+
+
+
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Retrieve training via GetTrainingByDate API to verify series are returned in ascending order
+        var getRequest = new { createdAt = DateTime.UtcNow };
+        var getResponse = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/getTrainingByDate", getRequest);
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await getResponse.Content.ReadFromJsonAsync<List<TrainingByDateResponse>>();
+        body.Should().NotBeNull();
+        body.Should().HaveCountGreaterThanOrEqualTo(1);
+
+        var training = body!.First(t => t.PlanDay?.Name == "Series Day");
+        var enrichedExercises = training.Exercises;
+
+        enrichedExercises.Should().HaveCount(1, "single exercise with multiple series");
+
+        var exercise = enrichedExercises[0];
+        var scoresDetails = exercise.ScoresDetails;
+
+        scoresDetails.Should().HaveCount(4, "four series submitted");
+
+        // CRITICAL: Verify API returns series in ascending order (1, 2, 3, 4)
+        // NOT submission order (3, 1, 4, 2)
+        var seriesValues = scoresDetails.Select(s => s.Series).ToList();
+        seriesValues.Should().BeInAscendingOrder("GetTrainingByDate API sorts ScoresDetails by Series ascending");
+        seriesValues.Should().Equal(1, 2, 3, 4);
+
+        // Verify weights correctly associated with series (ordered by series number)
+        scoresDetails[0].Series.Should().Be(1);
+        scoresDetails[0].Weight.Should().Be(100.0);
+
+        scoresDetails[1].Series.Should().Be(2);
+        scoresDetails[1].Weight.Should().Be(110.0);
+
+        scoresDetails[2].Series.Should().Be(3);
+        scoresDetails[2].Weight.Should().Be(120.0);
+
+        scoresDetails[3].Series.Should().Be(4);
+        scoresDetails[3].Weight.Should().Be(125.0);
+    }
+
 }

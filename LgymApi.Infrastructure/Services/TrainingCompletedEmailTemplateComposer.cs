@@ -1,8 +1,11 @@
 using System.Globalization;
+using System.Reflection;
+using System.Resources;
 using System.Text;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Resources;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
@@ -96,8 +99,7 @@ public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateCompos
         builder.AppendLine("  </thead>");
         builder.AppendLine("  <tbody>");
         var groups = payload.Exercises
-            .GroupBy(exercise => exercise.ExerciseName, StringComparer.Ordinal)
-            .OrderBy(group => group.Key, StringComparer.Ordinal);
+            .GroupBy(exercise => exercise.ExerciseName, StringComparer.Ordinal);
 
         foreach (var group in groups)
         {
@@ -109,7 +111,7 @@ public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateCompos
             foreach (var entry in group.OrderBy(x => x.Series))
             {
                 var weightValue = entry.Weight.ToString("0.##", culture);
-                var unitValue = SanitizeTemplateValue(entry.Unit.ToString());
+                var unitValue = SanitizeTemplateValue(GetLocalizedUnitDisplayName(entry.Unit, culture));
                 builder.AppendLine("    <tr>");
                 builder.AppendLine($"      <td style=\"padding:8px 10px; border-bottom:1px solid #f3f4f6; color:#111827;\">{seriesLabel} #{entry.Series.ToString(culture)}</td>");
                 builder.AppendLine($"      <td style=\"padding:8px 10px; border-bottom:1px solid #f3f4f6; color:#111827;\">{entry.Reps.ToString(culture)}</td>");
@@ -123,5 +125,19 @@ public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateCompos
         builder.AppendLine("</table>");
 
         return builder.ToString();
+    }
+
+    private static string GetLocalizedUnitDisplayName(WeightUnits unit, CultureInfo culture)
+    {
+        var unitType = unit.GetType();
+        var enumName = unit.ToString();
+        var field = unitType.GetField(enumName);
+        var translationAttribute = field?.GetCustomAttribute<EnumTranslationAttribute>();
+        var translationKey = translationAttribute?.ResourceKey ?? $"{unitType.Name}_{enumName}";
+
+        var resourceManager = new ResourceManager("LgymApi.Resources.Resources.Enums", typeof(LgymApi.Resources.Enums).Assembly);
+        var displayName = resourceManager.GetString(translationKey, culture) ?? enumName;
+
+        return displayName;
     }
 }
