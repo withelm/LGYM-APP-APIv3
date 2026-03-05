@@ -163,31 +163,9 @@ public sealed class UserService : IUserService
             Elo = 1000
         }, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await DispatchUserRegisteredCommandAsync(user, cancellationToken);
-    }
-
-    private Task DispatchUserRegisteredCommandAsync(UserEntity user, CancellationToken cancellationToken)
-    {
-        // Dispatch command to background processor for welcome email
-        if (string.IsNullOrWhiteSpace(user.Email))
-        {
-            _logger.LogInformation(
-                "User email is empty; UserRegisteredCommand will not be dispatched for user {UserId}.",
-                user.Id);
-            return Task.CompletedTask;
-        }
-
         try
         {
-            var command = new UserRegisteredCommand
-            {
-                UserId = user.Id,
-                UserName = user.Name,
-                RecipientEmail = user.Email,
-                CultureName = string.IsNullOrWhiteSpace(user.PreferredLanguage) ? "en-US" : user.PreferredLanguage
-            };
-
-            _commandDispatcher.Enqueue(command);
+            _commandDispatcher.Enqueue(new UserRegisteredCommand { UserId = user.Id });
         }
         catch (Exception ex)
         {
@@ -196,9 +174,8 @@ public sealed class UserService : IUserService
                 "Failed to dispatch UserRegisteredCommand for user {UserId}. Registration is still successful.",
                 user.Id);
         }
-
-        return Task.CompletedTask;
     }
+
 
     private async Task<LoginResult> LoginCoreAsync(string name, string password, string? requiredRole, CancellationToken cancellationToken)
     {

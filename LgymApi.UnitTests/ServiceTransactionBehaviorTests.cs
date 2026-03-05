@@ -308,6 +308,7 @@ public sealed class ServiceTransactionBehaviorTests
     private sealed class TrainingRepositoryStub : ITrainingRepository
     {
         public Task AddAsync(Training training, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Training?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Training?> GetLastByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<Training>> GetByUserIdAndDateAsync(Guid userId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<DateTimeOffset>> GetDatesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

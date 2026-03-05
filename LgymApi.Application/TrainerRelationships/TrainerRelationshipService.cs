@@ -7,8 +7,6 @@ using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
-using LgymApi.BackgroundWorker.Common.Notifications;
-using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Application.Repositories;
@@ -30,7 +28,6 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IPlanRepository _planRepository;
     private readonly ICommandDispatcher _commandDispatcher;
-    private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly ITrainingService _trainingService;
     private readonly IExerciseScoresService _exerciseScoresService;
     private readonly IEloRegistryService _eloRegistryService;
@@ -45,7 +42,6 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         ITrainerRelationshipRepository trainerRelationshipRepository,
         IPlanRepository planRepository,
         ICommandDispatcher commandDispatcher,
-        IEmailNotificationsFeature emailNotificationsFeature,
         ITrainingService trainingService,
         IExerciseScoresService exerciseScoresService,
         IEloRegistryService eloRegistryService,
@@ -58,7 +54,6 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         _trainerRelationshipRepository = trainerRelationshipRepository;
         _planRepository = planRepository;
         _commandDispatcher = commandDispatcher;
-        _emailNotificationsFeature = emailNotificationsFeature;
         _trainingService = trainingService;
         _exerciseScoresService = exerciseScoresService;
         _eloRegistryService = eloRegistryService;
@@ -112,7 +107,17 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         await _trainerRelationshipRepository.AddInvitationAsync(invitation, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await DispatchInvitationCreatedCommandAsync(currentTrainer, trainee, invitation, cancellationToken);
+        try
+        {
+            _commandDispatcher.Enqueue(new InvitationCreatedCommand { InvitationId = invitation.Id });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to dispatch InvitationCreatedCommand for invitation {InvitationId}. Invitation creation is still successful.",
+                invitation.Id);
+        }
 
         return MapInvitation(invitation);
     }
@@ -135,51 +140,6 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return null;
     }
 
-    private Task DispatchInvitationCreatedCommandAsync(UserEntity currentTrainer, UserEntity trainee, TrainerInvitation invitation, CancellationToken cancellationToken)
-    {
-        // Dispatch command to background processor for invitation email
-        if (string.IsNullOrWhiteSpace(trainee.Email))
-        {
-            _logger.LogInformation(
-                "Trainee email is empty; InvitationCreatedCommand will not be dispatched for invitation {InvitationId}.",
-                invitation.Id);
-            return Task.CompletedTask;
-        }
-
-        if (!_emailNotificationsFeature.Enabled)
-        {
-            _logger.LogInformation(
-                "Email notifications are disabled; InvitationCreatedCommand will not be dispatched for invitation {InvitationId}.",
-                invitation.Id);
-            return Task.CompletedTask;
-        }
-
-        try
-        {
-            var command = new InvitationCreatedCommand
-            {
-                InvitationId = invitation.Id,
-                InvitationCode = invitation.Code,
-                ExpiresAt = invitation.ExpiresAt,
-                TrainerName = currentTrainer.Name,
-                RecipientEmail = trainee.Email,
-                CultureName = string.IsNullOrWhiteSpace(currentTrainer.PreferredLanguage)
-                    ? "en-US"
-                    : currentTrainer.PreferredLanguage
-            };
-
-            _commandDispatcher.Enqueue(command);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Failed to dispatch InvitationCreatedCommand for invitation {InvitationId}. Invitation creation is still successful.",
-                invitation.Id);
-        }
-
-        return Task.CompletedTask;
-    }
 
     public async Task<List<TrainerInvitationResult>> GetTrainerInvitationsAsync(UserEntity currentTrainer, CancellationToken cancellationToken = default)
     {

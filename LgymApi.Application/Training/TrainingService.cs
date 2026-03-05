@@ -18,10 +18,6 @@ namespace LgymApi.Application.Features.Training;
 
 public sealed class TrainingService : ITrainingService
 {
-    private static readonly Action<ILogger, Guid, Exception?> UserEmailMissingLog = LoggerMessage.Define<Guid>(
-        LogLevel.Information,
-        new EventId(1001, nameof(UserEmailMissingLog)),
-        "User email is empty; training completed email will not be scheduled for user {UserId}.");
 
     private readonly IUserRepository _userRepository;
     private readonly IGymRepository _gymRepository;
@@ -29,7 +25,6 @@ public sealed class TrainingService : ITrainingService
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
     private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
-    private readonly IPlanDayRepository _planDayRepository;
     private readonly IEmailNotificationSubscriptionRepository _emailNotificationSubscriptionRepository;
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IMainRecordRepository _mainRecordRepository;
@@ -46,7 +41,6 @@ public sealed class TrainingService : ITrainingService
         IExerciseRepository exerciseRepository,
         IExerciseScoreRepository exerciseScoreRepository,
         ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
-        IPlanDayRepository planDayRepository,
         IEmailNotificationSubscriptionRepository emailNotificationSubscriptionRepository,
         ICommandDispatcher commandDispatcher,
         IMainRecordRepository mainRecordRepository,
@@ -62,7 +56,6 @@ public sealed class TrainingService : ITrainingService
         _exerciseRepository = exerciseRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
         _trainingExerciseScoreRepository = trainingExerciseScoreRepository;
-        _planDayRepository = planDayRepository;
         _emailNotificationSubscriptionRepository = emailNotificationSubscriptionRepository;
         _commandDispatcher = commandDispatcher;
         _mainRecordRepository = mainRecordRepository;
@@ -210,13 +203,7 @@ public sealed class TrainingService : ITrainingService
 
                 var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
 
-                await DispatchTrainingCompletedCommandAsync(
-                    user,
-                    training,
-                    createdAtUtc,
-                    planDayId,
-                    exercises,
-                    exerciseDetailsMap);
+                _commandDispatcher.Enqueue(new TrainingCompletedCommand { UserId = user.Id, TrainingId = training.Id });
 
                 await transaction.CommitAsync(cancellationToken);
                 return new TrainingSummaryResult
@@ -246,62 +233,6 @@ public sealed class TrainingService : ITrainingService
     }
 
 
-    private async Task DispatchTrainingCompletedCommandAsync(
-        UserEntity user,
-        TrainingEntity training,
-        DateTime createdAtUtc,
-        Guid planDayId,
-        IReadOnlyCollection<TrainingExerciseInput> exercises,
-        IReadOnlyDictionary<Guid, string> exerciseDetailsMap)
-    {
-        // Email checks will be performed by email handler
-        if (string.IsNullOrWhiteSpace(user.Email))
-        {
-            UserEmailMissingLog(_logger, user.Id, null);
-        }
-
-        var cultureName = string.IsNullOrWhiteSpace(user.PreferredLanguage) ? "en-US" : user.PreferredLanguage;
-
-        var planDay = await _planDayRepository.FindByIdAsync(planDayId, CancellationToken.None);
-
-        var command = new TrainingCompletedCommand
-        {
-            UserId = user.Id,
-            TrainingId = training.Id,
-            RecipientEmail = user.Email ?? string.Empty,
-            CultureName = cultureName,
-            PlanDayName = planDay?.Name ?? string.Empty,
-            TrainingDate = new DateTimeOffset(createdAtUtc),
-            Exercises = exercises
-                .Where(e => Guid.TryParse(e.ExerciseId, out _))
-                .Select(e =>
-                {
-                    var parsedId = Guid.Parse(e.ExerciseId);
-                    return new TrainingExerciseSummary
-                    {
-                        ExerciseId = e.ExerciseId,
-                        ExerciseName = ResolveExerciseName(e.ExerciseId, exerciseDetailsMap),
-                        Series = e.Series,
-                        Reps = e.Reps,
-                        Weight = e.Weight,
-                        Unit = e.Unit
-                    };
-                })
-                .ToList()
-        };
-
-        _commandDispatcher.Enqueue(command);
-    }
-
-    private static string ResolveExerciseName(string exerciseId, IReadOnlyDictionary<Guid, string> exerciseDetailsMap)
-    {
-        if (!Guid.TryParse(exerciseId, out var parsedId))
-        {
-            return string.Empty;
-        }
-
-        return exerciseDetailsMap.TryGetValue(parsedId, out var name) ? name : string.Empty;
-    }
 
     public async Task<TrainingEntity> GetLastTrainingAsync(Guid userId, CancellationToken cancellationToken = default)
     {

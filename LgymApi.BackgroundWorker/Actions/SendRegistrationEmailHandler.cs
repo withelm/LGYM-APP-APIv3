@@ -1,3 +1,4 @@
+using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
@@ -12,21 +13,34 @@ namespace LgymApi.BackgroundWorker.Actions;
 /// </summary>
 public sealed class SendRegistrationEmailHandler : IBackgroundAction<UserRegisteredCommand>
 {
+    private readonly IUserRepository _userRepository;
     private readonly IEmailScheduler<WelcomeEmailPayload> _emailScheduler;
     private readonly ILogger<SendRegistrationEmailHandler> _logger;
 
     public SendRegistrationEmailHandler(
+        IUserRepository userRepository,
         IEmailScheduler<WelcomeEmailPayload> emailScheduler,
         ILogger<SendRegistrationEmailHandler> logger)
     {
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _emailScheduler = emailScheduler ?? throw new ArgumentNullException(nameof(emailScheduler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task ExecuteAsync(UserRegisteredCommand command, CancellationToken cancellationToken = default)
     {
+        // Fetch user entity by ID
+        var user = await _userRepository.FindByIdAsync(command.UserId, cancellationToken);
+        if (user == null)
+        {
+            _logger.LogWarning(
+                "Welcome email skipped for User {UserId} - user not found",
+                command.UserId);
+            return;
+        }
+
         // Skip scheduling if recipient email is empty (graceful degradation)
-        if (string.IsNullOrWhiteSpace(command.RecipientEmail))
+        if (string.IsNullOrWhiteSpace(user.Email))
         {
             _logger.LogWarning(
                 "Welcome email skipped for User {UserId} - no recipient email provided",
@@ -34,13 +48,16 @@ public sealed class SendRegistrationEmailHandler : IBackgroundAction<UserRegiste
             return;
         }
 
-        // Map command to email payload
+        // Determine culture: use user's preferred language or fallback to en-US
+        var cultureName = !string.IsNullOrWhiteSpace(user.PreferredLanguage) ? user.PreferredLanguage : "en-US";
+
+        // Map user entity to email payload
         var emailPayload = new WelcomeEmailPayload
         {
             UserId = command.UserId,
-            UserName = command.UserName,
-            RecipientEmail = command.RecipientEmail,
-            CultureName = command.CultureName
+            UserName = user.Name,
+            RecipientEmail = user.Email,
+            CultureName = cultureName
         };
 
         // Schedule email via typed email scheduler
@@ -49,6 +66,6 @@ public sealed class SendRegistrationEmailHandler : IBackgroundAction<UserRegiste
         _logger.LogInformation(
             "Welcome email scheduled for User {UserId} to {Email}",
             command.UserId,
-            command.RecipientEmail);
+            user.Email);
     }
 }

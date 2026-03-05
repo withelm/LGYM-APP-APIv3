@@ -1,7 +1,10 @@
+using LgymApi.Application.Repositories;
+using LgymApi.Application.Models;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.UnitTests;
@@ -9,6 +12,7 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class SendRegistrationEmailHandlerTests
 {
+    private TestUserRepository _testUserRepository = null!;
     private TestEmailScheduler _testScheduler = null!;
     private TestLogger _testLogger = null!;
     private SendRegistrationEmailHandler _handler = null!;
@@ -16,9 +20,10 @@ public sealed class SendRegistrationEmailHandlerTests
     [SetUp]
     public void SetUp()
     {
+        _testUserRepository = new TestUserRepository();
         _testScheduler = new TestEmailScheduler();
         _testLogger = new TestLogger();
-        _handler = new SendRegistrationEmailHandler(_testScheduler, _testLogger);
+        _handler = new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, _testLogger);
     }
 
     [Test]
@@ -26,12 +31,17 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "JohnDoe",
+            Email = "john.doe@example.com",
+            PreferredLanguage = "en-US"
+        };
+
         var command = new UserRegisteredCommand
         {
-            UserId = userId,
-            UserName = "JohnDoe",
-            RecipientEmail = "john.doe@example.com",
-            CultureName = "en-US"
+            UserId = userId
         };
 
         // Act
@@ -50,12 +60,18 @@ public sealed class SendRegistrationEmailHandlerTests
     public async Task ExecuteAsync_WithEmptyEmail_SkipsSchedulingGracefully()
     {
         // Arrange
+        var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "TestUser",
+            Email = string.Empty,
+            PreferredLanguage = "en-US"
+        };
+
         var command = new UserRegisteredCommand
         {
-            UserId = Guid.NewGuid(),
-            UserName = "TestUser",
-            RecipientEmail = string.Empty,
-            CultureName = "en-US"
+            UserId = userId
         };
 
         // Act
@@ -71,12 +87,18 @@ public sealed class SendRegistrationEmailHandlerTests
     public async Task ExecuteAsync_WithWhitespaceEmail_SkipsSchedulingGracefully()
     {
         // Arrange
+        var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "TestUser",
+            Email = "   ",
+            PreferredLanguage = "en-US"
+        };
+
         var command = new UserRegisteredCommand
         {
-            UserId = Guid.NewGuid(),
-            UserName = "TestUser",
-            RecipientEmail = "   ",
-            CultureName = "en-US"
+            UserId = userId
         };
 
         // Act
@@ -88,16 +110,21 @@ public sealed class SendRegistrationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_MapsAllCommandFieldsToPayload()
+    public async Task ExecuteAsync_MapsAllUserFieldsToPayload()
     {
         // Arrange
         var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "MariaGarcia",
+            Email = "maria.garcia@example.com",
+            PreferredLanguage = "es-ES"
+        };
+
         var command = new UserRegisteredCommand
         {
-            UserId = userId,
-            UserName = "MariaGarcia",
-            RecipientEmail = "maria.garcia@example.com",
-            CultureName = "es-ES"
+            UserId = userId
         };
 
         // Act
@@ -115,12 +142,18 @@ public sealed class SendRegistrationEmailHandlerTests
     public async Task ExecuteAsync_WithCancellationToken_PassesTokenToScheduler()
     {
         // Arrange
+        var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "TestUser",
+            Email = "test@example.com",
+            PreferredLanguage = "en-US"
+        };
+
         var command = new UserRegisteredCommand
         {
-            UserId = Guid.NewGuid(),
-            UserName = "TestUser",
-            RecipientEmail = "test@example.com",
-            CultureName = "en-US"
+            UserId = userId
         };
 
         using var cts = new CancellationTokenSource();
@@ -136,12 +169,18 @@ public sealed class SendRegistrationEmailHandlerTests
     public async Task ExecuteAsync_LogsInformationOnSuccess()
     {
         // Arrange
+        var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "TestUser",
+            Email = "test@example.com",
+            PreferredLanguage = "en-US"
+        };
+
         var command = new UserRegisteredCommand
         {
-            UserId = Guid.NewGuid(),
-            UserName = "TestUser",
-            RecipientEmail = "test@example.com",
-            CultureName = "en-US"
+            UserId = userId
         };
 
         // Act
@@ -153,11 +192,20 @@ public sealed class SendRegistrationEmailHandlerTests
     }
 
     [Test]
+    public void Constructor_WithNullUserRepository_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new SendRegistrationEmailHandler(null!, _testScheduler, _testLogger));
+        Assert.That(ex.ParamName, Is.EqualTo("userRepository"));
+    }
+
+    [Test]
     public void Constructor_WithNullEmailScheduler_ThrowsArgumentNullException()
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(null!, _testLogger));
+            new SendRegistrationEmailHandler(_testUserRepository, null!, _testLogger));
         Assert.That(ex.ParamName, Is.EqualTo("emailScheduler"));
     }
 
@@ -166,7 +214,7 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(_testScheduler, null!));
+            new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, null!));
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 
@@ -174,12 +222,18 @@ public sealed class SendRegistrationEmailHandlerTests
     public async Task ExecuteAsync_WithDifferentCulture_PreservesCultureName()
     {
         // Arrange
+        var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "PierreDupont",
+            Email = "pierre@example.fr",
+            PreferredLanguage = "fr-FR"
+        };
+
         var command = new UserRegisteredCommand
         {
-            UserId = Guid.NewGuid(),
-            UserName = "PierreDupont",
-            RecipientEmail = "pierre@example.fr",
-            CultureName = "fr-FR"
+            UserId = userId
         };
 
         // Act
@@ -190,7 +244,70 @@ public sealed class SendRegistrationEmailHandlerTests
         Assert.That(payload.CultureName, Is.EqualTo("fr-FR"));
     }
 
+    [Test]
+    public async Task ExecuteAsync_WithUserNotFound_SkipsSchedulingGracefully()
+    {
+        // Arrange
+        _testUserRepository.UserToReturn = null;
+
+        var command = new UserRegisteredCommand
+        {
+            UserId = Guid.NewGuid()
+        };
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
+        Assert.That(_testLogger.WarningMessages, Has.Count.EqualTo(1));
+        Assert.That(_testLogger.WarningMessages[0], Does.Contain("user not found"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithNoPreferredLanguage_DefaultsToEnUs()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "TestUser",
+            Email = "test@example.com",
+            PreferredLanguage = null
+        };
+
+        var command = new UserRegisteredCommand
+        {
+            UserId = userId
+        };
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        var payload = _testScheduler.ScheduledPayloads[0];
+        Assert.That(payload.CultureName, Is.EqualTo("en-US"));
+    }
+
     // Test doubles
+    private sealed class TestUserRepository : IUserRepository
+    {
+        public User? UserToReturn { get; set; }
+
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(UserToReturn);
+        }
+
+        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task AddAsync(User user, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task UpdateAsync(User user, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
     private sealed class TestEmailScheduler : IEmailScheduler<WelcomeEmailPayload>
     {
         public List<WelcomeEmailPayload> ScheduledPayloads { get; } = new();

@@ -11,21 +11,31 @@ namespace LgymApi.BackgroundWorker.Actions;
 /// <summary>
 /// Background action handler that updates main records after training completion.
 /// Analyzes training exercises and creates new personal records when weights exceed previous bests.
+/// Fetches exercise data from repositories instead of command payload.
 /// </summary>
 public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<TrainingCompletedCommand>
 {
     private readonly IMainRecordRepository _mainRecordRepository;
+    private readonly ITrainingRepository _trainingRepository;
+    private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
+    private readonly IExerciseScoreRepository _exerciseScoreRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly ILogger<UpdateTrainingMainRecordsHandler> _logger;
 
     public UpdateTrainingMainRecordsHandler(
         IMainRecordRepository mainRecordRepository,
+        ITrainingRepository trainingRepository,
+        ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
+        IExerciseScoreRepository exerciseScoreRepository,
         IUnitOfWork unitOfWork,
         IUnitConverter<WeightUnits> weightUnitConverter,
         ILogger<UpdateTrainingMainRecordsHandler> logger)
     {
         _mainRecordRepository = mainRecordRepository ?? throw new ArgumentNullException(nameof(mainRecordRepository));
+        _trainingRepository = trainingRepository ?? throw new ArgumentNullException(nameof(trainingRepository));
+        _trainingExerciseScoreRepository = trainingExerciseScoreRepository ?? throw new ArgumentNullException(nameof(trainingExerciseScoreRepository));
+        _exerciseScoreRepository = exerciseScoreRepository ?? throw new ArgumentNullException(nameof(exerciseScoreRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _weightUnitConverter = weightUnitConverter ?? throw new ArgumentNullException(nameof(weightUnitConverter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -33,27 +43,59 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
 
     public async Task ExecuteAsync(TrainingCompletedCommand command, CancellationToken cancellationToken = default)
     {
-        // Extract best score per exercise from training data
+        // Fetch training entity to get date
+        var training = await _trainingRepository.GetByIdAsync(command.TrainingId, cancellationToken);
+        if (training is null)
+        {
+            _logger.LogWarning(
+                "Training {TrainingId} not found - cannot update main records",
+                command.TrainingId);
+            return;
+        }
+
+        // Fetch exercise data from repositories
+        var trainingExerciseScores = await _trainingExerciseScoreRepository.GetByTrainingIdsAsync(
+            new List<Guid> { command.TrainingId },
+            cancellationToken);
+
+        if (trainingExerciseScores.Count == 0)
+        {
+            _logger.LogInformation(
+                "No exercise scores found for Training {TrainingId} - skipping main record updates",
+                command.TrainingId);
+            return;
+        }
+
+        var exerciseScoreIds = trainingExerciseScores.Select(te => te.ExerciseScoreId).ToList();
+        var exerciseScores = await _exerciseScoreRepository.GetByIdsAsync(exerciseScoreIds, cancellationToken);
+        var exerciseScoreDict = exerciseScores.ToDictionary(es => es.Id);
+
+        // Extract best score per exercise from fetched data
         var bestScoresByExercise = new Dictionary<Guid, (double Weight, WeightUnits Unit)>();
 
-        foreach (var exercise in command.Exercises)
+        foreach (var trainingExercise in trainingExerciseScores)
         {
-            // Parse exercise ID - skip invalid entries
-            if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId) || exercise.Unit == WeightUnits.Unknown)
+            if (!exerciseScoreDict.TryGetValue(trainingExercise.ExerciseScoreId, out var score))
+            {
+                continue;
+            }
+
+            // Skip invalid entries
+            if (score.Unit == WeightUnits.Unknown)
             {
                 continue;
             }
 
             // Track best weight per exercise within this training session
-            if (!bestScoresByExercise.TryGetValue(exerciseId, out var currentBest))
+            if (!bestScoresByExercise.TryGetValue(score.ExerciseId, out var currentBest))
             {
-                bestScoresByExercise[exerciseId] = (exercise.Weight, exercise.Unit);
+                bestScoresByExercise[score.ExerciseId] = (score.Weight, score.Unit);
                 continue;
             }
 
-            if (CompareWeights(exercise.Weight, exercise.Unit, currentBest.Weight, currentBest.Unit) > 0)
+            if (CompareWeights(score.Weight, score.Unit, currentBest.Weight, currentBest.Unit) > 0)
             {
-                bestScoresByExercise[exerciseId] = (exercise.Weight, exercise.Unit);
+                bestScoresByExercise[score.ExerciseId] = (score.Weight, score.Unit);
             }
         }
 
@@ -75,7 +117,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
             .GroupBy(r => r.ExerciseId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        var recordDate = command.TrainingDate;
+        var recordDate = training.CreatedAt;
         var newRecordsCount = 0;
 
         foreach (var (exerciseId, bestScore) in bestScoresByExercise)

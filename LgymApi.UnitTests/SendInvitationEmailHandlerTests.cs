@@ -1,7 +1,12 @@
+using LgymApi.Application.Repositories;
+using LgymApi.Application.Models;
+using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.UnitTests;
@@ -9,6 +14,8 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class SendInvitationEmailHandlerTests
 {
+    private TestTrainerRelationshipRepository _testInvitationRepository = null!;
+    private TestUserRepository _testUserRepository = null!;
     private TestEmailScheduler _testScheduler = null!;
     private TestLogger _testLogger = null!;
     private SendInvitationEmailHandler _handler = null!;
@@ -16,9 +23,11 @@ public sealed class SendInvitationEmailHandlerTests
     [SetUp]
     public void SetUp()
     {
+        _testInvitationRepository = new TestTrainerRelationshipRepository();
+        _testUserRepository = new TestUserRepository();
         _testScheduler = new TestEmailScheduler();
         _testLogger = new TestLogger();
-        _handler = new SendInvitationEmailHandler(_testScheduler, _testLogger);
+        _handler = new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testLogger);
     }
 
     [Test]
@@ -26,15 +35,36 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Arrange
         var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
         var expiresAt = DateTimeOffset.UtcNow.AddDays(7);
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "ABC123XYZ",
+            ExpiresAt = expiresAt,
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "trainee@example.com",
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach Smith",
+            PreferredLanguage = "en-US"
+        };
+
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId,
-            InvitationCode = "ABC123XYZ",
-            ExpiresAt = expiresAt,
-            TrainerName = "Coach Smith",
-            RecipientEmail = "trainee@example.com",
-            CultureName = "en-US"
+            InvitationId = invitationId
         };
 
         // Act
@@ -55,14 +85,35 @@ public sealed class SendInvitationEmailHandlerTests
     public async Task ExecuteAsync_WithEmptyEmail_SkipsSchedulingGracefully()
     {
         // Arrange
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "TEST123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = string.Empty,
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach"
+        };
+
         var command = new InvitationCreatedCommand
         {
-            InvitationId = Guid.NewGuid(),
-            InvitationCode = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerName = "Coach",
-            RecipientEmail = string.Empty,
-            CultureName = "en-US"
+            InvitationId = invitationId
         };
 
         // Act
@@ -78,14 +129,35 @@ public sealed class SendInvitationEmailHandlerTests
     public async Task ExecuteAsync_WithWhitespaceEmail_SkipsSchedulingGracefully()
     {
         // Arrange
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "TEST123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "   ",
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach"
+        };
+
         var command = new InvitationCreatedCommand
         {
-            InvitationId = Guid.NewGuid(),
-            InvitationCode = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerName = "Coach",
-            RecipientEmail = "   ",
-            CultureName = "en-US"
+            InvitationId = invitationId
         };
 
         // Act
@@ -97,19 +169,40 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_MapsAllCommandFieldsToPayload()
+    public async Task ExecuteAsync_MapsAllFieldsToPayload()
     {
         // Arrange
         var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
         var expiresAt = DateTimeOffset.UtcNow.AddDays(14);
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "INVITE2024",
+            ExpiresAt = expiresAt,
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "carlos@example.es",
+            PreferredLanguage = "es-ES"
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Maria Rodriguez",
+            PreferredLanguage = "es-ES"
+        };
+
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId,
-            InvitationCode = "INVITE2024",
-            ExpiresAt = expiresAt,
-            TrainerName = "Maria Rodriguez",
-            RecipientEmail = "carlos@example.es",
-            CultureName = "es-ES"
+            InvitationId = invitationId
         };
 
         // Act
@@ -129,14 +222,35 @@ public sealed class SendInvitationEmailHandlerTests
     public async Task ExecuteAsync_WithCancellationToken_PassesTokenToScheduler()
     {
         // Arrange
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "TEST123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "test@example.com",
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach"
+        };
+
         var command = new InvitationCreatedCommand
         {
-            InvitationId = Guid.NewGuid(),
-            InvitationCode = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerName = "Coach",
-            RecipientEmail = "test@example.com",
-            CultureName = "en-US"
+            InvitationId = invitationId
         };
 
         using var cts = new CancellationTokenSource();
@@ -152,14 +266,35 @@ public sealed class SendInvitationEmailHandlerTests
     public async Task ExecuteAsync_LogsInformationOnSuccess()
     {
         // Arrange
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "TEST123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "test@example.com",
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach"
+        };
+
         var command = new InvitationCreatedCommand
         {
-            InvitationId = Guid.NewGuid(),
-            InvitationCode = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerName = "Coach",
-            RecipientEmail = "test@example.com",
-            CultureName = "en-US"
+            InvitationId = invitationId
         };
 
         // Act
@@ -171,11 +306,29 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
+    public void Constructor_WithNullInvitationRepository_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new SendInvitationEmailHandler(null!, _testUserRepository, _testScheduler, _testLogger));
+        Assert.That(ex.ParamName, Is.EqualTo("invitationRepository"));
+    }
+
+    [Test]
+    public void Constructor_WithNullUserRepository_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new SendInvitationEmailHandler(_testInvitationRepository, null!, _testScheduler, _testLogger));
+        Assert.That(ex.ParamName, Is.EqualTo("userRepository"));
+    }
+
+    [Test]
     public void Constructor_WithNullEmailScheduler_ThrowsArgumentNullException()
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(null!, _testLogger));
+            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, null!, _testLogger));
         Assert.That(ex.ParamName, Is.EqualTo("emailScheduler"));
     }
 
@@ -184,7 +337,7 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(_testScheduler, null!));
+            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, null!));
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 
@@ -192,14 +345,36 @@ public sealed class SendInvitationEmailHandlerTests
     public async Task ExecuteAsync_WithDifferentCulture_PreservesCultureName()
     {
         // Arrange
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "FR123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "trainee@example.fr",
+            PreferredLanguage = "fr-FR"
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach Pierre",
+            PreferredLanguage = "fr-FR"
+        };
+
         var command = new InvitationCreatedCommand
         {
-            InvitationId = Guid.NewGuid(),
-            InvitationCode = "FR123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerName = "Coach Pierre",
-            RecipientEmail = "trainee@example.fr",
-            CultureName = "fr-FR"
+            InvitationId = invitationId
         };
 
         // Act
@@ -214,15 +389,36 @@ public sealed class SendInvitationEmailHandlerTests
     public async Task ExecuteAsync_WithShortExpirationPeriod_PreservesExpiresAt()
     {
         // Arrange
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
         var expiresAt = DateTimeOffset.UtcNow.AddHours(24);
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "URGENT",
+            ExpiresAt = expiresAt,
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "trainee@example.com",
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach"
+        };
+
         var command = new InvitationCreatedCommand
         {
-            InvitationId = Guid.NewGuid(),
-            InvitationCode = "URGENT",
-            ExpiresAt = expiresAt,
-            TrainerName = "Coach",
-            RecipientEmail = "trainee@example.com",
-            CultureName = "en-US"
+            InvitationId = invitationId
         };
 
         // Act
@@ -233,7 +429,143 @@ public sealed class SendInvitationEmailHandlerTests
         Assert.That(payload.ExpiresAt, Is.EqualTo(expiresAt));
     }
 
+    [Test]
+    public async Task ExecuteAsync_WithInvitationNotFound_SkipsSchedulingGracefully()
+    {
+        // Arrange
+        _testInvitationRepository.InvitationToReturn = null;
+
+        var command = new InvitationCreatedCommand
+        {
+            InvitationId = Guid.NewGuid()
+        };
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
+        Assert.That(_testLogger.WarningMessages, Has.Count.EqualTo(1));
+        Assert.That(_testLogger.WarningMessages[0], Does.Contain("Invitation not found"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithTraineeNotFound_SkipsSchedulingGracefully()
+    {
+        // Arrange
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "TEST123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach"
+        };
+
+        // traineeId not added to repository
+
+        var command = new InvitationCreatedCommand
+        {
+            InvitationId = invitationId
+        };
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
+        Assert.That(_testLogger.WarningMessages, Has.Count.EqualTo(1));
+        Assert.That(_testLogger.WarningMessages[0], Does.Contain("Trainee user not found"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithTrainerNotFound_SkipsSchedulingGracefully()
+    {
+        // Arrange
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "TEST123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "trainee@example.com"
+        };
+
+        // trainerId not added to repository
+
+        var command = new InvitationCreatedCommand
+        {
+            InvitationId = invitationId
+        };
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
+        Assert.That(_testLogger.WarningMessages, Has.Count.EqualTo(1));
+        Assert.That(_testLogger.WarningMessages[0], Does.Contain("Trainer user not found"));
+    }
+
     // Test doubles
+    private sealed class TestTrainerRelationshipRepository : ITrainerRelationshipRepository
+    {
+        public TrainerInvitation? InvitationToReturn { get; set; }
+
+        public Task<TrainerInvitation?> FindInvitationByIdAsync(Guid invitationId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(InvitationToReturn);
+        }
+
+        public Task AddInvitationAsync(TrainerInvitation invitation, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<TrainerInvitation?> FindPendingInvitationAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> HasActiveLinkForTraineeAsync(Guid traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Guid trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
+    private sealed class TestUserRepository : IUserRepository
+    {
+        public Dictionary<Guid, User> UsersById { get; } = new();
+
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            UsersById.TryGetValue(id, out var user);
+            return Task.FromResult(user);
+        }
+
+        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task AddAsync(User user, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task UpdateAsync(User user, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
     private sealed class TestEmailScheduler : IEmailScheduler<InvitationEmailPayload>
     {
         public List<InvitationEmailPayload> ScheduledPayloads { get; } = new();
