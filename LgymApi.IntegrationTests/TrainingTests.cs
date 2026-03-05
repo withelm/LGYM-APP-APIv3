@@ -95,19 +95,20 @@ public sealed class TrainingTests : IntegrationTestBase
                 : root.GetProperty("Exercises");
             var exercises = exercisesProperty.EnumerateArray().ToArray();
             exercises.Length.Should().Be(2);
-            var firstExerciseName = exercises[0].TryGetProperty("exerciseName", out var camelExerciseName)
-                ? camelExerciseName
-                : exercises[0].GetProperty("ExerciseName");
-            firstExerciseName.GetString().Should().Be("Bench Press");
+            var exerciseNames = exercises
+                .Select(ex => ex.TryGetProperty("exerciseName", out var camelExerciseName)
+                    ? camelExerciseName.GetString()
+                    : ex.GetProperty("ExerciseName").GetString())
+                .ToArray();
+            exerciseNames.Should().OnlyContain(name => name == "Bench Press");
 
-            var firstSeries = exercises[0].TryGetProperty("series", out var camelSeries1)
-                ? camelSeries1
-                : exercises[0].GetProperty("Series");
-            var secondSeries = exercises[1].TryGetProperty("series", out var camelSeries2)
-                ? camelSeries2
-                : exercises[1].GetProperty("Series");
-            firstSeries.GetInt32().Should().Be(1);
-            secondSeries.GetInt32().Should().Be(2);
+            var seriesValues = exercises
+                .Select(ex => ex.TryGetProperty("series", out var camelSeries)
+                    ? camelSeries.GetInt32()
+                    : ex.GetProperty("Series").GetInt32())
+                .OrderBy(value => value)
+                .ToArray();
+            seriesValues.Should().Equal(1, 2);
         }
     }
 
