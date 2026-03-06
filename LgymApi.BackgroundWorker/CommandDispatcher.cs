@@ -38,11 +38,10 @@ public sealed class CommandDispatcher : ICommandDispatcher
     }
 
     /// <summary>
-    /// Enqueues a strongly-typed command for background action execution.
+    /// Enqueues a strongly-typed command for background action execution asynchronously.
     /// Validates exact-type handler availability (1:1), checks idempotency, persists envelope, and enqueues orchestration job.
     /// Zero-handler path short-circuits safely with warning and no enqueue.
-    /// </summary>
-    public void Enqueue<TCommand>(TCommand command) where TCommand : class, IActionCommand
+    public async Task EnqueueAsync<TCommand>(TCommand command) where TCommand : class, IActionCommand
     {
         if (command == default(TCommand))
         {
@@ -94,7 +93,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         };
 
         // AddOrGetExistingAsync uses durable idempotency check (database-level uniqueness or conflict detection)
-        var envelopeResult = _commandEnvelopeRepository.AddOrGetExistingAsync(envelope).GetAwaiter().GetResult();
+        var envelopeResult = await _commandEnvelopeRepository.AddOrGetExistingAsync(envelope);
 
         if (!ReferenceEquals(envelopeResult, envelope))
         {
@@ -107,7 +106,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         }
 
         // Persist new envelope
-        _unitOfWork.SaveChangesAsync().GetAwaiter().GetResult();
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation(
             "Command envelope {EnvelopeId} persisted for correlation {CorrelationId}.",
