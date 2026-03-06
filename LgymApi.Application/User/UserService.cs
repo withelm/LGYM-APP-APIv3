@@ -165,7 +165,7 @@ public sealed class UserService : IUserService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         try
         {
-            _commandDispatcher.Enqueue(new UserRegisteredCommand { UserId = user.Id });
+            await _commandDispatcher.EnqueueAsync(new UserRegisteredCommand { UserId = user.Id });
         }
         catch (Exception ex)
         {

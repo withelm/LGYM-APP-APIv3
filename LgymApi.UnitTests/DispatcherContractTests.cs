@@ -12,7 +12,7 @@ public sealed class DispatcherContractTests
         var command = new TestCommand { Value = 42 };
 
         // Act
-        dispatcher.Enqueue(command);
+        dispatcher.EnqueueAsync(command);
 
         // Assert
         Assert.Multiple(() =>
@@ -33,7 +33,7 @@ public sealed class DispatcherContractTests
         var command = new TestCommand { Value = 99 };
 
         // Act & Assert: compiler enforces ICommand constraint
-        dispatcher.Enqueue(command);
+        dispatcher.EnqueueAsync(command);
         Assert.Pass("Generic constraint enforces ICommand at compile time");
     }
 
@@ -59,10 +59,11 @@ public sealed class DispatcherContractTests
     {
         public List<object> EnqueuedCommands { get; } = new();
 
-        public void Enqueue<TCommand>(TCommand command)
+        public Task EnqueueAsync<TCommand>(TCommand command)
             where TCommand : class, IActionCommand
         {
             EnqueuedCommands.Add(command!);
+            return Task.CompletedTask;
         }
     }
 }

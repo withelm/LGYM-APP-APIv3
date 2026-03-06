@@ -17,6 +17,7 @@ public sealed class SendInvitationEmailHandlerTests
     private TestTrainerRelationshipRepository _testInvitationRepository = null!;
     private TestUserRepository _testUserRepository = null!;
     private TestEmailScheduler _testScheduler = null!;
+    private TestEmailNotificationsFeature _testEmailNotificationsFeature = null!;
     private TestLogger _testLogger = null!;
     private SendInvitationEmailHandler _handler = null!;
 
@@ -26,8 +27,9 @@ public sealed class SendInvitationEmailHandlerTests
         _testInvitationRepository = new TestTrainerRelationshipRepository();
         _testUserRepository = new TestUserRepository();
         _testScheduler = new TestEmailScheduler();
+        _testEmailNotificationsFeature = new TestEmailNotificationsFeature();
         _testLogger = new TestLogger();
-        _handler = new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testLogger);
+        _handler = new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, _testLogger);
     }
 
     [Test]
@@ -310,7 +312,7 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(null!, _testUserRepository, _testScheduler, _testLogger));
+            new SendInvitationEmailHandler(null!, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, _testLogger));
         Assert.That(ex.ParamName, Is.EqualTo("invitationRepository"));
     }
 
@@ -319,7 +321,7 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(_testInvitationRepository, null!, _testScheduler, _testLogger));
+            new SendInvitationEmailHandler(_testInvitationRepository, null!, _testScheduler, _testEmailNotificationsFeature, _testLogger));
         Assert.That(ex.ParamName, Is.EqualTo("userRepository"));
     }
 
@@ -328,7 +330,7 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, null!, _testLogger));
+            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, null!, _testEmailNotificationsFeature, _testLogger));
         Assert.That(ex.ParamName, Is.EqualTo("emailScheduler"));
     }
 
@@ -337,7 +339,7 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, null!));
+            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, null!));
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 
@@ -527,6 +529,51 @@ public sealed class SendInvitationEmailHandlerTests
         Assert.That(_testLogger.WarningMessages[0], Does.Contain("Trainer user not found"));
     }
 
+    [Test]
+    public async Task ExecuteAsync_WithFeatureDisabled_SkipsEmailScheduling()
+    {
+        // Arrange
+        _testEmailNotificationsFeature.Enabled = false;
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "TEST123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "trainee@example.com",
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach"
+        };
+
+        var command = new InvitationCreatedCommand
+        {
+            InvitationId = invitationId
+        };
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
+        Assert.That(_testLogger.InformationMessages, Has.Count.EqualTo(1));
+        Assert.That(_testLogger.InformationMessages[0], Does.Contain("Email notifications disabled"));
+    }
+
     // Test doubles
     private sealed class TestTrainerRelationshipRepository : ITrainerRelationshipRepository
     {
@@ -595,5 +642,10 @@ public sealed class SendInvitationEmailHandlerTests
             else if (logLevel == LogLevel.Information)
                 InformationMessages.Add(message);
         }
+    }
+
+    private sealed class TestEmailNotificationsFeature : IEmailNotificationsFeature
+    {
+        public bool Enabled { get; set; } = true;
     }
 }

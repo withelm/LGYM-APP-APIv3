@@ -1,5 +1,6 @@
+using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using System.Text.Json;
-using System.Reflection;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
@@ -23,6 +24,12 @@ public sealed class BackgroundActionOrchestratorService
 
     // Parallel execution configuration
     private const int MaxDegreeOfParallelism = 4;
+
+    // Delegate type for cached handler invocation
+    private delegate Task HandlerInvoker(object handler, object command, CancellationToken cancellationToken);
+    
+    // Cache compiled invokers per command type (setup-time reflection, execution-time cached delegates)
+    private static readonly ConcurrentDictionary<Type, HandlerInvoker> _invokerCache = new();
 
     public BackgroundActionOrchestratorService(
         IServiceProvider serviceProvider,
@@ -153,8 +160,7 @@ public sealed class BackgroundActionOrchestratorService
 
         for (int i = 0; i < handlerCount; i++)
         {
-            var handlerIndex = i;
-            var expectedHandlerTypeName = handlerTypeNames[handlerIndex];
+            var expectedHandlerTypeName = handlerTypeNames[i];
             var task = Task.Run(async () =>
             {
                 await semaphore.WaitAsync(cancellationToken);
@@ -164,7 +170,6 @@ public sealed class BackgroundActionOrchestratorService
                         handlerType,
                         command,
                         commandType,
-                        handlerIndex,
                         expectedHandlerTypeName,
                         cancellationToken);
                 }
@@ -180,6 +185,9 @@ public sealed class BackgroundActionOrchestratorService
         // Evaluate results and update envelope status
         var hasFailures = results.Any(r => !r.Success);
 
+        // Calculate current attempt number BEFORE adding new HandlerExecution logs
+        var currentAttemptNumber = envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution);
+
         // Record per-handler execution outcomes in durable ExecutionLog
         foreach (var result in results)
         {
@@ -188,7 +196,7 @@ public sealed class BackgroundActionOrchestratorService
                 CommandEnvelopeId = envelope.Id,
                 ActionType = ActionExecutionLogType.HandlerExecution,
                 Status = result.Success ? ActionExecutionStatus.Completed : ActionExecutionStatus.Failed,
-                AttemptNumber = envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute),
+                AttemptNumber = currentAttemptNumber,
                 HandlerTypeName = result.HandlerTypeName,
                 ErrorMessage = result.Success ? null : result.ErrorMessage,
                 ErrorDetails = result.Success ? null : result.ErrorDetails
@@ -205,20 +213,20 @@ public sealed class BackgroundActionOrchestratorService
             await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        if (envelope.ShouldRetry())
-        {
-            _logger.LogWarning(
-                "Envelope {EnvelopeId} has failures. Retry attempt {AttemptNumber}/{MaxAttempts}. Hangfire will retry after {NextAttemptAt}.",
-                envelopeId,
-                envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute),
-                CommandEnvelope.MaxRetryAttempts,
-                envelope.NextAttemptAt);
-            
-            // Throw exception to trigger Hangfire AutomaticRetry (60/300/900s delays)
-            // This ensures backoff delays are enforced at the job level
-            throw new InvalidOperationException(
-                $"Envelope {envelopeId} handler execution failed. Retry scheduled at {envelope.NextAttemptAt}. Error: {combinedError}");
-        }
+            if (envelope.ShouldRetry())
+            {
+                _logger.LogWarning(
+                    "Envelope {EnvelopeId} has failures. Retry attempt {AttemptNumber}/{MaxAttempts}. Hangfire will retry after {NextAttemptAt}.",
+                    envelopeId,
+                    envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution),
+                    CommandEnvelope.MaxRetryAttempts,
+                    envelope.NextAttemptAt);
+                
+                // Throw exception to trigger Hangfire AutomaticRetry (60/300/900s delays)
+                // This ensures backoff delays are enforced at the job level
+                throw new InvalidOperationException(
+                    $"Envelope {envelopeId} handler execution failed. Retry scheduled at {envelope.NextAttemptAt}. Error: {combinedError}");
+            }
             else
             {
                 _logger.LogError(
@@ -252,7 +260,6 @@ public sealed class BackgroundActionOrchestratorService
         Type handlerType,
         object command,
         Type commandType,
-        int handlerIndex,
         string expectedHandlerTypeName,
         CancellationToken cancellationToken)
     {
@@ -264,28 +271,32 @@ public sealed class BackgroundActionOrchestratorService
 
             // Resolve handler instance from this scope (ensures isolated scoped dependencies)
             var handlers = scope.ServiceProvider.GetServices(handlerType).ToList();
-            if (handlerIndex >= handlers.Count)
-            {
-                throw new InvalidOperationException(
-                    $"Handler index {handlerIndex} out of range (count: {handlers.Count}) for expected handler {expectedHandlerTypeName}.");
-            }
-
-            var handler = handlers[handlerIndex]
-                ?? throw new InvalidOperationException($"Resolved handler at index {handlerIndex} is null.");
+            var handler = handlers.FirstOrDefault(h => h?.GetType().FullName == expectedHandlerTypeName)
+                ?? throw new InvalidOperationException(
+                    $"Handler with type '{expectedHandlerTypeName}' not found in execution scope. Available handlers: [{string.Join(", ", handlers.Select(h => h?.GetType().FullName ?? "null"))}]");
             resolvedHandlerTypeName = handler.GetType().FullName ?? expectedHandlerTypeName;
 
-            // Invoke ExecuteAsync via reflection (handler is dynamic type)
-            var executeMethod = handler.GetType().GetMethod("ExecuteAsync");
-            if (executeMethod == null)
+            // Get or create cached invoker delegate for this command type
+            var invoker = _invokerCache.GetOrAdd(commandType, static cmdType =>
             {
-                throw new InvalidOperationException($"Handler {handler.GetType().FullName} does not have ExecuteAsync method.");
-            }
+                // Build expression: (handler, cmd, ct) => ((IBackgroundAction<TCommand>)handler).ExecuteAsync((TCommand)cmd, ct)
+                var handlerParam = Expression.Parameter(typeof(object), "handler");
+                var commandParam = Expression.Parameter(typeof(object), "command");
+                var ctParam = Expression.Parameter(typeof(CancellationToken), "ct");
 
-            var task = (Task?)executeMethod.Invoke(handler, new[] { command, cancellationToken });
-            if (task != null)
-            {
-                await task;
-            }
+                var interfaceType = typeof(IBackgroundAction<>).MakeGenericType(cmdType);
+                var executeMethod = interfaceType.GetMethod(nameof(IBackgroundAction<IActionCommand>.ExecuteAsync))
+                    ?? throw new InvalidOperationException($"ExecuteAsync method not found on {interfaceType.FullName}");
+
+                var handlerCast = Expression.Convert(handlerParam, interfaceType);
+                var commandCast = Expression.Convert(commandParam, cmdType);
+                var methodCall = Expression.Call(handlerCast, executeMethod, commandCast, ctParam);
+
+                return Expression.Lambda<HandlerInvoker>(methodCall, handlerParam, commandParam, ctParam).Compile();
+            });
+
+            // Execute via cached compiled delegate (no MethodInfo.Invoke)
+            await invoker(handler, command, cancellationToken);
 
             _logger.LogInformation(
                 "Handler {HandlerType} executed successfully for command {CommandType}.",
@@ -300,9 +311,8 @@ public sealed class BackgroundActionOrchestratorService
         }
         catch (Exception ex)
         {
-            var inner = ex is TargetInvocationException { InnerException: not null }
-                ? ex.InnerException
-                : ex;
+            // Exceptions from compiled delegates are direct (no TargetInvocationException wrapping)
+            var inner = ex;
 
             _logger.LogError(ex,
                 "Handler {HandlerType} failed for command {CommandType}.",

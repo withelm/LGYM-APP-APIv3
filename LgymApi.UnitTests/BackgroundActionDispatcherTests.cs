@@ -40,7 +40,7 @@ public sealed class BackgroundActionDispatcherTests
     }
 
     [Test]
-    public void Enqueue_SingleHandler_CreatesEnvelopeAndEnqueues()
+    public async Task Enqueue_SingleHandler_CreatesEnvelopeAndEnqueues()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -52,7 +52,7 @@ public sealed class BackgroundActionDispatcherTests
         var command = new TestCommand { Value = "test-single" };
 
         // Act
-        dispatcher.Enqueue(command);
+        await dispatcher.EnqueueAsync(command);
 
         // Assert
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should persist exactly one envelope");
@@ -67,7 +67,7 @@ public sealed class BackgroundActionDispatcherTests
     }
 
     [Test]
-    public void Enqueue_MultipleHandlers_CreatesOneEnvelopeAndOneJob()
+    public async Task Enqueue_MultipleHandlers_CreatesOneEnvelopeAndOneJob()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -81,7 +81,7 @@ public sealed class BackgroundActionDispatcherTests
         var command = new TestCommand { Value = "test-multi" };
 
         // Act
-        dispatcher.Enqueue(command);
+        await dispatcher.EnqueueAsync(command);
 
         // Assert
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should persist exactly one envelope despite multiple handlers");
@@ -90,7 +90,7 @@ public sealed class BackgroundActionDispatcherTests
     }
 
     [Test]
-    public void Enqueue_ZeroHandlers_NoEnqueueAndNoFailure()
+    public async Task Enqueue_ZeroHandlers_NoEnqueueAndNoFailure()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -101,7 +101,7 @@ public sealed class BackgroundActionDispatcherTests
         var command = new TestCommand { Value = "test-zero" };
 
         // Act
-        dispatcher.Enqueue(command);
+        await dispatcher.EnqueueAsync(command);
 
         // Assert - Zero-handler path: safe no-op, no failure, no enqueue
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(0), "Should not persist envelope when no handlers registered");
@@ -110,7 +110,7 @@ public sealed class BackgroundActionDispatcherTests
     }
 
     [Test]
-    public void Enqueue_DuplicateCommand_BlocksDuplicateEnqueue()
+    public async Task Enqueue_DuplicateCommand_BlocksDuplicateEnqueue()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -122,8 +122,8 @@ public sealed class BackgroundActionDispatcherTests
         var command = new TestCommand { Value = "test-duplicate" };
 
         // Act - Dispatch same command twice
-        dispatcher.Enqueue(command);
-        dispatcher.Enqueue(command); // Duplicate dispatch with identical content
+        await dispatcher.EnqueueAsync(command);
+        await dispatcher.EnqueueAsync(command); // Duplicate dispatch with identical content
 
         // Assert - Deterministic correlation ID should deduplicate second dispatch
 
@@ -134,7 +134,7 @@ public sealed class BackgroundActionDispatcherTests
     }
 
     [Test]
-    public void Enqueue_NullCommand_ThrowsArgumentNullException()
+    public async Task Enqueue_NullCommand_ThrowsArgumentNullException()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -144,11 +144,11 @@ public sealed class BackgroundActionDispatcherTests
         var dispatcher = CreateDispatcher();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => dispatcher.Enqueue<TestCommand>(null!));
+        Assert.ThrowsAsync<ArgumentNullException>(async () => await dispatcher.EnqueueAsync<TestCommand>(null!));
     }
 
     [Test]
-    public void Enqueue_ExactTypeMatchingOnly_DerivedCommandDoesNotInherit()
+    public async Task Enqueue_ExactTypeMatchingOnly_DerivedCommandDoesNotInherit()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -160,7 +160,7 @@ public sealed class BackgroundActionDispatcherTests
         var derivedCommand = new DerivedTestCommand { Value = "derived", DerivedValue = "extra" };
 
         // Act - DerivedTestCommand has NO handlers registered (base handler should NOT match)
-        dispatcher.Enqueue(derivedCommand);
+        await dispatcher.EnqueueAsync(derivedCommand);
 
         // Assert - Zero-handler path because exact-type matching only
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(0), "Should not persist envelope for derived command when only base handler exists");
@@ -168,7 +168,7 @@ public sealed class BackgroundActionDispatcherTests
     }
 
     [Test]
-    public void Enqueue_PersistsThenEnqueues_OrderGuaranteed()
+    public async Task Enqueue_PersistsThenEnqueues_OrderGuaranteed()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -180,7 +180,7 @@ public sealed class BackgroundActionDispatcherTests
         var command = new TestCommand { Value = "test-order" };
 
         // Act
-        dispatcher.Enqueue(command);
+        await dispatcher.EnqueueAsync(command);
 
         // Assert - Envelope must be persisted before enqueue
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(1));

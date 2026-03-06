@@ -17,21 +17,33 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
     private readonly IUserRepository _userRepository;
     private readonly IEmailScheduler<InvitationEmailPayload> _emailScheduler;
     private readonly ILogger<SendInvitationEmailHandler> _logger;
+    private readonly IEmailNotificationsFeature _emailNotificationsFeature;
 
     public SendInvitationEmailHandler(
         ITrainerRelationshipRepository invitationRepository,
         IUserRepository userRepository,
         IEmailScheduler<InvitationEmailPayload> emailScheduler,
+        IEmailNotificationsFeature emailNotificationsFeature,
         ILogger<SendInvitationEmailHandler> logger)
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _emailScheduler = emailScheduler ?? throw new ArgumentNullException(nameof(emailScheduler));
+        _emailNotificationsFeature = emailNotificationsFeature ?? throw new ArgumentNullException(nameof(emailNotificationsFeature));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task ExecuteAsync(InvitationCreatedCommand command, CancellationToken cancellationToken = default)
     {
+        // Early exit if email notifications are disabled
+        if (!_emailNotificationsFeature.Enabled)
+        {
+            _logger.LogInformation(
+                "Email notifications disabled. Skipping invitation email for Invitation {InvitationId}",
+                command.InvitationId);
+            return;
+        }
+
         // Fetch invitation by ID
         var invitation = await _invitationRepository.FindInvitationByIdAsync(command.InvitationId, cancellationToken);
         if (invitation == null)

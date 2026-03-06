@@ -7,10 +7,10 @@ namespace LgymApi.BackgroundWorker.Common;
 public interface ICommandDispatcher
 {
     /// <summary>
-    /// Enqueues a strongly-typed command for background execution.
+    /// Enqueues a strongly-typed command for background execution asynchronously.
     /// </summary>
     /// <typeparam name="TCommand">The command type (must implement IActionCommand).</typeparam>
     /// <param name="command">The command instance to enqueue.</param>
-    void Enqueue<TCommand>(TCommand command)
+    Task EnqueueAsync<TCommand>(TCommand command)
         where TCommand : class, IActionCommand;
 }

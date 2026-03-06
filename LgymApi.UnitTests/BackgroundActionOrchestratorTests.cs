@@ -127,10 +127,15 @@ public sealed class BackgroundActionOrchestratorTests
         var envelope = CreateEnvelope(envelopeId, command);
         
         // Simulate 3 prior attempts
+        // Simulate 3 prior attempts with HandlerExecution logs
+        envelope.ExecutionLogs.Add(new ActionExecutionLog { CommandEnvelopeId = envelope.Id, ActionType = ActionExecutionLogType.HandlerExecution, Status = ActionExecutionStatus.Failed, AttemptNumber = 0, HandlerTypeName = "TestActionHandlerFailure", ErrorMessage = "Attempt 1 failed" });
         envelope.RecordAttemptFailure("Attempt 1 failed");
+        
+        envelope.ExecutionLogs.Add(new ActionExecutionLog { CommandEnvelopeId = envelope.Id, ActionType = ActionExecutionLogType.HandlerExecution, Status = ActionExecutionStatus.Failed, AttemptNumber = 1, HandlerTypeName = "TestActionHandlerFailure", ErrorMessage = "Attempt 2 failed" });
         envelope.RecordAttemptFailure("Attempt 2 failed");
+        
+        envelope.ExecutionLogs.Add(new ActionExecutionLog { CommandEnvelopeId = envelope.Id, ActionType = ActionExecutionLogType.HandlerExecution, Status = ActionExecutionStatus.Failed, AttemptNumber = 2, HandlerTypeName = "TestActionHandlerFailure", ErrorMessage = "Attempt 3 failed" });
         envelope.RecordAttemptFailure("Attempt 3 failed");
-        envelope.Status = ActionExecutionStatus.Pending; // Reset to allow orchestrator processing
         
         _repository.AddEnvelope(envelope);
 
@@ -482,8 +487,17 @@ public sealed class BackgroundActionOrchestratorTests
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         // Simulate first failure already recorded
+        // Simulate first failure already recorded (with HandlerExecution log from previous orchestration)
+        envelope.ExecutionLogs.Add(new ActionExecutionLog
+        {
+            CommandEnvelopeId = envelope.Id,
+            ActionType = ActionExecutionLogType.HandlerExecution,
+            Status = ActionExecutionStatus.Failed,
+            AttemptNumber = 0,
+            HandlerTypeName = "TestActionHandlerFailure",
+            ErrorMessage = "First attempt failed"
+        });
         envelope.RecordAttemptFailure("First attempt failed");
-        envelope.Status = ActionExecutionStatus.Pending; // Reset to allow re-orchestration
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
@@ -499,7 +513,7 @@ public sealed class BackgroundActionOrchestratorTests
         
         Assert.That(ex!.Message, Does.Contain("Retry scheduled"), "Exception should indicate retry");
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
-        Assert.That(envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute), Is.EqualTo(2), "Should have 2 execution attempts");
+        Assert.That(envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution), Is.EqualTo(2), "Should have 2 execution attempts");
     }
 
     [Test]
