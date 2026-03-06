@@ -122,7 +122,7 @@ public sealed class UserController : ControllerBase
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
-    [HttpPut("updateTimeZone")]
+    [HttpPost("updateTimeZone")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateTimeZone([FromBody] UpdateTimeZoneRequest request)
     {
