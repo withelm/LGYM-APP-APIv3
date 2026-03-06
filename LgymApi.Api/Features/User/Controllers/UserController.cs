@@ -5,7 +5,6 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
-using LgymApi.Application.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,13 +16,11 @@ public sealed class UserController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly IMapper _mapper;
-    private readonly AppDefaultsOptions _appDefaultsOptions;
 
-    public UserController(IUserService userService, IMapper mapper, AppDefaultsOptions appDefaultsOptions)
+    public UserController(IUserService userService, IMapper mapper)
     {
         _userService = userService;
         _mapper = mapper;
-        _appDefaultsOptions = appDefaultsOptions;
     }
 
     [HttpPost("register")]
@@ -31,17 +28,10 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
-        var preferredLanguage = _appDefaultsOptions.PreferredLanguage;
-        if (Request.Headers.TryGetValue("Accept-Language", out var langs))
-        {
-            preferredLanguage = langs
-                .ToString()
-                .Split(',')
-                .FirstOrDefault()?
-                .Split(';')
-                .FirstOrDefault()?
-                .Trim();
-        }
+        var preferredLanguage = Request.Headers.TryGetValue("Accept-Language", out var langs)
+            ? langs.ToString()
+            : null;
+
         await _userService.RegisterAsync(
             request.Name,
             request.Email,

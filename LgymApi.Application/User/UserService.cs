@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Options;
@@ -146,7 +147,7 @@ public sealed class UserService : IUserService
             LegacyIterations = passwordData.Iterations,
             LegacyKeyLength = passwordData.KeyLength,
             LegacyDigest = passwordData.Digest,
-            PreferredLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? _appDefaultsOptions.PreferredLanguage : preferredLanguage,
+            PreferredLanguage = ResolvePreferredLanguage(preferredLanguage),
             PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone
         };
 
@@ -415,5 +416,32 @@ public sealed class UserService : IUserService
         }
 
         await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => r.Id).ToList(), cancellationToken);
+    }
+
+    private string ResolvePreferredLanguage(string? preferredLanguageHeader)
+    {
+        if (string.IsNullOrWhiteSpace(preferredLanguageHeader))
+        {
+            return _appDefaultsOptions.PreferredLanguage;
+        }
+
+        var candidate = preferredLanguageHeader
+            .Split(',')
+            .Select(part => part.Split(';').FirstOrDefault()?.Trim())
+            .FirstOrDefault(part => !string.IsNullOrWhiteSpace(part));
+
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return _appDefaultsOptions.PreferredLanguage;
+        }
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(candidate).Name;
+        }
+        catch (CultureNotFoundException)
+        {
+            return _appDefaultsOptions.PreferredLanguage;
+        }
     }
 }
