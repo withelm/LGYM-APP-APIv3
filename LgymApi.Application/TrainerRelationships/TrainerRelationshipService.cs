@@ -109,7 +109,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         try
         {
-            _commandDispatcher.Enqueue(new InvitationCreatedCommand { InvitationId = invitation.Id });
+            await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = invitation.Id });
         }
         catch (Exception ex)
         {

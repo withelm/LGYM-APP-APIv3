@@ -203,7 +203,7 @@ public sealed class TrainingService : ITrainingService
 
                 var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
 
-                _commandDispatcher.Enqueue(new TrainingCompletedCommand { UserId = user.Id, TrainingId = training.Id });
+                await _commandDispatcher.EnqueueAsync(new TrainingCompletedCommand { UserId = user.Id, TrainingId = training.Id });
 
                 await transaction.CommitAsync(cancellationToken);
                 return new TrainingSummaryResult
