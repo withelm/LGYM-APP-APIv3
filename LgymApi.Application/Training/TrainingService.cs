@@ -5,14 +5,10 @@ using LgymApi.Application.Services;
 using LgymApi.Application.Units;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
-using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
-using Microsoft.Extensions.Logging;
-using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
 using TrainingEntity = LgymApi.Domain.Entities.Training;
-using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.Training;
 
@@ -28,7 +24,6 @@ public sealed class TrainingService : ITrainingService
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
-    private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
 
     public TrainingService(
@@ -41,7 +36,6 @@ public sealed class TrainingService : ITrainingService
         ICommandDispatcher commandDispatcher,
         IEloRegistryRepository eloRepository,
         IRankService rankService,
-        IUnitConverter<WeightUnits> weightUnitConverter,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
@@ -53,7 +47,6 @@ public sealed class TrainingService : ITrainingService
         _commandDispatcher = commandDispatcher;
         _eloRepository = eloRepository;
         _rankService = rankService;
-        _weightUnitConverter = weightUnitConverter;
         _unitOfWork = unitOfWork;
     }
 
