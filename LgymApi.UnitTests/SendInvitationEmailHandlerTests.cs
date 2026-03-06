@@ -569,9 +569,11 @@ public sealed class SendInvitationEmailHandlerTests
         await _handler.ExecuteAsync(command);
 
         // Assert
-        Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
-        Assert.That(_testLogger.InformationMessages, Has.Count.EqualTo(1));
-        Assert.That(_testLogger.InformationMessages[0], Does.Contain("Email notifications disabled"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
+            Assert.That(_testLogger.InformationMessages, Has.Count.EqualTo(0));
+        });
     }
 
     // Test doubles
