@@ -1,4 +1,5 @@
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using System.Globalization;
@@ -91,13 +92,55 @@ public sealed class InvitationEmailTemplateComposerTests
         });
     }
 
-    private TrainerInvitationEmailTemplateComposer CreateComposer()
+    [Test]
+    public void ComposeTrainerInvitation_ShouldUseConfiguredFallbackTimeZone_WhenPreferredTimeZoneInvalid()
+    {
+        var composer = CreateComposer(new AppDefaultsOptions { PreferredLanguage = "en-US", PreferredTimeZone = "UTC" });
+
+        var payload = new InvitationEmailPayload
+        {
+            InvitationId = Guid.NewGuid(),
+            InvitationCode = "UTC123",
+            ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
+            TrainerName = "Coach UTC",
+            RecipientEmail = "trainee@example.com",
+            CultureName = "en-US",
+            PreferredTimeZone = "Invalid/Zone"
+        };
+
+        var message = composer.ComposeTrainerInvitation(payload);
+
+        Assert.That(message.Body, Does.Contain("Expires: 2026-03-01 10:00"));
+    }
+
+    [Test]
+    public void ComposeTrainerInvitation_ShouldUseConfiguredFallbackTimeZone_WhenPreferredTimeZoneEmpty()
+    {
+        var composer = CreateComposer(new AppDefaultsOptions { PreferredLanguage = "en-US", PreferredTimeZone = "UTC" });
+
+        var payload = new InvitationEmailPayload
+        {
+            InvitationId = Guid.NewGuid(),
+            InvitationCode = "UTC456",
+            ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
+            TrainerName = "Coach UTC",
+            RecipientEmail = "trainee@example.com",
+            CultureName = "en-US",
+            PreferredTimeZone = string.Empty
+        };
+
+        var message = composer.ComposeTrainerInvitation(payload);
+
+        Assert.That(message.Body, Does.Contain("Expires: 2026-03-01 10:00"));
+    }
+
+    private TrainerInvitationEmailTemplateComposer CreateComposer(AppDefaultsOptions? appDefaultsOptions = null)
     {
         return new TrainerInvitationEmailTemplateComposer(new EmailOptions
         {
             InvitationBaseUrl = "https://app.example.com/invitations",
             TemplateRootPath = _templateRootPath,
             DefaultCulture = CultureInfo.GetCultureInfo("en-US")
-        });
+        }, appDefaultsOptions ?? new AppDefaultsOptions());
     }
 }

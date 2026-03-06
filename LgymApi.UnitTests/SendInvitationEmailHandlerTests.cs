@@ -394,6 +394,51 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
+    public async Task ExecuteAsync_UsesConfiguredDefaults_WhenLanguageAndTimeZoneWhitespace()
+    {
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "CFG123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "trainee@example.com",
+            PreferredTimeZone = "   "
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach",
+            PreferredLanguage = "   "
+        };
+
+        var handler = new SendInvitationEmailHandler(
+            _testInvitationRepository,
+            _testUserRepository,
+            _testScheduler,
+            _testEmailNotificationsFeature,
+            _testLogger,
+            new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "UTC" });
+
+        await handler.ExecuteAsync(new InvitationCreatedCommand { InvitationId = invitationId });
+
+        var payload = _testScheduler.ScheduledPayloads[0];
+        Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
+        Assert.That(payload.PreferredTimeZone, Is.EqualTo("UTC"));
+    }
+
+    [Test]
     public async Task ExecuteAsync_WithShortExpirationPeriod_PreservesExpiresAt()
     {
         // Arrange

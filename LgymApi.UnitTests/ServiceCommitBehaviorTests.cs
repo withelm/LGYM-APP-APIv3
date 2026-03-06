@@ -114,6 +114,116 @@ public sealed class ServiceCommitBehaviorTests
     }
 
     [Test]
+    public async Task RegisterAsync_UsesPrimaryCultureFromAcceptLanguageHeader()
+    {
+        var dbName = $"service-commit-register-culture-header-{Guid.NewGuid()}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+
+        await using var dbContext = new AppDbContext(options);
+
+        dbContext.Roles.Add(new Role
+        {
+            Id = Guid.NewGuid(),
+            Name = AuthConstants.Roles.User,
+            Description = "Default user role"
+        });
+        await dbContext.SaveChangesAsync();
+
+        IUserRepository userRepository = new UserRepository(dbContext);
+        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
+        ITokenService tokenService = new NoOpTokenService();
+        ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
+        IRankService rankService = new RankService();
+        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
+        IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+        ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
+
+        var service = new UserService(
+            userRepository,
+            roleRepository,
+            eloRepository,
+            tokenService,
+            legacyPasswordService,
+            rankService,
+            userSessionCache,
+            commandDispatcher,
+            unitOfWork,
+            NullLogger<UserService>.Instance,
+            new AppDefaultsOptions());
+
+        await service.RegisterAsync(
+            "lang-user",
+            "lang-user@example.com",
+            "password123",
+            "password123",
+            true,
+            preferredLanguage: "pl-PL,pl;q=0.9");
+
+        var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "lang-user");
+        Assert.That(savedUser, Is.Not.Null);
+        Assert.That(savedUser!.PreferredLanguage, Is.EqualTo("pl-PL"));
+    }
+
+    [Test]
+    public async Task RegisterAsync_FallsBackToConfiguredPreferredLanguage_WhenHeaderInvalid()
+    {
+        var dbName = $"service-commit-register-culture-fallback-{Guid.NewGuid()}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+
+        await using var dbContext = new AppDbContext(options);
+
+        dbContext.Roles.Add(new Role
+        {
+            Id = Guid.NewGuid(),
+            Name = AuthConstants.Roles.User,
+            Description = "Default user role"
+        });
+        await dbContext.SaveChangesAsync();
+
+        IUserRepository userRepository = new UserRepository(dbContext);
+        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
+        ITokenService tokenService = new NoOpTokenService();
+        ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
+        IRankService rankService = new RankService();
+        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
+        IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+        ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
+        var defaults = new AppDefaultsOptions { PreferredLanguage = "de-DE", PreferredTimeZone = "UTC" };
+
+        var service = new UserService(
+            userRepository,
+            roleRepository,
+            eloRepository,
+            tokenService,
+            legacyPasswordService,
+            rankService,
+            userSessionCache,
+            commandDispatcher,
+            unitOfWork,
+            NullLogger<UserService>.Instance,
+            defaults);
+
+        await service.RegisterAsync(
+            "fallback-user",
+            "fallback-user@example.com",
+            "password123",
+            "password123",
+            true,
+            preferredLanguage: "@@invalid-culture@@");
+
+        var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "fallback-user");
+        Assert.That(savedUser, Is.Not.Null);
+        Assert.That(savedUser!.PreferredLanguage, Is.EqualTo("de-DE"));
+        Assert.That(savedUser.PreferredTimeZone, Is.EqualTo("UTC"));
+    }
+
+    [Test]
     public async Task UpdateTimeZoneAsync_PersistsUserPreference()
     {
         var dbName = $"service-commit-timezone-{Guid.NewGuid()}";

@@ -244,6 +244,47 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     }
 
     [Test]
+    public async Task ExecuteAsync_UsesConfiguredDefaults_WhenLanguageAndTimeZoneWhitespace()
+    {
+        var userId = Guid.NewGuid();
+        var trainingId = Guid.NewGuid();
+
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Email = "athlete@example.com",
+            PreferredLanguage = "   ",
+            PreferredTimeZone = "   "
+        };
+
+        _testTrainingRepository.TrainingToReturn = new Training
+        {
+            Id = trainingId,
+            PlanDay = new PlanDay { Name = "Default Day" },
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>();
+        _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>();
+
+        var handler = new TrainingCompletedEmailCommandHandler(
+            _testUserRepository,
+            _testTrainingRepository,
+            _testTrainingExerciseScoreRepository,
+            _testExerciseScoreRepository,
+            _testSubscriptionRepository,
+            _testScheduler,
+            _testLogger,
+            new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "UTC" });
+
+        await handler.ExecuteAsync(new TrainingCompletedCommand { UserId = userId, TrainingId = trainingId });
+
+        var payload = _testScheduler.ScheduledPayloads[0];
+        Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
+        Assert.That(payload.PreferredTimeZone, Is.EqualTo("UTC"));
+    }
+
+    [Test]
     public async Task ExecuteAsync_WithCancellationToken_PassesTokenToScheduler()
     {
         // Arrange

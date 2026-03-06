@@ -291,6 +291,32 @@ public sealed class SendRegistrationEmailHandlerTests
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
     }
 
+    [Test]
+    public async Task ExecuteAsync_WithWhitespacePreferredLanguage_UsesConfiguredDefault()
+    {
+        var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "TestUser",
+            Email = "test@example.com",
+            PreferredLanguage = "   "
+        };
+
+        var handler = new SendRegistrationEmailHandler(
+            _testUserRepository,
+            _testScheduler,
+            _testLogger,
+            new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "Europe/Warsaw" });
+
+        var command = new UserRegisteredCommand { UserId = userId };
+
+        await handler.ExecuteAsync(command);
+
+        var payload = _testScheduler.ScheduledPayloads[0];
+        Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
+    }
+
     // Test doubles
     private sealed class TestUserRepository : IUserRepository
     {
