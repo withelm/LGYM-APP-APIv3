@@ -56,10 +56,9 @@ public sealed class CommandEnvelope : EntityBase
     public ICollection<ActionExecutionLog> ExecutionLogs { get; set; } = new List<ActionExecutionLog>();
 
     /// <summary>
-    /// Increments the attempt counter and records an error on this envelope.
-    /// Updates LastAttemptAt and schedules the next retry based on attempt count.
+    /// Updates envelope state and schedules next retry based on attempt count.
+    /// Does NOT add execution log (orchestrator records per-handler HandlerExecution logs).
     /// Does NOT mark as DeadLettered; caller must decide after this call.
-    /// </summary>
     public void RecordAttemptFailure(string errorMessage, string? errorDetails = null)
     {
         if (Status == ActionExecutionStatus.DeadLettered)
@@ -67,29 +66,21 @@ public sealed class CommandEnvelope : EntityBase
             throw new InvalidOperationException("Cannot record failure on dead-lettered envelope.");
         }
 
-        // Increment attempt number for next retry logic
-        var attemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute);
+        // Calculate attempt number from HandlerExecution logs (orchestrator adds logs BEFORE calling this)
+        var attemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution);
 
-        // Record this failure in execution log
-        var executionLog = new ActionExecutionLog
-        {
-            CommandEnvelopeId = Id,
-            ActionType = ActionExecutionLogType.Execute,
-            Status = ActionExecutionStatus.Failed,
-            AttemptNumber = attemptNumber,
-            ErrorMessage = errorMessage,
-            ErrorDetails = errorDetails
-        };
-        ExecutionLogs.Add(executionLog);
+        // No execution log added - orchestrator already recorded per-handler logs
 
         // Update envelope state
         Status = ActionExecutionStatus.Failed;
         LastAttemptAt = DateTimeOffset.UtcNow;
 
         // Schedule next attempt if we haven't exhausted all delay values
-        if (attemptNumber < RetryDelaysSeconds.Length)
+        // attemptNumber includes current failed attempt, so we use (attemptNumber - 1) as delay index
+        var delayIndex = attemptNumber - 1;
+        if (delayIndex >= 0 && delayIndex < RetryDelaysSeconds.Length)
         {
-            var delaySeconds = RetryDelaysSeconds[attemptNumber];
+            var delaySeconds = RetryDelaysSeconds[delayIndex];
             NextAttemptAt = DateTimeOffset.UtcNow.AddSeconds(delaySeconds);
         }
         else
@@ -121,7 +112,7 @@ public sealed class CommandEnvelope : EntityBase
             CommandEnvelopeId = Id,
             ActionType = ActionExecutionLogType.DeadLetter,
             Status = ActionExecutionStatus.DeadLettered,
-            AttemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute),
+            AttemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution),
             ErrorMessage = "Dead-lettered after maximum retry attempts exceeded",
             ErrorDetails = null
         };
@@ -130,8 +121,7 @@ public sealed class CommandEnvelope : EntityBase
 
     /// <summary>
     /// Marks the envelope as completed successfully.
-    /// Preserves all prior failure history.
-    /// </summary>
+    /// Does NOT add execution log (orchestrator records per-handler HandlerExecution logs).
     public void MarkCompleted()
     {
         if (Status == ActionExecutionStatus.Completed || Status == ActionExecutionStatus.DeadLettered)
@@ -144,17 +134,7 @@ public sealed class CommandEnvelope : EntityBase
         CompletedAt = DateTimeOffset.UtcNow;
         NextAttemptAt = null;
 
-        // Record success in execution log
-        var executionLog = new ActionExecutionLog
-        {
-            CommandEnvelopeId = Id,
-            ActionType = ActionExecutionLogType.Execute,
-            Status = ActionExecutionStatus.Completed,
-            AttemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute),
-            ErrorMessage = null,
-            ErrorDetails = null
-        };
-        ExecutionLogs.Add(executionLog);
+        // No execution log added - orchestrator already recorded per-handler HandlerExecution logs
     }
 
     /// <summary>
@@ -167,7 +147,7 @@ public sealed class CommandEnvelope : EntityBase
             return false;
         }
 
-        var executionLogCount = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute);
-        return executionLogCount <= MaxRetryAttempts;
+        var executionLogCount = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution);
+        return executionLogCount < MaxRetryAttempts;
     }
 }
