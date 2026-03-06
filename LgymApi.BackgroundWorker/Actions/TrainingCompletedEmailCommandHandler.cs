@@ -3,6 +3,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Options;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
@@ -20,6 +21,7 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
     private readonly IEmailNotificationSubscriptionRepository _emailNotificationSubscriptionRepository;
     private readonly IEmailScheduler<TrainingCompletedEmailPayload> _emailScheduler;
     private readonly ILogger<TrainingCompletedEmailCommandHandler> _logger;
+    private readonly AppDefaultsOptions _appDefaultsOptions;
 
     public TrainingCompletedEmailCommandHandler(
         IUserRepository userRepository,
@@ -28,7 +30,8 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
         IExerciseScoreRepository exerciseScoreRepository,
         IEmailNotificationSubscriptionRepository emailNotificationSubscriptionRepository,
         IEmailScheduler<TrainingCompletedEmailPayload> emailScheduler,
-        ILogger<TrainingCompletedEmailCommandHandler> logger)
+        ILogger<TrainingCompletedEmailCommandHandler> logger,
+        AppDefaultsOptions appDefaultsOptions)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _trainingRepository = trainingRepository ?? throw new ArgumentNullException(nameof(trainingRepository));
@@ -37,6 +40,7 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
         _emailNotificationSubscriptionRepository = emailNotificationSubscriptionRepository ?? throw new ArgumentNullException(nameof(emailNotificationSubscriptionRepository));
         _emailScheduler = emailScheduler ?? throw new ArgumentNullException(nameof(emailScheduler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _appDefaultsOptions = appDefaultsOptions ?? throw new ArgumentNullException(nameof(appDefaultsOptions));
     }
 
     public async Task ExecuteAsync(TrainingCompletedCommand command, CancellationToken cancellationToken = default)
@@ -122,8 +126,8 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
             UserId = command.UserId,
             TrainingId = command.TrainingId,
             RecipientEmail = user.Email,
-            CultureName = user.PreferredLanguage ?? "en-US",
-            TimeZoneId = user.PreferredTimeZone,
+            CultureName = string.IsNullOrWhiteSpace(user.PreferredLanguage) ? _appDefaultsOptions.PreferredLanguage : user.PreferredLanguage,
+            PreferredTimeZone = string.IsNullOrWhiteSpace(user.PreferredTimeZone) ? _appDefaultsOptions.PreferredTimeZone : user.PreferredTimeZone,
             PlanDayName = planDayName,
             TrainingDate = trainingDate,
             Exercises = exercises

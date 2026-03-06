@@ -8,18 +8,18 @@ public sealed class UpdateTimeZoneRequestValidator : AbstractValidator<UpdateTim
 {
     public UpdateTimeZoneRequestValidator()
     {
-        RuleFor(x => x.TimeZoneId)
+        RuleFor(x => x.PreferredTimeZone)
             .NotEmpty()
             .WithMessage(Messages.FieldRequired)
             .Must(BeValidTimeZone)
             .WithMessage(Messages.InvalidTimeZone);
     }
 
-    private static bool BeValidTimeZone(string timeZoneId)
+    private static bool BeValidTimeZone(string preferredTimeZone)
     {
         try
         {
-            _ = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            _ = TimeZoneInfo.FindSystemTimeZoneById(preferredTimeZone);
             return true;
         }
         catch (TimeZoneNotFoundException)

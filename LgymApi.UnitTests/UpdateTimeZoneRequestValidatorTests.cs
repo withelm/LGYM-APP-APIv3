@@ -7,10 +7,10 @@ namespace LgymApi.UnitTests;
 public sealed class UpdateTimeZoneRequestValidatorTests
 {
     [Test]
-    public void Validate_Fails_WhenTimeZoneIdIsEmpty()
+    public void Validate_Fails_WhenPreferredTimeZoneIsEmpty()
     {
         var validator = new UpdateTimeZoneRequestValidator();
-        var request = new UpdateTimeZoneRequest { TimeZoneId = string.Empty };
+        var request = new UpdateTimeZoneRequest { PreferredTimeZone = string.Empty };
 
         var result = validator.Validate(request);
 
@@ -18,10 +18,10 @@ public sealed class UpdateTimeZoneRequestValidatorTests
     }
 
     [Test]
-    public void Validate_Fails_WhenTimeZoneIdIsInvalid()
+    public void Validate_Fails_WhenPreferredTimeZoneIsInvalid()
     {
         var validator = new UpdateTimeZoneRequestValidator();
-        var request = new UpdateTimeZoneRequest { TimeZoneId = "Not/ARealTimeZone" };
+        var request = new UpdateTimeZoneRequest { PreferredTimeZone = "Not/ARealTimeZone" };
 
         var result = validator.Validate(request);
 
@@ -29,10 +29,10 @@ public sealed class UpdateTimeZoneRequestValidatorTests
     }
 
     [Test]
-    public void Validate_Passes_WhenTimeZoneIdIsValid()
+    public void Validate_Passes_WhenPreferredTimeZoneIsValid()
     {
         var validator = new UpdateTimeZoneRequestValidator();
-        var request = new UpdateTimeZoneRequest { TimeZoneId = "Europe/Warsaw" };
+        var request = new UpdateTimeZoneRequest { PreferredTimeZone = "Europe/Warsaw" };
 
         var result = validator.Validate(request);
 

@@ -11,8 +11,8 @@ public sealed class TrainingCompletedEmailPayload : IEmailPayload
     public Guid UserId { get; init; }
     public Guid TrainingId { get; init; }
     public string RecipientEmail { get; init; } = string.Empty;
-    public string CultureName { get; init; } = "en-US";
-    public string TimeZoneId { get; init; } = "Europe/Warsaw";
+    public string CultureName { get; init; } = string.Empty;
+    public string PreferredTimeZone { get; init; } = string.Empty;
     public string PlanDayName { get; init; } = string.Empty;
     public DateTimeOffset TrainingDate { get; init; }
     public IReadOnlyList<TrainingExerciseSummary> Exercises { get; init; } = Array.Empty<TrainingExerciseSummary>();

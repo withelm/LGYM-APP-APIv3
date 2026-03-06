@@ -2,6 +2,7 @@ using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Exceptions;
+using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.BackgroundWorker.Common.Notifications;
@@ -99,7 +100,8 @@ public sealed class ServiceCommitBehaviorTests
             userSessionCache,
             commandDispatcher,
             unitOfWork,
-            NullLogger<UserService>.Instance);
+            NullLogger<UserService>.Instance,
+            new AppDefaultsOptions());
 
         await service.RegisterAsync("newuser", "newuser@example.com", "password123", "password123", true);
 
@@ -165,7 +167,8 @@ public sealed class ServiceCommitBehaviorTests
             userSessionCache,
             commandDispatcher,
             unitOfWork,
-            NullLogger<UserService>.Instance);
+            NullLogger<UserService>.Instance,
+            new AppDefaultsOptions());
 
         await service.UpdateTimeZoneAsync(user, "Europe/Paris");
 
@@ -227,7 +230,8 @@ public sealed class ServiceCommitBehaviorTests
             userSessionCache,
             commandDispatcher,
             unitOfWork,
-            NullLogger<UserService>.Instance);
+            NullLogger<UserService>.Instance,
+            new AppDefaultsOptions());
 
         Assert.ThrowsAsync<AppException>(async () => await service.UpdateTimeZoneAsync(user, "Not/ARealTimeZone"));
     }

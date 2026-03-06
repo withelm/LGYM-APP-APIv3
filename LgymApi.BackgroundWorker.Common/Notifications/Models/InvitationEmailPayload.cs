@@ -12,8 +12,8 @@ public sealed class InvitationEmailPayload : IEmailPayload
     public DateTimeOffset ExpiresAt { get; init; }
     public string TrainerName { get; init; } = string.Empty;
     public string RecipientEmail { get; init; } = string.Empty;
-    public string CultureName { get; init; } = "en-US";
-    public string TimeZoneId { get; init; } = "Europe/Warsaw";
+    public string CultureName { get; init; } = string.Empty;
+    public string PreferredTimeZone { get; init; } = string.Empty;
 
     public Guid CorrelationId => InvitationId;
     public EmailNotificationType NotificationType => EmailNotificationTypes.TrainerInvitation;

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.BackgroundWorker.Common;
@@ -25,6 +26,7 @@ public sealed class UserService : IUserService
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserService> _logger;
+    private readonly AppDefaultsOptions _appDefaultsOptions;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "User service coordinates auth, ranking, roles, and session concerns.")]
     public UserService(
@@ -37,7 +39,8 @@ public sealed class UserService : IUserService
         IUserSessionCache userSessionCache,
         ICommandDispatcher commandDispatcher,
         IUnitOfWork unitOfWork,
-        ILogger<UserService> logger)
+        ILogger<UserService> logger,
+        AppDefaultsOptions appDefaultsOptions)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -49,6 +52,7 @@ public sealed class UserService : IUserService
         _commandDispatcher = commandDispatcher;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _appDefaultsOptions = appDefaultsOptions;
     }
 
     public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, string? preferredLanguage = null, CancellationToken cancellationToken = default)
@@ -142,7 +146,8 @@ public sealed class UserService : IUserService
             LegacyIterations = passwordData.Iterations,
             LegacyKeyLength = passwordData.KeyLength,
             LegacyDigest = passwordData.Digest,
-            PreferredLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? "en-US" : preferredLanguage
+            PreferredLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? _appDefaultsOptions.PreferredLanguage : preferredLanguage,
+            PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone
         };
 
         await _userRepository.AddAsync(user, cancellationToken);
@@ -228,7 +233,7 @@ public sealed class UserService : IUserService
                 Email = user.Email,
                 Avatar = user.Avatar,
                 ProfileRank = user.ProfileRank,
-                PreferredTimeZone = user.PreferredTimeZone,
+                PreferredTimeZone = string.IsNullOrWhiteSpace(user.PreferredTimeZone) ? _appDefaultsOptions.PreferredTimeZone : user.PreferredTimeZone,
                 CreatedAt = user.CreatedAt.UtcDateTime,
                 UpdatedAt = user.UpdatedAt.UtcDateTime,
                 Elo = elo,
@@ -270,7 +275,7 @@ public sealed class UserService : IUserService
             Email = currentUser.Email,
             Avatar = currentUser.Avatar,
             ProfileRank = currentUser.ProfileRank,
-            PreferredTimeZone = currentUser.PreferredTimeZone,
+            PreferredTimeZone = string.IsNullOrWhiteSpace(currentUser.PreferredTimeZone) ? _appDefaultsOptions.PreferredTimeZone : currentUser.PreferredTimeZone,
             CreatedAt = currentUser.CreatedAt.UtcDateTime,
             UpdatedAt = currentUser.UpdatedAt.UtcDateTime,
             Elo = elo,
@@ -353,22 +358,22 @@ public sealed class UserService : IUserService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateTimeZoneAsync(UserEntity currentUser, string timeZoneId, CancellationToken cancellationToken = default)
+    public async Task UpdateTimeZoneAsync(UserEntity currentUser, string preferredTimeZone, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
             throw AppException.BadRequest(Messages.DidntFind);
         }
 
-        if (string.IsNullOrWhiteSpace(timeZoneId))
+        if (string.IsNullOrWhiteSpace(preferredTimeZone))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var normalizedTimeZoneId = timeZoneId.Trim();
+        var normalizedPreferredTimeZone = preferredTimeZone.Trim();
         try
         {
-            _ = TimeZoneInfo.FindSystemTimeZoneById(normalizedTimeZoneId);
+            _ = TimeZoneInfo.FindSystemTimeZoneById(normalizedPreferredTimeZone);
         }
         catch (TimeZoneNotFoundException)
         {
@@ -379,7 +384,7 @@ public sealed class UserService : IUserService
             throw AppException.BadRequest(Messages.InvalidTimeZone);
         }
 
-        currentUser.PreferredTimeZone = normalizedTimeZoneId;
+        currentUser.PreferredTimeZone = normalizedPreferredTimeZone;
         await _userRepository.UpdateAsync(currentUser, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }

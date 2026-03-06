@@ -45,7 +45,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
-            TimeZoneId = "Europe/Warsaw",
+            PreferredTimeZone = "Europe/Warsaw",
             PlanDayName = "Upper Body A",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>
@@ -97,7 +97,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "de-DE",
-            TimeZoneId = "Europe/Warsaw",
+            PreferredTimeZone = "Europe/Warsaw",
             PlanDayName = "Lower Body B",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>()
@@ -124,7 +124,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
-            TimeZoneId = "Europe/Warsaw",
+            PreferredTimeZone = "Europe/Warsaw",
             PlanDayName = "Full Body",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>
@@ -187,7 +187,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
-            TimeZoneId = "Europe/Warsaw",
+            PreferredTimeZone = "Europe/Warsaw",
             PlanDayName = "Testing Units",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>

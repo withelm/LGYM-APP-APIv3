@@ -46,7 +46,7 @@ public sealed class InvitationEmailTemplateComposerTests
             TrainerName = "Coach Mike",
             RecipientEmail = "trainee@example.com",
             CultureName = "pl-PL",
-            TimeZoneId = "Europe/Warsaw"
+            PreferredTimeZone = "Europe/Warsaw"
         };
 
         var message = composer.ComposeTrainerInvitation(payload);
@@ -78,7 +78,7 @@ public sealed class InvitationEmailTemplateComposerTests
             TrainerName = "Coach Jane",
             RecipientEmail = "trainee@example.com",
             CultureName = "de-DE",
-            TimeZoneId = "Europe/Warsaw"
+            PreferredTimeZone = "Europe/Warsaw"
         };
 
         var message = composer.ComposeTrainerInvitation(payload);

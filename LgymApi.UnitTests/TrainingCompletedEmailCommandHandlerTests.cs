@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Models;
+using LgymApi.Application.Options;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
@@ -39,7 +40,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
             _testExerciseScoreRepository,
             _testSubscriptionRepository,
             _testScheduler,
-            _testLogger);
+            _testLogger,
+            new AppDefaultsOptions());
     }
 
     [Test]
@@ -104,7 +106,7 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
         Assert.That(payload.TrainingId, Is.EqualTo(trainingId));
         Assert.That(payload.RecipientEmail, Is.EqualTo("user@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
-        Assert.That(payload.TimeZoneId, Is.EqualTo("Europe/Warsaw"));
+        Assert.That(payload.PreferredTimeZone, Is.EqualTo("Europe/Warsaw"));
         Assert.That(payload.PlanDayName, Is.EqualTo("Day 1 - Chest"));
         Assert.That(payload.Exercises, Has.Count.EqualTo(1));
         Assert.That(payload.Exercises[0].ExerciseName, Is.EqualTo("Bench Press"));
@@ -233,7 +235,7 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
         Assert.That(payload.TrainingId, Is.EqualTo(trainingId));
         Assert.That(payload.RecipientEmail, Is.EqualTo("athlete@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
-        Assert.That(payload.TimeZoneId, Is.EqualTo("Europe/Warsaw"));
+        Assert.That(payload.PreferredTimeZone, Is.EqualTo("Europe/Warsaw"));
         Assert.That(payload.PlanDayName, Is.EqualTo("Dzień 2 - Nogi"));
         Assert.That(payload.TrainingDate, Is.EqualTo(trainingDate));
         Assert.That(payload.Exercises, Has.Count.EqualTo(2));
@@ -291,7 +293,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
                 _testExerciseScoreRepository,
                 _testSubscriptionRepository,
                 _testScheduler,
-                _testLogger));
+                _testLogger,
+                new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("userRepository"));
     }
 
@@ -307,7 +310,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
                 _testExerciseScoreRepository,
                 _testSubscriptionRepository,
                 _testScheduler,
-                _testLogger));
+                _testLogger,
+                new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("trainingRepository"));
     }
 
@@ -323,7 +327,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
                 _testExerciseScoreRepository,
                 _testSubscriptionRepository,
                 null!,
-                _testLogger));
+                _testLogger,
+                new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("emailScheduler"));
     }
 
@@ -338,7 +343,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
                 _testExerciseScoreRepository,
                 null!,
                 _testScheduler,
-                _testLogger));
+                _testLogger,
+                new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("emailNotificationSubscriptionRepository"));
     }
 
@@ -354,7 +360,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
                 _testExerciseScoreRepository,
                 _testSubscriptionRepository,
                 _testScheduler,
-                null!));
+                null!,
+                new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 

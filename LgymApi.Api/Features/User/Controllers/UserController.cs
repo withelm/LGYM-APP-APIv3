@@ -5,6 +5,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,11 +17,13 @@ public sealed class UserController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly IMapper _mapper;
+    private readonly AppDefaultsOptions _appDefaultsOptions;
 
-    public UserController(IUserService userService, IMapper mapper)
+    public UserController(IUserService userService, IMapper mapper, AppDefaultsOptions appDefaultsOptions)
     {
         _userService = userService;
         _mapper = mapper;
+        _appDefaultsOptions = appDefaultsOptions;
     }
 
     [HttpPost("register")]
@@ -28,7 +31,7 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
-        var preferredLanguage = "en-US";
+        var preferredLanguage = _appDefaultsOptions.PreferredLanguage;
         if (Request.Headers.TryGetValue("Accept-Language", out var langs))
         {
             preferredLanguage = langs
@@ -134,7 +137,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> UpdateTimeZone([FromBody] UpdateTimeZoneRequest request)
     {
         var user = HttpContext.GetCurrentUser();
-        await _userService.UpdateTimeZoneAsync(user!, request.TimeZoneId, HttpContext.RequestAborted);
+        await _userService.UpdateTimeZoneAsync(user!, request.PreferredTimeZone, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

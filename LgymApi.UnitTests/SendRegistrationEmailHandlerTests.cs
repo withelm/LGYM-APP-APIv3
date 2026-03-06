@@ -4,6 +4,7 @@ using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Options;
 using LgymApi.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -23,7 +24,7 @@ public sealed class SendRegistrationEmailHandlerTests
         _testUserRepository = new TestUserRepository();
         _testScheduler = new TestEmailScheduler();
         _testLogger = new TestLogger();
-        _handler = new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, _testLogger);
+        _handler = new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, _testLogger, new AppDefaultsOptions());
     }
 
     [Test]
@@ -196,7 +197,7 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(null!, _testScheduler, _testLogger));
+            new SendRegistrationEmailHandler(null!, _testScheduler, _testLogger, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("userRepository"));
     }
 
@@ -205,7 +206,7 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(_testUserRepository, null!, _testLogger));
+            new SendRegistrationEmailHandler(_testUserRepository, null!, _testLogger, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("emailScheduler"));
     }
 
@@ -214,7 +215,7 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, null!));
+            new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, null!, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 
