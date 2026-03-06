@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Models;
 using LgymApi.Application.Features.TrainerRelationships.Models;
+using LgymApi.Application.Options;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
@@ -29,7 +30,7 @@ public sealed class SendInvitationEmailHandlerTests
         _testScheduler = new TestEmailScheduler();
         _testEmailNotificationsFeature = new TestEmailNotificationsFeature();
         _testLogger = new TestLogger();
-        _handler = new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, _testLogger);
+        _handler = new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
     }
 
     [Test]
@@ -81,6 +82,7 @@ public sealed class SendInvitationEmailHandlerTests
         Assert.That(payload.TrainerName, Is.EqualTo("Coach Smith"));
         Assert.That(payload.RecipientEmail, Is.EqualTo("trainee@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
+        Assert.That(payload.PreferredTimeZone, Is.EqualTo("Europe/Warsaw"));
     }
 
     [Test]
@@ -192,7 +194,8 @@ public sealed class SendInvitationEmailHandlerTests
         {
             Id = traineeId,
             Email = "carlos@example.es",
-            PreferredLanguage = "es-ES"
+            PreferredLanguage = "es-ES",
+            PreferredTimeZone = "Europe/Madrid"
         };
 
         _testUserRepository.UsersById[trainerId] = new User
@@ -218,6 +221,7 @@ public sealed class SendInvitationEmailHandlerTests
         Assert.That(payload.TrainerName, Is.EqualTo("Maria Rodriguez"));
         Assert.That(payload.RecipientEmail, Is.EqualTo("carlos@example.es"));
         Assert.That(payload.CultureName, Is.EqualTo("es-ES"));
+        Assert.That(payload.PreferredTimeZone, Is.EqualTo("Europe/Madrid"));
     }
 
     [Test]
@@ -312,7 +316,7 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(null!, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, _testLogger));
+            new SendInvitationEmailHandler(null!, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("invitationRepository"));
     }
 
@@ -321,7 +325,7 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(_testInvitationRepository, null!, _testScheduler, _testEmailNotificationsFeature, _testLogger));
+            new SendInvitationEmailHandler(_testInvitationRepository, null!, _testScheduler, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("userRepository"));
     }
 
@@ -330,7 +334,7 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, null!, _testEmailNotificationsFeature, _testLogger));
+            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, null!, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("emailScheduler"));
     }
 
@@ -339,7 +343,7 @@ public sealed class SendInvitationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, null!));
+            new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, null!, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 
@@ -364,7 +368,8 @@ public sealed class SendInvitationEmailHandlerTests
         {
             Id = traineeId,
             Email = "trainee@example.fr",
-            PreferredLanguage = "fr-FR"
+            PreferredLanguage = "fr-FR",
+            PreferredTimeZone = "Europe/Paris"
         };
 
         _testUserRepository.UsersById[trainerId] = new User
@@ -385,6 +390,52 @@ public sealed class SendInvitationEmailHandlerTests
         // Assert
         var payload = _testScheduler.ScheduledPayloads[0];
         Assert.That(payload.CultureName, Is.EqualTo("fr-FR"));
+        Assert.That(payload.PreferredTimeZone, Is.EqualTo("Europe/Paris"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_UsesConfiguredDefaults_WhenLanguageAndTimeZoneWhitespace()
+    {
+        var invitationId = Guid.NewGuid();
+        var trainerId = Guid.NewGuid();
+        var traineeId = Guid.NewGuid();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = invitationId,
+            Code = "CFG123",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        };
+
+        _testUserRepository.UsersById[traineeId] = new User
+        {
+            Id = traineeId,
+            Email = "trainee@example.com",
+            PreferredTimeZone = "   "
+        };
+
+        _testUserRepository.UsersById[trainerId] = new User
+        {
+            Id = trainerId,
+            Name = "Coach",
+            PreferredLanguage = "   "
+        };
+
+        var handler = new SendInvitationEmailHandler(
+            _testInvitationRepository,
+            _testUserRepository,
+            _testScheduler,
+            _testEmailNotificationsFeature,
+            _testLogger,
+            new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "UTC" });
+
+        await handler.ExecuteAsync(new InvitationCreatedCommand { InvitationId = invitationId });
+
+        var payload = _testScheduler.ScheduledPayloads[0];
+        Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
+        Assert.That(payload.PreferredTimeZone, Is.EqualTo("UTC"));
     }
 
     [Test]

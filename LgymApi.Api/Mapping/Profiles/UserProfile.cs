@@ -22,6 +22,7 @@ public sealed class UserProfile : IMappingProfile
             Email = source.Email,
             Avatar = source.Avatar,
             ProfileRank = source.ProfileRank,
+            PreferredTimeZone = source.PreferredTimeZone,
             CreatedAt = source.CreatedAt,
             UpdatedAt = source.UpdatedAt,
             Elo = source.Elo,

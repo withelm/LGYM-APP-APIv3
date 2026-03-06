@@ -16,5 +16,6 @@ public interface IUserService
     Task LogoutAsync(UserEntity currentUser, CancellationToken cancellationToken = default);
     Task DeleteAccountAsync(UserEntity currentUser, CancellationToken cancellationToken = default);
     Task ChangeVisibilityInRankingAsync(UserEntity currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default);
+    Task UpdateTimeZoneAsync(UserEntity currentUser, string preferredTimeZone, CancellationToken cancellationToken = default);
     Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default);
 }

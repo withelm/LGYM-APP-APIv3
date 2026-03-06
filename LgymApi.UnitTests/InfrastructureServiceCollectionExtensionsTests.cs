@@ -1,7 +1,9 @@
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Options;
 using LgymApi.Infrastructure;
+using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -227,6 +229,59 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
         using var provider = services.BuildServiceProvider();
         var orchestrator = provider.GetRequiredService<BackgroundActionOrchestratorService>();
         Assert.That(orchestrator, Is.Not.Null);
+    }
+
+    [Test]
+    public void AddInfrastructure_RegistersConfiguredAppDefaults()
+    {
+        var services = new ServiceCollection();
+        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        values["AppDefaults:PreferredLanguage"] = "pl-PL";
+        values["AppDefaults:PreferredTimeZone"] = "UTC";
+        var configuration = BuildConfiguration(values);
+
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+
+        using var provider = services.BuildServiceProvider();
+        var defaults = provider.GetRequiredService<AppDefaultsOptions>();
+
+        Assert.That(defaults.PreferredLanguage, Is.EqualTo("pl-PL"));
+        Assert.That(defaults.PreferredTimeZone, Is.EqualTo("UTC"));
+    }
+
+    [Test]
+    public void AddInfrastructure_FallsBackAppDefaults_WhenConfigurationInvalid()
+    {
+        var services = new ServiceCollection();
+        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        values["AppDefaults:PreferredLanguage"] = "@@invalid-culture@@";
+        values["AppDefaults:PreferredTimeZone"] = "Not/ARealTimeZone";
+        var configuration = BuildConfiguration(values);
+
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+
+        using var provider = services.BuildServiceProvider();
+        var defaults = provider.GetRequiredService<AppDefaultsOptions>();
+
+        Assert.That(defaults.PreferredLanguage, Is.EqualTo("en-US"));
+        Assert.That(defaults.PreferredTimeZone, Is.EqualTo("Europe/Warsaw"));
+    }
+
+    [Test]
+    public void AddInfrastructure_UsesAppDefaultLanguage_WhenEmailDefaultCultureInvalid()
+    {
+        var services = new ServiceCollection();
+        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        values["AppDefaults:PreferredLanguage"] = "pl-PL";
+        values["Email:DefaultCulture"] = "@@invalid-culture@@";
+        var configuration = BuildConfiguration(values);
+
+        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+
+        using var provider = services.BuildServiceProvider();
+        var emailOptions = provider.GetRequiredService<EmailOptions>();
+
+        Assert.That(emailOptions.DefaultCulture.Name, Is.EqualTo("pl-PL"));
     }
 
     private static IConfiguration BuildEnabledEmailConfiguration()

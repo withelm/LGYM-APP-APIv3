@@ -3,6 +3,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Options;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
@@ -18,19 +19,22 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
     private readonly IEmailScheduler<InvitationEmailPayload> _emailScheduler;
     private readonly ILogger<SendInvitationEmailHandler> _logger;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
+    private readonly AppDefaultsOptions _appDefaultsOptions;
 
     public SendInvitationEmailHandler(
         ITrainerRelationshipRepository invitationRepository,
         IUserRepository userRepository,
         IEmailScheduler<InvitationEmailPayload> emailScheduler,
         IEmailNotificationsFeature emailNotificationsFeature,
-        ILogger<SendInvitationEmailHandler> logger)
+        ILogger<SendInvitationEmailHandler> logger,
+        AppDefaultsOptions appDefaultsOptions)
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _emailScheduler = emailScheduler ?? throw new ArgumentNullException(nameof(emailScheduler));
         _emailNotificationsFeature = emailNotificationsFeature ?? throw new ArgumentNullException(nameof(emailNotificationsFeature));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _appDefaultsOptions = appDefaultsOptions ?? throw new ArgumentNullException(nameof(appDefaultsOptions));
     }
 
     public async Task ExecuteAsync(InvitationCreatedCommand command, CancellationToken cancellationToken = default)
@@ -90,7 +94,8 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
             ExpiresAt = invitation.ExpiresAt,
             TrainerName = trainer.Name,
             RecipientEmail = trainee.Email,
-            CultureName = trainer.PreferredLanguage ?? "en-US"
+            CultureName = string.IsNullOrWhiteSpace(trainer.PreferredLanguage) ? _appDefaultsOptions.PreferredLanguage : trainer.PreferredLanguage,
+            PreferredTimeZone = string.IsNullOrWhiteSpace(trainee.PreferredTimeZone) ? _appDefaultsOptions.PreferredTimeZone : trainee.PreferredTimeZone
         };
 
         // Schedule email via typed email scheduler

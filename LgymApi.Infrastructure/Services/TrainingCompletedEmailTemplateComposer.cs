@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Options;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Resources;
@@ -14,9 +15,18 @@ namespace LgymApi.Infrastructure.Services;
 
 public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateComposerBase, IEmailTemplateComposer
 {
+    private readonly AppDefaultsOptions _appDefaultsOptions;
+
     public TrainingCompletedEmailTemplateComposer(EmailOptions emailOptions)
         : base(emailOptions)
     {
+        _appDefaultsOptions = new AppDefaultsOptions();
+    }
+
+    public TrainingCompletedEmailTemplateComposer(EmailOptions emailOptions, AppDefaultsOptions appDefaultsOptions)
+        : base(emailOptions)
+    {
+        _appDefaultsOptions = appDefaultsOptions;
     }
 
     public EmailNotificationType NotificationType => EmailNotificationTypes.TrainingCompleted;
@@ -31,7 +41,8 @@ public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateCompos
     {
         var culture = payload.Culture;
         var template = LoadTemplate("TrainingCompleted", culture);
-        var trainingDate = payload.TrainingDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm", culture);
+        var timeZone = ResolveTimeZone(payload.PreferredTimeZone, _appDefaultsOptions.PreferredTimeZone);
+        var trainingDate = TimeZoneInfo.ConvertTime(payload.TrainingDate, timeZone).ToString("yyyy-MM-dd HH:mm", culture);
         var previousCulture = CultureInfo.CurrentUICulture;
         try
         {
@@ -139,5 +150,24 @@ public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateCompos
         var displayName = resourceManager.GetString(translationKey, culture) ?? enumName;
 
         return displayName;
+    }
+
+    private static TimeZoneInfo ResolveTimeZone(string? preferredTimeZone, string fallbackTimeZone)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredTimeZone))
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(preferredTimeZone);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+
+        return TimeZoneInfo.FindSystemTimeZoneById(fallbackTimeZone);
     }
 }

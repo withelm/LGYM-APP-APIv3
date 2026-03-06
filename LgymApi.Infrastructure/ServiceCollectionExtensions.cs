@@ -7,6 +7,7 @@ using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,6 +27,8 @@ public static class ServiceCollectionExtensions
         bool isTesting = false,
         bool hostBackgroundServer = false)
     {
+        var appDefaultsOptions = ResolveAppDefaults(configuration);
+
         var emailOptions = new EmailOptions
         {
             Enabled = bool.TryParse(configuration["Email:Enabled"], out var enabled) && enabled,
@@ -40,9 +43,10 @@ public static class ServiceCollectionExtensions
             UseSsl = GetBooleanOrDefault(configuration["Email:UseSsl"], defaultValue: true),
             InvitationBaseUrl = configuration["Email:InvitationBaseUrl"] ?? string.Empty,
             TemplateRootPath = configuration["Email:TemplateRootPath"] ?? "EmailTemplates",
-            DefaultCulture = ResolveDefaultCulture(configuration["Email:DefaultCulture"])
+            DefaultCulture = ResolveDefaultCulture(configuration["Email:DefaultCulture"], appDefaultsOptions.PreferredLanguage)
         };
 
+        services.AddSingleton(appDefaultsOptions);
         ValidateEmailOptions(emailOptions);
         services.AddSingleton(emailOptions);
         services.AddSingleton<IEmailNotificationsFeature, EmailNotificationsFeature>();
@@ -188,11 +192,61 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static CultureInfo ResolveDefaultCulture(string? value)
+    private static AppDefaultsOptions ResolveAppDefaults(IConfiguration configuration)
+    {
+        var preferredLanguage = ResolvePreferredLanguage(configuration["AppDefaults:PreferredLanguage"]);
+        var preferredTimeZone = ResolvePreferredTimeZone(configuration["AppDefaults:PreferredTimeZone"]);
+
+        return new AppDefaultsOptions
+        {
+            PreferredLanguage = preferredLanguage,
+            PreferredTimeZone = preferredTimeZone
+        };
+    }
+
+    private static string ResolvePreferredLanguage(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            return CultureInfo.GetCultureInfo("en-US");
+            return "en-US";
+        }
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(value).Name;
+        }
+        catch (CultureNotFoundException)
+        {
+            return "en-US";
+        }
+    }
+
+    private static string ResolvePreferredTimeZone(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "Europe/Warsaw";
+        }
+
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(value).Id;
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return "Europe/Warsaw";
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return "Europe/Warsaw";
+        }
+    }
+
+    private static CultureInfo ResolveDefaultCulture(string? value, string preferredLanguageFallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return CultureInfo.GetCultureInfo(preferredLanguageFallback);
         }
 
         try
@@ -201,7 +255,7 @@ public static class ServiceCollectionExtensions
         }
         catch (CultureNotFoundException)
         {
-            return CultureInfo.GetCultureInfo("en-US");
+            return CultureInfo.GetCultureInfo(preferredLanguageFallback);
         }
     }
 

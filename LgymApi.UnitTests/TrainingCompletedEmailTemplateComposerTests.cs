@@ -1,5 +1,6 @@
 using System.Globalization;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Options;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
@@ -45,6 +46,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
+            PreferredTimeZone = "Europe/Warsaw",
             PlanDayName = "Upper Body A",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>
@@ -77,6 +79,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             Assert.That(message.IsHtml, Is.True);
             Assert.That(message.Body, Does.Contain("<table"));
             Assert.That(message.Body, Does.Contain("Bench Press"));
+            Assert.That(message.Body, Does.Contain("Date: 2026-03-01 11:00"));
             Assert.That(message.Body, Does.Contain($"{Emails.TrainingSeriesLabel} #1"));
             Assert.That(message.Body, Does.Contain($"{Emails.TrainingSeriesLabel} #2"));
             Assert.That(message.Body, Does.Contain(">8<"));
@@ -95,6 +98,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "de-DE",
+            PreferredTimeZone = "Europe/Warsaw",
             PlanDayName = "Lower Body B",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>()
@@ -121,6 +125,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
+            PreferredTimeZone = "Europe/Warsaw",
             PlanDayName = "Full Body",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>
@@ -183,6 +188,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
+            PreferredTimeZone = "Europe/Warsaw",
             PlanDayName = "Testing Units",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>
@@ -216,13 +222,58 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             Assert.That(message.Body, Does.Not.Contain(">Pounds<"), "Should not render enum name for Pounds");
         });
     }
-    private TrainingCompletedEmailTemplateComposer CreateComposer()
+
+    [Test]
+    public void ComposeTrainingCompleted_ShouldUseConfiguredFallbackTimeZone_WhenPreferredTimeZoneInvalid()
+    {
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+        var composer = CreateComposer(new AppDefaultsOptions { PreferredLanguage = "en-US", PreferredTimeZone = "UTC" });
+        var payload = new TrainingCompletedEmailPayload
+        {
+            UserId = Guid.NewGuid(),
+            TrainingId = Guid.NewGuid(),
+            RecipientEmail = "user@example.com",
+            CultureName = "en-US",
+            PreferredTimeZone = "Invalid/Zone",
+            PlanDayName = "Fallback TZ",
+            TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
+            Exercises = new List<TrainingExerciseSummary>()
+        };
+
+        var message = composer.ComposeTrainingCompleted(payload);
+
+        Assert.That(message.Body, Does.Contain("Date: 2026-03-01 10:00"));
+    }
+
+    [Test]
+    public void ComposeTrainingCompleted_ShouldUseConfiguredFallbackTimeZone_WhenPreferredTimeZoneEmpty()
+    {
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+        var composer = CreateComposer(new AppDefaultsOptions { PreferredLanguage = "en-US", PreferredTimeZone = "UTC" });
+        var payload = new TrainingCompletedEmailPayload
+        {
+            UserId = Guid.NewGuid(),
+            TrainingId = Guid.NewGuid(),
+            RecipientEmail = "user@example.com",
+            CultureName = "en-US",
+            PreferredTimeZone = string.Empty,
+            PlanDayName = "Fallback TZ",
+            TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
+            Exercises = new List<TrainingExerciseSummary>()
+        };
+
+        var message = composer.ComposeTrainingCompleted(payload);
+
+        Assert.That(message.Body, Does.Contain("Date: 2026-03-01 10:00"));
+    }
+
+    private TrainingCompletedEmailTemplateComposer CreateComposer(AppDefaultsOptions? appDefaultsOptions = null)
     {
         return new TrainingCompletedEmailTemplateComposer(new EmailOptions
         {
             InvitationBaseUrl = "https://app.example.com/invitations",
             TemplateRootPath = _templateRootPath,
             DefaultCulture = CultureInfo.GetCultureInfo("en-US")
-        });
+        }, appDefaultsOptions ?? new AppDefaultsOptions());
     }
 }

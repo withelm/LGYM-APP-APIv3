@@ -3,6 +3,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Options;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
@@ -16,15 +17,18 @@ public sealed class SendRegistrationEmailHandler : IBackgroundAction<UserRegiste
     private readonly IUserRepository _userRepository;
     private readonly IEmailScheduler<WelcomeEmailPayload> _emailScheduler;
     private readonly ILogger<SendRegistrationEmailHandler> _logger;
+    private readonly AppDefaultsOptions _appDefaultsOptions;
 
     public SendRegistrationEmailHandler(
         IUserRepository userRepository,
         IEmailScheduler<WelcomeEmailPayload> emailScheduler,
-        ILogger<SendRegistrationEmailHandler> logger)
+        ILogger<SendRegistrationEmailHandler> logger,
+        AppDefaultsOptions appDefaultsOptions)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _emailScheduler = emailScheduler ?? throw new ArgumentNullException(nameof(emailScheduler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _appDefaultsOptions = appDefaultsOptions ?? throw new ArgumentNullException(nameof(appDefaultsOptions));
     }
 
     public async Task ExecuteAsync(UserRegisteredCommand command, CancellationToken cancellationToken = default)
@@ -48,8 +52,8 @@ public sealed class SendRegistrationEmailHandler : IBackgroundAction<UserRegiste
             return;
         }
 
-        // Determine culture: use user's preferred language or fallback to en-US
-        var cultureName = !string.IsNullOrWhiteSpace(user.PreferredLanguage) ? user.PreferredLanguage : "en-US";
+        // Determine culture: use user's preferred language or configured fallback
+        var cultureName = !string.IsNullOrWhiteSpace(user.PreferredLanguage) ? user.PreferredLanguage : _appDefaultsOptions.PreferredLanguage;
 
         // Map user entity to email payload
         var emailPayload = new WelcomeEmailPayload

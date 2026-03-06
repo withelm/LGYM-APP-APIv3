@@ -28,17 +28,10 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
-        var preferredLanguage = "en-US";
-        if (Request.Headers.TryGetValue("Accept-Language", out var langs))
-        {
-            preferredLanguage = langs
-                .ToString()
-                .Split(',')
-                .FirstOrDefault()?
-                .Split(';')
-                .FirstOrDefault()?
-                .Trim();
-        }
+        var preferredLanguage = Request.Headers.TryGetValue("Accept-Language", out var langs)
+            ? langs.ToString()
+            : null;
+
         await _userService.RegisterAsync(
             request.Name,
             request.Email,
@@ -126,6 +119,15 @@ public sealed class UserController : ControllerBase
 
         var user = HttpContext.GetCurrentUser();
         await _userService.ChangeVisibilityInRankingAsync(user!, isVisible, HttpContext.RequestAborted);
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
+    }
+
+    [HttpPost("updateTimeZone")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateTimeZone([FromBody] UpdateTimeZoneRequest request)
+    {
+        var user = HttpContext.GetCurrentUser();
+        await _userService.UpdateTimeZoneAsync(user!, request.PreferredTimeZone, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

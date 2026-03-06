@@ -4,6 +4,7 @@ using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Options;
 using LgymApi.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -23,7 +24,7 @@ public sealed class SendRegistrationEmailHandlerTests
         _testUserRepository = new TestUserRepository();
         _testScheduler = new TestEmailScheduler();
         _testLogger = new TestLogger();
-        _handler = new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, _testLogger);
+        _handler = new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, _testLogger, new AppDefaultsOptions());
     }
 
     [Test]
@@ -196,7 +197,7 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(null!, _testScheduler, _testLogger));
+            new SendRegistrationEmailHandler(null!, _testScheduler, _testLogger, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("userRepository"));
     }
 
@@ -205,7 +206,7 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(_testUserRepository, null!, _testLogger));
+            new SendRegistrationEmailHandler(_testUserRepository, null!, _testLogger, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("emailScheduler"));
     }
 
@@ -214,7 +215,7 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, null!));
+            new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, null!, new AppDefaultsOptions()));
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 
@@ -288,6 +289,32 @@ public sealed class SendRegistrationEmailHandlerTests
         // Assert
         var payload = _testScheduler.ScheduledPayloads[0];
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithWhitespacePreferredLanguage_UsesConfiguredDefault()
+    {
+        var userId = Guid.NewGuid();
+        _testUserRepository.UserToReturn = new User
+        {
+            Id = userId,
+            Name = "TestUser",
+            Email = "test@example.com",
+            PreferredLanguage = "   "
+        };
+
+        var handler = new SendRegistrationEmailHandler(
+            _testUserRepository,
+            _testScheduler,
+            _testLogger,
+            new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "Europe/Warsaw" });
+
+        var command = new UserRegisteredCommand { UserId = userId };
+
+        await handler.ExecuteAsync(command);
+
+        var payload = _testScheduler.ScheduledPayloads[0];
+        Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
     }
 
     // Test doubles

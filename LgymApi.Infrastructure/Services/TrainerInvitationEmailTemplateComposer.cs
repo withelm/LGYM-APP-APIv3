@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Options;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
 
@@ -9,9 +10,18 @@ namespace LgymApi.Infrastructure.Services;
 
 public sealed class TrainerInvitationEmailTemplateComposer : EmailTemplateComposerBase, IEmailTemplateComposer
 {
+    private readonly AppDefaultsOptions _appDefaultsOptions;
+
     public TrainerInvitationEmailTemplateComposer(EmailOptions emailOptions)
         : base(emailOptions)
     {
+        _appDefaultsOptions = new AppDefaultsOptions();
+    }
+
+    public TrainerInvitationEmailTemplateComposer(EmailOptions emailOptions, AppDefaultsOptions appDefaultsOptions)
+        : base(emailOptions)
+    {
+        _appDefaultsOptions = appDefaultsOptions;
     }
 
     public EmailNotificationType NotificationType => EmailNotificationTypes.TrainerInvitation;
@@ -29,8 +39,8 @@ public sealed class TrainerInvitationEmailTemplateComposer : EmailTemplateCompos
         var baseUrl = EmailOptions.InvitationBaseUrl.TrimEnd('/');
         var acceptUrl = $"{baseUrl}/accept/{payload.InvitationId}";
         var rejectUrl = $"{baseUrl}/reject/{payload.InvitationId}";
-
-        var expiresAt = payload.ExpiresAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
+        var timeZone = ResolveTimeZone(payload.PreferredTimeZone, _appDefaultsOptions.PreferredTimeZone);
+        var expiresAt = TimeZoneInfo.ConvertTime(payload.ExpiresAt, timeZone).ToString("yyyy-MM-dd HH:mm", culture);
         var replacements = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["{{TrainerName}}"] = SanitizeTemplateValue(payload.TrainerName),
@@ -67,6 +77,25 @@ public sealed class TrainerInvitationEmailTemplateComposer : EmailTemplateCompos
         {
             throw new InvalidOperationException("Failed to deserialize invitation email payload.", ex);
         }
+    }
+
+    private static TimeZoneInfo ResolveTimeZone(string? preferredTimeZone, string fallbackTimeZone)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredTimeZone))
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(preferredTimeZone);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+
+        return TimeZoneInfo.FindSystemTimeZoneById(fallbackTimeZone);
     }
 
 }
