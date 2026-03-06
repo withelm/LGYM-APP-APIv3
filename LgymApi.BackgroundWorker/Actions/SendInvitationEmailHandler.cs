@@ -90,7 +90,8 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
             ExpiresAt = invitation.ExpiresAt,
             TrainerName = trainer.Name,
             RecipientEmail = trainee.Email,
-            CultureName = trainer.PreferredLanguage ?? "en-US"
+            CultureName = trainer.PreferredLanguage ?? "en-US",
+            TimeZoneId = trainee.PreferredTimeZone
         };
 
         // Schedule email via typed email scheduler

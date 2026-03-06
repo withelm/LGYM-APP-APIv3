@@ -30,6 +30,12 @@ public sealed class LoginRequest : IDto
     public string Password { get; set; } = string.Empty;
 }
 
+public sealed class UpdateTimeZoneRequest : IDto
+{
+    [JsonPropertyName("timeZoneId")]
+    public string TimeZoneId { get; set; } = string.Empty;
+}
+
 public sealed class RankDto : IResultDto
 {
     [JsonPropertyName("name")]
@@ -55,6 +61,9 @@ public sealed class UserInfoDto : IResultDto
 
     [JsonPropertyName("profileRank")]
     public string ProfileRank { get; set; } = string.Empty;
+
+    [JsonPropertyName("preferredTimeZone")]
+    public string PreferredTimeZone { get; set; } = "Europe/Warsaw";
 
     [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; set; }

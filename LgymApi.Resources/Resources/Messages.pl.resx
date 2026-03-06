@@ -195,4 +195,7 @@
   <data name="DateRangeRequired" xml:space="preserve">
     <value>Parametry zapytania fromDate i toDate są wymagane.</value>
   </data>
+  <data name="InvalidTimeZone" xml:space="preserve">
+    <value>Nieprawidłowy identyfikator strefy czasowej.</value>
+  </data>
 </root>

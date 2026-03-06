@@ -45,6 +45,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
+            TimeZoneId = "Europe/Warsaw",
             PlanDayName = "Upper Body A",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>
@@ -77,6 +78,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             Assert.That(message.IsHtml, Is.True);
             Assert.That(message.Body, Does.Contain("<table"));
             Assert.That(message.Body, Does.Contain("Bench Press"));
+            Assert.That(message.Body, Does.Contain("Date: 2026-03-01 11:00"));
             Assert.That(message.Body, Does.Contain($"{Emails.TrainingSeriesLabel} #1"));
             Assert.That(message.Body, Does.Contain($"{Emails.TrainingSeriesLabel} #2"));
             Assert.That(message.Body, Does.Contain(">8<"));
@@ -95,6 +97,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "de-DE",
+            TimeZoneId = "Europe/Warsaw",
             PlanDayName = "Lower Body B",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>()
@@ -121,6 +124,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
+            TimeZoneId = "Europe/Warsaw",
             PlanDayName = "Full Body",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>
@@ -183,6 +187,7 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
             TrainingId = Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
+            TimeZoneId = "Europe/Warsaw",
             PlanDayName = "Testing Units",
             TrainingDate = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             Exercises = new List<TrainingExerciseSummary>

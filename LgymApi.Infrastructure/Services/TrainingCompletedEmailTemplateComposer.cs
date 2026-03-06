@@ -31,7 +31,8 @@ public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateCompos
     {
         var culture = payload.Culture;
         var template = LoadTemplate("TrainingCompleted", culture);
-        var trainingDate = payload.TrainingDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm", culture);
+        var timeZone = ResolveTimeZone(payload.TimeZoneId);
+        var trainingDate = TimeZoneInfo.ConvertTime(payload.TrainingDate, timeZone).ToString("yyyy-MM-dd HH:mm", culture);
         var previousCulture = CultureInfo.CurrentUICulture;
         try
         {
@@ -139,5 +140,24 @@ public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateCompos
         var displayName = resourceManager.GetString(translationKey, culture) ?? enumName;
 
         return displayName;
+    }
+
+    private static TimeZoneInfo ResolveTimeZone(string? timeZoneId)
+    {
+        if (!string.IsNullOrWhiteSpace(timeZoneId))
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+
+        return TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
     }
 }

@@ -81,6 +81,7 @@ public sealed class SendInvitationEmailHandlerTests
         Assert.That(payload.TrainerName, Is.EqualTo("Coach Smith"));
         Assert.That(payload.RecipientEmail, Is.EqualTo("trainee@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
+        Assert.That(payload.TimeZoneId, Is.EqualTo("Europe/Warsaw"));
     }
 
     [Test]
@@ -192,7 +193,8 @@ public sealed class SendInvitationEmailHandlerTests
         {
             Id = traineeId,
             Email = "carlos@example.es",
-            PreferredLanguage = "es-ES"
+            PreferredLanguage = "es-ES",
+            PreferredTimeZone = "Europe/Madrid"
         };
 
         _testUserRepository.UsersById[trainerId] = new User
@@ -218,6 +220,7 @@ public sealed class SendInvitationEmailHandlerTests
         Assert.That(payload.TrainerName, Is.EqualTo("Maria Rodriguez"));
         Assert.That(payload.RecipientEmail, Is.EqualTo("carlos@example.es"));
         Assert.That(payload.CultureName, Is.EqualTo("es-ES"));
+        Assert.That(payload.TimeZoneId, Is.EqualTo("Europe/Madrid"));
     }
 
     [Test]
@@ -364,7 +367,8 @@ public sealed class SendInvitationEmailHandlerTests
         {
             Id = traineeId,
             Email = "trainee@example.fr",
-            PreferredLanguage = "fr-FR"
+            PreferredLanguage = "fr-FR",
+            PreferredTimeZone = "Europe/Paris"
         };
 
         _testUserRepository.UsersById[trainerId] = new User
@@ -385,6 +389,7 @@ public sealed class SendInvitationEmailHandlerTests
         // Assert
         var payload = _testScheduler.ScheduledPayloads[0];
         Assert.That(payload.CultureName, Is.EqualTo("fr-FR"));
+        Assert.That(payload.TimeZoneId, Is.EqualTo("Europe/Paris"));
     }
 
     [Test]

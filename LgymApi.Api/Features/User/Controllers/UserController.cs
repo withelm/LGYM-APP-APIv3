@@ -128,4 +128,13 @@ public sealed class UserController : ControllerBase
         await _userService.ChangeVisibilityInRankingAsync(user!, isVisible, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
+
+    [HttpPut("updateTimeZone")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateTimeZone([FromBody] UpdateTimeZoneRequest request)
+    {
+        var user = HttpContext.GetCurrentUser();
+        await _userService.UpdateTimeZoneAsync(user!, request.TimeZoneId, HttpContext.RequestAborted);
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
+    }
 }

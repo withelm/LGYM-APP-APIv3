@@ -45,7 +45,8 @@ public sealed class InvitationEmailTemplateComposerTests
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach Mike",
             RecipientEmail = "trainee@example.com",
-            CultureName = "pl-PL"
+            CultureName = "pl-PL",
+            TimeZoneId = "Europe/Warsaw"
         };
 
         var message = composer.ComposeTrainerInvitation(payload);
@@ -57,6 +58,7 @@ public sealed class InvitationEmailTemplateComposerTests
             Assert.That(message.Body, Does.Contain("Kod: ABC123XYZ789"));
             Assert.That(message.Body, Does.Contain("Akceptuj:"));
             Assert.That(message.Body, Does.Contain("Wygasa:"));
+            Assert.That(message.Body, Does.Contain("2026-03-01 11:00"));
             Assert.That(message.Body, Does.Contain($"/accept/{invitationId}"));
             Assert.That(message.Body, Does.Contain($"/reject/{invitationId}"));
         });
@@ -75,7 +77,8 @@ public sealed class InvitationEmailTemplateComposerTests
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach Jane",
             RecipientEmail = "trainee@example.com",
-            CultureName = "de-DE"
+            CultureName = "de-DE",
+            TimeZoneId = "Europe/Warsaw"
         };
 
         var message = composer.ComposeTrainerInvitation(payload);

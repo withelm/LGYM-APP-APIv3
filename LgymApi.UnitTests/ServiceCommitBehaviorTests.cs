@@ -1,6 +1,7 @@
 using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Exceptions;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.BackgroundWorker.Common.Notifications;
@@ -108,6 +109,127 @@ public sealed class ServiceCommitBehaviorTests
         var savedElo = await dbContext.EloRegistries.FirstOrDefaultAsync(e => e.UserId == savedUser!.Id);
         Assert.That(savedElo, Is.Not.Null);
         Assert.That(savedElo!.Elo, Is.EqualTo(1000));
+    }
+
+    [Test]
+    public async Task UpdateTimeZoneAsync_PersistsUserPreference()
+    {
+        var dbName = $"service-commit-timezone-{Guid.NewGuid()}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+
+        await using var dbContext = new AppDbContext(options);
+
+        dbContext.Roles.Add(new Role
+        {
+            Id = Guid.NewGuid(),
+            Name = AuthConstants.Roles.User,
+            Description = "Default user role"
+        });
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = "timezone-user",
+            Email = "timezone-user@example.com",
+            ProfileRank = "Junior 1",
+            PreferredTimeZone = "Europe/Warsaw",
+            LegacyHash = "hash",
+            LegacySalt = "salt",
+            LegacyDigest = "sha256",
+            LegacyIterations = 25000,
+            LegacyKeyLength = 512
+        };
+
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
+
+        IUserRepository userRepository = new UserRepository(dbContext);
+        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
+        ITokenService tokenService = new NoOpTokenService();
+        ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
+        IRankService rankService = new RankService();
+        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
+        IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+        ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
+
+        var service = new UserService(
+            userRepository,
+            roleRepository,
+            eloRepository,
+            tokenService,
+            legacyPasswordService,
+            rankService,
+            userSessionCache,
+            commandDispatcher,
+            unitOfWork,
+            NullLogger<UserService>.Instance);
+
+        await service.UpdateTimeZoneAsync(user, "Europe/Paris");
+
+        var savedUser = await dbContext.Users.SingleAsync(u => u.Id == user.Id);
+        Assert.That(savedUser.PreferredTimeZone, Is.EqualTo("Europe/Paris"));
+    }
+
+    [Test]
+    public async Task UpdateTimeZoneAsync_ThrowsBadRequest_WhenTimeZoneInvalid()
+    {
+        var dbName = $"service-commit-timezone-invalid-{Guid.NewGuid()}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+
+        await using var dbContext = new AppDbContext(options);
+
+        dbContext.Roles.Add(new Role
+        {
+            Id = Guid.NewGuid(),
+            Name = AuthConstants.Roles.User,
+            Description = "Default user role"
+        });
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = "timezone-invalid-user",
+            Email = "timezone-invalid-user@example.com",
+            ProfileRank = "Junior 1",
+            PreferredTimeZone = "Europe/Warsaw",
+            LegacyHash = "hash",
+            LegacySalt = "salt",
+            LegacyDigest = "sha256",
+            LegacyIterations = 25000,
+            LegacyKeyLength = 512
+        };
+
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
+
+        IUserRepository userRepository = new UserRepository(dbContext);
+        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
+        ITokenService tokenService = new NoOpTokenService();
+        ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
+        IRankService rankService = new RankService();
+        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
+        IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+        ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
+
+        var service = new UserService(
+            userRepository,
+            roleRepository,
+            eloRepository,
+            tokenService,
+            legacyPasswordService,
+            rankService,
+            userSessionCache,
+            commandDispatcher,
+            unitOfWork,
+            NullLogger<UserService>.Instance);
+
+        Assert.ThrowsAsync<AppException>(async () => await service.UpdateTimeZoneAsync(user, "Not/ARealTimeZone"));
     }
 
     [Test]

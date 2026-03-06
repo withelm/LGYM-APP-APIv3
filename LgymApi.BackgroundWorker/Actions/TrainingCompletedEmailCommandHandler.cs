@@ -123,6 +123,7 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
             TrainingId = command.TrainingId,
             RecipientEmail = user.Email,
             CultureName = user.PreferredLanguage ?? "en-US",
+            TimeZoneId = user.PreferredTimeZone,
             PlanDayName = planDayName,
             TrainingDate = trainingDate,
             Exercises = exercises

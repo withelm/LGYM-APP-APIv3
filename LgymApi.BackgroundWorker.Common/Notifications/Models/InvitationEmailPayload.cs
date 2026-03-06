@@ -13,6 +13,7 @@ public sealed class InvitationEmailPayload : IEmailPayload
     public string TrainerName { get; init; } = string.Empty;
     public string RecipientEmail { get; init; } = string.Empty;
     public string CultureName { get; init; } = "en-US";
+    public string TimeZoneId { get; init; } = "Europe/Warsaw";
 
     public Guid CorrelationId => InvitationId;
     public EmailNotificationType NotificationType => EmailNotificationTypes.TrainerInvitation;

@@ -228,6 +228,7 @@ public sealed class UserService : IUserService
                 Email = user.Email,
                 Avatar = user.Avatar,
                 ProfileRank = user.ProfileRank,
+                PreferredTimeZone = user.PreferredTimeZone,
                 CreatedAt = user.CreatedAt.UtcDateTime,
                 UpdatedAt = user.UpdatedAt.UtcDateTime,
                 Elo = elo,
@@ -269,6 +270,7 @@ public sealed class UserService : IUserService
             Email = currentUser.Email,
             Avatar = currentUser.Avatar,
             ProfileRank = currentUser.ProfileRank,
+            PreferredTimeZone = currentUser.PreferredTimeZone,
             CreatedAt = currentUser.CreatedAt.UtcDateTime,
             UpdatedAt = currentUser.UpdatedAt.UtcDateTime,
             Elo = elo,
@@ -347,6 +349,37 @@ public sealed class UserService : IUserService
         }
 
         currentUser.IsVisibleInRanking = isVisibleInRanking;
+        await _userRepository.UpdateAsync(currentUser, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateTimeZoneAsync(UserEntity currentUser, string timeZoneId, CancellationToken cancellationToken = default)
+    {
+        if (currentUser == null)
+        {
+            throw AppException.BadRequest(Messages.DidntFind);
+        }
+
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        var normalizedTimeZoneId = timeZoneId.Trim();
+        try
+        {
+            _ = TimeZoneInfo.FindSystemTimeZoneById(normalizedTimeZoneId);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            throw AppException.BadRequest(Messages.InvalidTimeZone);
+        }
+        catch (InvalidTimeZoneException)
+        {
+            throw AppException.BadRequest(Messages.InvalidTimeZone);
+        }
+
+        currentUser.PreferredTimeZone = normalizedTimeZoneId;
         await _userRepository.UpdateAsync(currentUser, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
