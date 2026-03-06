@@ -25,14 +25,11 @@ public sealed class TrainingService : ITrainingService
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
     private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
-    private readonly IEmailNotificationSubscriptionRepository _emailNotificationSubscriptionRepository;
     private readonly ICommandDispatcher _commandDispatcher;
-    private readonly IMainRecordRepository _mainRecordRepository;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
     private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<TrainingService> _logger;
 
     public TrainingService(
         IUserRepository userRepository,
@@ -41,14 +38,11 @@ public sealed class TrainingService : ITrainingService
         IExerciseRepository exerciseRepository,
         IExerciseScoreRepository exerciseScoreRepository,
         ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
-        IEmailNotificationSubscriptionRepository emailNotificationSubscriptionRepository,
         ICommandDispatcher commandDispatcher,
-        IMainRecordRepository mainRecordRepository,
         IEloRegistryRepository eloRepository,
         IRankService rankService,
         IUnitConverter<WeightUnits> weightUnitConverter,
-        IUnitOfWork unitOfWork,
-        ILogger<TrainingService> logger)
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _gymRepository = gymRepository;
@@ -56,14 +50,11 @@ public sealed class TrainingService : ITrainingService
         _exerciseRepository = exerciseRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
         _trainingExerciseScoreRepository = trainingExerciseScoreRepository;
-        _emailNotificationSubscriptionRepository = emailNotificationSubscriptionRepository;
         _commandDispatcher = commandDispatcher;
-        _mainRecordRepository = mainRecordRepository;
         _eloRepository = eloRepository;
         _rankService = rankService;
         _weightUnitConverter = weightUnitConverter;
         _unitOfWork = unitOfWork;
-        _logger = logger;
     }
 
     public async Task<TrainingSummaryResult> AddTrainingAsync(
@@ -361,16 +352,6 @@ public sealed class TrainingService : ITrainingService
     private static int CalculateEloPerExercise(ExerciseScore currentScore, ExerciseScore previousScore)
     {
         return PartElo(previousScore.Weight, previousScore.Reps, currentScore.Weight, currentScore.Reps);
-    }
-
-    private int CompareWeights(double leftWeight, WeightUnits leftUnit, double rightWeight, WeightUnits rightUnit)
-    {
-        return UnitValueComparer.Compare(
-            leftWeight,
-            leftUnit,
-            rightWeight,
-            rightUnit,
-            (value, unit) => _weightUnitConverter.Convert(value, unit, WeightUnits.Kilograms));
     }
 
     private static int PartElo(double prevWeight, int prevReps, double accWeight, int accReps)

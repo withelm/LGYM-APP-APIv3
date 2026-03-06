@@ -38,9 +38,6 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         // Early exit if email notifications are disabled
         if (!_emailNotificationsFeature.Enabled)
         {
-            _logger.LogInformation(
-                "Email notifications disabled. Skipping invitation email for Invitation {InvitationId}",
-                command.InvitationId);
             return;
         }
 
