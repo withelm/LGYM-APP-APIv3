@@ -588,13 +588,18 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         body.Items.Should().ContainSingle(x => x.Id == matching.Id.ToString());
     }
 
-    [Test]
-    public async Task GetDashboardTrainees_WithInvalidSortBy_ReturnsBadRequestWithResourceMessage()
+    [TestCase("sortBy=unknown", nameof(Messages.DashboardSortByInvalid), TestName = "GetDashboardTrainees_WithInvalidSortBy_ReturnsBadRequestWithResourceMessage")]
+    [TestCase("status=NotAStatus", nameof(Messages.DashboardStatusInvalid), TestName = "GetDashboardTrainees_WithInvalidStatus_ReturnsBadRequestWithResourceMessage")]
+    [TestCase("page=0", nameof(Messages.DashboardPageRange), TestName = "GetDashboardTrainees_WithInvalidPage_ReturnsBadRequestWithResourceMessage")]
+    [TestCase("page=21474838", nameof(Messages.DashboardPageRange), TestName = "GetDashboardTrainees_WithTooLargePage_ReturnsBadRequestWithResourceMessage")]
+    [TestCase("sortDirection=invalid", nameof(Messages.DashboardSortDirectionInvalid), TestName = "GetDashboardTrainees_WithInvalidSortDirection_ReturnsBadRequestWithResourceMessage")]
+    public async Task GetDashboardTrainees_WithInvalidQueryParam_ReturnsBadRequestWithResourceMessage(string queryString, string expectedMessagePropertyName)
     {
-        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-sort", "trainer-dashboard-invalid-sort@example.com");
+        var uniqueKey = queryString.Replace("=", "-").Replace("&", "-");
+        var trainer = await SeedTrainerAsync($"trainer-dashboard-{uniqueKey}", $"trainer-dashboard-{Guid.NewGuid():N}@example.com");
         SetAuthorizationHeader(trainer.Id);
 
-        var response = await Client.GetAsync("/api/trainer/trainees?sortBy=unknown");
+        var response = await Client.GetAsync($"/api/trainer/trainees?{queryString}");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var responseBody = await response.Content.ReadAsStringAsync();
@@ -604,82 +609,8 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            responseBody.Should().Contain(Messages.DashboardSortByInvalid);
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = originalCulture;
-            CultureInfo.CurrentUICulture = originalUiCulture;
-        }
-    }
-
-    [Test]
-    public async Task GetDashboardTrainees_WithInvalidStatus_ReturnsBadRequestWithResourceMessage()
-    {
-        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-status", "trainer-dashboard-invalid-status@example.com");
-        SetAuthorizationHeader(trainer.Id);
-
-        var response = await Client.GetAsync("/api/trainer/trainees?status=NotAStatus");
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var responseBody = await response.Content.ReadAsStringAsync();
-        var originalCulture = CultureInfo.CurrentCulture;
-        var originalUiCulture = CultureInfo.CurrentUICulture;
-        try
-        {
-            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            responseBody.Should().Contain(Messages.DashboardStatusInvalid);
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = originalCulture;
-            CultureInfo.CurrentUICulture = originalUiCulture;
-        }
-    }
-
-    [Test]
-    public async Task GetDashboardTrainees_WithInvalidPage_ReturnsBadRequestWithResourceMessage()
-    {
-        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-page", "trainer-dashboard-invalid-page@example.com");
-        SetAuthorizationHeader(trainer.Id);
-
-        var response = await Client.GetAsync("/api/trainer/trainees?page=0");
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var responseBody = await response.Content.ReadAsStringAsync();
-        var originalCulture = CultureInfo.CurrentCulture;
-        var originalUiCulture = CultureInfo.CurrentUICulture;
-        try
-        {
-            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            responseBody.Should().Contain(Messages.DashboardPageRange);
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = originalCulture;
-            CultureInfo.CurrentUICulture = originalUiCulture;
-        }
-    }
-
-    [Test]
-    public async Task GetDashboardTrainees_WithTooLargePage_ReturnsBadRequestWithResourceMessage()
-    {
-        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-page-max", "trainer-dashboard-invalid-page-max@example.com");
-        SetAuthorizationHeader(trainer.Id);
-
-        var response = await Client.GetAsync("/api/trainer/trainees?page=21474838");
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var responseBody = await response.Content.ReadAsStringAsync();
-        var originalCulture = CultureInfo.CurrentCulture;
-        var originalUiCulture = CultureInfo.CurrentUICulture;
-        try
-        {
-            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            responseBody.Should().Contain(Messages.DashboardPageRange);
+            var expectedMessage = typeof(Messages).GetProperty(expectedMessagePropertyName)!.GetValue(null) as string;
+            responseBody.Should().Contain(expectedMessage!);
         }
         finally
         {
@@ -707,31 +638,6 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
             responseBody.Should().Contain(Messages.DashboardPageSizeRange);
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = originalCulture;
-            CultureInfo.CurrentUICulture = originalUiCulture;
-        }
-    }
-
-    [Test]
-    public async Task GetDashboardTrainees_WithInvalidSortDirection_ReturnsBadRequestWithResourceMessage()
-    {
-        var trainer = await SeedTrainerAsync("trainer-dashboard-invalid-sortdir", "trainer-dashboard-invalid-sortdir@example.com");
-        SetAuthorizationHeader(trainer.Id);
-
-        var response = await Client.GetAsync("/api/trainer/trainees?sortDirection=invalid");
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var responseBody = await response.Content.ReadAsStringAsync();
-        var originalCulture = CultureInfo.CurrentCulture;
-        var originalUiCulture = CultureInfo.CurrentUICulture;
-        try
-        {
-            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            responseBody.Should().Contain(Messages.DashboardSortDirectionInvalid);
         }
         finally
         {

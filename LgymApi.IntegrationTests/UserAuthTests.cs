@@ -163,63 +163,18 @@ public sealed class UserAuthTests : IntegrationTestBase
         emailLog.PayloadJson.Should().Contain("pl-PL");
         // Optionally check the subject/body if stored; else, template test ensures content.
     }
-    [Test]
-    public async Task Register_WithEmptyName_ReturnsError()
+    [TestCase("", "test@example.com", "password123", "password123", TestName = "Register_WithEmptyName_ReturnsError")]
+    [TestCase("testuser", "invalid-email", "password123", "password123", TestName = "Register_WithInvalidEmail_ReturnsError")]
+    [TestCase("testuser", "test@example.com", "12345", "12345", TestName = "Register_WithShortPassword_ReturnsError")]
+    [TestCase("testuser", "test@example.com", "password123", "differentpassword", TestName = "Register_WithMismatchedPasswords_ReturnsError")]
+    public async Task Register_WithInvalidData_ReturnsBadRequest(string name, string email, string password, string cpassword)
     {
         var request = new
         {
-            name = "",
-            email = "test@example.com",
-            password = "password123",
-            cpassword = "password123"
-        };
-
-        var response = await Client.PostAsJsonAsync("/api/register", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Test]
-    public async Task Register_WithInvalidEmail_ReturnsError()
-    {
-        var request = new
-        {
-            name = "testuser",
-            email = "invalid-email",
-            password = "password123",
-            cpassword = "password123"
-        };
-
-        var response = await Client.PostAsJsonAsync("/api/register", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Test]
-    public async Task Register_WithShortPassword_ReturnsError()
-    {
-        var request = new
-        {
-            name = "testuser",
-            email = "test@example.com",
-            password = "12345",
-            cpassword = "12345"
-        };
-
-        var response = await Client.PostAsJsonAsync("/api/register", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Test]
-    public async Task Register_WithMismatchedPasswords_ReturnsError()
-    {
-        var request = new
-        {
-            name = "testuser",
-            email = "test@example.com",
-            password = "password123",
-            cpassword = "differentpassword"
+            name,
+            email,
+            password,
+            cpassword
         };
 
         var response = await Client.PostAsJsonAsync("/api/register", request);
