@@ -10,6 +10,7 @@ public sealed class MainRecord : EntityBase
 
     public Guid UserId { get; set; }
     public Guid ExerciseId { get; set; }
+    public double WeightValue => _weightValue;
     public Weight Weight
     {
         get => new(_weightValue, _unit);

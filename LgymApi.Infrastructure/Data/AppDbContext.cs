@@ -159,7 +159,7 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("ExerciseScores");
             entity.Ignore(e => e.Weight);
-            entity.Property<double>("_weightValue").HasColumnName("Weight");
+            entity.Property(e => e.WeightValue).HasField("_weightValue").HasColumnName("Weight");
             entity.Property(e => e.Unit).HasField("_unit").HasConversion<string>();
             entity.HasOne(e => e.Exercise)
                 .WithMany(e => e.ExerciseScores)
@@ -182,7 +182,7 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("MainRecords");
             entity.Ignore(e => e.Weight);
-            entity.Property<double>("_weightValue").HasColumnName("Weight");
+            entity.Property(e => e.WeightValue).HasField("_weightValue").HasColumnName("Weight");
             entity.Property(e => e.Unit).HasField("_unit").HasConversion<string>();
         });
 

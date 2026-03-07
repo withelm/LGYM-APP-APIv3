@@ -62,7 +62,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
         return query
             .GroupBy(r => new { r.ExerciseId, r.Unit })
             .Select(g => g
-                .OrderByDescending(r => EF.Property<double>(r, "_weightValue"))
+                .OrderByDescending(r => r.WeightValue)
                 .ThenByDescending(r => r.Date)
                 .First())
             .ToListAsync(cancellationToken);
