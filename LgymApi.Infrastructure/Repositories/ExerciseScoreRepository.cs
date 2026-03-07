@@ -116,7 +116,7 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
         return _dbContext.ExerciseScores
             .AsNoTracking()
             .Where(s => s.UserId == userId && s.ExerciseId == exerciseId)
-            .OrderByDescending(s => s.Weight)
+            .OrderByDescending(s => EF.Property<double>(s, "_weightValue"))
             .ThenByDescending(s => s.Reps)
             .FirstOrDefaultAsync(cancellationToken);
     }

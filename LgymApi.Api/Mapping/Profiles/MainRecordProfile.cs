@@ -22,8 +22,8 @@ public sealed class MainRecordProfile : IMappingProfile
         {
             Id = source.Id.ToString(),
             ExerciseId = source.ExerciseId.ToString(),
-            Weight = source.Weight,
-            Unit = source.Unit.ToLookup(),
+            Weight = source.Weight.Value,
+            Unit = source.Weight.Unit.ToLookup(),
             Date = source.Date.UtcDateTime
         });
 
@@ -38,8 +38,8 @@ public sealed class MainRecordProfile : IMappingProfile
             {
                 Id = source.Id.ToString(),
                 ExerciseId = source.ExerciseId.ToString(),
-                Weight = source.Weight,
-                Unit = source.Unit.ToLookup(),
+                Weight = source.Weight.Value,
+                Unit = source.Weight.Unit.ToLookup(),
                 Date = source.Date.UtcDateTime,
                 ExerciseDetails = exercise == null
                     ? new ExerciseResponseDto()

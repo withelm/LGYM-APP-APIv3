@@ -107,7 +107,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var newRecord = _testMainRecordRepository.AddedRecords[0];
         Assert.That(newRecord.UserId, Is.EqualTo(userId));
         Assert.That(newRecord.ExerciseId, Is.EqualTo(exerciseId));
-        Assert.That(newRecord.Weight, Is.EqualTo(90));
+        Assert.That(newRecord.Weight.Value, Is.EqualTo(90));
         Assert.That(newRecord.Unit, Is.EqualTo(WeightUnits.Kilograms));
         Assert.That(newRecord.Date, Is.EqualTo(trainingDate));
     }
@@ -227,7 +227,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Assert
         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
         var newRecord = _testMainRecordRepository.AddedRecords[0];
-        Assert.That(newRecord.Weight, Is.EqualTo(120));
+        Assert.That(newRecord.Weight.Value, Is.EqualTo(120));
         Assert.That(newRecord.ExerciseId, Is.EqualTo(exerciseId));
     }
 
@@ -413,7 +413,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Assert - 220 lbs (~99.8 kg) > 90 kg, so should create new record
         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
         var newRecord = _testMainRecordRepository.AddedRecords[0];
-        Assert.That(newRecord.Weight, Is.EqualTo(220));
+        Assert.That(newRecord.Weight.Value, Is.EqualTo(220));
         Assert.That(newRecord.Unit, Is.EqualTo(WeightUnits.Pounds));
     }
 
@@ -485,7 +485,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         // Assert - Only one record for the exercise, with the best weight (90kg)
         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
-        Assert.That(_testMainRecordRepository.AddedRecords[0].Weight, Is.EqualTo(90));
+        Assert.That(_testMainRecordRepository.AddedRecords[0].Weight.Value, Is.EqualTo(90));
     }
 
     [Test]

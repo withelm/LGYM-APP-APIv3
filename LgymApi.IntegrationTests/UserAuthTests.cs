@@ -37,13 +37,13 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "newuser");
         user.Should().NotBeNull();
-        user!.Email.Should().Be("newuser@example.com");
+        user!.Email.Value.Should().Be("newuser@example.com");
         user.ProfileRank.Should().Be("Junior 1");
         user.IsVisibleInRanking.Should().BeTrue();
 
         var eloEntry = await db.EloRegistries.FirstOrDefaultAsync(e => e.UserId == user.Id);
         eloEntry.Should().NotBeNull();
-        eloEntry!.Elo.Should().Be(1000);
+        eloEntry!.Elo.Value.Should().Be(1000);
     }
 
     [Test]
@@ -414,7 +414,7 @@ public sealed class UserAuthTests : IntegrationTestBase
         updatedUser.Should().NotBeNull();
         updatedUser!.IsDeleted.Should().BeTrue();
         updatedUser.Name.Should().StartWith("anonymized_user_");
-        updatedUser.Email.Should().StartWith("anonymized_");
+        updatedUser.Email.Value.Should().StartWith("anonymized_");
     }
 
     private sealed class MessageResponse

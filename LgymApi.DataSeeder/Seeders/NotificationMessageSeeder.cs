@@ -1,6 +1,7 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,7 @@ public sealed class NotificationMessageSeeder : IEntitySeeder
             .Select(message => new { message.Channel, message.Type, message.CorrelationId, message.Recipient })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(NotificationChannel Channel, EmailNotificationType Type, Guid CorrelationId, string Recipient)>(
+        var existingSet = new HashSet<(NotificationChannel Channel, EmailNotificationType Type, Guid CorrelationId, Email Recipient)>(
             existing.Select(entry => (entry.Channel, entry.Type, entry.CorrelationId, entry.Recipient)));
 
         var messages = new List<NotificationMessage>

@@ -11,6 +11,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
+using LgymApi.TestUtils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -50,17 +51,17 @@ public abstract class IntegrationTestBase : IDisposable
     }
 
     // Default admin credentials for tests
-    protected const string AdminName = "testadmin";
-    protected const string AdminEmail = "testadmin@example.com";
-    protected const string AdminPassword = "AdminPass123!";
+    protected const string AdminName = TestDataFactory.DefaultAdminName;
+    protected const string AdminEmail = TestDataFactory.DefaultAdminEmail;
+    protected const string AdminPassword = TestDataFactory.DefaultAdminPassword;
 
     protected async Task<User> SeedAdminAsync()
     {
-        return await SeedUserAsync(
-            name: AdminName,
-            email: AdminEmail,
-            password: AdminPassword,
-            isAdmin: true);
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await TestDataFactory.SeedAdminAsync(db);
+        await db.SaveChangesAsync();
+        return user;
     }
 
     protected async Task<User> SeedUserAsync(
@@ -75,47 +76,17 @@ public abstract class IntegrationTestBase : IDisposable
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var passwordService = new LegacyPasswordService();
-
-        var passwordData = passwordService.Create(password);
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
-            Email = email,
-            IsVisibleInRanking = isVisibleInRanking,
-            IsDeleted = isDeleted,
-            ProfileRank = "Junior 1",
-            LegacyHash = passwordData.Hash,
-            LegacySalt = passwordData.Salt,
-            LegacyIterations = passwordData.Iterations,
-            LegacyKeyLength = passwordData.KeyLength,
-            LegacyDigest = passwordData.Digest
-        };
-
-        db.Users.Add(user);
-        db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = AppDbContext.UserRoleSeedId });
-        if (isAdmin)
-        {
-            db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = AppDbContext.AdminRoleSeedId });
-        }
-
-        if (isTester)
-        {
-            db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = AppDbContext.TesterRoleSeedId });
-        }
-
-        var eloRegistry = new EloRegistry
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            Date = DateTimeOffset.UtcNow,
-            Elo = elo
-        };
-        db.EloRegistries.Add(eloRegistry);
-
+        var user = await TestDataFactory.SeedUserAsync(
+            db,
+            name,
+            email,
+            password,
+            isAdmin,
+            isVisibleInRanking,
+            isTester,
+            isDeleted,
+            elo);
         await db.SaveChangesAsync();
-
         return user;
     }
 

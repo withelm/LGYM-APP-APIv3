@@ -35,31 +35,19 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<TrainerRelationshipService> _logger;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Service orchestrates trainer relationship aggregate and depends on dedicated domain services.")]
-    public TrainerRelationshipService(
-        IUserRepository userRepository,
-        IRoleRepository roleRepository,
-        ITrainerRelationshipRepository trainerRelationshipRepository,
-        IPlanRepository planRepository,
-        ICommandDispatcher commandDispatcher,
-        ITrainingService trainingService,
-        IExerciseScoresService exerciseScoresService,
-        IEloRegistryService eloRegistryService,
-        IMainRecordsService mainRecordsService,
-        IUnitOfWork unitOfWork,
-        ILogger<TrainerRelationshipService> logger)
+    public TrainerRelationshipService(ITrainerRelationshipServiceDependencies dependencies)
     {
-        _userRepository = userRepository;
-        _roleRepository = roleRepository;
-        _trainerRelationshipRepository = trainerRelationshipRepository;
-        _planRepository = planRepository;
-        _commandDispatcher = commandDispatcher;
-        _trainingService = trainingService;
-        _exerciseScoresService = exerciseScoresService;
-        _eloRegistryService = eloRegistryService;
-        _mainRecordsService = mainRecordsService;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _userRepository = dependencies.UserRepository;
+        _roleRepository = dependencies.RoleRepository;
+        _trainerRelationshipRepository = dependencies.TrainerRelationshipRepository;
+        _planRepository = dependencies.PlanRepository;
+        _commandDispatcher = dependencies.CommandDispatcher;
+        _trainingService = dependencies.TrainingService;
+        _exerciseScoresService = dependencies.ExerciseScoresService;
+        _eloRegistryService = dependencies.EloRegistryService;
+        _mainRecordsService = dependencies.MainRecordsService;
+        _unitOfWork = dependencies.UnitOfWork;
+        _logger = dependencies.Logger;
     }
 
     public async Task<TrainerInvitationResult> CreateInvitationAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)

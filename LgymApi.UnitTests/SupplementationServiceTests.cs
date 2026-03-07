@@ -407,7 +407,7 @@ public sealed class SupplementationServiceTests
             SupplementName = supplementName,
             Dosage = dosage,
             TimeOfDay = TimeOnly.Parse(timeOfDay).ToTimeSpan(),
-            DaysOfWeekMask = mask,
+            DaysOfWeekMask = (LgymApi.Domain.ValueObjects.DaysOfWeekSet)mask,
             Order = order
         };
     }

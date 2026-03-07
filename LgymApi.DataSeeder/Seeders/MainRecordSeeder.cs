@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -49,8 +50,7 @@ public sealed class MainRecordSeeder : IEntitySeeder
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 ExerciseId = exercise.Id,
-                Weight = 100 + recordIndex * 5,
-                Unit = WeightUnits.Kilograms,
+                Weight = new Weight(100 + recordIndex * 5, WeightUnits.Kilograms),
                 Date = DateTimeOffset.UtcNow.AddDays(-recordIndex)
             };
 

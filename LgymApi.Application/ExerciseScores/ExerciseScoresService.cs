@@ -42,7 +42,7 @@ public sealed class ExerciseScoresService : IExerciseScoresService
             }
 
             var key = $"{score.ExerciseId}-{score.TrainingId}";
-            var oneRepMax = CalculateOneRepMax(score.Reps, score.Weight);
+            var oneRepMax = CalculateOneRepMax(score.Reps, score.Weight.Value);
             var trainingDate = score.Training.CreatedAt.UtcDateTime.ToString("MM/dd", CultureInfo.InvariantCulture);
 
             if (!bestSeries.TryGetValue(key, out var current) || oneRepMax > current.Value)

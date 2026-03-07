@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,7 +44,7 @@ public sealed class SupplementPlanItemSeeder : IEntitySeeder
                     PlanId = plan.Id,
                     SupplementName = "Whey protein",
                     Dosage = "30g",
-                    DaysOfWeekMask = 127,
+                    DaysOfWeekMask = DaysOfWeekSet.EveryDay,
                     TimeOfDay = new TimeSpan(7, 30, 0),
                     Order = 1
                 },
@@ -53,7 +54,7 @@ public sealed class SupplementPlanItemSeeder : IEntitySeeder
                     PlanId = plan.Id,
                     SupplementName = "Creatine",
                     Dosage = "5g",
-                    DaysOfWeekMask = 127,
+                    DaysOfWeekMask = DaysOfWeekSet.EveryDay,
                     TimeOfDay = new TimeSpan(18, 0, 0),
                     Order = 2
                 }

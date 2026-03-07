@@ -1,11 +1,12 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
 public sealed class User : EntityBase
 {
     public string Name { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
+    public Email Email { get; set; } = new("placeholder@example.com");
     public string PreferredLanguage { get; set; } = string.Empty;
     public string PreferredTimeZone { get; set; } = string.Empty;
     public Guid? PlanId { get; set; }

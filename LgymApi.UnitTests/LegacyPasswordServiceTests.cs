@@ -52,7 +52,13 @@ public sealed class LegacyPasswordServiceTests
     [Test]
     public void Verify_ReturnsFalse_WhenHashInvalid()
     {
-        var result = _service.Verify("password", "not-hex", "salt", 25000, 512, "sha256");
+        var result = _service.Verify(
+            "password",
+            "not-hex",
+            "salt",
+            LegacyPasswordConstants.Iterations,
+            LegacyPasswordConstants.KeyLength,
+            LegacyPasswordConstants.Digest);
 
         Assert.That(result, Is.False);
     }

@@ -5,6 +5,7 @@ using LgymApi.Application.Options;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
+using LgymApi.TestUtils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,16 +17,15 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     [Test]
     public void AddInfrastructure_RegistersNoOpScheduler_WhenTesting()
     {
-        var services = new ServiceCollection();
-        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
         {
             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
         });
 
-        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
-        services.AddBackgroundWorkerServices(isTesting: true);
-
-        using var provider = services.BuildServiceProvider();
+        using var provider = TestServiceProviderFactory.CreateInfrastructureProvider(
+            configuration,
+            isTesting: true,
+            includeBackgroundWorker: true);
         var scheduler = provider.GetRequiredService<IEmailBackgroundScheduler>();
         Assert.That(scheduler, Is.TypeOf<NoOpEmailBackgroundScheduler>());
     }
@@ -33,14 +33,11 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     [Test]
     public void AddInfrastructure_UsesSmtpDeliveryModeByDefault()
     {
-        var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values.Remove("Email:DeliveryMode");
-        var configuration = BuildConfiguration(values);
+        var configuration = TestConfigurationBuilder.BuildConfiguration(values);
 
-        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
-
-        using var provider = services.BuildServiceProvider();
+        using var provider = TestServiceProviderFactory.CreateInfrastructureProvider(configuration, isTesting: true);
         var sender = provider.GetRequiredService<IEmailSender>();
         Assert.That(sender, Is.TypeOf<SmtpEmailSender>());
     }
@@ -49,11 +46,11 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_UsesDummyEmailSender_WhenModeIsDummy()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["Email:DeliveryMode"] = "Dummy";
         values["Email:DummyOutputDirectory"] = "DummyOutbox";
         values["Email:SmtpHost"] = string.Empty;
-        var configuration = BuildConfiguration(values);
+        var configuration = TestConfigurationBuilder.BuildConfiguration(values);
 
         services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
 
@@ -66,11 +63,11 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_Throws_WhenDeliveryModeInvalid()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["Email:DeliveryMode"] = "something-else";
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            services.AddInfrastructure(BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
+            services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
 
         Assert.That(exception!.Message, Is.EqualTo("Email:DeliveryMode must be one of: Smtp, Dummy."));
     }
@@ -79,12 +76,12 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_Throws_WhenDummyOutputDirectoryMissingInDummyMode()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["Email:DeliveryMode"] = "Dummy";
         values["Email:DummyOutputDirectory"] = "   ";
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            services.AddInfrastructure(BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
+            services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
 
         Assert.That(exception!.Message, Is.EqualTo("Email:DummyOutputDirectory is required when Email:DeliveryMode is Dummy."));
     }
@@ -94,14 +91,14 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_Throws_ForInvalidInvitationBaseUrl(string? invitationBaseUrl, string expectedMessage)
     {
         var services = new ServiceCollection();
-        var configuration = BuildEnabledEmailConfiguration();
+        var configuration = TestConfigurationBuilder.BuildEnabledEmailConfiguration();
         var values = new Dictionary<string, string?>(configuration.AsEnumerable().ToDictionary(k => k.Key, v => v.Value))
         {
             ["Email:InvitationBaseUrl"] = invitationBaseUrl
         };
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            services.AddInfrastructure(BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
+            services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
 
         Assert.That(exception, Is.Not.Null);
         Assert.That(exception!.Message, Is.EqualTo(expectedMessage));
@@ -111,11 +108,11 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_Throws_WhenTemplateRootPathMissing()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["Email:TemplateRootPath"] = "";
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            services.AddInfrastructure(BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
+            services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
 
         Assert.That(exception!.Message, Is.EqualTo("Email:TemplateRootPath is required when email is enabled."));
     }
@@ -124,11 +121,11 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_Throws_WhenFromAddressInvalid()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["Email:FromAddress"] = "invalid-email";
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            services.AddInfrastructure(BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
+            services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
 
         Assert.That(exception!.Message, Is.EqualTo("Email:FromAddress must be a valid email address."));
     }
@@ -137,11 +134,11 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_Throws_WhenSmtpHostMissing()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["Email:SmtpHost"] = "";
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            services.AddInfrastructure(BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
+            services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
 
         Assert.That(exception!.Message, Is.EqualTo("Email:SmtpHost is required when email is enabled."));
     }
@@ -150,11 +147,11 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_Throws_WhenSmtpPortNonPositive()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["Email:SmtpPort"] = "0";
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            services.AddInfrastructure(BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
+            services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true));
 
         Assert.That(exception!.Message, Is.EqualTo("Email:SmtpPort must be greater than 0 when email is enabled."));
     }
@@ -162,17 +159,15 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     [Test]
     public void AddBackgroundWorkerServices_RegistersCommandDispatcher()
     {
-        var services = new ServiceCollection();
-        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
         {
             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
         });
 
-        services.AddLogging();
-        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
-        services.AddBackgroundWorkerServices(isTesting: true);
-
-        using var provider = services.BuildServiceProvider();
+        using var provider = TestServiceProviderFactory.CreateInfrastructureProvider(
+            configuration,
+            isTesting: true,
+            includeBackgroundWorker: true);
         var dispatcher = provider.GetRequiredService<ICommandDispatcher>();
         Assert.That(dispatcher, Is.TypeOf<CommandDispatcher>());
     }
@@ -181,7 +176,7 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddBackgroundWorkerServices_RegistersNoOpScheduler_WhenTesting()
     {
         var services = new ServiceCollection();
-        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
         {
             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
         });
@@ -199,7 +194,7 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddBackgroundWorkerServices_RegistersHangfireScheduler_WhenNotTesting()
     {
         var services = new ServiceCollection();
-        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
         {
             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
         });
@@ -216,17 +211,15 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     [Test]
     public void AddBackgroundWorkerServices_RegistersOrchestratorService()
     {
-        var services = new ServiceCollection();
-        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
         {
             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
         });
 
-        services.AddLogging();
-        services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
-        services.AddBackgroundWorkerServices(isTesting: true);
-
-        using var provider = services.BuildServiceProvider();
+        using var provider = TestServiceProviderFactory.CreateInfrastructureProvider(
+            configuration,
+            isTesting: true,
+            includeBackgroundWorker: true);
         var orchestrator = provider.GetRequiredService<BackgroundActionOrchestratorService>();
         Assert.That(orchestrator, Is.Not.Null);
     }
@@ -235,10 +228,10 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_RegistersConfiguredAppDefaults()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["AppDefaults:PreferredLanguage"] = "pl-PL";
         values["AppDefaults:PreferredTimeZone"] = "UTC";
-        var configuration = BuildConfiguration(values);
+        var configuration = TestConfigurationBuilder.BuildConfiguration(values);
 
         services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
 
@@ -253,10 +246,10 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_FallsBackAppDefaults_WhenConfigurationInvalid()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["AppDefaults:PreferredLanguage"] = "@@invalid-culture@@";
         values["AppDefaults:PreferredTimeZone"] = "Not/ARealTimeZone";
-        var configuration = BuildConfiguration(values);
+        var configuration = TestConfigurationBuilder.BuildConfiguration(values);
 
         services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
 
@@ -271,10 +264,10 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_UsesAppDefaultLanguage_WhenEmailDefaultCultureInvalid()
     {
         var services = new ServiceCollection();
-        var values = ToDictionary(BuildEnabledEmailConfiguration());
+        var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
         values["AppDefaults:PreferredLanguage"] = "pl-PL";
         values["Email:DefaultCulture"] = "@@invalid-culture@@";
-        var configuration = BuildConfiguration(values);
+        var configuration = TestConfigurationBuilder.BuildConfiguration(values);
 
         services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
 
@@ -284,30 +277,4 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
         Assert.That(emailOptions.DefaultCulture.Name, Is.EqualTo("pl-PL"));
     }
 
-    private static IConfiguration BuildEnabledEmailConfiguration()
-    {
-        return BuildConfiguration(new Dictionary<string, string?>
-        {
-            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
-            ["Email:Enabled"] = "true",
-            ["Email:InvitationBaseUrl"] = "https://example.com/invite",
-            ["Email:TemplateRootPath"] = "EmailTemplates",
-            ["Email:DefaultCulture"] = "en-US",
-            ["Email:FromAddress"] = "coach@example.com",
-            ["Email:SmtpHost"] = "smtp.example.com",
-            ["Email:SmtpPort"] = "587"
-        });
-    }
-
-    private static Dictionary<string, string?> ToDictionary(IConfiguration configuration)
-    {
-        return configuration.AsEnumerable().ToDictionary(x => x.Key, x => x.Value);
-    }
-
-    private static IConfiguration BuildConfiguration(Dictionary<string, string?> values)
-    {
-        return new ConfigurationBuilder()
-            .AddInMemoryCollection(values)
-            .Build();
-    }
 }

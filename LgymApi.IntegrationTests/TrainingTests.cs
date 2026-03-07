@@ -676,7 +676,7 @@ public sealed class TrainingTests : IntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var record = await db.MainRecords.SingleAsync(r => r.UserId == userId && r.ExerciseId == exerciseId);
 
-        record.Weight.Should().Be(85.0);
+        record.Weight.Value.Should().Be(85.0);
         record.Unit.Should().Be(WeightUnits.Kilograms);
         record.Date.UtcDateTime.Should().BeCloseTo(trainingDate, TimeSpan.FromSeconds(1));
     }
@@ -730,9 +730,9 @@ public sealed class TrainingTests : IntegrationTestBase
         var records = await db.MainRecords.Where(r => r.UserId == userId && r.ExerciseId == exerciseId).ToListAsync();
 
         records.Should().HaveCount(2);
-        records.Should().Contain(r => r.Weight == 100.0 && r.Unit == WeightUnits.Kilograms);
-        records.Should().Contain(r => r.Weight == 225.0 && r.Unit == WeightUnits.Pounds);
-        records.Should().Contain(r => r.Weight == 225.0 && r.Unit == WeightUnits.Pounds &&
+        records.Should().Contain(r => r.Weight.Value == 100.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().Contain(r => r.Weight.Value == 225.0 && r.Unit == WeightUnits.Pounds);
+        records.Should().Contain(r => r.Weight.Value == 225.0 && r.Unit == WeightUnits.Pounds &&
                                      r.Date.UtcDateTime >= trainingDate.AddSeconds(-1));
     }
 
@@ -786,7 +786,7 @@ public sealed class TrainingTests : IntegrationTestBase
         var records = await db.MainRecords.Where(r => r.UserId == userId && r.ExerciseId == exerciseId).ToListAsync();
 
         records.Should().HaveCount(1);
-        records[0].Weight.Should().Be(100.0);
+        records[0].Weight.Value.Should().Be(100.0);
         records[0].Unit.Should().Be(WeightUnits.Kilograms);
         records[0].Date.UtcDateTime.Should().BeCloseTo(initialDate, TimeSpan.FromSeconds(1));
     }
@@ -839,7 +839,7 @@ public sealed class TrainingTests : IntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var record = await db.MainRecords.SingleAsync(r => r.UserId == userId && r.ExerciseId == exerciseId);
 
-        record.Weight.Should().Be(100.0);
+        record.Weight.Value.Should().Be(100.0);
         record.Unit.Should().Be(WeightUnits.Kilograms);
         record.Date.UtcDateTime.Should().BeCloseTo(initialDate, TimeSpan.FromSeconds(1));
     }
@@ -919,10 +919,10 @@ public sealed class TrainingTests : IntegrationTestBase
             .ToListAsync();
 
         records.Should().HaveCount(2);
-        records.Should().Contain(r => r.Weight == 70.0 && r.Unit == WeightUnits.Kilograms);
-        records.Should().Contain(r => r.Weight == 76.0 && r.Unit == WeightUnits.Kilograms);
-        records.Should().NotContain(r => r.Weight == 72.0 && r.Unit == WeightUnits.Kilograms);
-        records.Should().NotContain(r => r.Weight == 74.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().Contain(r => r.Weight.Value == 70.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().Contain(r => r.Weight.Value == 76.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().NotContain(r => r.Weight.Value == 72.0 && r.Unit == WeightUnits.Kilograms);
+        records.Should().NotContain(r => r.Weight.Value == 74.0 && r.Unit == WeightUnits.Kilograms);
     }
 
     [Test]

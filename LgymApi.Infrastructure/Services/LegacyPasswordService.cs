@@ -12,7 +12,7 @@ public sealed class LegacyPasswordService : ILegacyPasswordService
             return false;
         }
 
-        var iterationCount = iterations ?? 25000;
+        var iterationCount = iterations ?? LegacyPasswordConstants.Iterations;
         var algorithm = ResolveHashAlgorithm(digest);
 
         var hashBytes = DecodeHash(hash);
@@ -30,11 +30,11 @@ public sealed class LegacyPasswordService : ILegacyPasswordService
 
     public (string Hash, string Salt, int Iterations, int KeyLength, string Digest) Create(string password)
     {
-        var iterations = 25000;
-        var keyLength = 512;
-        var digest = "sha256";
+        var iterations = LegacyPasswordConstants.Iterations;
+        var keyLength = LegacyPasswordConstants.KeyLength;
+        var digest = LegacyPasswordConstants.Digest;
 
-        var saltBytes = RandomNumberGenerator.GetBytes(32);
+        var saltBytes = RandomNumberGenerator.GetBytes(LegacyPasswordConstants.SaltLengthBytes);
         var saltHex = ConvertToHex(saltBytes);
         var saltForPbkdf2 = System.Text.Encoding.UTF8.GetBytes(saltHex);
         var derived = Rfc2898DeriveBytes.Pbkdf2(password, saltForPbkdf2, iterations, HashAlgorithmName.SHA256, keyLength);
@@ -90,7 +90,7 @@ public sealed class LegacyPasswordService : ILegacyPasswordService
     {
         if (hashLengthBytes <= 0)
         {
-            return storedKeyLength ?? 512;
+            return storedKeyLength ?? LegacyPasswordConstants.KeyLength;
         }
 
         if (!storedKeyLength.HasValue || storedKeyLength.Value <= 0)

@@ -2,6 +2,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System.Linq.Expressions;
@@ -65,6 +66,8 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("Users");
+            entity.Property(u => u.Email)
+                .HasConversion(email => email.Value, value => new Email(value));
             entity.HasIndex(u => u.Email)
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
@@ -155,7 +158,9 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<ExerciseScore>(entity =>
         {
             entity.ToTable("ExerciseScores");
-            entity.Property(e => e.Unit).HasConversion<string>();
+            entity.Ignore(e => e.Weight);
+            entity.Property<double>("_weightValue").HasColumnName("Weight");
+            entity.Property(e => e.Unit).HasField("_unit").HasConversion<string>();
             entity.HasOne(e => e.Exercise)
                 .WithMany(e => e.ExerciseScores)
                 .HasForeignKey(e => e.ExerciseId);
@@ -176,7 +181,9 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<MainRecord>(entity =>
         {
             entity.ToTable("MainRecords");
-            entity.Property(e => e.Unit).HasConversion<string>();
+            entity.Ignore(e => e.Weight);
+            entity.Property<double>("_weightValue").HasColumnName("Weight");
+            entity.Property(e => e.Unit).HasField("_unit").HasConversion<string>();
         });
 
         modelBuilder.Entity<Gym>(entity =>
@@ -195,6 +202,8 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<EloRegistry>(entity =>
         {
             entity.ToTable("EloRegistries");
+            entity.Property(e => e.Elo)
+                .HasConversion(elo => elo.Value, value => new Domain.ValueObjects.Elo(value));
             entity.HasOne(e => e.User)
                 .WithMany(u => u.EloRegistries)
                 .HasForeignKey(e => e.UserId);
@@ -356,6 +365,8 @@ public sealed class AppDbContext : DbContext
                     notificationType => notificationType.Value,
                     value => EmailNotificationType.Parse(value))
                 .IsRequired();
+            entity.Property(e => e.Recipient)
+                .HasConversion(email => email.Value, value => new Email(value));
             entity.Property(e => e.Recipient).IsRequired();
             entity.Property(e => e.PayloadJson).IsRequired();
             entity.HasIndex(e => new { e.Status, e.NextAttemptAt, e.CreatedAt });
@@ -464,6 +475,8 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("SupplementPlanItems");
             entity.Property(e => e.SupplementName).HasMaxLength(160).IsRequired();
             entity.Property(e => e.Dosage).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.DaysOfWeekMask)
+                .HasConversion(mask => (int)mask, value => (DaysOfWeekSet)value);
             entity.HasIndex(e => new { e.PlanId, e.Order, e.TimeOfDay });
             entity.HasOne(e => e.Plan)
                 .WithMany(e => e.Items)
