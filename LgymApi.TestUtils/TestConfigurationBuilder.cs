@@ -15,7 +15,7 @@ public static class TestConfigurationBuilder
     {
         return BuildConfiguration(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
+            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test",
             ["Email:Enabled"] = "true",
             ["Email:InvitationBaseUrl"] = "https://example.com/invite",
             ["Email:TemplateRootPath"] = "EmailTemplates",

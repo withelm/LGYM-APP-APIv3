@@ -10,7 +10,8 @@ public static class TestDataFactory
 {
     public const string DefaultAdminName = "testadmin";
     public const string DefaultAdminEmail = "testadmin@example.com";
-    public const string DefaultAdminPassword = "AdminPass123!";
+    public const string DefaultAdminSecret = "AdminSecret123!";
+    public const string DefaultUserSecret = "UserSecret123!";
 
     public static async Task SeedDefaultRolesAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
     {
@@ -101,7 +102,7 @@ public static class TestDataFactory
             dbContext,
             name: DefaultAdminName,
             email: DefaultAdminEmail,
-            password: DefaultAdminPassword,
+            password: DefaultAdminSecret,
             isAdmin: true,
             cancellationToken: cancellationToken);
     }
@@ -110,7 +111,7 @@ public static class TestDataFactory
         AppDbContext dbContext,
         string name = "testuser",
         string email = "test@example.com",
-        string password = "password123",
+        string? password = null,
         bool isAdmin = false,
         bool isVisibleInRanking = true,
         bool isTester = false,
@@ -118,6 +119,7 @@ public static class TestDataFactory
         int elo = 1000,
         CancellationToken cancellationToken = default)
     {
+        password ??= DefaultUserSecret;
         var passwordData = new LegacyPasswordService().Create(password);
         var user = new User
         {

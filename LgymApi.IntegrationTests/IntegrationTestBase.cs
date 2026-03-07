@@ -53,7 +53,7 @@ public abstract class IntegrationTestBase : IDisposable
     // Default admin credentials for tests
     protected const string AdminName = TestDataFactory.DefaultAdminName;
     protected const string AdminEmail = TestDataFactory.DefaultAdminEmail;
-    protected const string AdminPassword = TestDataFactory.DefaultAdminPassword;
+    protected const string AdminPassword = TestDataFactory.DefaultAdminSecret;
 
     protected async Task<User> SeedAdminAsync()
     {
