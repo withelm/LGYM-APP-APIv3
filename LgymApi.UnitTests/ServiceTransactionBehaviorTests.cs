@@ -89,13 +89,13 @@ public sealed class ServiceTransactionBehaviorTests
             PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
         };
 
-        var service = new PlanDayService(
+        var service = new PlanDayService(new PlanDayServiceDependenciesStub(
             planRepository,
             planDayRepository,
             exercisesRepository,
             new ExerciseRepositoryStub(),
             new TrainingRepositoryStub(),
-            unitOfWork);
+            unitOfWork));
 
         await service.UpdatePlanDayAsync(
             new User { Id = userId },
@@ -127,7 +127,7 @@ public sealed class ServiceTransactionBehaviorTests
             RemoveException = new InvalidOperationException("remove failed")
         };
 
-        var service = new PlanDayService(
+        var service = new PlanDayService(new PlanDayServiceDependenciesStub(
             new PlanRepositoryStub
             {
                 PlanToReturn = new Plan { Id = planId, UserId = userId }
@@ -139,7 +139,7 @@ public sealed class ServiceTransactionBehaviorTests
             exercisesRepository,
             new ExerciseRepositoryStub(),
             new TrainingRepositoryStub(),
-            unitOfWork);
+            unitOfWork));
 
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await service.UpdatePlanDayAsync(
@@ -154,6 +154,32 @@ public sealed class ServiceTransactionBehaviorTests
             Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
             Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
         });
+    }
+
+    private sealed class PlanDayServiceDependenciesStub : IPlanDayServiceDependencies
+    {
+        public PlanDayServiceDependenciesStub(
+            IPlanRepository planRepository,
+            IPlanDayRepository planDayRepository,
+            IPlanDayExerciseRepository planDayExerciseRepository,
+            IExerciseRepository exerciseRepository,
+            ITrainingRepository trainingRepository,
+            IUnitOfWork unitOfWork)
+        {
+            PlanRepository = planRepository;
+            PlanDayRepository = planDayRepository;
+            PlanDayExerciseRepository = planDayExerciseRepository;
+            ExerciseRepository = exerciseRepository;
+            TrainingRepository = trainingRepository;
+            UnitOfWork = unitOfWork;
+        }
+
+        public IPlanRepository PlanRepository { get; }
+        public IPlanDayRepository PlanDayRepository { get; }
+        public IPlanDayExerciseRepository PlanDayExerciseRepository { get; }
+        public IExerciseRepository ExerciseRepository { get; }
+        public ITrainingRepository TrainingRepository { get; }
+        public IUnitOfWork UnitOfWork { get; }
     }
 
     private sealed class RecordingUnitOfWork : IUnitOfWork

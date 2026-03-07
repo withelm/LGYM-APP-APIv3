@@ -18,16 +18,16 @@ public sealed class ExerciseScoreProfile : IMappingProfile
             ExerciseId = source.ExerciseId.ToString(),
             Reps = source.Reps,
             Series = source.Series,
-            Weight = source.Weight,
-            Unit = source.Unit.ToLookup()
+            Weight = source.Weight.Value,
+            Unit = source.Weight.Unit.ToLookup()
         });
 
         configuration.CreateMap<ExerciseScore, ScoreDto>((source, _) => new ScoreDto
         {
             Id = source.Id.ToString(),
             Reps = source.Reps,
-            Weight = source.Weight,
-            Unit = source.Unit.ToLookup()
+            Weight = source.Weight.Value,
+            Unit = source.Weight.Unit.ToLookup()
         });
 
         configuration.CreateMap<ExerciseScore, ScoreWithGymDto>((source, context) =>

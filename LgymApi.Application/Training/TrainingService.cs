@@ -7,6 +7,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using TrainingEntity = LgymApi.Domain.Entities.Training;
 
@@ -26,28 +27,18 @@ public sealed class TrainingService : ITrainingService
     private readonly IRankService _rankService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public TrainingService(
-        IUserRepository userRepository,
-        IGymRepository gymRepository,
-        ITrainingRepository trainingRepository,
-        IExerciseRepository exerciseRepository,
-        IExerciseScoreRepository exerciseScoreRepository,
-        ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
-        ICommandDispatcher commandDispatcher,
-        IEloRegistryRepository eloRepository,
-        IRankService rankService,
-        IUnitOfWork unitOfWork)
+    public TrainingService(ITrainingServiceDependencies dependencies)
     {
-        _userRepository = userRepository;
-        _gymRepository = gymRepository;
-        _trainingRepository = trainingRepository;
-        _exerciseRepository = exerciseRepository;
-        _exerciseScoreRepository = exerciseScoreRepository;
-        _trainingExerciseScoreRepository = trainingExerciseScoreRepository;
-        _commandDispatcher = commandDispatcher;
-        _eloRepository = eloRepository;
-        _rankService = rankService;
-        _unitOfWork = unitOfWork;
+        _userRepository = dependencies.UserRepository;
+        _gymRepository = dependencies.GymRepository;
+        _trainingRepository = dependencies.TrainingRepository;
+        _exerciseRepository = dependencies.ExerciseRepository;
+        _exerciseScoreRepository = dependencies.ExerciseScoreRepository;
+        _trainingExerciseScoreRepository = dependencies.TrainingExerciseScoreRepository;
+        _commandDispatcher = dependencies.CommandDispatcher;
+        _eloRepository = dependencies.EloRepository;
+        _rankService = dependencies.RankService;
+        _unitOfWork = dependencies.UnitOfWork;
     }
 
     public async Task<TrainingSummaryResult> AddTrainingAsync(
@@ -127,8 +118,7 @@ public sealed class TrainingService : ITrainingService
                         UserId = user.Id,
                         Reps = exercise.Reps,
                         Series = exercise.Series,
-                        Weight = exercise.Weight,
-                        Unit = exercise.Unit,
+                        Weight = new Weight(exercise.Weight, exercise.Unit),
                         TrainingId = training.Id,
                         Order = index
                     };
@@ -344,7 +334,7 @@ public sealed class TrainingService : ITrainingService
 
     private static int CalculateEloPerExercise(ExerciseScore currentScore, ExerciseScore previousScore)
     {
-        return PartElo(previousScore.Weight, previousScore.Reps, currentScore.Weight, currentScore.Reps);
+        return PartElo(previousScore.Weight.Value, previousScore.Reps, currentScore.Weight.Value, currentScore.Reps);
     }
 
     private static int PartElo(double prevWeight, int prevReps, double accWeight, int accReps)
@@ -438,15 +428,15 @@ public sealed class TrainingService : ITrainingService
                     Weight = current.Weight,
                     Unit = current.Unit
                 },
-                PreviousResult = previous == null
-                    ? null
-                    : new ScoreResult
-                    {
-                        Reps = previous.Reps,
-                        Weight = previous.Weight,
-                        Unit = previous.Unit
-                    }
-            });
+                        PreviousResult = previous == null
+                            ? null
+                            : new ScoreResult
+                            {
+                                Reps = previous.Reps,
+                                Weight = previous.Weight.Value,
+                                Unit = previous.Weight.Unit
+                            }
+                    });
         }
 
         return comparisonMap.Values.ToList();

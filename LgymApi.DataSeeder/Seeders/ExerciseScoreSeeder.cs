@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -52,8 +53,7 @@ public sealed class ExerciseScoreSeeder : IEntitySeeder
                 TrainingId = training.Id,
                 Series = 3,
                 Reps = 10,
-                Weight = 60 + scoreIndex * 2,
-                Unit = WeightUnits.Kilograms
+                Weight = new Weight(60 + scoreIndex * 2, WeightUnits.Kilograms)
             };
 
             await context.ExerciseScores.AddAsync(score, cancellationToken);

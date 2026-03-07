@@ -3,6 +3,7 @@ using LgymApi.Application.Features.Supplementation.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -60,7 +61,7 @@ public sealed class SupplementationService : ISupplementationService
                 SupplementName = item.SupplementName,
                 Dosage = item.Dosage,
                 TimeOfDay = item.TimeOfDay,
-                DaysOfWeekMask = item.DaysOfWeekMask,
+                DaysOfWeekMask = (DaysOfWeekSet)item.DaysOfWeekMask,
                 Order = item.Order
             }).ToList()
         };
@@ -96,7 +97,7 @@ public sealed class SupplementationService : ISupplementationService
                 SupplementName = item.SupplementName,
                 Dosage = item.Dosage,
                 TimeOfDay = item.TimeOfDay,
-                DaysOfWeekMask = item.DaysOfWeekMask,
+                DaysOfWeekMask = (DaysOfWeekSet)item.DaysOfWeekMask,
                 Order = item.Order
             }).ToList()
         };
@@ -394,11 +395,11 @@ public sealed class SupplementationService : ISupplementationService
             .ToList();
     }
 
-    private static bool IsScheduledOnDate(int daysOfWeekMask, DateOnly date)
+    private static bool IsScheduledOnDate(DaysOfWeekSet daysOfWeekMask, DateOnly date)
     {
         var normalizedDay = ((int)date.DayOfWeek + 6) % 7;
         var bit = 1 << normalizedDay;
-        return (daysOfWeekMask & bit) != 0;
+        return ((int)daysOfWeekMask & bit) != 0;
     }
 
     private static string FormatTime(TimeSpan value)
@@ -427,7 +428,7 @@ public sealed class SupplementationService : ISupplementationService
                     SupplementName = item.SupplementName,
                     Dosage = item.Dosage,
                     TimeOfDay = FormatTime(item.TimeOfDay),
-                    DaysOfWeekMask = item.DaysOfWeekMask,
+                    DaysOfWeekMask = (int)item.DaysOfWeekMask,
                     Order = item.Order
                 })
                 .ToList()

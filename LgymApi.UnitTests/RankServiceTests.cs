@@ -16,9 +16,9 @@ public sealed class RankServiceTests
         Assert.That(ranks, Is.SameAs(RankDefinitions.All));
         Assert.That(ranks, Has.Count.EqualTo(10));
         Assert.That(ranks[0].Name, Is.EqualTo("Junior 1"));
-        Assert.That(ranks[0].NeedElo, Is.EqualTo(0));
+        Assert.That(ranks[0].NeedElo.Value, Is.EqualTo(0));
         Assert.That(ranks[^1].Name, Is.EqualTo("Champ"));
-        Assert.That(ranks[^1].NeedElo, Is.EqualTo(30000));
+        Assert.That(ranks[^1].NeedElo.Value, Is.EqualTo(30000));
     }
 
     [TestCase(0, "Junior 1")]

@@ -29,31 +29,19 @@ public sealed class UserService : IUserService
     private readonly ILogger<UserService> _logger;
     private readonly AppDefaultsOptions _appDefaultsOptions;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "User service coordinates auth, ranking, roles, and session concerns.")]
-    public UserService(
-        IUserRepository userRepository,
-        IRoleRepository roleRepository,
-        IEloRegistryRepository eloRepository,
-        ITokenService tokenService,
-        ILegacyPasswordService legacyPasswordService,
-        IRankService rankService,
-        IUserSessionCache userSessionCache,
-        ICommandDispatcher commandDispatcher,
-        IUnitOfWork unitOfWork,
-        ILogger<UserService> logger,
-        AppDefaultsOptions appDefaultsOptions)
+    public UserService(IUserServiceDependencies dependencies)
     {
-        _userRepository = userRepository;
-        _roleRepository = roleRepository;
-        _eloRepository = eloRepository;
-        _tokenService = tokenService;
-        _legacyPasswordService = legacyPasswordService;
-        _rankService = rankService;
-        _userSessionCache = userSessionCache;
-        _commandDispatcher = commandDispatcher;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-        _appDefaultsOptions = appDefaultsOptions;
+        _userRepository = dependencies.UserRepository;
+        _roleRepository = dependencies.RoleRepository;
+        _eloRepository = dependencies.EloRepository;
+        _tokenService = dependencies.TokenService;
+        _legacyPasswordService = dependencies.LegacyPasswordService;
+        _rankService = dependencies.RankService;
+        _userSessionCache = dependencies.UserSessionCache;
+        _commandDispatcher = dependencies.CommandDispatcher;
+        _unitOfWork = dependencies.UnitOfWork;
+        _logger = dependencies.Logger;
+        _appDefaultsOptions = dependencies.AppDefaultsOptions;
     }
 
     public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, string? preferredLanguage = null, CancellationToken cancellationToken = default)

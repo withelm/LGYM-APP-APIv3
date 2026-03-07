@@ -101,8 +101,8 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
                     ExerciseName = score?.Exercise?.Name ?? string.Empty,
                     Series = score?.Series ?? 0,
                     Reps = score?.Reps ?? 0,
-                    Weight = score?.Weight ?? 0,
-                    Unit = score?.Unit ?? Domain.Enums.WeightUnits.Kilograms
+                    Weight = score?.Weight.Value ?? 0,
+                    Unit = score?.Weight.Unit ?? Domain.Enums.WeightUnits.Kilograms
                 };
             })
             .ToList();

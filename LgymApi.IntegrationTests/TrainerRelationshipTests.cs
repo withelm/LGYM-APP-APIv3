@@ -68,7 +68,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var log = await db.NotificationMessages.FirstOrDefaultAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
         log.Should().NotBeNull();
         log!.Status.Should().Be(EmailNotificationStatus.Pending);
-        log.Recipient.Should().Be("trainee-email-log@example.com");
+        log.Recipient.Value.Should().Be("trainee-email-log@example.com");
     }
 
     [Test]

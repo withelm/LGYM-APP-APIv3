@@ -155,9 +155,19 @@ public sealed class TrainerSupplementationController : ControllerBase
                 SupplementName = item.SupplementName,
                 Dosage = item.Dosage,
                 TimeOfDay = item.TimeOfDay,
-                DaysOfWeekMask = item.DaysOfWeekMask,
+                DaysOfWeekMask = ParseDaysOfWeekMask(item.DaysOfWeekMask),
                 Order = item.Order
             }).ToList() ?? []
         };
+    }
+
+    private static int ParseDaysOfWeekMask(int mask)
+    {
+        if (mask is < 1 or > 127)
+        {
+            throw AppException.BadRequest(Messages.FieldRequired);
+        }
+
+        return mask;
     }
 }

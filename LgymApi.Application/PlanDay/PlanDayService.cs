@@ -17,20 +17,14 @@ public sealed class PlanDayService : IPlanDayService
     private readonly ITrainingRepository _trainingRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public PlanDayService(
-        IPlanRepository planRepository,
-        IPlanDayRepository planDayRepository,
-        IPlanDayExerciseRepository planDayExerciseRepository,
-        IExerciseRepository exerciseRepository,
-        ITrainingRepository trainingRepository,
-        IUnitOfWork unitOfWork)
+    public PlanDayService(IPlanDayServiceDependencies dependencies)
     {
-        _planRepository = planRepository;
-        _planDayRepository = planDayRepository;
-        _planDayExerciseRepository = planDayExerciseRepository;
-        _exerciseRepository = exerciseRepository;
-        _trainingRepository = trainingRepository;
-        _unitOfWork = unitOfWork;
+        _planRepository = dependencies.PlanRepository;
+        _planDayRepository = dependencies.PlanDayRepository;
+        _planDayExerciseRepository = dependencies.PlanDayExerciseRepository;
+        _exerciseRepository = dependencies.ExerciseRepository;
+        _trainingRepository = dependencies.TrainingRepository;
+        _unitOfWork = dependencies.UnitOfWork;
     }
 
     public async Task CreatePlanDayAsync(UserEntity currentUser, Guid planId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises, CancellationToken cancellationToken = default)

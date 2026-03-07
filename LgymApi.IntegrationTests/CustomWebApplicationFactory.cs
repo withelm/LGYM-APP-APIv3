@@ -1,8 +1,6 @@
 using LgymApi.Infrastructure.Data;
 using LgymApi.BackgroundWorker.Common.Notifications;
-using LgymApi.BackgroundWorker.Common.Notifications.Models;
-using LgymApi.Domain.Entities;
-using LgymApi.Domain.Security;
+using LgymApi.TestUtils;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -47,82 +45,8 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             using var scope = serviceProvider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
-
-            if (!db.Roles.Any())
-            {
-                var timestamp = new DateTimeOffset(2026, 2, 15, 0, 0, 0, TimeSpan.Zero);
-                db.Roles.AddRange(
-                    new Role
-                    {
-                        Id = AppDbContext.UserRoleSeedId,
-                        Name = AuthConstants.Roles.User,
-                        Description = "Default role for all users",
-                        CreatedAt = timestamp,
-                        UpdatedAt = timestamp
-                    },
-                    new Role
-                    {
-                        Id = AppDbContext.AdminRoleSeedId,
-                        Name = AuthConstants.Roles.Admin,
-                        Description = "Administrative privileges",
-                        CreatedAt = timestamp,
-                        UpdatedAt = timestamp
-                    },
-                    new Role
-                    {
-                        Id = AppDbContext.TesterRoleSeedId,
-                        Name = AuthConstants.Roles.Tester,
-                        Description = "Excluded from ranking",
-                        CreatedAt = timestamp,
-                        UpdatedAt = timestamp
-                    },
-                    new Role
-                    {
-                        Id = AppDbContext.TrainerRoleSeedId,
-                        Name = AuthConstants.Roles.Trainer,
-                        Description = "Trainer role for coach-facing APIs",
-                        CreatedAt = timestamp,
-                        UpdatedAt = timestamp
-                    });
-                db.RoleClaims.AddRange(
-                    new RoleClaim
-                    {
-                        Id = AppDbContext.AdminAccessClaimSeedId,
-                        RoleId = AppDbContext.AdminRoleSeedId,
-                        ClaimType = AuthConstants.PermissionClaimType,
-                        ClaimValue = AuthConstants.Permissions.AdminAccess,
-                        CreatedAt = timestamp,
-                        UpdatedAt = timestamp
-                    },
-                    new RoleClaim
-                    {
-                        Id = AppDbContext.ManageUserRolesClaimSeedId,
-                        RoleId = AppDbContext.AdminRoleSeedId,
-                        ClaimType = AuthConstants.PermissionClaimType,
-                        ClaimValue = AuthConstants.Permissions.ManageUserRoles,
-                        CreatedAt = timestamp,
-                        UpdatedAt = timestamp
-                    },
-                    new RoleClaim
-                    {
-                        Id = AppDbContext.ManageAppConfigClaimSeedId,
-                        RoleId = AppDbContext.AdminRoleSeedId,
-                        ClaimType = AuthConstants.PermissionClaimType,
-                        ClaimValue = AuthConstants.Permissions.ManageAppConfig,
-                        CreatedAt = timestamp,
-                        UpdatedAt = timestamp
-                    },
-                    new RoleClaim
-                    {
-                        Id = AppDbContext.ManageGlobalExercisesClaimSeedId,
-                        RoleId = AppDbContext.AdminRoleSeedId,
-                        ClaimType = AuthConstants.PermissionClaimType,
-                        ClaimValue = AuthConstants.Permissions.ManageGlobalExercises,
-                        CreatedAt = timestamp,
-                        UpdatedAt = timestamp
-                    });
-                db.SaveChanges();
-            }
+            TestDataFactory.SeedDefaultRolesAsync(db).GetAwaiter().GetResult();
+            db.SaveChanges();
         });
 
         builder.UseSetting("Jwt:SigningKey", TestJwtSigningKey);
@@ -136,29 +60,4 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Email:DefaultCulture", "en-US");
     }
 
-    public sealed class TestEmailSender : IEmailSender
-    {
-        public List<EmailMessage> SentMessages { get; } = new();
-        public int FailuresRemaining { get; set; }
-        public bool ReturnFalse { get; set; }
-
-        public void Reset()
-        {
-            SentMessages.Clear();
-            FailuresRemaining = 0;
-            ReturnFalse = false;
-        }
-
-        public Task<bool> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
-        {
-            if (FailuresRemaining > 0)
-            {
-                FailuresRemaining -= 1;
-                throw new InvalidOperationException("Simulated SMTP failure");
-            }
-
-            SentMessages.Add(message);
-            return Task.FromResult(!ReturnFalse);
-        }
-    }
 }

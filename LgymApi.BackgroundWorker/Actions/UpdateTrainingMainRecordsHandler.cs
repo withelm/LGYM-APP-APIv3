@@ -3,6 +3,7 @@ using LgymApi.Application.Units;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
 
@@ -71,7 +72,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
         var exerciseScoreDict = exerciseScores.ToDictionary(es => es.Id);
 
         // Extract best score per exercise from fetched data
-        var bestScoresByExercise = new Dictionary<Guid, (double Weight, WeightUnits Unit)>();
+        var bestScoresByExercise = new Dictionary<Guid, Weight>();
 
         foreach (var trainingExercise in trainingExerciseScores)
         {
@@ -81,7 +82,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
             }
 
             // Skip invalid entries
-            if (score.Unit == WeightUnits.Unknown)
+            if (score.Weight.Unit == WeightUnits.Unknown)
             {
                 continue;
             }
@@ -89,13 +90,13 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
             // Track best weight per exercise within this training session
             if (!bestScoresByExercise.TryGetValue(score.ExerciseId, out var currentBest))
             {
-                bestScoresByExercise[score.ExerciseId] = (score.Weight, score.Unit);
+                bestScoresByExercise[score.ExerciseId] = score.Weight;
                 continue;
             }
 
-            if (CompareWeights(score.Weight, score.Unit, currentBest.Weight, currentBest.Unit) > 0)
+            if (CompareWeights(score.Weight, currentBest) > 0)
             {
-                bestScoresByExercise[score.ExerciseId] = (score.Weight, score.Unit);
+                bestScoresByExercise[score.ExerciseId] = score.Weight;
             }
         }
 
@@ -126,7 +127,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
             records ??= new List<MainRecordEntity>();
 
             var comparableRecords = records
-                .Where(r => r.Unit != WeightUnits.Unknown)
+                .Where(r => r.Weight.Unit != WeightUnits.Unknown)
                 .ToList();
 
             // No existing record for this exercise - create first record
@@ -137,8 +138,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
                     Id = Guid.NewGuid(),
                     UserId = command.UserId,
                     ExerciseId = exerciseId,
-                    Weight = bestScore.Weight,
-                    Unit = bestScore.Unit,
+                    Weight = bestScore,
                     Date = recordDate
                 }, cancellationToken);
                 newRecordsCount++;
@@ -149,14 +149,14 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
             var currentBestRecord = comparableRecords[0];
             foreach (var candidateRecord in comparableRecords.Skip(1))
             {
-                if (CompareWeights(candidateRecord.Weight, candidateRecord.Unit, currentBestRecord.Weight, currentBestRecord.Unit) > 0)
+                if (CompareWeights(candidateRecord.Weight, currentBestRecord.Weight) > 0)
                 {
                     currentBestRecord = candidateRecord;
                 }
             }
 
             // Compare training best to existing best - create new record if improved
-            var comparison = CompareWeights(bestScore.Weight, bestScore.Unit, currentBestRecord.Weight, currentBestRecord.Unit);
+            var comparison = CompareWeights(bestScore, currentBestRecord.Weight);
             if (comparison > 0)
             {
                 await _mainRecordRepository.AddAsync(new MainRecordEntity
@@ -164,8 +164,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
                     Id = Guid.NewGuid(),
                     UserId = command.UserId,
                     ExerciseId = exerciseId,
-                    Weight = bestScore.Weight,
-                    Unit = bestScore.Unit,
+                    Weight = bestScore,
                     Date = recordDate
                 }, cancellationToken);
                 newRecordsCount++;
@@ -187,16 +186,16 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
     /// Compares two weights accounting for unit differences.
     /// Returns: positive if weight1 > weight2, negative if weight1 &lt; weight2, zero if equal.
     /// </summary>
-    private int CompareWeights(double weight1, WeightUnits unit1, double weight2, WeightUnits unit2)
+    private int CompareWeights(Weight weight1, Weight weight2)
     {
         // Normalize both weights to kilograms for comparison
-        var normalizedWeight1 = unit1 == WeightUnits.Kilograms
-            ? weight1
-            : _weightUnitConverter.Convert(weight1, unit1, WeightUnits.Kilograms);
+        var normalizedWeight1 = weight1.Unit == WeightUnits.Kilograms
+            ? weight1.Value
+            : _weightUnitConverter.Convert(weight1.Value, weight1.Unit, WeightUnits.Kilograms);
 
-        var normalizedWeight2 = unit2 == WeightUnits.Kilograms
-            ? weight2
-            : _weightUnitConverter.Convert(weight2, unit2, WeightUnits.Kilograms);
+        var normalizedWeight2 = weight2.Unit == WeightUnits.Kilograms
+            ? weight2.Value
+            : _weightUnitConverter.Convert(weight2.Value, weight2.Unit, WeightUnits.Kilograms);
 
         return normalizedWeight1.CompareTo(normalizedWeight2);
     }

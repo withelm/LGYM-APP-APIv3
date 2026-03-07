@@ -3,6 +3,7 @@ using LgymApi.Application.Features.MainRecords.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
@@ -18,20 +19,14 @@ public sealed class MainRecordsService : IMainRecordsService
     private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
 
-    public MainRecordsService(
-        IUserRepository userRepository,
-        IExerciseRepository exerciseRepository,
-        IMainRecordRepository mainRecordRepository,
-        IExerciseScoreRepository exerciseScoreRepository,
-        IUnitConverter<WeightUnits> weightUnitConverter,
-        IUnitOfWork unitOfWork)
+    public MainRecordsService(IMainRecordsServiceDependencies dependencies)
     {
-        _userRepository = userRepository;
-        _exerciseRepository = exerciseRepository;
-        _mainRecordRepository = mainRecordRepository;
-        _exerciseScoreRepository = exerciseScoreRepository;
-        _weightUnitConverter = weightUnitConverter;
-        _unitOfWork = unitOfWork;
+        _userRepository = dependencies.UserRepository;
+        _exerciseRepository = dependencies.ExerciseRepository;
+        _mainRecordRepository = dependencies.MainRecordRepository;
+        _exerciseScoreRepository = dependencies.ExerciseScoreRepository;
+        _weightUnitConverter = dependencies.WeightUnitConverter;
+        _unitOfWork = dependencies.UnitOfWork;
     }
 
     public async Task AddNewRecordAsync(Guid userId, string exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default)
@@ -63,8 +58,7 @@ public sealed class MainRecordsService : IMainRecordsService
             Id = Guid.NewGuid(),
             UserId = user.Id,
             ExerciseId = exercise.Id,
-            Weight = weight,
-            Unit = unit,
+            Weight = new Weight(weight, unit),
             Date = new DateTimeOffset(DateTime.SpecifyKind(date, DateTimeKind.Utc))
         };
 
@@ -116,7 +110,7 @@ public sealed class MainRecordsService : IMainRecordsService
         }
 
         var bestRecords = records
-            .Where(r => r.Unit != WeightUnits.Unknown)
+            .Where(r => r.Weight.Unit != WeightUnits.Unknown)
             .GroupBy(r => r.ExerciseId)
             .Select(g => GetBestRecord(g.ToList()))
             .ToList();
@@ -204,8 +198,7 @@ public sealed class MainRecordsService : IMainRecordsService
         }
 
         existingRecord.ExerciseId = exercise.Id;
-        existingRecord.Weight = weight;
-        existingRecord.Unit = unit;
+        existingRecord.Weight = new Weight(weight, unit);
         existingRecord.Date = new DateTimeOffset(DateTime.SpecifyKind(date, DateTimeKind.Utc));
 
         await _mainRecordRepository.UpdateAsync(existingRecord, cancellationToken);
@@ -221,7 +214,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, new[] { exerciseGuid }, cancellationToken);
         var comparableRecords = records
-            .Where(r => r.Unit != WeightUnits.Unknown)
+            .Where(r => r.Weight.Unit != WeightUnits.Unknown)
             .ToList();
 
         MainRecordEntity? record = comparableRecords.Count == 0 ? null : GetBestRecord(comparableRecords);
@@ -236,18 +229,18 @@ public sealed class MainRecordsService : IMainRecordsService
 
             return new PossibleRecordResult
             {
-                Weight = possible.Weight,
+                Weight = possible.Weight.Value,
                 Reps = possible.Reps,
-                Unit = possible.Unit,
+                Unit = possible.Weight.Unit,
                 Date = possible.CreatedAt.UtcDateTime
             };
         }
 
         return new PossibleRecordResult
         {
-            Weight = record.Weight,
+            Weight = record.Weight.Value,
             Reps = 1,
-            Unit = record.Unit,
+            Unit = record.Weight.Unit,
             Date = record.Date.UtcDateTime
         };
     }
@@ -257,7 +250,11 @@ public sealed class MainRecordsService : IMainRecordsService
         var best = records[0];
         foreach (var candidate in records.Skip(1))
         {
-            var comparison = CompareWeights(candidate.Weight, candidate.Unit, best.Weight, best.Unit);
+            var comparison = CompareWeights(
+                candidate.Weight.Value,
+                candidate.Weight.Unit,
+                best.Weight.Value,
+                best.Weight.Unit);
             if (comparison > 0 || (comparison == 0 && candidate.Date > best.Date))
             {
                 best = candidate;

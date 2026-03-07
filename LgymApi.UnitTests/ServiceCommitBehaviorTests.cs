@@ -15,6 +15,7 @@ using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LgymApi.UnitTests;
@@ -90,7 +91,7 @@ public sealed class ServiceCommitBehaviorTests
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
-        var service = new UserService(
+        var service = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
             eloRepository,
@@ -101,7 +102,7 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            new AppDefaultsOptions());
+            new AppDefaultsOptions()));
 
         await service.RegisterAsync("newuser", "newuser@example.com", "password123", "password123", true);
 
@@ -110,7 +111,7 @@ public sealed class ServiceCommitBehaviorTests
 
         var savedElo = await dbContext.EloRegistries.FirstOrDefaultAsync(e => e.UserId == savedUser!.Id);
         Assert.That(savedElo, Is.Not.Null);
-        Assert.That(savedElo!.Elo, Is.EqualTo(1000));
+        Assert.That(savedElo!.Elo.Value, Is.EqualTo(1000));
     }
 
     [Test]
@@ -141,7 +142,7 @@ public sealed class ServiceCommitBehaviorTests
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
-        var service = new UserService(
+        var service = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
             eloRepository,
@@ -152,7 +153,7 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            new AppDefaultsOptions());
+            new AppDefaultsOptions()));
 
         await service.RegisterAsync(
             "lang-user",
@@ -196,7 +197,7 @@ public sealed class ServiceCommitBehaviorTests
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
         var defaults = new AppDefaultsOptions { PreferredLanguage = "de-DE", PreferredTimeZone = "UTC" };
 
-        var service = new UserService(
+        var service = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
             eloRepository,
@@ -207,7 +208,7 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            defaults);
+            defaults));
 
         await service.RegisterAsync(
             "fallback-user",
@@ -250,8 +251,8 @@ public sealed class ServiceCommitBehaviorTests
             LegacyHash = "hash",
             LegacySalt = "salt",
             LegacyDigest = "sha256",
-            LegacyIterations = 25000,
-            LegacyKeyLength = 512
+            LegacyIterations = LegacyPasswordConstants.Iterations,
+            LegacyKeyLength = LegacyPasswordConstants.KeyLength
         };
 
         dbContext.Users.Add(user);
@@ -267,7 +268,7 @@ public sealed class ServiceCommitBehaviorTests
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
-        var service = new UserService(
+        var service = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
             eloRepository,
@@ -278,7 +279,7 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            new AppDefaultsOptions());
+            new AppDefaultsOptions()));
 
         await service.UpdateTimeZoneAsync(user, "Europe/Paris");
 
@@ -313,8 +314,8 @@ public sealed class ServiceCommitBehaviorTests
             LegacyHash = "hash",
             LegacySalt = "salt",
             LegacyDigest = "sha256",
-            LegacyIterations = 25000,
-            LegacyKeyLength = 512
+            LegacyIterations = LegacyPasswordConstants.Iterations,
+            LegacyKeyLength = LegacyPasswordConstants.KeyLength
         };
 
         dbContext.Users.Add(user);
@@ -330,7 +331,7 @@ public sealed class ServiceCommitBehaviorTests
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
-        var service = new UserService(
+        var service = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
             eloRepository,
@@ -341,7 +342,7 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            new AppDefaultsOptions());
+            new AppDefaultsOptions()));
 
         Assert.ThrowsAsync<AppException>(async () => await service.UpdateTimeZoneAsync(user, "Not/ARealTimeZone"));
     }
@@ -426,6 +427,47 @@ public sealed class ServiceCommitBehaviorTests
             .ToListAsync();
 
         Assert.That(assignedRoleNames, Is.EquivalentTo(new[] { "Coach", AuthConstants.Roles.User }));
+    }
+
+    private sealed class UserServiceDependenciesStub : IUserServiceDependencies
+    {
+        public UserServiceDependenciesStub(
+            IUserRepository userRepository,
+            IRoleRepository roleRepository,
+            IEloRegistryRepository eloRepository,
+            ITokenService tokenService,
+            ILegacyPasswordService legacyPasswordService,
+            IRankService rankService,
+            IUserSessionCache userSessionCache,
+            ICommandDispatcher commandDispatcher,
+            IUnitOfWork unitOfWork,
+            ILogger<UserService> logger,
+            AppDefaultsOptions appDefaultsOptions)
+        {
+            UserRepository = userRepository;
+            RoleRepository = roleRepository;
+            EloRepository = eloRepository;
+            TokenService = tokenService;
+            LegacyPasswordService = legacyPasswordService;
+            RankService = rankService;
+            UserSessionCache = userSessionCache;
+            CommandDispatcher = commandDispatcher;
+            UnitOfWork = unitOfWork;
+            Logger = logger;
+            AppDefaultsOptions = appDefaultsOptions;
+        }
+
+        public IUserRepository UserRepository { get; }
+        public IRoleRepository RoleRepository { get; }
+        public IEloRegistryRepository EloRepository { get; }
+        public ITokenService TokenService { get; }
+        public ILegacyPasswordService LegacyPasswordService { get; }
+        public IRankService RankService { get; }
+        public IUserSessionCache UserSessionCache { get; }
+        public ICommandDispatcher CommandDispatcher { get; }
+        public IUnitOfWork UnitOfWork { get; }
+        public ILogger<UserService> Logger { get; }
+        public AppDefaultsOptions AppDefaultsOptions { get; }
     }
 
     private sealed class NoOpTokenService : ITokenService

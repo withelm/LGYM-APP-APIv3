@@ -1,11 +1,12 @@
 using LgymApi.Domain.Services;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Application.Services;
 
 public interface IRankService
 {
     IReadOnlyList<RankDefinition> GetRanks();
-    RankDefinition GetCurrentRank(int elo);
+    RankDefinition GetCurrentRank(Elo elo);
     RankDefinition? GetNextRank(string currentRankName);
 }
 
@@ -13,7 +14,7 @@ public sealed class RankService : IRankService
 {
     public IReadOnlyList<RankDefinition> GetRanks() => RankDefinitions.All;
 
-    public RankDefinition GetCurrentRank(int elo)
+    public RankDefinition GetCurrentRank(Elo elo)
     {
         return RankDefinitions.All.Last(rank => elo >= rank.NeedElo);
     }
