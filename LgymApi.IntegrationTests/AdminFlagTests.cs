@@ -21,56 +21,49 @@ public sealed class AdminFlagTests : IntegrationTestBase
         result.Should().BeTrue();
     }
 
-    [Test]
-    public async Task IsAdmin_WithNonAdminUser_ReturnsFalse()
+    private static IEnumerable<TestCaseData> IsAdmin_FalseResultCases()
     {
-        var normalUser = await SeedUserAsync(name: "normaluser", email: "normal@example.com", isAdmin: false);
-        SetAuthorizationHeader(normalUser.Id);
+        yield return new TestCaseData(
+                new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
+                {
+                    var user = await self.SeedUserAsync(name: "normaluser", email: "normal@example.com", isAdmin: false);
+                    return (user.Id, user.Id.ToString());
+                }))
+            .SetName("IsAdmin_WithNonAdminUser_ReturnsFalse");
 
-        var response = await Client.GetAsync($"/api/{normalUser.Id}/isAdmin");
+        yield return new TestCaseData(
+                new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
+                {
+                    var user = await self.SeedUserAsync(name: "nulladmin", email: "nulladmin@example.com");
+                    return (user.Id, user.Id.ToString());
+                }))
+            .SetName("IsAdmin_WithNullAdminFlag_ReturnsFalse");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        yield return new TestCaseData(
+                new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
+                {
+                    var user = await self.SeedUserAsync(name: "authuser", email: "auth-nonexistent@example.com");
+                    return (user.Id, Guid.NewGuid().ToString());
+                }))
+            .SetName("IsAdmin_WithNonExistentUser_ReturnsFalse");
 
-        var result = await response.Content.ReadFromJsonAsync<bool>();
-        result.Should().BeFalse();
+        yield return new TestCaseData(
+                new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
+                {
+                    var user = await self.SeedUserAsync(name: "authuser", email: "auth-invalid@example.com");
+                    return (user.Id, "invalid-guid");
+                }))
+            .SetName("IsAdmin_WithInvalidGuidFormat_ReturnsFalse");
     }
 
-    [Test]
-    public async Task IsAdmin_WithNullAdminFlag_ReturnsFalse()
+    [TestCaseSource(nameof(IsAdmin_FalseResultCases))]
+    public async Task IsAdmin_WithVariousNonAdminScenarios_ReturnsFalse(
+        Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>> setupAsync)
     {
-        var user = await SeedUserAsync(name: "nulladmin", email: "nulladmin@example.com");
-        SetAuthorizationHeader(user.Id);
+        var (authUserId, queryId) = await setupAsync(this);
+        SetAuthorizationHeader(authUserId);
 
-        var response = await Client.GetAsync($"/api/{user.Id}/isAdmin");
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var result = await response.Content.ReadFromJsonAsync<bool>();
-        result.Should().BeFalse();
-    }
-
-    [Test]
-    public async Task IsAdmin_WithNonExistentUser_ReturnsFalse()
-    {
-        var user = await SeedUserAsync(name: "authuser", email: "auth@example.com");
-        SetAuthorizationHeader(user.Id);
-
-        var nonExistentId = Guid.NewGuid();
-        var response = await Client.GetAsync($"/api/{nonExistentId}/isAdmin");
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var result = await response.Content.ReadFromJsonAsync<bool>();
-        result.Should().BeFalse();
-    }
-
-    [Test]
-    public async Task IsAdmin_WithInvalidGuidFormat_ReturnsFalse()
-    {
-        var user = await SeedUserAsync(name: "authuser", email: "auth@example.com");
-        SetAuthorizationHeader(user.Id);
-
-        var response = await Client.GetAsync("/api/invalid-guid/isAdmin");
+        var response = await Client.GetAsync($"/api/{queryId}/isAdmin");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 

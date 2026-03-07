@@ -42,26 +42,25 @@ public sealed class AppConfigTests : IntegrationTestBase
         body.ReleaseNotes.Should().Be("Bug fixes and improvements");
     }
 
-    [Test]
-    public async Task GetAppVersion_WithInvalidPlatform_ReturnsBadRequest()
+    private static IEnumerable<TestCaseData> GetAppVersion_InvalidPlatformCases()
     {
-        var user = await SeedUserAsync(name: "testuser", email: "test@example.com");
-        SetAuthorizationHeader(user.Id);
-
-        var request = new { platform = "InvalidPlatform" };
-        var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        yield return new TestCaseData(new { platform = "InvalidPlatform" })
+            .SetName("GetAppVersion_WithInvalidPlatform_ReturnsBadRequest");
+        yield return new TestCaseData(new { })
+            .SetName("GetAppVersion_WithMissingPlatform_ReturnsBadRequest");
+        yield return new TestCaseData(new { platform = 1 })
+            .SetName("GetAppVersion_WithNumericPlatform_ReturnsBadRequest");
     }
 
-    [Test]
-    public async Task GetAppVersion_WithMissingPlatform_ReturnsBadRequest()
+    [TestCaseSource(nameof(GetAppVersion_InvalidPlatformCases))]
+    public async Task GetAppVersion_WithInvalidPlatformData_ReturnsBadRequest(object requestBody)
     {
-        var user = await SeedUserAsync(name: "testuser", email: "test@example.com");
+        var user = await SeedUserAsync(
+            name: $"testuser-{TestContext.CurrentContext.Test.Name}",
+            email: $"test-{Guid.NewGuid():N}@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var request = new { };
-        var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", request);
+        var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", requestBody);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -148,37 +147,34 @@ public sealed class AppConfigTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
-    [Test]
-    public async Task CreateNewAppVersion_WithInvalidPlatform_ReturnsBadRequest()
+    private static IEnumerable<TestCaseData> CreateNewAppVersion_InvalidPlatformCases()
     {
-        var admin = await SeedAdminAsync();
-        SetAuthorizationHeader(admin.Id);
-
-        var request = new
+        yield return new TestCaseData(new
         {
             platform = "InvalidPlatform",
             minRequiredVersion = "1.0.0",
             latestVersion = "2.0.0"
-        };
-
-        var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }).SetName("CreateNewAppVersion_WithInvalidPlatform_ReturnsBadRequest");
+        yield return new TestCaseData(new
+        {
+            minRequiredVersion = "1.0.0",
+            latestVersion = "2.0.0"
+        }).SetName("CreateNewAppVersion_WithMissingPlatform_ReturnsBadRequest");
+        yield return new TestCaseData(new
+        {
+            platform = 1,
+            minRequiredVersion = "1.0.0",
+            latestVersion = "2.0.0"
+        }).SetName("CreateNewAppVersion_WithNumericPlatform_ReturnsBadRequest");
     }
 
-    [Test]
-    public async Task CreateNewAppVersion_WithMissingPlatform_ReturnsBadRequest()
+    [TestCaseSource(nameof(CreateNewAppVersion_InvalidPlatformCases))]
+    public async Task CreateNewAppVersion_WithInvalidPlatformData_ReturnsBadRequest(object requestBody)
     {
         var admin = await SeedAdminAsync();
         SetAuthorizationHeader(admin.Id);
 
-        var request = new
-        {
-            minRequiredVersion = "1.0.0",
-            latestVersion = "2.0.0"
-        };
-
-        var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", request);
+        var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", requestBody);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -217,36 +213,6 @@ public sealed class AppConfigTests : IntegrationTestBase
         body!.LatestVersion.Should().Be("2.0.0");
         body.MinRequiredVersion.Should().Be("1.5.0");
         body.ForceUpdate.Should().BeTrue();
-    }
-
-    [Test]
-    public async Task GetAppVersion_WithNumericPlatform_ReturnsBadRequest()
-    {
-        var user = await SeedUserAsync(name: "testuser2", email: "test2@example.com");
-        SetAuthorizationHeader(user.Id);
-
-        var request = new { platform = 1 };
-        var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Test]
-    public async Task CreateNewAppVersion_WithNumericPlatform_ReturnsBadRequest()
-    {
-        var admin = await SeedAdminAsync();
-        SetAuthorizationHeader(admin.Id);
-
-        var request = new
-        {
-            platform = 1,
-            minRequiredVersion = "1.0.0",
-            latestVersion = "2.0.0"
-        };
-
-        var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     private sealed class MessageResponse
