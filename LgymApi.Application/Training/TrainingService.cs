@@ -337,11 +337,11 @@ public sealed class TrainingService : ITrainingService
         return PartElo(previousScore.Weight.Value, previousScore.Reps, currentScore.Weight.Value, currentScore.Reps);
     }
 
-    private static int PartElo(double prevWeight, int prevReps, double accWeight, int accReps)
+    private static int PartElo(double prevWeight, double prevReps, double accWeight, double accReps)
     {
         const int k = 32;
 
-        double GetWeightedScore(double weight, int reps)
+        double GetWeightedScore(double weight, double reps)
         {
             if (weight <= 15)
             {
@@ -392,7 +392,7 @@ public sealed class TrainingService : ITrainingService
         return map;
     }
 
-    private List<GroupedExerciseComparison> BuildComparisonReport(
+    internal List<GroupedExerciseComparison> BuildComparisonReport(
         IReadOnlyCollection<TrainingExerciseInput> currentExercises,
         Dictionary<string, ExerciseScore> previousScores,
         Dictionary<Guid, string> exerciseDetails)
@@ -439,7 +439,17 @@ public sealed class TrainingService : ITrainingService
                     });
         }
 
-        return comparisonMap.Values.ToList();
+        var exerciseOrder = currentExercises
+            .Select(e => e.ExerciseId)
+            .Where(id => Guid.TryParse(id, out _))
+            .Select(id => Guid.Parse(id))
+            .Distinct()
+            .ToList();
+
+        return exerciseOrder
+            .Where(comparisonMap.ContainsKey)
+            .Select(id => comparisonMap[id])
+            .ToList();
     }
 
 }

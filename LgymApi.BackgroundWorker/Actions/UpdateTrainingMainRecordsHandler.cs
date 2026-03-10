@@ -87,6 +87,12 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
                 continue;
             }
 
+            // Skip exercises with partial reps — only full reps qualify for records
+            if (score.Reps < 1)
+            {
+                continue;
+            }
+
             // Track best weight per exercise within this training session
             if (!bestScoresByExercise.TryGetValue(score.ExerciseId, out var currentBest))
             {

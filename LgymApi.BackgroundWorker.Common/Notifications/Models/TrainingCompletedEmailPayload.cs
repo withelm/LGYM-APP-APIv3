@@ -42,7 +42,7 @@ public sealed class TrainingExerciseSummary
     public string ExerciseId { get; init; } = string.Empty;
     public string ExerciseName { get; init; } = string.Empty;
     public int Series { get; init; }
-    public int Reps { get; init; }
+    public double Reps { get; init; }
     public double Weight { get; init; }
     public WeightUnits Unit { get; init; }
 }
