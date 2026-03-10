@@ -337,11 +337,11 @@ public sealed class TrainingService : ITrainingService
         return PartElo(previousScore.Weight.Value, previousScore.Reps, currentScore.Weight.Value, currentScore.Reps);
     }
 
-    private static int PartElo(double prevWeight, int prevReps, double accWeight, int accReps)
+    private static int PartElo(double prevWeight, double prevReps, double accWeight, double accReps)
     {
         const int k = 32;
 
-        double GetWeightedScore(double weight, int reps)
+        double GetWeightedScore(double weight, double reps)
         {
             if (weight <= 15)
             {

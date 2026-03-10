@@ -72,7 +72,7 @@ public sealed class PossibleRecordForExerciseDto : IResultDto
     public double Weight { get; set; }
 
     [JsonPropertyName("reps")]
-    public int Reps { get; set; }
+    public double Reps { get; set; }
 
     [JsonPropertyName("unit")]
     public EnumLookupDto Unit { get; set; } = new();

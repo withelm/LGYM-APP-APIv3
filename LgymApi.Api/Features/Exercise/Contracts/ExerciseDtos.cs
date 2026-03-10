@@ -71,7 +71,7 @@ public sealed class SeriesScoreDto : IResultDto
 public class ScoreDto : IResultDto
 {
     [JsonPropertyName("reps")]
-    public int Reps { get; set; }
+    public double Reps { get; set; }
 
     [JsonPropertyName("weight")]
     public double Weight { get; set; }

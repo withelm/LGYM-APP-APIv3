@@ -61,7 +61,7 @@ public sealed class ExerciseScoresService : IExerciseScoresService
         return bestSeries.Values.ToList();
     }
 
-    private static double CalculateOneRepMax(int reps, double weight)
+    private static double CalculateOneRepMax(double reps, double weight)
     {
         if (reps <= 0 || weight <= 0)
         {

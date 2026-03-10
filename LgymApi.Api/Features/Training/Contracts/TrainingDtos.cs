@@ -20,7 +20,7 @@ public class ExerciseScoresTrainingFormDto : IResultDto
     public WeightUnits Unit { get; set; }
 
     [JsonPropertyName("reps")]
-    public int Reps { get; set; }
+    public double Reps { get; set; }
 
     [JsonPropertyName("exercise")]
     public string ExerciseId { get; set; } = string.Empty;
@@ -41,7 +41,7 @@ public sealed class ExerciseScoreResponseDto : IResultDto
     public EnumLookupDto Unit { get; set; } = new();
 
     [JsonPropertyName("reps")]
-    public int Reps { get; set; }
+    public double Reps { get; set; }
 
     [JsonPropertyName("exercise")]
     public string ExerciseId { get; set; } = string.Empty;
@@ -166,7 +166,7 @@ public sealed class SeriesComparisonDto : IResultDto
 public sealed class ScoreResultDto : IResultDto
 {
     [JsonPropertyName("reps")]
-    public int Reps { get; set; }
+    public double Reps { get; set; }
 
     [JsonPropertyName("weight")]
     public double Weight { get; set; }

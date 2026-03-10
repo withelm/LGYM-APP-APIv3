@@ -10,7 +10,7 @@ public sealed class ExerciseScore : EntityBase
 
     public Guid ExerciseId { get; set; }
     public Guid UserId { get; set; }
-    public int Reps { get; set; }
+    public double Reps { get; set; }
     public int Series { get; set; }
     public double WeightValue => _weightValue;
     public Weight Weight

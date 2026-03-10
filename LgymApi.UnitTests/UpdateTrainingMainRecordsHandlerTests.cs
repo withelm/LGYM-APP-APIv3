@@ -713,6 +713,167 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 
+    [Test]
+    public async Task ExecuteAsync_WithPartialReps_DoesNotCreateRecord()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var exerciseId = Guid.NewGuid();
+        var trainingId = Guid.NewGuid();
+        var exerciseScoreId = Guid.NewGuid();
+
+        _testTrainingRepository.TrainingToReturn = new Training
+        {
+            Id = trainingId,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
+        {
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+        };
+
+        _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
+        {
+            new ExerciseScore
+            {
+                Id = exerciseScoreId,
+                ExerciseId = exerciseId,
+                Weight = 100,
+                Unit = WeightUnits.Kilograms,
+                Series = 3,
+                Reps = 0.5
+            }
+        };
+
+        _testMainRecordRepository.ExistingRecords = new List<MainRecordEntity>();
+
+        var command = new TrainingCompletedCommand
+        {
+            UserId = userId,
+            TrainingId = trainingId
+        };
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        Assert.That(_testMainRecordRepository.AddedRecords, Is.Empty);
+        Assert.That(_testUnitOfWork.SaveChangesCalled, Is.False);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithZeroReps_DoesNotCreateRecord()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var exerciseId = Guid.NewGuid();
+        var trainingId = Guid.NewGuid();
+        var exerciseScoreId = Guid.NewGuid();
+
+        _testTrainingRepository.TrainingToReturn = new Training
+        {
+            Id = trainingId,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
+        {
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+        };
+
+        _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
+        {
+            new ExerciseScore
+            {
+                Id = exerciseScoreId,
+                ExerciseId = exerciseId,
+                Weight = 100,
+                Unit = WeightUnits.Kilograms,
+                Series = 3,
+                Reps = 0
+            }
+        };
+
+        _testMainRecordRepository.ExistingRecords = new List<MainRecordEntity>();
+
+        var command = new TrainingCompletedCommand
+        {
+            UserId = userId,
+            TrainingId = trainingId
+        };
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        Assert.That(_testMainRecordRepository.AddedRecords, Is.Empty);
+        Assert.That(_testUnitOfWork.SaveChangesCalled, Is.False);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithMixedFullAndPartialReps_OnlyCreatesRecordForFullReps()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var exerciseId1 = Guid.NewGuid();
+        var exerciseId2 = Guid.NewGuid();
+        var trainingId = Guid.NewGuid();
+        var scoreId1 = Guid.NewGuid();
+        var scoreId2 = Guid.NewGuid();
+
+        _testTrainingRepository.TrainingToReturn = new Training
+        {
+            Id = trainingId,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
+        {
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId1 },
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId2 }
+        };
+
+        _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
+        {
+            new ExerciseScore
+            {
+                Id = scoreId1,
+                ExerciseId = exerciseId1,
+                Weight = 100,
+                Unit = WeightUnits.Kilograms,
+                Series = 3,
+                Reps = 0.5
+            },
+            new ExerciseScore
+            {
+                Id = scoreId2,
+                ExerciseId = exerciseId2,
+                Weight = 80,
+                Unit = WeightUnits.Kilograms,
+                Series = 3,
+                Reps = 5
+            }
+        };
+
+        _testMainRecordRepository.ExistingRecords = new List<MainRecordEntity>();
+
+        var command = new TrainingCompletedCommand
+        {
+            UserId = userId,
+            TrainingId = trainingId
+        };
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
+        Assert.That(_testMainRecordRepository.AddedRecords[0].ExerciseId, Is.EqualTo(exerciseId2));
+        Assert.That(_testMainRecordRepository.AddedRecords[0].Weight.Value, Is.EqualTo(80));
+        Assert.That(_testUnitOfWork.SaveChangesCalled, Is.True);
+    }
+
     // Test doubles
     private sealed class TestMainRecordRepository : IMainRecordRepository
     {
