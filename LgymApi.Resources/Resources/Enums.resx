@@ -78,4 +78,31 @@
   <data name="Platforms_Ios" xml:space="preserve">
     <value>iOS</value>
   </data>
+  <data name="TutorialType_Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="TutorialType_OnboardingDemo" xml:space="preserve">
+    <value>Onboarding Demo</value>
+  </data>
+  <data name="TutorialStep_Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="TutorialStep_CreateArea" xml:space="preserve">
+    <value>Create Area</value>
+  </data>
+  <data name="TutorialStep_CreateGym" xml:space="preserve">
+    <value>Create Gym</value>
+  </data>
+  <data name="TutorialStep_CreatePlan" xml:space="preserve">
+    <value>Create Plan</value>
+  </data>
+  <data name="TutorialStep_CreatePlanDay" xml:space="preserve">
+    <value>Create Plan Day</value>
+  </data>
+  <data name="TutorialStep_CreateTraining" xml:space="preserve">
+    <value>Create Training</value>
+  </data>
+  <data name="TutorialStep_LastTreningResult" xml:space="preserve">
+    <value>Last Training Result</value>
+  </data>
 </root>

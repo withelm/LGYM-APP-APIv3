@@ -1,0 +1,51 @@
+using LgymApi.Application.Repositories;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace LgymApi.Infrastructure.Repositories;
+
+public sealed class TutorialProgressRepository : ITutorialProgressRepository
+{
+    private readonly AppDbContext _dbContext;
+
+    public TutorialProgressRepository(AppDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public Task<UserTutorialProgress?> FindByUserIdAndTypeAsync(Guid userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.UserTutorialProgresses
+            .AsTracking()
+            .Include(p => p.CompletedSteps)
+            .FirstOrDefaultAsync(p => p.UserId == userId && p.TutorialType == tutorialType, cancellationToken);
+    }
+
+    public Task<List<UserTutorialProgress>> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.UserTutorialProgresses
+            .Include(p => p.CompletedSteps)
+            .Where(p => p.UserId == userId && !p.IsCompleted)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> HasActiveTutorialsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.UserTutorialProgresses
+            .AnyAsync(p => p.UserId == userId && !p.IsCompleted, cancellationToken);
+    }
+
+    public Task AddAsync(UserTutorialProgress progress, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.UserTutorialProgresses.AddAsync(progress, cancellationToken).AsTask();
+    }
+
+    public Task UpdateAsync(UserTutorialProgress progress, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    public Task AddStepAsync(Guid progressId, UserTutorialStepProgress step, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.UserTutorialStepProgresses.AddAsync(step, cancellationToken).AsTask();
+    }
+}

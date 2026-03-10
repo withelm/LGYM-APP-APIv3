@@ -30,7 +30,8 @@ public sealed class UserProfile : IMappingProfile
             IsDeleted = source.IsDeleted,
             IsVisibleInRanking = source.IsVisibleInRanking,
             Roles = source.Roles,
-            PermissionClaims = source.PermissionClaims
+            PermissionClaims = source.PermissionClaims,
+            HasActiveTutorials = source.HasActiveTutorials
         });
 
         configuration.CreateMap<LoginResult, LoginResponseDto>((source, context) => new LoginResponseDto

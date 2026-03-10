@@ -125,6 +125,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEloRegistryRepository, EloRegistryRepository>();
         services.AddScoped<IAppConfigRepository, AppConfigRepository>();
         services.AddScoped<ICommandEnvelopeRepository, CommandEnvelopeRepository>();
+        services.AddScoped<ITutorialProgressRepository, TutorialProgressRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         return services;

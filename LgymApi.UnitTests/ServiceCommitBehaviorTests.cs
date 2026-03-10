@@ -1,6 +1,8 @@
 using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Features.Tutorial;
+using LgymApi.Application.Features.Tutorial.Models;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
@@ -10,6 +12,7 @@ using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
@@ -102,7 +105,8 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            new AppDefaultsOptions()));
+            new AppDefaultsOptions(),
+            new NoOpTutorialService()));
 
         await service.RegisterAsync("newuser", "newuser@example.com", "password123", "password123", true);
 
@@ -153,7 +157,8 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            new AppDefaultsOptions()));
+            new AppDefaultsOptions(),
+            new NoOpTutorialService()));
 
         await service.RegisterAsync(
             "lang-user",
@@ -208,7 +213,8 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            defaults));
+            defaults,
+            new NoOpTutorialService()));
 
         await service.RegisterAsync(
             "fallback-user",
@@ -279,7 +285,8 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            new AppDefaultsOptions()));
+            new AppDefaultsOptions(),
+            new NoOpTutorialService()));
 
         await service.UpdateTimeZoneAsync(user, "Europe/Paris");
 
@@ -342,7 +349,8 @@ public sealed class ServiceCommitBehaviorTests
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
-            new AppDefaultsOptions()));
+            new AppDefaultsOptions(),
+            new NoOpTutorialService()));
 
         Assert.ThrowsAsync<AppException>(async () => await service.UpdateTimeZoneAsync(user, "Not/ARealTimeZone"));
     }
@@ -442,7 +450,8 @@ public sealed class ServiceCommitBehaviorTests
             ICommandDispatcher commandDispatcher,
             IUnitOfWork unitOfWork,
             ILogger<UserService> logger,
-            AppDefaultsOptions appDefaultsOptions)
+            AppDefaultsOptions appDefaultsOptions,
+            ITutorialService tutorialService)
         {
             UserRepository = userRepository;
             RoleRepository = roleRepository;
@@ -455,6 +464,7 @@ public sealed class ServiceCommitBehaviorTests
             UnitOfWork = unitOfWork;
             Logger = logger;
             AppDefaultsOptions = appDefaultsOptions;
+            TutorialService = tutorialService;
         }
 
         public IUserRepository UserRepository { get; }
@@ -468,6 +478,7 @@ public sealed class ServiceCommitBehaviorTests
         public IUnitOfWork UnitOfWork { get; }
         public ILogger<UserService> Logger { get; }
         public AppDefaultsOptions AppDefaultsOptions { get; }
+        public ITutorialService TutorialService { get; }
     }
 
     private sealed class NoOpTokenService : ITokenService
@@ -512,6 +523,39 @@ public sealed class ServiceCommitBehaviorTests
             return Task.CompletedTask;
         }
         public Task EnqueueAsync<TCommand>(TCommand command) where TCommand : class, IActionCommand
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpTutorialService : ITutorialService
+    {
+        public Task InitializeOnboardingTutorialAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> HasActiveTutorialsAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(false);
+        }
+
+        public Task<List<TutorialProgressResult>> GetActiveTutorialsAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new List<TutorialProgressResult>());
+        }
+
+        public Task<TutorialProgressResult?> GetTutorialProgressAsync(Guid userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<TutorialProgressResult?>(null);
+        }
+
+        public Task CompleteStepAsync(Guid userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task CompleteTutorialAsync(Guid userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }

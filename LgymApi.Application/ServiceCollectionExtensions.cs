@@ -14,6 +14,7 @@ using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Units;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITrainerRelationshipService, TrainerRelationshipService>();
         services.AddScoped<IUserServiceDependencies, UserServiceDependencies>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<ITutorialService, TutorialService>();
         services.AddSingleton<ILinearUnitStrategy<WeightUnits>, WeightLinearUnitStrategy>();
         services.AddSingleton<IUnitConverter<WeightUnits>, LinearUnitConverter<WeightUnits>>();
         services.AddSingleton<ILinearUnitStrategy<HeightUnits>, HeightLinearUnitStrategy>();

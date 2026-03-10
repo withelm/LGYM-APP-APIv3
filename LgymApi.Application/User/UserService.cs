@@ -12,6 +12,7 @@ using LgymApi.Domain.Security;
 using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
 using UserEntity = LgymApi.Domain.Entities.User;
+using LgymApi.Application.Features.Tutorial;
 
 namespace LgymApi.Application.Features.User;
 
@@ -28,6 +29,7 @@ public sealed class UserService : IUserService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserService> _logger;
     private readonly AppDefaultsOptions _appDefaultsOptions;
+    private readonly ITutorialService _tutorialService;
 
     public UserService(IUserServiceDependencies dependencies)
     {
@@ -42,6 +44,7 @@ public sealed class UserService : IUserService
         _unitOfWork = dependencies.UnitOfWork;
         _logger = dependencies.Logger;
         _appDefaultsOptions = dependencies.AppDefaultsOptions;
+        _tutorialService = dependencies.TutorialService;
     }
 
     public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, string? preferredLanguage = null, CancellationToken cancellationToken = default)
@@ -157,6 +160,19 @@ public sealed class UserService : IUserService
             Elo = 1000
         }, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Initialize onboarding tutorial for new user
+        try
+        {
+            await _tutorialService.InitializeOnboardingTutorialAsync(user.Id, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to initialize onboarding tutorial for user {UserId}. Registration is still successful.",
+                user.Id);
+        }
         try
         {
             await _commandDispatcher.EnqueueAsync(new UserRegisteredCommand { UserId = user.Id });
@@ -208,6 +224,7 @@ public sealed class UserService : IUserService
         var token = _tokenService.CreateToken(user.Id, roles, permissionClaims);
         var elo = await _eloRepository.GetLatestEloAsync(user.Id, cancellationToken) ?? 1000;
         var nextRank = _rankService.GetNextRank(user.ProfileRank);
+        var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(user.Id, cancellationToken);
 
         _userSessionCache.AddOrRefresh(user.Id);
 
@@ -230,7 +247,8 @@ public sealed class UserService : IUserService
                 IsDeleted = user.IsDeleted,
                 IsVisibleInRanking = user.IsVisibleInRanking,
                 Roles = roles,
-                PermissionClaims = permissionClaims
+                PermissionClaims = permissionClaims,
+                HasActiveTutorials = hasActiveTutorials
             }
         };
     }
@@ -256,6 +274,7 @@ public sealed class UserService : IUserService
         var elo = await _eloRepository.GetLatestEloAsync(currentUser.Id, cancellationToken) ?? 1000;
         var roles = await _roleRepository.GetRoleNamesByUserIdAsync(currentUser.Id, cancellationToken);
         var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(currentUser.Id, cancellationToken);
+        var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(currentUser.Id, cancellationToken);
 
         return new UserInfoResult
         {
@@ -272,7 +291,8 @@ public sealed class UserService : IUserService
             IsDeleted = currentUser.IsDeleted,
             IsVisibleInRanking = currentUser.IsVisibleInRanking,
             Roles = roles,
-            PermissionClaims = permissionClaims
+                PermissionClaims = permissionClaims,
+                HasActiveTutorials = hasActiveTutorials
         };
     }
 

@@ -165,6 +165,7 @@ public abstract class IntegrationTestBase : IDisposable
             DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         };
+        options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
         var json = System.Text.Json.JsonSerializer.Serialize(value, options);
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         return Client.PostAsync(requestUri, content);
