@@ -1,5 +1,7 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Features.MainRecords.Strategies;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -111,13 +113,13 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
         return query.OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, IRecordComparisonStrategy strategy, CancellationToken cancellationToken = default)
     {
-        return _dbContext.ExerciseScores
+        var query = _dbContext.ExerciseScores
             .AsNoTracking()
-            .Where(s => s.UserId == userId && s.ExerciseId == exerciseId)
-            .OrderByDescending(s => s.WeightValue)
-            .ThenByDescending(s => s.Reps)
+            .Where(s => s.UserId == userId && s.ExerciseId == exerciseId);
+
+        return strategy.OrderScoresByBest(query)
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

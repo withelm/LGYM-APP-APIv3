@@ -32,7 +32,7 @@ public sealed class ExerciseService : IExerciseService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddExerciseAsync(string name, BodyParts bodyPart, string? description, string? image, CancellationToken cancellationToken = default)
+    public async Task AddExerciseAsync(string name, BodyParts bodyPart, EloStrategy eloStrategy, string? description, string? image, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name) || bodyPart == BodyParts.Unknown)
         {
@@ -44,6 +44,7 @@ public sealed class ExerciseService : IExerciseService
             Id = Guid.NewGuid(),
             Name = name,
             BodyPart = bodyPart,
+            EloStrategy = eloStrategy,
             Description = description,
             Image = image,
             IsDeleted = false
@@ -53,7 +54,7 @@ public sealed class ExerciseService : IExerciseService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task AddUserExerciseAsync(Guid userId, string name, BodyParts bodyPart, string? description, string? image, CancellationToken cancellationToken = default)
+    public async Task AddUserExerciseAsync(Guid userId, string name, BodyParts bodyPart, EloStrategy eloStrategy, string? description, string? image, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name) || bodyPart == BodyParts.Unknown)
         {
@@ -76,6 +77,7 @@ public sealed class ExerciseService : IExerciseService
             Id = Guid.NewGuid(),
             Name = name,
             BodyPart = bodyPart,
+            EloStrategy = eloStrategy,
             Description = description,
             Image = image,
             UserId = user.Id,
@@ -128,7 +130,7 @@ public sealed class ExerciseService : IExerciseService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateExerciseAsync(string exerciseId, string? name, BodyParts bodyPart, string? description, string? image, CancellationToken cancellationToken = default)
+    public async Task UpdateExerciseAsync(string exerciseId, string? name, BodyParts bodyPart, EloStrategy eloStrategy, string? description, string? image, CancellationToken cancellationToken = default)
     {
         if (!Guid.TryParse(exerciseId, out var exerciseGuid))
         {
@@ -150,6 +152,8 @@ public sealed class ExerciseService : IExerciseService
         {
             exercise.BodyPart = bodyPart;
         }
+
+        exercise.EloStrategy = eloStrategy;
 
         exercise.Description = description;
         exercise.Image = image;

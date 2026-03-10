@@ -34,7 +34,7 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AddExercise([FromBody] ExerciseFormDto form)
     {
-        await _exerciseService.AddExerciseAsync(form.Name, form.BodyPart, form.Description, form.Image, HttpContext.RequestAborted);
+        await _exerciseService.AddExerciseAsync(form.Name, form.BodyPart, form.EloStrategy, form.Description, form.Image, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -45,7 +45,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> AddUserExercise([FromRoute] string id, [FromBody] ExerciseFormDto form)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _exerciseService.AddUserExerciseAsync(userId, form.Name, form.BodyPart, form.Description, form.Image, HttpContext.RequestAborted);
+        await _exerciseService.AddUserExerciseAsync(userId, form.Name, form.BodyPart, form.EloStrategy, form.Description, form.Image, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -73,7 +73,7 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateExercise([FromBody] ExerciseFormDto form)
     {
-        await _exerciseService.UpdateExerciseAsync(form.Id ?? string.Empty, form.Name, form.BodyPart, form.Description, form.Image, HttpContext.RequestAborted);
+        await _exerciseService.UpdateExerciseAsync(form.Id ?? string.Empty, form.Name, form.BodyPart, form.EloStrategy, form.Description, form.Image, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 

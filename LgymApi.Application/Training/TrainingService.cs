@@ -2,6 +2,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Application.Features.Training.Elo;
 using LgymApi.Application.Units;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
@@ -25,6 +26,7 @@ public sealed class TrainingService : ITrainingService
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
+    private readonly IEloCalculationStrategyResolver _eloStrategyResolver;
     private readonly IUnitOfWork _unitOfWork;
 
     public TrainingService(ITrainingServiceDependencies dependencies)
@@ -38,6 +40,7 @@ public sealed class TrainingService : ITrainingService
         _commandDispatcher = dependencies.CommandDispatcher;
         _eloRepository = dependencies.EloRepository;
         _rankService = dependencies.RankService;
+        _eloStrategyResolver = dependencies.EloStrategyResolver;
         _unitOfWork = dependencies.UnitOfWork;
     }
 
@@ -76,7 +79,7 @@ public sealed class TrainingService : ITrainingService
                 .ToList();
 
             var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds, cancellationToken);
-            var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
+            var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => (e.Name, e.EloStrategy));
 
             var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds, cancellationToken);
 
@@ -130,7 +133,10 @@ public sealed class TrainingService : ITrainingService
                     var key = $"{exerciseId}-{exercise.Series}";
                     if (previousScoresMap.TryGetValue(key, out var previousScore))
                     {
-                        var eloGain = CalculateEloPerExercise(scoreEntity, previousScore);
+                        var exerciseStrategy = exerciseDetailsMap.TryGetValue(exerciseId, out var details)
+                            ? details.EloStrategy
+                            : EloStrategy.Standard;
+                        var eloGain = CalculateEloPerExercise(scoreEntity, previousScore, exerciseStrategy);
                         totalElo += eloGain;
                     }
                 }
@@ -332,43 +338,10 @@ public sealed class TrainingService : ITrainingService
         return trainings.Select(t => t.UtcDateTime).ToList();
     }
 
-    private static int CalculateEloPerExercise(ExerciseScore currentScore, ExerciseScore previousScore)
+    private int CalculateEloPerExercise(ExerciseScore currentScore, ExerciseScore previousScore, EloStrategy strategy)
     {
-        return PartElo(previousScore.Weight.Value, previousScore.Reps, currentScore.Weight.Value, currentScore.Reps);
-    }
-
-    private static int PartElo(double prevWeight, int prevReps, double accWeight, int accReps)
-    {
-        const int k = 32;
-
-        double GetWeightedScore(double weight, int reps)
-        {
-            if (weight <= 15)
-            {
-                return weight * 0.3 + reps * 0.7;
-            }
-
-            if (weight <= 80)
-            {
-                return weight * 0.5 + reps * 0.5;
-            }
-
-            return weight * 0.7 + reps * 0.3;
-        }
-
-        var prevScore = GetWeightedScore(prevWeight, prevReps);
-        var accScore = GetWeightedScore(accWeight, accReps);
-        var toleranceThreshold = prevWeight > 80 ? 0.1 * prevScore : 0.05 * prevScore;
-
-        var expectedScore = Math.Abs(accScore - prevScore) <= toleranceThreshold
-            ? 0.5
-            : prevScore / (prevScore + accScore);
-
-        var actualScore = accScore >= prevScore ? 1 : 0;
-        var scoreDifference = (actualScore - expectedScore) * (Math.Abs(accScore - prevScore) < toleranceThreshold ? 0.5 : 1);
-        var points = k * scoreDifference;
-
-        return (int)Math.Round(points);
+        var calculator = _eloStrategyResolver.Resolve(strategy);
+        return calculator.Calculate(previousScore, currentScore);
     }
 
     private async Task<Dictionary<string, ExerciseScore>> FetchPreviousScores(Guid userId, Guid gymId, List<Guid> exerciseIds, CancellationToken cancellationToken)
@@ -395,7 +368,7 @@ public sealed class TrainingService : ITrainingService
     private List<GroupedExerciseComparison> BuildComparisonReport(
         IReadOnlyCollection<TrainingExerciseInput> currentExercises,
         Dictionary<string, ExerciseScore> previousScores,
-        Dictionary<Guid, string> exerciseDetails)
+        Dictionary<Guid, (string Name, EloStrategy EloStrategy)> exerciseDetails)
     {
         var comparisonMap = new Dictionary<Guid, GroupedExerciseComparison>();
 
@@ -411,7 +384,7 @@ public sealed class TrainingService : ITrainingService
                 comparisonMap[exerciseId] = new GroupedExerciseComparison
                 {
                     ExerciseId = exerciseId,
-                    ExerciseName = exerciseDetails.TryGetValue(exerciseId, out var name) ? name : "Nieznane cwiczenie",
+                    ExerciseName = exerciseDetails.TryGetValue(exerciseId, out var details) ? details.Name : "Nieznane cwiczenie",
                     SeriesComparisons = new List<SeriesComparison>()
                 };
             }

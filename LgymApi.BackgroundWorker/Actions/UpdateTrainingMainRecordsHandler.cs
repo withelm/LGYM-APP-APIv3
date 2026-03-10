@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
+using LgymApi.Application.Features.MainRecords.Strategies;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Enums;
@@ -16,29 +17,35 @@ namespace LgymApi.BackgroundWorker.Actions;
 /// </summary>
 public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<TrainingCompletedCommand>
 {
+    private readonly IExerciseRepository _exerciseRepository;
     private readonly IMainRecordRepository _mainRecordRepository;
     private readonly ITrainingRepository _trainingRepository;
     private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
+    private readonly IRecordComparisonStrategyResolver _recordComparisonStrategyResolver;
     private readonly ILogger<UpdateTrainingMainRecordsHandler> _logger;
 
     public UpdateTrainingMainRecordsHandler(
+        IExerciseRepository exerciseRepository,
         IMainRecordRepository mainRecordRepository,
         ITrainingRepository trainingRepository,
         ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
         IExerciseScoreRepository exerciseScoreRepository,
         IUnitOfWork unitOfWork,
         IUnitConverter<WeightUnits> weightUnitConverter,
+        IRecordComparisonStrategyResolver recordComparisonStrategyResolver,
         ILogger<UpdateTrainingMainRecordsHandler> logger)
     {
+        _exerciseRepository = exerciseRepository ?? throw new ArgumentNullException(nameof(exerciseRepository));
         _mainRecordRepository = mainRecordRepository ?? throw new ArgumentNullException(nameof(mainRecordRepository));
         _trainingRepository = trainingRepository ?? throw new ArgumentNullException(nameof(trainingRepository));
         _trainingExerciseScoreRepository = trainingExerciseScoreRepository ?? throw new ArgumentNullException(nameof(trainingExerciseScoreRepository));
         _exerciseScoreRepository = exerciseScoreRepository ?? throw new ArgumentNullException(nameof(exerciseScoreRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _weightUnitConverter = weightUnitConverter ?? throw new ArgumentNullException(nameof(weightUnitConverter));
+        _recordComparisonStrategyResolver = recordComparisonStrategyResolver ?? throw new ArgumentNullException(nameof(recordComparisonStrategyResolver));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -71,6 +78,10 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
         var exerciseScores = await _exerciseScoreRepository.GetByIdsAsync(exerciseScoreIds, cancellationToken);
         var exerciseScoreDict = exerciseScores.ToDictionary(es => es.Id);
 
+        var exerciseIds = exerciseScores.Select(es => es.ExerciseId).Distinct().ToList();
+        var exercises = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
+        var strategyByExerciseId = exercises.ToDictionary(e => e.Id, e => e.EloStrategy);
+
         // Extract best score per exercise from fetched data
         var bestScoresByExercise = new Dictionary<Guid, Weight>();
 
@@ -94,7 +105,12 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
                 continue;
             }
 
-            if (CompareWeights(score.Weight, currentBest) > 0)
+            var eloStrategy = strategyByExerciseId.TryGetValue(score.ExerciseId, out var resolvedStrategy)
+                ? resolvedStrategy
+                : EloStrategy.Standard;
+            var comparisonStrategy = _recordComparisonStrategyResolver.Resolve(eloStrategy);
+
+            if (IsBetter(score.Weight, currentBest, comparisonStrategy))
             {
                 bestScoresByExercise[score.ExerciseId] = score.Weight;
             }
@@ -109,7 +125,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
         }
 
         // Fetch existing personal records for these exercises
-        var existingRecords = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(
+        var existingRecords = await _mainRecordRepository.GetByUserAndExercisesAsync(
             command.UserId,
             bestScoresByExercise.Keys.ToList(),
             cancellationToken);
@@ -125,6 +141,10 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
         {
             existingRecordsByExercise.TryGetValue(exerciseId, out var records);
             records ??= new List<MainRecordEntity>();
+
+            var strategy = strategyByExerciseId.TryGetValue(exerciseId, out var resolved)
+                ? resolved
+                : EloStrategy.Standard;
 
             var comparableRecords = records
                 .Where(r => r.Weight.Unit != WeightUnits.Unknown)
@@ -145,19 +165,20 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
                 continue;
             }
 
+            var comparisonStrategy = _recordComparisonStrategyResolver.Resolve(strategy);
+
             // Find current best from existing records
             var currentBestRecord = comparableRecords[0];
             foreach (var candidateRecord in comparableRecords.Skip(1))
             {
-                if (CompareWeights(candidateRecord.Weight, currentBestRecord.Weight) > 0)
+                if (IsBetter(candidateRecord.Weight, currentBestRecord.Weight, comparisonStrategy))
                 {
                     currentBestRecord = candidateRecord;
                 }
             }
 
             // Compare training best to existing best - create new record if improved
-            var comparison = CompareWeights(bestScore, currentBestRecord.Weight);
-            if (comparison > 0)
+            if (IsBetter(bestScore, currentBestRecord.Weight, comparisonStrategy))
             {
                 await _mainRecordRepository.AddAsync(new MainRecordEntity
                 {
@@ -198,5 +219,11 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
             : _weightUnitConverter.Convert(weight2.Value, weight2.Unit, WeightUnits.Kilograms);
 
         return normalizedWeight1.CompareTo(normalizedWeight2);
+    }
+
+    private bool IsBetter(Weight candidate, Weight currentBest, IRecordComparisonStrategy strategy)
+    {
+        var comparison = CompareWeights(candidate, currentBest);
+        return strategy.IsBetter(comparison);
     }
 }

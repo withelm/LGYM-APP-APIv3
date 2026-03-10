@@ -35,6 +35,7 @@ public sealed class ExerciseProfile : IMappingProfile
                 Id = source.Id.ToString(),
                 Name = name,
                 BodyPart = source.BodyPart.ToLookup(),
+                EloStrategy = source.EloStrategy.ToLookup(),
                 Description = source.Description,
                 Image = source.Image,
                 UserId = source.UserId?.ToString()

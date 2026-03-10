@@ -6,6 +6,7 @@ public sealed class Exercise : EntityBase
 {
     public string Name { get; set; } = string.Empty;
     public BodyParts BodyPart { get; set; }
+    public EloStrategy EloStrategy { get; set; } = EloStrategy.Standard;
     public string? Description { get; set; }
     public string? Image { get; set; }
     public Guid? UserId { get; set; }

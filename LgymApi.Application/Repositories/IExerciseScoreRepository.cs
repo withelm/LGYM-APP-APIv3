@@ -1,4 +1,6 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Application.Features.MainRecords.Strategies;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Repositories;
 
@@ -11,5 +13,5 @@ public interface IExerciseScoreRepository
     Task<List<ExerciseScore>> GetByUserAndExercisesAsync(Guid userId, List<Guid> exerciseIds, CancellationToken cancellationToken = default);
     Task<List<ExerciseScore>> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, Guid? gymId, CancellationToken cancellationToken = default);
     Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, int series, Guid? gymId, CancellationToken cancellationToken = default);
-    Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default);
+    Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, IRecordComparisonStrategy strategy, CancellationToken cancellationToken = default);
 }

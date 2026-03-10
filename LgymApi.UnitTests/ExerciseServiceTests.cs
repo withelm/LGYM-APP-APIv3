@@ -2,6 +2,7 @@ using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Application.Features.MainRecords.Strategies;
 
 namespace LgymApi.UnitTests;
 
@@ -58,7 +59,7 @@ public sealed class ExerciseServiceTests
         public Task<List<ExerciseScore>> GetByUserAndExerciseAndGymAsync(Guid userId, Guid exerciseId, Guid? gymId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<ExerciseScore>> GetByUserAndExercisesAsync(Guid userId, List<Guid> exerciseIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, int series, Guid? gymId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, IRecordComparisonStrategy strategy, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class NoOpUserRepository : IUserRepository

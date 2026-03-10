@@ -17,6 +17,7 @@ public sealed class EnumService : IEnumService
     private static readonly Dictionary<string, Type> EnumTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         { nameof(BodyParts), typeof(BodyParts) },
+        { nameof(EloStrategy), typeof(EloStrategy) },
         { nameof(WeightUnits), typeof(WeightUnits) },
         { nameof(HeightUnits), typeof(HeightUnits) },
         { nameof(Platforms), typeof(Platforms) }

@@ -17,5 +17,8 @@ public class ExerciseFormDtoValidator : AbstractValidator<ExerciseFormDto>
             .IsInEnum()
             .NotEqual(BodyParts.Unknown)
             .WithMessage(Messages.BodyPartRequired);
+
+        RuleFor(x => x.EloStrategy)
+            .IsInEnum();
     }
 }

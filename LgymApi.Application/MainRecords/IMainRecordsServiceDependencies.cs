@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
+using LgymApi.Application.Features.MainRecords.Strategies;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Features.MainRecords;
@@ -12,6 +13,7 @@ public interface IMainRecordsServiceDependencies
     IExerciseScoreRepository ExerciseScoreRepository { get; }
     IUnitConverter<WeightUnits> WeightUnitConverter { get; }
     IUnitOfWork UnitOfWork { get; }
+    IRecordComparisonStrategyResolver RecordComparisonStrategyResolver { get; }
 }
 
 internal sealed class MainRecordsServiceDependencies : IMainRecordsServiceDependencies
@@ -22,7 +24,8 @@ internal sealed class MainRecordsServiceDependencies : IMainRecordsServiceDepend
         IMainRecordRepository mainRecordRepository,
         IExerciseScoreRepository exerciseScoreRepository,
         IUnitConverter<WeightUnits> weightUnitConverter,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IRecordComparisonStrategyResolver recordComparisonStrategyResolver)
     {
         UserRepository = userRepository;
         ExerciseRepository = exerciseRepository;
@@ -30,6 +33,7 @@ internal sealed class MainRecordsServiceDependencies : IMainRecordsServiceDepend
         ExerciseScoreRepository = exerciseScoreRepository;
         WeightUnitConverter = weightUnitConverter;
         UnitOfWork = unitOfWork;
+        RecordComparisonStrategyResolver = recordComparisonStrategyResolver;
     }
 
     public IUserRepository UserRepository { get; }
@@ -38,4 +42,5 @@ internal sealed class MainRecordsServiceDependencies : IMainRecordsServiceDepend
     public IExerciseScoreRepository ExerciseScoreRepository { get; }
     public IUnitConverter<WeightUnits> WeightUnitConverter { get; }
     public IUnitOfWork UnitOfWork { get; }
+    public IRecordComparisonStrategyResolver RecordComparisonStrategyResolver { get; }
 }

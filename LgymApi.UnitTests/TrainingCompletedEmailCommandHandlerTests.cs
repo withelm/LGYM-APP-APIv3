@@ -7,6 +7,7 @@ using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Application.Features.MainRecords.Strategies;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.UnitTests;
@@ -681,7 +682,7 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
         public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, int series, Guid? gymId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+        public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, IRecordComparisonStrategy strategy, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 

@@ -2,6 +2,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.MainRecords.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
+using LgymApi.Application.Features.MainRecords.Strategies;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
@@ -18,6 +19,7 @@ public sealed class MainRecordsService : IMainRecordsService
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
     private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IRecordComparisonStrategyResolver _recordComparisonStrategyResolver;
 
     public MainRecordsService(IMainRecordsServiceDependencies dependencies)
     {
@@ -27,6 +29,7 @@ public sealed class MainRecordsService : IMainRecordsService
         _exerciseScoreRepository = dependencies.ExerciseScoreRepository;
         _weightUnitConverter = dependencies.WeightUnitConverter;
         _unitOfWork = dependencies.UnitOfWork;
+        _recordComparisonStrategyResolver = dependencies.RecordComparisonStrategyResolver;
     }
 
     public async Task AddNewRecordAsync(Guid userId, string exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default)
@@ -103,26 +106,32 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(user.Id, null, cancellationToken);
+        var records = await _mainRecordRepository.GetByUserIdAsync(user.Id, cancellationToken);
         if (records.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
+        var exerciseIds = records.Select(r => r.ExerciseId).Distinct().ToList();
+        var exercises = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
+        var exerciseMap = exercises.ToDictionary(e => e.Id, e => e);
+
         var bestRecords = records
             .Where(r => r.Weight.Unit != WeightUnits.Unknown)
             .GroupBy(r => r.ExerciseId)
-            .Select(g => GetBestRecord(g.ToList()))
+            .Select(g =>
+            {
+                var strategy = exerciseMap.TryGetValue(g.Key, out var exercise)
+                    ? exercise.EloStrategy
+                    : EloStrategy.Standard;
+                return GetBestRecord(g.ToList(), strategy);
+            })
             .ToList();
 
         if (bestRecords.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
-
-        var exerciseIds = bestRecords.Select(r => r.ExerciseId).Distinct().ToList();
-        var exercises = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
-        var exerciseMap = exercises.ToDictionary(e => e.Id, e => e);
 
         return new MainRecordsLastContext
         {
@@ -212,16 +221,23 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, new[] { exerciseGuid }, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync(exerciseGuid, cancellationToken);
+        if (exercise == null)
+        {
+            throw AppException.NotFound(Messages.DidntFind);
+        }
+
+        var records = await _mainRecordRepository.GetByUserAndExerciseAsync(userId, exerciseGuid, cancellationToken);
         var comparableRecords = records
             .Where(r => r.Weight.Unit != WeightUnits.Unknown)
             .ToList();
 
-        MainRecordEntity? record = comparableRecords.Count == 0 ? null : GetBestRecord(comparableRecords);
+        MainRecordEntity? record = comparableRecords.Count == 0 ? null : GetBestRecord(comparableRecords, exercise.EloStrategy);
 
         if (record == null)
         {
-            var possible = await _exerciseScoreRepository.GetBestScoreAsync(userId, exerciseGuid, cancellationToken);
+            var comparisonStrategy = _recordComparisonStrategyResolver.Resolve(exercise.EloStrategy);
+            var possible = await _exerciseScoreRepository.GetBestScoreAsync(userId, exerciseGuid, comparisonStrategy, cancellationToken);
             if (possible == null)
             {
                 throw AppException.NotFound(Messages.DidntFind);
@@ -245,8 +261,9 @@ public sealed class MainRecordsService : IMainRecordsService
         };
     }
 
-    private MainRecordEntity GetBestRecord(List<MainRecordEntity> records)
+    private MainRecordEntity GetBestRecord(List<MainRecordEntity> records, EloStrategy eloStrategy)
     {
+        var strategy = _recordComparisonStrategyResolver.Resolve(eloStrategy);
         var best = records[0];
         foreach (var candidate in records.Skip(1))
         {
@@ -255,7 +272,8 @@ public sealed class MainRecordsService : IMainRecordsService
                 candidate.Weight.Unit,
                 best.Weight.Value,
                 best.Weight.Unit);
-            if (comparison > 0 || (comparison == 0 && candidate.Date > best.Date))
+
+            if (strategy.IsBetter(comparison) || (comparison == 0 && candidate.Date > best.Date))
             {
                 best = candidate;
             }

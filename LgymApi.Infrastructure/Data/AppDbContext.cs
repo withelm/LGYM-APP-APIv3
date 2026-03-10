@@ -114,6 +114,7 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("Exercises");
             entity.Property(e => e.BodyPart).HasConversion<string>();
+            entity.Property(e => e.EloStrategy).HasConversion<string>().HasDefaultValue(EloStrategy.Standard);
         });
 
         modelBuilder.Entity<ExerciseTranslation>(entity =>

@@ -19,6 +19,9 @@ public sealed class ExerciseFormDto : IDto
     [JsonPropertyName("bodyPart")]
     public BodyParts BodyPart { get; set; }
 
+    [JsonPropertyName("eloStrategy")]
+    public EloStrategy EloStrategy { get; set; } = EloStrategy.Standard;
+
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
@@ -39,6 +42,9 @@ public sealed class ExerciseResponseDto : IResultDto
 
     [JsonPropertyName("bodyPart")]
     public EnumLookupDto BodyPart { get; set; } = new();
+
+    [JsonPropertyName("eloStrategy")]
+    public EnumLookupDto EloStrategy { get; set; } = new();
 
     [JsonPropertyName("description")]
     public string? Description { get; set; }

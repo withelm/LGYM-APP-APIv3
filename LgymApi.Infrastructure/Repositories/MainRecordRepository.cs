@@ -1,5 +1,7 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Features.MainRecords.Strategies;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,10 +50,11 @@ public sealed class MainRecordRepository : IMainRecordRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<MainRecord>> GetBestByUserGroupedByExerciseAndUnitAsync(Guid userId, IReadOnlyCollection<Guid>? exerciseIds = null, CancellationToken cancellationToken = default)
+    public async Task<List<MainRecord>> GetBestByUserGroupedByExerciseAndUnitAsync(Guid userId, IRecordComparisonStrategyResolver strategyResolver, IReadOnlyCollection<Guid>? exerciseIds = null, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.MainRecords
             .AsNoTracking()
+            .Include(r => r.Exercise)
             .Where(r => r.UserId == userId);
 
         if (exerciseIds is { Count: > 0 })
@@ -59,13 +62,16 @@ public sealed class MainRecordRepository : IMainRecordRepository
             query = query.Where(r => exerciseIds.Contains(r.ExerciseId));
         }
 
-        return query
+        var records = await query.ToListAsync(cancellationToken);
+        return records
             .GroupBy(r => new { r.ExerciseId, r.Unit })
-            .Select(g => g
-                .OrderByDescending(r => r.WeightValue)
-                .ThenByDescending(r => r.Date)
-                .First())
-            .ToListAsync(cancellationToken);
+            .Select(g =>
+            {
+                var eloStrategy = g.FirstOrDefault()?.Exercise?.EloStrategy ?? EloStrategy.Standard;
+                var strategy = strategyResolver.Resolve(eloStrategy);
+                return strategy.OrderRecordsByBest(g).First();
+            })
+            .ToList();
     }
 
     public Task<MainRecord?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)

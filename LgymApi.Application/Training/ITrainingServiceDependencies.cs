@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Application.Features.Training.Elo;
 using LgymApi.BackgroundWorker.Common;
 
 namespace LgymApi.Application.Features.Training;
@@ -15,6 +16,7 @@ public interface ITrainingServiceDependencies
     ICommandDispatcher CommandDispatcher { get; }
     IEloRegistryRepository EloRepository { get; }
     IRankService RankService { get; }
+    IEloCalculationStrategyResolver EloStrategyResolver { get; }
     IUnitOfWork UnitOfWork { get; }
 }
 
@@ -30,6 +32,7 @@ internal sealed class TrainingServiceDependencies : ITrainingServiceDependencies
         ICommandDispatcher commandDispatcher,
         IEloRegistryRepository eloRepository,
         IRankService rankService,
+        IEloCalculationStrategyResolver eloStrategyResolver,
         IUnitOfWork unitOfWork)
     {
         UserRepository = userRepository;
@@ -41,6 +44,7 @@ internal sealed class TrainingServiceDependencies : ITrainingServiceDependencies
         CommandDispatcher = commandDispatcher;
         EloRepository = eloRepository;
         RankService = rankService;
+        EloStrategyResolver = eloStrategyResolver;
         UnitOfWork = unitOfWork;
     }
 
@@ -53,5 +57,6 @@ internal sealed class TrainingServiceDependencies : ITrainingServiceDependencies
     public ICommandDispatcher CommandDispatcher { get; }
     public IEloRegistryRepository EloRepository { get; }
     public IRankService RankService { get; }
+    public IEloCalculationStrategyResolver EloStrategyResolver { get; }
     public IUnitOfWork UnitOfWork { get; }
 }

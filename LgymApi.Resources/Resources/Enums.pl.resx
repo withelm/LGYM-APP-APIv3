@@ -78,4 +78,10 @@
   <data name="Platforms_Ios" xml:space="preserve">
     <value>iOS</value>
   </data>
+  <data name="EloStrategy_Standard" xml:space="preserve">
+    <value>Standardowa</value>
+  </data>
+  <data name="EloStrategy_Assistance" xml:space="preserve">
+    <value>Asysta</value>
+  </data>
 </root>

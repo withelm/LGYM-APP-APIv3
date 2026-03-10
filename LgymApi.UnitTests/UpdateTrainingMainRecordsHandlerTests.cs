@@ -4,6 +4,7 @@ using LgymApi.Application.Models;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Enums;
+using LgymApi.Application.Features.MainRecords.Strategies;
 using LgymApi.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
@@ -14,11 +15,13 @@ namespace LgymApi.UnitTests;
 public sealed class UpdateTrainingMainRecordsHandlerTests
 {
     private TestMainRecordRepository _testMainRecordRepository = null!;
+    private TestExerciseRepository _testExerciseRepository = null!;
     private TestTrainingRepository _testTrainingRepository = null!;
     private TestTrainingExerciseScoreRepository _testTrainingExerciseScoreRepository = null!;
     private TestExerciseScoreRepository _testExerciseScoreRepository = null!;
     private TestUnitOfWork _testUnitOfWork = null!;
     private TestWeightUnitConverter _testConverter = null!;
+    private RecordComparisonStrategyResolver _testRecordComparisonStrategyResolver = null!;
     private TestLogger _testLogger = null!;
     private UpdateTrainingMainRecordsHandler _handler = null!;
 
@@ -26,19 +29,27 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public void SetUp()
     {
         _testMainRecordRepository = new TestMainRecordRepository();
+        _testExerciseRepository = new TestExerciseRepository();
         _testTrainingRepository = new TestTrainingRepository();
         _testTrainingExerciseScoreRepository = new TestTrainingExerciseScoreRepository();
         _testExerciseScoreRepository = new TestExerciseScoreRepository();
         _testUnitOfWork = new TestUnitOfWork();
         _testConverter = new TestWeightUnitConverter();
+        _testRecordComparisonStrategyResolver = new RecordComparisonStrategyResolver(new IRecordComparisonStrategy[]
+        {
+            new StandardRecordComparisonStrategy(),
+            new AssistanceRecordComparisonStrategy()
+        });
         _testLogger = new TestLogger();
         _handler = new UpdateTrainingMainRecordsHandler(
+            _testExerciseRepository,
             _testMainRecordRepository,
             _testTrainingRepository,
             _testTrainingExerciseScoreRepository,
             _testExerciseScoreRepository,
             _testUnitOfWork,
             _testConverter,
+            _testRecordComparisonStrategyResolver,
             _testLogger);
     }
 
@@ -173,6 +184,77 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         // Assert
         Assert.That(_testMainRecordRepository.AddedRecords, Is.Empty);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithAssistanceStrategy_LowerWeightCreatesRecord()
+    {
+        var userId = Guid.NewGuid();
+        var exerciseId = Guid.NewGuid();
+        var trainingId = Guid.NewGuid();
+        var exerciseScoreId = Guid.NewGuid();
+        var trainingDate = DateTimeOffset.UtcNow;
+
+        _testTrainingRepository.TrainingToReturn = new Training
+        {
+            Id = trainingId,
+            CreatedAt = trainingDate
+        };
+
+        _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
+        {
+            new TrainingExerciseScore
+            {
+                TrainingId = trainingId,
+                ExerciseScoreId = exerciseScoreId
+            }
+        };
+
+        _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
+        {
+            new ExerciseScore
+            {
+                Id = exerciseScoreId,
+                ExerciseId = exerciseId,
+                Weight = 30,
+                Unit = WeightUnits.Kilograms,
+                Series = 3,
+                Reps = 8
+            }
+        };
+
+        _testExerciseRepository.ExercisesToReturn = new List<Exercise>
+        {
+            new Exercise
+            {
+                Id = exerciseId,
+                EloStrategy = EloStrategy.Assistance
+            }
+        };
+
+        _testMainRecordRepository.ExistingRecords = new List<MainRecordEntity>
+        {
+            new MainRecordEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                ExerciseId = exerciseId,
+                Weight = 40,
+                Unit = WeightUnits.Kilograms,
+                Date = trainingDate.AddDays(-30)
+            }
+        };
+
+        var command = new TrainingCompletedCommand
+        {
+            UserId = userId,
+            TrainingId = trainingId
+        };
+
+        await _handler.ExecuteAsync(command);
+
+        Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
+        Assert.That(_testMainRecordRepository.AddedRecords[0].Weight.Value, Is.EqualTo(30));
     }
 
     [Test]
@@ -655,12 +737,14 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new UpdateTrainingMainRecordsHandler(
+                _testExerciseRepository,
                 null!,
                 _testTrainingRepository,
                 _testTrainingExerciseScoreRepository,
                 _testExerciseScoreRepository,
                 _testUnitOfWork,
                 _testConverter,
+                _testRecordComparisonStrategyResolver,
                 _testLogger));
         Assert.That(ex.ParamName, Is.EqualTo("mainRecordRepository"));
     }
@@ -671,12 +755,14 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new UpdateTrainingMainRecordsHandler(
+                _testExerciseRepository,
                 _testMainRecordRepository,
                 _testTrainingRepository,
                 _testTrainingExerciseScoreRepository,
                 _testExerciseScoreRepository,
                 null!,
                 _testConverter,
+                _testRecordComparisonStrategyResolver,
                 _testLogger));
         Assert.That(ex.ParamName, Is.EqualTo("unitOfWork"));
     }
@@ -687,12 +773,14 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new UpdateTrainingMainRecordsHandler(
+                _testExerciseRepository,
                 _testMainRecordRepository,
                 _testTrainingRepository,
                 _testTrainingExerciseScoreRepository,
                 _testExerciseScoreRepository,
                 _testUnitOfWork,
                 null!,
+                _testRecordComparisonStrategyResolver,
                 _testLogger));
         Assert.That(ex.ParamName, Is.EqualTo("weightUnitConverter"));
     }
@@ -703,14 +791,50 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new UpdateTrainingMainRecordsHandler(
+                _testExerciseRepository,
                 _testMainRecordRepository,
                 _testTrainingRepository,
                 _testTrainingExerciseScoreRepository,
                 _testExerciseScoreRepository,
                 _testUnitOfWork,
                 _testConverter,
+                _testRecordComparisonStrategyResolver,
                 null!));
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
+    }
+
+    [Test]
+    public void Constructor_WithNullExerciseRepository_ThrowsArgumentNullException()
+    {
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new UpdateTrainingMainRecordsHandler(
+                null!,
+                _testMainRecordRepository,
+                _testTrainingRepository,
+                _testTrainingExerciseScoreRepository,
+                _testExerciseScoreRepository,
+                _testUnitOfWork,
+                _testConverter,
+                _testRecordComparisonStrategyResolver,
+                _testLogger));
+        Assert.That(ex.ParamName, Is.EqualTo("exerciseRepository"));
+    }
+
+    [Test]
+    public void Constructor_WithNullRecordComparisonStrategyResolver_ThrowsArgumentNullException()
+    {
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new UpdateTrainingMainRecordsHandler(
+                _testExerciseRepository,
+                _testMainRecordRepository,
+                _testTrainingRepository,
+                _testTrainingExerciseScoreRepository,
+                _testExerciseScoreRepository,
+                _testUnitOfWork,
+                _testConverter,
+                null!,
+                _testLogger));
+        Assert.That(ex.ParamName, Is.EqualTo("recordComparisonStrategyResolver"));
     }
 
     // Test doubles
@@ -721,7 +845,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         public Task<List<MainRecordEntity>> GetBestByUserGroupedByExerciseAndUnitAsync(
             Guid userId,
-            IReadOnlyCollection<Guid>? exerciseIds,
+            IRecordComparisonStrategyResolver strategyResolver,
+            IReadOnlyCollection<Guid>? exerciseIds = null,
             CancellationToken cancellationToken = default)
             => Task.FromResult(ExistingRecords);
 
@@ -738,7 +863,9 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             => throw new NotSupportedException();
 
         public Task<List<MainRecordEntity>> GetByUserAndExercisesAsync(Guid userId, IReadOnlyCollection<Guid> exerciseIds, CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+            => Task.FromResult(ExistingRecords
+                .Where(r => r.UserId == userId && exerciseIds.Contains(r.ExerciseId))
+                .ToList());
 
         public Task<MainRecordEntity?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -750,6 +877,41 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             => throw new NotSupportedException();
 
         public Task<MainRecordEntity?> GetLatestByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class TestExerciseRepository : IExerciseRepository
+    {
+        public List<Exercise> ExercisesToReturn { get; set; } = new();
+
+        public Task<List<Exercise>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default)
+            => Task.FromResult(ExercisesToReturn.Where(e => ids.Contains(e.Id)).ToList());
+
+        public Task<Exercise?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult(ExercisesToReturn.FirstOrDefault(e => e.Id == id));
+
+        public Task<List<Exercise>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<List<Exercise>> GetAllGlobalAsync(CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<List<Exercise>> GetUserExercisesAsync(Guid userId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<List<Exercise>> GetByBodyPartAsync(Guid userId, BodyParts bodyPart, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Dictionary<Guid, string>> GetTranslationsAsync(IEnumerable<Guid> exerciseIds, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task UpsertTranslationAsync(Guid exerciseId, string culture, string name, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 
@@ -819,7 +981,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, int series, Guid? gymId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+        public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, IRecordComparisonStrategy strategy, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 
