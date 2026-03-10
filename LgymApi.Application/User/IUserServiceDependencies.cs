@@ -3,6 +3,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.BackgroundWorker.Common;
 using Microsoft.Extensions.Logging;
+using LgymApi.Application.Features.Tutorial;
 
 namespace LgymApi.Application.Features.User;
 
@@ -19,6 +20,7 @@ public interface IUserServiceDependencies
     IUnitOfWork UnitOfWork { get; }
     ILogger<UserService> Logger { get; }
     AppDefaultsOptions AppDefaultsOptions { get; }
+    ITutorialService TutorialService { get; }
 }
 
 internal sealed class UserServiceDependencies : IUserServiceDependencies
@@ -34,7 +36,8 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
         ICommandDispatcher commandDispatcher,
         IUnitOfWork unitOfWork,
         ILogger<UserService> logger,
-        AppDefaultsOptions appDefaultsOptions)
+        AppDefaultsOptions appDefaultsOptions,
+        ITutorialService tutorialService)
     {
         UserRepository = userRepository;
         RoleRepository = roleRepository;
@@ -47,6 +50,7 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
         UnitOfWork = unitOfWork;
         Logger = logger;
         AppDefaultsOptions = appDefaultsOptions;
+        TutorialService = tutorialService;
     }
 
     public IUserRepository UserRepository { get; }
@@ -60,4 +64,5 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
     public IUnitOfWork UnitOfWork { get; }
     public ILogger<UserService> Logger { get; }
     public AppDefaultsOptions AppDefaultsOptions { get; }
+    public ITutorialService TutorialService { get; }
 }

@@ -16,4 +16,5 @@ public sealed class UserInfoResult
     public bool IsVisibleInRanking { get; init; }
     public List<string> Roles { get; init; } = new();
     public List<string> PermissionClaims { get; init; } = new();
+    public bool HasActiveTutorials { get; init; }
 }

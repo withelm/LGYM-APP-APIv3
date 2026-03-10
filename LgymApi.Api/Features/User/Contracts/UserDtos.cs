@@ -88,6 +88,9 @@ public sealed class UserInfoDto : IResultDto
 
     [JsonPropertyName("permissionClaims")]
     public List<string> PermissionClaims { get; set; } = new();
+
+    [JsonPropertyName("hasActiveTutorials")]
+    public bool HasActiveTutorials { get; set; }
 }
 
 public sealed class UserBaseInfoDto : IResultDto

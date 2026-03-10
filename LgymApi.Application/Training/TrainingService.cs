@@ -140,11 +140,12 @@ public sealed class TrainingService : ITrainingService
                     await _exerciseScoreRepository.AddRangeAsync(scoresToAdd, cancellationToken);
                 }
 
-                var trainingScores = savedScoreIds.Select(scoreId => new TrainingExerciseScore
+                var trainingScores = savedScoreIds.Select((scoreId, index) => new TrainingExerciseScore
                 {
                     Id = Guid.NewGuid(),
                     TrainingId = training.Id,
-                    ExerciseScoreId = scoreId
+                    ExerciseScoreId = scoreId,
+                    Order = index
                 }).ToList();
 
                 if (trainingScores.Count > 0)
@@ -282,11 +283,11 @@ public sealed class TrainingService : ITrainingService
                         ScoresDetails = new List<ExerciseScore>()
                     };
                     grouped[score.ExerciseId] = group;
-                    exerciseOrderMap[score.ExerciseId] = score.Order;
+                    exerciseOrderMap[score.ExerciseId] = reference.Order;
                 }
                 else
                 {
-                    exerciseOrderMap[score.ExerciseId] = Math.Min(exerciseOrderMap[score.ExerciseId], score.Order);
+                    exerciseOrderMap[score.ExerciseId] = Math.Min(exerciseOrderMap[score.ExerciseId], reference.Order);
                 }
 
                 group.ScoresDetails.Add(score);

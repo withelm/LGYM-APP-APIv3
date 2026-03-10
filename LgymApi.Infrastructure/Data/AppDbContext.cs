@@ -46,6 +46,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<SupplementIntakeLog> SupplementIntakeLogs => Set<SupplementIntakeLog>();
     public DbSet<CommandEnvelope> CommandEnvelopes => Set<CommandEnvelope>();
     public DbSet<ActionExecutionLog> ActionExecutionLogs => Set<ActionExecutionLog>();
+    public DbSet<UserTutorialStepProgress> UserTutorialStepProgresses => Set<UserTutorialStepProgress>();
+    public DbSet<UserTutorialProgress> UserTutorialProgresses => Set<UserTutorialProgress>();
 
     public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
@@ -538,6 +540,34 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(e => e.CreatedAt)
                 .HasFilter("\"IsDeleted\" = FALSE");
             // Foreign key is configured by CommandEnvelope HasMany
+        });
+
+        modelBuilder.Entity<UserTutorialProgress>(entity =>
+        {
+            entity.ToTable("UserTutorialProgresses");
+            entity.Property(e => e.TutorialType).HasConversion<string>();
+            entity.HasIndex(e => new { e.UserId, e.TutorialType })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.UserId, e.IsCompleted })
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.CompletedSteps)
+                .WithOne(s => s.UserTutorialProgress)
+                .HasForeignKey(s => s.UserTutorialProgressId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserTutorialStepProgress>(entity =>
+        {
+            entity.ToTable("UserTutorialStepProgresses");
+            entity.Property(e => e.TutorialStep).HasConversion<string>();
+            entity.HasIndex(e => new { e.UserTutorialProgressId, e.TutorialStep })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
         });
     }
 
