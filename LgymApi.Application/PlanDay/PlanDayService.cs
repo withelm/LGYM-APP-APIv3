@@ -165,7 +165,7 @@ public sealed class PlanDayService : IPlanDayService
         }
     }
 
-    public async Task<PlanDayDetailsContext> GetPlanDayAsync(UserEntity currentUser, Guid planDayId, CancellationToken cancellationToken = default)
+    public async Task<PlanDayDetailsContext> GetPlanDayAsync(UserEntity currentUser, Guid planDayId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || planDayId == Guid.Empty)
         {
@@ -193,16 +193,22 @@ public sealed class PlanDayService : IPlanDayService
         var exerciseIds = exercises.Select(e => e.ExerciseId).Distinct().ToList();
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
         var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
+        var globalExerciseIds = exerciseList
+            .Where(e => e.UserId == null)
+            .Select(e => e.Id)
+            .ToList();
+        var translations = await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken);
 
         return new PlanDayDetailsContext
         {
             PlanDay = planDay,
             Exercises = exercises,
-            ExerciseMap = exerciseMap
+            ExerciseMap = exerciseMap,
+            Translations = translations
         };
     }
 
-    public async Task<PlanDaysContext> GetPlanDaysAsync(UserEntity currentUser, Guid planId, CancellationToken cancellationToken = default)
+    public async Task<PlanDaysContext> GetPlanDaysAsync(UserEntity currentUser, Guid planId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || planId == Guid.Empty)
         {
@@ -232,12 +238,18 @@ public sealed class PlanDayService : IPlanDayService
         var exerciseIds = planDayExercises.Select(e => e.ExerciseId).Distinct().ToList();
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
         var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
+        var globalExerciseIds = exerciseList
+            .Where(e => e.UserId == null)
+            .Select(e => e.Id)
+            .ToList();
+        var translations = await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken);
 
         return new PlanDaysContext
         {
             PlanDays = planDays,
             PlanDayExercises = planDayExercises,
-            ExerciseMap = exerciseMap
+            ExerciseMap = exerciseMap,
+            Translations = translations
         };
     }
 

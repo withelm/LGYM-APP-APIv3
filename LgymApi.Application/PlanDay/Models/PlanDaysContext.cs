@@ -9,4 +9,5 @@ public sealed class PlanDaysContext
     public List<PlanDayEntity> PlanDays { get; init; } = new();
     public List<PlanDayExerciseEntity> PlanDayExercises { get; init; } = new();
     public Dictionary<Guid, ExerciseEntity> ExerciseMap { get; init; } = new();
+    public Dictionary<Guid, string> Translations { get; init; } = new();
 }

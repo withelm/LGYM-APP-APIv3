@@ -71,10 +71,12 @@ public sealed class PlanDayController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var planDayId = Guid.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
-        var context = await _planDayService.GetPlanDayAsync(user!, planDayId, HttpContext.RequestAborted);
+        var cultures = HttpContext.GetCulturePreferences();
+        var context = await _planDayService.GetPlanDayAsync(user!, planDayId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.Exercises);
         mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
+        mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var planDayVm = _mapper.Map<LgymApi.Domain.Entities.PlanDay, PlanDayVmDto>(context.PlanDay, mappingContext);
         return Ok(planDayVm);
     }
@@ -87,10 +89,12 @@ public sealed class PlanDayController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
-        var context = await _planDayService.GetPlanDaysAsync(user!, planId, HttpContext.RequestAborted);
+        var cultures = HttpContext.GetCulturePreferences();
+        var context = await _planDayService.GetPlanDaysAsync(user!, planId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
         mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
+        mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var result = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayVmDto>(context.PlanDays, mappingContext);
         return Ok(result);
     }
@@ -135,4 +139,5 @@ public sealed class PlanDayController : ControllerBase
         var result = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayBaseInfoDto>(context.PlanDays, mappingContext);
         return Ok(result);
     }
+
 }

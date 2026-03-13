@@ -153,6 +153,41 @@ public sealed class PlanDayTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetPlanDay_WithAcceptLanguage_ReturnsTranslatedGlobalExerciseName()
+    {
+        var admin = await SeedAdminAsync();
+        SetAuthorizationHeader(admin.Id);
+
+        var exerciseId = await CreateGlobalExerciseViaEndpointAsync(admin.Id, "Squat", BodyParts.Quads);
+        var translationRequest = new
+        {
+            exerciseId = exerciseId.ToString(),
+            culture = "pl",
+            name = "Przysiad"
+        };
+        var translationResponse = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", translationRequest);
+        translationResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var planId = await CreatePlanViaEndpointAsync(admin.Id, "Translated Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(admin.Id, planId, "Translated Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "8" }
+        });
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/planDay/{planDayId}/getPlanDay");
+        request.Headers.AcceptLanguage.ParseAdd("pl-PL");
+        var response = await Client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<PlanDayVmResponse>();
+        body.Should().NotBeNull();
+        body!.Exercises.Should().HaveCount(1);
+        body.Exercises[0].Exercise.Should().NotBeNull();
+        body.Exercises[0].Exercise!.Name.Should().Be("Przysiad");
+    }
+
+    [Test]
     public async Task GetPlanDay_PreservesExerciseOrderFromCreateRequest()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
