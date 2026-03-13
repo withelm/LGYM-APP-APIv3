@@ -11,8 +11,6 @@ using LgymApi.Application.Mapping.Core;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Localization;
-using System.Globalization;
 
 namespace LgymApi.Api.Features.Exercise.Controllers;
 
@@ -97,7 +95,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> GetAllExercises([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var cultures = GetCulturePreferences();
+        var cultures = HttpContext.GetCulturePreferences();
         var context = await _exerciseService.GetAllExercisesAsync(userId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
@@ -111,7 +109,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> GetAllUserExercises([FromRoute] string id)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var cultures = GetCulturePreferences();
+        var cultures = HttpContext.GetCulturePreferences();
         var context = await _exerciseService.GetAllUserExercisesAsync(userId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
@@ -124,7 +122,7 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAllGlobalExercises()
     {
-        var cultures = GetCulturePreferences();
+        var cultures = HttpContext.GetCulturePreferences();
         var context = await _exerciseService.GetAllGlobalExercisesAsync(cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
@@ -139,7 +137,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> GetExerciseByBodyPart([FromRoute] string id, [FromBody] ExerciseByBodyPartRequestDto request)
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var cultures = GetCulturePreferences();
+        var cultures = HttpContext.GetCulturePreferences();
         var context = await _exerciseService.GetExerciseByBodyPartAsync(userId, request.BodyPart, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
@@ -153,7 +151,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> GetExercise([FromRoute] string id)
     {
         var exerciseId = Guid.TryParse(id, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        var cultures = GetCulturePreferences();
+        var cultures = HttpContext.GetCulturePreferences();
         var context = await _exerciseService.GetExerciseAsync(exerciseId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
@@ -190,80 +188,6 @@ public sealed class ExerciseController : ControllerBase
         var mapped = _mapper.MapList<ExerciseTrainingHistoryItem, ExerciseTrainingHistoryItemDto>(result);
 
         return Ok(mapped);
-    }
-
-    private IReadOnlyList<string> GetCulturePreferences()
-    {
-        var cultures = new List<string>();
-
-        var acceptLanguage = Request.Headers.AcceptLanguage.ToString();
-        var rawCulture = acceptLanguage
-            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(value => value.Split(';', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault())
-            .FirstOrDefault()?.Trim();
-
-        if (!string.IsNullOrWhiteSpace(rawCulture))
-        {
-            AddCultureAndNeutral(cultures, rawCulture);
-        }
-
-        var requestCulture = HttpContext.Features.Get<IRequestCultureFeature>()?.RequestCulture?.UICulture;
-        if (requestCulture != null && !string.IsNullOrWhiteSpace(requestCulture.Name))
-        {
-            AddCultureAndNeutral(cultures, requestCulture.Name);
-        }
-
-        var culture = CultureInfo.CurrentUICulture;
-        if (!string.IsNullOrWhiteSpace(culture.Name))
-        {
-            AddCultureAndNeutral(cultures, culture.Name);
-        }
-
-        cultures.Add("en");
-
-        return cultures
-            .Select(c => c.Trim().ToLowerInvariant())
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-    }
-
-    private static void AddCultureAndNeutral(List<string> cultures, string cultureName)
-    {
-        if (string.IsNullOrWhiteSpace(cultureName))
-        {
-            return;
-        }
-
-        if (!TryGetCulture(cultureName, out var cultureInfo))
-        {
-            return;
-        }
-
-        cultures.Add(cultureInfo.Name);
-
-        if (!string.IsNullOrWhiteSpace(cultureInfo.TwoLetterISOLanguageName) && !string.Equals(cultureInfo.Name, cultureInfo.TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase))
-        {
-            cultures.Add(cultureInfo.TwoLetterISOLanguageName);
-        }
-    }
-
-    private static bool TryGetCulture(string cultureName, out CultureInfo cultureInfo)
-    {
-        cultureInfo = null!;
-        if (string.IsNullOrWhiteSpace(cultureName))
-        {
-            return false;
-        }
-
-        try
-        {
-            cultureInfo = CultureInfo.GetCultureInfo(cultureName.Trim());
-            return true;
-        }
-        catch (CultureNotFoundException)
-        {
-            return false;
-        }
     }
 
 }

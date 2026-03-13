@@ -5,9 +5,7 @@ using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Features.PlanDay;
 using LgymApi.Application.Features.PlanDay.Models;
 using LgymApi.Application.Mapping.Core;
-using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
-using System.Globalization;
 
 namespace LgymApi.Api.Features.PlanDay.Controllers;
 
@@ -73,7 +71,7 @@ public sealed class PlanDayController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var planDayId = Guid.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
-        var cultures = GetCulturePreferences();
+        var cultures = HttpContext.GetCulturePreferences();
         var context = await _planDayService.GetPlanDayAsync(user!, planDayId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.Exercises);
@@ -91,7 +89,7 @@ public sealed class PlanDayController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
-        var cultures = GetCulturePreferences();
+        var cultures = HttpContext.GetCulturePreferences();
         var context = await _planDayService.GetPlanDaysAsync(user!, planId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
@@ -142,77 +140,4 @@ public sealed class PlanDayController : ControllerBase
         return Ok(result);
     }
 
-    private IReadOnlyList<string> GetCulturePreferences()
-    {
-        var cultures = new List<string>();
-
-        var acceptLanguage = Request.Headers.AcceptLanguage.ToString();
-        var rawCulture = acceptLanguage
-            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(value => value.Split(';', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault())
-            .FirstOrDefault()?.Trim();
-
-        if (!string.IsNullOrWhiteSpace(rawCulture))
-        {
-            AddCultureAndNeutral(cultures, rawCulture);
-        }
-
-        var requestCulture = HttpContext.Features.Get<IRequestCultureFeature>()?.RequestCulture?.UICulture;
-        if (requestCulture != null && !string.IsNullOrWhiteSpace(requestCulture.Name))
-        {
-            AddCultureAndNeutral(cultures, requestCulture.Name);
-        }
-
-        var culture = CultureInfo.CurrentUICulture;
-        if (!string.IsNullOrWhiteSpace(culture.Name))
-        {
-            AddCultureAndNeutral(cultures, culture.Name);
-        }
-
-        cultures.Add("en");
-
-        return cultures
-            .Select(c => c.Trim().ToLowerInvariant())
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-    }
-
-    private static void AddCultureAndNeutral(List<string> cultures, string cultureName)
-    {
-        if (string.IsNullOrWhiteSpace(cultureName))
-        {
-            return;
-        }
-
-        if (!TryGetCulture(cultureName, out var cultureInfo))
-        {
-            return;
-        }
-
-        cultures.Add(cultureInfo.Name);
-
-        if (!string.IsNullOrWhiteSpace(cultureInfo.TwoLetterISOLanguageName) && !string.Equals(cultureInfo.Name, cultureInfo.TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase))
-        {
-            cultures.Add(cultureInfo.TwoLetterISOLanguageName);
-        }
-    }
-
-    private static bool TryGetCulture(string cultureName, out CultureInfo cultureInfo)
-    {
-        cultureInfo = null!;
-        if (string.IsNullOrWhiteSpace(cultureName))
-        {
-            return false;
-        }
-
-        try
-        {
-            cultureInfo = CultureInfo.GetCultureInfo(cultureName.Trim());
-            return true;
-        }
-        catch (CultureNotFoundException)
-        {
-            return false;
-        }
-    }
 }
