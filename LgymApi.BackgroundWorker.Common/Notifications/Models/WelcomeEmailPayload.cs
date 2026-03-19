@@ -1,5 +1,4 @@
 using System.Globalization;
-using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Notifications;
 using System.Text.Json.Serialization;
 
@@ -13,7 +12,7 @@ public sealed class WelcomeEmailPayload : IEmailPayload
     public string CultureName { get; init; } = string.Empty;
 
     public Guid CorrelationId => UserId;
-    public EmailNotificationType NotificationType => EmailNotificationTypes.Welcome;
+    public EmailNotificationType NotificationType => Domain.Notifications.EmailNotificationTypes.Welcome;
 
     [JsonIgnore]
     public CultureInfo Culture

@@ -5,8 +5,10 @@ using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
+using EmailNotificationTypes = LgymApi.Domain.Notifications.EmailNotificationTypes;
 
 namespace LgymApi.UnitTests;
 
@@ -55,7 +57,7 @@ public sealed class WelcomeEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Failed,
             Attempts = 5,
-            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.Welcome,
+            Type = EmailNotificationTypes.Welcome,
             CorrelationId = Guid.NewGuid(),
             Recipient = "alex@example.com",
             PayloadJson = "{}"
@@ -132,7 +134,7 @@ public sealed class WelcomeEmailServicesTests
         {
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
-            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.Welcome,
+            Type = EmailNotificationTypes.Welcome,
             CorrelationId = Guid.NewGuid(),
             Recipient = "alex@example.com",
             PayloadJson = "{}"
@@ -179,7 +181,7 @@ public sealed class WelcomeEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
             Attempts = 0,
-            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.Welcome,
+            Type = EmailNotificationTypes.Welcome,
             CorrelationId = Guid.NewGuid(),
             Recipient = "alex@example.com",
             PayloadJson = "{\"userId\":\"d75e53b9-2701-4cb0-b2d1-c02f0dbf8aa0\",\"userName\":\"Alex\",\"recipientEmail\":\"alex@example.com\",\"cultureName\":\"en-US\"}"
@@ -214,7 +216,7 @@ public sealed class WelcomeEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Sent,
             Attempts = 2,
-            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.Welcome,
+            Type = EmailNotificationTypes.Welcome,
             CorrelationId = Guid.NewGuid(),
             Recipient = "alex@example.com",
             PayloadJson = "{}"
@@ -317,7 +319,7 @@ public sealed class WelcomeEmailServicesTests
 
     private sealed class ThrowingComposer : IEmailTemplateComposer
     {
-        public EmailNotificationType NotificationType => LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.Welcome;
+        public EmailNotificationType NotificationType => EmailNotificationTypes.Welcome;
 
         public EmailMessage Compose(string payloadJson)
         {
@@ -327,7 +329,7 @@ public sealed class WelcomeEmailServicesTests
 
     private sealed class PassThroughComposer : IEmailTemplateComposer
     {
-        public EmailNotificationType NotificationType => LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.Welcome;
+        public EmailNotificationType NotificationType => EmailNotificationTypes.Welcome;
 
         public EmailMessage Compose(string payloadJson)
         {

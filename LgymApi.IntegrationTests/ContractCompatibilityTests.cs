@@ -25,10 +25,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var json = await ReadJsonAsync(response);
-        json.RootElement.TryGetProperty("msg", out var msg).Should().BeTrue();
-        msg.GetString().Should().NotBeNullOrWhiteSpace();
-        // Contract guard: legacy clients expect `msg`; an accidental switch to `message` would break them.
-        json.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+        AssertLegacyMsgFieldPresent(json, "msg property must be present for backward compatibility");
     }
 
     [Test]
@@ -48,9 +45,8 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         json.RootElement.TryGetProperty("token", out var token).Should().BeTrue();
         token.GetString().Should().NotBeNullOrWhiteSpace();
 
+        AssertLegacyReqFieldPresent(json, requireIdField: true, requireNameField: true);
         json.RootElement.TryGetProperty("req", out var req).Should().BeTrue();
-        req.TryGetProperty("_id", out var userId).Should().BeTrue();
-        userId.GetString().Should().NotBeNullOrWhiteSpace();
         req.TryGetProperty("name", out var userName).Should().BeTrue();
         userName.GetString().Should().Be("contract_login");
 
@@ -124,6 +120,222 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         unit.TryGetProperty("displayName", out var unitDisplayName).Should().BeTrue();
         unitDisplayName.GetString().Should().NotBeNullOrWhiteSpace();
     }
+
+    [Test]
+    public async Task Gym_AddGym_ReturnsLegacyMsgField()
+    {
+        var user = await SeedUserAsync(name: "contract_gym", email: "contract_gym@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.PostAsJsonAsync($"/api/gym/{user.Id}/addGym", new
+        {
+            name = "Contract Test Gym"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        AssertLegacyMsgFieldPresent(json, "addGym endpoint must return msg field for backward compatibility");
+    }
+
+    [Test]
+    public async Task Gym_GetGyms_ReturnsListWithLegacyIdFields()
+    {
+        var user = await SeedUserAsync(name: "contract_gym_list", email: "contract_gym_list@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var gymId = await CreateGymViaEndpointAsync(user.Id, "Gym One");
+        await CreateGymViaEndpointAsync(user.Id, "Gym Two");
+
+        var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var json = await ReadJsonAsync(response);
+        AssertJsonArrayHasLegacyIdFields(json, "each gym in list must have _id");
+    }
+
+    [Test]
+    public async Task Gym_GetGym_ReturnsEntityWithLegacyIdField()
+    {
+        var user = await SeedUserAsync(name: "contract_gym_get", email: "contract_gym_get@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var gymId = await CreateGymViaEndpointAsync(user.Id, "Single Gym");
+
+        var response = await Client.GetAsync($"/api/gym/{gymId}/getGym");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var json = await ReadJsonAsync(response);
+        AssertLegacyIdFieldPresent(json, "_id property must be present for gym detail response");
+    }
+
+    [Test]
+    public async Task Plan_CreatePlan_ReturnsLegacyMsgField()
+    {
+        var user = await SeedUserAsync(name: "contract_plan", email: "contract_plan@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.PostAsJsonAsync($"/api/{user.Id}/createPlan", new
+        {
+            name = "Contract Test Plan"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        AssertLegacyMsgFieldPresent(json, "createPlan endpoint must return msg field for backward compatibility");
+    }
+
+    [Test]
+    public async Task Plan_GetPlansList_ReturnsListWithLegacyIdFields()
+    {
+        var user = await SeedUserAsync(name: "contract_plan_list", email: "contract_plan_list@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        await CreatePlanViaEndpointAsync(user.Id, "Plan Alpha");
+        await CreatePlanViaEndpointAsync(user.Id, "Plan Beta");
+
+        var response = await Client.GetAsync($"/api/{user.Id}/getPlansList");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var json = await ReadJsonAsync(response);
+        AssertJsonArrayHasLegacyIdFields(json, "each plan in list must have _id");
+    }
+
+    [Test]
+    public async Task Exercise_AddUserExercise_ReturnsLegacyMsgField()
+    {
+        var user = await SeedUserAsync(name: "contract_exercise", email: "contract_exercise@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{user.Id}/addUserExercise", new
+        {
+            name = "Contract Exercise",
+            bodyPart = BodyParts.Chest.ToString(),
+            description = "Test"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        AssertLegacyMsgFieldPresent(json, "addUserExercise endpoint must return msg field for backward compatibility");
+    }
+
+    [Test]
+    public async Task Exercise_GetAllUserExercises_ReturnsListWithLegacyIdFields()
+    {
+        var user = await SeedUserAsync(name: "contract_exercise_list", email: "contract_exercise_list@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        await CreateExerciseViaEndpointAsync(user.Id, "Exercise A", BodyParts.Chest);
+        await CreateExerciseViaEndpointAsync(user.Id, "Exercise B", BodyParts.Back);
+
+        var response = await Client.GetAsync($"/api/exercise/{user.Id}/getAllUserExercises");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var json = await ReadJsonAsync(response);
+        AssertJsonArrayHasLegacyIdFields(json, "each exercise in list must have _id");
+    }
+
+
+
+    [TestCase("/api/gym/{0}/addGym", "name", "Test Gym 1")]
+    [TestCase("/api/{0}/createPlan", "name", "Test Plan 1")]
+    public async Task PostMutationEndpoint_ReturnsLegacyMsgField(string routeTemplate, string propertyName, string propertyValue)
+    {
+        var user = await SeedUserAsync($"contract_{Guid.NewGuid():N}", $"contract_{Guid.NewGuid():N}@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var route = string.Format(routeTemplate, user.Id);
+        var request = CreateDynamicRequest(propertyName, propertyValue);
+
+        var response = await Client.PostAsJsonAsync(route, request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var json = await ReadJsonAsync(response);
+        AssertLegacyMsgFieldPresent(json, $"endpoint {route} must return msg field");
+    }
+
+    [TestCase("/api/gym/{0}/getGyms")]
+    [TestCase("/api/{0}/getPlansList")]
+    [TestCase("/api/exercise/{0}/getAllUserExercises")]
+    public async Task GetListEndpoint_ReturnsLegacyIdFields(string routeTemplate)
+    {
+        var user = await SeedUserAsync($"contract_list_{Guid.NewGuid():N}", $"contract_list_{Guid.NewGuid():N}@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        // Seed test data for each endpoint
+        if (routeTemplate.Contains("gym"))
+        {
+            await CreateGymViaEndpointAsync(user.Id, "Seed Gym");
+        }
+        else if (routeTemplate.Contains("Plan"))
+        {
+            await CreatePlanViaEndpointAsync(user.Id, "Seed Plan");
+        }
+        else if (routeTemplate.Contains("exercise"))
+        {
+            await CreateExerciseViaEndpointAsync(user.Id, "Seed Exercise");
+        }
+
+        var route = string.Format(routeTemplate, user.Id);
+
+        var response = await Client.GetAsync(route);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var json = await ReadJsonAsync(response);
+        AssertJsonArrayHasLegacyIdFields(json, $"endpoint {route} must return array items with _id");
+    }
+
+    #region Shared Assertion Helpers
+
+    private static void AssertLegacyIdFieldPresent(JsonDocument json, string because)
+    {
+        json.RootElement.TryGetProperty("_id", out var id).Should().BeTrue(because);
+        id.GetString().Should().NotBeNullOrWhiteSpace();
+        // Contract guard: API must use `_id` (legacy MongoDB naming), not `id`
+        json.RootElement.TryGetProperty("id", out _).Should().BeFalse($"response must not have 'id' field when '_id' is present (legacy compatibility)");
+    }
+
+    private static void AssertLegacyMsgFieldPresent(JsonDocument json, string because)
+    {
+        json.RootElement.TryGetProperty("msg", out var msg).Should().BeTrue(because);
+        msg.GetString().Should().NotBeNullOrWhiteSpace();
+        // Contract guard: legacy clients expect `msg`; an accidental switch to `message` would break them.
+        json.RootElement.TryGetProperty("message", out _).Should().BeFalse($"response must not have 'message' field when 'msg' is present (legacy compatibility)");
+    }
+
+    private static void AssertLegacyReqFieldPresent(JsonDocument json, bool requireIdField, bool requireNameField)
+    {
+        json.RootElement.TryGetProperty("req", out var req).Should().BeTrue("legacy clients expect 'req' field");
+        if (requireIdField)
+        {
+            req.TryGetProperty("_id", out var userId).Should().BeTrue("req must contain _id");
+            userId.GetString().Should().NotBeNullOrWhiteSpace();
+        }
+        if (requireNameField)
+        {
+            req.TryGetProperty("name", out var userName).Should().BeTrue("req must contain name");
+            userName.GetString().Should().NotBeNullOrWhiteSpace();
+        }
+    }
+
+    private static void AssertJsonArrayHasLegacyIdFields(JsonDocument json, string because)
+    {
+        json.RootElement.ValueKind.Should().Be(JsonValueKind.Array, because);
+        var array = json.RootElement.EnumerateArray().ToList();
+        array.Should().NotBeEmpty(because);
+
+        foreach (var item in array)
+        {
+            item.TryGetProperty("_id", out var id).Should().BeTrue($"{because} - each item must have _id");
+            id.GetString().Should().NotBeNullOrWhiteSpace();
+        }
+    }
+
+    private static object CreateDynamicRequest(string propertyName, object propertyValue)
+    {
+        return new Dictionary<string, object> { { propertyName, propertyValue } };
+    }
+
+    #endregion
 
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response)
     {

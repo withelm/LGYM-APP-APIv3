@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +51,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
         var commandType = typeof(TCommand);
         var descriptor = new CommandDescriptor(commandType);
-        var payloadJson = JsonSerializer.Serialize(command, commandType);
+        var payloadJson = JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current);
 
         // Compute deterministic correlation ID from command type + payload content
         var correlationId = ComputeDeterministicCorrelationId(descriptor.TypeFullName, payloadJson);

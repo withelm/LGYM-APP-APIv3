@@ -5,8 +5,10 @@ using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
+using EmailNotificationTypes = LgymApi.Domain.Notifications.EmailNotificationTypes;
 
 namespace LgymApi.UnitTests;
 
@@ -57,7 +59,7 @@ public sealed class InvitationEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Failed,
             Attempts = 5,
-            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation,
+            Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             Recipient = "trainee@example.com",
             PayloadJson = "{}"
@@ -138,7 +140,7 @@ public sealed class InvitationEmailServicesTests
         {
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
-            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation,
+            Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             Recipient = "trainee@example.com",
             PayloadJson = "{}"
@@ -187,7 +189,7 @@ public sealed class InvitationEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
             Attempts = 0,
-            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation,
+            Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             Recipient = "trainee@example.com",
             PayloadJson = "{\"invitationId\":\"d75e53b9-2701-4cb0-b2d1-c02f0dbf8aa0\",\"invitationCode\":\"ABC123\",\"expiresAt\":\"2026-03-01T10:00:00+00:00\",\"trainerName\":\"Coach\",\"recipientEmail\":\"trainee@example.com\",\"cultureName\":\"en-US\"}"
@@ -222,7 +224,7 @@ public sealed class InvitationEmailServicesTests
             Id = Guid.NewGuid(),
             Status = EmailNotificationStatus.Sent,
             Attempts = 2,
-            Type = LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation,
+            Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
             Recipient = "trainee@example.com",
             PayloadJson = "{}"
@@ -325,7 +327,7 @@ public sealed class InvitationEmailServicesTests
 
     private sealed class ThrowingComposer : IEmailTemplateComposer
     {
-        public EmailNotificationType NotificationType => LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation;
+        public EmailNotificationType NotificationType => EmailNotificationTypes.TrainerInvitation;
 
         public EmailMessage Compose(string payloadJson)
         {
@@ -335,7 +337,7 @@ public sealed class InvitationEmailServicesTests
 
     private sealed class PassThroughComposer : IEmailTemplateComposer
     {
-        public EmailNotificationType NotificationType => LgymApi.BackgroundWorker.Common.Notifications.EmailNotificationTypes.TrainerInvitation;
+        public EmailNotificationType NotificationType => EmailNotificationTypes.TrainerInvitation;
 
         public EmailMessage Compose(string payloadJson)
         {

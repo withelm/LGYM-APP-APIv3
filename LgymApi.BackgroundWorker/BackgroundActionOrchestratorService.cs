@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Text.Json;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -105,7 +106,7 @@ public sealed class BackgroundActionOrchestratorService
         object command;
         try
         {
-            command = JsonSerializer.Deserialize(envelope.PayloadJson, commandType)
+            command = JsonSerializer.Deserialize(envelope.PayloadJson, commandType, SharedSerializationOptions.Current)
                       ?? throw new InvalidOperationException("Deserialized command is null.");
         }
         catch (Exception ex)

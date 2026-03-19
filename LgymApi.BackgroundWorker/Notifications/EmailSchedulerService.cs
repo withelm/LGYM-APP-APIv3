@@ -2,6 +2,7 @@ using System.Text.Json;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -64,7 +65,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             Type = payload.NotificationType,
             CorrelationId = payload.CorrelationId,
             Recipient = payload.RecipientEmail,
-            PayloadJson = JsonSerializer.Serialize(payload)
+            PayloadJson = JsonSerializer.Serialize(payload, SharedSerializationOptions.Current)
         };
 
         if (!await TryPersistNotificationAsync(payload, message, cancellationToken))

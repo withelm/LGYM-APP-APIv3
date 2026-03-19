@@ -4,6 +4,7 @@ using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;
+using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
@@ -68,7 +69,7 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
 
         var isSubscribed = await _emailNotificationSubscriptionRepository.IsSubscribedAsync(
             command.UserId,
-            EmailNotificationTypes.TrainingCompleted.Value,
+            Domain.Notifications.EmailNotificationTypes.TrainingCompleted.Value,
             cancellationToken);
 
         if (!isSubscribed)

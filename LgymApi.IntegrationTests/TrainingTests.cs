@@ -6,6 +6,7 @@ using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
