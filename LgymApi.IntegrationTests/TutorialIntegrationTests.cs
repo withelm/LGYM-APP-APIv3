@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Api.Features.Tutorial.Contracts;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Entities;
 using LgymApi.Application.Features.Tutorial;
@@ -10,18 +11,11 @@ using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-using System.Text.Json;
 namespace LgymApi.IntegrationTests;
 
 [TestFixture]
 public sealed class TutorialIntegrationTests : IntegrationTestBase
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter() }
-    };
 
 
     private async Task InitializeTutorialAsync(Guid userId)
@@ -62,7 +56,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var loginResponse = await Client.PostAsJsonAsync("/api/login", loginRequest);
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(JsonOptions);
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(SharedSerializationOptions.Current);
         loginBody.Should().NotBeNull();
         loginBody!.Token.Should().NotBeNullOrWhiteSpace();
         loginBody.User.Should().NotBeNull();
@@ -81,7 +75,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/tutorials/active");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var body = await response.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(JsonOptions);
+        var body = await response.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(SharedSerializationOptions.Current);
         body.Should().NotBeNull();
         body.Should().HaveCount(1);
         body![0].TutorialType.Should().Be(TutorialType.OnboardingDemo);
@@ -102,7 +96,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/tutorials/OnboardingDemo");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var body = await response.Content.ReadFromJsonAsync<TutorialProgressDto>(JsonOptions);
+        var body = await response.Content.ReadFromJsonAsync<TutorialProgressDto>(SharedSerializationOptions.Current);
         body.Should().NotBeNull();
         body!.TutorialType.Should().Be(TutorialType.OnboardingDemo);
         body.IsCompleted.Should().BeFalse();
@@ -132,7 +126,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var progressResponse = await Client.GetAsync("/api/tutorials/OnboardingDemo");
         progressResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var progress = await progressResponse.Content.ReadFromJsonAsync<TutorialProgressDto>(JsonOptions);
+        var progress = await progressResponse.Content.ReadFromJsonAsync<TutorialProgressDto>(SharedSerializationOptions.Current);
         progress.Should().NotBeNull();
         progress!.CompletedSteps.Should().HaveCount(1);
         progress!.CompletedSteps.Should().Contain(TutorialStep.CreateArea);
@@ -161,7 +155,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var activeResponse = await Client.GetAsync("/api/tutorials/active");
         activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(JsonOptions);
+        var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(SharedSerializationOptions.Current);
         activeTutorials.Should().NotBeNull();
         activeTutorials.Should().BeEmpty();
 
@@ -169,7 +163,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var checkTokenResponse = await Client.GetAsync("/api/checkToken");
         checkTokenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var tokenUser = await checkTokenResponse.Content.ReadFromJsonAsync<UserDto>(JsonOptions);
+        var tokenUser = await checkTokenResponse.Content.ReadFromJsonAsync<UserDto>(SharedSerializationOptions.Current);
         tokenUser.Should().NotBeNull();
         tokenUser!.HasActiveTutorials.Should().BeFalse();
     }
@@ -209,7 +203,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var progressResponse = await Client.GetAsync("/api/tutorials/OnboardingDemo");
         progressResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var progress = await progressResponse.Content.ReadFromJsonAsync<TutorialProgressDto>(JsonOptions);
+        var progress = await progressResponse.Content.ReadFromJsonAsync<TutorialProgressDto>(SharedSerializationOptions.Current);
         progress.Should().NotBeNull();
         progress!.CompletedSteps.Should().HaveCount(6);
         progress.IsCompleted.Should().BeTrue();
@@ -218,7 +212,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var activeResponse = await Client.GetAsync("/api/tutorials/active");
         activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(JsonOptions);
+        var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(SharedSerializationOptions.Current);
         activeTutorials.Should().NotBeNull();
         activeTutorials.Should().BeEmpty();
 
@@ -226,7 +220,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var checkTokenResponse = await Client.GetAsync("/api/checkToken");
         checkTokenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var tokenUser = await checkTokenResponse.Content.ReadFromJsonAsync<UserDto>(JsonOptions);
+        var tokenUser = await checkTokenResponse.Content.ReadFromJsonAsync<UserDto>(SharedSerializationOptions.Current);
         tokenUser.Should().NotBeNull();
         tokenUser!.HasActiveTutorials.Should().BeFalse();
     }
@@ -256,7 +250,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var activeResponse = await Client.GetAsync("/api/tutorials/active");
         activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(JsonOptions);
+        var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(SharedSerializationOptions.Current);
         activeTutorials.Should().NotBeNull();
         activeTutorials.Should().BeEmpty();
     }
