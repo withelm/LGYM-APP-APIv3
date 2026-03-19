@@ -15,6 +15,7 @@ using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
+using LgymApi.Application.Services;
 using LgymApi.Application.Units;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +38,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlanService, PlanService>();
         services.AddScoped<IPlanDayServiceDependencies, PlanDayServiceDependencies>();
         services.AddScoped<IPlanDayService, PlanDayService>();
+        services.AddScoped<IRankService, RankService>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<ISupplementationService, SupplementationService>();
