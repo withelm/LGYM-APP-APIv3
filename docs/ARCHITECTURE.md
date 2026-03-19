@@ -166,7 +166,35 @@ When changing existing enums, treat them as part of a persisted and externally c
 - **Prefer deprecation over deletion**: do not remove enum members in normal flow; mark them with `[Obsolete]` first and keep compatibility until a planned removal window.
 - **If removal is unavoidable**: document migration steps, update all mappings/validators/tests, and communicate a breaking change before merge.
 
-## 10. Quick Module Skeleton (Minimal)
+## 11. Dependency Injection Conventions
+
+The solution uses a decentralized registration approach across projects, enforced by architecture guards in unit tests.
+
+- **Application Services**: register in `LgymApi.Application/ServiceCollectionExtensions.cs`.
+- **Infrastructure Dependencies**: register in `LgymApi.Infrastructure/ServiceCollectionExtensions.cs`.
+
+### Registration Ownership
+
+1. **Application Layer**: Owns its interfaces and implementation classes. Any service defined under `LgymApi.Application/Services` must be registered within the Application project's `ServiceCollectionExtensions`.
+2. **Infrastructure Layer**: Owns repository implementations, external client adapters (Email, SMS), and technical services (Persistence, Caching). These are registered within the Infrastructure project's `ServiceCollectionExtensions`.
+
+### Forbidden Patterns
+
+- **Cross-Boundary Registration**: the Infrastructure project **must not** register Application services. This is enforced by a `CrossBoundary` architecture guard.
+- **Untracked Concrete Placements**: every concrete service implementation in `LgymApi.Application/Services` or `LgymApi.Infrastructure/Services` must have a corresponding registration in its respective `ServiceCollectionExtensions`.
+- **Implementation Leaks**: avoid registering infrastructure-specific concrete types in the Application layer.
+- **Unsafe Duplicate Assumptions**: do not rely on implicit registrations from other projects; always use the provided `AddApplication()` and `AddInfrastructure()` extensions in `Program.cs`.
+
+### Intentional Exceptions
+
+- **Multi-registration Collections**: multiple implementations for a single interface (for example `IPipelineStep`) are allowed and expected in certain orchestration scenarios.
+- **Factory/Instance Registrations**: manual factory delegates `(sp => ...)` or pre-constructed instances are permitted for complex initialization but should be used sparingly.
+
+### Verification
+
+DI registrations are automatically verified by `ServiceRegistrationGuardTests`. If you add a new service class, the build/test pipeline will fail until it is correctly registered in the appropriate `ServiceCollectionExtensions.cs` file.
+
+## 12. Quick Module Skeleton (Minimal)
 
 For module `FeatureX`, add:
 

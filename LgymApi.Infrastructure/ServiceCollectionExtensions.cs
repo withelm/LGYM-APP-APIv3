@@ -90,7 +90,6 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<ILegacyPasswordService, LegacyPasswordService>();
-        services.AddScoped<LgymApi.Application.Services.IRankService, LgymApi.Application.Services.RankService>();
         services.AddSingleton<IUserSessionCache, UserSessionCache>();
         services.AddScoped<IEmailTemplateComposer, TrainerInvitationEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposer, TrainingCompletedEmailTemplateComposer>();

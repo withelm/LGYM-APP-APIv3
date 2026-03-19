@@ -82,18 +82,14 @@ public sealed class ServiceRegistrationGuardTests
             return false;
         }
 
-        return !typeDeclaration.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.AbstractKeyword));
+        return !typeDeclaration.Modifiers.Any(modifier =>
+            modifier.IsKind(SyntaxKind.AbstractKeyword) || modifier.IsKind(SyntaxKind.StaticKeyword));
     }
 
     private static bool IsFeatureServicePath(string path)
     {
         var normalized = path.Replace('\\', '/');
         if (!normalized.Contains("/LgymApi.Application/", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (normalized.Contains("/Services/", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
