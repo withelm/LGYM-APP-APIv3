@@ -2,9 +2,11 @@ using System.Globalization;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Options;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
+using EmailNotificationTypes = LgymApi.Domain.Notifications.EmailNotificationTypes;
 
 namespace LgymApi.Infrastructure.Services;
 
@@ -65,7 +67,7 @@ public sealed class TrainerInvitationEmailTemplateComposer : EmailTemplateCompos
     {
         try
         {
-            var payload = JsonSerializer.Deserialize<InvitationEmailPayload>(payloadJson);
+            var payload = JsonSerializer.Deserialize<InvitationEmailPayload>(payloadJson, SharedSerializationOptions.Current);
             if (payload == null)
             {
                 throw new InvalidOperationException("Invitation email payload is empty.");

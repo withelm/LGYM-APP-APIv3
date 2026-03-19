@@ -2,8 +2,10 @@ using System.Globalization;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Infrastructure.Options;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
+using EmailNotificationTypes = LgymApi.Domain.Notifications.EmailNotificationTypes;
 
 namespace LgymApi.Infrastructure.Services;
 
@@ -46,7 +48,7 @@ public sealed class WelcomeEmailTemplateComposer : EmailTemplateComposerBase, IE
     {
         try
         {
-            var payload = JsonSerializer.Deserialize<WelcomeEmailPayload>(payloadJson);
+            var payload = JsonSerializer.Deserialize<WelcomeEmailPayload>(payloadJson, SharedSerializationOptions.Current);
             if (payload == null)
             {
                 throw new InvalidOperationException("Welcome email payload is empty.");

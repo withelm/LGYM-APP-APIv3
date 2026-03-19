@@ -2,6 +2,7 @@ using System.Text.Json;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -565,7 +566,7 @@ public sealed class BackgroundActionOrchestratorTests
         {
             Id = envelopeId,
             CorrelationId = Guid.NewGuid(),
-            PayloadJson = JsonSerializer.Serialize(command),
+            PayloadJson = JsonSerializer.Serialize(command, SharedSerializationOptions.Current),
             CommandTypeFullName = typeof(TCommand).AssemblyQualifiedName!,
             Status = ActionExecutionStatus.Pending
         };

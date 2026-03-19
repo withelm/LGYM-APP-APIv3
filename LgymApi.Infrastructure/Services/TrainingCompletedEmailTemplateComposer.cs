@@ -5,11 +5,13 @@ using System.Text;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Application.Options;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Resources;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
+using EmailNotificationTypes = LgymApi.Domain.Notifications.EmailNotificationTypes;
 
 namespace LgymApi.Infrastructure.Services;
 
@@ -76,7 +78,7 @@ public sealed class TrainingCompletedEmailTemplateComposer : EmailTemplateCompos
     {
         try
         {
-            var payload = JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(payloadJson);
+            var payload = JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(payloadJson, SharedSerializationOptions.Current);
             if (payload == null)
             {
                 throw new InvalidOperationException("Training completed email payload is empty.");
