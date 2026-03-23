@@ -40,7 +40,8 @@ public sealed class TrainingController : ControllerBase
                 Unit = exercise.Unit
             }).ToList();
 
-        var result = await _trainingService.AddTrainingAsync(userId, gymId, planDayId, form.CreatedAt, exercises, HttpContext.RequestAborted);
+        var input = new AddTrainingInput(gymId, planDayId, form.CreatedAt, exercises);
+        var result = await _trainingService.AddTrainingAsync(userId, input, HttpContext.RequestAborted);
         var mapped = _mapper.Map<TrainingSummaryResult, TrainingSummaryDto>(result);
         return Ok(mapped);
     }

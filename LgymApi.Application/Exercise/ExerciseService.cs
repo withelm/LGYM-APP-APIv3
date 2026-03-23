@@ -53,8 +53,10 @@ public sealed class ExerciseService : IExerciseService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task AddUserExerciseAsync(Guid userId, string name, BodyParts bodyPart, string? description, string? image, CancellationToken cancellationToken = default)
+    public async Task AddUserExerciseAsync(AddUserExerciseInput input, CancellationToken cancellationToken = default)
     {
+        var (userId, name, bodyPart, description, image) = input;
+
         if (string.IsNullOrWhiteSpace(name) || bodyPart == BodyParts.Unknown)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
@@ -128,8 +130,10 @@ public sealed class ExerciseService : IExerciseService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateExerciseAsync(string exerciseId, string? name, BodyParts bodyPart, string? description, string? image, CancellationToken cancellationToken = default)
+    public async Task UpdateExerciseAsync(UpdateExerciseInput input, CancellationToken cancellationToken = default)
     {
+        var (exerciseId, name, bodyPart, description, image) = input;
+
         if (!Guid.TryParse(exerciseId, out var exerciseGuid))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
@@ -158,8 +162,10 @@ public sealed class ExerciseService : IExerciseService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task AddGlobalTranslationAsync(UserEntity currentUser, Guid routeUserId, string exerciseId, string? culture, string? name, CancellationToken cancellationToken = default)
+    public async Task AddGlobalTranslationAsync(UserEntity currentUser, AddGlobalTranslationInput input, CancellationToken cancellationToken = default)
     {
+        var (routeUserId, exerciseId, culture, name) = input;
+
         if (currentUser == null)
         {
             throw AppException.Forbidden(Messages.Forbidden);
@@ -336,8 +342,10 @@ public sealed class ExerciseService : IExerciseService
         };
     }
 
-    public async Task<LastExerciseScoresResult> GetLastExerciseScoresAsync(Guid routeUserId, Guid currentUserId, Guid exerciseId, int series, Guid? gymId, string exerciseName, CancellationToken cancellationToken = default)
+    public async Task<LastExerciseScoresResult> GetLastExerciseScoresAsync(GetLastExerciseScoresInput input, CancellationToken cancellationToken = default)
     {
+        var (routeUserId, currentUserId, exerciseId, series, gymId, exerciseName) = input;
+
         if (routeUserId == Guid.Empty || currentUserId == Guid.Empty || exerciseId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);

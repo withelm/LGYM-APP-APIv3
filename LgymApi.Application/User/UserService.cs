@@ -47,29 +47,21 @@ public sealed class UserService : IUserService
         _tutorialService = dependencies.TutorialService;
     }
 
-    public async Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, string? preferredLanguage = null, CancellationToken cancellationToken = default)
+    public async Task RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
     {
         await RegisterCoreAsync(
-            name,
-            email,
-            password,
-            confirmPassword,
-            isVisibleInRanking,
+            input,
             [AuthConstants.Roles.User],
-            preferredLanguage,
             cancellationToken);
     }
 
-    public async Task RegisterTrainerAsync(string name, string email, string password, string confirmPassword, CancellationToken cancellationToken = default)
+    public async Task RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
     {
+        var trainerInput = input with { IsVisibleInRanking = false, PreferredLanguage = null };
+
         await RegisterCoreAsync(
-            name,
-            email,
-            password,
-            confirmPassword,
-            isVisibleInRanking: false,
+            trainerInput,
             [AuthConstants.Roles.User, AuthConstants.Roles.Trainer],
-            preferredLanguage: null,
             cancellationToken);
     }
 
@@ -84,15 +76,15 @@ public sealed class UserService : IUserService
     }
 
     private async Task RegisterCoreAsync(
-        string name,
-        string email,
-        string password,
-        string confirmPassword,
-        bool? isVisibleInRanking,
+        RegisterUserInput input,
         IReadOnlyCollection<string> roleNames,
-        string? preferredLanguage,
         CancellationToken cancellationToken)
     {
+        var name = input.Name;
+        var email = input.Email;
+        var password = input.Password;
+        var confirmPassword = input.ConfirmPassword;
+
         if (string.IsNullOrWhiteSpace(name))
         {
             throw AppException.NotFound(Messages.NameIsRequired);
@@ -131,14 +123,14 @@ public sealed class UserService : IUserService
             Id = Guid.NewGuid(),
             Name = name,
             Email = normalizedEmail!,
-            IsVisibleInRanking = isVisibleInRanking ?? true,
+            IsVisibleInRanking = input.IsVisibleInRanking ?? true,
             ProfileRank = "Junior 1",
             LegacyHash = passwordData.Hash,
             LegacySalt = passwordData.Salt,
             LegacyIterations = passwordData.Iterations,
             LegacyKeyLength = passwordData.KeyLength,
             LegacyDigest = passwordData.Digest,
-            PreferredLanguage = ResolvePreferredLanguage(preferredLanguage),
+            PreferredLanguage = ResolvePreferredLanguage(input.PreferredLanguage),
             PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone
         };
 

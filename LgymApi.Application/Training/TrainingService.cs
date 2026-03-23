@@ -43,12 +43,10 @@ public sealed class TrainingService : ITrainingService
 
     public async Task<TrainingSummaryResult> AddTrainingAsync(
         Guid userId,
-        Guid gymId,
-        Guid planDayId,
-        DateTime createdAt,
-        IReadOnlyCollection<TrainingExerciseInput> exercises,
+        AddTrainingInput input,
         CancellationToken cancellationToken = default)
     {
+        var (gymId, planDayId, createdAt, exercises) = input;
         try
         {
             if (userId == Guid.Empty || gymId == Guid.Empty || planDayId == Guid.Empty)

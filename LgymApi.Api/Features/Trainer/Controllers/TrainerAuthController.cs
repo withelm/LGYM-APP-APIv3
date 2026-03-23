@@ -2,6 +2,7 @@ using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -27,7 +28,15 @@ public sealed class TrainerAuthController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
     {
-        await _userService.RegisterTrainerAsync(request.Name, request.Email, request.Password, request.ConfirmPassword, HttpContext.RequestAborted);
+        var input = new RegisterUserInput(
+            request.Name,
+            request.Email,
+            request.Password,
+            request.ConfirmPassword,
+            IsVisibleInRanking: null,
+            PreferredLanguage: null);
+
+        await _userService.RegisterTrainerAsync(input, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 

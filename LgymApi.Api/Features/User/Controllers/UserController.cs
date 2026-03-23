@@ -32,14 +32,15 @@ public sealed class UserController : ControllerBase
             ? langs.ToString()
             : null;
 
-        await _userService.RegisterAsync(
+        var input = new RegisterUserInput(
             request.Name,
             request.Email,
             request.Password,
             request.ConfirmPassword,
             request.IsVisibleInRanking,
-            preferredLanguage,
-            HttpContext.RequestAborted);
+            preferredLanguage);
+
+        await _userService.RegisterAsync(input, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 

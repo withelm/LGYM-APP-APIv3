@@ -5,8 +5,8 @@ namespace LgymApi.Application.Features.User;
 
 public interface IUserService
 {
-    Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, string? preferredLanguage = null, CancellationToken cancellationToken = default);
-    Task RegisterTrainerAsync(string name, string email, string password, string confirmPassword, CancellationToken cancellationToken = default);
+    Task RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default);
+    Task RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default);
     Task<LoginResult> LoginAsync(string name, string password, CancellationToken cancellationToken = default);
     Task<LoginResult> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default);
     Task<bool> IsAdminAsync(Guid userId, CancellationToken cancellationToken = default);

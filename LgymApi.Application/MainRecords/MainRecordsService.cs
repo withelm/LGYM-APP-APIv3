@@ -29,14 +29,14 @@ public sealed class MainRecordsService : IMainRecordsService
         _unitOfWork = dependencies.UnitOfWork;
     }
 
-    public async Task AddNewRecordAsync(Guid userId, string exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default)
+    public async Task AddNewRecordAsync(AddMainRecordInput input, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty || !Guid.TryParse(exerciseId, out var exerciseGuid))
+        if (input.UserId == Guid.Empty || !Guid.TryParse(input.ExerciseId, out var exerciseGuid))
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync(input.UserId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -48,7 +48,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (unit == WeightUnits.Unknown)
+        if (input.Unit == WeightUnits.Unknown)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -58,8 +58,8 @@ public sealed class MainRecordsService : IMainRecordsService
             Id = Guid.NewGuid(),
             UserId = user.Id,
             ExerciseId = exercise.Id,
-            Weight = new Weight(weight, unit),
-            Date = new DateTimeOffset(DateTime.SpecifyKind(date, DateTimeKind.Utc))
+            Weight = new Weight(input.Weight, input.Unit),
+            Date = new DateTimeOffset(DateTime.SpecifyKind(input.Date, DateTimeKind.Utc))
         };
 
         await _mainRecordRepository.AddAsync(record, cancellationToken);
@@ -153,19 +153,19 @@ public sealed class MainRecordsService : IMainRecordsService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateMainRecordAsync(Guid routeUserId, Guid currentUserId, string recordId, string exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default)
+    public async Task UpdateMainRecordAsync(UpdateMainRecordInput input, CancellationToken cancellationToken = default)
     {
-        if (routeUserId == Guid.Empty || currentUserId == Guid.Empty)
+        if (input.RouteUserId == Guid.Empty || input.CurrentUserId == Guid.Empty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (routeUserId != currentUserId)
+        if (input.RouteUserId != input.CurrentUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (!Guid.TryParse(recordId, out var recordGuid))
+        if (!Guid.TryParse(input.RecordId, out var recordGuid))
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -176,12 +176,12 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (existingRecord.UserId != currentUserId)
+        if (existingRecord.UserId != input.CurrentUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (!Guid.TryParse(exerciseId, out var exerciseGuid))
+        if (!Guid.TryParse(input.ExerciseId, out var exerciseGuid))
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -192,14 +192,14 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (unit == WeightUnits.Unknown)
+        if (input.Unit == WeightUnits.Unknown)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         existingRecord.ExerciseId = exercise.Id;
-        existingRecord.Weight = new Weight(weight, unit);
-        existingRecord.Date = new DateTimeOffset(DateTime.SpecifyKind(date, DateTimeKind.Utc));
+        existingRecord.Weight = new Weight(input.Weight, input.Unit);
+        existingRecord.Date = new DateTimeOffset(DateTime.SpecifyKind(input.Date, DateTimeKind.Utc));
 
         await _mainRecordRepository.UpdateAsync(existingRecord, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
