@@ -72,13 +72,13 @@ public sealed class UserControllerTests
     {
         public string? LastPreferredLanguage { get; private set; }
 
-        public Task RegisterAsync(string name, string email, string password, string confirmPassword, bool? isVisibleInRanking, string? preferredLanguage = null, CancellationToken cancellationToken = default)
+        public Task RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
         {
-            LastPreferredLanguage = preferredLanguage;
+            LastPreferredLanguage = input.PreferredLanguage;
             return Task.CompletedTask;
         }
 
-        public Task RegisterTrainerAsync(string name, string email, string password, string confirmPassword, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<LoginResult> LoginAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(new LoginResult());
         public Task<LoginResult> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(new LoginResult());
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(false);

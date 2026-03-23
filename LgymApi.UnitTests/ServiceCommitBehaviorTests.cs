@@ -3,6 +3,7 @@ using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Features.Tutorial.Models;
+using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
@@ -108,7 +109,13 @@ public sealed class ServiceCommitBehaviorTests
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
 
-        await service.RegisterAsync("newuser", "newuser@example.com", "password123", "password123", true);
+        await service.RegisterAsync(new RegisterUserInput(
+            "newuser",
+            "newuser@example.com",
+            "password123",
+            "password123",
+            true,
+            PreferredLanguage: null));
 
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "newuser");
         Assert.That(savedUser, Is.Not.Null);
@@ -160,13 +167,13 @@ public sealed class ServiceCommitBehaviorTests
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
 
-        await service.RegisterAsync(
+        await service.RegisterAsync(new RegisterUserInput(
             "lang-user",
             "lang-user@example.com",
             "password123",
             "password123",
             true,
-            preferredLanguage: "pl-PL,pl;q=0.9");
+            "pl-PL,pl;q=0.9"));
 
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "lang-user");
         Assert.That(savedUser, Is.Not.Null);
@@ -216,13 +223,13 @@ public sealed class ServiceCommitBehaviorTests
             defaults,
             new NoOpTutorialService()));
 
-        await service.RegisterAsync(
+        await service.RegisterAsync(new RegisterUserInput(
             "fallback-user",
             "fallback-user@example.com",
             "password123",
             "password123",
             true,
-            preferredLanguage: "@@invalid-culture@@");
+            "@@invalid-culture@@"));
 
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "fallback-user");
         Assert.That(savedUser, Is.Not.Null);
