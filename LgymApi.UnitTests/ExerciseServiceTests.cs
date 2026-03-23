@@ -1,4 +1,5 @@
 using LgymApi.Application.Features.Exercise;
+using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -27,7 +28,8 @@ public sealed class ExerciseServiceTests
             new StubExerciseScoreRepository(scores),
             new NoOpUnitOfWork());
 
-        var result = await service.GetLastExerciseScoresAsync(userId, userId, exerciseId, 100, null, "Bench press");
+        var input = new GetLastExerciseScoresInput(userId, userId, exerciseId, 100, null, "Bench press");
+        var result = await service.GetLastExerciseScoresAsync(input);
 
         Assert.Multiple(() =>
         {
