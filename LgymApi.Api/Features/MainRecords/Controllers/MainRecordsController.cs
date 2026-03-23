@@ -30,7 +30,8 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> AddNewRecord([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        await _mainRecordsService.AddNewRecordAsync(userId, form.ExerciseId, form.Weight, form.Unit, form.Date, HttpContext.RequestAborted);
+        var input = new AddMainRecordInput(userId, form.ExerciseId, form.Weight, form.Unit, form.Date);
+        await _mainRecordsService.AddNewRecordAsync(input, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -80,7 +81,8 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> UpdateMainRecords([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         var routeUserId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        await _mainRecordsService.UpdateMainRecordAsync(routeUserId, routeUserId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date, HttpContext.RequestAborted);
+        var input = new UpdateMainRecordInput(routeUserId, routeUserId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date);
+        await _mainRecordsService.UpdateMainRecordAsync(input, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
