@@ -2,6 +2,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Tutorial.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Tutorials;
 using LgymApi.Resources;
@@ -40,8 +41,8 @@ public sealed class TutorialService : ITutorialService
 
         var progress = new UserTutorialProgress
         {
-            Id = Guid.NewGuid(),
-            UserId = userId,
+            Id = Id<UserTutorialProgress>.New(),
+            UserId = (Id<LgymApi.Domain.Entities.User>)userId,
             TutorialType = TutorialType.OnboardingDemo,
             IsCompleted = false,
             CompletedAt = null
@@ -115,13 +116,13 @@ public sealed class TutorialService : ITutorialService
 
         var stepProgress = new UserTutorialStepProgress
         {
-            Id = Guid.NewGuid(),
+            Id = Id<UserTutorialStepProgress>.New(),
             UserTutorialProgressId = progress.Id,
             TutorialStep = step,
             CompletedAt = DateTimeOffset.UtcNow
         };
 
-        await _tutorialProgressRepository.AddStepAsync(progress.Id, stepProgress, cancellationToken);
+        await _tutorialProgressRepository.AddStepAsync((Guid)progress.Id, stepProgress, cancellationToken);
         await _tutorialProgressRepository.UpdateAsync(progress, cancellationToken);
 
         var allStepsCompleted = tutorialDefinition.Steps.All(requiredStep =>
@@ -185,7 +186,7 @@ public sealed class TutorialService : ITutorialService
 
         return new TutorialProgressResult
         {
-            Id = progress.Id,
+            Id = (Guid)progress.Id,
             TutorialType = progress.TutorialType,
             TutorialName = tutorialDefinition.Name,
             TutorialDescription = tutorialDefinition.Description,

@@ -1,10 +1,12 @@
+using LgymApi.Domain.ValueObjects;
+
 namespace LgymApi.Domain.Entities;
 
-public sealed class Gym : EntityBase
+public sealed class Gym : EntityBase<Gym>
 {
-    public Guid UserId { get; set; }
+    public Id<User> UserId { get; set; }
     public string Name { get; set; } = string.Empty;
-    public Guid? AddressId { get; set; }
+    public Id<Address>? AddressId { get; set; }
 
     public User? User { get; set; }
     public Address? Address { get; set; }

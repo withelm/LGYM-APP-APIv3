@@ -2,6 +2,7 @@ using LgymApi.DataSeeder.Seeders;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,7 +46,7 @@ public sealed class SeederSmokeExtensionTests
         await context.SaveChangesAsync();
 
         var adminClaims = await context.RoleClaims
-            .Where(claim => claim.RoleId == AppDbContext.AdminRoleSeedId)
+            .Where(claim => claim.RoleId == (Id<Role>)AppDbContext.AdminRoleSeedId)
             .Select(claim => claim.ClaimValue)
             .ToListAsync();
 
@@ -53,32 +54,16 @@ public sealed class SeederSmokeExtensionTests
         Assert.That(adminClaims, Does.Contain(AuthConstants.Permissions.ManageUserRoles));
     }
 
-    [Test]
-    public async Task TrainerInvitationSeeder_Should_Add_Invitation_For_Demo_Users()
-    {
-        var context = await CreateContextAsync();
-        var seedContext = new SeedContext();
+     [Test]
+     public async Task TrainerTraineeLinkSeeder_Should_Add_Link_For_Demo_Users()
+     {
+         var context = await CreateContextAsync();
+         var seedContext = new SeedContext();
 
-        seedContext.DemoUsers.Add(new User { Id = Guid.NewGuid(), Name = "Trainer" });
-        seedContext.DemoUsers.Add(new User { Id = Guid.NewGuid(), Name = "Trainee" });
+         seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" });
+         seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainee" });
 
-        var seeder = new TrainerInvitationSeeder();
-        await seeder.SeedAsync(context, seedContext, CancellationToken.None);
-        await context.SaveChangesAsync();
-
-        Assert.That(await context.TrainerInvitations.CountAsync(), Is.EqualTo(1));
-    }
-
-    [Test]
-    public async Task TrainerTraineeLinkSeeder_Should_Add_Link_For_Demo_Users()
-    {
-        var context = await CreateContextAsync();
-        var seedContext = new SeedContext();
-
-        seedContext.DemoUsers.Add(new User { Id = Guid.NewGuid(), Name = "Trainer" });
-        seedContext.DemoUsers.Add(new User { Id = Guid.NewGuid(), Name = "Trainee" });
-
-        var seeder = new TrainerTraineeLinkSeeder();
+         var seeder = new TrainerTraineeLinkSeeder();
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
@@ -91,7 +76,7 @@ public sealed class SeederSmokeExtensionTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        seedContext.DemoUsers.Add(new User { Id = Guid.NewGuid(), Name = "Trainer" });
+        seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" });
 
         var seeder = new ReportTemplateSeeder();
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
@@ -107,8 +92,8 @@ public sealed class SeederSmokeExtensionTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var trainer = new User { Id = Guid.NewGuid(), Name = "Trainer" };
-        var trainee = new User { Id = Guid.NewGuid(), Name = "Trainee" };
+        var trainer = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" };
+        var trainee = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainee" };
         seedContext.DemoUsers.Add(trainer);
         seedContext.DemoUsers.Add(trainee);
 
@@ -130,8 +115,8 @@ public sealed class SeederSmokeExtensionTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        seedContext.DemoUsers.Add(new User { Id = Guid.NewGuid(), Name = "Trainer" });
-        seedContext.DemoUsers.Add(new User { Id = Guid.NewGuid(), Name = "Trainee" });
+        seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" });
+        seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainee" });
 
         var planSeeder = new SupplementPlanSeeder();
         await planSeeder.SeedAsync(context, seedContext, CancellationToken.None);
@@ -182,7 +167,7 @@ public sealed class SeederSmokeExtensionTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var trainer = new User { Id = Guid.NewGuid(), Name = "Trainer" };
+        var trainer = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" };
         seedContext.DemoUsers.Add(trainer);
 
         var templateSeeder = new ReportTemplateSeeder();

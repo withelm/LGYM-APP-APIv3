@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,7 +44,7 @@ public sealed class EloRegistrySeeder : IEntitySeeder
 
             var entry = new EloRegistry
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<EloRegistry>)Guid.NewGuid(),
                 UserId = user.Id,
                 Date = DateTimeOffset.UtcNow,
                 Elo = 1000

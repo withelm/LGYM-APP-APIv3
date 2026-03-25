@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -156,7 +157,7 @@ public sealed class PlanDayTests : IntegrationTestBase
     public async Task GetPlanDay_WithAcceptLanguage_ReturnsTranslatedGlobalExerciseName()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader(admin.Id);
+        SetAuthorizationHeader((Guid)admin.Id);
 
         var exerciseId = await CreateGlobalExerciseViaEndpointAsync(admin.Id, "Squat", BodyParts.Quads);
         var translationRequest = new
@@ -168,7 +169,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         var translationResponse = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", translationRequest);
         translationResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var planId = await CreatePlanViaEndpointAsync(admin.Id, "Translated Plan");
+         var planId = await CreatePlanViaEndpointAsync((Guid)admin.Id, "Translation Test Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(admin.Id, planId, "Translated Day", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "8" }
@@ -436,12 +437,12 @@ public sealed class PlanDayTests : IntegrationTestBase
             .Should()
             .ContainInOrder(exerciseC.ToString(), exerciseA.ToString(), exerciseB.ToString());
 
-        var dbContext = GetDbContext();
-        var persistedOrders = await dbContext.PlanDayExercises
-            .Where(x => x.PlanDayId == planDayId)
-            .OrderBy(x => x.Order)
-            .Select(x => x.Order)
-            .ToListAsync();
+         var dbContext = GetDbContext();
+         var persistedOrders = await dbContext.PlanDayExercises
+             .Where(x => x.PlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDayId)
+             .OrderBy(x => x.Order)
+             .Select(x => x.Order)
+             .ToListAsync();
 
         persistedOrders.Should().Equal(0, 1, 2);
     }

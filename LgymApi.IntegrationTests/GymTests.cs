@@ -17,7 +17,7 @@ public sealed class GymTests : IntegrationTestBase
     public async Task AddGym_WithValidData_CreatesGym()
     {
         var user = await SeedUserAsync(name: "gymuser", email: "gym@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -46,7 +46,7 @@ public sealed class GymTests : IntegrationTestBase
     {
         var user = await SeedUserAsync(name: "user1", email: "user1@example.com");
         var otherUser = await SeedUserAsync(name: "user2", email: "user2@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -62,7 +62,7 @@ public sealed class GymTests : IntegrationTestBase
     public async Task AddGym_WithoutName_ReturnsBadRequest()
     {
         var user = await SeedUserAsync(name: "gymuser", email: "gym@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -78,8 +78,8 @@ public sealed class GymTests : IntegrationTestBase
     public async Task DeleteGym_WithValidGym_MarkAsDeleted()
     {
         var user = await SeedUserAsync(name: "gymuser", email: "gym@example.com");
-        var gym = await SeedGymAsync(user.Id, "Gym to Delete");
-        SetAuthorizationHeader(user.Id);
+        var gym = await SeedGymAsync((Guid)user.Id, "Gym to Delete");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.PostAsJsonAsync($"/api/gym/{gym.Id}/deleteGym", new { });
 
@@ -100,8 +100,8 @@ public sealed class GymTests : IntegrationTestBase
     {
         var user1 = await SeedUserAsync(name: "user1", email: "user1@example.com");
         var user2 = await SeedUserAsync(name: "user2", email: "user2@example.com");
-        var gym = await SeedGymAsync(user2.Id, "User 2 Gym");
-        SetAuthorizationHeader(user1.Id);
+        var gym = await SeedGymAsync((Guid)user2.Id, "User 2 Gym");
+        SetAuthorizationHeader((Guid)user1.Id);
 
         var response = await Client.PostAsJsonAsync($"/api/gym/{gym.Id}/deleteGym", new { });
 
@@ -112,7 +112,7 @@ public sealed class GymTests : IntegrationTestBase
     public async Task GetGyms_WithNoGyms_ReturnsEmptyList()
     {
         var user = await SeedUserAsync(name: "gymuser", email: "gym@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
 
@@ -127,9 +127,9 @@ public sealed class GymTests : IntegrationTestBase
     public async Task GetGyms_WithMultipleGyms_ReturnsAllUserGyms()
     {
         var user = await SeedUserAsync(name: "gymuser", email: "gym@example.com");
-        await SeedGymAsync(user.Id, "Gym 1");
-        await SeedGymAsync(user.Id, "Gym 2");
-        SetAuthorizationHeader(user.Id);
+        await SeedGymAsync((Guid)user.Id, "Gym 1");
+        await SeedGymAsync((Guid)user.Id, "Gym 2");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
 
@@ -187,9 +187,9 @@ public sealed class GymTests : IntegrationTestBase
     public async Task GetGyms_ExcludesDeletedGyms()
     {
         var user = await SeedUserAsync(name: "gymuser", email: "gym@example.com");
-        await SeedGymAsync(user.Id, "Active Gym");
-        await SeedGymAsync(user.Id, "Deleted Gym", isDeleted: true);
-        SetAuthorizationHeader(user.Id);
+        await SeedGymAsync((Guid)user.Id, "Active Gym");
+        await SeedGymAsync((Guid)user.Id, "Deleted Gym", isDeleted: true);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
 
@@ -205,8 +205,8 @@ public sealed class GymTests : IntegrationTestBase
     public async Task GetGym_WithValidId_ReturnsGym()
     {
         var user = await SeedUserAsync(name: "gymuser", email: "gym@example.com");
-        var gym = await SeedGymAsync(user.Id, "My Gym");
-        SetAuthorizationHeader(user.Id);
+        var gym = await SeedGymAsync((Guid)user.Id, "My Gym");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync($"/api/gym/{gym.Id}/getGym");
 
@@ -222,8 +222,8 @@ public sealed class GymTests : IntegrationTestBase
     public async Task EditGym_WithValidData_UpdatesGym()
     {
         var user = await SeedUserAsync(name: "gymuser", email: "gym@example.com");
-        var gym = await SeedGymAsync(user.Id, "Old Name");
-        SetAuthorizationHeader(user.Id);
+        var gym = await SeedGymAsync((Guid)user.Id, "Old Name");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -250,8 +250,8 @@ public sealed class GymTests : IntegrationTestBase
 
         var gym = new Gym
         {
-            Id = Guid.NewGuid(),
-            UserId = userId,
+            Id = (Domain.ValueObjects.Id<Gym>)Guid.NewGuid(),
+            UserId = (Domain.ValueObjects.Id<User>)userId,
             Name = name,
             IsDeleted = isDeleted
         };

@@ -1,8 +1,8 @@
 namespace LgymApi.Domain.Entities;
 
-public sealed class Plan : EntityBase
+public sealed class Plan : EntityBase<Plan>
 {
-    public Guid UserId { get; set; }
+    public ValueObjects.Id<User> UserId { get; set; }
     public string Name { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
     public string? ShareCode { get; set; }

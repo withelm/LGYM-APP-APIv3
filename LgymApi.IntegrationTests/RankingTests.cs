@@ -12,7 +12,7 @@ public sealed class RankingTests : IntegrationTestBase
     public async Task GetUsersRanking_WithNoUsers_ReturnsNotFound()
     {
         var user = await SeedUserAsync(name: "authuser", email: "auth@example.com", isTester: true);
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
@@ -28,7 +28,7 @@ public sealed class RankingTests : IntegrationTestBase
     {
         var user1 = await SeedUserAsync(name: "highelo", email: "high@example.com", elo: 2000);
         var user2 = await SeedUserAsync(name: "lowelo", email: "low@example.com", elo: 1200);
-        SetAuthorizationHeader(user1.Id);
+        SetAuthorizationHeader((Guid)user1.Id);
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
@@ -48,7 +48,7 @@ public sealed class RankingTests : IntegrationTestBase
     {
         var visibleUser = await SeedUserAsync(name: "visible", email: "visible@example.com", elo: 1500, isVisibleInRanking: true);
         await SeedUserAsync(name: "hidden", email: "hidden@example.com", elo: 2000, isVisibleInRanking: false);
-        SetAuthorizationHeader(visibleUser.Id);
+        SetAuthorizationHeader((Guid)visibleUser.Id);
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
@@ -65,7 +65,7 @@ public sealed class RankingTests : IntegrationTestBase
     {
         var normalUser = await SeedUserAsync(name: "normal", email: "normal@example.com", elo: 1500);
         await SeedUserAsync(name: "tester", email: "tester@example.com", elo: 3000, isTester: true);
-        SetAuthorizationHeader(normalUser.Id);
+        SetAuthorizationHeader((Guid)normalUser.Id);
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
@@ -82,7 +82,7 @@ public sealed class RankingTests : IntegrationTestBase
     {
         var activeUser = await SeedUserAsync(name: "active", email: "active@example.com", elo: 1500);
         await SeedUserAsync(name: "deleted", email: "deleted@example.com", elo: 2500, isDeleted: true);
-        SetAuthorizationHeader(activeUser.Id);
+        SetAuthorizationHeader((Guid)activeUser.Id);
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
@@ -98,7 +98,7 @@ public sealed class RankingTests : IntegrationTestBase
     public async Task ChangeVisibilityInRanking_SetsVisibilityToFalse()
     {
         var user = await SeedUserAsync(name: "visibilityuser", email: "vis@example.com", isVisibleInRanking: true);
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new Dictionary<string, bool> { { "isVisibleInRanking", false } };
         var response = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", request);
@@ -117,7 +117,7 @@ public sealed class RankingTests : IntegrationTestBase
     public async Task ChangeVisibilityInRanking_SetsVisibilityToTrue()
     {
         var user = await SeedUserAsync(name: "hiddenuser", email: "hid@example.com", isVisibleInRanking: false);
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new Dictionary<string, bool> { { "isVisibleInRanking", true } };
         var response = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", request);
@@ -139,7 +139,7 @@ public sealed class RankingTests : IntegrationTestBase
     public async Task ChangeVisibilityInRanking_WithoutRequiredField_ReturnsBadRequest()
     {
         var user = await SeedUserAsync(name: "badrequest", email: "bad@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new Dictionary<string, string> { { "wrongField", "value" } };
         var response = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", request);
@@ -151,7 +151,7 @@ public sealed class RankingTests : IntegrationTestBase
     public async Task GetUserEloPoints_WithValidUser_ReturnsElo()
     {
         var user = await SeedUserAsync(name: "elouser", email: "elo@example.com", elo: 1750);
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync($"/api/userInfo/{user.Id}/getUserEloPoints");
 
@@ -166,7 +166,7 @@ public sealed class RankingTests : IntegrationTestBase
     public async Task GetUserEloPoints_WithInvalidUserId_ReturnsNotFound()
     {
         var user = await SeedUserAsync(name: "authuser", email: "auth@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync($"/api/userInfo/{Guid.NewGuid()}/getUserEloPoints");
 
@@ -181,7 +181,7 @@ public sealed class RankingTests : IntegrationTestBase
     public async Task GetUserEloPoints_WithInvalidGuidFormat_ReturnsNotFound()
     {
         var user = await SeedUserAsync(name: "authuser", email: "auth@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync("/api/userInfo/invalid-guid/getUserEloPoints");
 

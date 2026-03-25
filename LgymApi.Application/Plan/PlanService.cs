@@ -1,5 +1,6 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -28,14 +29,14 @@ public sealed class PlanService : IPlanService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (currentUser.Id != routeUserId)
+        if (currentUser.Id != (Id<UserEntity>)routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
         var plan = new PlanEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<PlanEntity>.New(),
             UserId = currentUser.Id,
             Name = name,
             IsActive = true,
@@ -55,7 +56,7 @@ public sealed class PlanService : IPlanService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (currentUser.Id != routeUserId)
+        if (currentUser.Id != (Id<UserEntity>)routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
@@ -70,7 +71,7 @@ public sealed class PlanService : IPlanService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var plan = await _planRepository.FindByIdAsync(planGuid, cancellationToken);
+        var plan = await _planRepository.FindByIdAsync((Id<PlanEntity>)planGuid, cancellationToken);
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -88,7 +89,7 @@ public sealed class PlanService : IPlanService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (currentUser.Id != routeUserId)
+        if (currentUser.Id != (Id<UserEntity>)routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
@@ -109,7 +110,7 @@ public sealed class PlanService : IPlanService
             throw AppException.NotFound(Messages.DidntFind, false);
         }
 
-        if (currentUser.Id != routeUserId)
+        if (currentUser.Id != (Id<UserEntity>)routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden, false);
         }
@@ -131,7 +132,7 @@ public sealed class PlanService : IPlanService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (currentUser.Id != routeUserId)
+        if (currentUser.Id != (Id<UserEntity>)routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
@@ -152,12 +153,12 @@ public sealed class PlanService : IPlanService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (currentUser.Id != routeUserId)
+        if (currentUser.Id != (Id<UserEntity>)routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
+        var plan = await _planRepository.FindByIdAsync((Id<PlanEntity>)planId, cancellationToken);
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -171,8 +172,8 @@ public sealed class PlanService : IPlanService
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
-            await _planRepository.SetActivePlanAsync(currentUser.Id, planId, cancellationToken);
-            currentUser.PlanId = planId;
+            await _planRepository.SetActivePlanAsync(currentUser.Id, (Id<PlanEntity>)planId, cancellationToken);
+            currentUser.PlanId = (Id<PlanEntity>)planId;
             await _userRepository.UpdateAsync(currentUser, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -191,7 +192,7 @@ public sealed class PlanService : IPlanService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
+        var plan = await _planRepository.FindByIdAsync((Id<PlanEntity>)planId, cancellationToken);
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -211,7 +212,7 @@ public sealed class PlanService : IPlanService
             plan.IsDeleted = true;
             await _planRepository.UpdateAsync(plan, cancellationToken);
 
-            var user = await _userRepository.FindByIdAsync(currentUser.Id, cancellationToken);
+            var user = await _userRepository.FindByIdAsync((Guid)currentUser.Id, cancellationToken);
             if (user != null && user.PlanId == plan.Id)
             {
                 var lastValidPlan = await _planRepository.FindLastActiveByUserIdAsync(currentUser.Id, cancellationToken);
@@ -272,7 +273,7 @@ public sealed class PlanService : IPlanService
 
         try
         {
-            var shareCode = await _planRepository.GenerateShareCodeAsync(planId, currentUser.Id, cancellationToken);
+            var shareCode = await _planRepository.GenerateShareCodeAsync((Id<PlanEntity>)planId, currentUser.Id, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return shareCode;
         }

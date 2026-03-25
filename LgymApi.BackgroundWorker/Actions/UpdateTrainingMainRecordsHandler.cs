@@ -45,7 +45,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
     public async Task ExecuteAsync(TrainingCompletedCommand command, CancellationToken cancellationToken = default)
     {
         // Fetch training entity to get date
-        var training = await _trainingRepository.GetByIdAsync(command.TrainingId, cancellationToken);
+        var training = await _trainingRepository.GetByIdAsync((Domain.ValueObjects.Id<Domain.Entities.Training>)command.TrainingId, cancellationToken);
         if (training is null)
         {
             _logger.LogWarning(
@@ -56,7 +56,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
 
         // Fetch exercise data from repositories
         var trainingExerciseScores = await _trainingExerciseScoreRepository.GetByTrainingIdsAsync(
-            new List<Guid> { command.TrainingId },
+            new List<Domain.ValueObjects.Id<Domain.Entities.Training>> { (Domain.ValueObjects.Id<Domain.Entities.Training>)command.TrainingId },
             cancellationToken);
 
         if (trainingExerciseScores.Count == 0)
@@ -72,7 +72,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
         var exerciseScoreDict = exerciseScores.ToDictionary(es => es.Id);
 
         // Extract best score per exercise from fetched data
-        var bestScoresByExercise = new Dictionary<Guid, Weight>();
+        var bestScoresByExercise = new Dictionary<Domain.ValueObjects.Id<Domain.Entities.Exercise>, Weight>();
 
         foreach (var trainingExercise in trainingExerciseScores)
         {
@@ -117,7 +117,7 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
         // Fetch existing personal records for these exercises
         var existingRecords = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(
             command.UserId,
-            bestScoresByExercise.Keys.ToList(),
+            bestScoresByExercise.Keys.Select(exerciseId => (Guid)exerciseId).ToList(),
             cancellationToken);
 
         var existingRecordsByExercise = existingRecords
@@ -141,9 +141,9 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
             {
                 await _mainRecordRepository.AddAsync(new MainRecordEntity
                 {
-                    Id = Guid.NewGuid(),
-                    UserId = command.UserId,
-                    ExerciseId = exerciseId,
+                    Id = (Domain.ValueObjects.Id<MainRecordEntity>)Guid.NewGuid(),
+                    UserId = (Domain.ValueObjects.Id<Domain.Entities.User>)command.UserId,
+                    ExerciseId = (Domain.ValueObjects.Id<Domain.Entities.Exercise>)exerciseId,
                     Weight = bestScore,
                     Date = recordDate
                 }, cancellationToken);
@@ -167,9 +167,9 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
             {
                 await _mainRecordRepository.AddAsync(new MainRecordEntity
                 {
-                    Id = Guid.NewGuid(),
-                    UserId = command.UserId,
-                    ExerciseId = exerciseId,
+                    Id = (Domain.ValueObjects.Id<MainRecordEntity>)Guid.NewGuid(),
+                    UserId = (Domain.ValueObjects.Id<Domain.Entities.User>)command.UserId,
+                    ExerciseId = (Domain.ValueObjects.Id<Domain.Entities.Exercise>)exerciseId,
                     Weight = bestScore,
                     Date = recordDate
                 }, cancellationToken);

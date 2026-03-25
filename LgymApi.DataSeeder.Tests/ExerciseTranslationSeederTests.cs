@@ -1,5 +1,6 @@
 using LgymApi.DataSeeder.Seeders;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,7 @@ public sealed class ExerciseTranslationSeederTests
 
         var exercise = new Exercise
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<Exercise>)Guid.NewGuid(),
             Name = "Bench Press"
         };
 

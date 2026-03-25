@@ -40,7 +40,7 @@ public sealed class GymProfile : IMappingProfile
         {
             var lastTrainingMap = context?.Get(Keys.LastTrainingMap);
             LgymApi.Domain.Entities.Training? training = null;
-            if (lastTrainingMap != null && lastTrainingMap.TryGetValue(source.Id, out var resolvedTraining))
+            if (lastTrainingMap != null && lastTrainingMap.TryGetValue((Guid)source.Id, out var resolvedTraining))
             {
                 training = resolvedTraining;
             }

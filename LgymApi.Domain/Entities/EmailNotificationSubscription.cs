@@ -1,8 +1,10 @@
+using LgymApi.Domain.ValueObjects;
+
 namespace LgymApi.Domain.Entities;
 
-public sealed class EmailNotificationSubscription : EntityBase
+public sealed class EmailNotificationSubscription : EntityBase<EmailNotificationSubscription>
 {
-    public Guid UserId { get; set; }
+    public Id<User> UserId { get; set; }
     public string NotificationType { get; set; } = string.Empty;
 
     public User User { get; set; } = null!;

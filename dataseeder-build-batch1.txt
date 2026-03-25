@@ -1,0 +1,6 @@
+
+Kompilacja powiodła się.
+    Ostrzeżenia: 4
+    Liczba błędów: 0
+
+Czas, który upłynął: 00:00:51.51

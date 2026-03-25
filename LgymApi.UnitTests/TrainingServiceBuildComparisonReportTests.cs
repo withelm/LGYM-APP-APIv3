@@ -104,17 +104,17 @@ public sealed class TrainingServiceBuildComparisonReportTests
             new() { ExerciseId = exerciseId.ToString(), Series = 1, Reps = 10, Weight = 80, Unit = WeightUnits.Kilograms },
         };
 
-        var previousScores = new Dictionary<string, ExerciseScore>
-        {
-            [$"{exerciseId}-1"] = new ExerciseScore
-            {
-                Id = Guid.NewGuid(),
-                ExerciseId = exerciseId,
-                Reps = 8,
-                Weight = new Weight(75, WeightUnits.Kilograms),
-                Series = 1,
-            },
-        };
+         var previousScores = new Dictionary<string, ExerciseScore>
+         {
+             [$"{exerciseId}-1"] = new ExerciseScore
+             {
+                 Id = (Id<ExerciseScore>)Guid.NewGuid(),
+                 ExerciseId = (Id<Exercise>)exerciseId,
+                 Reps = 8,
+                 Weight = new Weight(75, WeightUnits.Kilograms),
+                 Series = 1,
+             },
+         };
 
         var exerciseDetails = new Dictionary<Guid, string>
         {

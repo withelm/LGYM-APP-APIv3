@@ -90,7 +90,7 @@ public abstract class IntegrationTestBase : IDisposable
         return user;
     }
 
-    protected string GenerateJwt(Guid userId)
+    protected string GenerateJwt(Domain.ValueObjects.Id<User> userId)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -112,20 +112,21 @@ public abstract class IntegrationTestBase : IDisposable
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(CustomWebApplicationFactory.TestJwtSigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new List<Claim>
+        var userIdGuid = (Guid)userId;
+        var claims = new List<System.Security.Claims.Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new Claim("userId", userId.ToString())
+            new System.Security.Claims.Claim(JwtRegisteredClaimNames.Sub, userIdGuid.ToString()),
+            new System.Security.Claims.Claim("userId", userIdGuid.ToString())
         };
 
         foreach (var role in roles)
         {
-            claims.Add(new Claim(ClaimTypes.Role, role));
+            claims.Add(new System.Security.Claims.Claim(ClaimTypes.Role, role));
         }
 
         foreach (var permission in permissionClaims)
         {
-            claims.Add(new Claim(AuthConstants.PermissionClaimType, permission));
+            claims.Add(new System.Security.Claims.Claim(AuthConstants.PermissionClaimType, permission));
         }
 
         var token = new JwtSecurityToken(
@@ -136,14 +137,25 @@ public abstract class IntegrationTestBase : IDisposable
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    protected void SetAuthorizationHeader(Guid userId)
+    protected string GenerateJwt(Guid userId)
+    {
+        return GenerateJwt((Domain.ValueObjects.Id<User>)userId);
+    }
+
+    protected void SetAuthorizationHeader(Domain.ValueObjects.Id<User> userId)
     {
         using var scope = Factory.Services.CreateScope();
         var userSessionCache = scope.ServiceProvider.GetRequiredService<IUserSessionCache>();
-        userSessionCache.AddOrRefresh(userId);
+        var userIdGuid = (Guid)userId;
+        userSessionCache.AddOrRefresh(userIdGuid);
 
         var token = GenerateJwt(userId);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
+
+    protected void SetAuthorizationHeader(Guid userId)
+    {
+        SetAuthorizationHeader((Domain.ValueObjects.Id<User>)userId);
     }
 
     protected void ClearAuthorizationHeader()
@@ -206,6 +218,11 @@ public abstract class IntegrationTestBase : IDisposable
         return Guid.Parse(gyms!.First(g => g.Name == name).Id!);
     }
 
+    protected Task<Guid> CreateGymViaEndpointAsync(Domain.ValueObjects.Id<User> userId, string name = "Test Gym")
+    {
+        return CreateGymViaEndpointAsync((Guid)userId, name);
+    }
+
     protected async Task<Guid> CreatePlanViaEndpointAsync(Guid userId, string name = "Test Plan")
     {
         SetAuthorizationHeader(userId);
@@ -215,6 +232,11 @@ public abstract class IntegrationTestBase : IDisposable
         var plansResponse = await Client.GetAsync($"/api/{userId}/getPlansList");
         var plans = await plansResponse.Content.ReadFromJsonAsync<List<PlanResult>>();
         return Guid.Parse(plans!.First(p => p.Name == name).Id!);
+    }
+
+    protected Task<Guid> CreatePlanViaEndpointAsync(Domain.ValueObjects.Id<User> userId, string name = "Test Plan")
+    {
+        return CreatePlanViaEndpointAsync((Guid)userId, name);
     }
 
     protected async Task<Guid> CreateExerciseViaEndpointAsync(Guid userId, string name = "Test Exercise", BodyParts bodyPart = BodyParts.Chest)
@@ -228,6 +250,11 @@ public abstract class IntegrationTestBase : IDisposable
         return Guid.Parse(exercises!.First(e => e.Name == name).Id!);
     }
 
+    protected Task<Guid> CreateExerciseViaEndpointAsync(Domain.ValueObjects.Id<User> userId, string name = "Test Exercise", BodyParts bodyPart = BodyParts.Chest)
+    {
+        return CreateExerciseViaEndpointAsync((Guid)userId, name, bodyPart);
+    }
+
     protected async Task<Guid> CreateGlobalExerciseViaEndpointAsync(Guid userId, string name = "Global Exercise", BodyParts bodyPart = BodyParts.Chest)
     {
         SetAuthorizationHeader(userId);
@@ -239,6 +266,11 @@ public abstract class IntegrationTestBase : IDisposable
         return Guid.Parse(exercises!.First(e => e.Name == name).Id!);
     }
 
+    protected Task<Guid> CreateGlobalExerciseViaEndpointAsync(Domain.ValueObjects.Id<User> userId, string name = "Global Exercise", BodyParts bodyPart = BodyParts.Chest)
+    {
+        return CreateGlobalExerciseViaEndpointAsync((Guid)userId, name, bodyPart);
+    }
+
     protected async Task<Guid> CreatePlanDayViaEndpointAsync(Guid userId, Guid planId, string name, List<PlanDayExerciseInput> exercises)
     {
         SetAuthorizationHeader(userId);
@@ -248,6 +280,11 @@ public abstract class IntegrationTestBase : IDisposable
         var planDaysResponse = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
         var planDays = await planDaysResponse.Content.ReadFromJsonAsync<List<PlanDayResult>>();
         return Guid.Parse(planDays!.First(pd => pd.Name == name).Id!);
+    }
+
+    protected Task<Guid> CreatePlanDayViaEndpointAsync(Domain.ValueObjects.Id<User> userId, Guid planId, string name, List<PlanDayExerciseInput> exercises)
+    {
+        return CreatePlanDayViaEndpointAsync((Guid)userId, planId, name, exercises);
     }
 
     protected sealed class LoginResult
@@ -332,7 +369,7 @@ public abstract class IntegrationTestBase : IDisposable
         {
             try
             {
-                await orchestrator.OrchestrateAsync(envelope.Id, CancellationToken.None);
+                await orchestrator.OrchestrateAsync((Guid)envelope.Id, CancellationToken.None);
             }
             catch
             {

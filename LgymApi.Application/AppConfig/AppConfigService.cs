@@ -3,6 +3,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
 namespace LgymApi.Application.Features.AppConfig;
@@ -62,7 +63,7 @@ public sealed class AppConfigService : IAppConfigService
 
         var config = new AppConfigEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<AppConfigEntity>.New(),
             Platform = input.Platform,
             MinRequiredVersion = input.MinRequiredVersion ?? string.Empty,
             LatestVersion = input.LatestVersion ?? string.Empty,

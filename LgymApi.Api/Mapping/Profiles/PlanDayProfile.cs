@@ -33,7 +33,7 @@ public sealed class PlanDayProfile : IMappingProfile
             var exerciseMap = context?.Get(Keys.ExerciseMap);
 
             var vmExercises = exercises
-                .Where(e => e.PlanDayId == source.Id)
+                .Where(e => (Guid)e.PlanDayId == (Guid)source.Id)
                 .OrderBy(e => e.Order)
                 .ThenBy(e => e.Id)
                 .Select(exercise => new PlanDayExerciseVmDto
@@ -57,8 +57,8 @@ public sealed class PlanDayProfile : IMappingProfile
             var exercises = context?.Get(Keys.PlanDayExercises) ?? Array.Empty<PlanDayExercise>();
             var lastTrainingMap = context?.Get(Keys.PlanDayLastTrainings);
 
-            var filteredExercises = exercises.Where(e => e.PlanDayId == source.Id).ToList();
-            var lastTrainingDate = lastTrainingMap != null && lastTrainingMap.TryGetValue(source.Id, out var date)
+            var filteredExercises = exercises.Where(e => (Guid)e.PlanDayId == (Guid)source.Id).ToList();
+            var lastTrainingDate = lastTrainingMap != null && lastTrainingMap.TryGetValue((Guid)source.Id, out var date)
                 ? date
                 : null;
 
@@ -75,7 +75,7 @@ public sealed class PlanDayProfile : IMappingProfile
 
     private static ExerciseResponseDto ResolveExerciseDto(PlanDayExercise exercise, IReadOnlyDictionary<Guid, Exercise>? exerciseMap, MappingContext? context)
     {
-        if (exerciseMap != null && exerciseMap.TryGetValue(exercise.ExerciseId, out var entity))
+        if (exerciseMap != null && exerciseMap.TryGetValue((Guid)exercise.ExerciseId, out var entity))
         {
             return context!.Map<Exercise, ExerciseResponseDto>(entity);
         }

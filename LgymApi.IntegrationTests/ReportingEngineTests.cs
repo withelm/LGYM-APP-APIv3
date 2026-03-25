@@ -14,24 +14,24 @@ namespace LgymApi.IntegrationTests;
 public sealed class ReportingEngineTests : IntegrationTestBase
 {
     [Test]
-    public async Task ReportFlow_TrainerCreatesRequest_TraineeSubmits_TrainerCanReadSubmission()
-    {
-        var trainer = await SeedTrainerAsync("trainer-reports", "trainer-reports@example.com");
-        var trainee = await SeedUserAsync(name: "trainee-reports", email: "trainee-reports@example.com", password: "password123");
+     public async Task ReportFlow_TrainerCreatesRequest_TraineeSubmits_TrainerCanReadSubmission()
+         {
+             var trainer = await SeedTrainerAsync("trainer-reports", "trainer-reports@example.com");
+             var trainee = await SeedUserAsync(name: "trainee-reports", email: "trainee-reports@example.com", password: "password123");
 
-        using (var scope = Factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
-            {
-                Id = Guid.NewGuid(),
-                TrainerId = trainer.Id,
-                TraineeId = trainee.Id
-            });
-            await db.SaveChangesAsync();
-        }
+             using (var scope = Factory.Services.CreateScope())
+             {
+                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                 db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id
+                 });
+                 await db.SaveChangesAsync();
+             }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var createTemplateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
         {
             name = "Weekly Check-in",
@@ -59,7 +59,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         request.Should().NotBeNull();
         request!.Status.Should().Be("Pending");
 
-        SetAuthorizationHeader(trainee.Id);
+        SetAuthorizationHeader((Guid)trainee.Id);
         var pendingResponse = await Client.GetAsync("/api/trainee/report-requests");
         pendingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var pending = await pendingResponse.Content.ReadFromJsonAsync<List<ReportRequestResponse>>();
@@ -77,7 +77,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
 
         submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var submissionsResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/report-submissions");
         submissionsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var submissions = await submissionsResponse.Content.ReadFromJsonAsync<List<ReportSubmissionResponse>>();
@@ -88,24 +88,24 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task SubmitReport_WithInvalidDynamicFieldType_ReturnsBadRequest()
-    {
-        var trainer = await SeedTrainerAsync("trainer-reports-invalid", "trainer-reports-invalid@example.com");
-        var trainee = await SeedUserAsync(name: "trainee-reports-invalid", email: "trainee-reports-invalid@example.com", password: "password123");
+     public async Task SubmitReport_WithInvalidDynamicFieldType_ReturnsBadRequest()
+         {
+             var trainer = await SeedTrainerAsync("trainer-reports-invalid", "trainer-reports-invalid@example.com");
+             var trainee = await SeedUserAsync(name: "trainee-reports-invalid", email: "trainee-reports-invalid@example.com", password: "password123");
 
-        using (var scope = Factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
-            {
-                Id = Guid.NewGuid(),
-                TrainerId = trainer.Id,
-                TraineeId = trainee.Id
-            });
-            await db.SaveChangesAsync();
-        }
+             using (var scope = Factory.Services.CreateScope())
+             {
+                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                 db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id
+                 });
+                 await db.SaveChangesAsync();
+             }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var templateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
         {
             name = "Daily",
@@ -122,7 +122,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         });
         var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
 
-        SetAuthorizationHeader(trainee.Id);
+        SetAuthorizationHeader((Guid)trainee.Id);
         var submitResponse = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request!.Id}/submit", new
         {
             answers = new
@@ -138,7 +138,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     public async Task TrainerReportingController_InvalidIds_ReturnBadRequest()
     {
         var trainer = await SeedTrainerAsync("trainer-report-invalid-ids", "trainer-report-invalid-ids@example.com");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var getTemplate = await Client.GetAsync("/api/trainer/report-templates/not-a-guid");
         var updateTemplate = await Client.PostAsJsonAsync("/api/trainer/report-templates/not-a-guid/update", new
@@ -169,7 +169,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     public async Task TrainerReportingController_TemplateCreateAndReadFlow_Works()
     {
         var trainer = await SeedTrainerAsync("trainer-report-crud", "trainer-report-crud@example.com");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var createTemplateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
         {
@@ -201,18 +201,18 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     {
         var trainer = await SeedUserAsync(name: name, email: email, password: "password123");
 
-        using var scope = Factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == trainer.Id && ur.RoleId == AppDbContext.TrainerRoleSeedId);
-        if (!alreadyLinked)
-        {
-            db.UserRoles.Add(new UserRole
-            {
-                UserId = trainer.Id,
-                RoleId = AppDbContext.TrainerRoleSeedId
-            });
-            await db.SaveChangesAsync();
-        }
+         using var scope = Factory.Services.CreateScope();
+         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+         var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == (Domain.ValueObjects.Id<User>)trainer.Id && ur.RoleId == (Domain.ValueObjects.Id<Role>)AppDbContext.TrainerRoleSeedId);
+         if (!alreadyLinked)
+         {
+             db.UserRoles.Add(new UserRole
+             {
+                 UserId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                 RoleId = (Domain.ValueObjects.Id<Role>)AppDbContext.TrainerRoleSeedId
+             });
+             await db.SaveChangesAsync();
+         }
 
         return trainer;
     }

@@ -56,7 +56,7 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         }
 
         // Fetch trainee email and language
-        var trainee = await _userRepository.FindByIdAsync(invitation.TraineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync((Guid)invitation.TraineeId, cancellationToken);
         if (trainee == null)
         {
             _logger.LogWarning(
@@ -67,7 +67,7 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         }
 
         // Fetch trainer name and preferred language
-        var trainer = await _userRepository.FindByIdAsync(invitation.TrainerId, cancellationToken);
+        var trainer = await _userRepository.FindByIdAsync((Guid)invitation.TrainerId, cancellationToken);
         if (trainer == null)
         {
             _logger.LogWarning(

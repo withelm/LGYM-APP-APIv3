@@ -13,6 +13,7 @@ using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
 using UserEntity = LgymApi.Domain.Entities.User;
 using LgymApi.Application.Features.Tutorial;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Application.Features.User;
 
@@ -120,7 +121,7 @@ public sealed class UserService : IUserService
         var passwordData = _legacyPasswordService.Create(password);
         var user = new UserEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<LgymApi.Domain.Entities.User>.New(),
             Name = name,
             Email = normalizedEmail!,
             IsVisibleInRanking = input.IsVisibleInRanking ?? true,
@@ -142,11 +143,11 @@ public sealed class UserService : IUserService
             throw AppException.Internal(Messages.DefaultRoleMissing);
         }
 
-        await _roleRepository.AddUserRolesAsync(user.Id, rolesToAssign.Select(r => r.Id).ToList(), cancellationToken);
+        await _roleRepository.AddUserRolesAsync((Guid)user.Id, rolesToAssign.Select(r => (Guid)r.Id).ToList(), cancellationToken);
 
         await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
         {
-            Id = Guid.NewGuid(),
+            Id = Id<LgymApi.Domain.Entities.EloRegistry>.New(),
             UserId = user.Id,
             Date = DateTimeOffset.UtcNow,
             Elo = 1000
@@ -156,25 +157,25 @@ public sealed class UserService : IUserService
         // Initialize onboarding tutorial for new user
         try
         {
-            await _tutorialService.InitializeOnboardingTutorialAsync(user.Id, cancellationToken);
+            await _tutorialService.InitializeOnboardingTutorialAsync((Guid)user.Id, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
                 "Failed to initialize onboarding tutorial for user {UserId}. Registration is still successful.",
-                user.Id);
+                (Guid)user.Id);
         }
         try
         {
-            await _commandDispatcher.EnqueueAsync(new UserRegisteredCommand { UserId = user.Id });
+            await _commandDispatcher.EnqueueAsync(new UserRegisteredCommand { UserId = (Guid)user.Id });
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
                 "Failed to dispatch UserRegisteredCommand for user {UserId}. Registration is still successful.",
-                user.Id);
+                (Guid)user.Id);
         }
     }
 
@@ -205,20 +206,20 @@ public sealed class UserService : IUserService
             throw AppException.Unauthorized(Messages.Unauthorized);
         }
 
-        var roles = await _roleRepository.GetRoleNamesByUserIdAsync(user.Id, cancellationToken);
+        var roles = await _roleRepository.GetRoleNamesByUserIdAsync((Guid)user.Id, cancellationToken);
         if (!string.IsNullOrWhiteSpace(requiredRole) &&
             !roles.Contains(requiredRole, StringComparer.Ordinal))
         {
             throw AppException.Unauthorized(Messages.Unauthorized);
         }
 
-        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken);
-        var token = _tokenService.CreateToken(user.Id, roles, permissionClaims);
+        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync((Guid)user.Id, cancellationToken);
+        var token = _tokenService.CreateToken((Guid)user.Id, roles, permissionClaims);
         var elo = await _eloRepository.GetLatestEloAsync(user.Id, cancellationToken) ?? 1000;
         var nextRank = _rankService.GetNextRank(user.ProfileRank);
-        var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(user.Id, cancellationToken);
+        var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync((Guid)user.Id, cancellationToken);
 
-        _userSessionCache.AddOrRefresh(user.Id);
+        _userSessionCache.AddOrRefresh((Guid)user.Id);
 
         return new LoginResult
         {
@@ -227,7 +228,7 @@ public sealed class UserService : IUserService
             User = new UserInfoResult
             {
                 Name = user.Name,
-                Id = user.Id,
+                Id = (Guid)user.Id,
                 Email = user.Email,
                 Avatar = user.Avatar,
                 ProfileRank = user.ProfileRank,
@@ -264,14 +265,14 @@ public sealed class UserService : IUserService
 
         var nextRank = _rankService.GetNextRank(currentUser.ProfileRank);
         var elo = await _eloRepository.GetLatestEloAsync(currentUser.Id, cancellationToken) ?? 1000;
-        var roles = await _roleRepository.GetRoleNamesByUserIdAsync(currentUser.Id, cancellationToken);
-        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(currentUser.Id, cancellationToken);
-        var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(currentUser.Id, cancellationToken);
+        var roles = await _roleRepository.GetRoleNamesByUserIdAsync((Guid)currentUser.Id, cancellationToken);
+        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync((Guid)currentUser.Id, cancellationToken);
+        var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync((Guid)currentUser.Id, cancellationToken);
 
         return new UserInfoResult
         {
             Name = currentUser.Name,
-            Id = currentUser.Id,
+            Id = (Guid)currentUser.Id,
             Email = currentUser.Email,
             Avatar = currentUser.Avatar,
             ProfileRank = currentUser.ProfileRank,
@@ -312,7 +313,7 @@ public sealed class UserService : IUserService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var result = await _eloRepository.GetLatestEloAsync(userId, cancellationToken);
+        var result = await _eloRepository.GetLatestEloAsync((Id<UserEntity>)userId, cancellationToken);
         if (!result.HasValue)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -343,7 +344,7 @@ public sealed class UserService : IUserService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        _userSessionCache.Remove(currentUser.Id);
+        _userSessionCache.Remove((Guid)currentUser.Id);
         return Task.CompletedTask;
     }
 
@@ -415,7 +416,7 @@ public sealed class UserService : IUserService
             throw AppException.BadRequest(Messages.InvalidRoleSelection);
         }
 
-        await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => r.Id).ToList(), cancellationToken);
+        await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => (Guid)r.Id).ToList(), cancellationToken);
     }
 
     private string ResolvePreferredLanguage(string? preferredLanguageHeader)

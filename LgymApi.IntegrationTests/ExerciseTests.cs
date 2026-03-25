@@ -17,7 +17,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task AddExercise_WithValidData_CreatesGlobalExercise()
     {
         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -47,7 +47,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task AddUserExercise_WithValidData_CreatesUserExercise()
     {
         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -72,7 +72,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task AddExercise_WithoutName_ReturnsBadRequest()
     {
         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -89,7 +89,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task AddExercise_WithInvalidBodyPart_ReturnsBadRequest()
     {
         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -102,12 +102,12 @@ public sealed class ExerciseTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
-    [Test]
-    public async Task DeleteExercise_AsOwner_MarksAsDeleted()
-    {
-        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        var exercise = await SeedExerciseAsync(user.Id, "User Exercise", "Chest");
-        SetAuthorizationHeader(user.Id);
+     [Test]
+     public async Task DeleteExercise_AsOwner_MarksAsDeleted()
+     {
+         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+         var exercise = await SeedExerciseAsync((Guid)user.Id, "Test Exercise", "Chest");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new Dictionary<string, string>
         {
@@ -133,7 +133,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     {
         var admin = await SeedUserAsync(name: "admin", email: "admin@example.com", isAdmin: true);
         var exercise = await SeedExerciseAsync(null, "Global Exercise", "Chest");
-        SetAuthorizationHeader(admin.Id);
+        SetAuthorizationHeader((Guid)admin.Id);
 
         var request = new Dictionary<string, string>
         {
@@ -153,13 +153,13 @@ public sealed class ExerciseTests : IntegrationTestBase
         deletedExercise!.IsDeleted.Should().BeTrue();
     }
 
-    [Test]
-    public async Task DeleteExercise_NonOwnerNonAdmin_ReturnsForbidden()
-    {
-        var user1 = await SeedUserAsync(name: "user1", email: "user1@example.com");
-        var user2 = await SeedUserAsync(name: "user2", email: "user2@example.com");
-        var exercise = await SeedExerciseAsync(user2.Id, "User2 Exercise", "Chest");
-        SetAuthorizationHeader(user1.Id);
+     [Test]
+     public async Task DeleteExercise_NonOwnerNonAdmin_ReturnsForbidden()
+     {
+         var user1 = await SeedUserAsync(name: "user1", email: "user1@example.com");
+         var user2 = await SeedUserAsync(name: "user2", email: "user2@example.com");
+         var exercise = await SeedExerciseAsync((Guid)user2.Id, "Test Exercise", "Back");
+        SetAuthorizationHeader((Guid)user1.Id);
 
         var request = new Dictionary<string, string>
         {
@@ -171,12 +171,12 @@ public sealed class ExerciseTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
-    [Test]
-    public async Task UpdateExercise_WithValidData_UpdatesExercise()
-    {
-        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        var exercise = await SeedExerciseAsync(user.Id, "Old Name", "Chest");
-        SetAuthorizationHeader(user.Id);
+     [Test]
+     public async Task UpdateExercise_WithValidData_UpdatesExercise()
+     {
+         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+         var exercise = await SeedExerciseAsync((Guid)user.Id, "Test Exercise", "Chest");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -200,14 +200,14 @@ public sealed class ExerciseTests : IntegrationTestBase
         updatedExercise.Description.Should().Be("Updated description");
     }
 
-    [Test]
-    public async Task GetAllGlobalExercises_ReturnsOnlyGlobalExercises()
-    {
-        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        await SeedExerciseAsync(null, "Global Exercise 1", "Chest");
-        await SeedExerciseAsync(null, "Global Exercise 2", "Back");
-        await SeedExerciseAsync(user.Id, "User Exercise", "Legs");
-        SetAuthorizationHeader(user.Id);
+     [Test]
+     public async Task GetAllGlobalExercises_ReturnsOnlyGlobalExercises()
+     {
+         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+         await SeedExerciseAsync(null, "Global Exercise 1", "Chest");
+         await SeedExerciseAsync(null, "Global Exercise 2", "Back");
+         await SeedExerciseAsync((Guid)user.Id, "User Exercise", "Chest");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync("/api/exercise/getAllGlobalExercises");
 
@@ -219,14 +219,14 @@ public sealed class ExerciseTests : IntegrationTestBase
         body!.Select(e => e.Name).Should().Contain(new[] { "Global Exercise 1", "Global Exercise 2" });
     }
 
-    [Test]
-    public async Task GetAllUserExercises_ReturnsOnlyUserExercises()
-    {
-        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        await SeedExerciseAsync(null, "Global Exercise", "Chest");
-        await SeedExerciseAsync(user.Id, "User Exercise 1", "Back");
-        await SeedExerciseAsync(user.Id, "User Exercise 2", "Legs");
-        SetAuthorizationHeader(user.Id);
+     [Test]
+     public async Task GetAllUserExercises_ReturnsOnlyUserExercises()
+     {
+         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+         await SeedExerciseAsync(null, "Global Exercise", "Chest");
+         await SeedExerciseAsync((Guid)user.Id, "User Exercise 1", "Chest");
+         await SeedExerciseAsync((Guid)user.Id, "User Exercise 2", "Back");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync($"/api/exercise/{user.Id}/getAllUserExercises");
 
@@ -238,13 +238,13 @@ public sealed class ExerciseTests : IntegrationTestBase
         body!.Select(e => e.Name).Should().Contain(new[] { "User Exercise 1", "User Exercise 2" });
     }
 
-    [Test]
-    public async Task GetAllExercises_ReturnsGlobalAndUserExercises()
-    {
-        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        await SeedExerciseAsync(null, "Global Exercise", "Chest");
-        await SeedExerciseAsync(user.Id, "User Exercise", "Back");
-        SetAuthorizationHeader(user.Id);
+     [Test]
+     public async Task GetAllExercises_ReturnsGlobalAndUserExercises()
+     {
+         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+         await SeedExerciseAsync(null, "Global Exercise", "Chest");
+         await SeedExerciseAsync((Guid)user.Id, "User Exercise", "Back");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync($"/api/exercise/{user.Id}/getAllExercises");
 
@@ -262,7 +262,7 @@ public sealed class ExerciseTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
         await SeedExerciseAsync(null, "Chest Exercise", "Chest");
         await SeedExerciseAsync(null, "Back Exercise", "Back");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new { bodyPart = BodyParts.Chest.ToString() };
 
@@ -280,7 +280,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task GetExerciseByBodyPart_WithInvalidBodyPart_ReturnsBadRequest()
     {
         var user = await SeedUserAsync(name: "exerciseuseralias", email: "exercisealias@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new { bodyPart = "ChestAlias" };
         var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/getExerciseByBodyPart", request);
@@ -292,7 +292,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task GetExerciseByBodyPart_WithNumericBodyPart_ReturnsBadRequest()
     {
         var user = await SeedUserAsync(name: "exerciseusernum", email: "exercisenum@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new { bodyPart = 1 };
         var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/getExerciseByBodyPart", request);
@@ -300,12 +300,12 @@ public sealed class ExerciseTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
-    [Test]
-    public async Task GetExercise_WithValidId_ReturnsExercise()
-    {
-        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-        var exercise = await SeedExerciseAsync(user.Id, "Test Exercise", "Chest");
-        SetAuthorizationHeader(user.Id);
+     [Test]
+     public async Task GetExercise_WithValidId_ReturnsExercise()
+     {
+         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+         var exercise = await SeedExerciseAsync((Guid)user.Id, "Test Exercise", "Chest");
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync($"/api/exercise/{exercise.Id}/getExercise");
 
@@ -325,14 +325,14 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         Enum.TryParse<BodyParts>(bodyPart, out var bodyPartEnum);
 
-        var exercise = new Exercise
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Name = name,
-            BodyPart = bodyPartEnum,
-            IsDeleted = isDeleted
-        };
+         var exercise = new Exercise
+         {
+             Id = (Domain.ValueObjects.Id<Exercise>)Guid.NewGuid(),
+             UserId = (Domain.ValueObjects.Id<User>?)userId,
+             Name = name,
+             BodyPart = bodyPartEnum,
+             IsDeleted = isDeleted
+         };
 
         db.Exercises.Add(exercise);
         await db.SaveChangesAsync();
@@ -380,7 +380,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task AddGlobalTranslation_AsAdmin_AddsTranslation()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader(admin.Id);
+        SetAuthorizationHeader((Guid)admin.Id);
 
         var exercise = await SeedExerciseAsync(null, "Global Push Ups", "Chest");
 
@@ -406,10 +406,10 @@ public sealed class ExerciseTests : IntegrationTestBase
         var admin = await SeedAdminAsync();
         var user = await SeedUserAsync(name: "normaluser", email: "normal@example.com");
         
-        SetAuthorizationHeader(admin.Id);
+        SetAuthorizationHeader((Guid)admin.Id);
         var exercise = await SeedExerciseAsync(null, "Global Squats", "Quads");
         
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var request = new
         {
@@ -423,13 +423,13 @@ public sealed class ExerciseTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
-    [Test]
-    public async Task AddGlobalTranslation_ForUserExercise_ReturnsForbidden()
-    {
-        var admin = await SeedAdminAsync();
-        SetAuthorizationHeader(admin.Id);
+     [Test]
+     public async Task AddGlobalTranslation_ForUserExercise_ReturnsForbidden()
+     {
+         var admin = await SeedAdminAsync();
+         SetAuthorizationHeader((Guid)admin.Id);
 
-        var exercise = await SeedExerciseAsync(admin.Id, "Admin User Exercise", "Back");
+         var exercise = await SeedExerciseAsync((Guid)admin.Id, "User Exercise for Translation", "Chest");
 
         var request = new
         {
@@ -447,7 +447,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task AddGlobalTranslation_WithInvalidCulture_ReturnsBadRequest()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader(admin.Id);
+        SetAuthorizationHeader((Guid)admin.Id);
 
         var exercise = await SeedExerciseAsync(null, "Global Deadlift", "Back");
 
@@ -467,7 +467,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task AddGlobalTranslation_WithMissingFields_ReturnsBadRequest()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader(admin.Id);
+        SetAuthorizationHeader((Guid)admin.Id);
 
         var request = new
         {
@@ -485,7 +485,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     public async Task AddGlobalTranslation_WithNonExistentExercise_ReturnsNotFound()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader(admin.Id);
+        SetAuthorizationHeader((Guid)admin.Id);
 
         var nonExistentId = Guid.NewGuid();
         var request = new

@@ -42,7 +42,7 @@ public sealed class PlanDaySeeder : IEntitySeeder
 
                 var day = new PlanDay
                 {
-                    Id = Guid.NewGuid(),
+                    Id = (LgymApi.Domain.ValueObjects.Id<PlanDay>)Guid.NewGuid(),
                     PlanId = plan.Id,
                     Name = name
                 };

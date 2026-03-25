@@ -11,7 +11,7 @@ public sealed class AdminFlagTests : IntegrationTestBase
     public async Task IsAdmin_WithAdminUser_ReturnsTrue()
     {
         var adminUser = await SeedUserAsync(name: "adminuser", email: "admin@example.com", isAdmin: true);
-        SetAuthorizationHeader(adminUser.Id);
+        SetAuthorizationHeader((Guid)adminUser.Id);
 
         var response = await Client.GetAsync($"/api/{adminUser.Id}/isAdmin");
 
@@ -27,7 +27,7 @@ public sealed class AdminFlagTests : IntegrationTestBase
                 new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
                 {
                     var user = await self.SeedUserAsync(name: "normaluser", email: "normal@example.com", isAdmin: false);
-                    return (user.Id, user.Id.ToString());
+                    return ((Guid)user.Id, user.Id.ToString());
                 }))
             .SetName("IsAdmin_WithNonAdminUser_ReturnsFalse");
 
@@ -35,7 +35,7 @@ public sealed class AdminFlagTests : IntegrationTestBase
                 new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
                 {
                     var user = await self.SeedUserAsync(name: "nulladmin", email: "nulladmin@example.com");
-                    return (user.Id, user.Id.ToString());
+                    return ((Guid)user.Id, user.Id.ToString());
                 }))
             .SetName("IsAdmin_WithNullAdminFlag_ReturnsFalse");
 
@@ -43,7 +43,7 @@ public sealed class AdminFlagTests : IntegrationTestBase
                 new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
                 {
                     var user = await self.SeedUserAsync(name: "authuser", email: "auth-nonexistent@example.com");
-                    return (user.Id, Guid.NewGuid().ToString());
+                    return ((Guid)user.Id, Guid.NewGuid().ToString());
                 }))
             .SetName("IsAdmin_WithNonExistentUser_ReturnsFalse");
 
@@ -51,7 +51,7 @@ public sealed class AdminFlagTests : IntegrationTestBase
                 new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
                 {
                     var user = await self.SeedUserAsync(name: "authuser", email: "auth-invalid@example.com");
-                    return (user.Id, "invalid-guid");
+                    return ((Guid)user.Id, "invalid-guid");
                 }))
             .SetName("IsAdmin_WithInvalidGuidFormat_ReturnsFalse");
     }

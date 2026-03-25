@@ -56,7 +56,7 @@ public sealed class InvitationEmailServicesTests
     {
         var existing = new NotificationMessage
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
             Status = EmailNotificationStatus.Failed,
             Attempts = 5,
             Type = EmailNotificationTypes.TrainerInvitation,
@@ -138,7 +138,7 @@ public sealed class InvitationEmailServicesTests
     {
         var existing = new NotificationMessage
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
             Type = EmailNotificationTypes.TrainerInvitation,
             CorrelationId = Guid.NewGuid(),
@@ -175,7 +175,7 @@ public sealed class InvitationEmailServicesTests
         Assert.Multiple(() =>
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
-            Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
+            Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo((Guid)existing.Id));
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -186,7 +186,7 @@ public sealed class InvitationEmailServicesTests
     {
         var notification = new NotificationMessage
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
             Status = EmailNotificationStatus.Pending,
             Attempts = 0,
             Type = EmailNotificationTypes.TrainerInvitation,
@@ -206,7 +206,7 @@ public sealed class InvitationEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notification.Id));
+        Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync((Guid)notification.Id));
         Assert.Multiple(() =>
         {
             Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
@@ -221,7 +221,7 @@ public sealed class InvitationEmailServicesTests
     {
         var notification = new NotificationMessage
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
             Status = EmailNotificationStatus.Sent,
             Attempts = 2,
             Type = EmailNotificationTypes.TrainerInvitation,
@@ -242,7 +242,7 @@ public sealed class InvitationEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        await handler.ProcessAsync(notification.Id);
+        await handler.ProcessAsync((Guid)notification.Id);
 
         Assert.Multiple(() =>
         {

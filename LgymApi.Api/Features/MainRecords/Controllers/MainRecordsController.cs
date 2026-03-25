@@ -68,7 +68,7 @@ public sealed class MainRecordsController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteMainRecord([FromRoute] string id)
     {
-        var currentUserId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
+        var currentUserId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? (Guid)HttpContext.GetCurrentUser()!.Id : Guid.Empty;
         var recordId = Guid.TryParse(id, out var parsedRecordId) ? parsedRecordId : Guid.Empty;
         await _mainRecordsService.DeleteMainRecordAsync(currentUserId, recordId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
@@ -91,7 +91,7 @@ public sealed class MainRecordsController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRecordOrPossibleRecordInExercise([FromBody] RecordOrPossibleRequestDto request)
     {
-        var userId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
+        var userId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? (Guid)HttpContext.GetCurrentUser()!.Id : Guid.Empty;
         var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, request.ExerciseId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<PossibleRecordResult, PossibleRecordForExerciseDto>(result));
     }

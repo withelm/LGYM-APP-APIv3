@@ -27,7 +27,7 @@ public sealed class AppConfigSeeder : IEntitySeeder
         {
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<AppConfig>)Guid.NewGuid(),
                 Platform = Platforms.Android,
                 MinRequiredVersion = "1.0.0",
                 LatestVersion = "1.0.0",
@@ -37,7 +37,7 @@ public sealed class AppConfigSeeder : IEntitySeeder
             },
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<AppConfig>)Guid.NewGuid(),
                 Platform = Platforms.Ios,
                 MinRequiredVersion = "1.0.0",
                 LatestVersion = "1.0.0",

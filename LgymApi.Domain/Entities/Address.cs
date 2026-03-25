@@ -1,6 +1,6 @@
 namespace LgymApi.Domain.Entities;
 
-public sealed class Address : EntityBase
+public sealed class Address : EntityBase<Address>
 {
     public string? City { get; set; }
     public string? Country { get; set; }

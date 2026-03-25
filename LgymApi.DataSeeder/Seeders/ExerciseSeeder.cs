@@ -61,7 +61,7 @@ public sealed class ExerciseSeeder : IEntitySeeder
     {
         return new Exercise
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<Exercise>)Guid.NewGuid(),
             Name = name,
             BodyPart = bodyPart
         };

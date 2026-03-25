@@ -4,6 +4,7 @@ using LgymApi.Application.Features.Role;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.UnitTests;
 
@@ -30,7 +31,7 @@ public sealed class RoleServiceTests
     public async Task GetRolesAsync_ReturnsRolesWithClaims()
     {
         var roleId = Guid.NewGuid();
-        _roleRepository.Roles.Add(new Role { Id = roleId, Name = "Coach", Description = "Role" });
+        _roleRepository.Roles.Add(new Role { Id = (Domain.ValueObjects.Id<Role>)roleId, Name = "Coach", Description = "Role" });
         _roleRepository.RoleClaims[roleId] =
         [
             AuthConstants.Permissions.ManageAppConfig,
@@ -43,7 +44,7 @@ public sealed class RoleServiceTests
         {
             Assert.That(roles, Has.Count.EqualTo(1));
             Assert.That(roles[0].Name, Is.EqualTo("Coach"));
-            Assert.That(roles[0].PermissionClaims, Is.EquivalentTo(_roleRepository.RoleClaims[roleId]));
+            Assert.That(roles[0].PermissionClaims, Is.EquivalentTo(_roleRepository.RoleClaims[(Guid)_roleRepository.Roles.First().Id]));
         });
     }
 
@@ -77,7 +78,7 @@ public sealed class RoleServiceTests
                 AuthConstants.Permissions.ManageAppConfig,
                 AuthConstants.Permissions.ManageUserRoles
             }));
-            Assert.That(_roleRepository.Roles.Any(r => r.Id == result.Id), Is.True);
+            Assert.That(_roleRepository.Roles.Any(r => (Guid)r.Id == (Guid)result.Id), Is.True);
             Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
         });
     }
@@ -93,14 +94,14 @@ public sealed class RoleServiceTests
     }
 
     [Test]
-    public void UpdateRoleAsync_ThrowsForbidden_ForSystemRole()
+    public async Task UpdateRoleAsync_ThrowsForbidden_ForSystemRole()
     {
-        var adminRole = new Role { Id = Guid.NewGuid(), Name = AuthConstants.Roles.Admin };
+        var adminRole = new Role { Id = (Domain.ValueObjects.Id<Role>)Guid.NewGuid(), Name = AuthConstants.Roles.Admin };
         _roleRepository.Roles.Add(adminRole);
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
             await _service.UpdateRoleAsync(
-                adminRole.Id,
+                (Guid)adminRole.Id,
                 "AdminUpdated",
                 null,
                 [AuthConstants.Permissions.ManageUserRoles]));
@@ -113,7 +114,7 @@ public sealed class RoleServiceTests
     public async Task UpdateRoleAsync_UpdatesNameDescriptionAndClaims()
     {
         var roleId = Guid.NewGuid();
-        _roleRepository.Roles.Add(new Role { Id = roleId, Name = "Coach", Description = "Old" });
+        _roleRepository.Roles.Add(new Role { Id = (Domain.ValueObjects.Id<Role>)roleId, Name = "Coach", Description = "Old" });
 
         await _service.UpdateRoleAsync(
             roleId,
@@ -121,12 +122,12 @@ public sealed class RoleServiceTests
             "  New desc  ",
             ManageGlobalExercisesClaim);
 
-        var updated = _roleRepository.Roles.Single(r => r.Id == roleId);
+        var updated = _roleRepository.Roles.Single(r => (Guid)r.Id == roleId);
         Assert.Multiple(() =>
         {
             Assert.That(updated.Name, Is.EqualTo("Senior Coach"));
             Assert.That(updated.Description, Is.EqualTo("New desc"));
-            Assert.That(_roleRepository.RoleClaims[roleId], Is.EqualTo(ManageGlobalExercisesClaim));
+            Assert.That(_roleRepository.RoleClaims[(Guid)updated.Id], Is.EqualTo(ManageGlobalExercisesClaim));
             Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
         });
     }
@@ -134,10 +135,10 @@ public sealed class RoleServiceTests
     [Test]
     public void DeleteRoleAsync_ThrowsForbidden_ForSystemRole()
     {
-        var userRole = new Role { Id = Guid.NewGuid(), Name = AuthConstants.Roles.User };
+        var userRole = new Role { Id = (Domain.ValueObjects.Id<Role>)Guid.NewGuid(), Name = AuthConstants.Roles.User };
         _roleRepository.Roles.Add(userRole);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () => await _service.DeleteRoleAsync(userRole.Id));
+        var exception = Assert.ThrowsAsync<AppException>(async () => await _service.DeleteRoleAsync((Guid)userRole.Id));
 
         Assert.That(exception, Is.Not.Null);
         Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
@@ -146,14 +147,14 @@ public sealed class RoleServiceTests
     [Test]
     public async Task DeleteRoleAsync_RemovesNonSystemRole()
     {
-        var role = new Role { Id = Guid.NewGuid(), Name = "Coach" };
+        var role = new Role { Id = (Domain.ValueObjects.Id<Role>)Guid.NewGuid(), Name = "Coach" };
         _roleRepository.Roles.Add(role);
 
-        await _service.DeleteRoleAsync(role.Id);
+        await _service.DeleteRoleAsync((Guid)role.Id);
 
         Assert.Multiple(() =>
         {
-            Assert.That(_roleRepository.Roles.Any(r => r.Id == role.Id), Is.False);
+            Assert.That(_roleRepository.Roles.Any(r => (Guid)r.Id == (Guid)role.Id), Is.False);
             Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
         });
     }
@@ -162,10 +163,10 @@ public sealed class RoleServiceTests
     public async Task UpdateUserRolesAsync_ReplacesUserRolesUsingDistinctNames()
     {
         var userId = Guid.NewGuid();
-        _userRepository.Users.Add(new User { Id = userId, Name = "u", Email = "u@x.com" });
+        _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "u", Email = "u@x.com" });
 
-        var coach = new Role { Id = Guid.NewGuid(), Name = "Coach" };
-        var analyst = new Role { Id = Guid.NewGuid(), Name = "Analyst" };
+        var coach = new Role { Id = (Domain.ValueObjects.Id<Role>)Guid.NewGuid(), Name = "Coach" };
+        var analyst = new Role { Id = (Domain.ValueObjects.Id<Role>)Guid.NewGuid(), Name = "Analyst" };
         _roleRepository.Roles.AddRange([coach, analyst]);
 
         await _service.UpdateUserRolesAsync(userId, [" coach ", "ANALYST", "coach"]);
@@ -173,7 +174,7 @@ public sealed class RoleServiceTests
         Assert.Multiple(() =>
         {
             Assert.That(_roleRepository.UserRoleAssignments.TryGetValue(userId, out var roles), Is.True);
-            Assert.That(roles!, Is.EquivalentTo(new[] { coach.Id, analyst.Id }));
+            Assert.That(roles!, Is.EquivalentTo(new[] { (Guid)coach.Id, (Guid)analyst.Id }));
             Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
         });
     }
@@ -192,7 +193,7 @@ public sealed class RoleServiceTests
     public void UpdateUserRolesAsync_ThrowsBadRequest_WhenRoleMissing()
     {
         var userId = Guid.NewGuid();
-        _userRepository.Users.Add(new User { Id = userId, Name = "u", Email = "u@x.com" });
+        _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "u", Email = "u@x.com" });
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
             await _service.UpdateUserRolesAsync(userId, ["UnknownRole"]));
@@ -219,10 +220,10 @@ public sealed class RoleServiceTests
         public List<User> Users { get; } = new();
 
         public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
-            => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+            => Task.FromResult(Users.FirstOrDefault(u => (Guid)u.Id == id));
 
         public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
-            => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+            => Task.FromResult(Users.FirstOrDefault(u => (Guid)u.Id == id));
 
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Name == name));
@@ -241,7 +242,7 @@ public sealed class RoleServiceTests
 
         public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
         {
-            var index = Users.FindIndex(u => u.Id == user.Id);
+            var index = Users.FindIndex(u => (Guid)u.Id == (Guid)user.Id);
             if (index >= 0)
             {
                 Users[index] = user;
@@ -261,7 +262,7 @@ public sealed class RoleServiceTests
             => Task.FromResult(Roles.OrderBy(r => r.Name).ToList());
 
         public Task<Role?> FindByIdAsync(Guid roleId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Roles.FirstOrDefault(r => r.Id == roleId));
+            => Task.FromResult(Roles.FirstOrDefault(r => (Guid)r.Id == roleId));
 
         public Task<Role?> FindByNameAsync(string roleName, CancellationToken cancellationToken = default)
             => Task.FromResult(Roles.FirstOrDefault(r => string.Equals(r.Name, roleName, StringComparison.Ordinal)));
@@ -279,7 +280,7 @@ public sealed class RoleServiceTests
         {
             var exists = Roles.Any(r =>
                 string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase) &&
-                (!excludeRoleId.HasValue || r.Id != excludeRoleId.Value));
+                (!excludeRoleId.HasValue || (Guid)r.Id != excludeRoleId.Value));
             return Task.FromResult(exists);
         }
 
@@ -290,7 +291,7 @@ public sealed class RoleServiceTests
                 return Task.FromResult(new List<string>());
             }
 
-            return Task.FromResult(Roles.Where(r => roleIds.Contains(r.Id)).Select(r => r.Name).OrderBy(n => n).ToList());
+            return Task.FromResult(Roles.Where(r => roleIds.Contains((Guid)r.Id)).Select(r => r.Name).OrderBy(n => n).ToList());
         }
 
         public Task<List<string>> GetPermissionClaimsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -332,7 +333,7 @@ public sealed class RoleServiceTests
                 return Task.FromResult(false);
             }
 
-            var hasRole = Roles.Any(r => roleIds.Contains(r.Id) && string.Equals(r.Name, roleName, StringComparison.Ordinal));
+            var hasRole = Roles.Any(r => roleIds.Contains((Guid)r.Id) && string.Equals(r.Name, roleName, StringComparison.Ordinal));
             return Task.FromResult(hasRole);
         }
 
@@ -359,7 +360,7 @@ public sealed class RoleServiceTests
 
         public Task UpdateRoleAsync(Role role, CancellationToken cancellationToken = default)
         {
-            var index = Roles.FindIndex(r => r.Id == role.Id);
+            var index = Roles.FindIndex(r => (Guid)r.Id == (Guid)role.Id);
             if (index >= 0)
             {
                 Roles[index] = role;
@@ -370,11 +371,11 @@ public sealed class RoleServiceTests
 
         public Task DeleteRoleAsync(Role role, CancellationToken cancellationToken = default)
         {
-            Roles.RemoveAll(r => r.Id == role.Id);
-            RoleClaims.Remove(role.Id);
+            Roles.RemoveAll(r => (Guid)r.Id == (Guid)role.Id);
+            RoleClaims.Remove((Guid)role.Id);
             foreach (var assignment in UserRoleAssignments.Values)
             {
-                assignment.RemoveAll(roleId => roleId == role.Id);
+                assignment.RemoveAll(roleId => roleId == (Guid)role.Id);
             }
 
             return Task.CompletedTask;

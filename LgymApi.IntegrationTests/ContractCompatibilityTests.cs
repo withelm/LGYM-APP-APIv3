@@ -58,7 +58,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     public async Task AppConfig_GetAppVersion_ReturnsExpectedJsonShape()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader(admin.Id);
+        SetAuthorizationHeader((Guid)admin.Id);
 
         var createResponse = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", new
         {
@@ -89,7 +89,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     public async Task MainRecords_PossibleRecord_ReturnsExpectedJsonShape()
     {
         var user = await SeedUserAsync(name: "contract_mainrecord", email: "contract_mainrecord@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, name: "Contract Main Record Exercise");
 
@@ -125,7 +125,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     public async Task Gym_AddGym_ReturnsLegacyMsgField()
     {
         var user = await SeedUserAsync(name: "contract_gym", email: "contract_gym@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.PostAsJsonAsync($"/api/gym/{user.Id}/addGym", new
         {
@@ -140,11 +140,11 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     [Test]
     public async Task Gym_GetGyms_ReturnsListWithLegacyIdFields()
     {
-        var user = await SeedUserAsync(name: "contract_gym_list", email: "contract_gym_list@example.com");
-        SetAuthorizationHeader(user.Id);
+         var user = await SeedUserAsync(name: "contract_gym_list", email: "contract_gym_list@example.com");
+         SetAuthorizationHeader((Guid)user.Id);
 
-        var gymId = await CreateGymViaEndpointAsync(user.Id, "Gym One");
-        await CreateGymViaEndpointAsync(user.Id, "Gym Two");
+         var gymId = await CreateGymViaEndpointAsync((Guid)user.Id, "Test Gym 1");
+         await CreateGymViaEndpointAsync((Guid)user.Id, "Test Gym 2");
 
         var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -156,10 +156,10 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     [Test]
     public async Task Gym_GetGym_ReturnsEntityWithLegacyIdField()
     {
-        var user = await SeedUserAsync(name: "contract_gym_get", email: "contract_gym_get@example.com");
-        SetAuthorizationHeader(user.Id);
+         var user = await SeedUserAsync(name: "contract_gym_get", email: "contract_gym_get@example.com");
+         SetAuthorizationHeader((Guid)user.Id);
 
-        var gymId = await CreateGymViaEndpointAsync(user.Id, "Single Gym");
+         var gymId = await CreateGymViaEndpointAsync((Guid)user.Id, "Test Gym");
 
         var response = await Client.GetAsync($"/api/gym/{gymId}/getGym");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -172,7 +172,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     public async Task Plan_CreatePlan_ReturnsLegacyMsgField()
     {
         var user = await SeedUserAsync(name: "contract_plan", email: "contract_plan@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.PostAsJsonAsync($"/api/{user.Id}/createPlan", new
         {
@@ -187,11 +187,11 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     [Test]
     public async Task Plan_GetPlansList_ReturnsListWithLegacyIdFields()
     {
-        var user = await SeedUserAsync(name: "contract_plan_list", email: "contract_plan_list@example.com");
-        SetAuthorizationHeader(user.Id);
+         var user = await SeedUserAsync(name: "contract_plan_list", email: "contract_plan_list@example.com");
+         SetAuthorizationHeader((Guid)user.Id);
 
-        await CreatePlanViaEndpointAsync(user.Id, "Plan Alpha");
-        await CreatePlanViaEndpointAsync(user.Id, "Plan Beta");
+         await CreatePlanViaEndpointAsync((Guid)user.Id, "Test Plan 1");
+         await CreatePlanViaEndpointAsync((Guid)user.Id, "Test Plan 2");
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlansList");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -204,7 +204,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     public async Task Exercise_AddUserExercise_ReturnsLegacyMsgField()
     {
         var user = await SeedUserAsync(name: "contract_exercise", email: "contract_exercise@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{user.Id}/addUserExercise", new
         {
@@ -222,7 +222,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     public async Task Exercise_GetAllUserExercises_ReturnsListWithLegacyIdFields()
     {
         var user = await SeedUserAsync(name: "contract_exercise_list", email: "contract_exercise_list@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         await CreateExerciseViaEndpointAsync(user.Id, "Exercise A", BodyParts.Chest);
         await CreateExerciseViaEndpointAsync(user.Id, "Exercise B", BodyParts.Back);
@@ -241,7 +241,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     public async Task PostMutationEndpoint_ReturnsLegacyMsgField(string routeTemplate, string propertyName, string propertyValue)
     {
         var user = await SeedUserAsync($"contract_{Guid.NewGuid():N}", $"contract_{Guid.NewGuid():N}@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var route = string.Format(routeTemplate, user.Id);
         var request = CreateDynamicRequest(propertyName, propertyValue);
@@ -259,17 +259,17 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     public async Task GetListEndpoint_ReturnsLegacyIdFields(string routeTemplate)
     {
         var user = await SeedUserAsync($"contract_list_{Guid.NewGuid():N}", $"contract_list_{Guid.NewGuid():N}@example.com");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
-        // Seed test data for each endpoint
-        if (routeTemplate.Contains("gym"))
-        {
-            await CreateGymViaEndpointAsync(user.Id, "Seed Gym");
-        }
-        else if (routeTemplate.Contains("Plan"))
-        {
-            await CreatePlanViaEndpointAsync(user.Id, "Seed Plan");
-        }
+         // Seed test data for each endpoint
+         if (routeTemplate.Contains("gym"))
+         {
+             await CreateGymViaEndpointAsync((Guid)user.Id, "Seed Gym");
+         }
+         else if (routeTemplate.Contains("Plan"))
+         {
+             await CreatePlanViaEndpointAsync((Guid)user.Id, "Seed Plan");
+         }
         else if (routeTemplate.Contains("exercise"))
         {
             await CreateExerciseViaEndpointAsync(user.Id, "Seed Exercise");

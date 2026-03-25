@@ -1,9 +1,11 @@
+using LgymApi.Domain.ValueObjects;
+
 namespace LgymApi.Domain.Entities;
 
-public sealed class SupplementIntakeLog : EntityBase
+public sealed class SupplementIntakeLog : EntityBase<SupplementIntakeLog>
 {
-    public Guid TraineeId { get; set; }
-    public Guid PlanItemId { get; set; }
+    public Id<User> TraineeId { get; set; }
+    public Id<SupplementPlanItem> PlanItemId { get; set; }
     public DateOnly IntakeDate { get; set; }
     public DateTimeOffset TakenAt { get; set; }
 

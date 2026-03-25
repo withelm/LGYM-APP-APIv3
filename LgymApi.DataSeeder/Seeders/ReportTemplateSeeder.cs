@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,12 +31,12 @@ public sealed class ReportTemplateSeeder : IEntitySeeder
             .Select(template => new { template.TrainerId, template.Name })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid TrainerId, string Name)>(
+        var existingSet = new HashSet<(Id<User> TrainerId, string Name)>(
             existing.Select(entry => (entry.TrainerId, entry.Name)));
 
         var template = new ReportTemplate
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<ReportTemplate>)Guid.NewGuid(),
             TrainerId = trainer.Id,
             Name = "Weekly Check-in",
             Description = "Default weekly progress report"
@@ -71,7 +72,7 @@ public sealed class ReportTemplateSeeder : IEntitySeeder
         {
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<ReportTemplateField>)Guid.NewGuid(),
                 TemplateId = fieldTemplateGuid,
                 Key = "weight",
                 Label = "Current weight",
@@ -81,7 +82,7 @@ public sealed class ReportTemplateSeeder : IEntitySeeder
             },
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<ReportTemplateField>)Guid.NewGuid(),
                 TemplateId = fieldTemplateGuid,
                 Key = "sleep",
                 Label = "Average sleep (hours)",
@@ -91,7 +92,7 @@ public sealed class ReportTemplateSeeder : IEntitySeeder
             },
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<ReportTemplateField>)Guid.NewGuid(),
                 TemplateId = fieldTemplateGuid,
                 Key = "notes",
                 Label = "Notes",

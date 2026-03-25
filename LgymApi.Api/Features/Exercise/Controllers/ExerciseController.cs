@@ -167,7 +167,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> GetLastExerciseScores([FromRoute] string id, [FromBody] LastExerciseScoresRequestDto request)
     {
         var routeUserId = Guid.TryParse(id, out var parsedRouteUserId) ? parsedRouteUserId : Guid.Empty;
-        var currentUserId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
+        var currentUserId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? (Guid)HttpContext.GetCurrentUser()!.Id : Guid.Empty;
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
         Guid? gymId = null;
         if (!string.IsNullOrWhiteSpace(request.GymId) && Guid.TryParse(request.GymId, out var parsedGymId))
@@ -186,7 +186,7 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetExerciseScoresFromTrainingByExercise([FromBody] RecordOrPossibleRequestDto request)
     {
-        var currentUserId = HttpContext.GetCurrentUser()?.Id ?? Guid.Empty;
+        var currentUserId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? (Guid)HttpContext.GetCurrentUser()!.Id : Guid.Empty;
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
         var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync(currentUserId, exerciseId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<ExerciseTrainingHistoryItem, ExerciseTrainingHistoryItemDto>(result);

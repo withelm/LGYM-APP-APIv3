@@ -71,7 +71,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         await dbContext.SaveChangesAsync();
 
         // Act
-        var found = await repository.FindByIdAsync(envelope.Id);
+        var found = await repository.FindByIdAsync((Guid)envelope.Id);
 
         // Assert
         Assert.That(found, Is.Not.Null);
@@ -147,49 +147,52 @@ public sealed class BackgroundActionMessageRepositoryTests
         Assert.That(found, Is.Null);
     }
 
-    [Test]
-    public async Task CommandEnvelope_GetPendingRetriesAsync_ReturnsFailedEnvelopesReadyForRetry()
-    {
-        // Arrange
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"command-envelope-repo-{Guid.NewGuid()}")
-            .Options;
+     [Test]
+     public async Task CommandEnvelope_GetPendingRetriesAsync_ReturnsFailedEnvelopesReadyForRetry()
+     {
+         // Arrange
+         var options = new DbContextOptionsBuilder<AppDbContext>()
+             .UseInMemoryDatabase($"command-envelope-repo-{Guid.NewGuid()}")
+             .Options;
 
-        await using var dbContext = new AppDbContext(options);
-        var repository = new CommandEnvelopeRepository(dbContext);
+         await using var dbContext = new AppDbContext(options);
+         var repository = new CommandEnvelopeRepository(dbContext);
 
-        var readyForRetry = new CommandEnvelope
-        {
-            CorrelationId = Guid.NewGuid(),
-            CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
-            PayloadJson = "{}",
-            Status = ActionExecutionStatus.Failed,
-            CreatedAt = DateTimeOffset.UtcNow.AddHours(-2),
-            UpdatedAt = DateTimeOffset.UtcNow,
-            NextAttemptAt = DateTimeOffset.UtcNow.AddMinutes(-5)
-        };
+         var readyForRetry = new CommandEnvelope
+         {
+             Id = Domain.ValueObjects.Id<CommandEnvelope>.New(),
+             CorrelationId = Guid.NewGuid(),
+             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
+             PayloadJson = "{}",
+             Status = ActionExecutionStatus.Failed,
+             CreatedAt = DateTimeOffset.UtcNow.AddHours(-2),
+             UpdatedAt = DateTimeOffset.UtcNow,
+             NextAttemptAt = DateTimeOffset.UtcNow.AddMinutes(-5)
+         };
 
-        var notYetReady = new CommandEnvelope
-        {
-            CorrelationId = Guid.NewGuid(),
-            CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
-            PayloadJson = "{}",
-            Status = ActionExecutionStatus.Failed,
-            CreatedAt = DateTimeOffset.UtcNow.AddHours(-1),
-            UpdatedAt = DateTimeOffset.UtcNow,
-            NextAttemptAt = DateTimeOffset.UtcNow.AddMinutes(30)
-        };
+         var notYetReady = new CommandEnvelope
+         {
+             Id = Domain.ValueObjects.Id<CommandEnvelope>.New(),
+             CorrelationId = Guid.NewGuid(),
+             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
+             PayloadJson = "{}",
+             Status = ActionExecutionStatus.Failed,
+             CreatedAt = DateTimeOffset.UtcNow.AddHours(-1),
+             UpdatedAt = DateTimeOffset.UtcNow,
+             NextAttemptAt = DateTimeOffset.UtcNow.AddMinutes(30)
+         };
 
-        var succeeded = new CommandEnvelope
-        {
-            CorrelationId = Guid.NewGuid(),
-            CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
-            PayloadJson = "{}",
-            Status = ActionExecutionStatus.Completed,
-            CreatedAt = DateTimeOffset.UtcNow.AddHours(-3),
-            UpdatedAt = DateTimeOffset.UtcNow,
-            CompletedAt = DateTimeOffset.UtcNow.AddHours(-2)
-        };
+         var succeeded = new CommandEnvelope
+         {
+             Id = Domain.ValueObjects.Id<CommandEnvelope>.New(),
+             CorrelationId = Guid.NewGuid(),
+             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
+             PayloadJson = "{}",
+             Status = ActionExecutionStatus.Completed,
+             CreatedAt = DateTimeOffset.UtcNow.AddHours(-3),
+             UpdatedAt = DateTimeOffset.UtcNow,
+             CompletedAt = DateTimeOffset.UtcNow.AddHours(-2)
+         };
 
         await repository.AddAsync(readyForRetry);
         await repository.AddAsync(notYetReady);

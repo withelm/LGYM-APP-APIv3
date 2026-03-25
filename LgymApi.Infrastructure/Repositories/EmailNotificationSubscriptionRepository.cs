@@ -18,7 +18,7 @@ public sealed class EmailNotificationSubscriptionRepository : IEmailNotification
         return _dbContext.EmailNotificationSubscriptions
             .AsNoTracking()
             .AnyAsync(
-                x => x.UserId == userId && x.NotificationType == notificationType,
+                x => (Guid)x.UserId == userId && x.NotificationType == notificationType,
                 cancellationToken);
     }
 }

@@ -71,7 +71,7 @@ public sealed class UserSeeder : IEntitySeeder
         var passwordData = _legacyPasswordService.Create(name);
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<User>)Guid.NewGuid(),
             Name = name,
             Email = email,
             IsVisibleInRanking = true,

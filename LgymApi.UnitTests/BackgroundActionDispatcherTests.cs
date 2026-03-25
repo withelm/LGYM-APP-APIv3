@@ -63,7 +63,7 @@ public sealed class BackgroundActionDispatcherTests
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
         Assert.That(envelope.CommandTypeFullName, Is.EqualTo(typeof(TestCommand).FullName));
         Assert.That(envelope.PayloadJson, Does.Contain("test-single"));
-        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo(envelope.Id));
+        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo((Guid)envelope.Id));
     }
 
     [Test]
@@ -188,7 +188,7 @@ public sealed class BackgroundActionDispatcherTests
         Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(1));
         
         var envelope = _repository.Envelopes.First();
-        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo(envelope.Id), "Scheduler must receive persisted envelope ID");
+        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo((Guid)envelope.Id), "Scheduler must receive persisted envelope ID");
     }
 
     private CommandDispatcher CreateDispatcher()
@@ -216,7 +216,7 @@ public sealed class BackgroundActionDispatcherTests
 
         public Task<CommandEnvelope?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(Envelopes.FirstOrDefault(e => e.Id == id));
+            return Task.FromResult(Envelopes.FirstOrDefault(e => (Guid)e.Id == id));
         }
 
         public Task<CommandEnvelope?> FindByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)

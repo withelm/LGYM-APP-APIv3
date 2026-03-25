@@ -132,7 +132,7 @@ public static class ExecuteUpdateExtensions
         CancellationToken cancellationToken)
         where TSource : class
     {
-        if (typeof(EntityBase).IsAssignableFrom(typeof(TSource))
+        if (IsEntityBase(typeof(TSource))
             && !IsUpdatedAtProperty(propertySelector))
         {
             var utcNow = DateTimeOffset.UtcNow;
@@ -149,15 +149,29 @@ public static class ExecuteUpdateExtensions
             cancellationToken);
     }
 
+    private static bool IsEntityBase(Type type)
+    {
+        var baseType = type.BaseType;
+        while (baseType != null)
+        {
+            if (baseType.IsGenericType && baseType.GetGenericTypeDefinition().Name.StartsWith("EntityBase"))
+            {
+                return true;
+            }
+            baseType = baseType.BaseType;
+        }
+        return false;
+    }
+
     private static bool IsUpdatedAtProperty<TSource, TProperty>(Expression<Func<TSource, TProperty>> propertySelector)
     {
-        return GetPropertyInfo(propertySelector).Name == nameof(EntityBase.UpdatedAt);
+        return GetPropertyInfo(propertySelector).Name == "UpdatedAt";
     }
 
     private static Expression<Func<TSource, DateTimeOffset>> BuildUpdatedAtSelector<TSource>()
     {
         var entityParameter = Expression.Parameter(typeof(TSource), "entity");
-        var updatedAtProperty = Expression.Property(entityParameter, nameof(EntityBase.UpdatedAt));
+        var updatedAtProperty = Expression.Property(entityParameter, "UpdatedAt");
         return Expression.Lambda<Func<TSource, DateTimeOffset>>(updatedAtProperty, entityParameter);
     }
 }

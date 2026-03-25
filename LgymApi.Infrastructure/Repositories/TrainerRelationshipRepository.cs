@@ -2,6 +2,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,13 +25,15 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
     public Task<TrainerInvitation?> FindInvitationByIdAsync(Guid invitationId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerInvitations
-            .FirstOrDefaultAsync(i => i.Id == invitationId, cancellationToken);
+            .FirstOrDefaultAsync(i => (Guid)i.Id == invitationId, cancellationToken);
     }
 
     public Task<TrainerInvitation?> FindPendingInvitationAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerInvitations
-            .Where(i => i.TrainerId == trainerId && i.TraineeId == traineeId && i.Status == TrainerInvitationStatus.Pending)
+            .Where(i => i.TrainerId == (Id<User>)trainerId
+                && i.TraineeId == (Id<User>)traineeId
+                && i.Status == TrainerInvitationStatus.Pending)
             .OrderByDescending(i => i.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -38,26 +41,28 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
     public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerInvitations
-            .Where(i => i.TrainerId == trainerId)
+            .Where(i => i.TrainerId == (Id<User>)trainerId)
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
     }
 
     public Task<bool> HasActiveLinkForTraineeAsync(Guid traineeId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.TrainerTraineeLinks.AnyAsync(l => l.TraineeId == traineeId, cancellationToken);
+        return _dbContext.TrainerTraineeLinks.AnyAsync(l => l.TraineeId == (Id<User>)traineeId, cancellationToken);
     }
 
     public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerTraineeLinks
-            .FirstOrDefaultAsync(l => l.TrainerId == trainerId && l.TraineeId == traineeId, cancellationToken);
+            .FirstOrDefaultAsync(
+                l => l.TrainerId == (Id<User>)trainerId && l.TraineeId == (Id<User>)traineeId,
+                cancellationToken);
     }
 
     public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerTraineeLinks
-            .FirstOrDefaultAsync(l => l.TraineeId == traineeId, cancellationToken);
+            .FirstOrDefaultAsync(l => l.TraineeId == (Id<User>)traineeId, cancellationToken);
     }
 
     public async Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Guid trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
@@ -127,11 +132,11 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
 
         var trainerLinks = _dbContext.TrainerTraineeLinks
             .AsNoTracking()
-            .Where(x => x.TrainerId == trainerId);
+            .Where(x => x.TrainerId == (Id<User>)trainerId);
 
         var trainerInvitations = _dbContext.TrainerInvitations
             .AsNoTracking()
-            .Where(x => x.TrainerId == trainerId);
+            .Where(x => x.TrainerId == (Id<User>)trainerId);
 
         var ownedTraineeIds = trainerLinks
             .Select(x => x.TraineeId)
@@ -143,7 +148,7 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
             where !user.IsDeleted && ownedTraineeIds.Contains(user.Id)
             select new DashboardTraineeProjection
             {
-                Id = user.Id,
+                Id = (Guid)user.Id,
                 Name = user.Name,
                 Email = user.Email,
                 Avatar = user.Avatar,

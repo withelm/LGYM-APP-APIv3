@@ -69,6 +69,7 @@ public sealed class EntitySeedCoverageGuardTests
         return root
             .DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
+            .Where(type => !type.Modifiers.Any(modifier => modifier.Kind() == SyntaxKind.AbstractKeyword))
             .Where(type => type.BaseList != null
                            && type.BaseList.Types.Any(baseType => baseType.ToString().Contains("EntityBase", StringComparison.Ordinal)))
             .Select(type => type.Identifier.ValueText);

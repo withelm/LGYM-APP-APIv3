@@ -23,7 +23,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
     {
         return _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => r.UserId == userId)
+            .Where(r => (Guid)r.UserId == userId)
             .ToListAsync(cancellationToken);
     }
 
@@ -31,7 +31,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
     {
         return _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => r.UserId == userId && r.ExerciseId == exerciseId)
+            .Where(r => (Guid)r.UserId == userId && (Guid)r.ExerciseId == exerciseId)
             .ToListAsync(cancellationToken);
     }
 
@@ -44,7 +44,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
 
         return _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => r.UserId == userId && exerciseIds.Contains(r.ExerciseId))
+            .Where(r => (Guid)r.UserId == userId && exerciseIds.Contains((Guid)r.ExerciseId))
             .ToListAsync(cancellationToken);
     }
 
@@ -52,11 +52,11 @@ public sealed class MainRecordRepository : IMainRecordRepository
     {
         var query = _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => r.UserId == userId);
+            .Where(r => (Guid)r.UserId == userId);
 
         if (exerciseIds is { Count: > 0 })
         {
-            query = query.Where(r => exerciseIds.Contains(r.ExerciseId));
+            query = query.Where(r => exerciseIds.Contains((Guid)r.ExerciseId));
         }
 
         return query
@@ -70,7 +70,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
 
     public Task<MainRecord?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.MainRecords.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+        return _dbContext.MainRecords.FirstOrDefaultAsync(r => (Guid)r.Id == id, cancellationToken);
     }
 
     public Task DeleteAsync(MainRecord record, CancellationToken cancellationToken = default)
@@ -90,7 +90,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
     {
         return _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => r.UserId == userId && r.ExerciseId == exerciseId)
+            .Where(r => (Guid)r.UserId == userId && (Guid)r.ExerciseId == exerciseId)
             .OrderByDescending(r => r.Date)
             .FirstOrDefaultAsync(cancellationToken);
     }

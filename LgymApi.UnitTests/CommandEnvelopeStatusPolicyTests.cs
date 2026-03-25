@@ -21,7 +21,7 @@ public class CommandEnvelopeStatusPolicyTests
         // Fresh envelope for each test, Pending status
         _envelope = new CommandEnvelope
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
             CorrelationId = Guid.NewGuid(),
             PayloadJson = "{\"test\": true}",
             CommandTypeFullName = "TestNamespace.TestCommand",

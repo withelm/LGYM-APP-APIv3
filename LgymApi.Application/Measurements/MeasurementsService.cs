@@ -2,6 +2,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Measurements.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 using MeasurementEntity = LgymApi.Domain.Entities.Measurement;
@@ -39,7 +40,7 @@ public sealed class MeasurementsService : IMeasurementsService
 
         var measurement = new MeasurementEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<MeasurementEntity>.New(),
             UserId = currentUser.Id,
             BodyPart = bodyPart,
             Unit = unit.ToString(),
@@ -105,7 +106,7 @@ public sealed class MeasurementsService : IMeasurementsService
             throw AppException.BadRequest(Messages.UnitRequired);
         }
 
-        var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart, cancellationToken);
+        var measurements = await _measurementRepository.GetByUserAsync((Guid)currentUser.Id, bodyPart, cancellationToken);
         if (measurements.Count < 1)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -158,7 +159,7 @@ public sealed class MeasurementsService : IMeasurementsService
             throw AppException.BadRequest(Messages.UnitRequired);
         }
 
-        var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart, cancellationToken);
+        var measurements = await _measurementRepository.GetByUserAsync((Guid)currentUser.Id, bodyPart, cancellationToken);
         if (measurements.Count < 1)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -194,7 +195,7 @@ public sealed class MeasurementsService : IMeasurementsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (currentUser.Id != routeUserId)
+        if ((Guid)currentUser.Id != routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }

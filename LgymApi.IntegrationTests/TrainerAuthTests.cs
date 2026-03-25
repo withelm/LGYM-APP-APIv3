@@ -75,7 +75,7 @@ public sealed class TrainerAuthTests : IntegrationTestBase
     public async Task TrainerCheckToken_WithRegularUserToken_ReturnsForbidden()
     {
         var user = await SeedUserAsync(name: "regular-user", email: "regular-user@example.com", password: "password123");
-        SetAuthorizationHeader(user.Id);
+        SetAuthorizationHeader((Guid)user.Id);
 
         var response = await Client.GetAsync("/api/trainer/checkToken");
 

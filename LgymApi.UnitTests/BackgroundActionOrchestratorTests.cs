@@ -254,7 +254,7 @@ public sealed class BackgroundActionOrchestratorTests
         var envelopeId = Guid.NewGuid();
         var envelope = new CommandEnvelope
         {
-            Id = envelopeId,
+            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
             CorrelationId = Guid.NewGuid(),
             PayloadJson = "{}",
             CommandTypeFullName = "NonExistent.FakeCommand",
@@ -282,7 +282,7 @@ public sealed class BackgroundActionOrchestratorTests
         var envelopeId = Guid.NewGuid();
         var envelope = new CommandEnvelope
         {
-            Id = envelopeId,
+            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
             CorrelationId = Guid.NewGuid(),
             PayloadJson = "{invalid json",
             CommandTypeFullName = typeof(TestCommand).AssemblyQualifiedName!,
@@ -564,7 +564,7 @@ public sealed class BackgroundActionOrchestratorTests
     {
         return new CommandEnvelope
         {
-            Id = envelopeId,
+            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
             CorrelationId = Guid.NewGuid(),
             PayloadJson = JsonSerializer.Serialize(command, SharedSerializationOptions.Current),
             CommandTypeFullName = typeof(TCommand).AssemblyQualifiedName!,
@@ -695,12 +695,12 @@ public sealed class BackgroundActionOrchestratorTests
 
         public void AddEnvelope(CommandEnvelope envelope)
         {
-            _envelopes[envelope.Id] = envelope;
+            _envelopes[(Guid)envelope.Id] = envelope;
         }
 
         public Task AddAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
         {
-            _envelopes[envelope.Id] = envelope;
+            _envelopes[(Guid)envelope.Id] = envelope;
             return Task.CompletedTask;
         }
 
@@ -736,7 +736,7 @@ public sealed class BackgroundActionOrchestratorTests
                 return Task.FromResult(existing);
             }
             
-            _envelopes[envelope.Id] = envelope;
+            _envelopes[(Guid)envelope.Id] = envelope;
             return Task.FromResult(envelope);
         }
     }

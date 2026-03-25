@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -15,12 +16,12 @@ public sealed class PlanDayRepository : IPlanDayRepository
         _dbContext = dbContext;
     }
 
-    public Task<PlanDay?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<PlanDay?> FindByIdAsync(Id<PlanDay> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDays.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
-    public Task<List<PlanDay>> GetByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
+    public Task<List<PlanDay>> GetByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDays.AsNoTracking().Where(p => p.PlanId == planId && !p.IsDeleted).ToListAsync(cancellationToken);
     }
@@ -36,21 +37,21 @@ public sealed class PlanDayRepository : IPlanDayRepository
         return Task.CompletedTask;
     }
 
-    public async Task MarkDeletedAsync(Guid planDayId, CancellationToken cancellationToken = default)
+    public async Task MarkDeletedAsync(Id<PlanDay> planDayId, CancellationToken cancellationToken = default)
     {
         await _dbContext.PlanDays
             .Where(p => p.Id == planDayId)
             .StageUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
     }
 
-    public async Task MarkDeletedByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
+    public async Task MarkDeletedByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default)
     {
         await _dbContext.PlanDays
             .Where(p => p.PlanId == planId)
             .StageUpdateAsync(_dbContext, p => p.IsDeleted, p => true, cancellationToken);
     }
 
-    public Task<bool> AnyByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
+    public Task<bool> AnyByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDays.AnyAsync(p => p.PlanId == planId && !p.IsDeleted, cancellationToken);
     }

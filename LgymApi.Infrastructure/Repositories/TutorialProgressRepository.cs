@@ -20,21 +20,21 @@ public sealed class TutorialProgressRepository : ITutorialProgressRepository
         return _dbContext.UserTutorialProgresses
             .AsTracking()
             .Include(p => p.CompletedSteps)
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.TutorialType == tutorialType, cancellationToken);
+            .FirstOrDefaultAsync(p => (Guid)p.UserId == userId && p.TutorialType == tutorialType, cancellationToken);
     }
 
     public Task<List<UserTutorialProgress>> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserTutorialProgresses
             .Include(p => p.CompletedSteps)
-            .Where(p => p.UserId == userId && !p.IsCompleted)
+            .Where(p => (Guid)p.UserId == userId && !p.IsCompleted)
             .ToListAsync(cancellationToken);
     }
 
     public async Task<bool> HasActiveTutorialsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.UserTutorialProgresses
-            .AnyAsync(p => p.UserId == userId && !p.IsCompleted, cancellationToken);
+            .AnyAsync(p => (Guid)p.UserId == userId && !p.IsCompleted, cancellationToken);
     }
 
     public Task AddAsync(UserTutorialProgress progress, CancellationToken cancellationToken = default)

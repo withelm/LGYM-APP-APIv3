@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,7 +26,7 @@ public sealed class RoleRepository : IRoleRepository
 
     public Task<Role?> FindByIdAsync(Guid roleId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+        return _dbContext.Roles.FirstOrDefaultAsync(r => (Guid)r.Id == roleId, cancellationToken);
     }
 
     public Task<Role?> FindByNameAsync(string roleName, CancellationToken cancellationToken = default)
@@ -43,13 +44,13 @@ public sealed class RoleRepository : IRoleRepository
         {
             return query.AnyAsync(r =>
                 EF.Functions.ILike(r.Name, normalizedName) &&
-                (!excludeRoleId.HasValue || r.Id != excludeRoleId.Value),
+                (!excludeRoleId.HasValue || (Guid)r.Id != excludeRoleId.Value),
             cancellationToken);
         }
 
         return query.AnyAsync(r =>
                 string.Equals(r.Name, normalizedName, StringComparison.OrdinalIgnoreCase) &&
-                (!excludeRoleId.HasValue || r.Id != excludeRoleId.Value),
+                (!excludeRoleId.HasValue || (Guid)r.Id != excludeRoleId.Value),
             cancellationToken);
     }
 
@@ -76,7 +77,7 @@ public sealed class RoleRepository : IRoleRepository
     {
         return _dbContext.UserRoles
             .AsNoTracking()
-            .Where(ur => ur.UserId == userId)
+            .Where(ur => ur.UserId == (Id<User>)userId)
             .Select(ur => ur.Role.Name)
             .Distinct()
             .OrderBy(name => name)
@@ -87,7 +88,7 @@ public sealed class RoleRepository : IRoleRepository
     {
         return _dbContext.UserRoles
             .AsNoTracking()
-            .Where(ur => ur.UserId == userId)
+            .Where(ur => ur.UserId == (Id<User>)userId)
             .SelectMany(ur => ur.Role.RoleClaims)
             .Where(rc => rc.ClaimType == AuthConstants.PermissionClaimType)
             .Select(rc => rc.ClaimValue)
@@ -100,7 +101,7 @@ public sealed class RoleRepository : IRoleRepository
     {
         return _dbContext.RoleClaims
             .AsNoTracking()
-            .Where(rc => rc.RoleId == roleId && rc.ClaimType == AuthConstants.PermissionClaimType)
+            .Where(rc => rc.RoleId == (Id<Role>)roleId && rc.ClaimType == AuthConstants.PermissionClaimType)
             .Select(rc => rc.ClaimValue)
             .Distinct()
             .OrderBy(value => value)
@@ -116,8 +117,8 @@ public sealed class RoleRepository : IRoleRepository
 
         var items = await _dbContext.RoleClaims
             .AsNoTracking()
-            .Where(rc => roleIds.Contains(rc.RoleId) && rc.ClaimType == AuthConstants.PermissionClaimType)
-            .Select(rc => new { rc.RoleId, rc.ClaimValue })
+            .Where(rc => roleIds.Contains((Guid)rc.RoleId) && rc.ClaimType == AuthConstants.PermissionClaimType)
+            .Select(rc => new { RoleId = (Guid)rc.RoleId, rc.ClaimValue })
             .ToListAsync(cancellationToken);
 
         return items
@@ -134,14 +135,14 @@ public sealed class RoleRepository : IRoleRepository
     {
         return _dbContext.UserRoles
             .AsNoTracking()
-            .AnyAsync(ur => ur.UserId == userId && ur.Role.Name == roleName, cancellationToken);
+            .AnyAsync(ur => ur.UserId == (Id<User>)userId && ur.Role.Name == roleName, cancellationToken);
     }
 
     public Task<bool> UserHasPermissionAsync(Guid userId, string permission, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserRoles
             .AsNoTracking()
-            .Where(ur => ur.UserId == userId)
+            .Where(ur => ur.UserId == (Id<User>)userId)
             .SelectMany(ur => ur.Role.RoleClaims)
             .AnyAsync(rc => rc.ClaimType == AuthConstants.PermissionClaimType && rc.ClaimValue == permission, cancellationToken);
     }
@@ -166,7 +167,7 @@ public sealed class RoleRepository : IRoleRepository
     public async Task ReplaceRolePermissionClaimsAsync(Guid roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
     {
         var existingClaims = await _dbContext.RoleClaims
-            .Where(rc => rc.RoleId == roleId && rc.ClaimType == AuthConstants.PermissionClaimType)
+            .Where(rc => rc.RoleId == (Id<Role>)roleId && rc.ClaimType == AuthConstants.PermissionClaimType)
             .ToListAsync(cancellationToken);
 
         if (existingClaims.Count > 0)
@@ -181,8 +182,8 @@ public sealed class RoleRepository : IRoleRepository
             .OrderBy(pc => pc, StringComparer.Ordinal)
             .Select(pc => new RoleClaim
             {
-                Id = Guid.NewGuid(),
-                RoleId = roleId,
+                Id = Id<RoleClaim>.New(),
+                RoleId = (Id<Role>)roleId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = pc
             })
@@ -203,13 +204,13 @@ public sealed class RoleRepository : IRoleRepository
         }
 
         var existingRoleIds = await _dbContext.UserRoles
-            .Where(ur => ur.UserId == userId)
+            .Where(ur => ur.UserId == (Id<User>)userId)
             .Select(ur => ur.RoleId)
             .ToListAsync(cancellationToken);
 
         var missing = roleIds
-            .Where(roleId => !existingRoleIds.Contains(roleId))
-            .Select(roleId => new UserRole { UserId = userId, RoleId = roleId })
+            .Where(roleId => !existingRoleIds.Contains((Id<Role>)roleId))
+            .Select(roleId => new UserRole { UserId = (Id<User>)userId, RoleId = (Id<Role>)roleId })
             .ToList();
 
         if (missing.Count == 0)
@@ -223,7 +224,7 @@ public sealed class RoleRepository : IRoleRepository
     public async Task ReplaceUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
     {
         var existing = await _dbContext.UserRoles
-            .Where(ur => ur.UserId == userId)
+            .Where(ur => ur.UserId == (Id<User>)userId)
             .ToListAsync(cancellationToken);
 
         if (existing.Count > 0)
@@ -235,8 +236,8 @@ public sealed class RoleRepository : IRoleRepository
         {
             var items = roleIds.Distinct().Select(roleId => new UserRole
             {
-                UserId = userId,
-                RoleId = roleId
+                UserId = (Id<User>)userId,
+                RoleId = (Id<Role>)roleId
             });
             await _dbContext.UserRoles.AddRangeAsync(items, cancellationToken);
         }

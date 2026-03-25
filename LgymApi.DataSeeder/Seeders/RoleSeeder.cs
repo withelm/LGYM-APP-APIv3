@@ -27,25 +27,25 @@ public sealed class RoleSeeder : IEntitySeeder
         {
             new()
             {
-                Id = AppDbContext.UserRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.UserRoleSeedId,
                 Name = AuthConstants.Roles.User,
                 Description = "Default role for all users"
             },
             new()
             {
-                Id = AppDbContext.AdminRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.AdminRoleSeedId,
                 Name = AuthConstants.Roles.Admin,
                 Description = "Administrative privileges"
             },
             new()
             {
-                Id = AppDbContext.TesterRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.TesterRoleSeedId,
                 Name = AuthConstants.Roles.Tester,
                 Description = "Excluded from ranking"
             },
             new()
             {
-                Id = AppDbContext.TrainerRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.TrainerRoleSeedId,
                 Name = AuthConstants.Roles.Trainer,
                 Description = "Trainer role for coach-facing APIs"
             }

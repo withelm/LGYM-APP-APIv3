@@ -20,20 +20,20 @@ public sealed class ExerciseRepositoryTests
         var exerciseId = Guid.NewGuid();
         dbContext.Exercises.Add(new Exercise
         {
-            Id = exerciseId,
+            Id = (LgymApi.Domain.ValueObjects.Id<Exercise>)exerciseId,
             Name = "Bench press"
         });
         dbContext.ExerciseTranslations.Add(new ExerciseTranslation
         {
-            Id = Guid.NewGuid(),
-            ExerciseId = exerciseId,
+            Id = (LgymApi.Domain.ValueObjects.Id<ExerciseTranslation>)Guid.NewGuid(),
+            ExerciseId = (LgymApi.Domain.ValueObjects.Id<Exercise>)exerciseId,
             Culture = "en",
             Name = "Bench press"
         });
         await dbContext.SaveChangesAsync();
 
         var repository = new ExerciseRepository(dbContext);
-        var result = await repository.GetTranslationsAsync([exerciseId], ["   ", ""], CancellationToken.None);
+        var result = await repository.GetTranslationsAsync([(LgymApi.Domain.ValueObjects.Id<Exercise>)exerciseId], ["   ", ""], CancellationToken.None);
 
         Assert.That(result, Is.Empty);
     }

@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,7 @@ public sealed class TrainingRepository : ITrainingRepository
         return _dbContext.Trainings.AddAsync(training, cancellationToken).AsTask();
     }
 
-    public Task<Training?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<Training?> GetByIdAsync(Id<Training> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.Trainings
             .AsNoTracking()
@@ -27,7 +28,7 @@ public sealed class TrainingRepository : ITrainingRepository
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
     }
 
-    public Task<Training?> GetLastByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<Training?> GetLastByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Trainings
             .AsNoTracking()
@@ -36,7 +37,7 @@ public sealed class TrainingRepository : ITrainingRepository
             .FirstOrDefaultAsync(t => t.UserId == userId, cancellationToken);
     }
 
-    public Task<List<Training>> GetByUserIdAndDateAsync(Guid userId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
+    public Task<List<Training>> GetByUserIdAndDateAsync(Id<User> userId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
     {
         return _dbContext.Trainings
             .AsNoTracking()
@@ -46,7 +47,7 @@ public sealed class TrainingRepository : ITrainingRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<DateTimeOffset>> GetDatesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<DateTimeOffset>> GetDatesByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Trainings
             .AsNoTracking()
@@ -56,7 +57,7 @@ public sealed class TrainingRepository : ITrainingRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<Training>> GetByGymIdsAsync(List<Guid> gymIds, CancellationToken cancellationToken = default)
+    public Task<List<Training>> GetByGymIdsAsync(List<Id<Gym>> gymIds, CancellationToken cancellationToken = default)
     {
         return _dbContext.Trainings
             .AsNoTracking()
@@ -65,7 +66,7 @@ public sealed class TrainingRepository : ITrainingRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<Training>> GetByPlanDayIdsAsync(List<Guid> planDayIds, CancellationToken cancellationToken = default)
+    public Task<List<Training>> GetByPlanDayIdsAsync(List<Id<PlanDay>> planDayIds, CancellationToken cancellationToken = default)
     {
         return _dbContext.Trainings
             .AsNoTracking()

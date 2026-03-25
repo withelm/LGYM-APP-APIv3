@@ -2,6 +2,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -189,24 +190,24 @@ public sealed class IdempotencyKeyPolicyTests
         Assert.That(all.Count, Is.EqualTo(1));
     }
 
-    [Test]
-    public async Task Persistence_MultipleEnvelopesWithDifferentCorrelationIds()
-    {
-        var cid1 = Guid.NewGuid();
-        var cid2 = Guid.NewGuid();
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: $"T5_{Guid.NewGuid()}")
-            .Options;
+     [Test]
+     public async Task Persistence_MultipleEnvelopesWithDifferentCorrelationIds()
+     {
+         var cid1 = Guid.NewGuid();
+         var cid2 = Guid.NewGuid();
+         var opts = new DbContextOptionsBuilder<AppDbContext>()
+             .UseInMemoryDatabase(databaseName: $"T5_{Guid.NewGuid()}")
+             .Options;
 
-        using var ctx = new AppDbContext(opts);
-        await ctx.Database.EnsureCreatedAsync();
-        var r = new CommandEnvelopeRepository(ctx);
-        var e1 = new CommandEnvelope { CorrelationId = cid1, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
-        var e2 = new CommandEnvelope { CorrelationId = cid2, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
-        await r.AddAsync(e1);
-        await r.AddAsync(e2);
-        await ctx.SaveChangesAsync();
-        var all = await ctx.CommandEnvelopes.ToListAsync();
-        Assert.That(all.Count, Is.EqualTo(2));
-    }
+         using var ctx = new AppDbContext(opts);
+         await ctx.Database.EnsureCreatedAsync();
+         var r = new CommandEnvelopeRepository(ctx);
+         var e1 = new CommandEnvelope { Id = Id<CommandEnvelope>.New(), CorrelationId = cid1, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
+         var e2 = new CommandEnvelope { Id = Id<CommandEnvelope>.New(), CorrelationId = cid2, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
+         await r.AddAsync(e1);
+         await r.AddAsync(e2);
+         await ctx.SaveChangesAsync();
+         var all = await ctx.CommandEnvelopes.ToListAsync();
+         Assert.That(all.Count, Is.EqualTo(2));
+     }
 }

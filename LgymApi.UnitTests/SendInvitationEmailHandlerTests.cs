@@ -33,37 +33,37 @@ public sealed class SendInvitationEmailHandlerTests
         _handler = new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
     }
 
-    [Test]
-    public async Task ExecuteAsync_WithValidCommand_SchedulesInvitationEmail()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-        var expiresAt = DateTimeOffset.UtcNow.AddDays(7);
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        [Test]
+        public async Task ExecuteAsync_WithValidCommand_SchedulesInvitationEmail()
         {
-            Id = invitationId,
-            Code = "ABC123XYZ",
-            ExpiresAt = expiresAt,
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
+            var expiresAt = DateTimeOffset.UtcNow.AddDays(7);
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "ABC123XYZ",
+                ExpiresAt = expiresAt,
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
+
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
             Email = "trainee@example.com",
             PreferredLanguage = "en-US"
         };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach Smith",
-            PreferredLanguage = "en-US"
-        };
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach Smith",
+                PreferredLanguage = "en-US"
+            };
 
         var command = new InvitationCreatedCommand
         {
@@ -86,34 +86,34 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithEmptyEmail_SkipsSchedulingGracefully()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_WithEmptyEmail_SkipsSchedulingGracefully()
         {
-            Id = invitationId,
-            Code = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = string.Empty,
-            PreferredLanguage = "en-US"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "TEST123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach"
-        };
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = string.Empty,
+                PreferredLanguage = "en-US"
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach"
+            };
 
         var command = new InvitationCreatedCommand
         {
@@ -130,34 +130,34 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithWhitespaceEmail_SkipsSchedulingGracefully()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_WithWhitespaceEmail_SkipsSchedulingGracefully()
         {
-            Id = invitationId,
-            Code = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = "   ",
-            PreferredLanguage = "en-US"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "TEST123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach"
-        };
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = "   ",
+                PreferredLanguage = "en-US"
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach"
+            };
 
         var command = new InvitationCreatedCommand
         {
@@ -173,37 +173,37 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_MapsAllFieldsToPayload()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-        var expiresAt = DateTimeOffset.UtcNow.AddDays(14);
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_MapsAllFieldsToPayload()
         {
-            Id = invitationId,
-            Code = "INVITE2024",
-            ExpiresAt = expiresAt,
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
+            var expiresAt = DateTimeOffset.UtcNow.AddDays(14);
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = "carlos@example.es",
-            PreferredLanguage = "es-ES",
-            PreferredTimeZone = "Europe/Madrid"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "INVITE2024",
+                ExpiresAt = expiresAt,
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Maria Rodriguez",
-            PreferredLanguage = "es-ES"
-        };
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = "carlos@example.es",
+                PreferredLanguage = "es-ES",
+                PreferredTimeZone = "Europe/Madrid"
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Maria Rodriguez",
+                PreferredLanguage = "es-ES"
+            };
 
         var command = new InvitationCreatedCommand
         {
@@ -225,34 +225,34 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithCancellationToken_PassesTokenToScheduler()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_WithCancellationToken_PassesTokenToScheduler()
         {
-            Id = invitationId,
-            Code = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = "test@example.com",
-            PreferredLanguage = "en-US"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "TEST123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach"
-        };
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = "test@example.com",
+                PreferredLanguage = "en-US"
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach"
+            };
 
         var command = new InvitationCreatedCommand
         {
@@ -269,34 +269,34 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_LogsInformationOnSuccess()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_LogsInformationOnSuccess()
         {
-            Id = invitationId,
-            Code = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = "test@example.com",
-            PreferredLanguage = "en-US"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "TEST123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach"
-        };
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = "test@example.com",
+                PreferredLanguage = "en-US"
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach"
+            };
 
         var command = new InvitationCreatedCommand
         {
@@ -348,36 +348,36 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithDifferentCulture_PreservesCultureName()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_WithDifferentCulture_PreservesCultureName()
         {
-            Id = invitationId,
-            Code = "FR123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = "trainee@example.fr",
-            PreferredLanguage = "fr-FR",
-            PreferredTimeZone = "Europe/Paris"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "FR123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach Pierre",
-            PreferredLanguage = "fr-FR"
-        };
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = "trainee@example.fr",
+                PreferredLanguage = "fr-FR",
+                PreferredTimeZone = "Europe/Paris"
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach Pierre",
+                PreferredLanguage = "fr-FR"
+            };
 
         var command = new InvitationCreatedCommand
         {
@@ -394,34 +394,34 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_UsesConfiguredDefaults_WhenLanguageAndTimeZoneWhitespace()
-    {
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_UsesConfiguredDefaults_WhenLanguageAndTimeZoneWhitespace()
         {
-            Id = invitationId,
-            Code = "CFG123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = "trainee@example.com",
-            PreferredTimeZone = "   "
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "CFG123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach",
-            PreferredLanguage = "   "
-        };
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = "trainee@example.com",
+                PreferredTimeZone = "   "
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach",
+                PreferredLanguage = "   "
+            };
 
         var handler = new SendInvitationEmailHandler(
             _testInvitationRepository,
@@ -439,35 +439,35 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithShortExpirationPeriod_PreservesExpiresAt()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-        var expiresAt = DateTimeOffset.UtcNow.AddHours(24);
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_WithShortExpirationPeriod_PreservesExpiresAt()
         {
-            Id = invitationId,
-            Code = "URGENT",
-            ExpiresAt = expiresAt,
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
+            var expiresAt = DateTimeOffset.UtcNow.AddHours(24);
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = "trainee@example.com",
-            PreferredLanguage = "en-US"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "URGENT",
+                ExpiresAt = expiresAt,
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach"
-        };
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = "trainee@example.com",
+                PreferredLanguage = "en-US"
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach"
+            };
 
         var command = new InvitationCreatedCommand
         {
@@ -503,27 +503,27 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithTraineeNotFound_SkipsSchedulingGracefully()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_WithTraineeNotFound_SkipsSchedulingGracefully()
         {
-            Id = invitationId,
-            Code = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "TEST123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach"
+            };
 
         // traineeId not added to repository
 
@@ -542,27 +542,27 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithTrainerNotFound_SkipsSchedulingGracefully()
-    {
-        // Arrange
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_WithTrainerNotFound_SkipsSchedulingGracefully()
         {
-            Id = invitationId,
-            Code = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = "trainee@example.com"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "TEST123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
+
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = "trainee@example.com"
+            };
 
         // trainerId not added to repository
 
@@ -581,35 +581,35 @@ public sealed class SendInvitationEmailHandlerTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithFeatureDisabled_SkipsEmailScheduling()
-    {
-        // Arrange
-        _testEmailNotificationsFeature.Enabled = false;
-        var invitationId = Guid.NewGuid();
-        var trainerId = Guid.NewGuid();
-        var traineeId = Guid.NewGuid();
-
-        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        public async Task ExecuteAsync_WithFeatureDisabled_SkipsEmailScheduling()
         {
-            Id = invitationId,
-            Code = "TEST123",
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+            // Arrange
+            _testEmailNotificationsFeature.Enabled = false;
+            var invitationId = Guid.NewGuid();
+            var trainerId = Guid.NewGuid();
+            var traineeId = Guid.NewGuid();
 
-        _testUserRepository.UsersById[traineeId] = new User
-        {
-            Id = traineeId,
-            Email = "trainee@example.com",
-            PreferredLanguage = "en-US"
-        };
+            _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+            {
+                Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                Code = "TEST123",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+            };
 
-        _testUserRepository.UsersById[trainerId] = new User
-        {
-            Id = trainerId,
-            Name = "Coach"
-        };
+            _testUserRepository.UsersById[traineeId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)traineeId,
+                Email = "trainee@example.com",
+                PreferredLanguage = "en-US"
+            };
+
+            _testUserRepository.UsersById[trainerId] = new User
+            {
+                Id = (Domain.ValueObjects.Id<User>)trainerId,
+                Name = "Coach"
+            };
 
         var command = new InvitationCreatedCommand
         {

@@ -4,6 +4,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
@@ -37,7 +38,7 @@ public sealed class ReportingService : IReportingService
 
         var template = new ReportTemplate
         {
-            Id = Guid.NewGuid(),
+            Id = Id<ReportTemplate>.New(),
             TrainerId = currentTrainer.Id,
             Name = command.Name.Trim(),
             Description = string.IsNullOrWhiteSpace(command.Description) ? null : command.Description.Trim(),
@@ -47,7 +48,7 @@ public sealed class ReportingService : IReportingService
                 .ThenBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(x => new ReportTemplateField
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Id<ReportTemplateField>.New(),
                     Key = x.Key.Trim(),
                     Label = x.Label.Trim(),
                     Type = x.Type,
@@ -66,7 +67,7 @@ public sealed class ReportingService : IReportingService
     public async Task<List<ReportTemplateResult>> GetTrainerTemplatesAsync(UserEntity currentTrainer, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
-        var templates = await _reportingRepository.GetTemplatesByTrainerIdAsync(currentTrainer.Id, cancellationToken);
+        var templates = await _reportingRepository.GetTemplatesByTrainerIdAsync((Guid)currentTrainer.Id, cancellationToken);
         return templates.Select(MapTemplate).ToList();
     }
 
@@ -91,10 +92,10 @@ public sealed class ReportingService : IReportingService
                      .OrderBy(x => x.Order)
                      .ThenBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
         {
-            template.Fields.Add(new ReportTemplateField
-            {
-                Id = Guid.NewGuid(),
-                TemplateId = template.Id,
+                template.Fields.Add(new ReportTemplateField
+                {
+                    Id = Id<ReportTemplateField>.New(),
+                    TemplateId = template.Id,
                 Key = field.Key.Trim(),
                 Label = field.Label.Trim(),
                 Type = field.Type,
@@ -126,9 +127,9 @@ public sealed class ReportingService : IReportingService
         var template = await EnsureOwnedTemplateAsync(currentTrainer, command.TemplateId, cancellationToken);
         var request = new ReportRequest
         {
-            Id = Guid.NewGuid(),
+            Id = Id<ReportRequest>.New(),
             TrainerId = currentTrainer.Id,
-            TraineeId = traineeId,
+            TraineeId = (Id<UserEntity>)traineeId,
             TemplateId = template.Id,
             Status = ReportRequestStatus.Pending,
             DueAt = command.DueAt,
@@ -144,7 +145,7 @@ public sealed class ReportingService : IReportingService
 
     public async Task<List<ReportRequestResult>> GetPendingRequestsForTraineeAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
     {
-        var requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
+        var requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync((Guid)currentTrainee.Id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
         var hasUpdates = false;
 
@@ -160,7 +161,7 @@ public sealed class ReportingService : IReportingService
         if (hasUpdates)
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
+            requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync((Guid)currentTrainee.Id, cancellationToken);
         }
 
         return requests.Select(MapRequest).ToList();
@@ -196,7 +197,7 @@ public sealed class ReportingService : IReportingService
 
         var submission = new ReportSubmission
         {
-            Id = Guid.NewGuid(),
+            Id = Id<ReportSubmission>.New(),
             ReportRequestId = request.Id,
             TraineeId = currentTrainee.Id,
             PayloadJson = JsonSerializer.Serialize(normalizedAnswers)
@@ -222,7 +223,7 @@ public sealed class ReportingService : IReportingService
     public async Task<List<ReportSubmissionResult>> GetTraineeSubmissionsAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
-        var submissions = await _reportingRepository.GetSubmissionsByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
+        var submissions = await _reportingRepository.GetSubmissionsByTrainerAndTraineeAsync((Guid)currentTrainer.Id, traineeId, cancellationToken);
         return submissions.Select(MapSubmission).ToList();
     }
 
@@ -325,7 +326,7 @@ public sealed class ReportingService : IReportingService
 
     private async Task EnsureTrainerAsync(UserEntity currentTrainer, CancellationToken cancellationToken)
     {
-        var isTrainer = await _roleRepository.UserHasRoleAsync(currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
+        var isTrainer = await _roleRepository.UserHasRoleAsync((Guid)currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
         if (!isTrainer)
         {
             throw AppException.Forbidden(Messages.TrainerRoleRequired);
@@ -341,7 +342,7 @@ public sealed class ReportingService : IReportingService
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync((Guid)currentTrainer.Id, traineeId, cancellationToken);
         if (link == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -368,8 +369,8 @@ public sealed class ReportingService : IReportingService
     {
         return new ReportTemplateResult
         {
-            Id = template.Id,
-            TrainerId = template.TrainerId,
+            Id = (Guid)template.Id,
+            TrainerId = (Guid)template.TrainerId,
             Name = template.Name,
             Description = template.Description,
             CreatedAt = template.CreatedAt,
@@ -392,10 +393,10 @@ public sealed class ReportingService : IReportingService
     {
         return new ReportRequestResult
         {
-            Id = request.Id,
-            TrainerId = request.TrainerId,
-            TraineeId = request.TraineeId,
-            TemplateId = request.TemplateId,
+            Id = (Guid)request.Id,
+            TrainerId = (Guid)request.TrainerId,
+            TraineeId = (Guid)request.TraineeId,
+            TemplateId = (Guid)request.TemplateId,
             Status = request.Status,
             DueAt = request.DueAt,
             Note = request.Note,
@@ -414,9 +415,9 @@ public sealed class ReportingService : IReportingService
 
         return new ReportSubmissionResult
         {
-            Id = submission.Id,
-            ReportRequestId = submission.ReportRequestId,
-            TraineeId = submission.TraineeId,
+            Id = (Guid)submission.Id,
+            ReportRequestId = (Guid)submission.ReportRequestId,
+            TraineeId = (Guid)submission.TraineeId,
             SubmittedAt = submission.CreatedAt,
             Answers = answers,
             Request = MapRequest(submission.ReportRequest)

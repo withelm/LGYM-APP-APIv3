@@ -1,6 +1,7 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.PlanDay.Models;
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using PlanDayEntity = LgymApi.Domain.Entities.PlanDay;
 using PlanDayExerciseEntity = LgymApi.Domain.Entities.PlanDayExercise;
@@ -34,7 +35,7 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
+        var plan = await _planRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.Plan>)planId, cancellationToken);
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -52,7 +53,7 @@ public sealed class PlanDayService : IPlanDayService
 
         var planDay = new PlanDayEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<PlanDayEntity>.New(),
             PlanId = plan.Id,
             Name = name,
             IsDeleted = false
@@ -71,9 +72,9 @@ public sealed class PlanDayService : IPlanDayService
 
             exercisesToAdd.Add(new PlanDayExerciseEntity
             {
-                Id = Guid.NewGuid(),
+                Id = Id<PlanDayExerciseEntity>.New(),
                 PlanDayId = planDay.Id,
-                ExerciseId = exerciseId,
+                ExerciseId = (Id<LgymApi.Domain.Entities.Exercise>)exerciseId,
                 Order = order++,
                 Series = exercise.Series,
                 Reps = exercise.Reps
@@ -105,7 +106,7 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.BadRequest(Messages.DidntFind);
         }
 
-        var planDay = await _planDayRepository.FindByIdAsync(planDayGuid, cancellationToken);
+        var planDay = await _planDayRepository.FindByIdAsync((Id<PlanDayEntity>)planDayGuid, cancellationToken);
         if (planDay == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -141,9 +142,9 @@ public sealed class PlanDayService : IPlanDayService
 
                 exercisesToAdd.Add(new PlanDayExerciseEntity
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Id<PlanDayExerciseEntity>.New(),
                     PlanDayId = planDay.Id,
-                    ExerciseId = exerciseId,
+                    ExerciseId = (Id<LgymApi.Domain.Entities.Exercise>)exerciseId,
                     Order = order++,
                     Series = exercise.Series,
                     Reps = exercise.Reps
@@ -172,7 +173,7 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
+        var planDay = await _planDayRepository.FindByIdAsync((Id<PlanDayEntity>)planDayId, cancellationToken);
         if (planDay == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -192,12 +193,13 @@ public sealed class PlanDayService : IPlanDayService
         var exercises = await _planDayExerciseRepository.GetByPlanDayIdAsync(planDay.Id, cancellationToken);
         var exerciseIds = exercises.Select(e => e.ExerciseId).Distinct().ToList();
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
-        var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
+        var exerciseMap = exerciseList.ToDictionary(e => (Guid)e.Id, e => e);
         var globalExerciseIds = exerciseList
             .Where(e => e.UserId == null)
             .Select(e => e.Id)
             .ToList();
-        var translations = await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken);
+        var translations = (await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken))
+            .ToDictionary(x => (Guid)x.Key, x => x.Value);
 
         return new PlanDayDetailsContext
         {
@@ -215,7 +217,7 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
+        var plan = await _planRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.Plan>)planId, cancellationToken);
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -237,12 +239,13 @@ public sealed class PlanDayService : IPlanDayService
 
         var exerciseIds = planDayExercises.Select(e => e.ExerciseId).Distinct().ToList();
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
-        var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
+        var exerciseMap = exerciseList.ToDictionary(e => (Guid)e.Id, e => e);
         var globalExerciseIds = exerciseList
             .Where(e => e.UserId == null)
             .Select(e => e.Id)
             .ToList();
-        var translations = await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken);
+        var translations = (await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken))
+            .ToDictionary(x => (Guid)x.Key, x => x.Value);
 
         return new PlanDaysContext
         {
@@ -260,7 +263,7 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (currentUser.Id != routeUserId)
+        if ((Guid)currentUser.Id != routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
@@ -281,7 +284,7 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
+        var planDay = await _planDayRepository.FindByIdAsync((Id<PlanDayEntity>)planDayId, cancellationToken);
         if (planDay == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -309,7 +312,7 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
+        var plan = await _planRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.Plan>)planId, cancellationToken);
         if (plan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -328,7 +331,7 @@ public sealed class PlanDayService : IPlanDayService
         var trainings = await _trainingRepository.GetByPlanDayIdsAsync(planDayIds, cancellationToken);
         var lastTrainingMap = trainings
             .GroupBy(t => t.TypePlanDayId)
-            .ToDictionary(g => g.Key, g => (DateTime?)g.Max(t => t.CreatedAt).UtcDateTime);
+            .ToDictionary(g => (Guid)g.Key, g => (DateTime?)g.Max(t => t.CreatedAt).UtcDateTime);
 
         return new PlanDaysInfoContext
         {

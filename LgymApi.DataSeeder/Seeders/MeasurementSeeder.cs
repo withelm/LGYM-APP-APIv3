@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,7 +32,7 @@ public sealed class MeasurementSeeder : IEntitySeeder
             .ToListAsync(cancellationToken);
 
         var existingSet = new HashSet<(Guid UserId, BodyParts BodyPart)>(
-            existing.Select(entry => (entry.UserId, entry.BodyPart)));
+            existing.Select(entry => ((Guid)entry.UserId, entry.BodyPart)));
 
         var bodyParts = new[] { BodyParts.Chest, BodyParts.Biceps, BodyParts.Abs };
         var measurementIndex = 0;
@@ -40,14 +41,14 @@ public sealed class MeasurementSeeder : IEntitySeeder
         {
             foreach (var part in bodyParts)
             {
-                if (!existingSet.Add((user.Id, part)))
+                if (!existingSet.Add(((Guid)user.Id, part)))
                 {
                     measurementIndex++;
                     continue;
                 }
                 var measurement = new Measurement
                 {
-                    Id = Guid.NewGuid(),
+                    Id = (LgymApi.Domain.ValueObjects.Id<Measurement>)Guid.NewGuid(),
                     UserId = user.Id,
                     BodyPart = part,
                     Unit = "cm",

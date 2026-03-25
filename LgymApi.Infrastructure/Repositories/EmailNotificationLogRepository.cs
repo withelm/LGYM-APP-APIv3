@@ -23,7 +23,7 @@ public sealed class EmailNotificationLogRepository : IEmailNotificationLogReposi
 
     public Task<NotificationMessage?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.NotificationMessages.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        return _dbContext.NotificationMessages.FirstOrDefaultAsync(x => (Guid)x.Id == id, cancellationToken);
     }
 
     public Task<NotificationMessage?> FindByCorrelationAsync(EmailNotificationType type, Guid correlationId, string recipient, CancellationToken cancellationToken = default)

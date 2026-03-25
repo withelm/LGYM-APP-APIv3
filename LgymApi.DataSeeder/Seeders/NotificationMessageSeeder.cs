@@ -32,7 +32,7 @@ public sealed class NotificationMessageSeeder : IEntitySeeder
         {
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
                 Channel = NotificationChannel.Email,
                 Type = EmailNotificationTypes.TrainerInvitation,
                 CorrelationId = Guid.NewGuid(),
@@ -45,7 +45,7 @@ public sealed class NotificationMessageSeeder : IEntitySeeder
             },
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
                 Channel = NotificationChannel.Email,
                 Type = EmailNotificationTypes.Welcome,
                 CorrelationId = Guid.NewGuid(),

@@ -30,7 +30,7 @@ public sealed class MainRecordProfile : IMappingProfile
         configuration.CreateMap<MainRecord, MainRecordsLastDto>((source, context) =>
         {
             var exerciseMap = context?.Get(Keys.ExerciseMap);
-            var exercise = exerciseMap != null && exerciseMap.TryGetValue(source.ExerciseId, out var resolvedExercise)
+            var exercise = exerciseMap != null && exerciseMap.TryGetValue((Guid)source.ExerciseId, out var resolvedExercise)
                 ? resolvedExercise
                 : null;
 

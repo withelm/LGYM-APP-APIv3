@@ -5,156 +5,157 @@ using LgymApi.Application.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.UnitTests;
 
 [TestFixture]
 public sealed class ServiceTransactionBehaviorTests
 {
-    [Test]
-    public async Task SetNewActivePlanAsync_WhenSuccessful_CommitsTransaction()
-    {
-        var userId = Guid.NewGuid();
-        var planId = Guid.NewGuid();
-        var currentUser = new User { Id = userId };
-        var unitOfWork = new RecordingUnitOfWork();
-        var planRepository = new PlanRepositoryStub
-        {
-            PlanToReturn = new Plan { Id = planId, UserId = userId }
-        };
+     [Test]
+     public async Task SetNewActivePlanAsync_WhenSuccessful_CommitsTransaction()
+     {
+         var userId = new Id<User>(Guid.NewGuid());
+         var planId = new Id<Plan>(Guid.NewGuid());
+         var currentUser = new User { Id = userId };
+         var unitOfWork = new RecordingUnitOfWork();
+         var planRepository = new PlanRepositoryStub
+         {
+             PlanToReturn = new Plan { Id = planId, UserId = userId }
+         };
 
-        var service = new PlanService(
-            new UserRepositoryStub(),
-            planRepository,
-            new PlanDayRepositoryStub(),
-            unitOfWork);
+         var service = new PlanService(
+             new UserRepositoryStub(),
+             planRepository,
+             new PlanDayRepositoryStub(),
+             unitOfWork);
 
-        await service.SetNewActivePlanAsync(currentUser, userId, planId, CancellationToken.None);
+          await service.SetNewActivePlanAsync(currentUser, (Guid)userId, (Guid)planId, CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-            Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(1));
-            Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(0));
-            Assert.That(currentUser.PlanId, Is.EqualTo(planId));
-            Assert.That(planRepository.SetActiveCalls, Is.EqualTo(1));
-        });
-    }
+         Assert.Multiple(() =>
+         {
+             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+             Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(1));
+             Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(0));
+             Assert.That(currentUser.PlanId, Is.EqualTo(planId));
+             Assert.That(planRepository.SetActiveCalls, Is.EqualTo(1));
+         });
+     }
 
-    [Test]
-    public void SetNewActivePlanAsync_WhenSetActiveFails_RollsBackTransaction()
-    {
-        var userId = Guid.NewGuid();
-        var planId = Guid.NewGuid();
-        var currentUser = new User { Id = userId };
-        var unitOfWork = new RecordingUnitOfWork();
-        var planRepository = new PlanRepositoryStub
-        {
-            PlanToReturn = new Plan { Id = planId, UserId = userId },
-            SetActiveException = new InvalidOperationException("boom")
-        };
+     [Test]
+     public void SetNewActivePlanAsync_WhenSetActiveFails_RollsBackTransaction()
+     {
+         var userId = new Id<User>(Guid.NewGuid());
+         var planId = new Id<Plan>(Guid.NewGuid());
+         var currentUser = new User { Id = userId };
+         var unitOfWork = new RecordingUnitOfWork();
+         var planRepository = new PlanRepositoryStub
+         {
+             PlanToReturn = new Plan { Id = planId, UserId = userId },
+             SetActiveException = new InvalidOperationException("boom")
+         };
 
-        var service = new PlanService(
-            new UserRepositoryStub(),
-            planRepository,
-            new PlanDayRepositoryStub(),
-            unitOfWork);
+         var service = new PlanService(
+             new UserRepositoryStub(),
+             planRepository,
+             new PlanDayRepositoryStub(),
+             unitOfWork);
 
-        Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await service.SetNewActivePlanAsync(currentUser, userId, planId, CancellationToken.None));
+         Assert.ThrowsAsync<InvalidOperationException>(async () =>
+             await service.SetNewActivePlanAsync(currentUser, (Guid)userId, (Guid)planId, CancellationToken.None));
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
-            Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
-        });
-    }
+         Assert.Multiple(() =>
+         {
+             Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
+             Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
+         });
+     }
 
-    [Test]
-    public async Task UpdatePlanDayAsync_WhenSuccessful_CommitsTransaction()
-    {
-        var userId = Guid.NewGuid();
-        var planId = Guid.NewGuid();
-        var planDayId = Guid.NewGuid();
-        var unitOfWork = new RecordingUnitOfWork();
-        var exercisesRepository = new PlanDayExerciseRepositoryStub();
+     [Test]
+     public async Task UpdatePlanDayAsync_WhenSuccessful_CommitsTransaction()
+     {
+         var userId = new Id<User>(Guid.NewGuid());
+         var planId = new Id<Plan>(Guid.NewGuid());
+         var planDayId = new Id<PlanDay>(Guid.NewGuid());
+         var unitOfWork = new RecordingUnitOfWork();
+         var exercisesRepository = new PlanDayExerciseRepositoryStub();
 
-        var planRepository = new PlanRepositoryStub
-        {
-            PlanToReturn = new Plan { Id = planId, UserId = userId }
-        };
+         var planRepository = new PlanRepositoryStub
+         {
+             PlanToReturn = new Plan { Id = planId, UserId = userId }
+         };
 
-        var planDayRepository = new PlanDayRepositoryStub
-        {
-            PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
-        };
+         var planDayRepository = new PlanDayRepositoryStub
+         {
+             PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
+         };
 
-        var service = new PlanDayService(new PlanDayServiceDependenciesStub(
-            planRepository,
-            planDayRepository,
-            exercisesRepository,
-            new ExerciseRepositoryStub(),
-            new TrainingRepositoryStub(),
-            unitOfWork));
+         var service = new PlanDayService(new PlanDayServiceDependenciesStub(
+             planRepository,
+             planDayRepository,
+             exercisesRepository,
+             new ExerciseRepositoryStub(),
+             new TrainingRepositoryStub(),
+             unitOfWork));
 
-        await service.UpdatePlanDayAsync(
-            new User { Id = userId },
-            planDayId.ToString(),
-            "new",
-            [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
-            CancellationToken.None);
+         await service.UpdatePlanDayAsync(
+             new User { Id = userId },
+             planDayId.ToString(),
+             "new",
+             [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
+             CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(planDayRepository.UpdateCalls, Is.EqualTo(1));
-            Assert.That(exercisesRepository.RemoveCalls, Is.EqualTo(1));
-            Assert.That(exercisesRepository.AddRangeCalls, Is.EqualTo(1));
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-            Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(1));
-            Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(0));
-        });
-    }
+         Assert.Multiple(() =>
+         {
+             Assert.That(planDayRepository.UpdateCalls, Is.EqualTo(1));
+             Assert.That(exercisesRepository.RemoveCalls, Is.EqualTo(1));
+             Assert.That(exercisesRepository.AddRangeCalls, Is.EqualTo(1));
+             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+             Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(1));
+             Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(0));
+         });
+     }
 
-    [Test]
-    public void UpdatePlanDayAsync_WhenRemoveFails_RollsBackTransaction()
-    {
-        var userId = Guid.NewGuid();
-        var planId = Guid.NewGuid();
-        var planDayId = Guid.NewGuid();
-        var unitOfWork = new RecordingUnitOfWork();
-        var exercisesRepository = new PlanDayExerciseRepositoryStub
-        {
-            RemoveException = new InvalidOperationException("remove failed")
-        };
+     [Test]
+     public void UpdatePlanDayAsync_WhenRemoveFails_RollsBackTransaction()
+     {
+         var userId = new Id<User>(Guid.NewGuid());
+         var planId = new Id<Plan>(Guid.NewGuid());
+         var planDayId = new Id<PlanDay>(Guid.NewGuid());
+         var unitOfWork = new RecordingUnitOfWork();
+         var exercisesRepository = new PlanDayExerciseRepositoryStub
+         {
+             RemoveException = new InvalidOperationException("remove failed")
+         };
 
-        var service = new PlanDayService(new PlanDayServiceDependenciesStub(
-            new PlanRepositoryStub
-            {
-                PlanToReturn = new Plan { Id = planId, UserId = userId }
-            },
-            new PlanDayRepositoryStub
-            {
-                PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
-            },
-            exercisesRepository,
-            new ExerciseRepositoryStub(),
-            new TrainingRepositoryStub(),
-            unitOfWork));
+         var service = new PlanDayService(new PlanDayServiceDependenciesStub(
+             new PlanRepositoryStub
+             {
+                 PlanToReturn = new Plan { Id = planId, UserId = userId }
+             },
+             new PlanDayRepositoryStub
+             {
+                 PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
+             },
+             exercisesRepository,
+             new ExerciseRepositoryStub(),
+             new TrainingRepositoryStub(),
+             unitOfWork));
 
-        Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await service.UpdatePlanDayAsync(
-                new User { Id = userId },
-                planDayId.ToString(),
-                "new",
-                [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
-                CancellationToken.None));
+         Assert.ThrowsAsync<InvalidOperationException>(async () =>
+             await service.UpdatePlanDayAsync(
+                 new User { Id = userId },
+                 planDayId.ToString(),
+                 "new",
+                 [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
+                 CancellationToken.None));
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
-            Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
-        });
-    }
+         Assert.Multiple(() =>
+         {
+             Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
+             Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
+         });
+     }
 
     private sealed class PlanDayServiceDependenciesStub : IPlanDayServiceDependencies
     {
@@ -228,12 +229,12 @@ public sealed class ServiceTransactionBehaviorTests
         public Exception? SetActiveException { get; set; }
         public int SetActiveCalls { get; private set; }
 
-        public Task<Plan?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<Plan?> FindByIdAsync(Id<Plan> id, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(PlanToReturn);
         }
 
-        public Task SetActivePlanAsync(Guid userId, Guid planId, CancellationToken cancellationToken = default)
+        public Task SetActivePlanAsync(Id<User> userId, Id<Plan> planId, CancellationToken cancellationToken = default)
         {
             SetActiveCalls++;
             if (SetActiveException != null)
@@ -244,15 +245,15 @@ public sealed class ServiceTransactionBehaviorTests
             return Task.CompletedTask;
         }
 
-        public Task ClearActivePlansAsync(Guid userId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task ClearActivePlansAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-        public Task<Plan?> FindActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Plan?> FindLastActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<Plan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Plan?> FindActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Plan?> FindLastActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Plan>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAsync(Plan plan, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task UpdateAsync(Plan plan, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<string> GenerateShareCodeAsync(Guid planId, Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class PlanDayRepositoryStub : IPlanDayRepository
@@ -260,7 +261,7 @@ public sealed class ServiceTransactionBehaviorTests
         public PlanDay? PlanDayToReturn { get; set; }
         public int UpdateCalls { get; private set; }
 
-        public Task<PlanDay?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<PlanDay?> FindByIdAsync(Id<PlanDay> id, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(PlanDayToReturn);
         }
@@ -271,11 +272,11 @@ public sealed class ServiceTransactionBehaviorTests
             return Task.CompletedTask;
         }
 
-        public Task<List<PlanDay>> GetByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<PlanDay>> GetByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAsync(PlanDay planDay, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task MarkDeletedAsync(Guid planDayId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task MarkDeletedByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<bool> AnyByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task MarkDeletedAsync(Id<PlanDay> planDayId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task MarkDeletedByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> AnyByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class PlanDayExerciseRepositoryStub : IPlanDayExerciseRepository
@@ -284,7 +285,7 @@ public sealed class ServiceTransactionBehaviorTests
         public int RemoveCalls { get; private set; }
         public int AddRangeCalls { get; private set; }
 
-        public Task RemoveByPlanDayIdAsync(Guid planDayId, CancellationToken cancellationToken = default)
+        public Task RemoveByPlanDayIdAsync(Id<PlanDay> planDayId, CancellationToken cancellationToken = default)
         {
             RemoveCalls++;
             if (RemoveException != null)
@@ -301,8 +302,8 @@ public sealed class ServiceTransactionBehaviorTests
             return Task.CompletedTask;
         }
 
-        public Task<List<PlanDayExercise>> GetByPlanDayIdsAsync(List<Guid> planDayIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<PlanDayExercise>> GetByPlanDayIdAsync(Guid planDayId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<PlanDayExercise>> GetByPlanDayIdsAsync(List<Id<PlanDay>> planDayIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<PlanDayExercise>> GetByPlanDayIdAsync(Id<PlanDay> planDayId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class UserRepositoryStub : IUserRepository
@@ -319,14 +320,14 @@ public sealed class ServiceTransactionBehaviorTests
 
     private sealed class ExerciseRepositoryStub : IExerciseRepository
     {
-        public Task<Exercise?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<Exercise>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Exercise?> FindByIdAsync(Id<Exercise> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Exercise>> GetAllForUserAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<Exercise>> GetAllGlobalAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<Exercise>> GetUserExercisesAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<Exercise>> GetByBodyPartAsync(Guid userId, BodyParts bodyPart, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<Exercise>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Dictionary<Guid, string>> GetTranslationsAsync(IEnumerable<Guid> exerciseIds, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task UpsertTranslationAsync(Guid exerciseId, string culture, string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Exercise>> GetUserExercisesAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Exercise>> GetByBodyPartAsync(Id<User> userId, BodyParts bodyPart, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Exercise>> GetByIdsAsync(List<Id<Exercise>> ids, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Dictionary<Id<Exercise>, string>> GetTranslationsAsync(IEnumerable<Id<Exercise>> exerciseIds, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task UpsertTranslationAsync(Id<Exercise> exerciseId, string culture, string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
@@ -334,11 +335,11 @@ public sealed class ServiceTransactionBehaviorTests
     private sealed class TrainingRepositoryStub : ITrainingRepository
     {
         public Task AddAsync(Training training, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Training?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Training?> GetLastByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<Training>> GetByUserIdAndDateAsync(Guid userId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<DateTimeOffset>> GetDatesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<Training>> GetByGymIdsAsync(List<Guid> gymIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<Training>> GetByPlanDayIdsAsync(List<Guid> planDayIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Training?> GetByIdAsync(Id<Training> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Training?> GetLastByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Training>> GetByUserIdAndDateAsync(Id<User> userId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<DateTimeOffset>> GetDatesByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Training>> GetByGymIdsAsync(List<Id<Gym>> gymIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Training>> GetByPlanDayIdsAsync(List<Id<PlanDay>> planDayIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }

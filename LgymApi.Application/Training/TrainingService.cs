@@ -70,11 +70,11 @@ public sealed class TrainingService : ITrainingService
                 .Select(e => e.ExerciseId)
                 .Where(e => Guid.TryParse(e, out _))
                 .Distinct()
-                .Select(Guid.Parse)
+                .Select(id => (Id<LgymApi.Domain.Entities.Exercise>)Guid.Parse(id))
                 .ToList();
 
             var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds, cancellationToken);
-            var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
+            var exerciseDetailsMap = exerciseDetails.ToDictionary(e => (Guid)e.Id, e => e.Name);
 
             var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds, cancellationToken);
 
@@ -84,16 +84,16 @@ public sealed class TrainingService : ITrainingService
                 var createdAtUtc = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
                 var training = new TrainingEntity
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Id<LgymApi.Domain.Entities.Training>.New(),
                     UserId = user.Id,
-                    TypePlanDayId = planDayId,
+                    TypePlanDayId = (Id<LgymApi.Domain.Entities.PlanDay>)planDayId,
                     CreatedAt = new DateTimeOffset(createdAtUtc),
                     GymId = gym.Id
                 };
 
                 await _trainingRepository.AddAsync(training, cancellationToken);
 
-                var savedScoreIds = new List<Guid>();
+                var savedScoreIds = new List<Id<ExerciseScore>>();
                 var totalElo = 0;
                 var scoresToAdd = new List<ExerciseScore>();
                 var index = 0;
@@ -111,8 +111,8 @@ public sealed class TrainingService : ITrainingService
 
                     var scoreEntity = new ExerciseScore
                     {
-                        Id = Guid.NewGuid(),
-                        ExerciseId = exerciseId,
+                        Id = Id<ExerciseScore>.New(),
+                        ExerciseId = (Id<LgymApi.Domain.Entities.Exercise>)exerciseId,
                         UserId = user.Id,
                         Reps = exercise.Reps,
                         Series = exercise.Series,
@@ -140,7 +140,7 @@ public sealed class TrainingService : ITrainingService
 
                 var trainingScores = savedScoreIds.Select((scoreId, index) => new TrainingExerciseScore
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Id<TrainingExerciseScore>.New(),
                     TrainingId = training.Id,
                     ExerciseScoreId = scoreId,
                     Order = index
@@ -165,7 +165,7 @@ public sealed class TrainingService : ITrainingService
                 user.ProfileRank = currentRank.Name;
                 await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Id<LgymApi.Domain.Entities.EloRegistry>.New(),
                     UserId = user.Id,
                     Date = DateTimeOffset.UtcNow,
                     Elo = newElo,
@@ -176,7 +176,7 @@ public sealed class TrainingService : ITrainingService
 
                 var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
 
-                await _commandDispatcher.EnqueueAsync(new TrainingCompletedCommand { UserId = user.Id, TrainingId = training.Id });
+                await _commandDispatcher.EnqueueAsync(new TrainingCompletedCommand { UserId = (Guid)user.Id, TrainingId = (Guid)training.Id });
 
                 await transaction.CommitAsync(cancellationToken);
                 return new TrainingSummaryResult
@@ -256,18 +256,18 @@ public sealed class TrainingService : ITrainingService
 
         var scoreIds = trainingScoreRefs.Select(t => t.ExerciseScoreId).Distinct().ToList();
         var scores = await _exerciseScoreRepository.GetByIdsAsync(scoreIds, cancellationToken);
-        var scoreMap = scores.ToDictionary(s => s.Id, s => s);
+        var scoreMap = scores.ToDictionary(s => (Guid)s.Id, s => s);
 
         var result = new List<TrainingByDateDetails>();
         foreach (var training in trainings)
         {
             var exerciseRefs = trainingScoreRefs.Where(t => t.TrainingId == training.Id).ToList();
-            var grouped = new Dictionary<Guid, EnrichedExercise>();
-            var exerciseOrderMap = new Dictionary<Guid, int>();
+            var grouped = new Dictionary<Id<LgymApi.Domain.Entities.Exercise>, EnrichedExercise>();
+            var exerciseOrderMap = new Dictionary<Id<LgymApi.Domain.Entities.Exercise>, int>();
 
             foreach (var reference in exerciseRefs)
             {
-                if (!scoreMap.TryGetValue(reference.ExerciseScoreId, out var score) || score.Exercise == null)
+                if (!scoreMap.TryGetValue((Guid)reference.ExerciseScoreId, out var score) || score.Exercise == null)
                 {
                     continue;
                 }
@@ -276,7 +276,7 @@ public sealed class TrainingService : ITrainingService
                 {
                     group = new EnrichedExercise
                     {
-                        ExerciseScoreId = reference.ExerciseScoreId,
+                        ExerciseScoreId = (Guid)reference.ExerciseScoreId,
                         ExerciseDetails = score.Exercise,
                         ScoresDetails = new List<ExerciseScore>()
                     };
@@ -303,8 +303,8 @@ public sealed class TrainingService : ITrainingService
 
             result.Add(new TrainingByDateDetails
             {
-                Id = training.Id,
-                TypePlanDayId = training.TypePlanDayId,
+                Id = (Guid)training.Id,
+                TypePlanDayId = (Guid)training.TypePlanDayId,
                 CreatedAt = training.CreatedAt.UtcDateTime,
                 PlanDay = training.PlanDay,
                 Gym = training.Gym?.Name,
@@ -322,7 +322,7 @@ public sealed class TrainingService : ITrainingService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var trainings = await _trainingRepository.GetDatesByUserIdAsync(userId, cancellationToken);
+        var trainings = await _trainingRepository.GetDatesByUserIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (trainings.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -370,7 +370,7 @@ public sealed class TrainingService : ITrainingService
         return (int)Math.Round(points);
     }
 
-    private async Task<Dictionary<string, ExerciseScore>> FetchPreviousScores(Guid userId, Guid gymId, List<Guid> exerciseIds, CancellationToken cancellationToken)
+    private async Task<Dictionary<string, ExerciseScore>> FetchPreviousScores(Id<LgymApi.Domain.Entities.User> userId, Id<LgymApi.Domain.Entities.Gym> gymId, List<Id<LgymApi.Domain.Entities.Exercise>> exerciseIds, CancellationToken cancellationToken)
     {
         var scores = await _exerciseScoreRepository.GetByUserAndExercisesAsync(userId, exerciseIds, cancellationToken);
         scores = scores

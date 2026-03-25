@@ -5,6 +5,7 @@ using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
 
@@ -54,7 +55,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = trainingDate
         };
 
@@ -62,8 +63,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new TrainingExerciseScore
             {
-                TrainingId = trainingId,
-                ExerciseScoreId = exerciseScoreId
+                TrainingId = (Domain.ValueObjects.Id<Training>)trainingId,
+                ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId
             }
         };
 
@@ -71,8 +72,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new ExerciseScore
             {
-                Id = exerciseScoreId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 90,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -84,9 +85,9 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new MainRecordEntity
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<MainRecordEntity>)Guid.NewGuid(),
+                UserId = (Domain.ValueObjects.Id<User>)userId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 80,
                 Unit = WeightUnits.Kilograms,
                 Date = trainingDate.AddDays(-30)
@@ -105,8 +106,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Assert
         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
         var newRecord = _testMainRecordRepository.AddedRecords[0];
-        Assert.That(newRecord.UserId, Is.EqualTo(userId));
-        Assert.That(newRecord.ExerciseId, Is.EqualTo(exerciseId));
+        Assert.That((Guid)newRecord.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)newRecord.ExerciseId, Is.EqualTo(exerciseId));
         Assert.That(newRecord.Weight.Value, Is.EqualTo(90));
         Assert.That(newRecord.Unit, Is.EqualTo(WeightUnits.Kilograms));
         Assert.That(newRecord.Date, Is.EqualTo(trainingDate));
@@ -123,7 +124,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -131,8 +132,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new TrainingExerciseScore
             {
-                TrainingId = trainingId,
-                ExerciseScoreId = exerciseScoreId
+                TrainingId = (Domain.ValueObjects.Id<Training>)trainingId,
+                ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId
             }
         };
 
@@ -140,8 +141,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new ExerciseScore
             {
-                Id = exerciseScoreId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 90,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -153,9 +154,9 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new MainRecordEntity
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<MainRecordEntity>)Guid.NewGuid(),
+                UserId = (Domain.ValueObjects.Id<User>)userId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 100,
                 Unit = WeightUnits.Kilograms,
                 Date = DateTimeOffset.UtcNow.AddDays(-30)
@@ -187,7 +188,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = trainingDate
         };
 
@@ -195,8 +196,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new TrainingExerciseScore
             {
-                TrainingId = trainingId,
-                ExerciseScoreId = exerciseScoreId
+                TrainingId = (Domain.ValueObjects.Id<Training>)trainingId,
+                ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId
             }
         };
 
@@ -204,8 +205,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new ExerciseScore
             {
-                Id = exerciseScoreId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 120,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -228,7 +229,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
         var newRecord = _testMainRecordRepository.AddedRecords[0];
         Assert.That(newRecord.Weight.Value, Is.EqualTo(120));
-        Assert.That(newRecord.ExerciseId, Is.EqualTo(exerciseId));
+        Assert.That((Guid)newRecord.ExerciseId, Is.EqualTo(exerciseId));
     }
 
     [Test]
@@ -245,22 +246,22 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = trainingDate
         };
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId1 },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId2 }
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId1 },
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId2 }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
         {
             new ExerciseScore
             {
-                Id = scoreId1,
-                ExerciseId = exerciseId1,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)scoreId1,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId1,
                 Weight = 100,
                 Unit = WeightUnits.Kilograms,
                 Series = 4,
@@ -268,8 +269,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             },
             new ExerciseScore
             {
-                Id = scoreId2,
-                ExerciseId = exerciseId2,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)scoreId2,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId2,
                 Weight = 80,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -290,7 +291,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         // Assert
         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(2));
-        Assert.That(_testMainRecordRepository.AddedRecords.Select(r => r.ExerciseId), 
+        Assert.That(_testMainRecordRepository.AddedRecords.Select(r => (Guid)r.ExerciseId), 
             Is.EquivalentTo(new[] { exerciseId1, exerciseId2 }));
     }
 
@@ -307,22 +308,22 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = invalidScoreId },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = validScoreId }
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)invalidScoreId },
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)validScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
         {
             new ExerciseScore
             {
-                Id = invalidScoreId,
-                ExerciseId = invalidExerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)invalidScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)invalidExerciseId,
                 Weight = 50,
                 Unit = WeightUnits.Unknown,
                 Series = 3,
@@ -330,8 +331,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             },
             new ExerciseScore
             {
-                Id = validScoreId,
-                ExerciseId = validExerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)validScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)validExerciseId,
                 Weight = 60,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -352,7 +353,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         // Assert
         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
-        Assert.That(_testMainRecordRepository.AddedRecords[0].ExerciseId, Is.EqualTo(validExerciseId));
+        Assert.That((Guid)_testMainRecordRepository.AddedRecords[0].ExerciseId, Is.EqualTo(validExerciseId));
     }
 
     [Test]
@@ -366,21 +367,21 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
         {
             new ExerciseScore
             {
-                Id = exerciseScoreId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 220,
                 Unit = WeightUnits.Pounds,
                 Series = 3,
@@ -392,9 +393,9 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new MainRecordEntity
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<MainRecordEntity>)Guid.NewGuid(),
+                UserId = (Domain.ValueObjects.Id<User>)userId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 90,
                 Unit = WeightUnits.Kilograms,
                 Date = DateTimeOffset.UtcNow.AddDays(-30)
@@ -430,23 +431,23 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId1 },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId2 },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId3 }
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId1 },
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId2 },
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId3 }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
         {
             new ExerciseScore
             {
-                Id = scoreId1,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)scoreId1,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 80,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -454,8 +455,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             },
             new ExerciseScore
             {
-                Id = scoreId2,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)scoreId2,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 90,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -463,8 +464,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             },
             new ExerciseScore
             {
-                Id = scoreId3,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)scoreId3,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 85,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -521,7 +522,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -553,21 +554,21 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
         {
             new ExerciseScore
             {
-                Id = exerciseScoreId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 100,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -601,21 +602,21 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
         {
             new ExerciseScore
             {
-                Id = exerciseScoreId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 80,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -627,9 +628,9 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new MainRecordEntity
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<MainRecordEntity>)Guid.NewGuid(),
+                UserId = (Domain.ValueObjects.Id<User>)userId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 100,
                 Unit = WeightUnits.Kilograms,
                 Date = DateTimeOffset.UtcNow.AddDays(-30)
@@ -724,21 +725,21 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
         {
             new ExerciseScore
             {
-                Id = exerciseScoreId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 100,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -773,21 +774,21 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
         {
             new ExerciseScore
             {
-                Id = exerciseScoreId,
-                ExerciseId = exerciseId,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId,
                 Weight = 100,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -824,22 +825,22 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
-            Id = trainingId,
+            Id = (Domain.ValueObjects.Id<Training>)trainingId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId1 },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId2 }
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId1 },
+            new TrainingExerciseScore { TrainingId = (Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId2 }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
         {
             new ExerciseScore
             {
-                Id = scoreId1,
-                ExerciseId = exerciseId1,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)scoreId1,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId1,
                 Weight = 100,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -847,8 +848,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             },
             new ExerciseScore
             {
-                Id = scoreId2,
-                ExerciseId = exerciseId2,
+                Id = (Domain.ValueObjects.Id<ExerciseScore>)scoreId2,
+                ExerciseId = (Domain.ValueObjects.Id<Exercise>)exerciseId2,
                 Weight = 80,
                 Unit = WeightUnits.Kilograms,
                 Series = 3,
@@ -869,7 +870,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         // Assert
         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
-        Assert.That(_testMainRecordRepository.AddedRecords[0].ExerciseId, Is.EqualTo(exerciseId2));
+        Assert.That((Guid)_testMainRecordRepository.AddedRecords[0].ExerciseId, Is.EqualTo(exerciseId2));
         Assert.That(_testMainRecordRepository.AddedRecords[0].Weight.Value, Is.EqualTo(80));
         Assert.That(_testUnitOfWork.SaveChangesCalled, Is.True);
     }
@@ -918,25 +919,25 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     {
         public Training? TrainingToReturn { get; set; }
 
-        public Task<Training?> GetByIdAsync(Guid trainingId, CancellationToken cancellationToken = default)
+        public Task<Training?> GetByIdAsync(Id<Training> trainingId, CancellationToken cancellationToken = default)
             => Task.FromResult(TrainingToReturn);
 
         public Task AddAsync(Training training, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<Training?> GetLastByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<Training?> GetLastByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<Training>> GetByUserIdAndDateAsync(Guid userId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
+        public Task<List<Training>> GetByUserIdAndDateAsync(Id<User> userId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<DateTimeOffset>> GetDatesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<List<DateTimeOffset>> GetDatesByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<Training>> GetByGymIdsAsync(List<Guid> gymIds, CancellationToken cancellationToken = default)
+        public Task<List<Training>> GetByGymIdsAsync(List<Id<Gym>> gymIds, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<Training>> GetByPlanDayIdsAsync(List<Guid> planDayIds, CancellationToken cancellationToken = default)
+        public Task<List<Training>> GetByPlanDayIdsAsync(List<Id<PlanDay>> planDayIds, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 
@@ -945,7 +946,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         public List<TrainingExerciseScore> TrainingExercisesToReturn { get; set; } = new();
 
         public Task<List<TrainingExerciseScore>> GetByTrainingIdsAsync(
-            List<Guid> trainingIds,
+            List<Id<Training>> trainingIds,
             CancellationToken cancellationToken = default)
             => Task.FromResult(TrainingExercisesToReturn);
 
@@ -958,29 +959,29 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         public List<ExerciseScore> ExerciseScoresToReturn { get; set; } = new();
 
         public Task<List<ExerciseScore>> GetByIdsAsync(
-            List<Guid> exerciseScoreIds,
+            List<Id<ExerciseScore>> exerciseScoreIds,
             CancellationToken cancellationToken = default)
             => Task.FromResult(ExerciseScoresToReturn);
 
         public Task AddRangeAsync(IEnumerable<ExerciseScore> scores, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<ExerciseScore>> GetByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+        public Task<List<ExerciseScore>> GetByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<ExerciseScore>> GetByUserAndExerciseAndGymAsync(Guid userId, Guid exerciseId, Guid? gymId, CancellationToken cancellationToken = default)
+        public Task<List<ExerciseScore>> GetByUserAndExerciseAndGymAsync(Id<User> userId, Id<Exercise> exerciseId, Id<Gym>? gymId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<ExerciseScore>> GetByUserAndExercisesAsync(Guid userId, List<Guid> exerciseIds, CancellationToken cancellationToken = default)
+        public Task<List<ExerciseScore>> GetByUserAndExercisesAsync(Id<User> userId, List<Id<Exercise>> exerciseIds, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<ExerciseScore>> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, Guid? gymId, CancellationToken cancellationToken = default)
+        public Task<List<ExerciseScore>> GetLatestByUserExerciseSeriesAsync(Id<User> userId, Id<Exercise> exerciseId, Id<Gym>? gymId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, int series, Guid? gymId, CancellationToken cancellationToken = default)
+        public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Id<User> userId, Id<Exercise> exerciseId, int series, Id<Gym>? gymId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+        public Task<ExerciseScore?> GetBestScoreAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 

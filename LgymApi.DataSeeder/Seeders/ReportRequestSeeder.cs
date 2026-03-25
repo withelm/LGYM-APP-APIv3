@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,12 +34,12 @@ public sealed class ReportRequestSeeder : IEntitySeeder
             .Select(request => new { request.TrainerId, request.TraineeId, request.TemplateId })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid TrainerId, Guid TraineeId, Guid TemplateId)>(
+        var existingSet = new HashSet<(Id<User> TrainerId, Id<User> TraineeId, Id<ReportTemplate> TemplateId)>(
             existing.Select(entry => (entry.TrainerId, entry.TraineeId, entry.TemplateId)));
 
         var request = new ReportRequest
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<ReportRequest>)Guid.NewGuid(),
             TrainerId = trainer.Id,
             TraineeId = trainee.Id,
             TemplateId = template.Id,
@@ -69,7 +70,7 @@ public sealed class ReportRequestSeeder : IEntitySeeder
         {
             var submission = new ReportSubmission
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<ReportSubmission>)Guid.NewGuid(),
                 ReportRequestId = request.Id,
                 TraineeId = request.TraineeId,
                 PayloadJson = "{\"weight\":80,\"sleep\":7,\"notes\":\"All good\"}"

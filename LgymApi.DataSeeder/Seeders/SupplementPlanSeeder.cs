@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,12 +32,12 @@ public sealed class SupplementPlanSeeder : IEntitySeeder
             .Select(plan => new { plan.TrainerId, plan.TraineeId, plan.Name })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid TrainerId, Guid TraineeId, string Name)>(
+        var existingSet = new HashSet<(Id<User> TrainerId, Id<User> TraineeId, string Name)>(
             existing.Select(entry => (entry.TrainerId, entry.TraineeId, entry.Name)));
 
         var plan = new SupplementPlan
         {
-            Id = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<SupplementPlan>)Guid.NewGuid(),
             TrainerId = trainer.Id,
             TraineeId = trainee.Id,
             Name = "Starter stack",

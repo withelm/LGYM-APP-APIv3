@@ -1,6 +1,7 @@
 using LgymApi.Application.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,14 +18,14 @@ public sealed class UserRepository : IUserRepository
 
     public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        return _dbContext.Users.FirstOrDefaultAsync(u => (Guid)u.Id == id, cancellationToken);
     }
 
     public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return _dbContext.Users
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(u => (Guid)u.Id == id, cancellationToken);
     }
 
     public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
@@ -42,12 +43,12 @@ public sealed class UserRepository : IUserRepository
         var rankedUsers = await _dbContext.Users
             .AsNoTracking()
             .Where(u => !u.IsDeleted && u.IsVisibleInRanking)
-            .Where(u => !u.UserRoles.Any(ur => ur.RoleId == AppDbContext.TesterRoleSeedId))
+            .Where(u => !u.UserRoles.Any(ur => ur.RoleId == (Id<Role>)AppDbContext.TesterRoleSeedId))
             .Select(u => new
             {
                 User = u,
                 Elo = _dbContext.EloRegistries
-                    .Where(e => e.UserId == u.Id)
+                    .Where(e => (Guid)e.UserId == (Guid)u.Id)
                     .OrderByDescending(e => e.Date)
                     .Select(e => (int?)e.Elo)
                     .FirstOrDefault()

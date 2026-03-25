@@ -83,7 +83,7 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
 
         // Fetch training exercises
         var trainingExercises = await _trainingExerciseScoreRepository.GetByTrainingIdsAsync(
-            new List<Guid> { command.TrainingId },
+            new List<Domain.ValueObjects.Id<Domain.Entities.Training>> { (Domain.ValueObjects.Id<Domain.Entities.Training>)command.TrainingId },
             cancellationToken);
 
         var exerciseScoreIds = trainingExercises.Select(te => te.ExerciseScoreId).ToList();
@@ -109,7 +109,7 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
             .ToList();
 
         // Fetch training to get plan day name and training date
-        var training = await _trainingRepository.GetByIdAsync(command.TrainingId, cancellationToken);
+        var training = await _trainingRepository.GetByIdAsync((Domain.ValueObjects.Id<Domain.Entities.Training>)command.TrainingId, cancellationToken);
         if (training == null)
         {
             _logger.LogWarning(

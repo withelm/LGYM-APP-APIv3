@@ -23,8 +23,8 @@ public sealed class PlanRepositoryTests
         await using var dbContext = new AppDbContext(options);
         dbContext.Plans.Add(new Plan
         {
-            Id = planId,
-            UserId = userId,
+            Id = (LgymApi.Domain.ValueObjects.Id<Plan>)planId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<User>)userId,
             Name = "Plan",
             ShareCode = "EXISTING01"
         });
@@ -32,7 +32,7 @@ public sealed class PlanRepositoryTests
 
         var repository = new PlanRepository(dbContext, _ => "NEVERUSED1");
 
-        var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
+        var result = await repository.GenerateShareCodeAsync((LgymApi.Domain.ValueObjects.Id<Plan>)planId, (LgymApi.Domain.ValueObjects.Id<User>)userId, CancellationToken.None);
 
         Assert.That(result, Is.EqualTo("EXISTING01"));
     }
@@ -51,15 +51,15 @@ public sealed class PlanRepositoryTests
         dbContext.Plans.AddRange(
             new Plan
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Plan>)Guid.NewGuid(),
+                UserId = (LgymApi.Domain.ValueObjects.Id<User>)userId,
                 Name = "Owner Plan",
                 ShareCode = "COLLIDE001"
             },
             new Plan
             {
-                Id = planId,
-                UserId = userId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Plan>)planId,
+                UserId = (LgymApi.Domain.ValueObjects.Id<User>)userId,
                 Name = "Target Plan",
                 ShareCode = null
             });
@@ -68,7 +68,7 @@ public sealed class PlanRepositoryTests
         var generatedCodes = new Queue<string>(["COLLIDE001", "UNIQUE0001"]);
         var repository = new PlanRepository(dbContext, _ => generatedCodes.Dequeue());
 
-        var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
+        var result = await repository.GenerateShareCodeAsync((LgymApi.Domain.ValueObjects.Id<Plan>)planId, (LgymApi.Domain.ValueObjects.Id<User>)userId, CancellationToken.None);
 
         Assert.That(result, Is.EqualTo("UNIQUE0001"));
     }
@@ -87,15 +87,15 @@ public sealed class PlanRepositoryTests
         dbContext.Plans.AddRange(
             new Plan
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Plan>)Guid.NewGuid(),
+                UserId = (LgymApi.Domain.ValueObjects.Id<User>)userId,
                 Name = "Existing Plan",
                 ShareCode = "DUPLICATE01"
             },
             new Plan
             {
-                Id = planId,
-                UserId = userId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Plan>)planId,
+                UserId = (LgymApi.Domain.ValueObjects.Id<User>)userId,
                 Name = "Target Plan",
                 ShareCode = "DUPLICATE01"
             });
@@ -103,7 +103,7 @@ public sealed class PlanRepositoryTests
 
         var repository = new PlanRepository(dbContext, _ => "UNIQUE0001");
 
-        var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
+        var result = await repository.GenerateShareCodeAsync((LgymApi.Domain.ValueObjects.Id<Plan>)planId, (LgymApi.Domain.ValueObjects.Id<User>)userId, CancellationToken.None);
 
         Assert.That(result, Is.EqualTo("UNIQUE0001"));
     }
@@ -121,8 +121,8 @@ public sealed class PlanRepositoryTests
         await using var dbContext = new AppDbContext(options);
         dbContext.Plans.Add(new Plan
         {
-            Id = planId,
-            UserId = userId,
+            Id = (LgymApi.Domain.ValueObjects.Id<Plan>)planId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<User>)userId,
             Name = "Target Plan"
         });
         await dbContext.SaveChangesAsync();
@@ -130,7 +130,7 @@ public sealed class PlanRepositoryTests
         var generatedCodes = new Queue<string>(["bad", "UNIQUE0001"]);
         var repository = new PlanRepository(dbContext, _ => generatedCodes.Dequeue());
 
-        var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
+        var result = await repository.GenerateShareCodeAsync((LgymApi.Domain.ValueObjects.Id<Plan>)planId, (LgymApi.Domain.ValueObjects.Id<User>)userId, CancellationToken.None);
 
         Assert.That(result, Is.EqualTo("UNIQUE0001"));
     }
@@ -150,15 +150,15 @@ public sealed class PlanRepositoryTests
         dbContext.Plans.AddRange(
             new Plan
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Plan>)Guid.NewGuid(),
+                UserId = (LgymApi.Domain.ValueObjects.Id<User>)userId,
                 Name = "Existing Plan",
                 ShareCode = "COLLIDE001"
             },
             new Plan
             {
-                Id = planId,
-                UserId = userId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Plan>)planId,
+                UserId = (LgymApi.Domain.ValueObjects.Id<User>)userId,
                 Name = "Target Plan"
             });
         await dbContext.SaveChangesAsync();
@@ -172,7 +172,7 @@ public sealed class PlanRepositoryTests
             });
 
         var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None));
+            await repository.GenerateShareCodeAsync((LgymApi.Domain.ValueObjects.Id<Plan>)planId, (LgymApi.Domain.ValueObjects.Id<User>)userId, CancellationToken.None));
 
         Assert.That(exception!.Message, Is.EqualTo("Unable to generate unique share code"));
         Assert.That(generationCount, Is.EqualTo(ExpectedShareCodeGenerationAttempts));

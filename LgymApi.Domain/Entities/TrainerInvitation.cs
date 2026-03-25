@@ -1,11 +1,12 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
-public sealed class TrainerInvitation : EntityBase
+public sealed class TrainerInvitation : EntityBase<TrainerInvitation>
 {
-    public Guid TrainerId { get; set; }
-    public Guid TraineeId { get; set; }
+    public Id<User> TrainerId { get; set; }
+    public Id<User> TraineeId { get; set; }
     public string Code { get; set; } = string.Empty;
     public TrainerInvitationStatus Status { get; set; } = TrainerInvitationStatus.Pending;
     public DateTimeOffset ExpiresAt { get; set; }

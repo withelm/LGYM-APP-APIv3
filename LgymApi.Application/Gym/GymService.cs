@@ -1,7 +1,9 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Gym.Models;
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.Entities;
 using LgymApi.Resources;
+using LgymApi.Domain.ValueObjects;
 using GymEntity = LgymApi.Domain.Entities.Gym;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -27,7 +29,7 @@ public sealed class GymService : IGymService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (currentUser.Id != routeUserId)
+        if ((Guid)currentUser.Id != routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
@@ -45,10 +47,10 @@ public sealed class GymService : IGymService
 
         var gym = new GymEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<LgymApi.Domain.Entities.Gym>.New(),
             UserId = currentUser.Id,
             Name = name,
-            AddressId = addressId,
+            AddressId = addressId.HasValue ? (Id<Address>)addressId.Value : null,
             IsDeleted = false
         };
 
@@ -91,19 +93,19 @@ public sealed class GymService : IGymService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (currentUser.Id != routeUserId)
+        if ((Guid)currentUser.Id != routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        var gyms = await _gymRepository.GetByUserIdAsync(currentUser.Id, cancellationToken);
+        var gyms = await _gymRepository.GetByUserIdAsync((Guid)currentUser.Id, cancellationToken);
         var gymIds = gyms.Select(g => g.Id).ToList();
         var trainings = await _trainingRepository.GetByGymIdsAsync(gymIds, cancellationToken);
         var lastTrainings = trainings
             .GroupBy(t => t.GymId)
             .Select(g => g.OrderByDescending(t => t.CreatedAt).FirstOrDefault())
             .Where(t => t != null)
-            .ToDictionary(t => t!.GymId, t => t!);
+            .ToDictionary(t => (Guid)t!.GymId, t => t!);
 
         return new GymListContext
         {
@@ -164,7 +166,7 @@ public sealed class GymService : IGymService
         gym.Name = name;
         if (!string.IsNullOrWhiteSpace(address) && Guid.TryParse(address, out var addressId))
         {
-            gym.AddressId = addressId;
+            gym.AddressId = (Id<Address>)addressId;
         }
 
         await _gymRepository.UpdateAsync(gym, cancellationToken);

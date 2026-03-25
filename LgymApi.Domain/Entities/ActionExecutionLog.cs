@@ -1,18 +1,19 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
 /// <summary>
 /// Per-action execution log for tracking attempt outcomes on a CommandEnvelope.
 /// </summary>
-public sealed class ActionExecutionLog : EntityBase
+public sealed class ActionExecutionLog : EntityBase<ActionExecutionLog>
 {
     public ActionExecutionLog()
     {
 
     }
 
-    public Guid CommandEnvelopeId { get; set; }
+    public Id<CommandEnvelope> CommandEnvelopeId { get; set; }
 
     public CommandEnvelope CommandEnvelope { get; set; } = null!;
 

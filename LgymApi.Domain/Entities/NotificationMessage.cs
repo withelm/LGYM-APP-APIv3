@@ -4,8 +4,9 @@ using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
-public abstract class NotificationMessage<TType> : EntityBase
+public abstract class NotificationMessageBase<TType, TDerived> : EntityBase<TDerived>
     where TType : notnull
+    where TDerived : NotificationMessageBase<TType, TDerived>
 {
     public NotificationChannel Channel { get; set; } = NotificationChannel.Email;
     public TType Type { get; set; } = default!;
@@ -20,6 +21,6 @@ public abstract class NotificationMessage<TType> : EntityBase
     public DateTimeOffset? SentAt { get; set; }
 }
 
-public sealed class NotificationMessage : NotificationMessage<EmailNotificationType>
+public sealed class NotificationMessage : NotificationMessageBase<EmailNotificationType, NotificationMessage>
 {
 }

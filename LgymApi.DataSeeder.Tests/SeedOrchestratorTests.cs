@@ -1,6 +1,7 @@
 using LgymApi.Application.Services;
 using LgymApi.DataSeeder.Seeders;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,8 +51,8 @@ public sealed class SeedOrchestratorTests
 
         await using var context = new AppDbContext(options);
 
-        var admin = new User { Id = Guid.NewGuid(), Name = "Admin" };
-        var tester = new User { Id = Guid.NewGuid(), Name = "Tester" };
+        var admin = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Admin" };
+        var tester = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Tester" };
         context.Users.AddRange(admin, tester);
         await context.SaveChangesAsync();
 

@@ -349,7 +349,7 @@ public sealed class CommandEnvelopeCompatibilityTests
             // Step 2: Persist envelope (simulated database storage)
             var envelope = new CommandEnvelope
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
                 CorrelationId = Guid.NewGuid(),
                 PayloadJson = payloadJson,
                 CommandTypeFullName = discriminator,

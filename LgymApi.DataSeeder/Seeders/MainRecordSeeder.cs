@@ -32,7 +32,7 @@ public sealed class MainRecordSeeder : IEntitySeeder
             .Select(record => new { record.UserId, record.ExerciseId })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid UserId, Guid ExerciseId)>(
+        var existingSet = new HashSet<(Id<User> UserId, Id<Exercise> ExerciseId)>(
             existing.Select(entry => (entry.UserId, entry.ExerciseId)));
 
         var recordIndex = 0;
@@ -47,7 +47,7 @@ public sealed class MainRecordSeeder : IEntitySeeder
             }
             var record = new MainRecord
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<MainRecord>)Guid.NewGuid(),
                 UserId = user.Id,
                 ExerciseId = exercise.Id,
                 Weight = new Weight(100 + recordIndex * 5, WeightUnits.Kilograms),

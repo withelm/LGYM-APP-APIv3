@@ -33,21 +33,21 @@ public sealed class ExerciseScoreSeeder : IEntitySeeder
             .ToListAsync(cancellationToken);
 
         var existingSet = new HashSet<(Guid TrainingId, Guid ExerciseId)>(
-            existingPairs.Select(pair => (pair.TrainingId, pair.ExerciseId)));
+            existingPairs.Select(pair => ((Guid)pair.TrainingId, (Guid)pair.ExerciseId)));
 
         var scoreIndex = 0;
         var addedAny = false;
         foreach (var training in trainings)
         {
             var exercise = exercises[scoreIndex % exercises.Count];
-            if (!existingSet.Add((training.Id, exercise.Id)))
+            if (!existingSet.Add(((Guid)training.Id, (Guid)exercise.Id)))
             {
                 scoreIndex++;
                 continue;
             }
             var score = new ExerciseScore
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)Guid.NewGuid(),
                 ExerciseId = exercise.Id,
                 UserId = training.UserId,
                 TrainingId = training.Id,

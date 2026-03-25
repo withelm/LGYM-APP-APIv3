@@ -2,6 +2,7 @@ using System.Globalization;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
 namespace LgymApi.Application.Features.ExerciseScores;
@@ -30,7 +31,7 @@ public sealed class ExerciseScoresService : IExerciseScoresService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(user.Id, exerciseId, cancellationToken);
+        var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(user.Id, (Id<LgymApi.Domain.Entities.Exercise>)exerciseId, cancellationToken);
         scores = scores.OrderBy(s => s.CreatedAt).ToList();
 
         var bestSeries = new Dictionary<string, ExerciseScoresChartData>();

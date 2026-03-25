@@ -21,7 +21,7 @@ public sealed class AddressSeeder : IEntitySeeder
         {
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<Address>)Guid.NewGuid(),
                 Name = "LGYM Downtown",
                 City = "Warsaw",
                 Country = "Poland",
@@ -33,7 +33,7 @@ public sealed class AddressSeeder : IEntitySeeder
             },
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<Address>)Guid.NewGuid(),
                 Name = "LGYM Riverside",
                 City = "Krakow",
                 Country = "Poland",

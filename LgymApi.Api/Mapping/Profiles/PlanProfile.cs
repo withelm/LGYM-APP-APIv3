@@ -17,10 +17,10 @@ public sealed class PlanProfile : IMappingProfile
 
         configuration.CreateMap<Plan, PlanDto>((source, _) => new PlanDto
         {
-            Id = source.Id,
+            Id = (Guid)source.Id,
             Name = source.Name,
             IsActive = source.IsActive,
-            UserId = source.UserId
+            UserId = (Guid)source.UserId
         });
 
         configuration.CreateMap<string, ShareCodeResponseDto>((source, _) => new ShareCodeResponseDto(source));

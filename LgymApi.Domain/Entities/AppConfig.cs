@@ -2,7 +2,7 @@ using LgymApi.Domain.Enums;
 
 namespace LgymApi.Domain.Entities;
 
-public sealed class AppConfig : EntityBase
+public sealed class AppConfig : EntityBase<AppConfig>
 {
     public Platforms Platform { get; set; }
     public string MinRequiredVersion { get; set; } = string.Empty;

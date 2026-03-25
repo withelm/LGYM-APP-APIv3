@@ -6,6 +6,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -86,6 +87,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
         var envelope = new CommandEnvelope
         {
+            Id = Id<CommandEnvelope>.New(),
             CorrelationId = correlationId,
             PayloadJson = payloadJson,
             CommandTypeFullName = descriptor.TypeFullName,
@@ -115,7 +117,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
             correlationId);
 
         // Enqueue orchestration job by envelope ID only (durable reference)
-        _scheduler.Enqueue(envelope.Id);
+        _scheduler.Enqueue((Guid)envelope.Id);
 
         _logger.LogInformation(
             "Command envelope {EnvelopeId} enqueued for orchestration.",

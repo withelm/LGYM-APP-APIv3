@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,7 +31,7 @@ public sealed class SupplementIntakeLogSeeder : IEntitySeeder
             .Select(log => new { log.TraineeId, log.PlanItemId, log.IntakeDate })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid TraineeId, Guid PlanItemId, DateOnly IntakeDate)>(
+        var existingSet = new HashSet<(Id<User> TraineeId, Id<SupplementPlanItem> PlanItemId, DateOnly IntakeDate)>(
             existing.Select(entry => (entry.TraineeId, entry.PlanItemId, entry.IntakeDate)));
 
         var addedAny = false;
@@ -44,7 +45,7 @@ public sealed class SupplementIntakeLogSeeder : IEntitySeeder
 
             var log = new SupplementIntakeLog
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<SupplementIntakeLog>)Guid.NewGuid(),
                 TraineeId = trainee.Id,
                 PlanItemId = item.Id,
                 IntakeDate = intakeDate,

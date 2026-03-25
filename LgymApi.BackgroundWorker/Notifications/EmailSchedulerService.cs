@@ -60,7 +60,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
 
         var message = new NotificationMessage
         {
-            Id = Guid.NewGuid(),
+            Id = (Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
             Channel = NotificationChannel.Email,
             Type = payload.NotificationType,
             CorrelationId = payload.CorrelationId,
@@ -73,7 +73,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
-        _backgroundScheduler.Enqueue(message.Id);
+        _backgroundScheduler.Enqueue((Guid)message.Id);
         _metrics.RecordEnqueued(payload.NotificationType);
         _logger.LogInformation(
             "Created and enqueued email notification {NotificationId} for {NotificationType} correlation {CorrelationId}.",
@@ -116,7 +116,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
-        _backgroundScheduler.Enqueue(existing.Id);
+        _backgroundScheduler.Enqueue((Guid)existing.Id);
         _metrics.RecordRetried(payload.NotificationType);
         _logger.LogInformation(
             "Re-enqueued failed email notification {NotificationId} (attempts: {Attempts}).",
@@ -154,7 +154,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
                 payload.NotificationType,
                 payload.CorrelationId,
                 concurrent.Id);
-            _backgroundScheduler.Enqueue(concurrent.Id);
+            _backgroundScheduler.Enqueue((Guid)concurrent.Id);
             _metrics.RecordEnqueued(payload.NotificationType);
             return false;
         }

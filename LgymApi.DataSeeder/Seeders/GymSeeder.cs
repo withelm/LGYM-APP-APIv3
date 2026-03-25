@@ -49,7 +49,7 @@ public sealed class GymSeeder : IEntitySeeder
 
             var gym = new Gym
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<Gym>)Guid.NewGuid(),
                 UserId = user.Id,
                 Name = name,
                 AddressId = address.Id

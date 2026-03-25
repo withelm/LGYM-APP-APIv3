@@ -29,7 +29,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-invite", "trainer-invite@example.com");
         var trainee = await SeedUserAsync(name: "trainee-invite", email: "trainee-invite@example.com", password: "password123");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
@@ -49,7 +49,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-email-log", "trainer-email-log@example.com");
         var trainee = await SeedUserAsync(name: "trainee-email-log", email: "trainee-email-log@example.com", password: "password123");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
@@ -76,7 +76,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-email-job", "trainer-email-job@example.com", preferredLanguage: "en");
         var trainee = await SeedUserAsync(name: "trainee-email-job", email: "trainee-email-job@example.com", password: "password123");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
@@ -93,7 +93,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
-            notificationId = log.Id;
+            notificationId = (Guid)log.Id;
         }
 
         using (var scope = Factory.Services.CreateScope())
@@ -105,7 +105,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
+            var log = await db.NotificationMessages.FirstAsync(x => x.Id == (Domain.ValueObjects.Id<NotificationMessage>)notificationId);
             log.Status.Should().Be(EmailNotificationStatus.Sent);
             log.SentAt.Should().NotBeNull();
             log.Attempts.Should().BeGreaterThanOrEqualTo(1);
@@ -120,7 +120,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-email-pl", "trainer-email-pl@example.com", preferredLanguage: "pl");
         var trainee = await SeedUserAsync(name: "trainee-email-pl", email: "trainee-email-pl@example.com", password: "password123");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
@@ -136,7 +136,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
-            notificationId = log.Id;
+            notificationId = (Guid)log.Id;
         }
 
         using (var scope = Factory.Services.CreateScope())
@@ -155,7 +155,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-email-idempotent", "trainer-email-idempotent@example.com");
         var trainee = await SeedUserAsync(name: "trainee-email-idempotent", email: "trainee-email-idempotent@example.com", password: "password123");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
@@ -171,7 +171,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
-            notificationId = log.Id;
+            notificationId = (Guid)log.Id;
         }
 
         using (var scope = Factory.Services.CreateScope())
@@ -189,7 +189,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-email-fail", "trainer-email-fail@example.com");
         var trainee = await SeedUserAsync(name: "trainee-email-fail", email: "trainee-email-fail@example.com", password: "password123");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
@@ -205,7 +205,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
-            notificationId = log.Id;
+            notificationId = (Guid)log.Id;
         }
 
         Factory.EmailSender.FailuresRemaining = 1;
@@ -219,7 +219,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
+            var log = await db.NotificationMessages.FirstAsync(x => x.Id == (Domain.ValueObjects.Id<NotificationMessage>)notificationId);
             log.Status.Should().Be(EmailNotificationStatus.Failed);
             log.Attempts.Should().Be(1);
             log.LastError.Should().NotBeNullOrWhiteSpace();
@@ -234,7 +234,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-email-retry", "trainer-email-retry@example.com");
         var trainee = await SeedUserAsync(name: "trainee-email-retry", email: "trainee-email-retry@example.com", password: "password123");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
@@ -250,7 +250,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var log = await db.NotificationMessages.FirstAsync(x => x.CorrelationId == Guid.Parse(invitation!.Id));
-            notificationId = log.Id;
+            notificationId = (Guid)log.Id;
         }
 
         Factory.EmailSender.FailuresRemaining = 1;
@@ -265,7 +265,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var log = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
+            var log = await db.NotificationMessages.FirstAsync(x => x.Id == (Domain.ValueObjects.Id<NotificationMessage>)notificationId);
             log.Status.Should().Be(EmailNotificationStatus.Sent);
             log.Attempts.Should().Be(2);
             log.SentAt.Should().NotBeNull();
@@ -281,7 +281,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-repeat", "trainer-repeat@example.com");
         var trainee = await SeedUserAsync(name: "trainee-repeat", email: "trainee-repeat@example.com", password: "password123");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var first = await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
         var firstBody = await first.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
@@ -314,7 +314,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainer = await SeedTrainerAsync("trainer-list", "trainer-list@example.com");
         var traineeA = await SeedUserAsync(name: "trainee-list-a", email: "trainee-list-a@example.com", password: "password123");
         var traineeB = await SeedUserAsync(name: "trainee-list-b", email: "trainee-list-b@example.com", password: "password123");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = traineeA.Id.ToString() });
         await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = traineeB.Id.ToString() });
@@ -340,25 +340,25 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.TrainerTraineeLinks.AddRange(
-                new TrainerTraineeLink
-                {
-                    Id = Guid.NewGuid(),
-                    TrainerId = trainerA.Id,
-                    TraineeId = traineeLinkedToA.Id
-                },
-                new TrainerTraineeLink
-                {
-                    Id = Guid.NewGuid(),
-                    TrainerId = trainerB.Id,
-                    TraineeId = traineeLinkedToB.Id
-                });
+             db.TrainerTraineeLinks.AddRange(
+                 new TrainerTraineeLink
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainerA.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)traineeLinkedToA.Id
+                 },
+                 new TrainerTraineeLink
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainerB.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)traineeLinkedToB.Id
+                 });
 
-            db.TrainerInvitations.Add(new TrainerInvitation
-            {
-                Id = Guid.NewGuid(),
-                TrainerId = trainerA.Id,
-                TraineeId = traineeInvitedByA.Id,
+             db.TrainerInvitations.Add(new TrainerInvitation
+             {
+                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)Guid.NewGuid(),
+                 TrainerId = (Domain.ValueObjects.Id<User>)trainerA.Id,
+                 TraineeId = (Domain.ValueObjects.Id<User>)traineeInvitedByA.Id,
                 Code = "OWNERSHIPA001",
                 Status = TrainerInvitationStatus.Pending,
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(3)
@@ -367,7 +367,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainerA.Id);
+        SetAuthorizationHeader((Guid)trainerA.Id);
         var response = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -394,37 +394,37 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
-            {
-                Id = Guid.NewGuid(),
-                TrainerId = trainer.Id,
-                TraineeId = linked.Id
-            });
+             db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+             {
+                 Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                 TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                 TraineeId = (Domain.ValueObjects.Id<User>)linked.Id
+             });
 
-            db.TrainerInvitations.AddRange(
-                new TrainerInvitation
-                {
-                    Id = Guid.NewGuid(),
-                    TrainerId = trainer.Id,
-                    TraineeId = pending.Id,
-                    Code = "STATUSPENDING1",
-                    Status = TrainerInvitationStatus.Pending,
-                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
-                },
-                new TrainerInvitation
-                {
-                    Id = Guid.NewGuid(),
-                    TrainerId = trainer.Id,
-                    TraineeId = expired.Id,
-                    Code = "STATUSEXPIRED1",
-                    Status = TrainerInvitationStatus.Pending,
-                    ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-10)
-                });
+             db.TrainerInvitations.AddRange(
+                 new TrainerInvitation
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerInvitation>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)pending.Id,
+                     Code = "STATUSPENDING1",
+                     Status = TrainerInvitationStatus.Pending,
+                     ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
+                 },
+                 new TrainerInvitation
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerInvitation>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)expired.Id,
+                     Code = "STATUSEXPIRED1",
+                     Status = TrainerInvitationStatus.Pending,
+                     ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-10)
+                 });
 
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var filtered = await Client.GetAsync("/api/trainer/trainees?search=gamma&status=InvitationExpired&sortBy=name&sortDirection=desc&page=1&pageSize=10");
         filtered.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -465,11 +465,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             for (var i = 0; i < 35; i++)
             {
                 var trainee = await SeedUserAsync(name: $"trainee-{i:00}", email: $"trainee-{i:00}@example.com", password: "password123");
-                db.TrainerInvitations.Add(new TrainerInvitation
-                {
-                    Id = Guid.NewGuid(),
-                    TrainerId = trainer.Id,
-                    TraineeId = trainee.Id,
+             db.TrainerInvitations.Add(new TrainerInvitation
+             {
+                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)Guid.NewGuid(),
+                 TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                 TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id,
                     Code = $"PAGE{i:000}CODE",
                     Status = TrainerInvitationStatus.Pending,
                     ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
@@ -479,7 +479,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var response = await Client.GetAsync("/api/trainer/trainees?sortBy=name&sortDirection=asc&page=2&pageSize=10");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -505,28 +505,28 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
-            {
-                Id = Guid.NewGuid(),
-                TrainerId = trainer.Id,
-                TraineeId = linked.Id
+             db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+             {
+                 Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                 TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                 TraineeId = (Domain.ValueObjects.Id<User>)linked.Id
             });
 
-            db.TrainerInvitations.AddRange(
-                new TrainerInvitation
-                {
-                    Id = Guid.NewGuid(),
-                    TrainerId = trainer.Id,
-                    TraineeId = pending.Id,
+             db.TrainerInvitations.AddRange(
+                 new TrainerInvitation
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerInvitation>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)pending.Id,
                     Code = "STATUSSORTPEND",
                     Status = TrainerInvitationStatus.Pending,
                     ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
                 },
-                new TrainerInvitation
-                {
-                    Id = Guid.NewGuid(),
-                    TrainerId = trainer.Id,
-                    TraineeId = expired.Id,
+                 new TrainerInvitation
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerInvitation>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)expired.Id,
                     Code = "STATUSSORTEXP",
                     Status = TrainerInvitationStatus.Pending,
                     ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-10)
@@ -535,7 +535,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var response = await Client.GetAsync("/api/trainer/trainees?sortBy=status&sortDirection=asc&page=1&pageSize=10");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -555,21 +555,21 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            db.TrainerInvitations.AddRange(
-                new TrainerInvitation
-                {
-                    Id = Guid.NewGuid(),
-                    TrainerId = trainer.Id,
-                    TraineeId = matching.Id,
+             db.TrainerInvitations.AddRange(
+                 new TrainerInvitation
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerInvitation>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)matching.Id,
                     Code = "SEARCHCASE001",
                     Status = TrainerInvitationStatus.Pending,
                     ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
                 },
-                new TrainerInvitation
-                {
-                    Id = Guid.NewGuid(),
-                    TrainerId = trainer.Id,
-                    TraineeId = nonMatching.Id,
+                 new TrainerInvitation
+                 {
+                     Id = (Domain.ValueObjects.Id<TrainerInvitation>)Guid.NewGuid(),
+                     TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                     TraineeId = (Domain.ValueObjects.Id<User>)nonMatching.Id,
                     Code = "SEARCHCASE002",
                     Status = TrainerInvitationStatus.Pending,
                     ExpiresAt = DateTimeOffset.UtcNow.AddDays(2)
@@ -578,7 +578,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var response = await Client.GetAsync("/api/trainer/trainees?search=omega");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -597,7 +597,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var uniqueKey = queryString.Replace("=", "-").Replace("&", "-");
         var trainer = await SeedTrainerAsync($"trainer-dashboard-{uniqueKey}", $"trainer-dashboard-{Guid.NewGuid():N}@example.com");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.GetAsync($"/api/trainer/trainees?{queryString}");
 
@@ -625,7 +625,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     public async Task GetDashboardTrainees_WithInvalidPageSize_ReturnsBadRequestWithResourceMessage(int pageSize)
     {
         var trainer = await SeedTrainerAsync($"trainer-dashboard-invalid-pagesize-{pageSize}", $"trainer-dashboard-invalid-pagesize-{Guid.NewGuid():N}@example.com");
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.GetAsync($"/api/trainer/trainees?pageSize={pageSize}");
 
@@ -660,76 +660,76 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+            await LinkTrainerAndTraineeAsync(db, (Guid)trainer.Id, (Guid)trainee.Id);
 
-            var traineePlan = new Plan { Id = Guid.NewGuid(), UserId = trainee.Id, Name = "Plan A" };
-            var traineePlanDay = new PlanDay { Id = Guid.NewGuid(), PlanId = traineePlan.Id, Name = "Push Day" };
-            var traineeGym = new Gym { Id = Guid.NewGuid(), UserId = trainee.Id, Name = "Gym A" };
+             var traineePlan = new Plan { Id = (Domain.ValueObjects.Id<Plan>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)trainee.Id, Name = "Plan A" };
+             var traineePlanDay = new PlanDay { Id = (Domain.ValueObjects.Id<PlanDay>)Guid.NewGuid(), PlanId = (Domain.ValueObjects.Id<Plan>)traineePlan.Id, Name = "Push Day" };
+             var traineeGym = new Gym { Id = (Domain.ValueObjects.Id<Gym>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)trainee.Id, Name = "Gym A" };
 
-            var foreignPlan = new Plan { Id = Guid.NewGuid(), UserId = foreignTrainee.Id, Name = "Plan B" };
-            var foreignPlanDay = new PlanDay { Id = Guid.NewGuid(), PlanId = foreignPlan.Id, Name = "Pull Day" };
-            var foreignGym = new Gym { Id = Guid.NewGuid(), UserId = foreignTrainee.Id, Name = "Gym B" };
+             var foreignPlan = new Plan { Id = (Domain.ValueObjects.Id<Plan>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)foreignTrainee.Id, Name = "Plan B" };
+             var foreignPlanDay = new PlanDay { Id = (Domain.ValueObjects.Id<PlanDay>)Guid.NewGuid(), PlanId = (Domain.ValueObjects.Id<Plan>)foreignPlan.Id, Name = "Pull Day" };
+             var foreignGym = new Gym { Id = (Domain.ValueObjects.Id<Gym>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)foreignTrainee.Id, Name = "Gym B" };
 
-            var exercise = new Exercise { Id = Guid.NewGuid(), Name = "Bench Press", BodyPart = BodyParts.Chest };
-            exerciseId = exercise.Id;
+             var exercise = new Exercise { Id = (Domain.ValueObjects.Id<Exercise>)Guid.NewGuid(), Name = "Bench Press", BodyPart = BodyParts.Chest };
+             exerciseId = (Guid)exercise.Id;
 
             db.Plans.AddRange(traineePlan, foreignPlan);
             db.PlanDays.AddRange(traineePlanDay, foreignPlanDay);
             db.Gyms.AddRange(traineeGym, foreignGym);
             db.Exercises.Add(exercise);
 
-            var traineeTrainingA = new Training
-            {
-                Id = Guid.NewGuid(),
-                UserId = trainee.Id,
-                TypePlanDayId = traineePlanDay.Id,
-                GymId = traineeGym.Id,
-                CreatedAt = trackedDay
-            };
-            var traineeTrainingB = new Training
-            {
-                Id = Guid.NewGuid(),
-                UserId = trainee.Id,
-                TypePlanDayId = traineePlanDay.Id,
-                GymId = traineeGym.Id,
-                CreatedAt = otherDay
-            };
-            var foreignTraining = new Training
-            {
-                Id = Guid.NewGuid(),
-                UserId = foreignTrainee.Id,
-                TypePlanDayId = foreignPlanDay.Id,
-                GymId = foreignGym.Id,
-                CreatedAt = otherDay.AddDays(1)
+             var traineeTrainingA = new Training
+             {
+                 Id = (Domain.ValueObjects.Id<Training>)Guid.NewGuid(),
+                 UserId = (Domain.ValueObjects.Id<User>)trainee.Id,
+                 TypePlanDayId = (Domain.ValueObjects.Id<PlanDay>)traineePlanDay.Id,
+                 GymId = (Domain.ValueObjects.Id<Gym>)traineeGym.Id,
+                 CreatedAt = trackedDay
+             };
+             var traineeTrainingB = new Training
+             {
+                 Id = (Domain.ValueObjects.Id<Training>)Guid.NewGuid(),
+                 UserId = (Domain.ValueObjects.Id<User>)trainee.Id,
+                 TypePlanDayId = (Domain.ValueObjects.Id<PlanDay>)traineePlanDay.Id,
+                 GymId = (Domain.ValueObjects.Id<Gym>)traineeGym.Id,
+                 CreatedAt = otherDay
+             };
+             var foreignTraining = new Training
+             {
+                 Id = (Domain.ValueObjects.Id<Training>)Guid.NewGuid(),
+                 UserId = (Domain.ValueObjects.Id<User>)foreignTrainee.Id,
+                 TypePlanDayId = (Domain.ValueObjects.Id<PlanDay>)foreignPlanDay.Id,
+                 GymId = (Domain.ValueObjects.Id<Gym>)foreignGym.Id,
+                 CreatedAt = otherDay.AddDays(1)
             };
 
             db.Trainings.AddRange(traineeTrainingA, traineeTrainingB, foreignTraining);
 
-            var traineeScore = new ExerciseScore
-            {
-                Id = Guid.NewGuid(),
-                ExerciseId = exercise.Id,
-                UserId = trainee.Id,
-                Reps = 8,
-                Series = 1,
-                Weight = 80,
-                Unit = WeightUnits.Kilograms,
-                TrainingId = traineeTrainingA.Id,
-                CreatedAt = trackedDay
-            };
+             var traineeScore = new ExerciseScore
+             {
+                 Id = (Domain.ValueObjects.Id<ExerciseScore>)Guid.NewGuid(),
+                 ExerciseId = (Domain.ValueObjects.Id<Exercise>)exercise.Id,
+                 UserId = (Domain.ValueObjects.Id<User>)trainee.Id,
+                 Reps = 8,
+                 Series = 1,
+                 Weight = 80,
+                 Unit = WeightUnits.Kilograms,
+                 TrainingId = (Domain.ValueObjects.Id<Training>)traineeTrainingA.Id,
+                 CreatedAt = trackedDay
+             };
 
-            db.ExerciseScores.Add(traineeScore);
-            db.TrainingExerciseScores.Add(new TrainingExerciseScore
-            {
-                Id = Guid.NewGuid(),
-                TrainingId = traineeTrainingA.Id,
-                ExerciseScoreId = traineeScore.Id
+             db.ExerciseScores.Add(traineeScore);
+             db.TrainingExerciseScores.Add(new TrainingExerciseScore
+             {
+                 Id = (Domain.ValueObjects.Id<TrainingExerciseScore>)Guid.NewGuid(),
+                 TrainingId = (Domain.ValueObjects.Id<Training>)traineeTrainingA.Id,
+                 ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)traineeScore.Id
             });
 
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var datesResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/trainings/dates");
         datesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -761,13 +761,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+            await LinkTrainerAndTraineeAsync(db, (Guid)trainer.Id, (Guid)trainee.Id);
 
-            var plan = new Plan { Id = Guid.NewGuid(), UserId = trainee.Id, Name = "Plan Progress" };
-            var planDay = new PlanDay { Id = Guid.NewGuid(), PlanId = plan.Id, Name = "Progress Day" };
-            var gym = new Gym { Id = Guid.NewGuid(), UserId = trainee.Id, Name = "Progress Gym" };
-            var exercise = new Exercise { Id = Guid.NewGuid(), Name = "Squat", BodyPart = BodyParts.Quads };
-            exerciseId = exercise.Id;
+             var plan = new Plan { Id = (Domain.ValueObjects.Id<Plan>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)trainee.Id, Name = "Plan Progress" };
+             var planDay = new PlanDay { Id = (Domain.ValueObjects.Id<PlanDay>)Guid.NewGuid(), PlanId = (Domain.ValueObjects.Id<Plan>)plan.Id, Name = "Progress Day" };
+             var gym = new Gym { Id = (Domain.ValueObjects.Id<Gym>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)trainee.Id, Name = "Progress Gym" };
+             var exercise = new Exercise { Id = (Domain.ValueObjects.Id<Exercise>)Guid.NewGuid(), Name = "Squat", BodyPart = BodyParts.Quads };
+             exerciseId = (Guid)exercise.Id;
 
             db.Plans.Add(plan);
             db.PlanDays.Add(planDay);
@@ -776,44 +776,44 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
             var dayA = DateTimeOffset.UtcNow.AddDays(-3);
             var dayB = DateTimeOffset.UtcNow.AddDays(-1);
-            var trainingA = new Training { Id = Guid.NewGuid(), UserId = trainee.Id, TypePlanDayId = planDay.Id, GymId = gym.Id, CreatedAt = dayA };
-            var trainingB = new Training { Id = Guid.NewGuid(), UserId = trainee.Id, TypePlanDayId = planDay.Id, GymId = gym.Id, CreatedAt = dayB };
+             var trainingA = new Training { Id = (Domain.ValueObjects.Id<Training>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)trainee.Id, TypePlanDayId = (Domain.ValueObjects.Id<PlanDay>)planDay.Id, GymId = (Domain.ValueObjects.Id<Gym>)gym.Id, CreatedAt = dayA };
+             var trainingB = new Training { Id = (Domain.ValueObjects.Id<Training>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)trainee.Id, TypePlanDayId = (Domain.ValueObjects.Id<PlanDay>)planDay.Id, GymId = (Domain.ValueObjects.Id<Gym>)gym.Id, CreatedAt = dayB };
             db.Trainings.AddRange(trainingA, trainingB);
 
-            var scoreA = new ExerciseScore
-            {
-                Id = Guid.NewGuid(),
-                ExerciseId = exercise.Id,
-                UserId = trainee.Id,
-                Reps = 5,
-                Series = 1,
-                Weight = 100,
-                Unit = WeightUnits.Kilograms,
-                TrainingId = trainingA.Id,
-                CreatedAt = dayA
-            };
-            var scoreB = new ExerciseScore
-            {
-                Id = Guid.NewGuid(),
-                ExerciseId = exercise.Id,
-                UserId = trainee.Id,
-                Reps = 5,
-                Series = 1,
-                Weight = 110,
-                Unit = WeightUnits.Kilograms,
-                TrainingId = trainingB.Id,
-                CreatedAt = dayB
+             var scoreA = new ExerciseScore
+             {
+                 Id = (Domain.ValueObjects.Id<ExerciseScore>)Guid.NewGuid(),
+                 ExerciseId = (Domain.ValueObjects.Id<Exercise>)exercise.Id,
+                 UserId = (Domain.ValueObjects.Id<User>)trainee.Id,
+                 Reps = 5,
+                 Series = 1,
+                 Weight = 100,
+                 Unit = WeightUnits.Kilograms,
+                 TrainingId = (Domain.ValueObjects.Id<Training>)trainingA.Id,
+                 CreatedAt = dayA
+             };
+             var scoreB = new ExerciseScore
+             {
+                 Id = (Domain.ValueObjects.Id<ExerciseScore>)Guid.NewGuid(),
+                 ExerciseId = (Domain.ValueObjects.Id<Exercise>)exercise.Id,
+                 UserId = (Domain.ValueObjects.Id<User>)trainee.Id,
+                 Reps = 5,
+                 Series = 1,
+                 Weight = 110,
+                 Unit = WeightUnits.Kilograms,
+                 TrainingId = (Domain.ValueObjects.Id<Training>)trainingB.Id,
+                 CreatedAt = dayB
             };
 
             db.ExerciseScores.AddRange(scoreA, scoreB);
-            db.EloRegistries.AddRange(
-                new EloRegistry { Id = Guid.NewGuid(), UserId = trainee.Id, Date = dayA, Elo = 1010 },
-                new EloRegistry { Id = Guid.NewGuid(), UserId = trainee.Id, Date = dayB, Elo = 1030 });
+             db.EloRegistries.AddRange(
+                 new EloRegistry { Id = (Domain.ValueObjects.Id<EloRegistry>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)trainee.Id, Date = dayA, Elo = 1010 },
+                 new EloRegistry { Id = (Domain.ValueObjects.Id<EloRegistry>)Guid.NewGuid(), UserId = (Domain.ValueObjects.Id<User>)trainee.Id, Date = dayB, Elo = 1030 });
 
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var progressResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/exercise-scores/chart", new
         {
@@ -841,35 +841,35 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+            await LinkTrainerAndTraineeAsync(db, (Guid)trainer.Id, (Guid)trainee.Id);
 
-            var exercise = new Exercise { Id = Guid.NewGuid(), Name = "Deadlift", BodyPart = BodyParts.Back };
-            db.Exercises.Add(exercise);
+             var exercise = new Exercise { Id = (Domain.ValueObjects.Id<Exercise>)Guid.NewGuid(), Name = "Deadlift", BodyPart = BodyParts.Back };
+             db.Exercises.Add(exercise);
 
-            db.MainRecords.AddRange(
-                new MainRecord
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = trainee.Id,
-                    ExerciseId = exercise.Id,
-                    Weight = 140,
-                    Unit = WeightUnits.Kilograms,
-                    Date = DateTimeOffset.UtcNow.AddDays(-20)
-                },
-                new MainRecord
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = trainee.Id,
-                    ExerciseId = exercise.Id,
-                    Weight = 150,
-                    Unit = WeightUnits.Kilograms,
-                    Date = DateTimeOffset.UtcNow.AddDays(-10)
+             db.MainRecords.AddRange(
+                 new MainRecord
+                 {
+                     Id = (Domain.ValueObjects.Id<MainRecord>)Guid.NewGuid(),
+                     UserId = (Domain.ValueObjects.Id<User>)trainee.Id,
+                     ExerciseId = (Domain.ValueObjects.Id<Exercise>)exercise.Id,
+                     Weight = 140,
+                     Unit = WeightUnits.Kilograms,
+                     Date = DateTimeOffset.UtcNow.AddDays(-20)
+                 },
+                 new MainRecord
+                 {
+                     Id = (Domain.ValueObjects.Id<MainRecord>)Guid.NewGuid(),
+                     UserId = (Domain.ValueObjects.Id<User>)trainee.Id,
+                     ExerciseId = (Domain.ValueObjects.Id<Exercise>)exercise.Id,
+                     Weight = 150,
+                     Unit = WeightUnits.Kilograms,
+                     Date = DateTimeOffset.UtcNow.AddDays(-10)
                 });
 
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/main-records/history");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -890,11 +890,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await LinkTrainerAndTraineeAsync(db, trainerB.Id, trainee.Id);
+            await LinkTrainerAndTraineeAsync(db, (Guid)trainerB.Id, (Guid)trainee.Id);
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainerA.Id);
+        SetAuthorizationHeader((Guid)trainerA.Id);
         var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/trainings/dates");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -909,11 +909,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+            await LinkTrainerAndTraineeAsync(db, (Guid)trainer.Id, (Guid)trainee.Id);
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
 
         var invalidTraineeResponse = await Client.GetAsync("/api/trainer/trainees/not-a-guid/trainings/dates");
         invalidTraineeResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -957,14 +957,14 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainer = await SeedTrainerAsync("trainer-accept", "trainer-accept@example.com");
         var trainee = await SeedUserAsync(name: "trainee-accept", email: "trainee-accept@example.com", password: "password123");
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var createResponse = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
         var invitation = await createResponse.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
-        SetAuthorizationHeader(trainee.Id);
+        SetAuthorizationHeader((Guid)trainee.Id);
         var acceptResponse = await Client.PostAsync($"/api/trainee/invitations/{invitation!.Id}/accept", null);
 
         acceptResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -981,20 +981,20 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainer = await SeedTrainerAsync("trainer-reject", "trainer-reject@example.com");
         var trainee = await SeedUserAsync(name: "trainee-reject", email: "trainee-reject@example.com", password: "password123");
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var createResponse = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
         var invitation = await createResponse.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
-        SetAuthorizationHeader(trainee.Id);
+        SetAuthorizationHeader((Guid)trainee.Id);
         var rejectResponse = await Client.PostAsync($"/api/trainee/invitations/{invitation!.Id}/reject", null);
         rejectResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var invitationEntity = await db.TrainerInvitations.FirstAsync(i => i.Id == Guid.Parse(invitation.Id));
+         var invitationEntity = await db.TrainerInvitations.FirstAsync(i => i.Id == (Domain.ValueObjects.Id<TrainerInvitation>)Guid.Parse(invitation.Id));
         invitationEntity.Status.ToString().Should().Be("Rejected");
         invitationEntity.RespondedAt.Should().NotBeNull();
     }
@@ -1009,18 +1009,18 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.TrainerInvitations.Add(new TrainerInvitation
-            {
-                Id = invitationId,
-                TrainerId = trainer.Id,
-                TraineeId = trainee.Id,
+             db.TrainerInvitations.Add(new TrainerInvitation
+             {
+                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+                 TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                 TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id,
                 Code = "EXPIRED123456",
                 ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-5)
             });
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainee.Id);
+        SetAuthorizationHeader((Guid)trainee.Id);
         var response = await Client.PostAsync($"/api/trainee/invitations/{invitationId}/accept", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -1030,7 +1030,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var invitation = await verifyDb.TrainerInvitations.FirstAsync(i => i.Id == invitationId);
+         var invitation = await verifyDb.TrainerInvitations.FirstAsync(i => i.Id == (Domain.ValueObjects.Id<TrainerInvitation>)invitationId);
         invitation.Status.ToString().Should().Be("Expired");
         invitation.RespondedAt.Should().NotBeNull();
     }
@@ -1040,7 +1040,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var regularUser = await SeedUserAsync(name: "regular-invite", email: "regular-invite@example.com", password: "password123");
         var trainee = await SeedUserAsync(name: "regular-target", email: "regular-target@example.com", password: "password123");
-        SetAuthorizationHeader(regularUser.Id);
+        SetAuthorizationHeader((Guid)regularUser.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
@@ -1056,20 +1056,20 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainer = await SeedTrainerAsync("trainer-unlink", "trainer-unlink@example.com");
         var trainee = await SeedUserAsync(name: "trainee-unlink", email: "trainee-unlink@example.com", password: "password123");
 
-        using (var scope = Factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
-            {
-                Id = Guid.NewGuid(),
-                TrainerId = trainer.Id,
-                TraineeId = trainee.Id
-            });
-            await db.SaveChangesAsync();
-        }
+         using (var scope = Factory.Services.CreateScope())
+         {
+             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+             db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+             {
+                 Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                 TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                 TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id
+             });
+             await db.SaveChangesAsync();
+         }
 
-        SetAuthorizationHeader(trainer.Id);
-        var response = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
+         SetAuthorizationHeader((Guid)trainer.Id);
+         var response = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -1085,20 +1085,20 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainer = await SeedTrainerAsync("trainer-detach", "trainer-detach@example.com");
         var trainee = await SeedUserAsync(name: "trainee-detach", email: "trainee-detach@example.com", password: "password123");
 
-        using (var scope = Factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
-            {
-                Id = Guid.NewGuid(),
-                TrainerId = trainer.Id,
-                TraineeId = trainee.Id
-            });
-            await db.SaveChangesAsync();
-        }
+         using (var scope = Factory.Services.CreateScope())
+         {
+             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+             db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+             {
+                 Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                 TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                 TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id
+             });
+             await db.SaveChangesAsync();
+         }
 
-        SetAuthorizationHeader(trainee.Id);
-        var response = await Client.PostAsync("/api/trainee/trainer/detach", null);
+         SetAuthorizationHeader((Guid)trainee.Id);
+         var response = await Client.PostAsync("/api/trainee/trainer/detach", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -1117,11 +1117,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await LinkTrainerAndTraineeAsync(db, trainer.Id, trainee.Id);
+            await LinkTrainerAndTraineeAsync(db, (Guid)trainer.Id, (Guid)trainee.Id);
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var createResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans", new
         {
             name = "Trainer Owned Plan"
@@ -1136,7 +1136,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{createdPlan.Id}/assign", null);
         assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        SetAuthorizationHeader(trainee.Id);
+        SetAuthorizationHeader((Guid)trainee.Id);
         var activeResponse = await Client.GetAsync("/api/trainee/plan/active");
         activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var activePlan = await activeResponse.Content.ReadFromJsonAsync<TrainerManagedPlanResponse>();
@@ -1144,11 +1144,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         activePlan!.Id.Should().Be(createdPlan.Id);
         activePlan.IsActive.Should().BeTrue();
 
-        SetAuthorizationHeader(trainer.Id);
+        SetAuthorizationHeader((Guid)trainer.Id);
         var unassignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/unassign", null);
         unassignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        SetAuthorizationHeader(trainee.Id);
+        SetAuthorizationHeader((Guid)trainee.Id);
         var noActiveResponse = await Client.GetAsync("/api/trainee/plan/active");
         noActiveResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -1164,61 +1164,61 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await LinkTrainerAndTraineeAsync(db, trainerB.Id, trainee.Id);
+            await LinkTrainerAndTraineeAsync(db, (Guid)trainerB.Id, (Guid)trainee.Id);
 
-            var plan = new Plan
-            {
-                Id = Guid.NewGuid(),
-                UserId = trainee.Id,
-                Name = "Foreign Plan",
-                IsActive = false,
-                IsDeleted = false
-            };
+             var plan = new Plan
+             {
+                 Id = (Domain.ValueObjects.Id<Plan>)Guid.NewGuid(),
+                 UserId = (Domain.ValueObjects.Id<User>)trainee.Id,
+                 Name = "Foreign Plan",
+                 IsActive = false,
+                 IsDeleted = false
+             };
 
-            db.Plans.Add(plan);
-            await db.SaveChangesAsync();
-            planId = plan.Id;
+             db.Plans.Add(plan);
+             await db.SaveChangesAsync();
+             planId = (Guid)plan.Id;
         }
 
-        SetAuthorizationHeader(trainerA.Id);
+        SetAuthorizationHeader((Guid)trainerA.Id);
         var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{planId}/assign", null);
         assignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    private static async Task LinkTrainerAndTraineeAsync(AppDbContext db, Guid trainerId, Guid traineeId)
-    {
-        var existing = await db.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainerId && x.TraineeId == traineeId);
+     private static async Task LinkTrainerAndTraineeAsync(AppDbContext db, Guid trainerId, Guid traineeId)
+     {
+         var existing = await db.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == (Domain.ValueObjects.Id<User>)trainerId && x.TraineeId == (Domain.ValueObjects.Id<User>)traineeId);
         if (existing != null)
         {
             return;
         }
 
-        db.TrainerTraineeLinks.Add(new TrainerTraineeLink
-        {
-            Id = Guid.NewGuid(),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        });
-    }
+         db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+         {
+             Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+             TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+             TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+         });
+     }
 
-    private async Task<User> SeedTrainerAsync(string name, string email, string preferredLanguage = "en-US")
-    {
-        var trainer = await SeedUserAsync(name: name, email: email, password: "password123");
+     private async Task<User> SeedTrainerAsync(string name, string email, string preferredLanguage = "en-US")
+     {
+         var trainer = await SeedUserAsync(name: name, email: email, password: "password123");
 
-        using var scope = Factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+         using var scope = Factory.Services.CreateScope();
+         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == trainer.Id && ur.RoleId == AppDbContext.TrainerRoleSeedId);
-        if (!alreadyLinked)
-        {
-            db.UserRoles.Add(new UserRole
-            {
-                UserId = trainer.Id,
-                RoleId = AppDbContext.TrainerRoleSeedId
-            });
-        }
+          var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == (Domain.ValueObjects.Id<User>)trainer.Id && ur.RoleId == (Domain.ValueObjects.Id<Role>)AppDbContext.TrainerRoleSeedId);
+         if (!alreadyLinked)
+         {
+              db.UserRoles.Add(new UserRole
+              {
+                  UserId = (Domain.ValueObjects.Id<User>)trainer.Id,
+                  RoleId = (Domain.ValueObjects.Id<Role>)AppDbContext.TrainerRoleSeedId
+             });
+         }
 
-        var trainerToUpdate = await db.Users.FirstAsync(u => u.Id == trainer.Id);
+         var trainerToUpdate = await db.Users.FirstAsync(u => u.Id == (Domain.ValueObjects.Id<User>)trainer.Id);
         trainerToUpdate.PreferredLanguage = preferredLanguage;
         await db.SaveChangesAsync();
 

@@ -42,7 +42,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync(exerciseGuid, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync((Id<ExerciseEntity>)exerciseGuid, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -55,7 +55,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         var record = new MainRecordEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<LgymApi.Domain.Entities.MainRecord>.New(),
             UserId = user.Id,
             ExerciseId = exercise.Id,
             Weight = new Weight(input.Weight, input.Unit),
@@ -79,7 +79,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var records = await _mainRecordRepository.GetByUserIdAsync(user.Id, cancellationToken);
+        var records = await _mainRecordRepository.GetByUserIdAsync((Guid)user.Id, cancellationToken);
         records = records.OrderByDescending(r => r.Date).ToList();
 
         if (records.Count == 0)
@@ -103,7 +103,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(user.Id, null, cancellationToken);
+        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync((Guid)user.Id, null, cancellationToken);
         if (records.Count == 0)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -122,7 +122,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         var exerciseIds = bestRecords.Select(r => r.ExerciseId).Distinct().ToList();
         var exercises = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
-        var exerciseMap = exercises.ToDictionary(e => e.Id, e => e);
+        var exerciseMap = exercises.ToDictionary(e => (Guid)e.Id, e => e);
 
         return new MainRecordsLastContext
         {
@@ -144,7 +144,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (record.UserId != currentUserId)
+        if (record.UserId != (Id<LgymApi.Domain.Entities.User>)currentUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
@@ -176,7 +176,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (existingRecord.UserId != input.CurrentUserId)
+        if (existingRecord.UserId != (Id<LgymApi.Domain.Entities.User>)input.CurrentUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
@@ -186,7 +186,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync(exerciseGuid, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync((Id<ExerciseEntity>)exerciseGuid, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -221,7 +221,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         if (record == null)
         {
-            var possible = await _exerciseScoreRepository.GetBestScoreAsync(userId, exerciseGuid, cancellationToken);
+            var possible = await _exerciseScoreRepository.GetBestScoreAsync((Id<LgymApi.Domain.Entities.User>)userId, (Id<ExerciseEntity>)exerciseGuid, cancellationToken);
             if (possible == null)
             {
                 throw AppException.NotFound(Messages.DidntFind);

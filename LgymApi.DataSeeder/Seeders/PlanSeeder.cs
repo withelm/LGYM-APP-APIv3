@@ -39,7 +39,7 @@ public sealed class PlanSeeder : IEntitySeeder
 
             var plan = new Plan
             {
-                Id = Guid.NewGuid(),
+                Id = (LgymApi.Domain.ValueObjects.Id<Plan>)Guid.NewGuid(),
                 UserId = user.Id,
                 Name = "Push Pull Legs",
                 IsActive = true

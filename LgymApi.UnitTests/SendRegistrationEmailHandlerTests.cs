@@ -34,7 +34,7 @@ public sealed class SendRegistrationEmailHandlerTests
         var userId = Guid.NewGuid();
         _testUserRepository.UserToReturn = new User
         {
-            Id = userId,
+            Id = (Domain.ValueObjects.Id<User>)userId,
             Name = "JohnDoe",
             Email = "john.doe@example.com",
             PreferredLanguage = "en-US"
@@ -64,7 +64,7 @@ public sealed class SendRegistrationEmailHandlerTests
         var userId = Guid.NewGuid();
         _testUserRepository.UserToReturn = new User
         {
-            Id = userId,
+            Id = (Domain.ValueObjects.Id<User>)userId,
             Name = "TestUser",
             Email = string.Empty,
             PreferredLanguage = "en-US"
@@ -91,7 +91,7 @@ public sealed class SendRegistrationEmailHandlerTests
         var userId = Guid.NewGuid();
         _testUserRepository.UserToReturn = new User
         {
-            Id = userId,
+            Id = (Domain.ValueObjects.Id<User>)userId,
             Name = "TestUser",
             Email = "   ",
             PreferredLanguage = "en-US"
@@ -117,7 +117,7 @@ public sealed class SendRegistrationEmailHandlerTests
         var userId = Guid.NewGuid();
         _testUserRepository.UserToReturn = new User
         {
-            Id = userId,
+            Id = (Domain.ValueObjects.Id<User>)userId,
             Name = "MariaGarcia",
             Email = "maria.garcia@example.com",
             PreferredLanguage = "es-ES"
@@ -146,7 +146,7 @@ public sealed class SendRegistrationEmailHandlerTests
         var userId = Guid.NewGuid();
         _testUserRepository.UserToReturn = new User
         {
-            Id = userId,
+            Id = (Domain.ValueObjects.Id<User>)userId,
             Name = "TestUser",
             Email = "test@example.com",
             PreferredLanguage = "en-US"
@@ -173,7 +173,7 @@ public sealed class SendRegistrationEmailHandlerTests
         var userId = Guid.NewGuid();
         _testUserRepository.UserToReturn = new User
         {
-            Id = userId,
+            Id = (Domain.ValueObjects.Id<User>)userId,
             Name = "TestUser",
             Email = "test@example.com",
             PreferredLanguage = "en-US"
@@ -226,7 +226,7 @@ public sealed class SendRegistrationEmailHandlerTests
         var userId = Guid.NewGuid();
         _testUserRepository.UserToReturn = new User
         {
-            Id = userId,
+            Id = (Domain.ValueObjects.Id<User>)userId,
             Name = "PierreDupont",
             Email = "pierre@example.fr",
             PreferredLanguage = "fr-FR"
@@ -272,7 +272,7 @@ public sealed class SendRegistrationEmailHandlerTests
         var userId = Guid.NewGuid();
         _testUserRepository.UserToReturn = new User
         {
-            Id = userId,
+            Id = (Domain.ValueObjects.Id<User>)userId,
             Name = "TestUser",
             Email = "test@example.com",
             PreferredLanguage = null
@@ -297,7 +297,7 @@ public sealed class SendRegistrationEmailHandlerTests
         var userId = Guid.NewGuid();
         _testUserRepository.UserToReturn = new User
         {
-            Id = userId,
+            Id = (Domain.ValueObjects.Id<User>)userId,
             Name = "TestUser",
             Email = "test@example.com",
             PreferredLanguage = "   "

@@ -30,7 +30,7 @@ public sealed class SupplementPlanItemSeeder : IEntitySeeder
             .Select(item => new { item.PlanId, item.Order, item.TimeOfDay })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid PlanId, int Order, TimeSpan TimeOfDay)>(
+        var existingSet = new HashSet<(Id<SupplementPlan> PlanId, int Order, TimeSpan TimeOfDay)>(
             existing.Select(entry => (entry.PlanId, entry.Order, entry.TimeOfDay)));
 
         var addedAny = false;
@@ -40,7 +40,7 @@ public sealed class SupplementPlanItemSeeder : IEntitySeeder
             {
                 new()
                 {
-                    Id = Guid.NewGuid(),
+                    Id = (LgymApi.Domain.ValueObjects.Id<SupplementPlanItem>)Guid.NewGuid(),
                     PlanId = plan.Id,
                     SupplementName = "Whey protein",
                     Dosage = "30g",
@@ -50,7 +50,7 @@ public sealed class SupplementPlanItemSeeder : IEntitySeeder
                 },
                 new()
                 {
-                    Id = Guid.NewGuid(),
+                    Id = (LgymApi.Domain.ValueObjects.Id<SupplementPlanItem>)Guid.NewGuid(),
                     PlanId = plan.Id,
                     SupplementName = "Creatine",
                     Dosage = "5g",

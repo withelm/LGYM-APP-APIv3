@@ -14,6 +14,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
@@ -38,7 +39,7 @@ public sealed class ServiceCommitBehaviorTests
         await using var dbContext = new AppDbContext(options);
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = (Id<User>)Guid.NewGuid(),
             Name = "plan-user",
             Email = "plan-user@example.com",
             ProfileRank = "Junior 1",
@@ -58,7 +59,7 @@ public sealed class ServiceCommitBehaviorTests
 
         var service = new PlanService(userRepository, planRepository, planDayRepository, unitOfWork);
 
-        await service.CreatePlanAsync(user, user.Id, "UoW Plan");
+        await service.CreatePlanAsync(user, (Guid)user.Id, "UoW Plan");
 
         var savedPlan = await dbContext.Plans.FirstOrDefaultAsync(p => p.UserId == user.Id && p.Name == "UoW Plan");
         Assert.That(savedPlan, Is.Not.Null);
@@ -79,7 +80,7 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = (Id<Role>)Guid.NewGuid(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
@@ -137,7 +138,7 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = (Id<Role>)Guid.NewGuid(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
@@ -192,7 +193,7 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = (Id<Role>)Guid.NewGuid(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
@@ -249,14 +250,14 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = (Id<Role>)Guid.NewGuid(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
 
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = (Id<User>)Guid.NewGuid(),
             Name = "timezone-user",
             Email = "timezone-user@example.com",
             ProfileRank = "Junior 1",
@@ -313,14 +314,14 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = (Id<Role>)Guid.NewGuid(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
 
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = (Id<User>)Guid.NewGuid(),
             Name = "timezone-invalid-user",
             Email = "timezone-invalid-user@example.com",
             ProfileRank = "Junior 1",
@@ -383,11 +384,11 @@ public sealed class ServiceCommitBehaviorTests
             "Role for coaching",
             [AuthConstants.Permissions.ManageGlobalExercises, AuthConstants.Permissions.ManageAppConfig]);
 
-        var savedRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == created.Id);
+        var savedRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == (Id<Role>)created.Id);
         Assert.That(savedRole, Is.Not.Null);
 
         var savedClaims = await dbContext.RoleClaims
-            .Where(rc => rc.RoleId == created.Id)
+            .Where(rc => rc.RoleId == (Id<Role>)created.Id)
             .Select(rc => rc.ClaimValue)
             .OrderBy(v => v)
             .ToListAsync();
@@ -411,7 +412,7 @@ public sealed class ServiceCommitBehaviorTests
 
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = (Id<User>)Guid.NewGuid(),
             Name = "role-user",
             Email = "role-user@example.com",
             ProfileRank = "Junior 1",
@@ -423,8 +424,8 @@ public sealed class ServiceCommitBehaviorTests
         };
 
         dbContext.Users.Add(user);
-        dbContext.Roles.Add(new Role { Id = Guid.NewGuid(), Name = AuthConstants.Roles.User, Description = "Default" });
-        dbContext.Roles.Add(new Role { Id = Guid.NewGuid(), Name = "Coach", Description = "Custom" });
+        dbContext.Roles.Add(new Role { Id = (Id<Role>)Guid.NewGuid(), Name = AuthConstants.Roles.User, Description = "Default" });
+        dbContext.Roles.Add(new Role { Id = (Id<Role>)Guid.NewGuid(), Name = "Coach", Description = "Custom" });
         await dbContext.SaveChangesAsync();
 
         IRoleRepository roleRepository = new RoleRepository(dbContext);
@@ -433,7 +434,7 @@ public sealed class ServiceCommitBehaviorTests
 
         var service = new RoleService(roleRepository, userRepository, unitOfWork);
 
-        await service.UpdateUserRolesAsync(user.Id, [AuthConstants.Roles.User, "Coach"]);
+        await service.UpdateUserRolesAsync((Guid)user.Id, [AuthConstants.Roles.User, "Coach"]);
 
         var assignedRoleNames = await dbContext.UserRoles
             .Where(ur => ur.UserId == user.Id)

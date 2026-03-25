@@ -24,7 +24,7 @@ public sealed class ExerciseProfile : IMappingProfile
             if (source.UserId is null)
             {
                 var translations = context?.Get(Keys.Translations);
-                if (translations != null && translations.TryGetValue(source.Id, out var translatedName))
+                if (translations != null && translations.TryGetValue((Guid)source.Id, out var translatedName))
                 {
                     name = translatedName;
                 }

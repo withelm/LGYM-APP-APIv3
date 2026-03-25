@@ -99,34 +99,34 @@ public sealed class ReportingServiceTests
         });
     }
 
-    [Test]
-    public async Task GetPendingRequestsForTraineeAsync_ExpiresOverdueAndPersists()
-    {
-        var trainee = NewUser();
-        var trainer = NewUser();
-        var template = NewTemplate(trainer.Id, "T1", [NewField("weight", ReportFieldType.Number, true)]);
+     [Test]
+     public async Task GetPendingRequestsForTraineeAsync_ExpiresOverdueAndPersists()
+     {
+         var trainee = NewUser();
+         var trainer = NewUser();
+         var template = NewTemplate((Guid)trainer.Id, "T1", [NewField("weight", ReportFieldType.Number, true)]);
 
-        _reportingRepository.Requests.Add(new ReportRequest
-        {
-            Id = Guid.NewGuid(),
-            TrainerId = trainer.Id,
-            TraineeId = trainee.Id,
-            TemplateId = template.Id,
-            Template = template,
-            DueAt = DateTimeOffset.UtcNow.AddMinutes(-10),
-            Status = ReportRequestStatus.Pending
-        });
+         _reportingRepository.Requests.Add(new ReportRequest
+         {
+             Id = (Domain.ValueObjects.Id<ReportRequest>)Guid.NewGuid(),
+             TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+             TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id,
+             TemplateId = template.Id,
+             Template = template,
+             DueAt = DateTimeOffset.UtcNow.AddMinutes(-10),
+             Status = ReportRequestStatus.Pending
+         });
 
-        _reportingRepository.Requests.Add(new ReportRequest
-        {
-            Id = Guid.NewGuid(),
-            TrainerId = trainer.Id,
-            TraineeId = trainee.Id,
-            TemplateId = template.Id,
-            Template = template,
-            DueAt = DateTimeOffset.UtcNow.AddMinutes(30),
-            Status = ReportRequestStatus.Pending
-        });
+         _reportingRepository.Requests.Add(new ReportRequest
+         {
+             Id = (Domain.ValueObjects.Id<ReportRequest>)Guid.NewGuid(),
+             TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+             TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id,
+             TemplateId = template.Id,
+             Template = template,
+             DueAt = DateTimeOffset.UtcNow.AddMinutes(30),
+             Status = ReportRequestStatus.Pending
+         });
 
         var result = await _service.GetPendingRequestsForTraineeAsync(trainee);
 
@@ -138,23 +138,23 @@ public sealed class ReportingServiceTests
         });
     }
 
-    [Test]
-    public async Task GetPendingRequestsForTraineeAsync_DoesNotSave_WhenNothingExpires()
-    {
-        var trainee = NewUser();
-        var trainer = NewUser();
-        var template = NewTemplate(trainer.Id, "T2", [NewField("sleep", ReportFieldType.Boolean, false)]);
+     [Test]
+     public async Task GetPendingRequestsForTraineeAsync_DoesNotSave_WhenNothingExpires()
+     {
+         var trainee = NewUser();
+         var trainer = NewUser();
+         var template = NewTemplate((Guid)trainer.Id, "T2", [NewField("sleep", ReportFieldType.Boolean, false)]);
 
-        _reportingRepository.Requests.Add(new ReportRequest
-        {
-            Id = Guid.NewGuid(),
-            TrainerId = trainer.Id,
-            TraineeId = trainee.Id,
-            TemplateId = template.Id,
-            Template = template,
-            DueAt = DateTimeOffset.UtcNow.AddDays(1),
-            Status = ReportRequestStatus.Pending
-        });
+         _reportingRepository.Requests.Add(new ReportRequest
+         {
+             Id = (Domain.ValueObjects.Id<ReportRequest>)Guid.NewGuid(),
+             TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
+             TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id,
+             TemplateId = template.Id,
+             Template = template,
+             DueAt = DateTimeOffset.UtcNow.AddDays(1),
+             Status = ReportRequestStatus.Pending
+         });
 
         var result = await _service.GetPendingRequestsForTraineeAsync(trainee);
 
@@ -165,184 +165,166 @@ public sealed class ReportingServiceTests
         });
     }
 
-    [Test]
-    public async Task SubmitReportRequestAsync_AcceptsCaseInsensitiveKeys()
-    {
-        var trainee = NewUser();
-        var trainer = NewUser();
-        var template = NewTemplate(trainer.Id, "Weekly", [NewField("Weight", ReportFieldType.Number, true)]);
-        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+     [Test]
+     public async Task SubmitReportRequestAsync_AcceptsCaseInsensitiveKeys()
+     {
+         var trainee = NewUser();
+         var trainer = NewUser();
+         var template = NewTemplate((Guid)trainer.Id, "Weekly", [NewField("Weight", ReportFieldType.Number, true)]);
+         var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
         _reportingRepository.Requests.Add(request);
 
-        var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
-        {
-            Answers = new Dictionary<string, JsonElement>
-            {
-                ["weight"] = JsonSerializer.SerializeToElement(82)
-            }
-        });
+         var result = await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+         {
+             Answers = new Dictionary<string, JsonElement>
+             {
+                 ["weight"] = JsonSerializer.SerializeToElement(82)
+             }
+         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
-            Assert.That(result.Answers.ContainsKey("WEIGHT"), Is.True);
-            Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
-        });
+         Assert.Multiple(() =>
+         {
+             Assert.That(result.ReportRequestId, Is.EqualTo((Guid)request.Id));
+             Assert.That(result.Answers.ContainsKey("WEIGHT"), Is.True);
+             Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+         });
     }
 
-    [Test]
-    public async Task SubmitReportRequestAsync_AllowsEmptyAnswers_WhenAllFieldsOptional()
-    {
-        var trainee = NewUser();
-        var trainer = NewUser();
-        var template = NewTemplate(trainer.Id, "OptionalOnly", [NewField("notes", ReportFieldType.Text, false)]);
-        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+     [Test]
+     public async Task SubmitReportRequestAsync_AllowsEmptyAnswers_WhenAllFieldsOptional()
+     {
+         var trainee = NewUser();
+         var trainer = NewUser();
+         var template = NewTemplate((Guid)trainer.Id, "OptionalOnly", [NewField("notes", ReportFieldType.Text, false)]);
+         var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
         _reportingRepository.Requests.Add(request);
 
-        var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
-        {
-            Answers = new Dictionary<string, JsonElement>()
-        });
+         var result = await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+         {
+             Answers = new Dictionary<string, JsonElement>()
+         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
-            Assert.That(result.Answers, Is.Empty);
-            Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
-        });
+         Assert.Multiple(() =>
+         {
+             Assert.That(result.ReportRequestId, Is.EqualTo((Guid)request.Id));
+             Assert.That(result.Answers, Is.Empty);
+             Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+         });
     }
 
-    [Test]
-    public void SubmitReportRequestAsync_ThrowsBadRequest_WhenRequiredFieldMissing()
-    {
-        var trainee = NewUser();
-        var trainer = NewUser();
-        var template = NewTemplate(trainer.Id, "Required", [NewField("weight", ReportFieldType.Number, true)]);
-        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+      [Test]
+      public async Task SubmitReportRequestAsync_ThrowsBadRequest_WhenRequiredFieldMissing()
+      {
+          var trainee = NewUser();
+          var trainer = NewUser();
+          var template = NewTemplate((Guid)trainer.Id, "Required", [NewField("weight", ReportFieldType.Number, true)]);
+          var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
+         _reportingRepository.Requests.Add(request);
+
+          var exception = Assert.ThrowsAsync<AppException>(async () =>
+              await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+              {
+                  Answers = new Dictionary<string, JsonElement>()
+              }));
+
+         Assert.Multiple(() =>
+         {
+             Assert.That(exception, Is.Not.Null);
+             Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+             Assert.That(exception.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
+         });
+     }
+
+     [Test]
+     public async Task SubmitReportRequestAsync_AllowsNullForOptionalField()
+     {
+         var trainee = NewUser();
+         var trainer = NewUser();
+         var template = NewTemplate((Guid)trainer.Id, "Daily", [NewField("notes", ReportFieldType.Text, false)]);
+         var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
         _reportingRepository.Requests.Add(request);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
-            {
-                Answers = new Dictionary<string, JsonElement>()
-            }));
+         var result = await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+         {
+             Answers = new Dictionary<string, JsonElement>
+             {
+                 ["notes"] = JsonSerializer.SerializeToElement<string?>(null)
+             }
+         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(exception, Is.Not.Null);
-            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-            Assert.That(exception.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
-        });
+         Assert.Multiple(() =>
+         {
+             Assert.That(result.ReportRequestId, Is.EqualTo((Guid)request.Id));
+             Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+         });
     }
 
-    [Test]
-    public async Task SubmitReportRequestAsync_AllowsNullForOptionalField()
-    {
-        var trainee = NewUser();
-        var trainer = NewUser();
-        var template = NewTemplate(trainer.Id, "Daily", [NewField("notes", ReportFieldType.Text, false)]);
-        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
-        _reportingRepository.Requests.Add(request);
-
-        var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
-        {
-            Answers = new Dictionary<string, JsonElement>
-            {
-                ["notes"] = JsonSerializer.SerializeToElement<string?>(null)
-            }
-        });
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
-            Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
-        });
-    }
-
-    [Test]
-    public void SubmitReportRequestAsync_MapsDuplicateSubmissionToBadRequest()
-    {
-        var trainee = NewUser();
-        var trainer = NewUser();
-        var template = NewTemplate(trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
-        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+     [Test]
+     public void SubmitReportRequestAsync_MapsDuplicateSubmissionToBadRequest()
+     {
+         var trainee = NewUser();
+         var trainer = NewUser();
+         var template = NewTemplate((Guid)trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
+         var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
         _reportingRepository.Requests.Add(request);
         _unitOfWork.ThrowOnSave = new Exception("duplicate key value violates unique constraint ReportRequestId");
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
-            {
-                Answers = new Dictionary<string, JsonElement>
-                {
-                    ["weight"] = JsonSerializer.SerializeToElement(80)
-                }
-            }));
+         var exception = Assert.ThrowsAsync<AppException>(async () =>
+             await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+             {
+                 Answers = new Dictionary<string, JsonElement>
+                 {
+                     ["weight"] = JsonSerializer.SerializeToElement(80)
+                 }
+             }));
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(exception, Is.Not.Null);
-            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-            Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
-        });
-    }
+         Assert.Multiple(() =>
+         {
+             Assert.That(exception, Is.Not.Null);
+             Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+             Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+         });
+     }
 
-    [Test]
-    public void SubmitReportRequestAsync_ThrowsNotFound_WhenRequestMissing()
-    {
-        var trainee = NewUser();
-
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.SubmitReportRequestAsync(trainee, Guid.NewGuid(), new SubmitReportRequestCommand
-            {
-                Answers = new Dictionary<string, JsonElement>()
-            }));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(exception, Is.Not.Null);
-            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
-        });
-    }
-
-    [Test]
-    public void SubmitReportRequestAsync_ThrowsBadRequest_WhenStatusNotPending()
-    {
-        var trainee = NewUser();
-        var trainer = NewUser();
-        var template = NewTemplate(trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
-        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+      [Test]
+      public void SubmitReportRequestAsync_ThrowsBadRequest_WhenStatusNotPending()
+     {
+         var trainee = NewUser();
+         var trainer = NewUser();
+         var template = NewTemplate((Guid)trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
+         var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
         request.Status = ReportRequestStatus.Submitted;
         _reportingRepository.Requests.Add(request);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
-            {
-                Answers = new Dictionary<string, JsonElement>
-                {
-                    ["weight"] = JsonSerializer.SerializeToElement(80)
-                }
-            }));
+         var exception = Assert.ThrowsAsync<AppException>(async () =>
+             await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+             {
+                 Answers = new Dictionary<string, JsonElement>
+                 {
+                     ["weight"] = JsonSerializer.SerializeToElement(80)
+                 }
+             }));
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(exception, Is.Not.Null);
-            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-            Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
-        });
-    }
+         Assert.Multiple(() =>
+         {
+             Assert.That(exception, Is.Not.Null);
+             Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+             Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+         });
+     }
 
-    [Test]
-    public void SubmitReportRequestAsync_ThrowsBadRequest_WhenExpired()
-    {
-        var trainee = NewUser();
-        var trainer = NewUser();
-        var template = NewTemplate(trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
-        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
-        request.DueAt = DateTimeOffset.UtcNow.AddMinutes(-1);
-        _reportingRepository.Requests.Add(request);
+      [Test]
+      public void SubmitReportRequestAsync_ThrowsBadRequest_WhenExpired()
+      {
+          var trainee = NewUser();
+          var trainer = NewUser();
+          var template = NewTemplate((Guid)trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
+          var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
+         request.DueAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+         _reportingRepository.Requests.Add(request);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
+         var exception = Assert.ThrowsAsync<AppException>(async () =>
+             await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
             {
                 Answers = new Dictionary<string, JsonElement>
                 {
@@ -358,24 +340,24 @@ public sealed class ReportingServiceTests
         });
     }
 
-    [Test]
-    public async Task GetTraineeSubmissionsAsync_ReturnsMappedSubmissions()
-    {
-        var trainer = NewUser();
-        var trainee = NewUser();
-        var template = NewTemplate(trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
-        var request = NewPendingRequest(trainer.Id, trainee.Id, template);
+     [Test]
+     public async Task GetTraineeSubmissionsAsync_ReturnsMappedSubmissions()
+     {
+         var trainer = NewUser();
+         var trainee = NewUser();
+         var template = NewTemplate((Guid)trainer.Id, "Weekly", [NewField("weight", ReportFieldType.Number, true)]);
+         var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
 
-        _reportingRepository.Submissions.Add(new ReportSubmission
-        {
-            Id = Guid.NewGuid(),
-            ReportRequestId = request.Id,
-            TraineeId = trainee.Id,
-            PayloadJson = "{\"weight\": 81}",
-            ReportRequest = request
-        });
+         _reportingRepository.Submissions.Add(new ReportSubmission
+         {
+             Id = (Domain.ValueObjects.Id<ReportSubmission>)Guid.NewGuid(),
+             ReportRequestId = request.Id,
+             TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id,
+             PayloadJson = "{\"weight\": 81}",
+             ReportRequest = request
+         });
 
-        var result = await _service.GetTraineeSubmissionsAsync(trainer, trainee.Id);
+         var result = await _service.GetTraineeSubmissionsAsync(trainer, (Guid)trainee.Id);
 
         Assert.Multiple(() =>
         {
@@ -388,68 +370,68 @@ public sealed class ReportingServiceTests
     {
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = (Domain.ValueObjects.Id<User>)Guid.NewGuid(),
             Name = $"u-{Guid.NewGuid():N}",
             Email = $"{Guid.NewGuid():N}@example.com"
         };
 
-        _roleRepository.TrainerUserIds.Add(user.Id);
+        _roleRepository.TrainerUserIds.Add((Guid)user.Id);
         return user;
     }
 
-    private static User NewPlainUser()
-    {
-        return new User
-        {
-            Id = Guid.NewGuid(),
-            Name = $"u-{Guid.NewGuid():N}",
-            Email = $"{Guid.NewGuid():N}@example.com"
-        };
-    }
+     private static User NewPlainUser()
+     {
+         return new User
+         {
+             Id = (Domain.ValueObjects.Id<User>)Guid.NewGuid(),
+             Name = $"u-{Guid.NewGuid():N}",
+             Email = $"{Guid.NewGuid():N}@example.com"
+         };
+     }
 
-    private static ReportTemplate NewTemplate(Guid trainerId, string name, IReadOnlyList<ReportTemplateField> fields)
-    {
-        return new ReportTemplate
-        {
-            Id = Guid.NewGuid(),
-            TrainerId = trainerId,
-            Name = name,
-            Fields = fields.ToList()
-        };
-    }
+     private static ReportTemplate NewTemplate(Guid trainerId, string name, IReadOnlyList<ReportTemplateField> fields)
+     {
+         return new ReportTemplate
+         {
+             Id = (Domain.ValueObjects.Id<ReportTemplate>)Guid.NewGuid(),
+             TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+             Name = name,
+             Fields = fields.ToList()
+         };
+     }
 
-    private static ReportTemplateField NewField(string key, ReportFieldType type, bool required)
-    {
-        return new ReportTemplateField
-        {
-            Id = Guid.NewGuid(),
-            Key = key,
-            Label = key,
-            Type = type,
-            IsRequired = required,
-            Order = 0
-        };
-    }
+     private static ReportTemplateField NewField(string key, ReportFieldType type, bool required)
+     {
+         return new ReportTemplateField
+         {
+             Id = (Domain.ValueObjects.Id<ReportTemplateField>)Guid.NewGuid(),
+             Key = key,
+             Label = key,
+             Type = type,
+             IsRequired = required,
+             Order = 0
+         };
+     }
 
-    private ReportRequest NewPendingRequest(Guid trainerId, Guid traineeId, ReportTemplate template)
-    {
-        _trainerRelationshipRepository.Links[(trainerId, traineeId)] = new TrainerTraineeLink
-        {
-            Id = Guid.NewGuid(),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        };
+     private ReportRequest NewPendingRequest(Guid trainerId, Guid traineeId, ReportTemplate template)
+     {
+         _trainerRelationshipRepository.Links[((Guid)(Domain.ValueObjects.Id<User>)trainerId, (Guid)(Domain.ValueObjects.Id<User>)traineeId)] = new TrainerTraineeLink
+         {
+             Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+             TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+             TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+         };
 
-        return new ReportRequest
-        {
-            Id = Guid.NewGuid(),
-            TrainerId = trainerId,
-            TraineeId = traineeId,
-            TemplateId = template.Id,
-            Template = template,
-            Status = ReportRequestStatus.Pending
-        };
-    }
+         return new ReportRequest
+         {
+             Id = (Domain.ValueObjects.Id<ReportRequest>)Guid.NewGuid(),
+             TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
+             TraineeId = (Domain.ValueObjects.Id<User>)traineeId,
+             TemplateId = template.Id,
+             Template = template,
+             Status = ReportRequestStatus.Pending
+         };
+     }
 
     private sealed class FakeRoleRepository : IRoleRepository
     {
@@ -507,11 +489,11 @@ public sealed class ReportingServiceTests
             return Task.CompletedTask;
         }
 
-        public Task<ReportTemplate?> FindTemplateByIdAsync(Guid templateId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Templates.FirstOrDefault(x => x.Id == templateId));
+         public Task<ReportTemplate?> FindTemplateByIdAsync(Guid templateId, CancellationToken cancellationToken = default)
+             => Task.FromResult(Templates.FirstOrDefault(x => (Guid)x.Id == templateId));
 
-        public Task<List<ReportTemplate>> GetTemplatesByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Templates.Where(x => x.TrainerId == trainerId && !x.IsDeleted).ToList());
+         public Task<List<ReportTemplate>> GetTemplatesByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default)
+             => Task.FromResult(Templates.Where(x => (Guid)x.TrainerId == trainerId && !x.IsDeleted).ToList());
 
         public Task AddRequestAsync(ReportRequest request, CancellationToken cancellationToken = default)
         {
@@ -519,14 +501,14 @@ public sealed class ReportingServiceTests
             return Task.CompletedTask;
         }
 
-        public Task<ReportRequest?> FindRequestByIdAsync(Guid requestId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Requests.FirstOrDefault(x => x.Id == requestId));
+         public Task<ReportRequest?> FindRequestByIdAsync(Guid requestId, CancellationToken cancellationToken = default)
+             => Task.FromResult(Requests.FirstOrDefault(x => (Guid)x.Id == requestId));
 
-        public Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Requests
-                .Where(x => x.TraineeId == traineeId && x.Status == ReportRequestStatus.Pending)
-                .OrderByDescending(x => x.CreatedAt)
-                .ToList());
+         public Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default)
+             => Task.FromResult(Requests
+                 .Where(x => (Guid)x.TraineeId == traineeId && x.Status == ReportRequestStatus.Pending)
+                 .OrderByDescending(x => x.CreatedAt)
+                 .ToList());
 
         public Task AddSubmissionAsync(ReportSubmission submission, CancellationToken cancellationToken = default)
         {
@@ -534,8 +516,8 @@ public sealed class ReportingServiceTests
             return Task.CompletedTask;
         }
 
-        public Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Submissions.Where(x => x.TraineeId == traineeId && x.ReportRequest.TrainerId == trainerId).ToList());
+         public Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
+             => Task.FromResult(Submissions.Where(x => (Guid)x.TraineeId == traineeId && (Guid)x.ReportRequest.TrainerId == trainerId).ToList());
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

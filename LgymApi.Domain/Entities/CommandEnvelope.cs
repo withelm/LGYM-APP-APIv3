@@ -6,7 +6,7 @@ namespace LgymApi.Domain.Entities;
 /// Durable command envelope for storing background action commands with full lifecycle tracking.
 /// Ensures idempotency and traceability of command execution.
 /// </summary>
-public sealed class CommandEnvelope : EntityBase
+public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
 {
 
     // Retry policy configuration
