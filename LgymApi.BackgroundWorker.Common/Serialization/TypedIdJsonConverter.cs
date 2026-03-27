@@ -46,6 +46,6 @@ public sealed class TypedIdJsonConverter<TEntity> : JsonConverter<Id<TEntity>>
     /// </summary>
     public override void Write(Utf8JsonWriter writer, Id<TEntity> value, JsonSerializerOptions options)
     {
-        writer.WriteStringValue(value.Value.ToString());
+        writer.WriteStringValue(value.GetValue().ToString());
     }
 }
