@@ -5,6 +5,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.ExerciseScores;
 using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Features.ExerciseScores.Controllers;
@@ -30,7 +31,7 @@ public sealed class ExerciseScoresController : ControllerBase
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, exerciseId, HttpContext.RequestAborted);
+        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync((Id<LgymApi.Domain.Entities.User>)userId, (Id<LgymApi.Domain.Entities.Exercise>)exerciseId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result);
         return Ok(mapped);
     }

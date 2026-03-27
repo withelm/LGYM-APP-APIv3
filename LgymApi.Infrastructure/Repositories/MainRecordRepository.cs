@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,23 +20,23 @@ public sealed class MainRecordRepository : IMainRecordRepository
         return _dbContext.MainRecords.AddAsync(record, cancellationToken).AsTask();
     }
 
-    public Task<List<MainRecord>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<MainRecord>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => (Guid)r.UserId == userId)
+            .Where(r => r.UserId == userId)
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<MainRecord>> GetByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public Task<List<MainRecord>> GetByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => (Guid)r.UserId == userId && (Guid)r.ExerciseId == exerciseId)
+            .Where(r => r.UserId == userId && r.ExerciseId == exerciseId)
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<MainRecord>> GetByUserAndExercisesAsync(Guid userId, IReadOnlyCollection<Guid> exerciseIds, CancellationToken cancellationToken = default)
+    public Task<List<MainRecord>> GetByUserAndExercisesAsync(Id<User> userId, IReadOnlyCollection<Id<Exercise>> exerciseIds, CancellationToken cancellationToken = default)
     {
         if (exerciseIds.Count == 0)
         {
@@ -44,19 +45,19 @@ public sealed class MainRecordRepository : IMainRecordRepository
 
         return _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => (Guid)r.UserId == userId && exerciseIds.Contains((Guid)r.ExerciseId))
+            .Where(r => r.UserId == userId && exerciseIds.Contains(r.ExerciseId))
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<MainRecord>> GetBestByUserGroupedByExerciseAndUnitAsync(Guid userId, IReadOnlyCollection<Guid>? exerciseIds = null, CancellationToken cancellationToken = default)
+    public Task<List<MainRecord>> GetBestByUserGroupedByExerciseAndUnitAsync(Id<User> userId, IReadOnlyCollection<Id<Exercise>>? exerciseIds = null, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => (Guid)r.UserId == userId);
+            .Where(r => r.UserId == userId);
 
         if (exerciseIds is { Count: > 0 })
         {
-            query = query.Where(r => exerciseIds.Contains((Guid)r.ExerciseId));
+            query = query.Where(r => exerciseIds.Contains(r.ExerciseId));
         }
 
         return query
@@ -68,9 +69,9 @@ public sealed class MainRecordRepository : IMainRecordRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<MainRecord?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<MainRecord?> FindByIdAsync(Id<MainRecord> id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.MainRecords.FirstOrDefaultAsync(r => (Guid)r.Id == id, cancellationToken);
+        return _dbContext.MainRecords.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
     }
 
     public Task DeleteAsync(MainRecord record, CancellationToken cancellationToken = default)
@@ -86,11 +87,11 @@ public sealed class MainRecordRepository : IMainRecordRepository
         return Task.CompletedTask;
     }
 
-    public Task<MainRecord?> GetLatestByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public Task<MainRecord?> GetLatestByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
             .AsNoTracking()
-            .Where(r => (Guid)r.UserId == userId && (Guid)r.ExerciseId == exerciseId)
+            .Where(r => r.UserId == userId && r.ExerciseId == exerciseId)
             .OrderByDescending(r => r.Date)
             .FirstOrDefaultAsync(cancellationToken);
     }

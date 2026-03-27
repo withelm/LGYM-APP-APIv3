@@ -21,7 +21,7 @@ public sealed class ReportTemplateFieldCommand
 
 public sealed class CreateReportRequestCommand
 {
-    public Guid TemplateId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportTemplate> TemplateId { get; set; }
     public DateTimeOffset? DueAt { get; set; }
     public string? Note { get; set; }
 }
@@ -33,8 +33,8 @@ public sealed class SubmitReportRequestCommand
 
 public sealed class ReportTemplateResult
 {
-    public Guid Id { get; set; }
-    public Guid TrainerId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportTemplate> Id { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> TrainerId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
@@ -52,10 +52,10 @@ public sealed class ReportTemplateFieldResult
 
 public sealed class ReportRequestResult
 {
-    public Guid Id { get; set; }
-    public Guid TrainerId { get; set; }
-    public Guid TraineeId { get; set; }
-    public Guid TemplateId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest> Id { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> TrainerId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> TraineeId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportTemplate> TemplateId { get; set; }
     public ReportRequestStatus Status { get; set; }
     public DateTimeOffset? DueAt { get; set; }
     public string? Note { get; set; }
@@ -66,9 +66,9 @@ public sealed class ReportRequestResult
 
 public sealed class ReportSubmissionResult
 {
-    public Guid Id { get; set; }
-    public Guid ReportRequestId { get; set; }
-    public Guid TraineeId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportSubmission> Id { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest> ReportRequestId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> TraineeId { get; set; }
     public DateTimeOffset SubmittedAt { get; set; }
     public Dictionary<string, JsonElement> Answers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public ReportRequestResult Request { get; set; } = new();

@@ -30,7 +30,7 @@ public sealed class ServiceTransactionBehaviorTests
              new PlanDayRepositoryStub(),
              unitOfWork);
 
-          await service.SetNewActivePlanAsync(currentUser, (Guid)userId, (Guid)planId, CancellationToken.None);
+          await service.SetNewActivePlanAsync(currentUser, userId, planId, CancellationToken.None);
 
          Assert.Multiple(() =>
          {
@@ -62,7 +62,7 @@ public sealed class ServiceTransactionBehaviorTests
              unitOfWork);
 
          Assert.ThrowsAsync<InvalidOperationException>(async () =>
-             await service.SetNewActivePlanAsync(currentUser, (Guid)userId, (Guid)planId, CancellationToken.None));
+             await service.SetNewActivePlanAsync(currentUser, userId, planId, CancellationToken.None));
 
          Assert.Multiple(() =>
          {
@@ -98,12 +98,12 @@ public sealed class ServiceTransactionBehaviorTests
              new TrainingRepositoryStub(),
              unitOfWork));
 
-         await service.UpdatePlanDayAsync(
-             new User { Id = userId },
-             planDayId.ToString(),
-             "new",
-             [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
-             CancellationToken.None);
+        await service.UpdatePlanDayAsync(
+            new User { Id = userId },
+            planDayId,
+            "new",
+            [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
+            CancellationToken.None);
 
          Assert.Multiple(() =>
          {
@@ -142,13 +142,13 @@ public sealed class ServiceTransactionBehaviorTests
              new TrainingRepositoryStub(),
              unitOfWork));
 
-         Assert.ThrowsAsync<InvalidOperationException>(async () =>
-             await service.UpdatePlanDayAsync(
-                 new User { Id = userId },
-                 planDayId.ToString(),
-                 "new",
-                 [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
-                 CancellationToken.None));
+        Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await service.UpdatePlanDayAsync(
+                new User { Id = userId },
+                planDayId,
+                "new",
+                [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
+                CancellationToken.None));
 
          Assert.Multiple(() =>
          {
@@ -310,8 +310,8 @@ public sealed class ServiceTransactionBehaviorTests
     {
         public Task UpdateAsync(User user, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-        public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByIdAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByIdIncludingDeletedAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();

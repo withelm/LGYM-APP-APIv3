@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Application.Repositories;
 
@@ -16,7 +17,7 @@ public interface ICommandEnvelopeRepository
     /// <summary>
     /// Finds a command envelope by its unique identifier.
     /// </summary>
-    Task<CommandEnvelope?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<CommandEnvelope?> FindByIdAsync(Id<CommandEnvelope> id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds a command envelope by correlation ID for idempotency checking.

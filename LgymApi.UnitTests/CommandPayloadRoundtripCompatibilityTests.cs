@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
@@ -22,7 +23,7 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     public void UserRegisteredCommand_RoundtripsSuccessfully()
     {
         // Arrange
-        var originalCommand = new UserRegisteredCommand { UserId = Guid.NewGuid() };
+        var originalCommand = new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() };
         var json = JsonSerializer.Serialize(originalCommand, SharedSerializationOptions.Current);
 
         // Act
@@ -37,7 +38,7 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     public void UserRegisteredCommand_SerializedJsonUsesCamelCase()
     {
         // Arrange
-        var command = new UserRegisteredCommand { UserId = Guid.NewGuid() };
+        var command = new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() };
 
         // Act
         var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
@@ -59,7 +60,7 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert - PropertyNameCaseInsensitive=true allows reading PascalCase
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
     }
 
     [Test]
@@ -68,9 +69,9 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         // Arrange
         var commands = new[]
         {
-            new UserRegisteredCommand { UserId = Guid.NewGuid() },
-            new UserRegisteredCommand { UserId = Guid.NewGuid() },
-            new UserRegisteredCommand { UserId = Guid.NewGuid() }
+            new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() },
+            new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() },
+            new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() }
         };
 
         // Act & Assert
@@ -96,8 +97,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var trainingId = Guid.NewGuid();
         var originalCommand = new TrainingCompletedCommand 
         { 
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
         var json = JsonSerializer.Serialize(originalCommand, SharedSerializationOptions.Current);
 
@@ -106,8 +107,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId));
     }
 
     [Test]
@@ -116,8 +117,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         // Arrange
         var command = new TrainingCompletedCommand 
         { 
-            UserId = Guid.NewGuid(),
-            TrainingId = Guid.NewGuid()
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid()
         };
 
         // Act
@@ -143,8 +144,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId));
     }
 
     [Test]
@@ -160,8 +161,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId));
     }
 
     [Test]
@@ -172,8 +173,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var trainingId = Guid.NewGuid();
         var originalCommand = new TrainingCompletedCommand 
         { 
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
         var json = JsonSerializer.Serialize(originalCommand, SharedSerializationOptions.Current);
 
@@ -182,8 +183,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert - each field must match exactly
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId), "TrainingId not preserved");
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
+        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId), "TrainingId not preserved");
     }
 
     #endregion
@@ -195,7 +196,7 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     {
         // Arrange
         var invitationId = Guid.NewGuid();
-        var originalCommand = new InvitationCreatedCommand { InvitationId = invitationId };
+        var originalCommand = new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId };
         var json = JsonSerializer.Serialize(originalCommand, SharedSerializationOptions.Current);
 
         // Act
@@ -203,14 +204,14 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)deserialized!.InvitationId, Is.EqualTo(invitationId));
     }
 
     [Test]
     public void InvitationCreatedCommand_SerializedJsonUsesCamelCase()
     {
         // Arrange
-        var command = new InvitationCreatedCommand { InvitationId = Guid.NewGuid() };
+        var command = new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid() };
 
         // Act
         var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
@@ -232,7 +233,7 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)deserialized!.InvitationId, Is.EqualTo(invitationId));
     }
 
     [Test]
@@ -244,12 +245,12 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         // Act & Assert
         foreach (var guid in testGuids)
         {
-            var command = new InvitationCreatedCommand { InvitationId = guid };
+            var command = new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)guid };
             var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
             var deserialized = JsonSerializer.Deserialize<InvitationCreatedCommand>(json, SharedSerializationOptions.Current);
             
             Assert.That(deserialized, Is.Not.Null);
-            Assert.That(deserialized!.InvitationId, Is.EqualTo(guid));
+        Assert.That((Guid)deserialized!.InvitationId, Is.EqualTo(guid));
         }
     }
 
@@ -263,9 +264,9 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         // Arrange
         var commands = new object[]
         {
-            new UserRegisteredCommand { UserId = Guid.NewGuid() },
-            new TrainingCompletedCommand { UserId = Guid.NewGuid(), TrainingId = Guid.NewGuid() },
-            new InvitationCreatedCommand { InvitationId = Guid.NewGuid() }
+            new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() },
+            new TrainingCompletedCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(), TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid() },
+            new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid() }
         };
 
         // Act & Assert - all commands serialize to JSON without exception

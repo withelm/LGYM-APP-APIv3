@@ -5,6 +5,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.EloRegistry.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Features.EloRegistry.Controllers;
@@ -29,7 +30,7 @@ public sealed class EloRegistryController : ControllerBase
     public async Task<IActionResult> GetEloRegistryChart([FromRoute] string id)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _eloRegistryService.GetChartAsync(userId, HttpContext.RequestAborted);
+        var result = await _eloRegistryService.GetChartAsync((Id<LgymApi.Domain.Entities.User>)userId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result);
         return Ok(mapped);
     }

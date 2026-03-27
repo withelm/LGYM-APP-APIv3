@@ -4,6 +4,7 @@ using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Role.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -39,7 +40,7 @@ public sealed class RoleController : ControllerBase
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        var role = await _roleService.GetRoleAsync(roleId, cancellationToken);
+        var role = await _roleService.GetRoleAsync((Id<Domain.Entities.Role>)roleId, cancellationToken);
         return Ok(_mapper.Map<RoleResult, RoleDto>(role));
     }
 
@@ -69,7 +70,7 @@ public sealed class RoleController : ControllerBase
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims, cancellationToken);
+        await _roleService.UpdateRoleAsync((Id<Domain.Entities.Role>)roleId, request.Name, request.Description, request.PermissionClaims, cancellationToken);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -80,7 +81,7 @@ public sealed class RoleController : ControllerBase
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        await _roleService.DeleteRoleAsync(roleId, cancellationToken);
+        await _roleService.DeleteRoleAsync((Id<Domain.Entities.Role>)roleId, cancellationToken);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -92,7 +93,7 @@ public sealed class RoleController : ControllerBase
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _roleService.UpdateUserRolesAsync(userId, request.Roles, cancellationToken);
+        await _roleService.UpdateUserRolesAsync((Id<Domain.Entities.User>)userId, request.Roles, cancellationToken);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 

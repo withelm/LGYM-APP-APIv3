@@ -6,6 +6,7 @@ using LgymApi.Api.Features.Tutorial.Contracts;
 using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
 {
 
 
-    private async Task InitializeTutorialAsync(Guid userId)
+    private async Task InitializeTutorialAsync(Id<User> userId)
     {
         using var scope = Factory.Services.CreateScope();
         var tutorialService = scope.ServiceProvider.GetRequiredService<ITutorialService>();
@@ -44,7 +45,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var registeredUser = await db.Users.FirstAsync(u => u.Email == "tutorial@example.com");
-        await InitializeTutorialAsync((Guid)registeredUser.Id);
+        await InitializeTutorialAsync(registeredUser.Id);
 
         // Login to get token and user info
         var loginRequest = new
@@ -68,7 +69,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
     {
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "active-tutorial-user", email: "active@example.com");
-        await InitializeTutorialAsync((Guid)user.Id);
+        await InitializeTutorialAsync(user.Id);
         SetAuthorizationHeader((Guid)user.Id);
 
         // Get active tutorials
@@ -89,7 +90,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
     {
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "progress-user", email: "progress@example.com");
-        await InitializeTutorialAsync((Guid)user.Id);
+        await InitializeTutorialAsync(user.Id);
         SetAuthorizationHeader((Guid)user.Id);
 
         // Get tutorial progress
@@ -109,7 +110,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
     {
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "step-complete-user", email: "step@example.com");
-        await InitializeTutorialAsync((Guid)user.Id);
+        await InitializeTutorialAsync(user.Id);
         SetAuthorizationHeader((Guid)user.Id);
 
         // Complete first step
@@ -139,7 +140,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
     {
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "complete-tutorial-user", email: "complete@example.com");
-        await InitializeTutorialAsync((Guid)user.Id);
+        await InitializeTutorialAsync(user.Id);
         SetAuthorizationHeader((Guid)user.Id);
 
         // Complete tutorial
@@ -173,7 +174,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
     {
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "complete-all-steps-user", email: "allsteps@example.com");
-        await InitializeTutorialAsync((Guid)user.Id);
+        await InitializeTutorialAsync(user.Id);
         SetAuthorizationHeader((Guid)user.Id);
 
         // Complete all 6 steps
@@ -230,7 +231,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
     {
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "idempotent-user", email: "idempotent@example.com");
-        await InitializeTutorialAsync((Guid)user.Id);
+        await InitializeTutorialAsync(user.Id);
         SetAuthorizationHeader((Guid)user.Id);
 
         var completeTutorialRequest = new CompleteTutorialRequest

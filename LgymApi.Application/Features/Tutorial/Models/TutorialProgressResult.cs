@@ -5,7 +5,7 @@ namespace LgymApi.Application.Features.Tutorial.Models;
 
 public sealed class TutorialProgressResult
 {
-    public Guid Id { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.UserTutorialProgress> Id { get; init; }
     public TutorialType TutorialType { get; init; }
     public string TutorialName { get; init; } = string.Empty;
     public string TutorialDescription { get; init; } = string.Empty;

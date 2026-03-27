@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Options;
@@ -41,7 +42,7 @@ public sealed class InvitationEmailTemplateComposerTests
         var invitationId = Guid.NewGuid();
         var payload = new InvitationEmailPayload
         {
-            InvitationId = invitationId,
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId,
             InvitationCode = "ABC123XYZ789",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach Mike",
@@ -73,7 +74,7 @@ public sealed class InvitationEmailTemplateComposerTests
         var invitationId = Guid.NewGuid();
         var payload = new InvitationEmailPayload
         {
-            InvitationId = invitationId,
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId,
             InvitationCode = "ZZZ999YYY888",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach Jane",
@@ -99,7 +100,7 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var payload = new InvitationEmailPayload
         {
-            InvitationId = Guid.NewGuid(),
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid(),
             InvitationCode = "UTC123",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach UTC",
@@ -120,7 +121,7 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var payload = new InvitationEmailPayload
         {
-            InvitationId = Guid.NewGuid(),
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid(),
             InvitationCode = "UTC456",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach UTC",

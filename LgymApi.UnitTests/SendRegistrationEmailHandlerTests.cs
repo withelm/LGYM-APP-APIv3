@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Models;
 using LgymApi.BackgroundWorker.Actions;
@@ -42,7 +43,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = userId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId
         };
 
         // Act
@@ -51,7 +52,7 @@ public sealed class SendRegistrationEmailHandlerTests
         // Assert
         Assert.That(_testScheduler.ScheduledPayloads, Has.Count.EqualTo(1));
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)payload.UserId, Is.EqualTo(userId));
         Assert.That(payload.UserName, Is.EqualTo("JohnDoe"));
         Assert.That(payload.RecipientEmail, Is.EqualTo("john.doe@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
@@ -72,7 +73,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = userId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId
         };
 
         // Act
@@ -99,7 +100,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = userId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId
         };
 
         // Act
@@ -125,7 +126,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = userId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId
         };
 
         // Act
@@ -133,7 +134,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         // Assert
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)payload.UserId, Is.EqualTo(userId));
         Assert.That(payload.UserName, Is.EqualTo("MariaGarcia"));
         Assert.That(payload.RecipientEmail, Is.EqualTo("maria.garcia@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("es-ES"));
@@ -154,7 +155,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = userId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId
         };
 
         using var cts = new CancellationTokenSource();
@@ -181,7 +182,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = userId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId
         };
 
         // Act
@@ -234,7 +235,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = userId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId
         };
 
         // Act
@@ -253,7 +254,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = Guid.NewGuid()
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid()
         };
 
         // Act
@@ -280,7 +281,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = userId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId
         };
 
         // Act
@@ -309,7 +310,7 @@ public sealed class SendRegistrationEmailHandlerTests
             _testLogger,
             new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "Europe/Warsaw" });
 
-        var command = new UserRegisteredCommand { UserId = userId };
+        var command = new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId };
 
         await handler.ExecuteAsync(command);
 
@@ -322,12 +323,12 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         public User? UserToReturn { get; set; }
 
-        public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<User?> FindByIdAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(UserToReturn);
         }
 
-        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByIdIncludingDeletedAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();

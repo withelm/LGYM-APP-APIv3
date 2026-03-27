@@ -33,7 +33,7 @@ public sealed class EmailJobHandlerService : IEmailJobHandler
 
     public async Task ProcessAsync(Guid notificationId, CancellationToken cancellationToken = default)
     {
-        var notification = await _notificationLogRepository.FindByIdAsync(notificationId, cancellationToken);
+        var notification = await _notificationLogRepository.FindByIdAsync((LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.NotificationMessage>)notificationId, cancellationToken);
         if (notification == null)
         {
             _logger.LogWarning(

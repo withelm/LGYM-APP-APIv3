@@ -2,6 +2,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,9 +22,9 @@ public sealed class EmailNotificationLogRepository : IEmailNotificationLogReposi
         await _dbContext.NotificationMessages.AddAsync(message, cancellationToken);
     }
 
-    public Task<NotificationMessage?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<NotificationMessage?> FindByIdAsync(Id<NotificationMessage> id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.NotificationMessages.FirstOrDefaultAsync(x => (Guid)x.Id == id, cancellationToken);
+        return _dbContext.NotificationMessages.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
     public Task<NotificationMessage?> FindByCorrelationAsync(EmailNotificationType type, Guid correlationId, string recipient, CancellationToken cancellationToken = default)

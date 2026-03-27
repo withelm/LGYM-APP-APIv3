@@ -7,6 +7,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
 namespace LgymApi.UnitTests;
@@ -174,7 +175,7 @@ public sealed class ReportingServiceTests
          var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
         _reportingRepository.Requests.Add(request);
 
-         var result = await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+         var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
          {
              Answers = new Dictionary<string, JsonElement>
              {
@@ -184,7 +185,7 @@ public sealed class ReportingServiceTests
 
          Assert.Multiple(() =>
          {
-             Assert.That(result.ReportRequestId, Is.EqualTo((Guid)request.Id));
+             Assert.That((Guid)result.ReportRequestId, Is.EqualTo((Guid)request.Id));
              Assert.That(result.Answers.ContainsKey("WEIGHT"), Is.True);
              Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
          });
@@ -199,14 +200,14 @@ public sealed class ReportingServiceTests
          var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
         _reportingRepository.Requests.Add(request);
 
-         var result = await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+         var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
          {
              Answers = new Dictionary<string, JsonElement>()
          });
 
          Assert.Multiple(() =>
          {
-             Assert.That(result.ReportRequestId, Is.EqualTo((Guid)request.Id));
+             Assert.That((Guid)result.ReportRequestId, Is.EqualTo((Guid)request.Id));
              Assert.That(result.Answers, Is.Empty);
              Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
          });
@@ -222,7 +223,7 @@ public sealed class ReportingServiceTests
          _reportingRepository.Requests.Add(request);
 
           var exception = Assert.ThrowsAsync<AppException>(async () =>
-              await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+              await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
               {
                   Answers = new Dictionary<string, JsonElement>()
               }));
@@ -244,7 +245,7 @@ public sealed class ReportingServiceTests
          var request = NewPendingRequest((Guid)trainer.Id, (Guid)trainee.Id, template);
         _reportingRepository.Requests.Add(request);
 
-         var result = await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+         var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
          {
              Answers = new Dictionary<string, JsonElement>
              {
@@ -254,7 +255,7 @@ public sealed class ReportingServiceTests
 
          Assert.Multiple(() =>
          {
-             Assert.That(result.ReportRequestId, Is.EqualTo((Guid)request.Id));
+             Assert.That((Guid)result.ReportRequestId, Is.EqualTo((Guid)request.Id));
              Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
          });
     }
@@ -270,7 +271,7 @@ public sealed class ReportingServiceTests
         _unitOfWork.ThrowOnSave = new Exception("duplicate key value violates unique constraint ReportRequestId");
 
          var exception = Assert.ThrowsAsync<AppException>(async () =>
-             await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+             await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
              {
                  Answers = new Dictionary<string, JsonElement>
                  {
@@ -297,7 +298,7 @@ public sealed class ReportingServiceTests
         _reportingRepository.Requests.Add(request);
 
          var exception = Assert.ThrowsAsync<AppException>(async () =>
-             await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+             await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
              {
                  Answers = new Dictionary<string, JsonElement>
                  {
@@ -324,7 +325,7 @@ public sealed class ReportingServiceTests
          _reportingRepository.Requests.Add(request);
 
          var exception = Assert.ThrowsAsync<AppException>(async () =>
-             await _service.SubmitReportRequestAsync(trainee, (Guid)request.Id, new SubmitReportRequestCommand
+             await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
             {
                 Answers = new Dictionary<string, JsonElement>
                 {
@@ -357,7 +358,7 @@ public sealed class ReportingServiceTests
              ReportRequest = request
          });
 
-         var result = await _service.GetTraineeSubmissionsAsync(trainer, (Guid)trainee.Id);
+         var result = await _service.GetTraineeSubmissionsAsync(trainer, trainee.Id);
 
         Assert.Multiple(() =>
         {
@@ -437,41 +438,41 @@ public sealed class ReportingServiceTests
     {
         public HashSet<Guid> TrainerUserIds { get; } = [];
 
-        public Task<bool> UserHasRoleAsync(Guid userId, string roleName, CancellationToken cancellationToken = default)
-            => Task.FromResult(TrainerUserIds.Contains(userId) && roleName == AuthConstants.Roles.Trainer);
+        public Task<bool> UserHasRoleAsync(Id<User> userId, string roleName, CancellationToken cancellationToken = default)
+            => Task.FromResult(TrainerUserIds.Contains((Guid)userId) && roleName == AuthConstants.Roles.Trainer);
 
         public Task<List<Role>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<Role>());
-        public Task<Role?> FindByIdAsync(Guid roleId, CancellationToken cancellationToken = default) => Task.FromResult<Role?>(null);
+        public Task<Role?> FindByIdAsync(Id<Role> roleId, CancellationToken cancellationToken = default) => Task.FromResult<Role?>(null);
         public Task<Role?> FindByNameAsync(string roleName, CancellationToken cancellationToken = default) => Task.FromResult<Role?>(null);
         public Task<List<Role>> GetByNamesAsync(IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default) => Task.FromResult(new List<Role>());
-        public Task<bool> ExistsByNameAsync(string roleName, Guid? excludeRoleId = null, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<List<string>> GetRoleNamesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
-        public Task<List<string>> GetPermissionClaimsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
-        public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
-        public Task<Dictionary<Guid, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default) => Task.FromResult(new Dictionary<Guid, List<string>>());
-        public Task<bool> UserHasPermissionAsync(Guid userId, string permission, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> ExistsByNameAsync(string roleName, Id<Role>? excludeRoleId = null, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<List<string>> GetRoleNamesByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
+        public Task<List<string>> GetPermissionClaimsByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
+        public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Id<Role> roleId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
+        public Task<Dictionary<Id<Role>, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default) => Task.FromResult(new Dictionary<Id<Role>, List<string>>());
+        public Task<bool> UserHasPermissionAsync(Id<User> userId, string permission, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task AddRoleAsync(Role role, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task UpdateRoleAsync(Role role, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task DeleteRoleAsync(Role role, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task ReplaceRolePermissionClaimsAsync(Guid roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task AddUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task ReplaceUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task ReplaceRolePermissionClaimsAsync(Id<Role> roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task AddUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task ReplaceUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class FakeTrainerRelationshipRepository : ITrainerRelationshipRepository
     {
         public Dictionary<(Guid TrainerId, Guid TraineeId), TrainerTraineeLink> Links { get; } = new();
 
-        public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Links.TryGetValue((trainerId, traineeId), out var link) ? link : null);
+        public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
+            => Task.FromResult(Links.TryGetValue(((Guid)trainerId, (Guid)traineeId), out var link) ? link : null);
 
         public Task AddInvitationAsync(TrainerInvitation invitation, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<TrainerInvitation?> FindInvitationByIdAsync(Guid invitationId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
-        public Task<TrainerInvitation?> FindPendingInvitationAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
-        public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default) => Task.FromResult(new List<TrainerInvitation>());
-        public Task<bool> HasActiveLinkForTraineeAsync(Guid traineeId, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerTraineeLink?>(null);
-        public Task<LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Guid trainerId, LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
+        public Task<TrainerInvitation?> FindInvitationByIdAsync(Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
+        public Task<TrainerInvitation?> FindPendingInvitationAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
+        public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default) => Task.FromResult(new List<TrainerInvitation>());
+        public Task<bool> HasActiveLinkForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerTraineeLink?>(null);
+        public Task<LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
             => Task.FromResult(new LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeListResult());
         public Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -489,11 +490,11 @@ public sealed class ReportingServiceTests
             return Task.CompletedTask;
         }
 
-         public Task<ReportTemplate?> FindTemplateByIdAsync(Guid templateId, CancellationToken cancellationToken = default)
-             => Task.FromResult(Templates.FirstOrDefault(x => (Guid)x.Id == templateId));
+         public Task<ReportTemplate?> FindTemplateByIdAsync(Id<ReportTemplate> templateId, CancellationToken cancellationToken = default)
+             => Task.FromResult(Templates.FirstOrDefault(x => x.Id == templateId));
 
-         public Task<List<ReportTemplate>> GetTemplatesByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default)
-             => Task.FromResult(Templates.Where(x => (Guid)x.TrainerId == trainerId && !x.IsDeleted).ToList());
+         public Task<List<ReportTemplate>> GetTemplatesByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default)
+             => Task.FromResult(Templates.Where(x => x.TrainerId == trainerId && !x.IsDeleted).ToList());
 
         public Task AddRequestAsync(ReportRequest request, CancellationToken cancellationToken = default)
         {
@@ -501,12 +502,12 @@ public sealed class ReportingServiceTests
             return Task.CompletedTask;
         }
 
-         public Task<ReportRequest?> FindRequestByIdAsync(Guid requestId, CancellationToken cancellationToken = default)
-             => Task.FromResult(Requests.FirstOrDefault(x => (Guid)x.Id == requestId));
+         public Task<ReportRequest?> FindRequestByIdAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default)
+             => Task.FromResult(Requests.FirstOrDefault(x => x.Id == requestId));
 
-         public Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default)
+         public Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
              => Task.FromResult(Requests
-                 .Where(x => (Guid)x.TraineeId == traineeId && x.Status == ReportRequestStatus.Pending)
+                 .Where(x => x.TraineeId == traineeId && x.Status == ReportRequestStatus.Pending)
                  .OrderByDescending(x => x.CreatedAt)
                  .ToList());
 
@@ -516,8 +517,8 @@ public sealed class ReportingServiceTests
             return Task.CompletedTask;
         }
 
-         public Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
-             => Task.FromResult(Submissions.Where(x => (Guid)x.TraineeId == traineeId && (Guid)x.ReportRequest.TrainerId == trainerId).ToList());
+         public Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
+             => Task.FromResult(Submissions.Where(x => x.TraineeId == traineeId && x.ReportRequest.TrainerId == trainerId).ToList());
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

@@ -18,20 +18,20 @@ public sealed class ExerciseScoresService : IExerciseScoresService
         _exerciseScoreRepository = exerciseScoreRepository;
     }
 
-    public async Task<List<ExerciseScoresChartData>> GetExerciseScoresChartDataAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public async Task<List<ExerciseScoresChartData>> GetExerciseScoresChartDataAsync(Id<LgymApi.Domain.Entities.User> userId, Id<LgymApi.Domain.Entities.Exercise> exerciseId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty || exerciseId == Guid.Empty)
+        if (userId.IsEmpty || exerciseId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(user.Id, (Id<LgymApi.Domain.Entities.Exercise>)exerciseId, cancellationToken);
+        var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(user.Id, exerciseId, cancellationToken);
         scores = scores.OrderBy(s => s.CreatedAt).ToList();
 
         var bestSeries = new Dictionary<string, ExerciseScoresChartData>();

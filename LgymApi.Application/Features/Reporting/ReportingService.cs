@@ -67,18 +67,18 @@ public sealed class ReportingService : IReportingService
     public async Task<List<ReportTemplateResult>> GetTrainerTemplatesAsync(UserEntity currentTrainer, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
-        var templates = await _reportingRepository.GetTemplatesByTrainerIdAsync((Guid)currentTrainer.Id, cancellationToken);
+        var templates = await _reportingRepository.GetTemplatesByTrainerIdAsync(currentTrainer.Id, cancellationToken);
         return templates.Select(MapTemplate).ToList();
     }
 
-    public async Task<ReportTemplateResult> GetTrainerTemplateAsync(UserEntity currentTrainer, Guid templateId, CancellationToken cancellationToken = default)
+    public async Task<ReportTemplateResult> GetTrainerTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
         var template = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
         return MapTemplate(template);
     }
 
-    public async Task<ReportTemplateResult> UpdateTemplateAsync(UserEntity currentTrainer, Guid templateId, CreateReportTemplateCommand command, CancellationToken cancellationToken = default)
+    public async Task<ReportTemplateResult> UpdateTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CreateReportTemplateCommand command, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
         ValidateTemplateCommand(command);
@@ -108,7 +108,7 @@ public sealed class ReportingService : IReportingService
         return MapTemplate(template);
     }
 
-    public async Task DeleteTemplateAsync(UserEntity currentTrainer, Guid templateId, CancellationToken cancellationToken = default)
+    public async Task DeleteTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
         var template = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
@@ -116,10 +116,10 @@ public sealed class ReportingService : IReportingService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<ReportRequestResult> CreateReportRequestAsync(UserEntity currentTrainer, Guid traineeId, CreateReportRequestCommand command, CancellationToken cancellationToken = default)
+    public async Task<ReportRequestResult> CreateReportRequestAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CreateReportRequestCommand command, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
-        if (command.TemplateId == Guid.Empty)
+        if (command.TemplateId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -129,7 +129,7 @@ public sealed class ReportingService : IReportingService
         {
             Id = Id<ReportRequest>.New(),
             TrainerId = currentTrainer.Id,
-            TraineeId = (Id<UserEntity>)traineeId,
+            TraineeId = traineeId,
             TemplateId = template.Id,
             Status = ReportRequestStatus.Pending,
             DueAt = command.DueAt,
@@ -145,7 +145,7 @@ public sealed class ReportingService : IReportingService
 
     public async Task<List<ReportRequestResult>> GetPendingRequestsForTraineeAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
     {
-        var requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync((Guid)currentTrainee.Id, cancellationToken);
+        var requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
         var hasUpdates = false;
 
@@ -161,15 +161,15 @@ public sealed class ReportingService : IReportingService
         if (hasUpdates)
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync((Guid)currentTrainee.Id, cancellationToken);
+            requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
         }
 
         return requests.Select(MapRequest).ToList();
     }
 
-    public async Task<ReportSubmissionResult> SubmitReportRequestAsync(UserEntity currentTrainee, Guid requestId, SubmitReportRequestCommand command, CancellationToken cancellationToken = default)
+    public async Task<ReportSubmissionResult> SubmitReportRequestAsync(UserEntity currentTrainee, Id<ReportRequest> requestId, SubmitReportRequestCommand command, CancellationToken cancellationToken = default)
     {
-        if (requestId == Guid.Empty || command.Answers == null)
+        if (requestId.IsEmpty || command.Answers == null)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -220,10 +220,10 @@ public sealed class ReportingService : IReportingService
         return MapSubmission(submission);
     }
 
-    public async Task<List<ReportSubmissionResult>> GetTraineeSubmissionsAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task<List<ReportSubmissionResult>> GetTraineeSubmissionsAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
-        var submissions = await _reportingRepository.GetSubmissionsByTrainerAndTraineeAsync((Guid)currentTrainer.Id, traineeId, cancellationToken);
+        var submissions = await _reportingRepository.GetSubmissionsByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
         return submissions.Select(MapSubmission).ToList();
     }
 
@@ -326,32 +326,32 @@ public sealed class ReportingService : IReportingService
 
     private async Task EnsureTrainerAsync(UserEntity currentTrainer, CancellationToken cancellationToken)
     {
-        var isTrainer = await _roleRepository.UserHasRoleAsync((Guid)currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
+        var isTrainer = await _roleRepository.UserHasRoleAsync(currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
         if (!isTrainer)
         {
             throw AppException.Forbidden(Messages.TrainerRoleRequired);
         }
     }
 
-    private async Task EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken)
+    private async Task EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
 
-        if (traineeId == Guid.Empty)
+        if (traineeId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync((Guid)currentTrainer.Id, traineeId, cancellationToken);
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
         if (link == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
     }
 
-    private async Task<ReportTemplate> EnsureOwnedTemplateAsync(UserEntity currentTrainer, Guid templateId, CancellationToken cancellationToken)
+    private async Task<ReportTemplate> EnsureOwnedTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken)
     {
-        if (templateId == Guid.Empty)
+        if (templateId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -369,8 +369,8 @@ public sealed class ReportingService : IReportingService
     {
         return new ReportTemplateResult
         {
-            Id = (Guid)template.Id,
-            TrainerId = (Guid)template.TrainerId,
+            Id = template.Id,
+            TrainerId = template.TrainerId,
             Name = template.Name,
             Description = template.Description,
             CreatedAt = template.CreatedAt,
@@ -393,10 +393,10 @@ public sealed class ReportingService : IReportingService
     {
         return new ReportRequestResult
         {
-            Id = (Guid)request.Id,
-            TrainerId = (Guid)request.TrainerId,
-            TraineeId = (Guid)request.TraineeId,
-            TemplateId = (Guid)request.TemplateId,
+            Id = request.Id,
+            TrainerId = request.TrainerId,
+            TraineeId = request.TraineeId,
+            TemplateId = request.TemplateId,
             Status = request.Status,
             DueAt = request.DueAt,
             Note = request.Note,
@@ -415,9 +415,9 @@ public sealed class ReportingService : IReportingService
 
         return new ReportSubmissionResult
         {
-            Id = (Guid)submission.Id,
-            ReportRequestId = (Guid)submission.ReportRequestId,
-            TraineeId = (Guid)submission.TraineeId,
+            Id = submission.Id,
+            ReportRequestId = submission.ReportRequestId,
+            TraineeId = submission.TraineeId,
             SubmittedAt = submission.CreatedAt,
             Answers = answers,
             Request = MapRequest(submission.ReportRequest)

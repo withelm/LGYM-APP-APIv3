@@ -31,18 +31,18 @@ public sealed class RoleService : IRoleService
     public async Task<List<RoleResult>> GetRolesAsync(CancellationToken cancellationToken = default)
     {
         var roles = await _roleRepository.GetAllAsync(cancellationToken);
-        var claimsByRole = await _roleRepository.GetPermissionClaimsByRoleIdsAsync(roles.Select(r => (Guid)r.Id).ToList(), cancellationToken);
+        var claimsByRole = await _roleRepository.GetPermissionClaimsByRoleIdsAsync(roles.Select(r => r.Id).ToList(), cancellationToken);
 
         return roles
             .Select(role => MapRole(
                 role,
-                claimsByRole.TryGetValue((Guid)role.Id, out var claims) ? claims : new List<string>()))
+                claimsByRole.TryGetValue(role.Id, out var claims) ? claims : new List<string>()))
             .ToList();
     }
 
-    public async Task<RoleResult> GetRoleAsync(Guid roleId, CancellationToken cancellationToken = default)
+    public async Task<RoleResult> GetRoleAsync(Id<Domain.Entities.Role> roleId, CancellationToken cancellationToken = default)
     {
-        if (roleId == Guid.Empty)
+        if (roleId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -53,7 +53,7 @@ public sealed class RoleService : IRoleService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var permissionClaims = await _roleRepository.GetPermissionClaimsByRoleIdAsync((Guid)role.Id, cancellationToken);
+        var permissionClaims = await _roleRepository.GetPermissionClaimsByRoleIdAsync(role.Id, cancellationToken);
         return MapRole(role, permissionClaims);
     }
 
@@ -75,21 +75,21 @@ public sealed class RoleService : IRoleService
         };
 
         await _roleRepository.AddRoleAsync(role, cancellationToken);
-        await _roleRepository.ReplaceRolePermissionClaimsAsync((Guid)role.Id, normalizedClaims, cancellationToken);
+        await _roleRepository.ReplaceRolePermissionClaimsAsync(role.Id, normalizedClaims, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new RoleResult
         {
-            Id = (Guid)role.Id,
+            Id = role.Id,
             Name = role.Name,
             Description = role.Description,
             PermissionClaims = normalizedClaims.ToList()
         };
     }
 
-    public async Task UpdateRoleAsync(Guid roleId, string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
+    public async Task UpdateRoleAsync(Id<Domain.Entities.Role> roleId, string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
     {
-        if (roleId == Guid.Empty)
+        if (roleId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -117,13 +117,13 @@ public sealed class RoleService : IRoleService
         role.Description = NormalizeDescription(description);
 
         await _roleRepository.UpdateRoleAsync(role, cancellationToken);
-        await _roleRepository.ReplaceRolePermissionClaimsAsync((Guid)role.Id, normalizedClaims, cancellationToken);
+        await _roleRepository.ReplaceRolePermissionClaimsAsync(role.Id, normalizedClaims, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteRoleAsync(Guid roleId, CancellationToken cancellationToken = default)
+    public async Task DeleteRoleAsync(Id<Domain.Entities.Role> roleId, CancellationToken cancellationToken = default)
     {
-        if (roleId == Guid.Empty)
+        if (roleId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -163,14 +163,14 @@ public sealed class RoleService : IRoleService
             .ToList();
     }
 
-    public async Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
+    public async Task UpdateUserRolesAsync(Id<LgymApi.Domain.Entities.User> userId, IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -188,7 +188,7 @@ public sealed class RoleService : IRoleService
             throw AppException.BadRequest(Messages.InvalidRoleSelection);
         }
 
-        await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => (Guid)r.Id).ToList(), cancellationToken);
+        await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => r.Id).ToList(), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -196,7 +196,7 @@ public sealed class RoleService : IRoleService
     {
         return new RoleResult
         {
-            Id = (Guid)role.Id,
+            Id = role.Id,
             Name = role.Name,
             Description = role.Description,
             PermissionClaims = permissionClaims

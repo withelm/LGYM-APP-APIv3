@@ -49,14 +49,14 @@ public sealed class AppDbContext : DbContext
     public DbSet<UserTutorialStepProgress> UserTutorialStepProgresses => Set<UserTutorialStepProgress>();
     public DbSet<UserTutorialProgress> UserTutorialProgresses => Set<UserTutorialProgress>();
 
-    public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
-    public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
-    public static readonly Guid TesterRoleSeedId = Guid.Parse("f93f03af-ae11-4fd8-a60e-f970f89df6fb");
-    public static readonly Guid TrainerRoleSeedId = Guid.Parse("8c1a3db8-72a3-47cc-b3de-f5347c6ae501");
-    public static readonly Guid AdminAccessClaimSeedId = Guid.Parse("9dbfd057-cf88-4597-b668-2fdf16a2def6");
-    public static readonly Guid ManageUserRolesClaimSeedId = Guid.Parse("97f7ea56-0032-4f18-8703-ab2d1485ad45");
-    public static readonly Guid ManageAppConfigClaimSeedId = Guid.Parse("d12f9f84-48f4-4f4b-9614-843f31ea0f96");
-    public static readonly Guid ManageGlobalExercisesClaimSeedId = Guid.Parse("27965bf4-ff55-4261-8f98-218ccf00e537");
+    public static readonly Id<Role> UserRoleSeedId = (Id<Role>)Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
+    public static readonly Id<Role> AdminRoleSeedId = (Id<Role>)Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
+    public static readonly Id<Role> TesterRoleSeedId = (Id<Role>)Guid.Parse("f93f03af-ae11-4fd8-a60e-f970f89df6fb");
+    public static readonly Id<Role> TrainerRoleSeedId = (Id<Role>)Guid.Parse("8c1a3db8-72a3-47cc-b3de-f5347c6ae501");
+    public static readonly Id<RoleClaim> AdminAccessClaimSeedId = (Id<RoleClaim>)Guid.Parse("9dbfd057-cf88-4597-b668-2fdf16a2def6");
+    public static readonly Id<RoleClaim> ManageUserRolesClaimSeedId = (Id<RoleClaim>)Guid.Parse("97f7ea56-0032-4f18-8703-ab2d1485ad45");
+    public static readonly Id<RoleClaim> ManageAppConfigClaimSeedId = (Id<RoleClaim>)Guid.Parse("d12f9f84-48f4-4f4b-9614-843f31ea0f96");
+    public static readonly Id<RoleClaim> ManageGlobalExercisesClaimSeedId = (Id<RoleClaim>)Guid.Parse("27965bf4-ff55-4261-8f98-218ccf00e537");
     private static readonly DateTimeOffset RoleSeedTimestamp = new(2026, 2, 15, 0, 0, 0, TimeSpan.Zero);
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -6,6 +6,7 @@ using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Role.Models;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,7 +24,7 @@ public sealed class RoleControllerTests
         {
             CreateRoleHandler = (_, _, _) => Task.FromResult(new RoleResult
             {
-                Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                Id = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Role>)Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 Name = "Coach",
                 Description = "desc",
                 PermissionClaims = ManageUserRolesClaim
@@ -97,22 +98,22 @@ public sealed class RoleControllerTests
         public Func<string, string?, IReadOnlyCollection<string>, Task<RoleResult>>? CreateRoleHandler { get; init; }
 
         public Task<List<RoleResult>> GetRolesAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<RoleResult>());
-        public Task<RoleResult> GetRoleAsync(Guid roleId, CancellationToken cancellationToken = default) => Task.FromResult(new RoleResult { Id = roleId });
+        public Task<RoleResult> GetRoleAsync(Id<Domain.Entities.Role> roleId, CancellationToken cancellationToken = default) => Task.FromResult(new RoleResult { Id = roleId });
 
         public Task<RoleResult> CreateRoleAsync(string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
             => CreateRoleHandler?.Invoke(name, description, permissionClaims)
-               ?? Task.FromResult(new RoleResult { Id = Guid.NewGuid(), Name = name, Description = description, PermissionClaims = permissionClaims.ToList() });
+               ?? Task.FromResult(new RoleResult { Id = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Role>)Guid.NewGuid(), Name = name, Description = description, PermissionClaims = permissionClaims.ToList() });
 
-        public Task UpdateRoleAsync(Guid roleId, string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
+        public Task UpdateRoleAsync(Id<Domain.Entities.Role> roleId, string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
-        public Task DeleteRoleAsync(Guid roleId, CancellationToken cancellationToken = default)
+        public Task DeleteRoleAsync(Id<Domain.Entities.Role> roleId, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
         public List<PermissionClaimLookupResult> GetAvailablePermissionClaims()
             => new();
 
-        public Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
+        public Task UpdateUserRolesAsync(Id<Domain.Entities.User> userId, IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
     }
 }

@@ -81,26 +81,16 @@ public sealed class EntityIdLeakageGuardTests
             {
                 CheckMethodParameters(method, tree, semanticModel, repoRoot, violations);
             }
+
         }
 
         Assert.Multiple(() =>
         {
             Assert.That(
                 violations,
-                Is.Not.Empty,
-                "Guard must detect at least one raw Guid entity-ID-like declaration in production code to prove leakage detection is active.");
-
-            Assert.That(
-                violations.Any(v => !Normalize(v.File).Contains("LgymApi.Domain/Entities/", StringComparison.OrdinalIgnoreCase)),
-                Is.True,
-                "Guard must not be restricted only to EntityBase-derived domain entity classes.");
-
-            Assert.That(
-                violations.Any(v => Normalize(v.File).Contains("LgymApi.Application/", StringComparison.OrdinalIgnoreCase)
-                    || Normalize(v.File).Contains("LgymApi.Infrastructure/", StringComparison.OrdinalIgnoreCase)
-                    || Normalize(v.File).Contains("LgymApi.BackgroundWorker", StringComparison.OrdinalIgnoreCase)),
-                Is.True,
-                "Guard must detect raw Guid entity-ID patterns across production layers.");
+                Is.Empty,
+                "Raw Guid entity-ID leakage is forbidden in production scope. Violations:\n"
+                + string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
 
             Assert.That(
                 violations.Any(v => v.Message.Contains("CorrelationId", StringComparison.OrdinalIgnoreCase)),
@@ -161,21 +151,20 @@ public sealed class EntityIdLeakageGuardTests
     {
         foreach (var parameter in method.ParameterList.Parameters)
         {
-            var type = parameter.Type;
-            if (!IsRawGuidType(type, semanticModel))
+            if (!IsRawGuidType(parameter.Type, semanticModel))
             {
                 continue;
             }
 
-            var paramName = parameter.Identifier.ValueText;
-            if (IsEntityIdPattern(paramName))
+            var parameterName = parameter.Identifier.ValueText;
+            if (IsEntityIdPattern(parameterName))
             {
                 var line = parameter.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
                 var relativePath = Path.GetRelativePath(repoRoot, tree.FilePath);
                 violations.Add(new Violation(
                     relativePath,
                     line,
-                    $"Parameter '{paramName}' uses raw Guid; use Id<TEntity> instead"));
+                    $"Method parameter '{parameterName}' uses raw Guid; use Id<TEntity> instead"));
             }
         }
     }
@@ -215,7 +204,7 @@ public sealed class EntityIdLeakageGuardTests
         // Must end with one of the entity ID patterns
         foreach (var pattern in EntityIdPatterns)
         {
-            if (name.Equals(pattern, StringComparison.Ordinal) || name.EndsWith(pattern, StringComparison.Ordinal))
+            if (name.Equals(pattern, StringComparison.OrdinalIgnoreCase) || name.EndsWith(pattern, StringComparison.OrdinalIgnoreCase))
             {
                 // But NOT operational GUIDs (case-insensitive)
                 foreach (var operationalPattern in OperationalGuidPatterns)

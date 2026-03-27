@@ -4,7 +4,9 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.Training.Controllers;
 
@@ -29,8 +31,8 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> AddTraining([FromRoute] string id, [FromBody] TrainingFormDto form)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var gymId = Guid.TryParse(form.GymId, out var parsedGymId) ? parsedGymId : Guid.Empty;
-        var planDayId = Guid.TryParse(form.TypePlanDayId, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
+        var gymId = Guid.TryParse(form.GymId, out var parsedGymId) ? (Id<LgymApi.Domain.Entities.Gym>)parsedGymId : Id<LgymApi.Domain.Entities.Gym>.Empty;
+        var planDayId = Guid.TryParse(form.TypePlanDayId, out var parsedPlanDayId) ? (Id<LgymApi.Domain.Entities.PlanDay>)parsedPlanDayId : Id<LgymApi.Domain.Entities.PlanDay>.Empty;
         var exercises = form.Exercises.Select(exercise => new TrainingExerciseInput
         {
                 ExerciseId = exercise.ExerciseId,
@@ -41,7 +43,7 @@ public sealed class TrainingController : ControllerBase
             }).ToList();
 
         var input = new AddTrainingInput(gymId, planDayId, form.CreatedAt, exercises);
-        var result = await _trainingService.AddTrainingAsync(userId, input, HttpContext.RequestAborted);
+        var result = await _trainingService.AddTrainingAsync((Id<UserEntity>)userId, input, HttpContext.RequestAborted);
         var mapped = _mapper.Map<TrainingSummaryResult, TrainingSummaryDto>(result);
         return Ok(mapped);
     }
@@ -53,7 +55,7 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> GetLastTraining([FromRoute] string id)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var training = await _trainingService.GetLastTrainingAsync(userId, HttpContext.RequestAborted);
+        var training = await _trainingService.GetLastTrainingAsync((Id<UserEntity>)userId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Domain.Entities.Training, LastTrainingInfoDto>(training));
     }
 
@@ -64,7 +66,7 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> GetTrainingByDate([FromRoute] string id, [FromBody] TrainingByDateRequestDto request)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _trainingService.GetTrainingByDateAsync(userId, request.CreatedAt, HttpContext.RequestAborted);
+        var result = await _trainingService.GetTrainingByDateAsync((Id<UserEntity>)userId, request.CreatedAt, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result);
         return Ok(mapped);
     }
@@ -76,7 +78,7 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> GetTrainingDates([FromRoute] string id)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var dates = await _trainingService.GetTrainingDatesAsync(userId, HttpContext.RequestAborted);
+        var dates = await _trainingService.GetTrainingDatesAsync((Id<UserEntity>)userId, HttpContext.RequestAborted);
         return Ok(dates);
     }
 }

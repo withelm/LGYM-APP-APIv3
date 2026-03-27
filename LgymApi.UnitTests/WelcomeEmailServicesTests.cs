@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Notifications;
@@ -33,7 +34,7 @@ public sealed class WelcomeEmailServicesTests
 
         await service.ScheduleAsync(new WelcomeEmailPayload
         {
-            UserId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
             UserName = "Alex",
             RecipientEmail = "alex@example.com",
             CultureName = "en-US"
@@ -78,7 +79,7 @@ public sealed class WelcomeEmailServicesTests
 
         await service.ScheduleAsync(new WelcomeEmailPayload
         {
-            UserId = existing.CorrelationId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)existing.CorrelationId,
             UserName = "Alex",
             RecipientEmail = existing.Recipient,
             CultureName = "en-US"
@@ -111,7 +112,7 @@ public sealed class WelcomeEmailServicesTests
 
         await service.ScheduleAsync(new WelcomeEmailPayload
         {
-            UserId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
             UserName = "Alex",
             RecipientEmail = "alex@example.com",
             CultureName = "en-US"
@@ -158,7 +159,7 @@ public sealed class WelcomeEmailServicesTests
 
         await service.ScheduleAsync(new WelcomeEmailPayload
         {
-            UserId = existing.CorrelationId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)existing.CorrelationId,
             UserName = "Alex",
             RecipientEmail = existing.Recipient,
             CultureName = "en-US"
@@ -261,7 +262,7 @@ public sealed class WelcomeEmailServicesTests
             return Task.CompletedTask;
         }
 
-        public Task<NotificationMessage?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<NotificationMessage?> FindByIdAsync(LgymApi.Domain.ValueObjects.Id<NotificationMessage> id, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(ExistingById);
         }

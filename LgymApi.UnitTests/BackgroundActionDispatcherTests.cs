@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
@@ -214,9 +215,9 @@ public sealed class BackgroundActionDispatcherTests
             return Task.CompletedTask;
         }
 
-        public Task<CommandEnvelope?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<CommandEnvelope?> FindByIdAsync(Id<CommandEnvelope> id, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(Envelopes.FirstOrDefault(e => (Guid)e.Id == id));
+            return Task.FromResult(Envelopes.FirstOrDefault(e => e.Id == id));
         }
 
         public Task<CommandEnvelope?> FindByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)

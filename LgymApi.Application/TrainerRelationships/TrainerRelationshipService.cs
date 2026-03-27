@@ -16,6 +16,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
+using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -51,21 +52,21 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         _logger = dependencies.Logger;
     }
 
-    public async Task<TrainerInvitationResult> CreateInvitationAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task<TrainerInvitationResult> CreateInvitationAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
 
-        if (traineeId == Guid.Empty)
+        if (traineeId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (currentTrainer.Id == (Id<UserEntity>)traineeId)
+        if (currentTrainer.Id == traineeId)
         {
             throw AppException.BadRequest(Messages.CannotInviteYourself);
         }
 
-        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
         if (trainee == null || trainee.IsDeleted)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -76,7 +77,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             throw AppException.BadRequest(Messages.TraineeAlreadyLinked);
         }
 
-        var existingPending = await _trainerRelationshipRepository.FindPendingInvitationAsync((Guid)currentTrainer.Id, traineeId, cancellationToken);
+        var existingPending = await _trainerRelationshipRepository.FindPendingInvitationAsync(currentTrainer.Id, traineeId, cancellationToken);
         var reusableInvitation = await HandleExistingPendingInvitationAsync(existingPending, cancellationToken);
         if (reusableInvitation != null)
         {
@@ -87,7 +88,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         {
             Id = Id<TrainerInvitation>.New(),
             TrainerId = currentTrainer.Id,
-            TraineeId = (Id<UserEntity>)traineeId,
+            TraineeId = traineeId,
             Code = CreateInvitationCode(),
             Status = TrainerInvitationStatus.Pending,
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(7)
@@ -98,7 +99,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         try
         {
-            await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = (Guid)invitation.Id });
+            await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = invitation.Id });
         }
         catch (Exception ex)
         {
@@ -134,7 +135,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
 
-        var invitations = await _trainerRelationshipRepository.GetInvitationsByTrainerIdAsync((Guid)currentTrainer.Id, cancellationToken);
+        var invitations = await _trainerRelationshipRepository.GetInvitationsByTrainerIdAsync(currentTrainer.Id, cancellationToken);
         var hasUpdates = false;
 
         foreach (var invitation in invitations)
@@ -159,43 +160,43 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
 
-        return await _trainerRelationshipRepository.GetDashboardTraineesAsync((Guid)currentTrainer.Id, query, cancellationToken);
+        return await _trainerRelationshipRepository.GetDashboardTraineesAsync(currentTrainer.Id, query, cancellationToken);
     }
 
-    public async Task<List<DateTime>> GetTraineeTrainingDatesAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task<List<DateTime>> GetTraineeTrainingDatesAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         return await _trainingService.GetTrainingDatesAsync(traineeId, cancellationToken);
     }
 
-    public async Task<List<TrainingByDateDetails>> GetTraineeTrainingByDateAsync(UserEntity currentTrainer, Guid traineeId, DateTime createdAt, CancellationToken cancellationToken = default)
+    public async Task<List<TrainingByDateDetails>> GetTraineeTrainingByDateAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, DateTime createdAt, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         return await _trainingService.GetTrainingByDateAsync(traineeId, createdAt, cancellationToken);
     }
 
-    public async Task<List<ExerciseScoresChartData>> GetTraineeExerciseScoresChartDataAsync(UserEntity currentTrainer, Guid traineeId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public async Task<List<ExerciseScoresChartData>> GetTraineeExerciseScoresChartDataAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         return await _exerciseScoresService.GetExerciseScoresChartDataAsync(traineeId, exerciseId, cancellationToken);
     }
 
-    public async Task<List<EloRegistryChartEntry>> GetTraineeEloChartAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task<List<EloRegistryChartEntry>> GetTraineeEloChartAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         return await _eloRegistryService.GetChartAsync(traineeId, cancellationToken);
     }
 
-    public async Task<List<MainRecordEntity>> GetTraineeMainRecordsHistoryAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task<List<MainRecordEntity>> GetTraineeMainRecordsHistoryAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         return await _mainRecordsService.GetMainRecordsHistoryAsync(traineeId, cancellationToken);
     }
 
-    public async Task<List<TrainerManagedPlanResult>> GetTraineePlansAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task<List<TrainerManagedPlanResult>> GetTraineePlansAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
-        var plans = await _planRepository.GetByUserIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
+        var plans = await _planRepository.GetByUserIdAsync(traineeId, cancellationToken);
 
         return plans
             .OrderByDescending(x => x.CreatedAt)
@@ -203,7 +204,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             .ToList();
     }
 
-    public async Task<TrainerManagedPlanResult> CreateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, string name, CancellationToken cancellationToken = default)
+    public async Task<TrainerManagedPlanResult> CreateTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, string name, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
 
@@ -215,7 +216,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         var plan = new PlanEntity
         {
             Id = Id<PlanEntity>.New(),
-            UserId = (Id<LgymApi.Domain.Entities.User>)traineeId,
+            UserId = traineeId,
             Name = name.Trim(),
             IsActive = false,
             IsDeleted = false
@@ -226,17 +227,17 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return MapPlan(plan);
     }
 
-    public async Task<TrainerManagedPlanResult> UpdateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, string name, CancellationToken cancellationToken = default)
+    public async Task<TrainerManagedPlanResult> UpdateTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<PlanEntity> planId, string name, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
 
-        if (planId == Guid.Empty || string.IsNullOrWhiteSpace(name))
+        if (planId.IsEmpty || string.IsNullOrWhiteSpace(name))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var plan = await _planRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.Plan>)planId, cancellationToken);
-        if (plan == null || plan.UserId != (Id<UserEntity>)traineeId)
+        var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
+        if (plan == null || plan.UserId != traineeId)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -247,22 +248,22 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return MapPlan(plan);
     }
 
-    public async Task DeleteTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, CancellationToken cancellationToken = default)
+    public async Task DeleteTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
 
-        if (planId == Guid.Empty)
+        if (planId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var plan = await _planRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.Plan>)planId, cancellationToken);
-        if (plan == null || plan.UserId != (Id<UserEntity>)traineeId)
+        var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
+        if (plan == null || plan.UserId != traineeId)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
         if (trainee == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -281,44 +282,44 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task AssignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, CancellationToken cancellationToken = default)
+    public async Task AssignTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
 
-        if (planId == Guid.Empty)
+        if (planId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var plan = await _planRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.Plan>)planId, cancellationToken);
-        if (plan == null || plan.UserId != (Id<UserEntity>)traineeId)
+        var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
+        if (plan == null || plan.UserId != traineeId)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
         if (trainee == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        await _planRepository.SetActivePlanAsync((Id<LgymApi.Domain.Entities.User>)traineeId, (Id<LgymApi.Domain.Entities.Plan>)planId, cancellationToken);
-        trainee.PlanId = (Id<LgymApi.Domain.Entities.Plan>)planId;
+        await _planRepository.SetActivePlanAsync(traineeId, planId, cancellationToken);
+        trainee.PlanId = planId;
         await _userRepository.UpdateAsync(trainee, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UnassignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task UnassignTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
 
-        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
         if (trainee == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        await _planRepository.ClearActivePlansAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
+        await _planRepository.ClearActivePlansAsync(traineeId, cancellationToken);
         trainee.PlanId = null;
         await _userRepository.UpdateAsync(trainee, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -326,7 +327,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
     public async Task<TrainerManagedPlanResult> GetActiveAssignedPlanAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
     {
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTraineeIdAsync((Guid)currentTrainee.Id, cancellationToken);
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTraineeIdAsync(currentTrainee.Id, cancellationToken);
         if (link == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -341,9 +342,9 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return MapPlan(activePlan);
     }
 
-    public async Task AcceptInvitationAsync(UserEntity currentTrainee, Guid invitationId, CancellationToken cancellationToken = default)
+    public async Task AcceptInvitationAsync(UserEntity currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default)
     {
-        if (invitationId == Guid.Empty)
+        if (invitationId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -351,7 +352,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         var invitation = await GetInvitationForTraineeAsync(currentTrainee, invitationId, cancellationToken);
         if (invitation.Status == TrainerInvitationStatus.Accepted)
         {
-            var existing = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync((Guid)invitation.TrainerId, (Guid)currentTrainee.Id, cancellationToken);
+            var existing = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(invitation.TrainerId, currentTrainee.Id, cancellationToken);
             if (existing != null)
             {
                 return;
@@ -360,7 +361,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         await EnsureInvitationPendingAsync(invitation, cancellationToken);
 
-        if (await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync((Guid)currentTrainee.Id, cancellationToken))
+        if (await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync(currentTrainee.Id, cancellationToken))
         {
             throw AppException.BadRequest(Messages.TraineeAlreadyLinked);
         }
@@ -381,7 +382,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         }
         catch
         {
-            if (await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync((Guid)currentTrainee.Id, cancellationToken))
+            if (await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync(currentTrainee.Id, cancellationToken))
             {
                 throw AppException.BadRequest(Messages.TraineeAlreadyLinked);
             }
@@ -390,9 +391,9 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         }
     }
 
-    public async Task RejectInvitationAsync(UserEntity currentTrainee, Guid invitationId, CancellationToken cancellationToken = default)
+    public async Task RejectInvitationAsync(UserEntity currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default)
     {
-        if (invitationId == Guid.Empty)
+        if (invitationId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -411,7 +412,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UnlinkTraineeAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task UnlinkTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         var link = await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
 
@@ -421,7 +422,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
     public async Task DetachFromTrainerAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
     {
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTraineeIdAsync((Guid)currentTrainee.Id, cancellationToken);
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTraineeIdAsync(currentTrainee.Id, cancellationToken);
         if (link == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -433,23 +434,23 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
     private async Task EnsureTrainerAsync(UserEntity currentTrainer, CancellationToken cancellationToken)
     {
-        var isTrainer = await _roleRepository.UserHasRoleAsync((Guid)currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
+        var isTrainer = await _roleRepository.UserHasRoleAsync(currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
         if (!isTrainer)
         {
             throw AppException.Forbidden(Messages.TrainerRoleRequired);
         }
     }
 
-    private async Task<TrainerTraineeLink> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken)
+    private async Task<TrainerTraineeLink> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
     {
         await EnsureTrainerAsync(currentTrainer, cancellationToken);
 
-        if (traineeId == Guid.Empty)
+        if (traineeId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync((Guid)currentTrainer.Id, traineeId, cancellationToken);
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
         if (link == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -458,7 +459,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return link;
     }
 
-    private async Task<TrainerInvitation> GetInvitationForTraineeAsync(UserEntity currentTrainee, Guid invitationId, CancellationToken cancellationToken)
+    private async Task<TrainerInvitation> GetInvitationForTraineeAsync(UserEntity currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken)
     {
         var invitation = await _trainerRelationshipRepository.FindInvitationByIdAsync(invitationId, cancellationToken);
         if (invitation == null || invitation.TraineeId != currentTrainee.Id)
@@ -493,9 +494,9 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     {
         return new TrainerInvitationResult
         {
-            Id = (Guid)invitation.Id,
-            TrainerId = (Guid)invitation.TrainerId,
-            TraineeId = (Guid)invitation.TraineeId,
+            Id = invitation.Id,
+            TrainerId = invitation.TrainerId,
+            TraineeId = invitation.TraineeId,
             Code = invitation.Code,
             Status = invitation.Status,
             ExpiresAt = invitation.ExpiresAt,
@@ -508,7 +509,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     {
         return new TrainerManagedPlanResult
         {
-            Id = (Guid)plan.Id,
+            Id = plan.Id,
             Name = plan.Name,
             IsActive = plan.IsActive,
             CreatedAt = plan.CreatedAt

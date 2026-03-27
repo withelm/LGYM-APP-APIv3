@@ -34,14 +34,14 @@ public sealed class SupplementationService : ISupplementationService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<SupplementPlanResult>> GetTraineePlansAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task<List<SupplementPlanResult>> GetTraineePlansAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
-        var plans = await _supplementationRepository.GetPlansByTrainerAndTraineeAsync((Guid)currentTrainer.Id, traineeId, cancellationToken);
+        var plans = await _supplementationRepository.GetPlansByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
         return plans.Select(MapPlan).ToList();
     }
 
-    public async Task<SupplementPlanResult> CreateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, UpsertSupplementPlanCommand command, CancellationToken cancellationToken = default)
+    public async Task<SupplementPlanResult> CreateTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, UpsertSupplementPlanCommand command, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         var normalizedItems = ValidateAndNormalizeItems(command);
@@ -50,7 +50,7 @@ public sealed class SupplementationService : ISupplementationService
         {
             Id = Id<SupplementPlan>.New(),
             TrainerId = currentTrainer.Id,
-            TraineeId = (Id<LgymApi.Domain.Entities.User>)traineeId,
+            TraineeId = traineeId,
             Name = command.Name.Trim(),
             Notes = string.IsNullOrWhiteSpace(command.Notes) ? null : command.Notes.Trim(),
             IsActive = false,
@@ -72,7 +72,7 @@ public sealed class SupplementationService : ISupplementationService
         return MapPlan(plan);
     }
 
-    public async Task<SupplementPlanResult> UpdateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, UpsertSupplementPlanCommand command, CancellationToken cancellationToken = default)
+    public async Task<SupplementPlanResult> UpdateTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<SupplementPlan> planId, UpsertSupplementPlanCommand command, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         var normalizedItems = ValidateAndNormalizeItems(command);
@@ -86,7 +86,7 @@ public sealed class SupplementationService : ISupplementationService
         {
             Id = Id<SupplementPlan>.New(),
             TrainerId = currentTrainer.Id,
-            TraineeId = (Id<LgymApi.Domain.Entities.User>)traineeId,
+            TraineeId = traineeId,
             Name = command.Name.Trim(),
             Notes = string.IsNullOrWhiteSpace(command.Notes) ? null : command.Notes.Trim(),
             IsActive = wasActive,
@@ -108,7 +108,7 @@ public sealed class SupplementationService : ISupplementationService
         return MapPlan(newPlan);
     }
 
-    public async Task DeleteTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, CancellationToken cancellationToken = default)
+    public async Task DeleteTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<SupplementPlan> planId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         var plan = await EnsureOwnedPlanAsync(currentTrainer, traineeId, planId, cancellationToken);
@@ -117,12 +117,12 @@ public sealed class SupplementationService : ISupplementationService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task AssignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, CancellationToken cancellationToken = default)
+    public async Task AssignTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<SupplementPlan> planId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         var plan = await EnsureOwnedPlanAsync(currentTrainer, traineeId, planId, cancellationToken);
 
-        var existingPlans = await _supplementationRepository.GetPlansByTrainerAndTraineeAsync((Guid)currentTrainer.Id, traineeId, cancellationToken);
+        var existingPlans = await _supplementationRepository.GetPlansByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
         foreach (var candidate in existingPlans.Where(x => x.IsActive && x.Id != plan.Id))
         {
             candidate.IsActive = false;
@@ -132,7 +132,7 @@ public sealed class SupplementationService : ISupplementationService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UnassignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task UnassignTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
 
@@ -148,13 +148,13 @@ public sealed class SupplementationService : ISupplementationService
 
     public async Task<List<SupplementScheduleEntryResult>> GetActiveScheduleForDateAsync(UserEntity currentTrainee, DateOnly date, CancellationToken cancellationToken = default)
     {
-        var activePlan = await _supplementationRepository.GetActivePlanForTraineeAsync((Guid)currentTrainee.Id, cancellationToken);
+        var activePlan = await _supplementationRepository.GetActivePlanForTraineeAsync(currentTrainee.Id, cancellationToken);
         if (activePlan == null)
         {
             return [];
         }
 
-        var logs = await _supplementationRepository.GetIntakeLogsForPlanAsync((Guid)currentTrainee.Id, (Guid)activePlan.Id, date, date, cancellationToken);
+        var logs = await _supplementationRepository.GetIntakeLogsForPlanAsync(currentTrainee.Id, activePlan.Id, date, date, cancellationToken);
         var logsByPlanItem = logs.ToDictionary(x => x.PlanItemId, x => x);
 
         return activePlan.Items
@@ -164,10 +164,10 @@ public sealed class SupplementationService : ISupplementationService
             .ThenBy(item => item.CreatedAt)
             .Select(item =>
             {
-                var hasLog = logsByPlanItem.TryGetValue((Id<SupplementPlanItem>)item.Id, out var log);
+                var hasLog = logsByPlanItem.TryGetValue(item.Id, out var log);
                 return new SupplementScheduleEntryResult
                 {
-                    PlanItemId = (Guid)item.Id,
+                    PlanItemId = item.Id,
                     SupplementName = item.SupplementName,
                     Dosage = item.Dosage,
                     TimeOfDay = FormatTime(item.TimeOfDay),
@@ -181,7 +181,7 @@ public sealed class SupplementationService : ISupplementationService
 
     public async Task<SupplementScheduleEntryResult> CheckOffIntakeAsync(UserEntity currentTrainee, CheckOffSupplementIntakeCommand command, CancellationToken cancellationToken = default)
     {
-        if (command.PlanItemId == Guid.Empty)
+        if (command.PlanItemId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -191,26 +191,26 @@ public sealed class SupplementationService : ISupplementationService
             throw AppException.BadRequest(Messages.DateRequired);
         }
 
-        var activePlan = await _supplementationRepository.GetActivePlanForTraineeAsync((Guid)currentTrainee.Id, cancellationToken);
+        var activePlan = await _supplementationRepository.GetActivePlanForTraineeAsync(currentTrainee.Id, cancellationToken);
         if (activePlan == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var planItem = activePlan.Items.FirstOrDefault(item => (Guid)item.Id == command.PlanItemId);
+        var planItem = activePlan.Items.FirstOrDefault(item => item.Id == command.PlanItemId);
         if (planItem == null || !IsScheduledOnDate(planItem.DaysOfWeekMask, command.IntakeDate))
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var existing = await _supplementationRepository.FindIntakeLogAsync((Guid)currentTrainee.Id, command.PlanItemId, command.IntakeDate, cancellationToken);
+        var existing = await _supplementationRepository.FindIntakeLogAsync(currentTrainee.Id, command.PlanItemId, command.IntakeDate, cancellationToken);
         if (existing == null)
         {
             existing = new SupplementIntakeLog
             {
                 Id = Id<SupplementIntakeLog>.New(),
                 TraineeId = currentTrainee.Id,
-                PlanItemId = (Id<SupplementPlanItem>)command.PlanItemId,
+                PlanItemId = command.PlanItemId,
                 IntakeDate = command.IntakeDate,
                 TakenAt = command.TakenAt ?? DateTimeOffset.UtcNow
             };
@@ -223,7 +223,7 @@ public sealed class SupplementationService : ISupplementationService
             }
             catch
             {
-                var persisted = await _supplementationRepository.FindIntakeLogAsync((Guid)currentTrainee.Id, command.PlanItemId, command.IntakeDate, cancellationToken);
+                var persisted = await _supplementationRepository.FindIntakeLogAsync(currentTrainee.Id, command.PlanItemId, command.IntakeDate, cancellationToken);
                 if (persisted == null)
                 {
                     throw;
@@ -240,7 +240,7 @@ public sealed class SupplementationService : ISupplementationService
 
         return new SupplementScheduleEntryResult
         {
-            PlanItemId = (Guid)planItem.Id,
+            PlanItemId = planItem.Id,
             SupplementName = planItem.SupplementName,
             Dosage = planItem.Dosage,
             TimeOfDay = FormatTime(planItem.TimeOfDay),
@@ -250,7 +250,7 @@ public sealed class SupplementationService : ISupplementationService
         };
     }
 
-    public async Task<SupplementComplianceSummaryResult> GetComplianceSummaryAsync(UserEntity currentTrainer, Guid traineeId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
+    public async Task<SupplementComplianceSummaryResult> GetComplianceSummaryAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         if (toDate < fromDate)
@@ -284,7 +284,7 @@ public sealed class SupplementationService : ISupplementationService
             plannedDoses += activePlan.Items.Count(item => IsScheduledOnDate(item.DaysOfWeekMask, date));
         }
 
-        var logs = await _supplementationRepository.GetIntakeLogsForPlanAsync(traineeId, (Guid)activePlan.Id, fromDate, toDate, cancellationToken);
+        var logs = await _supplementationRepository.GetIntakeLogsForPlanAsync(traineeId, activePlan.Id, fromDate, toDate, cancellationToken);
         var takenDoses = logs.Count;
         var adherenceRate = plannedDoses == 0 ? 0 : Math.Round((double)takenDoses / plannedDoses * 100, 2);
 
@@ -299,37 +299,37 @@ public sealed class SupplementationService : ISupplementationService
         };
     }
 
-    private async Task EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken)
+    private async Task EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
     {
-        var isTrainer = await _roleRepository.UserHasRoleAsync((Guid)currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
+        var isTrainer = await _roleRepository.UserHasRoleAsync(currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
         if (!isTrainer)
         {
             throw AppException.Forbidden(Messages.TrainerRoleRequired);
         }
 
-        if (traineeId == Guid.Empty)
+        if (traineeId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync((Guid)currentTrainer.Id, traineeId, cancellationToken);
+        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
         if (link == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
     }
 
-    private async Task<SupplementPlan> EnsureOwnedPlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, CancellationToken cancellationToken)
+    private async Task<SupplementPlan> EnsureOwnedPlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<SupplementPlan> planId, CancellationToken cancellationToken)
     {
-        if (planId == Guid.Empty)
+        if (planId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var plan = await _supplementationRepository.FindPlanByIdAsync(planId, cancellationToken);
         if (plan == null
-            || (Guid)plan.TrainerId != (Guid)currentTrainer.Id
-            || (Guid)plan.TraineeId != traineeId
+            || plan.TrainerId != currentTrainer.Id
+            || plan.TraineeId != traineeId
             || plan.IsDeleted)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -411,9 +411,9 @@ public sealed class SupplementationService : ISupplementationService
     {
         return new SupplementPlanResult
         {
-            Id = (Guid)plan.Id,
-            TrainerId = (Guid)plan.TrainerId,
-            TraineeId = (Guid)plan.TraineeId,
+            Id = plan.Id,
+            TrainerId = plan.TrainerId,
+            TraineeId = plan.TraineeId,
             Name = plan.Name,
             Notes = plan.Notes,
             IsActive = plan.IsActive,
@@ -424,7 +424,7 @@ public sealed class SupplementationService : ISupplementationService
                 .ThenBy(x => x.CreatedAt)
                 .Select(item => new SupplementPlanItemResult
                 {
-                    Id = (Guid)item.Id,
+                    Id = item.Id,
                     SupplementName = item.SupplementName,
                     Dosage = item.Dosage,
                     TimeOfDay = FormatTime(item.TimeOfDay),

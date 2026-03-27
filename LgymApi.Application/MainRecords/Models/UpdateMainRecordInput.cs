@@ -1,10 +1,11 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Application.Features.MainRecords.Models;
 
 public sealed record UpdateMainRecordInput(
-    Guid RouteUserId,
-    Guid CurrentUserId,
+    Id<LgymApi.Domain.Entities.User> RouteUserId,
+    Id<LgymApi.Domain.Entities.User> CurrentUserId,
     string RecordId,
     string ExerciseId,
     double Weight,

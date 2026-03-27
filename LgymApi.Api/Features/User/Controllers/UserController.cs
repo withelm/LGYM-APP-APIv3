@@ -5,8 +5,10 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.User.Controllers;
 
@@ -58,7 +60,7 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
     public async Task<IActionResult> IsAdmin([FromRoute] string id)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = ParseUserId(id);
         var result = await _userService.IsAdminAsync(userId, HttpContext.RequestAborted);
         return Ok(result);
     }
@@ -95,9 +97,16 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(UserEloDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUserElo([FromRoute] string id)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = ParseUserId(id);
         var elo = await _userService.GetUserEloAsync(userId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<int, UserEloDto>(elo));
+    }
+
+    private static Id<UserEntity> ParseUserId(string value)
+    {
+        return Guid.TryParse(value, out var parsedUserId)
+            ? (Id<UserEntity>)parsedUserId
+            : Id<UserEntity>.Empty;
     }
 
     [HttpGet("deleteAccount")]

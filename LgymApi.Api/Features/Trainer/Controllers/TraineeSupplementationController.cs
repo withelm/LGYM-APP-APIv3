@@ -52,7 +52,7 @@ public sealed class TraineeSupplementationController : ControllerBase
         var trainee = HttpContext.GetCurrentUser();
         var result = await _supplementationService.CheckOffIntakeAsync(trainee!, new CheckOffSupplementIntakeCommand
         {
-            PlanItemId = parsedPlanItemId,
+            PlanItemId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.SupplementPlanItem>)parsedPlanItemId,
             IntakeDate = request.IntakeDate,
             TakenAt = request.TakenAt
         }, HttpContext.RequestAborted);

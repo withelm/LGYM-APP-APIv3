@@ -72,7 +72,7 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
         {
             new TrainingExerciseScore
             {
-                TrainingId = (LgymApi.Domain.ValueObjects.Id<Training>)trainingId,
+                TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)(LgymApi.Domain.ValueObjects.Id<Training>)trainingId,
                 ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId
             }
         };
@@ -93,8 +93,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         var command = new TrainingCompletedCommand
         {
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -103,8 +103,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
         // Assert
         Assert.That(_testScheduler.ScheduledPayloads, Has.Count.EqualTo(1));
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.UserId, Is.EqualTo(userId));
-        Assert.That(payload.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)payload.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)payload.TrainingId, Is.EqualTo(trainingId));
         Assert.That(payload.RecipientEmail, Is.EqualTo("user@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
         Assert.That(payload.PreferredTimeZone, Is.EqualTo("Europe/Warsaw"));
@@ -129,8 +129,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         var command = new TrainingCompletedCommand
         {
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -158,8 +158,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         var command = new TrainingCompletedCommand
         {
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -195,8 +195,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)exerciseScore1Id },
-            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)exerciseScore2Id }
+            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)(LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)exerciseScore1Id },
+            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)(LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)exerciseScore2Id }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -223,8 +223,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         var command = new TrainingCompletedCommand
         {
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -232,8 +232,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         // Assert
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.UserId, Is.EqualTo(userId));
-        Assert.That(payload.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)payload.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)payload.TrainingId, Is.EqualTo(trainingId));
         Assert.That(payload.RecipientEmail, Is.EqualTo("athlete@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
         Assert.That(payload.PreferredTimeZone, Is.EqualTo("Europe/Warsaw"));
@@ -278,7 +278,7 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
             _testLogger,
             new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "UTC" });
 
-        await handler.ExecuteAsync(new TrainingCompletedCommand { UserId = userId, TrainingId = trainingId });
+        await handler.ExecuteAsync(new TrainingCompletedCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId, TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId });
 
         var payload = _testScheduler.ScheduledPayloads[0];
         Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
@@ -310,8 +310,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         var command = new TrainingCompletedCommand
         {
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         using var cts = new CancellationTokenSource();
@@ -433,9 +433,9 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)score1Id },
-            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)score2Id },
-            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)score3Id }
+            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)(LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)score1Id },
+            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)(LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)score2Id },
+            new TrainingExerciseScore { TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)(LgymApi.Domain.ValueObjects.Id<Training>)trainingId, ExerciseScoreId = (LgymApi.Domain.ValueObjects.Id<ExerciseScore>)score3Id }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -471,8 +471,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         var command = new TrainingCompletedCommand
         {
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -505,8 +505,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         var command = new TrainingCompletedCommand
         {
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -537,8 +537,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         var command = new TrainingCompletedCommand
         {
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -576,8 +576,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         var command = new TrainingCompletedCommand
         {
-            UserId = userId,
-            TrainingId = trainingId
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -594,10 +594,10 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     {
         public User? UserToReturn { get; set; }
 
-        public Task<User?> FindByIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<User?> FindByIdAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default)
             => Task.FromResult(UserToReturn);
 
-        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<User?> FindByIdIncludingDeletedAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
@@ -703,7 +703,7 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     {
         public bool IsSubscribed { get; set; } = true;
 
-        public Task<bool> IsSubscribedAsync(Guid userId, string notificationType, CancellationToken cancellationToken = default)
+        public Task<bool> IsSubscribedAsync(Id<User> userId, string notificationType, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(IsSubscribed);
         }

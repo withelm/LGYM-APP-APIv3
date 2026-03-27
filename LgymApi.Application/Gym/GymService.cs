@@ -22,14 +22,14 @@ public sealed class GymService : IGymService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddGymAsync(UserEntity currentUser, Guid routeUserId, string name, string? address, CancellationToken cancellationToken = default)
+    public async Task AddGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.User> routeUserId, string name, string? address, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || routeUserId == Guid.Empty)
+        if (currentUser == null || routeUserId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if ((Guid)currentUser.Id != routeUserId)
+        if (currentUser.Id != routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
@@ -58,14 +58,14 @@ public sealed class GymService : IGymService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteGymAsync(UserEntity currentUser, Guid gymId, CancellationToken cancellationToken = default)
+    public async Task DeleteGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (gymId == Guid.Empty)
+        if (gymId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -86,19 +86,19 @@ public sealed class GymService : IGymService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<GymListContext> GetGymsAsync(UserEntity currentUser, Guid routeUserId, CancellationToken cancellationToken = default)
+    public async Task<GymListContext> GetGymsAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.User> routeUserId, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || routeUserId == Guid.Empty)
+        if (currentUser == null || routeUserId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if ((Guid)currentUser.Id != routeUserId)
+        if (currentUser.Id != routeUserId)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        var gyms = await _gymRepository.GetByUserIdAsync((Guid)currentUser.Id, cancellationToken);
+        var gyms = await _gymRepository.GetByUserIdAsync(currentUser.Id, cancellationToken);
         var gymIds = gyms.Select(g => g.Id).ToList();
         var trainings = await _trainingRepository.GetByGymIdsAsync(gymIds, cancellationToken);
         var lastTrainings = trainings
@@ -114,14 +114,14 @@ public sealed class GymService : IGymService
         };
     }
 
-    public async Task<GymEntity> GetGymAsync(UserEntity currentUser, Guid gymId, CancellationToken cancellationToken = default)
+    public async Task<GymEntity> GetGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (gymId == Guid.Empty)
+        if (gymId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -140,14 +140,14 @@ public sealed class GymService : IGymService
         return gym;
     }
 
-    public async Task UpdateGymAsync(UserEntity currentUser, Guid gymId, string name, string? address, CancellationToken cancellationToken = default)
+    public async Task UpdateGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, string name, string? address, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (gymId == Guid.Empty)
+        if (gymId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }

@@ -6,6 +6,6 @@ namespace LgymApi.BackgroundWorker.Common.Commands;
 /// </summary>
 public sealed class UserRegisteredCommand : IActionCommand
 {
-    public Guid UserId { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> UserId { get; init; }
 
 }

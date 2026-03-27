@@ -49,9 +49,9 @@ public sealed class TrainingServiceBuildComparisonReportTests
         Assert.Multiple(() =>
         {
             Assert.That(result, Has.Count.EqualTo(3));
-            Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseC));
-            Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseA));
-            Assert.That(result[2].ExerciseId, Is.EqualTo(exerciseB));
+            Assert.That((Guid)result[0].ExerciseId, Is.EqualTo(exerciseC));
+            Assert.That((Guid)result[1].ExerciseId, Is.EqualTo(exerciseA));
+            Assert.That((Guid)result[2].ExerciseId, Is.EqualTo(exerciseB));
         });
     }
 
@@ -86,9 +86,9 @@ public sealed class TrainingServiceBuildComparisonReportTests
         Assert.Multiple(() =>
         {
             Assert.That(result, Has.Count.EqualTo(2));
-            Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseB));
+            Assert.That((Guid)result[0].ExerciseId, Is.EqualTo(exerciseB));
             Assert.That(result[0].SeriesComparisons, Has.Count.EqualTo(2));
-            Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseA));
+            Assert.That((Guid)result[1].ExerciseId, Is.EqualTo(exerciseA));
             Assert.That(result[1].SeriesComparisons, Has.Count.EqualTo(2));
         });
     }

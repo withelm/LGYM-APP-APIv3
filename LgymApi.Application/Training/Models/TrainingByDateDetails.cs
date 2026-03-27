@@ -4,8 +4,8 @@ namespace LgymApi.Application.Features.Training.Models;
 
 public sealed class TrainingByDateDetails
 {
-    public Guid Id { get; init; }
-    public Guid TypePlanDayId { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training> Id { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.PlanDay> TypePlanDayId { get; init; }
     public DateTime CreatedAt { get; init; }
     public PlanDayEntity? PlanDay { get; init; }
     public string? Gym { get; init; }

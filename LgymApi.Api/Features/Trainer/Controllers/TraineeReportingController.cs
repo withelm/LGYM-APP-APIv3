@@ -5,6 +5,8 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +47,7 @@ public sealed class TraineeReportingController : ControllerBase
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        var submission = await _reportingService.SubmitReportRequestAsync(trainee!, parsedRequestId, new SubmitReportRequestCommand
+        var submission = await _reportingService.SubmitReportRequestAsync(trainee!, (Id<ReportRequest>)parsedRequestId, new SubmitReportRequestCommand
         {
             Answers = new Dictionary<string, System.Text.Json.JsonElement>(request.Answers, StringComparer.OrdinalIgnoreCase)
         }, HttpContext.RequestAborted);

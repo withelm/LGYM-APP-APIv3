@@ -60,7 +60,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
 
         var message = new NotificationMessage
         {
-            Id = (Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
+            Id = Domain.ValueObjects.Id<NotificationMessage>.New(),
             Channel = NotificationChannel.Email,
             Type = payload.NotificationType,
             CorrelationId = payload.CorrelationId,

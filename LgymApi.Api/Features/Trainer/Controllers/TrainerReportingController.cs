@@ -5,7 +5,9 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -61,7 +63,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var template = await _reportingService.GetTrainerTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
+        var template = await _reportingService.GetTrainerTemplateAsync(trainer!, (Id<ReportTemplate>)parsedTemplateId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<ReportTemplateResult, ReportTemplateDto>(template));
     }
 
@@ -76,7 +78,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var template = await _reportingService.UpdateTemplateAsync(trainer!, parsedTemplateId, new CreateReportTemplateCommand
+        var template = await _reportingService.UpdateTemplateAsync(trainer!, (Id<ReportTemplate>)parsedTemplateId, new CreateReportTemplateCommand
         {
             Name = request.Name,
             Description = request.Description,
@@ -97,7 +99,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _reportingService.DeleteTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
+        await _reportingService.DeleteTemplateAsync(trainer!, (Id<ReportTemplate>)parsedTemplateId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -117,9 +119,9 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _reportingService.CreateReportRequestAsync(trainer!, parsedTraineeId, new CreateReportRequestCommand
+        var result = await _reportingService.CreateReportRequestAsync(trainer!, (Id<LgymApi.Domain.Entities.User>)parsedTraineeId, new CreateReportRequestCommand
         {
-            TemplateId = parsedTemplateId,
+            TemplateId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportTemplate>)parsedTemplateId,
             DueAt = request.DueAt,
             Note = request.Note
         }, HttpContext.RequestAborted);
@@ -138,7 +140,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var submissions = await _reportingService.GetTraineeSubmissionsAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var submissions = await _reportingService.GetTraineeSubmissionsAsync(trainer!, (Id<LgymApi.Domain.Entities.User>)parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<ReportSubmissionResult, ReportSubmissionDto>(submissions));
     }
 

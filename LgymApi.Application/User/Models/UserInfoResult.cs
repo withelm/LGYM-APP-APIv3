@@ -3,7 +3,7 @@ namespace LgymApi.Application.Features.User.Models;
 public sealed class UserInfoResult
 {
     public string Name { get; init; } = string.Empty;
-    public Guid Id { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> Id { get; init; }
     public string Email { get; init; } = string.Empty;
     public string? Avatar { get; init; }
     public string ProfileRank { get; init; } = string.Empty;

@@ -7,8 +7,8 @@ namespace LgymApi.BackgroundWorker.Common.Notifications.Models;
 
 public sealed class TrainingCompletedEmailPayload : IEmailPayload
 {
-    public Guid UserId { get; init; }
-    public Guid TrainingId { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> UserId { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training> TrainingId { get; init; }
     public string RecipientEmail { get; init; } = string.Empty;
     public string CultureName { get; init; } = string.Empty;
     public string PreferredTimeZone { get; init; } = string.Empty;
@@ -16,7 +16,7 @@ public sealed class TrainingCompletedEmailPayload : IEmailPayload
     public DateTimeOffset TrainingDate { get; init; }
     public IReadOnlyList<TrainingExerciseSummary> Exercises { get; init; } = Array.Empty<TrainingExerciseSummary>();
 
-    public Guid CorrelationId => TrainingId;
+    public Guid CorrelationId => (Guid)TrainingId;
     public EmailNotificationType NotificationType => Domain.Notifications.EmailNotificationTypes.TrainingCompleted;
 
     [JsonIgnore]

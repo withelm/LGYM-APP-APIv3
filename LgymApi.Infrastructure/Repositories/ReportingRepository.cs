@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,18 +21,18 @@ public sealed class ReportingRepository : IReportingRepository
         await _dbContext.ReportTemplates.AddAsync(template, cancellationToken);
     }
 
-    public Task<ReportTemplate?> FindTemplateByIdAsync(Guid templateId, CancellationToken cancellationToken = default)
+    public Task<ReportTemplate?> FindTemplateByIdAsync(Id<ReportTemplate> templateId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ReportTemplates
             .Include(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
-            .FirstOrDefaultAsync(x => (Guid)x.Id == templateId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == templateId, cancellationToken);
     }
 
-    public Task<List<ReportTemplate>> GetTemplatesByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default)
+    public Task<List<ReportTemplate>> GetTemplatesByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ReportTemplates
             .AsNoTracking()
-            .Where(x => (Guid)x.TrainerId == trainerId && !x.IsDeleted)
+            .Where(x => x.TrainerId == trainerId && !x.IsDeleted)
             .Include(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -42,19 +43,19 @@ public sealed class ReportingRepository : IReportingRepository
         await _dbContext.ReportRequests.AddAsync(request, cancellationToken);
     }
 
-    public Task<ReportRequest?> FindRequestByIdAsync(Guid requestId, CancellationToken cancellationToken = default)
+    public Task<ReportRequest?> FindRequestByIdAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ReportRequests
             .Include(x => x.Template)
             .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
             .Include(x => x.Submission)
-            .FirstOrDefaultAsync(x => (Guid)x.Id == requestId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == requestId, cancellationToken);
     }
 
-    public Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default)
+    public Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ReportRequests
-            .Where(x => (Guid)x.TraineeId == traineeId && x.Status == ReportRequestStatus.Pending)
+            .Where(x => x.TraineeId == traineeId && x.Status == ReportRequestStatus.Pending)
             .Include(x => x.Template)
             .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
             .OrderByDescending(x => x.CreatedAt)
@@ -66,11 +67,11 @@ public sealed class ReportingRepository : IReportingRepository
         await _dbContext.ReportSubmissions.AddAsync(submission, cancellationToken);
     }
 
-    public Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
+    public Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ReportSubmissions
             .AsNoTracking()
-            .Where(x => (Guid)x.ReportRequest.TrainerId == trainerId && (Guid)x.TraineeId == traineeId)
+            .Where(x => x.ReportRequest.TrainerId == trainerId && x.TraineeId == traineeId)
             .Include(x => x.ReportRequest)
             .ThenInclude(x => x.Template)
             .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))

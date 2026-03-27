@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Serialization;
@@ -26,7 +27,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var userId = Guid.NewGuid();
         var originalPayload = new WelcomeEmailPayload
         {
-            UserId = userId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
             UserName = "John Doe",
             RecipientEmail = "john@example.com",
             CultureName = "en-US"
@@ -38,7 +39,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
         Assert.That(deserialized.UserName, Is.EqualTo("John Doe"));
         Assert.That(deserialized.RecipientEmail, Is.EqualTo("john@example.com"));
         Assert.That(deserialized.CultureName, Is.EqualTo("en-US"));
@@ -50,7 +51,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         // Arrange
         var originalPayload = new WelcomeEmailPayload
         {
-            UserId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
             UserName = "Jane Doe",
             RecipientEmail = "jane@example.com",
             CultureName = "pl-PL"
@@ -83,7 +84,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
         Assert.That(deserialized.UserName, Is.EqualTo("Legacy User"));
         Assert.That(deserialized.RecipientEmail, Is.EqualTo("legacy@example.com"));
         Assert.That(deserialized.CultureName, Is.EqualTo("de-DE"));
@@ -96,7 +97,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var userId = Guid.NewGuid();
         var originalPayload = new WelcomeEmailPayload
         {
-            UserId = userId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
             UserName = "Test User",
             RecipientEmail = "test@example.com",
             CultureName = "es-ES"
@@ -108,7 +109,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert - each field must match exactly
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
         Assert.That(deserialized.UserName, Is.EqualTo("Test User"), "UserName not preserved");
         Assert.That(deserialized.RecipientEmail, Is.EqualTo("test@example.com"), "RecipientEmail not preserved");
         Assert.That(deserialized.CultureName, Is.EqualTo("es-ES"), "CultureName not preserved");
@@ -121,7 +122,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var userId = Guid.NewGuid();
         var payload = new WelcomeEmailPayload
         {
-            UserId = userId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
             UserName = "Corr User",
             RecipientEmail = "corr@example.com",
             CultureName = "fr-FR"
@@ -148,7 +149,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var expiresAt = DateTimeOffset.UtcNow.AddDays(7);
         var originalPayload = new InvitationEmailPayload
         {
-            InvitationId = invitationId,
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId,
             InvitationCode = "INV12345",
             ExpiresAt = expiresAt,
             TrainerName = "Coach Mike",
@@ -163,7 +164,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)deserialized!.InvitationId, Is.EqualTo(invitationId));
         Assert.That(deserialized.InvitationCode, Is.EqualTo("INV12345"));
         Assert.That(deserialized.ExpiresAt, Is.EqualTo(expiresAt));
         Assert.That(deserialized.TrainerName, Is.EqualTo("Coach Mike"));
@@ -178,7 +179,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         // Arrange
         var originalPayload = new InvitationEmailPayload
         {
-            InvitationId = Guid.NewGuid(),
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid(),
             InvitationCode = "TEST123",
             ExpiresAt = DateTimeOffset.UtcNow,
             TrainerName = "Trainer",
@@ -221,7 +222,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)deserialized!.InvitationId, Is.EqualTo(invitationId));
         Assert.That(deserialized.InvitationCode, Is.EqualTo("LEGACY123"));
         Assert.That(deserialized.TrainerName, Is.EqualTo("Old Trainer"));
         Assert.That(deserialized.RecipientEmail, Is.EqualTo("oldclient@example.com"));
@@ -235,7 +236,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var expiresAt = DateTimeOffset.UtcNow.AddDays(30);
         var originalPayload = new InvitationEmailPayload
         {
-            InvitationId = invitationId,
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId,
             InvitationCode = "FULL123",
             ExpiresAt = expiresAt,
             TrainerName = "Full Trainer",
@@ -250,7 +251,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert - each field must match exactly
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(invitationId), "InvitationId not preserved");
+        Assert.That((Guid)deserialized!.InvitationId, Is.EqualTo(invitationId), "InvitationId not preserved");
         Assert.That(deserialized.InvitationCode, Is.EqualTo("FULL123"), "InvitationCode not preserved");
         Assert.That(deserialized.ExpiresAt, Is.EqualTo(expiresAt), "ExpiresAt not preserved");
         Assert.That(deserialized.TrainerName, Is.EqualTo("Full Trainer"), "TrainerName not preserved");
@@ -266,7 +267,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var invitationId = Guid.NewGuid();
         var payload = new InvitationEmailPayload
         {
-            InvitationId = invitationId,
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId,
             InvitationCode = "CORR123",
             ExpiresAt = DateTimeOffset.UtcNow,
             TrainerName = "Corr Trainer",
@@ -297,8 +298,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var trainingDate = DateTimeOffset.UtcNow;
         var originalPayload = new TrainingCompletedEmailPayload
         {
-            UserId = userId,
-            TrainingId = trainingId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId,
             RecipientEmail = "athlete@example.com",
             CultureName = "en-US",
             PreferredTimeZone = "America/Los_Angeles",
@@ -324,8 +325,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId));
         Assert.That(deserialized.RecipientEmail, Is.EqualTo("athlete@example.com"));
         Assert.That(deserialized.CultureName, Is.EqualTo("en-US"));
         Assert.That(deserialized.PreferredTimeZone, Is.EqualTo("America/Los_Angeles"));
@@ -341,8 +342,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var trainingId = Guid.NewGuid();
         var originalPayload = new TrainingCompletedEmailPayload
         {
-            UserId = userId,
-            TrainingId = trainingId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId,
             RecipientEmail = "athlete@example.com",
             CultureName = "en-US",
             PreferredTimeZone = "America/New_York",
@@ -411,8 +412,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         // Arrange
         var originalPayload = new TrainingCompletedEmailPayload
         {
-            UserId = Guid.NewGuid(),
-            TrainingId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid(),
             RecipientEmail = "test@example.com",
             CultureName = "pl-PL",
             PreferredTimeZone = "Europe/Warsaw",
@@ -443,8 +444,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         // Arrange
         var payload = new TrainingCompletedEmailPayload
         {
-            UserId = Guid.NewGuid(),
-            TrainingId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid(),
             RecipientEmail = "test@example.com",
             CultureName = "en-US",
             PreferredTimeZone = "UTC",
@@ -504,8 +505,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId));
         Assert.That(deserialized.RecipientEmail, Is.EqualTo("legacy@example.com"));
         Assert.That(deserialized.Exercises.Count, Is.EqualTo(1));
         Assert.That(deserialized.Exercises.First().ExerciseName, Is.EqualTo("Legacy Exercise"));
@@ -538,8 +539,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId));
         Assert.That(deserialized.RecipientEmail, Is.EqualTo("ancient@example.com"));
         Assert.That(deserialized.Exercises.Count, Is.EqualTo(1));
         Assert.That(deserialized.Exercises.First().ExerciseName, Is.EqualTo("Ancient Exercise"));
@@ -556,8 +557,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var trainingDate = DateTimeOffset.UtcNow;
         var originalPayload = new TrainingCompletedEmailPayload
         {
-            UserId = userId,
-            TrainingId = trainingId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId,
             RecipientEmail = "full@example.com",
             CultureName = "es-ES",
             PreferredTimeZone = "Europe/Madrid",
@@ -583,8 +584,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert - each field must match exactly
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId), "TrainingId not preserved");
+        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
+        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId), "TrainingId not preserved");
         Assert.That(deserialized.RecipientEmail, Is.EqualTo("full@example.com"), "RecipientEmail not preserved");
         Assert.That(deserialized.CultureName, Is.EqualTo("es-ES"), "CultureName not preserved");
         Assert.That(deserialized.PreferredTimeZone, Is.EqualTo("Europe/Madrid"), "PreferredTimeZone not preserved");
@@ -600,8 +601,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var trainingId = Guid.NewGuid();
         var payload = new TrainingCompletedEmailPayload
         {
-            UserId = Guid.NewGuid(),
-            TrainingId = trainingId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId,
             RecipientEmail = "corr@example.com",
             CultureName = "en-US",
             PreferredTimeZone = "UTC",
@@ -630,7 +631,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var userId = Guid.NewGuid();
         var storedPayload = new WelcomeEmailPayload
         {
-            UserId = userId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
             UserName = "Composer Test",
             RecipientEmail = "composer@example.com",
             CultureName = "en-US"
@@ -655,7 +656,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var expiresAt = DateTimeOffset.UtcNow.AddDays(7);
         var storedPayload = new InvitationEmailPayload
         {
-            InvitationId = invitationId,
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId,
             InvitationCode = "COMP123",
             ExpiresAt = expiresAt,
             TrainerName = "Composer Trainer",
@@ -685,8 +686,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var trainingDate = DateTimeOffset.UtcNow;
         var storedPayload = new TrainingCompletedEmailPayload
         {
-            UserId = userId,
-            TrainingId = trainingId,
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId,
             RecipientEmail = "comptraining@example.com",
             CultureName = "en-US",
             PreferredTimeZone = "America/New_York",

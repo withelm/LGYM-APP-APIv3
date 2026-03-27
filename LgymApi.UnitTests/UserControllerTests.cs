@@ -7,6 +7,7 @@ using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -81,14 +82,14 @@ public sealed class UserControllerTests
         public Task RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<LoginResult> LoginAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(new LoginResult());
         public Task<LoginResult> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(new LoginResult());
-        public Task<bool> IsAdminAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> IsAdminAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<UserInfoResult> CheckTokenAsync(User currentUser, CancellationToken cancellationToken = default) => Task.FromResult(new UserInfoResult());
         public Task<List<RankingEntry>> GetUsersRankingAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<RankingEntry>());
-        public Task<int> GetUserEloAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> GetUserEloAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task LogoutAsync(User currentUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task DeleteAccountAsync(User currentUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task ChangeVisibilityInRankingAsync(User currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task UpdateTimeZoneAsync(User currentUser, string preferredTimeZone, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task UpdateUserRolesAsync(Id<User> targetUserId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

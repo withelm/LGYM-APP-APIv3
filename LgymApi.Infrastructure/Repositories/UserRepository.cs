@@ -16,16 +16,16 @@ public sealed class UserRepository : IUserRepository
         _dbContext = dbContext;
     }
 
-    public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Users.FirstOrDefaultAsync(u => (Guid)u.Id == id, cancellationToken);
+        return _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
-    public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.Users
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => (Guid)u.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
     public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)

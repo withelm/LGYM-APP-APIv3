@@ -1,5 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 
 namespace LgymApi.Api.Middleware;
@@ -30,7 +32,7 @@ public sealed class UserContextMiddleware
             return;
         }
 
-        var user = await userRepository.FindByIdIncludingDeletedAsync(userId);
+        var user = await userRepository.FindByIdIncludingDeletedAsync((Id<LgymApi.Domain.Entities.User>)userId);
         if (user == null)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -45,7 +47,7 @@ public sealed class UserContextMiddleware
             return;
         }
 
-        if (!userSessionCache.Contains(userId))
+        if (!userSessionCache.Contains((Id<LgymApi.Domain.Entities.User>)userId))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsJsonAsync(new { message = Messages.Unauthorized });

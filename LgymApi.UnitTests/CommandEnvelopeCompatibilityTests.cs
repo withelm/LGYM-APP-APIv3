@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
@@ -35,7 +36,7 @@ public sealed class CommandEnvelopeCompatibilityTests
         Assert.That(deserializedCommand, Is.InstanceOf<UserRegisteredCommand>());
         
         var command = (UserRegisteredCommand)deserializedCommand!;
-        Assert.That(command.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)command.UserId, Is.EqualTo(userId));
     }
 
     [Test]
@@ -55,7 +56,7 @@ public sealed class CommandEnvelopeCompatibilityTests
         Assert.That(deserializedCommand, Is.Not.Null);
         
         var command = (UserRegisteredCommand)deserializedCommand!;
-        Assert.That(command.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)command.UserId, Is.EqualTo(userId));
     }
 
     [Test]
@@ -63,7 +64,7 @@ public sealed class CommandEnvelopeCompatibilityTests
     {
         // Arrange - create command and simulate full envelope lifecycle
         var userId = Guid.NewGuid();
-        var command = new UserRegisteredCommand { UserId = userId };
+        var command = new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId };
         var commandType = typeof(UserRegisteredCommand);
 
         // Act - serialize payload and discriminator (as CommandDispatcher does)
@@ -79,7 +80,7 @@ public sealed class CommandEnvelopeCompatibilityTests
         Assert.That(deserializedCommand, Is.Not.Null);
         
         var roundTrippedCommand = (UserRegisteredCommand)deserializedCommand!;
-        Assert.That(roundTrippedCommand.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)roundTrippedCommand.UserId, Is.EqualTo(userId));
         
         // Verify serialized payload uses camelCase
         Assert.That(payloadJson, Does.Contain("userId"));
@@ -108,8 +109,8 @@ public sealed class CommandEnvelopeCompatibilityTests
         Assert.That(deserializedCommand, Is.Not.Null);
         
         var command = (TrainingCompletedCommand)deserializedCommand!;
-        Assert.That(command.UserId, Is.EqualTo(userId));
-        Assert.That(command.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)command.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)command.TrainingId, Is.EqualTo(trainingId));
     }
 
     [Test]
@@ -130,8 +131,8 @@ public sealed class CommandEnvelopeCompatibilityTests
         Assert.That(deserializedCommand, Is.Not.Null);
         
         var command = (TrainingCompletedCommand)deserializedCommand!;
-        Assert.That(command.UserId, Is.EqualTo(userId));
-        Assert.That(command.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)command.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)command.TrainingId, Is.EqualTo(trainingId));
     }
 
     [Test]
@@ -140,7 +141,7 @@ public sealed class CommandEnvelopeCompatibilityTests
         // Arrange - create command with multiple properties
         var userId = Guid.NewGuid();
         var trainingId = Guid.NewGuid();
-        var command = new TrainingCompletedCommand { UserId = userId, TrainingId = trainingId };
+        var command = new TrainingCompletedCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId, TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId };
         var commandType = typeof(TrainingCompletedCommand);
 
         // Act - serialize and deserialize
@@ -152,8 +153,8 @@ public sealed class CommandEnvelopeCompatibilityTests
         // Assert - all fields preserved through roundtrip
         Assert.That(resolvedType, Is.EqualTo(commandType));
         var roundTrippedCommand = (TrainingCompletedCommand)deserializedCommand!;
-        Assert.That(roundTrippedCommand.UserId, Is.EqualTo(userId));
-        Assert.That(roundTrippedCommand.TrainingId, Is.EqualTo(trainingId));
+        Assert.That((Guid)roundTrippedCommand.UserId, Is.EqualTo(userId));
+        Assert.That((Guid)roundTrippedCommand.TrainingId, Is.EqualTo(trainingId));
         
         // Verify serialized payload uses camelCase
         Assert.That(payloadJson, Does.Contain("userId"));
@@ -181,7 +182,7 @@ public sealed class CommandEnvelopeCompatibilityTests
         Assert.That(deserializedCommand, Is.Not.Null);
         
         var command = (InvitationCreatedCommand)deserializedCommand!;
-        Assert.That(command.InvitationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)command.InvitationId, Is.EqualTo(invitationId));
     }
 
     [Test]
@@ -201,7 +202,7 @@ public sealed class CommandEnvelopeCompatibilityTests
         Assert.That(deserializedCommand, Is.Not.Null);
         
         var command = (InvitationCreatedCommand)deserializedCommand!;
-        Assert.That(command.InvitationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)command.InvitationId, Is.EqualTo(invitationId));
     }
 
     [Test]
@@ -209,7 +210,7 @@ public sealed class CommandEnvelopeCompatibilityTests
     {
         // Arrange - create command
         var invitationId = Guid.NewGuid();
-        var command = new InvitationCreatedCommand { InvitationId = invitationId };
+        var command = new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId };
         var commandType = typeof(InvitationCreatedCommand);
 
         // Act - serialize and deserialize
@@ -221,7 +222,7 @@ public sealed class CommandEnvelopeCompatibilityTests
         // Assert - full roundtrip preserves type and payload
         Assert.That(resolvedType, Is.EqualTo(commandType));
         var roundTrippedCommand = (InvitationCreatedCommand)deserializedCommand!;
-        Assert.That(roundTrippedCommand.InvitationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)roundTrippedCommand.InvitationId, Is.EqualTo(invitationId));
         
         // Verify serialized payload uses camelCase
         Assert.That(payloadJson, Does.Contain("invitationId"));
@@ -332,9 +333,9 @@ public sealed class CommandEnvelopeCompatibilityTests
 
         var commands = new IActionCommand[]
         {
-            new UserRegisteredCommand { UserId = userId },
-            new TrainingCompletedCommand { UserId = userId, TrainingId = trainingId },
-            new InvitationCreatedCommand { InvitationId = invitationId }
+            new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId },
+            new TrainingCompletedCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId, TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId },
+            new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId }
         };
 
         // Act - simulate CommandDispatcher serialization and persistence
@@ -371,14 +372,14 @@ public sealed class CommandEnvelopeCompatibilityTests
             switch (deserializedCommand)
             {
                 case UserRegisteredCommand urc:
-                    Assert.That(urc.UserId, Is.EqualTo(userId));
+                    Assert.That((Guid)urc.UserId, Is.EqualTo(userId));
                     break;
                 case TrainingCompletedCommand tcc:
-                    Assert.That(tcc.UserId, Is.EqualTo(userId));
-                    Assert.That(tcc.TrainingId, Is.EqualTo(trainingId));
+                    Assert.That((Guid)tcc.UserId, Is.EqualTo(userId));
+                    Assert.That((Guid)tcc.TrainingId, Is.EqualTo(trainingId));
                     break;
                 case InvitationCreatedCommand icc:
-                    Assert.That(icc.InvitationId, Is.EqualTo(invitationId));
+                    Assert.That((Guid)icc.InvitationId, Is.EqualTo(invitationId));
                     break;
             }
         }

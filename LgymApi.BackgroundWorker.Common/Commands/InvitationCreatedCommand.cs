@@ -6,6 +6,6 @@ namespace LgymApi.BackgroundWorker.Common.Commands;
 /// </summary>
 public sealed class InvitationCreatedCommand : IActionCommand
 {
-    public Guid InvitationId { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation> InvitationId { get; init; }
 
 }

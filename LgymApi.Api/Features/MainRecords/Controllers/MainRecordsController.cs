@@ -6,7 +6,9 @@ using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.MainRecords.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.MainRecords.Controllers;
 
@@ -30,7 +32,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> AddNewRecord([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var input = new AddMainRecordInput(userId, form.ExerciseId, form.Weight, form.Unit, form.Date);
+        var input = new AddMainRecordInput((Id<UserEntity>)userId, form.ExerciseId, form.Weight, form.Unit, form.Date);
         await _mainRecordsService.AddNewRecordAsync(input, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
@@ -42,7 +44,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetMainRecordsHistory([FromRoute] string id)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var records = await _mainRecordsService.GetMainRecordsHistoryAsync(userId, HttpContext.RequestAborted);
+        var records = await _mainRecordsService.GetMainRecordsHistoryAsync((Id<UserEntity>)userId, HttpContext.RequestAborted);
         var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(records);
         return Ok(mappedRecords);
     }
@@ -55,7 +57,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetLastMainRecords([FromRoute] string id)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var context = await _mainRecordsService.GetLastMainRecordsAsync(userId, HttpContext.RequestAborted);
+        var context = await _mainRecordsService.GetLastMainRecordsAsync((Id<UserEntity>)userId, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(MainRecordProfile.Keys.ExerciseMap, context.ExerciseMap);
         var mapped = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordsLastDto>(context.Records, mappingContext);
@@ -68,9 +70,9 @@ public sealed class MainRecordsController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteMainRecord([FromRoute] string id)
     {
-        var currentUserId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? (Guid)HttpContext.GetCurrentUser()!.Id : Guid.Empty;
+        var currentUserId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? HttpContext.GetCurrentUser()!.Id : (Id<UserEntity>)Guid.Empty;
         var recordId = Guid.TryParse(id, out var parsedRecordId) ? parsedRecordId : Guid.Empty;
-        await _mainRecordsService.DeleteMainRecordAsync(currentUserId, recordId, HttpContext.RequestAborted);
+        await _mainRecordsService.DeleteMainRecordAsync(currentUserId, (Id<LgymApi.Domain.Entities.MainRecord>)recordId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -81,7 +83,7 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> UpdateMainRecords([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         var routeUserId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var input = new UpdateMainRecordInput(routeUserId, routeUserId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date);
+        var input = new UpdateMainRecordInput((Id<UserEntity>)routeUserId, (Id<UserEntity>)routeUserId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date);
         await _mainRecordsService.UpdateMainRecordAsync(input, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
@@ -91,7 +93,7 @@ public sealed class MainRecordsController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRecordOrPossibleRecordInExercise([FromBody] RecordOrPossibleRequestDto request)
     {
-        var userId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? (Guid)HttpContext.GetCurrentUser()!.Id : Guid.Empty;
+        var userId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? HttpContext.GetCurrentUser()!.Id : (Id<UserEntity>)Guid.Empty;
         var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, request.ExerciseId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<PossibleRecordResult, PossibleRecordForExerciseDto>(result));
     }

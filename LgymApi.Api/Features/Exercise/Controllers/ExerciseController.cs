@@ -8,9 +8,10 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Mapping.Core;
-using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
-using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
+using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.Exercise.Controllers;
 
@@ -42,7 +43,7 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddUserExercise([FromRoute] string id, [FromBody] ExerciseFormDto form)
     {
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var userId = Guid.TryParse(id, out var parsedUserId) ? (Id<UserEntity>)parsedUserId : Id<UserEntity>.Empty;
         var input = new AddUserExerciseInput(userId, form.Name, form.BodyPart, form.Description, form.Image);
         await _exerciseService.AddUserExerciseAsync(input, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
@@ -62,7 +63,7 @@ public sealed class ExerciseController : ControllerBase
 
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var exerciseId = Guid.TryParse(exerciseIdString, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        await _exerciseService.DeleteExerciseAsync(userId, exerciseId, HttpContext.RequestAborted);
+        await _exerciseService.DeleteExerciseAsync((Id<UserEntity>)userId, (Id<ExerciseEntity>)exerciseId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -85,7 +86,7 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> AddGlobalTranslation([FromRoute] string id, [FromBody] ExerciseTranslationDto form)
     {
         var currentUser = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
+        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? (Id<UserEntity>)parsedUserId : Id<UserEntity>.Empty;
         var input = new AddGlobalTranslationInput(routeUserId, form.ExerciseId, form.Culture, form.Name);
         await _exerciseService.AddGlobalTranslationAsync(currentUser!, input, HttpContext.RequestAborted);
 
@@ -99,7 +100,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var cultures = HttpContext.GetCulturePreferences();
-        var context = await _exerciseService.GetAllExercisesAsync(userId, cultures, HttpContext.RequestAborted);
+        var context = await _exerciseService.GetAllExercisesAsync((Id<UserEntity>)userId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var result = _mapper.MapList<ExerciseEntity, ExerciseResponseDto>(context.Exercises, mappingContext);
@@ -113,7 +114,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var cultures = HttpContext.GetCulturePreferences();
-        var context = await _exerciseService.GetAllUserExercisesAsync(userId, cultures, HttpContext.RequestAborted);
+        var context = await _exerciseService.GetAllUserExercisesAsync((Id<UserEntity>)userId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var result = _mapper.MapList<ExerciseEntity, ExerciseResponseDto>(context.Exercises, mappingContext);
@@ -141,7 +142,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
         var cultures = HttpContext.GetCulturePreferences();
-        var context = await _exerciseService.GetExerciseByBodyPartAsync(userId, request.BodyPart, cultures, HttpContext.RequestAborted);
+        var context = await _exerciseService.GetExerciseByBodyPartAsync((Id<UserEntity>)userId, request.BodyPart, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         var result = _mapper.MapList<ExerciseEntity, ExerciseResponseDto>(context.Exercises, mappingContext);
@@ -155,7 +156,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var exerciseId = Guid.TryParse(id, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
         var cultures = HttpContext.GetCulturePreferences();
-        var context = await _exerciseService.GetExerciseAsync(exerciseId, cultures, HttpContext.RequestAborted);
+        var context = await _exerciseService.GetExerciseAsync((Id<ExerciseEntity>)exerciseId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         return Ok(_mapper.Map<ExerciseEntity, ExerciseResponseDto>(context.Exercise, mappingContext));
@@ -166,13 +167,13 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLastExerciseScores([FromRoute] string id, [FromBody] LastExerciseScoresRequestDto request)
     {
-        var routeUserId = Guid.TryParse(id, out var parsedRouteUserId) ? parsedRouteUserId : Guid.Empty;
-        var currentUserId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? (Guid)HttpContext.GetCurrentUser()!.Id : Guid.Empty;
-        var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        Guid? gymId = null;
+        var routeUserId = Guid.TryParse(id, out var parsedRouteUserId) ? (Id<UserEntity>)parsedRouteUserId : Id<UserEntity>.Empty;
+        var currentUserId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? HttpContext.GetCurrentUser()!.Id : Id<UserEntity>.Empty;
+        var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? (Id<ExerciseEntity>)parsedExerciseId : Id<ExerciseEntity>.Empty;
+        Id<LgymApi.Domain.Entities.Gym>? gymId = null;
         if (!string.IsNullOrWhiteSpace(request.GymId) && Guid.TryParse(request.GymId, out var parsedGymId))
         {
-            gymId = parsedGymId;
+            gymId = (Id<LgymApi.Domain.Entities.Gym>)parsedGymId;
         }
 
         var input = new GetLastExerciseScoresInput(routeUserId, currentUserId, exerciseId, request.Series, gymId, request.ExerciseName);
@@ -188,7 +189,7 @@ public sealed class ExerciseController : ControllerBase
     {
         var currentUserId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? (Guid)HttpContext.GetCurrentUser()!.Id : Guid.Empty;
         var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync(currentUserId, exerciseId, HttpContext.RequestAborted);
+        var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync((Id<UserEntity>)currentUserId, (Id<ExerciseEntity>)exerciseId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<ExerciseTrainingHistoryItem, ExerciseTrainingHistoryItemDto>(result);
 
         return Ok(mapped);

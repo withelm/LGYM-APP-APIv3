@@ -1,9 +1,10 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Application.Features.MainRecords.Models;
 
 public sealed record AddMainRecordInput(
-    Guid UserId,
+    Id<LgymApi.Domain.Entities.User> UserId,
     string ExerciseId,
     double Weight,
     WeightUnits Unit,

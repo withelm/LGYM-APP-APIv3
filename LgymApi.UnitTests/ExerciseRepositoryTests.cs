@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;

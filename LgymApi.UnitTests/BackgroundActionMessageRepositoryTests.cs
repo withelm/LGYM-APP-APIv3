@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
@@ -71,7 +72,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         await dbContext.SaveChangesAsync();
 
         // Act
-        var found = await repository.FindByIdAsync((Guid)envelope.Id);
+        var found = await repository.FindByIdAsync(envelope.Id);
 
         // Assert
         Assert.That(found, Is.Not.Null);
@@ -90,7 +91,7 @@ public sealed class BackgroundActionMessageRepositoryTests
         var repository = new CommandEnvelopeRepository(dbContext);
 
         // Act
-        var found = await repository.FindByIdAsync(Guid.NewGuid());
+        var found = await repository.FindByIdAsync((Id<CommandEnvelope>)Guid.NewGuid());
 
         // Assert
         Assert.That(found, Is.Null);

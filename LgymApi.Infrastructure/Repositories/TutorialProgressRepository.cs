@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,26 +16,26 @@ public sealed class TutorialProgressRepository : ITutorialProgressRepository
         _dbContext = dbContext;
     }
 
-    public Task<UserTutorialProgress?> FindByUserIdAndTypeAsync(Guid userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+    public Task<UserTutorialProgress?> FindByUserIdAndTypeAsync(Id<User> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserTutorialProgresses
             .AsTracking()
             .Include(p => p.CompletedSteps)
-            .FirstOrDefaultAsync(p => (Guid)p.UserId == userId && p.TutorialType == tutorialType, cancellationToken);
+            .FirstOrDefaultAsync(p => p.UserId == userId && p.TutorialType == tutorialType, cancellationToken);
     }
 
-    public Task<List<UserTutorialProgress>> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<UserTutorialProgress>> GetActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserTutorialProgresses
             .Include(p => p.CompletedSteps)
-            .Where(p => (Guid)p.UserId == userId && !p.IsCompleted)
+            .Where(p => p.UserId == userId && !p.IsCompleted)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<bool> HasActiveTutorialsAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> HasActiveTutorialsAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.UserTutorialProgresses
-            .AnyAsync(p => (Guid)p.UserId == userId && !p.IsCompleted, cancellationToken);
+            .AnyAsync(p => p.UserId == userId && !p.IsCompleted, cancellationToken);
     }
 
     public Task AddAsync(UserTutorialProgress progress, CancellationToken cancellationToken = default)
@@ -44,7 +45,7 @@ public sealed class TutorialProgressRepository : ITutorialProgressRepository
 
     public Task UpdateAsync(UserTutorialProgress progress, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-    public Task AddStepAsync(Guid progressId, UserTutorialStepProgress step, CancellationToken cancellationToken = default)
+    public Task AddStepAsync(Id<UserTutorialProgress> progressId, UserTutorialStepProgress step, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserTutorialStepProgresses.AddAsync(step, cancellationToken).AsTask();
     }

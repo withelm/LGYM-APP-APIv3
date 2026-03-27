@@ -4,6 +4,7 @@ using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
@@ -34,7 +35,7 @@ public sealed class SendRegistrationEmailHandler : IBackgroundAction<UserRegiste
     public async Task ExecuteAsync(UserRegisteredCommand command, CancellationToken cancellationToken = default)
     {
         // Fetch user entity by ID
-        var user = await _userRepository.FindByIdAsync(command.UserId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)command.UserId, cancellationToken);
         if (user == null)
         {
             _logger.LogWarning(

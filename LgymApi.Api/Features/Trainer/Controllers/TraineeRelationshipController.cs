@@ -5,9 +5,11 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TrainerInvitationEntity = LgymApi.Domain.Entities.TrainerInvitation;
 
 namespace LgymApi.Api.Features.Trainer.Controllers;
 
@@ -35,7 +37,7 @@ public sealed class TraineeRelationshipController : ControllerBase
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.AcceptInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
+        await _trainerRelationshipService.AcceptInvitationAsync(trainee!, (Id<TrainerInvitationEntity>)parsedInvitationId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -49,7 +51,7 @@ public sealed class TraineeRelationshipController : ControllerBase
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.RejectInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
+        await _trainerRelationshipService.RejectInvitationAsync(trainee!, (Id<TrainerInvitationEntity>)parsedInvitationId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 

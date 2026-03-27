@@ -59,7 +59,7 @@ public sealed class ServiceCommitBehaviorTests
 
         var service = new PlanService(userRepository, planRepository, planDayRepository, unitOfWork);
 
-        await service.CreatePlanAsync(user, (Guid)user.Id, "UoW Plan");
+        await service.CreatePlanAsync(user, user.Id, "UoW Plan");
 
         var savedPlan = await dbContext.Plans.FirstOrDefaultAsync(p => p.UserId == user.Id && p.Name == "UoW Plan");
         Assert.That(savedPlan, Is.Not.Null);
@@ -434,7 +434,7 @@ public sealed class ServiceCommitBehaviorTests
 
         var service = new RoleService(roleRepository, userRepository, unitOfWork);
 
-        await service.UpdateUserRolesAsync((Guid)user.Id, [AuthConstants.Roles.User, "Coach"]);
+        await service.UpdateUserRolesAsync(user.Id, [AuthConstants.Roles.User, "Coach"]);
 
         var assignedRoleNames = await dbContext.UserRoles
             .Where(ur => ur.UserId == user.Id)
@@ -491,9 +491,9 @@ public sealed class ServiceCommitBehaviorTests
 
     private sealed class NoOpTokenService : ITokenService
     {
-        public string CreateToken(Guid userId, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
+        public string CreateToken(Id<User> userId, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
         {
-            return userId.ToString();
+            return ((Guid)userId).ToString();
         }
     }
 
@@ -501,16 +501,16 @@ public sealed class ServiceCommitBehaviorTests
     {
         public int Count => 0;
 
-        public void AddOrRefresh(Guid userId)
+        public void AddOrRefresh(Id<User> userId)
         {
         }
 
-        public bool Remove(Guid userId)
+        public bool Remove(Id<User> userId)
         {
             return true;
         }
 
-        public bool Contains(Guid userId)
+        public bool Contains(Id<User> userId)
         {
             return false;
         }
@@ -538,32 +538,32 @@ public sealed class ServiceCommitBehaviorTests
 
     private sealed class NoOpTutorialService : ITutorialService
     {
-        public Task InitializeOnboardingTutorialAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task InitializeOnboardingTutorialAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
 
-        public Task<bool> HasActiveTutorialsAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<bool> HasActiveTutorialsAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(false);
         }
 
-        public Task<List<TutorialProgressResult>> GetActiveTutorialsAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<List<TutorialProgressResult>> GetActiveTutorialsAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new List<TutorialProgressResult>());
         }
 
-        public Task<TutorialProgressResult?> GetTutorialProgressAsync(Guid userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+        public Task<TutorialProgressResult?> GetTutorialProgressAsync(Id<User> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<TutorialProgressResult?>(null);
         }
 
-        public Task CompleteStepAsync(Guid userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default)
+        public Task CompleteStepAsync(Id<User> userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
 
-        public Task CompleteTutorialAsync(Guid userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+        public Task CompleteTutorialAsync(Id<User> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }

@@ -146,8 +146,7 @@ public abstract class IntegrationTestBase : IDisposable
     {
         using var scope = Factory.Services.CreateScope();
         var userSessionCache = scope.ServiceProvider.GetRequiredService<IUserSessionCache>();
-        var userIdGuid = (Guid)userId;
-        userSessionCache.AddOrRefresh(userIdGuid);
+        userSessionCache.AddOrRefresh(userId);
 
         var token = GenerateJwt(userId);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);

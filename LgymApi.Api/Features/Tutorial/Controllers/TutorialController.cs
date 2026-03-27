@@ -26,7 +26,7 @@ public sealed class TutorialController : ControllerBase
     public async Task<IActionResult> GetActiveTutorials()
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _tutorialService.GetActiveTutorialsAsync((Guid)user!.Id, HttpContext.RequestAborted);
+        var result = await _tutorialService.GetActiveTutorialsAsync(user!.Id, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<Application.Features.Tutorial.Models.TutorialProgressResult, TutorialProgressDto>(result);
         return Ok(mapped);
     }
@@ -37,7 +37,7 @@ public sealed class TutorialController : ControllerBase
     public async Task<IActionResult> GetTutorialProgress([FromRoute] TutorialType tutorialType)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _tutorialService.GetTutorialProgressAsync((Guid)user!.Id, tutorialType, HttpContext.RequestAborted);
+        var result = await _tutorialService.GetTutorialProgressAsync(user!.Id, tutorialType, HttpContext.RequestAborted);
         if (result == null)
         {
             return NotFound();
@@ -52,7 +52,7 @@ public sealed class TutorialController : ControllerBase
     public async Task<IActionResult> CompleteStep([FromBody] CompleteStepRequest request)
     {
         var user = HttpContext.GetCurrentUser();
-        await _tutorialService.CompleteStepAsync((Guid)user!.Id, request.TutorialType, request.Step, HttpContext.RequestAborted);
+        await _tutorialService.CompleteStepAsync(user!.Id, request.TutorialType, request.Step, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -61,7 +61,7 @@ public sealed class TutorialController : ControllerBase
     public async Task<IActionResult> CompleteTutorial([FromBody] CompleteTutorialRequest request)
     {
         var user = HttpContext.GetCurrentUser();
-        await _tutorialService.CompleteTutorialAsync((Guid)user!.Id, request.TutorialType, HttpContext.RequestAborted);
+        await _tutorialService.CompleteTutorialAsync(user!.Id, request.TutorialType, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

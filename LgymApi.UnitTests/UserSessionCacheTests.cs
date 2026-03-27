@@ -1,4 +1,6 @@
 using LgymApi.Infrastructure.Services;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 
 namespace LgymApi.UnitTests;
@@ -11,7 +13,7 @@ public sealed class UserSessionCacheTests
     {
         var cache = CreateCache(capacity: 2);
 
-        cache.AddOrRefresh(Guid.Empty);
+        cache.AddOrRefresh(Id<User>.Empty);
 
         Assert.That(cache.Count, Is.EqualTo(0));
     }
@@ -24,16 +26,16 @@ public sealed class UserSessionCacheTests
         var second = Guid.NewGuid();
         var third = Guid.NewGuid();
 
-        cache.AddOrRefresh(first);
-        cache.AddOrRefresh(second);
-        cache.AddOrRefresh(third);
+        cache.AddOrRefresh((Id<User>)first);
+        cache.AddOrRefresh((Id<User>)second);
+        cache.AddOrRefresh((Id<User>)third);
 
         Assert.Multiple(() =>
         {
             Assert.That(cache.Count, Is.EqualTo(2));
-            Assert.That(cache.Contains(first), Is.False);
-            Assert.That(cache.Contains(second), Is.True);
-            Assert.That(cache.Contains(third), Is.True);
+            Assert.That(cache.Contains((Id<User>)first), Is.False);
+            Assert.That(cache.Contains((Id<User>)second), Is.True);
+            Assert.That(cache.Contains((Id<User>)third), Is.True);
         });
     }
 
@@ -45,16 +47,16 @@ public sealed class UserSessionCacheTests
         var second = Guid.NewGuid();
         var third = Guid.NewGuid();
 
-        cache.AddOrRefresh(first);
-        cache.AddOrRefresh(second);
-        cache.AddOrRefresh(first);
-        cache.AddOrRefresh(third);
+        cache.AddOrRefresh((Id<User>)first);
+        cache.AddOrRefresh((Id<User>)second);
+        cache.AddOrRefresh((Id<User>)first);
+        cache.AddOrRefresh((Id<User>)third);
 
         Assert.Multiple(() =>
         {
-            Assert.That(cache.Contains(first), Is.True);
-            Assert.That(cache.Contains(second), Is.False);
-            Assert.That(cache.Contains(third), Is.True);
+            Assert.That(cache.Contains((Id<User>)first), Is.True);
+            Assert.That(cache.Contains((Id<User>)second), Is.False);
+            Assert.That(cache.Contains((Id<User>)third), Is.True);
         });
     }
 
@@ -63,14 +65,14 @@ public sealed class UserSessionCacheTests
     {
         var cache = CreateCache(capacity: 2);
         var userId = Guid.NewGuid();
-        cache.AddOrRefresh(userId);
+        cache.AddOrRefresh((Id<User>)userId);
 
         Assert.Multiple(() =>
         {
-            Assert.That(cache.Remove(Guid.Empty), Is.False);
-            Assert.That(cache.Remove(Guid.NewGuid()), Is.False);
-            Assert.That(cache.Remove(userId), Is.True);
-            Assert.That(cache.Contains(userId), Is.False);
+            Assert.That(cache.Remove(Id<User>.Empty), Is.False);
+            Assert.That(cache.Remove((Id<User>)Guid.NewGuid()), Is.False);
+            Assert.That(cache.Remove((Id<User>)userId), Is.True);
+            Assert.That(cache.Contains((Id<User>)userId), Is.False);
         });
     }
 
@@ -81,7 +83,7 @@ public sealed class UserSessionCacheTests
 
         for (var i = 0; i < 1001; i++)
         {
-            cache.AddOrRefresh(Guid.NewGuid());
+            cache.AddOrRefresh((Id<User>)Guid.NewGuid());
         }
 
         Assert.That(cache.Count, Is.EqualTo(1000));

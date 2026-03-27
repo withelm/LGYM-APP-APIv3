@@ -8,6 +8,7 @@ using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.UnitTests;
@@ -47,18 +48,18 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "ABC123XYZ",
                 ExpiresAt = expiresAt,
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
             Email = "trainee@example.com",
             PreferredLanguage = "en-US"
         };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach Smith",
@@ -67,7 +68,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -76,7 +77,7 @@ public sealed class SendInvitationEmailHandlerTests
         // Assert
         Assert.That(_testScheduler.ScheduledPayloads, Has.Count.EqualTo(1));
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.InvitationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)payload.InvitationId, Is.EqualTo(invitationId));
         Assert.That(payload.InvitationCode, Is.EqualTo("ABC123XYZ"));
         Assert.That(payload.ExpiresAt, Is.EqualTo(expiresAt));
         Assert.That(payload.TrainerName, Is.EqualTo("Coach Smith"));
@@ -98,18 +99,18 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "TEST123",
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = string.Empty,
                 PreferredLanguage = "en-US"
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach"
@@ -117,7 +118,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -142,18 +143,18 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "TEST123",
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = "   ",
                 PreferredLanguage = "en-US"
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach"
@@ -161,7 +162,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -186,11 +187,11 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "INVITE2024",
                 ExpiresAt = expiresAt,
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = "carlos@example.es",
@@ -198,7 +199,7 @@ public sealed class SendInvitationEmailHandlerTests
                 PreferredTimeZone = "Europe/Madrid"
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Maria Rodriguez",
@@ -207,7 +208,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -215,7 +216,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         // Assert
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.InvitationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)payload.InvitationId, Is.EqualTo(invitationId));
         Assert.That(payload.InvitationCode, Is.EqualTo("INVITE2024"));
         Assert.That(payload.ExpiresAt, Is.EqualTo(expiresAt));
         Assert.That(payload.TrainerName, Is.EqualTo("Maria Rodriguez"));
@@ -237,18 +238,18 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "TEST123",
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = "test@example.com",
                 PreferredLanguage = "en-US"
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach"
@@ -256,7 +257,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         using var cts = new CancellationTokenSource();
@@ -281,18 +282,18 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "TEST123",
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = "test@example.com",
                 PreferredLanguage = "en-US"
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach"
@@ -300,7 +301,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -360,11 +361,11 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "FR123",
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = "trainee@example.fr",
@@ -372,7 +373,7 @@ public sealed class SendInvitationEmailHandlerTests
                 PreferredTimeZone = "Europe/Paris"
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach Pierre",
@@ -381,7 +382,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -405,18 +406,18 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "CFG123",
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = "trainee@example.com",
                 PreferredTimeZone = "   "
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach",
@@ -431,7 +432,7 @@ public sealed class SendInvitationEmailHandlerTests
             _testLogger,
             new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "UTC" });
 
-        await handler.ExecuteAsync(new InvitationCreatedCommand { InvitationId = invitationId });
+        await handler.ExecuteAsync(new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId });
 
         var payload = _testScheduler.ScheduledPayloads[0];
         Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
@@ -452,18 +453,18 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "URGENT",
                 ExpiresAt = expiresAt,
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = "trainee@example.com",
                 PreferredLanguage = "en-US"
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach"
@@ -471,7 +472,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -490,7 +491,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = Guid.NewGuid()
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid()
         };
 
         // Act
@@ -515,11 +516,11 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "TEST123",
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach"
@@ -529,7 +530,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -554,11 +555,11 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "TEST123",
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = "trainee@example.com"
@@ -568,7 +569,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -594,18 +595,18 @@ public sealed class SendInvitationEmailHandlerTests
                 Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
                 Code = "TEST123",
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-                TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-                TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+                TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
             };
 
-            _testUserRepository.UsersById[traineeId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)traineeId,
                 Email = "trainee@example.com",
                 PreferredLanguage = "en-US"
             };
 
-            _testUserRepository.UsersById[trainerId] = new User
+            _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] =  new User
             {
                 Id = (Domain.ValueObjects.Id<User>)trainerId,
                 Name = "Coach"
@@ -613,7 +614,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = invitationId
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId
         };
 
         // Act
@@ -632,33 +633,33 @@ public sealed class SendInvitationEmailHandlerTests
     {
         public TrainerInvitation? InvitationToReturn { get; set; }
 
-        public Task<TrainerInvitation?> FindInvitationByIdAsync(Guid invitationId, CancellationToken cancellationToken = default)
+        public Task<TrainerInvitation?> FindInvitationByIdAsync(Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(InvitationToReturn);
         }
 
         public Task AddInvitationAsync(TrainerInvitation invitation, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerInvitation?> FindPendingInvitationAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<bool> HasActiveLinkForTraineeAsync(Guid traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Guid trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<TrainerInvitation?> FindPendingInvitationAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> HasActiveLinkForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
-    private sealed class TestUserRepository : IUserRepository
-    {
-        public Dictionary<Guid, User> UsersById { get; } = new();
+     private sealed class TestUserRepository : IUserRepository
+     {
+         public Dictionary<Id<User>, User> UsersById { get; } = new();
 
-        public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<User?> FindByIdAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default)
         {
             UsersById.TryGetValue(id, out var user);
             return Task.FromResult(user);
         }
 
-        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByIdIncludingDeletedAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();

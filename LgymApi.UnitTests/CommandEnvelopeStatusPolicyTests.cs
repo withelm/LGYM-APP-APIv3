@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using NUnit.Framework;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;

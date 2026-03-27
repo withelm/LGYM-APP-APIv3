@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using System.Globalization;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;
@@ -42,8 +43,8 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
         var composer = CreateComposer();
         var payload = new TrainingCompletedEmailPayload
         {
-            UserId = Guid.NewGuid(),
-            TrainingId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
             PreferredTimeZone = "Europe/Warsaw",
@@ -94,8 +95,8 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
         var composer = CreateComposer();
         var payload = new TrainingCompletedEmailPayload
         {
-            UserId = Guid.NewGuid(),
-            TrainingId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "de-DE",
             PreferredTimeZone = "Europe/Warsaw",
@@ -121,8 +122,8 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
         var composer = CreateComposer();
         var payload = new TrainingCompletedEmailPayload
         {
-            UserId = Guid.NewGuid(),
-            TrainingId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
             PreferredTimeZone = "Europe/Warsaw",
@@ -184,8 +185,8 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
         var composer = CreateComposer();
         var payload = new TrainingCompletedEmailPayload
         {
-            UserId = Guid.NewGuid(),
-            TrainingId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
             PreferredTimeZone = "Europe/Warsaw",
@@ -230,8 +231,8 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
         var composer = CreateComposer(new AppDefaultsOptions { PreferredLanguage = "en-US", PreferredTimeZone = "UTC" });
         var payload = new TrainingCompletedEmailPayload
         {
-            UserId = Guid.NewGuid(),
-            TrainingId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
             PreferredTimeZone = "Invalid/Zone",
@@ -252,8 +253,8 @@ public sealed class TrainingCompletedEmailTemplateComposerTests
         var composer = CreateComposer(new AppDefaultsOptions { PreferredLanguage = "en-US", PreferredTimeZone = "UTC" });
         var payload = new TrainingCompletedEmailPayload
         {
-            UserId = Guid.NewGuid(),
-            TrainingId = Guid.NewGuid(),
+            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid(),
             RecipientEmail = "user@example.com",
             CultureName = "en-US",
             PreferredTimeZone = string.Empty,

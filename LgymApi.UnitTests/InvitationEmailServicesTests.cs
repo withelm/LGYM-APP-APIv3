@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Notifications;
@@ -33,7 +34,7 @@ public sealed class InvitationEmailServicesTests
 
         await service.ScheduleAsync(new InvitationEmailPayload
         {
-            InvitationId = Guid.NewGuid(),
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid(),
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
@@ -80,7 +81,7 @@ public sealed class InvitationEmailServicesTests
 
         await service.ScheduleAsync(new InvitationEmailPayload
         {
-            InvitationId = existing.CorrelationId,
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)existing.CorrelationId,
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
@@ -115,7 +116,7 @@ public sealed class InvitationEmailServicesTests
 
         await service.ScheduleAsync(new InvitationEmailPayload
         {
-            InvitationId = Guid.NewGuid(),
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid(),
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
@@ -164,7 +165,7 @@ public sealed class InvitationEmailServicesTests
 
         await service.ScheduleAsync(new InvitationEmailPayload
         {
-            InvitationId = existing.CorrelationId,
+            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)existing.CorrelationId,
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
@@ -269,7 +270,7 @@ public sealed class InvitationEmailServicesTests
             return Task.CompletedTask;
         }
 
-        public Task<NotificationMessage?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<NotificationMessage?> FindByIdAsync(LgymApi.Domain.ValueObjects.Id<NotificationMessage> id, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(ExistingById);
         }
