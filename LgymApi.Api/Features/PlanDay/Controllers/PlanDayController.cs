@@ -5,6 +5,7 @@ using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Features.PlanDay;
 using LgymApi.Application.Features.PlanDay.Models;
 using LgymApi.Application.Mapping.Core;
+using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
@@ -38,7 +39,7 @@ public sealed class PlanDayController : ControllerBase
         var exercises = form.Exercises
             .Select(exercise => new PlanDayExerciseInput
             {
-                ExerciseId = exercise.ExerciseId,
+                ExerciseId = Id<ExerciseEntity>.TryParse(exercise.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Id<ExerciseEntity>.Empty,
                 Series = exercise.Series,
                 Reps = exercise.Reps
             })
@@ -58,7 +59,7 @@ public sealed class PlanDayController : ControllerBase
         var exercises = form.Exercises
             .Select(exercise => new PlanDayExerciseInput
             {
-                ExerciseId = exercise.ExerciseId,
+                ExerciseId = Id<ExerciseEntity>.TryParse(exercise.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Id<ExerciseEntity>.Empty,
                 Series = exercise.Series,
                 Reps = exercise.Reps
             })

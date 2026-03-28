@@ -73,7 +73,8 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateExercise([FromBody] ExerciseFormDto form)
     {
-        var input = new UpdateExerciseInput(form.Id ?? string.Empty, form.Name, form.BodyPart, form.Description, form.Image);
+        var exerciseId = Id<ExerciseEntity>.TryParse(form.Id ?? string.Empty, out var parsedExerciseId) ? parsedExerciseId : Id<ExerciseEntity>.Empty;
+        var input = new UpdateExerciseInput(exerciseId, form.Name, form.BodyPart, form.Description, form.Image);
         await _exerciseService.UpdateExerciseAsync(input, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
@@ -87,7 +88,8 @@ public sealed class ExerciseController : ControllerBase
     {
         var currentUser = HttpContext.GetCurrentUser();
         var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var input = new AddGlobalTranslationInput(routeUserId, form.ExerciseId, form.Culture, form.Name);
+        var exerciseId = Id<ExerciseEntity>.TryParse(form.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Id<ExerciseEntity>.Empty;
+        var input = new AddGlobalTranslationInput(routeUserId, exerciseId, form.Culture, form.Name);
         await _exerciseService.AddGlobalTranslationAsync(currentUser!, input, HttpContext.RequestAborted);
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));

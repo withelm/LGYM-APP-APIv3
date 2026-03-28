@@ -4,6 +4,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Mapping.Core;
+using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -35,7 +36,7 @@ public sealed class TrainingController : ControllerBase
         var planDayId = Id<LgymApi.Domain.Entities.PlanDay>.TryParse(form.TypePlanDayId, out var parsedPlanDayId) ? parsedPlanDayId : Id<LgymApi.Domain.Entities.PlanDay>.Empty;
         var exercises = form.Exercises.Select(exercise => new TrainingExerciseInput
         {
-                ExerciseId = exercise.ExerciseId,
+                ExerciseId = Id<ExerciseEntity>.TryParse(exercise.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Id<ExerciseEntity>.Empty,
                 Series = exercise.Series,
                 Reps = exercise.Reps,
                 Weight = exercise.Weight,

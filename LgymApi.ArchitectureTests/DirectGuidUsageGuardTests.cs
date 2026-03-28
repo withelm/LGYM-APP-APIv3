@@ -269,7 +269,17 @@ public sealed class DirectGuidUsageGuardTests
             return true;
         }
 
-        return normalized.EndsWith("/LgymApi.Domain/ValueObjects/Id.cs", StringComparison.OrdinalIgnoreCase);
+        if (normalized.EndsWith("/LgymApi.Domain/ValueObjects/Id.cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (normalized.EndsWith("/LgymApi.Infrastructure/Data/TypedIdValueConverter.cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return normalized.EndsWith("/LgymApi.UnitTests/TypedIdTests.cs", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsGeneratedFile(SyntaxTree tree)

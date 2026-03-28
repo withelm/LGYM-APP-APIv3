@@ -84,7 +84,9 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> UpdateMainRecords([FromRoute] string id, [FromBody] MainRecordsFormDto form)
     {
         var routeUserId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var input = new UpdateMainRecordInput(routeUserId, routeUserId, form.Id ?? string.Empty, form.ExerciseId, form.Weight, form.Unit, form.Date);
+        Id<Domain.Entities.MainRecord>.TryParse(form.Id ?? string.Empty, out var recordId);
+        Id<Domain.Entities.Exercise>.TryParse(form.ExerciseId, out var exerciseId);
+        var input = new UpdateMainRecordInput(routeUserId, routeUserId, recordId, exerciseId, form.Weight, form.Unit, form.Date);
         await _mainRecordsService.UpdateMainRecordAsync(input, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
@@ -95,7 +97,10 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetRecordOrPossibleRecordInExercise([FromBody] RecordOrPossibleRequestDto request)
     {
         var userId = HttpContext.GetCurrentUser()?.Id.IsEmpty == false ? HttpContext.GetCurrentUser()!.Id : Id<UserEntity>.Empty;
-        var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, request.ExerciseId, HttpContext.RequestAborted);
+        var exerciseId = Id<Domain.Entities.Exercise>.TryParse(request.ExerciseId, out var parsedExerciseId)
+            ? parsedExerciseId
+            : Id<Domain.Entities.Exercise>.Empty;
+        var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, exerciseId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<PossibleRecordResult, PossibleRecordForExerciseDto>(result));
     }
 }

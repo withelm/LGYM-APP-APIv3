@@ -102,7 +102,7 @@ public sealed class ServiceTransactionBehaviorTests
              new User { Id = userId },
              planDayId,
              "new",
-             [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New().ToString(), Series = 3, Reps = "8" }],
+             [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New(), Series = 3, Reps = "8" }],
              CancellationToken.None);
 
          Assert.Multiple(() =>
@@ -147,7 +147,7 @@ public sealed class ServiceTransactionBehaviorTests
                  new User { Id = userId },
                  planDayId,
                  "new",
-                 [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New().ToString(), Series = 3, Reps = "8" }],
+                 [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New(), Series = 3, Reps = "8" }],
                  CancellationToken.None));
 
          Assert.Multiple(() =>

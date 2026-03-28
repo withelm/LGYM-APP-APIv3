@@ -4,6 +4,6 @@ namespace LgymApi.Application.Features.Exercise.Models;
 
 public sealed record AddGlobalTranslationInput(
     Id<LgymApi.Domain.Entities.User> RouteUserId,
-    string ExerciseId,
+    Id<LgymApi.Domain.Entities.Exercise> ExerciseId,
     string? Culture,
     string? Name);

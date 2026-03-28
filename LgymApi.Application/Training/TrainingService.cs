@@ -68,9 +68,7 @@ public sealed class TrainingService : ITrainingService
 
             var uniqueExerciseIds = exercises
                 .Select(e => e.ExerciseId)
-                .Select(TryParseExerciseId)
-                .Where(id => id.HasValue)
-                .Select(id => id!.Value)
+                .Where(id => !id.IsEmpty)
                 .Distinct()
                 .ToList();
 
@@ -100,10 +98,12 @@ public sealed class TrainingService : ITrainingService
                 var index = 0;
                 foreach (var exercise in exercises)
                 {
-                    if (!Id<LgymApi.Domain.Entities.Exercise>.TryParse(exercise.ExerciseId, out var exerciseId))
+                    if (exercise.ExerciseId.IsEmpty)
                     {
                         continue;
                     }
+
+                    var exerciseId = exercise.ExerciseId;
 
                     if (exercise.Unit == WeightUnits.Unknown)
                     {
@@ -401,10 +401,12 @@ public sealed class TrainingService : ITrainingService
 
         foreach (var current in currentExercises)
         {
-            if (!Id<LgymApi.Domain.Entities.Exercise>.TryParse(current.ExerciseId, out var exerciseId))
+            if (current.ExerciseId.IsEmpty)
             {
                 continue;
             }
+
+            var exerciseId = current.ExerciseId;
 
             if (!comparisonMap.TryGetValue(exerciseId, out var group))
             {
@@ -441,9 +443,7 @@ public sealed class TrainingService : ITrainingService
 
         var exerciseOrder = currentExercises
             .Select(e => e.ExerciseId)
-            .Select(TryParseExerciseId)
-            .Where(id => id.HasValue)
-            .Select(id => id!.Value)
+            .Where(id => !id.IsEmpty)
             .Distinct()
             .ToList();
 
@@ -451,13 +451,6 @@ public sealed class TrainingService : ITrainingService
             .Where(comparisonMap.ContainsKey)
             .Select(id => comparisonMap[id])
             .ToList();
-    }
-
-    private static Id<LgymApi.Domain.Entities.Exercise>? TryParseExerciseId(string rawId)
-    {
-        return Id<LgymApi.Domain.Entities.Exercise>.TryParse(rawId, out var parsedId)
-            ? parsedId
-            : null;
     }
 
 }

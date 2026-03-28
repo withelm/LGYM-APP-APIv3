@@ -165,12 +165,12 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (!Id<MainRecordEntity>.TryParse(input.RecordId, out var recordId))
+        if (input.RecordId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var existingRecord = await _mainRecordRepository.FindByIdAsync(recordId, cancellationToken);
+        var existingRecord = await _mainRecordRepository.FindByIdAsync(input.RecordId, cancellationToken);
         if (existingRecord == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -181,12 +181,12 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (!Id<ExerciseEntity>.TryParse(input.ExerciseId, out var exerciseId))
+        if (input.ExerciseId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync(exerciseId, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync(input.ExerciseId, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -205,14 +205,14 @@ public sealed class MainRecordsService : IMainRecordsService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<PossibleRecordResult> GetRecordOrPossibleRecordInExerciseAsync(Id<LgymApi.Domain.Entities.User> userId, string exerciseId, CancellationToken cancellationToken = default)
+    public async Task<PossibleRecordResult> GetRecordOrPossibleRecordInExerciseAsync(Id<LgymApi.Domain.Entities.User> userId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default)
     {
-        if (userId.IsEmpty || !Id<ExerciseEntity>.TryParse(exerciseId, out var parsedExerciseId))
+        if (userId.IsEmpty || exerciseId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, [parsedExerciseId], cancellationToken);
+        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, [exerciseId], cancellationToken);
         var comparableRecords = records
             .Where(r => r.Weight.Unit != WeightUnits.Unknown)
             .ToList();
@@ -221,7 +221,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         if (record == null)
         {
-            var possible = await _exerciseScoreRepository.GetBestScoreAsync(userId, parsedExerciseId, cancellationToken);
+            var possible = await _exerciseScoreRepository.GetBestScoreAsync(userId, exerciseId, cancellationToken);
             if (possible == null)
             {
                 throw AppException.NotFound(Messages.DidntFind);

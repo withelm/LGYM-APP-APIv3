@@ -135,12 +135,12 @@ public sealed class ExerciseService : IExerciseService
     {
         var (exerciseId, name, bodyPart, description, image) = input;
 
-        if (!Id<Domain.Entities.Exercise>.TryParse(exerciseId, out var parsedExerciseId))
+        if (exerciseId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync(parsedExerciseId, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync(exerciseId, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -185,7 +185,7 @@ public sealed class ExerciseService : IExerciseService
         var cultureInput = culture?.Trim();
         var nameInput = name?.Trim();
 
-        if (!Id<Domain.Entities.Exercise>.TryParse(exerciseId, out var parsedExerciseId)
+        if (exerciseId.IsEmpty
             || string.IsNullOrWhiteSpace(cultureInput)
             || string.IsNullOrWhiteSpace(nameInput))
         {
@@ -206,7 +206,7 @@ public sealed class ExerciseService : IExerciseService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync(parsedExerciseId, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync(exerciseId, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -218,7 +218,7 @@ public sealed class ExerciseService : IExerciseService
         }
 
         var normalizedCulture = cultureInput.ToLowerInvariant();
-        await _exerciseRepository.UpsertTranslationAsync(parsedExerciseId, normalizedCulture, nameInput, cancellationToken);
+        await _exerciseRepository.UpsertTranslationAsync(exerciseId, normalizedCulture, nameInput, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 

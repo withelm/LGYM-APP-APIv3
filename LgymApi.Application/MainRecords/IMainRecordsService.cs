@@ -13,5 +13,5 @@ public interface IMainRecordsService
     Task<MainRecordsLastContext> GetLastMainRecordsAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default);
     Task DeleteMainRecordAsync(Id<LgymApi.Domain.Entities.User> currentUserId, Id<LgymApi.Domain.Entities.MainRecord> recordId, CancellationToken cancellationToken = default);
     Task UpdateMainRecordAsync(UpdateMainRecordInput input, CancellationToken cancellationToken = default);
-    Task<PossibleRecordResult> GetRecordOrPossibleRecordInExerciseAsync(Id<LgymApi.Domain.Entities.User> userId, string exerciseId, CancellationToken cancellationToken = default);
+    Task<PossibleRecordResult> GetRecordOrPossibleRecordInExerciseAsync(Id<LgymApi.Domain.Entities.User> userId, Id<LgymApi.Domain.Entities.Exercise> exerciseId, CancellationToken cancellationToken = default);
 }

@@ -28,9 +28,9 @@ public sealed class TrainingServiceBuildComparisonReportTests
         // Input order: C, A, B
         var currentExercises = new List<TrainingExerciseInput>
         {
-            new() { ExerciseId = exerciseC.ToString(), Series = 1, Reps = 10, Weight = 60, Unit = WeightUnits.Kilograms },
-            new() { ExerciseId = exerciseA.ToString(), Series = 1, Reps = 8, Weight = 80, Unit = WeightUnits.Kilograms },
-            new() { ExerciseId = exerciseB.ToString(), Series = 1, Reps = 6, Weight = 100, Unit = WeightUnits.Kilograms },
+            new() { ExerciseId = exerciseC, Series = 1, Reps = 10, Weight = 60, Unit = WeightUnits.Kilograms },
+            new() { ExerciseId = exerciseA, Series = 1, Reps = 8, Weight = 80, Unit = WeightUnits.Kilograms },
+            new() { ExerciseId = exerciseB, Series = 1, Reps = 6, Weight = 100, Unit = WeightUnits.Kilograms },
         };
 
         var previousScores = new Dictionary<string, ExerciseScore>();
@@ -65,10 +65,10 @@ public sealed class TrainingServiceBuildComparisonReportTests
         // B appears first (series 1, 2), then A (series 1, 2)
         var currentExercises = new List<TrainingExerciseInput>
         {
-            new() { ExerciseId = exerciseB.ToString(), Series = 1, Reps = 5, Weight = 120, Unit = WeightUnits.Kilograms },
-            new() { ExerciseId = exerciseB.ToString(), Series = 2, Reps = 5, Weight = 120, Unit = WeightUnits.Kilograms },
-            new() { ExerciseId = exerciseA.ToString(), Series = 1, Reps = 10, Weight = 60, Unit = WeightUnits.Kilograms },
-            new() { ExerciseId = exerciseA.ToString(), Series = 2, Reps = 8, Weight = 65, Unit = WeightUnits.Kilograms },
+            new() { ExerciseId = exerciseB, Series = 1, Reps = 5, Weight = 120, Unit = WeightUnits.Kilograms },
+            new() { ExerciseId = exerciseB, Series = 2, Reps = 5, Weight = 120, Unit = WeightUnits.Kilograms },
+            new() { ExerciseId = exerciseA, Series = 1, Reps = 10, Weight = 60, Unit = WeightUnits.Kilograms },
+            new() { ExerciseId = exerciseA, Series = 2, Reps = 8, Weight = 65, Unit = WeightUnits.Kilograms },
         };
 
         var previousScores = new Dictionary<string, ExerciseScore>();
@@ -101,7 +101,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
 
         var currentExercises = new List<TrainingExerciseInput>
         {
-            new() { ExerciseId = exerciseId.ToString(), Series = 1, Reps = 10, Weight = 80, Unit = WeightUnits.Kilograms },
+            new() { ExerciseId = exerciseId, Series = 1, Reps = 10, Weight = 80, Unit = WeightUnits.Kilograms },
         };
 
          var previousScores = new Dictionary<string, ExerciseScore>
