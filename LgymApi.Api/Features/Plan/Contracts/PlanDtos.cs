@@ -22,7 +22,7 @@ public sealed record CopyPlanDto(
 public sealed class PlanDto : IResultDto
 {
     [JsonPropertyName("id")]
-    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Plan> Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -31,7 +31,7 @@ public sealed class PlanDto : IResultDto
     public bool IsActive { get; set; }
 
     [JsonPropertyName("userId")]
-    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> UserId { get; set; }
+    public string UserId { get; set; } = string.Empty;
 }
 
 public sealed record ShareCodeResponseDto(

@@ -166,6 +166,28 @@ When changing existing enums, treat them as part of a persisted and externally c
 - **Prefer deprecation over deletion**: do not remove enum members in normal flow; mark them with `[Obsolete]` first and keep compatibility until a planned removal window.
 - **If removal is unavoidable**: document migration steps, update all mappings/validators/tests, and communicate a breaking change before merge.
 
+## 10. DTO and Model ID Conventions (Boundary Guards)
+
+The solution enforces strict boundaries between API contracts and internal application models regarding ID types. These rules are enforced by architecture tests and CI will fail on violations.
+
+### 10.1 API Contracts (External Layer)
+
+- **Rule**: DTOs and models located under `/Contracts/` namespaces/folders must use raw `string` for ID fields.
+- **Reasoning**: External API consumers (mobile, web) expect standard string GUIDs. Strongly typed IDs like `Id<T>` are internal implementation details and must not leak into the public API contract.
+- **Enforcement**: `ApiContractTypedIdGuardTests` ensures no `Id<TEntity>` usage in `/Contracts/`.
+
+### 10.2 Application Input Models (Internal Layer)
+
+- **Rule**: Internal application models, specifically those ending in `Input` (e.g., `UpdateWorkoutInput`) located under `LgymApi.Application/**/Models/*Input*.cs`, must use strongly typed IDs (`Id<TEntity>`).
+- **Reasoning**: This prevents "primitive obsession" and accidental ID swaps (e.g., passing a User ID where a Workout ID is expected) within the business logic layer.
+- **Enforcement**: `ApplicationInputModelStringIdGuardTests` ensures no raw `string` ID usage in `*Input.cs` files.
+
+### 10.3 Mapping Boundary
+
+The boundary is handled at the mapping layer:
+- **API to Application**: Validators or Mapping Profiles translate incoming `string` IDs from DTOs into `Id<TEntity>` for Application Input models.
+- **Application to API**: Mapping Profiles translate `Id<TEntity>` from Domain entities or Application models back into `string` for response DTOs.
+
 ## 11. Dependency Injection Conventions
 
 The solution uses a decentralized registration approach across projects, enforced by architecture guards in unit tests.
