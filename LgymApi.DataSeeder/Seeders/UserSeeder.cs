@@ -1,5 +1,6 @@
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -68,11 +69,11 @@ public sealed class UserSeeder : IEntitySeeder
             return existing;
         }
 
-        var passwordData = _legacyPasswordService.Create(name);
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
+         var passwordData = _legacyPasswordService.Create(name);
+         var user = new User
+         {
+             Id = Id<User>.New(),
+             Name = name,
             Email = email,
             IsVisibleInRanking = true,
             ProfileRank = "Junior 1",

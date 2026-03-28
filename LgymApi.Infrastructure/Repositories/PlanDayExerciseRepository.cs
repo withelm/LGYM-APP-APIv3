@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -15,24 +16,24 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
         _dbContext = dbContext;
     }
 
-    public Task<List<PlanDayExercise>> GetByPlanDayIdsAsync(List<Guid> planDayIds, CancellationToken cancellationToken = default)
+    public Task<List<PlanDayExercise>> GetByPlanDayIdsAsync(List<Id<PlanDay>> planDayIds, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDayExercises
             .AsNoTracking()
             .Where(e => planDayIds.Contains(e.PlanDayId))
-            .OrderBy(e => e.PlanDayId)
+            .OrderBy(e => e.PlanDayId.GetValue())
             .ThenBy(e => e.Order)
-            .ThenBy(e => e.Id)
+            .ThenBy(e => e.Id.GetValue())
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<PlanDayExercise>> GetByPlanDayIdAsync(Guid planDayId, CancellationToken cancellationToken = default)
+    public Task<List<PlanDayExercise>> GetByPlanDayIdAsync(Id<PlanDay> planDayId, CancellationToken cancellationToken = default)
     {
         return _dbContext.PlanDayExercises
             .AsNoTracking()
             .Where(e => e.PlanDayId == planDayId)
             .OrderBy(e => e.Order)
-            .ThenBy(e => e.Id)
+            .ThenBy(e => e.Id.GetValue())
             .ToListAsync(cancellationToken);
     }
 
@@ -48,7 +49,7 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
         await NormalizeOrdersAsync(exercisesToAdd.Select(e => e.PlanDayId), cancellationToken);
     }
 
-    public async Task RemoveByPlanDayIdAsync(Guid planDayId, CancellationToken cancellationToken = default)
+    public async Task RemoveByPlanDayIdAsync(Id<PlanDay> planDayId, CancellationToken cancellationToken = default)
     {
         await _dbContext.PlanDayExercises
             .Where(e => e.PlanDayId == planDayId)
@@ -57,7 +58,7 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
         await NormalizeOrdersAsync(new[] { planDayId }, cancellationToken);
     }
 
-    private async Task NormalizeOrdersAsync(IEnumerable<Guid> planDayIds, CancellationToken cancellationToken)
+    private async Task NormalizeOrdersAsync(IEnumerable<Id<PlanDay>> planDayIds, CancellationToken cancellationToken)
     {
         var affectedPlanDayIds = planDayIds
             .Distinct()
@@ -70,12 +71,12 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
 
         var orderedExercises = await _dbContext.PlanDayExercises
             .Where(e => affectedPlanDayIds.Contains(e.PlanDayId))
-            .OrderBy(e => e.PlanDayId)
+            .OrderBy(e => e.PlanDayId.GetValue())
             .ThenBy(e => e.Order)
-            .ThenBy(e => e.Id)
+            .ThenBy(e => e.Id.GetValue())
             .ToListAsync(cancellationToken);
 
-        Guid? currentPlanDayId = null;
+        Id<PlanDay>? currentPlanDayId = null;
         var nextOrder = 0;
 
         foreach (var exercise in orderedExercises)

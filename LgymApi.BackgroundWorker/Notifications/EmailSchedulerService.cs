@@ -7,6 +7,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Notifications;
@@ -60,7 +61,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
 
         var message = new NotificationMessage
         {
-            Id = Guid.NewGuid(),
+            Id = Domain.ValueObjects.Id<NotificationMessage>.New(),
             Channel = NotificationChannel.Email,
             Type = payload.NotificationType,
             CorrelationId = payload.CorrelationId,
@@ -82,7 +83,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             payload.CorrelationId);
     }
 
-    private bool IsSchedulingEnabled(EmailNotificationType notificationType, Guid correlationId)
+    private bool IsSchedulingEnabled(EmailNotificationType notificationType, Id<CorrelationScope> correlationId)
     {
         if (_emailNotificationsFeature.Enabled)
         {

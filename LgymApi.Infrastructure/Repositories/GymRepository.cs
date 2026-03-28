@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,12 +20,12 @@ public sealed class GymRepository : IGymRepository
         return _dbContext.Gyms.AddAsync(gym, cancellationToken).AsTask();
     }
 
-    public Task<Gym?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<Gym?> FindByIdAsync(Id<Gym> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.Gyms.FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
     }
 
-    public Task<List<Gym>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<Gym>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Gyms
             .AsNoTracking()

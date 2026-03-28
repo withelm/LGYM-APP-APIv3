@@ -1,5 +1,6 @@
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -224,6 +225,6 @@ public sealed class ActionScopeIsolationTests
     /// </summary>
     private sealed class TestScopedService
     {
-        public Guid Id { get; } = Guid.NewGuid();
+        public Id<TestScopedService> Id { get; } = Id<TestScopedService>.New();
     }
 }

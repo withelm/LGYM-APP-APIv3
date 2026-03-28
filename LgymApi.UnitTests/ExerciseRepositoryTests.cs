@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
@@ -12,12 +13,12 @@ public sealed class ExerciseRepositoryTests
     public async Task GetTranslationsAsync_WithOnlyEmptyCultures_ReturnsEmptyDictionary()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"exercise-repo-{Guid.NewGuid()}")
+            .UseInMemoryDatabase($"exercise-repo-{LgymApi.Domain.ValueObjects.Id<ExerciseRepositoryTests>.New():N}")
             .Options;
 
         await using var dbContext = new AppDbContext(options);
 
-        var exerciseId = Guid.NewGuid();
+        var exerciseId = LgymApi.Domain.ValueObjects.Id<Exercise>.New();
         dbContext.Exercises.Add(new Exercise
         {
             Id = exerciseId,
@@ -25,7 +26,7 @@ public sealed class ExerciseRepositoryTests
         });
         dbContext.ExerciseTranslations.Add(new ExerciseTranslation
         {
-            Id = Guid.NewGuid(),
+            Id = LgymApi.Domain.ValueObjects.Id<ExerciseTranslation>.New(),
             ExerciseId = exerciseId,
             Culture = "en",
             Name = "Bench press"

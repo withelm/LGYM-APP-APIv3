@@ -3,6 +3,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
 namespace LgymApi.Application.Features.AppConfig;
@@ -42,14 +43,14 @@ public sealed class AppConfigService : IAppConfigService
         return config;
     }
 
-    public async Task CreateNewAppVersionAsync(Guid userId, CreateAppVersionInput input, CancellationToken cancellationToken = default)
+    public async Task CreateNewAppVersionAsync(Id<LgymApi.Domain.Entities.User> userId, CreateAppVersionInput input, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null || !await _roleRepository.UserHasPermissionAsync(userId, AuthConstants.Permissions.ManageAppConfig, cancellationToken))
         {
             throw AppException.Forbidden(Messages.Forbidden);
@@ -62,7 +63,7 @@ public sealed class AppConfigService : IAppConfigService
 
         var config = new AppConfigEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<AppConfigEntity>.New(),
             Platform = input.Platform,
             MinRequiredVersion = input.MinRequiredVersion ?? string.Empty,
             LatestVersion = input.LatestVersion ?? string.Empty,

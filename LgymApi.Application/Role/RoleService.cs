@@ -2,6 +2,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Role.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
 
@@ -39,9 +40,9 @@ public sealed class RoleService : IRoleService
             .ToList();
     }
 
-    public async Task<RoleResult> GetRoleAsync(Guid roleId, CancellationToken cancellationToken = default)
+    public async Task<RoleResult> GetRoleAsync(Id<Domain.Entities.Role> roleId, CancellationToken cancellationToken = default)
     {
-        if (roleId == Guid.Empty)
+        if (roleId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -68,7 +69,7 @@ public sealed class RoleService : IRoleService
 
         var role = new Domain.Entities.Role
         {
-            Id = Guid.NewGuid(),
+            Id = Id<Domain.Entities.Role>.New(),
             Name = normalizedName,
             Description = NormalizeDescription(description)
         };
@@ -86,9 +87,9 @@ public sealed class RoleService : IRoleService
         };
     }
 
-    public async Task UpdateRoleAsync(Guid roleId, string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
+    public async Task UpdateRoleAsync(Id<Domain.Entities.Role> roleId, string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
     {
-        if (roleId == Guid.Empty)
+        if (roleId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -120,9 +121,9 @@ public sealed class RoleService : IRoleService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteRoleAsync(Guid roleId, CancellationToken cancellationToken = default)
+    public async Task DeleteRoleAsync(Id<Domain.Entities.Role> roleId, CancellationToken cancellationToken = default)
     {
-        if (roleId == Guid.Empty)
+        if (roleId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -162,14 +163,14 @@ public sealed class RoleService : IRoleService
             .ToList();
     }
 
-    public async Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
+    public async Task UpdateUserRolesAsync(Id<LgymApi.Domain.Entities.User> userId, IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);

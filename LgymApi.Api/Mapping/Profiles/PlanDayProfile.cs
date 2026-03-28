@@ -3,6 +3,7 @@ using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.PlanDay.Contracts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Api.Mapping.Profiles;
 
@@ -10,9 +11,9 @@ public sealed class PlanDayProfile : IMappingProfile
 {
     internal static class Keys
     {
-        internal static readonly ContextKey<IReadOnlyDictionary<Guid, Exercise>> ExerciseMap = new("PlanDay.ExerciseMap");
+        internal static readonly ContextKey<IReadOnlyDictionary<Id<Exercise>, Exercise>> ExerciseMap = new("PlanDay.ExerciseMap");
         internal static readonly ContextKey<IReadOnlyList<PlanDayExercise>> PlanDayExercises = new("PlanDay.Exercises");
-        internal static readonly ContextKey<IReadOnlyDictionary<Guid, DateTime?>> PlanDayLastTrainings = new("PlanDay.LastTrainings");
+        internal static readonly ContextKey<IReadOnlyDictionary<Id<PlanDay>, DateTime?>> PlanDayLastTrainings = new("PlanDay.LastTrainings");
     }
 
     public void Configure(MappingConfiguration configuration)
@@ -73,7 +74,7 @@ public sealed class PlanDayProfile : IMappingProfile
         });
     }
 
-    private static ExerciseResponseDto ResolveExerciseDto(PlanDayExercise exercise, IReadOnlyDictionary<Guid, Exercise>? exerciseMap, MappingContext? context)
+    private static ExerciseResponseDto ResolveExerciseDto(PlanDayExercise exercise, IReadOnlyDictionary<Id<Exercise>, Exercise>? exerciseMap, MappingContext? context)
     {
         if (exerciseMap != null && exerciseMap.TryGetValue(exercise.ExerciseId, out var entity))
         {

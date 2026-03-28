@@ -1,9 +1,11 @@
+using LgymApi.Domain.ValueObjects;
+
 namespace LgymApi.Application.Features.Exercise.Models;
 
 public sealed record GetLastExerciseScoresInput(
-    Guid RouteUserId,
-    Guid CurrentUserId,
-    Guid ExerciseId,
+    Id<LgymApi.Domain.Entities.User> RouteUserId,
+    Id<LgymApi.Domain.Entities.User> CurrentUserId,
+    Id<LgymApi.Domain.Entities.Exercise> ExerciseId,
     int Series,
-    Guid? GymId,
+    Id<LgymApi.Domain.Entities.Gym>? GymId,
     string ExerciseName);

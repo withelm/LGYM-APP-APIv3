@@ -18,9 +18,9 @@ public sealed class UpsertSupplementPlanItemCommand
 
 public sealed class SupplementPlanResult
 {
-    public Guid Id { get; set; }
-    public Guid TrainerId { get; set; }
-    public Guid TraineeId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.SupplementPlan> Id { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> TrainerId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> TraineeId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Notes { get; set; }
     public bool IsActive { get; set; }
@@ -30,7 +30,7 @@ public sealed class SupplementPlanResult
 
 public sealed class SupplementPlanItemResult
 {
-    public Guid Id { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.SupplementPlanItem> Id { get; set; }
     public string SupplementName { get; set; } = string.Empty;
     public string Dosage { get; set; } = string.Empty;
     public string TimeOfDay { get; set; } = string.Empty;
@@ -40,7 +40,7 @@ public sealed class SupplementPlanItemResult
 
 public sealed class SupplementScheduleEntryResult
 {
-    public Guid PlanItemId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.SupplementPlanItem> PlanItemId { get; set; }
     public string SupplementName { get; set; } = string.Empty;
     public string Dosage { get; set; } = string.Empty;
     public string TimeOfDay { get; set; } = string.Empty;
@@ -51,14 +51,14 @@ public sealed class SupplementScheduleEntryResult
 
 public sealed class CheckOffSupplementIntakeCommand
 {
-    public Guid PlanItemId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.SupplementPlanItem> PlanItemId { get; set; }
     public DateOnly IntakeDate { get; set; }
     public DateTimeOffset? TakenAt { get; set; }
 }
 
 public sealed class SupplementComplianceSummaryResult
 {
-    public Guid TraineeId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> TraineeId { get; set; }
     public DateOnly FromDate { get; set; }
     public DateOnly ToDate { get; set; }
     public int PlannedDoses { get; set; }

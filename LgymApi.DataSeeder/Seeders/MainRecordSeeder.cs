@@ -32,7 +32,7 @@ public sealed class MainRecordSeeder : IEntitySeeder
             .Select(record => new { record.UserId, record.ExerciseId })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid UserId, Guid ExerciseId)>(
+        var existingSet = new HashSet<(Id<User> UserId, Id<Exercise> ExerciseId)>(
             existing.Select(entry => (entry.UserId, entry.ExerciseId)));
 
         var recordIndex = 0;
@@ -45,10 +45,10 @@ public sealed class MainRecordSeeder : IEntitySeeder
                 recordIndex++;
                 continue;
             }
-            var record = new MainRecord
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
+             var record = new MainRecord
+             {
+                 Id = Id<MainRecord>.New(),
+                 UserId = user.Id,
                 ExerciseId = exercise.Id,
                 Weight = new Weight(100 + recordIndex * 5, WeightUnits.Kilograms),
                 Date = DateTimeOffset.UtcNow.AddDays(-recordIndex)

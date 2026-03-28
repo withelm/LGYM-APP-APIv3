@@ -20,6 +20,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Domain.Security;
 using Hangfire;
 using LgymApi.Api.Serialization;
+using LgymApi.BackgroundWorker.Common.Serialization;
 
 const string TestingEnvironment = "Testing";
 
@@ -32,6 +33,7 @@ builder.Services
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.Converters.Add(new TypedIdJsonConverterFactory());
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
     });
 

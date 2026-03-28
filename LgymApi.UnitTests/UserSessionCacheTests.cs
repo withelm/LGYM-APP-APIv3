@@ -1,4 +1,6 @@
 using LgymApi.Infrastructure.Services;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 
 namespace LgymApi.UnitTests;
@@ -11,7 +13,7 @@ public sealed class UserSessionCacheTests
     {
         var cache = CreateCache(capacity: 2);
 
-        cache.AddOrRefresh(Guid.Empty);
+        cache.AddOrRefresh(Id<User>.Empty);
 
         Assert.That(cache.Count, Is.EqualTo(0));
     }
@@ -20,9 +22,9 @@ public sealed class UserSessionCacheTests
     public void AddOrRefresh_EvictsLeastRecentlyUsed_WhenCapacityExceeded()
     {
         var cache = CreateCache(capacity: 2);
-        var first = Guid.NewGuid();
-        var second = Guid.NewGuid();
-        var third = Guid.NewGuid();
+        var first = Id<User>.New();
+        var second = Id<User>.New();
+        var third = Id<User>.New();
 
         cache.AddOrRefresh(first);
         cache.AddOrRefresh(second);
@@ -41,9 +43,9 @@ public sealed class UserSessionCacheTests
     public void AddOrRefresh_RefreshesExistingItem()
     {
         var cache = CreateCache(capacity: 2);
-        var first = Guid.NewGuid();
-        var second = Guid.NewGuid();
-        var third = Guid.NewGuid();
+        var first = Id<User>.New();
+        var second = Id<User>.New();
+        var third = Id<User>.New();
 
         cache.AddOrRefresh(first);
         cache.AddOrRefresh(second);
@@ -62,13 +64,13 @@ public sealed class UserSessionCacheTests
     public void Remove_ReturnsExpectedValues()
     {
         var cache = CreateCache(capacity: 2);
-        var userId = Guid.NewGuid();
+        var userId = Id<User>.New();
         cache.AddOrRefresh(userId);
 
         Assert.Multiple(() =>
         {
-            Assert.That(cache.Remove(Guid.Empty), Is.False);
-            Assert.That(cache.Remove(Guid.NewGuid()), Is.False);
+            Assert.That(cache.Remove(Id<User>.Empty), Is.False);
+            Assert.That(cache.Remove(Id<User>.New()), Is.False);
             Assert.That(cache.Remove(userId), Is.True);
             Assert.That(cache.Contains(userId), Is.False);
         });
@@ -81,7 +83,7 @@ public sealed class UserSessionCacheTests
 
         for (var i = 0; i < 1001; i++)
         {
-            cache.AddOrRefresh(Guid.NewGuid());
+            cache.AddOrRefresh(Id<User>.New());
         }
 
         Assert.That(cache.Count, Is.EqualTo(1000));

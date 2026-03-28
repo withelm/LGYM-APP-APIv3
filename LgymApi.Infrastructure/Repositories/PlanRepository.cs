@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -33,17 +34,17 @@ public sealed class PlanRepository : IPlanRepository
         _shareCodeGenerator = shareCodeGenerator ?? GenerateSecureAlphanumericCode;
     }
 
-    public Task<Plan?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<Plan?> FindByIdAsync(Id<Plan> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
     }
 
-    public Task<Plan?> FindActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<Plan?> FindActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Plans.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive && !p.IsDeleted, cancellationToken);
     }
 
-    public Task<Plan?> FindLastActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<Plan?> FindLastActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Plans
             .AsNoTracking()
@@ -52,7 +53,7 @@ public sealed class PlanRepository : IPlanRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<List<Plan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<Plan>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Plans.AsNoTracking().Where(p => p.UserId == userId && !p.IsDeleted).ToListAsync(cancellationToken);
     }
@@ -68,7 +69,7 @@ public sealed class PlanRepository : IPlanRepository
         return Task.CompletedTask;
     }
 
-    public async Task SetActivePlanAsync(Guid userId, Guid planId, CancellationToken cancellationToken = default)
+    public async Task SetActivePlanAsync(Id<User> userId, Id<Plan> planId, CancellationToken cancellationToken = default)
     {
         await _dbContext.Plans
             .Where(p => p.UserId == userId && p.Id != planId && !p.IsDeleted)
@@ -79,14 +80,14 @@ public sealed class PlanRepository : IPlanRepository
             .StageUpdateAsync(_dbContext, p => p.IsActive, p => true, cancellationToken);
     }
 
-    public Task ClearActivePlansAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task ClearActivePlansAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Plans
             .Where(p => p.UserId == userId && !p.IsDeleted)
             .StageUpdateAsync(_dbContext, p => p.IsActive, p => false, cancellationToken);
     }
 
-    public async Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Id<User> userId, CancellationToken cancellationToken = default)
     {
         // 1. Find plan by ShareCode
         var planToCopy = await _dbContext.Plans
@@ -113,7 +114,7 @@ public sealed class PlanRepository : IPlanRepository
 
         await _dbContext.Plans.AddAsync(newPlan, cancellationToken);
 
-        var copiedExercises = new Dictionary<Guid, Exercise>(); // Old ExerciseId -> New Exercise
+        var copiedExercises = new Dictionary<Id<Exercise>, Exercise>(); // Old ExerciseId -> New Exercise
 
         // 4. Iterate through days
         foreach (var planDay in planDaysToCopy)
@@ -186,7 +187,7 @@ public sealed class PlanRepository : IPlanRepository
         return newPlan;
     }
 
-    public async Task<string> GenerateShareCodeAsync(Guid planId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default)
     {
         var plan = await _dbContext.Plans.FirstOrDefaultAsync(p => p.Id == planId && !p.IsDeleted, cancellationToken);
 
@@ -228,7 +229,7 @@ public sealed class PlanRepository : IPlanRepository
         throw new InvalidOperationException("Unable to generate unique share code");
     }
 
-    private Task<bool> IsShareCodeTakenAsync(string shareCode, Guid currentPlanId, CancellationToken cancellationToken)
+    private Task<bool> IsShareCodeTakenAsync(string shareCode, Id<Plan> currentPlanId, CancellationToken cancellationToken)
     {
         return _dbContext.Plans.AnyAsync(
             p => p.Id != currentPlanId && p.ShareCode == shareCode && !p.IsDeleted,

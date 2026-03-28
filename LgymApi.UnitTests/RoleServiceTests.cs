@@ -4,6 +4,7 @@ using LgymApi.Application.Features.Role;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.UnitTests;
 
@@ -29,8 +30,8 @@ public sealed class RoleServiceTests
     [Test]
     public async Task GetRolesAsync_ReturnsRolesWithClaims()
     {
-        var roleId = Guid.NewGuid();
-        _roleRepository.Roles.Add(new Role { Id = roleId, Name = "Coach", Description = "Role" });
+        var roleId = Id<Role>.New();
+        _roleRepository.Roles.Add(new Role { Id = (Domain.ValueObjects.Id<Role>)roleId, Name = "Coach", Description = "Role" });
         _roleRepository.RoleClaims[roleId] =
         [
             AuthConstants.Permissions.ManageAppConfig,
@@ -43,14 +44,15 @@ public sealed class RoleServiceTests
         {
             Assert.That(roles, Has.Count.EqualTo(1));
             Assert.That(roles[0].Name, Is.EqualTo("Coach"));
-            Assert.That(roles[0].PermissionClaims, Is.EquivalentTo(_roleRepository.RoleClaims[roleId]));
+            Assert.That(roles[0].PermissionClaims, Is.EquivalentTo(_roleRepository.RoleClaims[_roleRepository.Roles.First().Id]));
         });
     }
 
-    [Test]
-    public void GetRoleAsync_ThrowsBadRequest_WhenRoleIdEmpty()
-    {
-        var exception = Assert.ThrowsAsync<AppException>(async () => await _service.GetRoleAsync(Guid.Empty));
+     [Test]
+     public void GetRoleAsync_ThrowsBadRequest_WhenRoleIdEmpty()
+     {
+         var emptyId = default(Id<Role>);
+        var exception = Assert.ThrowsAsync<AppException>(async () => await _service.GetRoleAsync(emptyId));
 
         Assert.That(exception, Is.Not.Null);
         Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
@@ -93,9 +95,9 @@ public sealed class RoleServiceTests
     }
 
     [Test]
-    public void UpdateRoleAsync_ThrowsForbidden_ForSystemRole()
+    public async Task UpdateRoleAsync_ThrowsForbidden_ForSystemRole()
     {
-        var adminRole = new Role { Id = Guid.NewGuid(), Name = AuthConstants.Roles.Admin };
+        var adminRole = new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.Admin };
         _roleRepository.Roles.Add(adminRole);
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
@@ -112,11 +114,11 @@ public sealed class RoleServiceTests
     [Test]
     public async Task UpdateRoleAsync_UpdatesNameDescriptionAndClaims()
     {
-        var roleId = Guid.NewGuid();
-        _roleRepository.Roles.Add(new Role { Id = roleId, Name = "Coach", Description = "Old" });
+        var roleId = Id<Role>.New();
+        _roleRepository.Roles.Add(new Role { Id = (Domain.ValueObjects.Id<Role>)roleId, Name = "Coach", Description = "Old" });
 
         await _service.UpdateRoleAsync(
-            roleId,
+            (Id<Role>)roleId,
             "  Senior Coach  ",
             "  New desc  ",
             ManageGlobalExercisesClaim);
@@ -126,7 +128,7 @@ public sealed class RoleServiceTests
         {
             Assert.That(updated.Name, Is.EqualTo("Senior Coach"));
             Assert.That(updated.Description, Is.EqualTo("New desc"));
-            Assert.That(_roleRepository.RoleClaims[roleId], Is.EqualTo(ManageGlobalExercisesClaim));
+            Assert.That(_roleRepository.RoleClaims[updated.Id], Is.EqualTo(ManageGlobalExercisesClaim));
             Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
         });
     }
@@ -134,7 +136,7 @@ public sealed class RoleServiceTests
     [Test]
     public void DeleteRoleAsync_ThrowsForbidden_ForSystemRole()
     {
-        var userRole = new Role { Id = Guid.NewGuid(), Name = AuthConstants.Roles.User };
+        var userRole = new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.User };
         _roleRepository.Roles.Add(userRole);
 
         var exception = Assert.ThrowsAsync<AppException>(async () => await _service.DeleteRoleAsync(userRole.Id));
@@ -146,7 +148,7 @@ public sealed class RoleServiceTests
     [Test]
     public async Task DeleteRoleAsync_RemovesNonSystemRole()
     {
-        var role = new Role { Id = Guid.NewGuid(), Name = "Coach" };
+        var role = new Role { Id = Id<Role>.New(), Name = "Coach" };
         _roleRepository.Roles.Add(role);
 
         await _service.DeleteRoleAsync(role.Id);
@@ -161,14 +163,14 @@ public sealed class RoleServiceTests
     [Test]
     public async Task UpdateUserRolesAsync_ReplacesUserRolesUsingDistinctNames()
     {
-        var userId = Guid.NewGuid();
-        _userRepository.Users.Add(new User { Id = userId, Name = "u", Email = "u@x.com" });
+        var userId = Id<User>.New();
+        _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "u", Email = "u@x.com" });
 
-        var coach = new Role { Id = Guid.NewGuid(), Name = "Coach" };
-        var analyst = new Role { Id = Guid.NewGuid(), Name = "Analyst" };
+        var coach = new Role { Id = Id<Role>.New(), Name = "Coach" };
+        var analyst = new Role { Id = Id<Role>.New(), Name = "Analyst" };
         _roleRepository.Roles.AddRange([coach, analyst]);
 
-        await _service.UpdateUserRolesAsync(userId, [" coach ", "ANALYST", "coach"]);
+        await _service.UpdateUserRolesAsync((Id<User>)userId, [" coach ", "ANALYST", "coach"]);
 
         Assert.Multiple(() =>
         {
@@ -182,7 +184,7 @@ public sealed class RoleServiceTests
     public void UpdateUserRolesAsync_ThrowsNotFound_WhenUserMissing()
     {
         var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.UpdateUserRolesAsync(Guid.NewGuid(), ["Coach"]));
+            await _service.UpdateUserRolesAsync(Id<User>.New(), ["Coach"]));
 
         Assert.That(exception, Is.Not.Null);
         Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
@@ -191,11 +193,11 @@ public sealed class RoleServiceTests
     [Test]
     public void UpdateUserRolesAsync_ThrowsBadRequest_WhenRoleMissing()
     {
-        var userId = Guid.NewGuid();
-        _userRepository.Users.Add(new User { Id = userId, Name = "u", Email = "u@x.com" });
+        var userId = Id<User>.New();
+        _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "u", Email = "u@x.com" });
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.UpdateUserRolesAsync(userId, ["UnknownRole"]));
+            await _service.UpdateUserRolesAsync((Id<User>)userId, ["UnknownRole"]));
 
         Assert.That(exception, Is.Not.Null);
         Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
@@ -218,11 +220,11 @@ public sealed class RoleServiceTests
     {
         public List<User> Users { get; } = new();
 
-        public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
-            => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+         public Task<User?> FindByIdAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default)
+             => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
 
-        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
-            => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+         public Task<User?> FindByIdIncludingDeletedAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default)
+             => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
 
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Name == name));
@@ -254,13 +256,13 @@ public sealed class RoleServiceTests
     private sealed class InMemoryRoleRepository : IRoleRepository
     {
         public List<Role> Roles { get; } = new();
-        public Dictionary<Guid, List<string>> RoleClaims { get; } = new();
-        public Dictionary<Guid, List<Guid>> UserRoleAssignments { get; } = new();
+        public Dictionary<Id<Role>, List<string>> RoleClaims { get; } = new();
+        public Dictionary<Id<User>, List<Id<Role>>> UserRoleAssignments { get; } = new();
 
         public Task<List<Role>> GetAllAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(Roles.OrderBy(r => r.Name).ToList());
 
-        public Task<Role?> FindByIdAsync(Guid roleId, CancellationToken cancellationToken = default)
+        public Task<Role?> FindByIdAsync(Id<Role> roleId, CancellationToken cancellationToken = default)
             => Task.FromResult(Roles.FirstOrDefault(r => r.Id == roleId));
 
         public Task<Role?> FindByNameAsync(string roleName, CancellationToken cancellationToken = default)
@@ -275,7 +277,7 @@ public sealed class RoleServiceTests
             return Task.FromResult(Roles.Where(r => normalized.Contains(r.Name)).ToList());
         }
 
-        public Task<bool> ExistsByNameAsync(string roleName, Guid? excludeRoleId = null, CancellationToken cancellationToken = default)
+        public Task<bool> ExistsByNameAsync(string roleName, Id<Role>? excludeRoleId = null, CancellationToken cancellationToken = default)
         {
             var exists = Roles.Any(r =>
                 string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase) &&
@@ -283,7 +285,7 @@ public sealed class RoleServiceTests
             return Task.FromResult(exists);
         }
 
-        public Task<List<string>> GetRoleNamesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<List<string>> GetRoleNamesByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
             if (!UserRoleAssignments.TryGetValue(userId, out var roleIds))
             {
@@ -293,7 +295,7 @@ public sealed class RoleServiceTests
             return Task.FromResult(Roles.Where(r => roleIds.Contains(r.Id)).Select(r => r.Name).OrderBy(n => n).ToList());
         }
 
-        public Task<List<string>> GetPermissionClaimsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<List<string>> GetPermissionClaimsByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
             if (!UserRoleAssignments.TryGetValue(userId, out var roleIds))
             {
@@ -309,12 +311,12 @@ public sealed class RoleServiceTests
             return Task.FromResult(claims);
         }
 
-        public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default)
-            => Task.FromResult(RoleClaims.TryGetValue(roleId, out var claims)
-                ? claims.OrderBy(c => c).ToList()
-                : new List<string>());
+         public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Id<Role> roleId, CancellationToken cancellationToken = default)
+             => Task.FromResult(RoleClaims.TryGetValue(roleId, out var claims)
+                 ? claims.OrderBy(c => c).ToList()
+                 : new List<string>());
 
-        public Task<Dictionary<Guid, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
+        public Task<Dictionary<Id<Role>, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default)
         {
             var result = roleIds
                 .Distinct()
@@ -325,7 +327,7 @@ public sealed class RoleServiceTests
             return Task.FromResult(result);
         }
 
-        public Task<bool> UserHasRoleAsync(Guid userId, string roleName, CancellationToken cancellationToken = default)
+        public Task<bool> UserHasRoleAsync(Id<User> userId, string roleName, CancellationToken cancellationToken = default)
         {
             if (!UserRoleAssignments.TryGetValue(userId, out var roleIds))
             {
@@ -336,7 +338,7 @@ public sealed class RoleServiceTests
             return Task.FromResult(hasRole);
         }
 
-        public Task<bool> UserHasPermissionAsync(Guid userId, string permission, CancellationToken cancellationToken = default)
+        public Task<bool> UserHasPermissionAsync(Id<User> userId, string permission, CancellationToken cancellationToken = default)
         {
             if (!UserRoleAssignments.TryGetValue(userId, out var roleIds))
             {
@@ -380,7 +382,7 @@ public sealed class RoleServiceTests
             return Task.CompletedTask;
         }
 
-        public Task ReplaceRolePermissionClaimsAsync(Guid roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
+        public Task ReplaceRolePermissionClaimsAsync(Id<Role> roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
         {
             RoleClaims[roleId] = permissionClaims
                 .Where(c => !string.IsNullOrWhiteSpace(c))
@@ -391,26 +393,27 @@ public sealed class RoleServiceTests
             return Task.CompletedTask;
         }
 
-        public Task AddUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
+        public Task AddUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default)
         {
-            if (!UserRoleAssignments.TryGetValue(userId, out var assignments))
-            {
-                assignments = new List<Guid>();
-                UserRoleAssignments[userId] = assignments;
-            }
+             var userIdGuid = userId;
+             if (!UserRoleAssignments.TryGetValue(userIdGuid, out var assignments))
+             {
+                 assignments = new List<Id<Role>>();
+                 UserRoleAssignments[userIdGuid] = assignments;
+             }
 
-            foreach (var roleId in roleIds.Where(roleId => !assignments.Contains(roleId)))
-            {
-                assignments.Add(roleId);
-            }
+             foreach (var roleId in roleIds.Where(roleId => !assignments.Contains(roleId)))
+             {
+                 assignments.Add(roleId);
+             }
 
-            return Task.CompletedTask;
-        }
+             return Task.CompletedTask;
+         }
 
-        public Task ReplaceUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
-        {
-            UserRoleAssignments[userId] = roleIds.Distinct().ToList();
-            return Task.CompletedTask;
+         public Task ReplaceUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default)
+         {
+             UserRoleAssignments[userId] = roleIds.Distinct().ToList();
+             return Task.CompletedTask;
         }
     }
 

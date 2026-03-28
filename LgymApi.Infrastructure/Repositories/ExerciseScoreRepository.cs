@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,7 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
         return _dbContext.ExerciseScores.AddRangeAsync(scores, cancellationToken);
     }
 
-    public Task<List<ExerciseScore>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default)
+    public Task<List<ExerciseScore>> GetByIdsAsync(List<Id<ExerciseScore>> ids, CancellationToken cancellationToken = default)
     {
         return _dbContext.ExerciseScores
             .AsNoTracking()
@@ -28,7 +29,7 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<ExerciseScore>> GetByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public Task<List<ExerciseScore>> GetByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ExerciseScores
             .AsNoTracking()
@@ -42,7 +43,7 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<ExerciseScore>> GetByUserAndExerciseAndGymAsync(Guid userId, Guid exerciseId, Guid? gymId, CancellationToken cancellationToken = default)
+    public Task<List<ExerciseScore>> GetByUserAndExerciseAndGymAsync(Id<User> userId, Id<Exercise> exerciseId, Id<Gym>? gymId, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.ExerciseScores
             .AsNoTracking()
@@ -59,7 +60,7 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
         return query.OrderByDescending(s => s.CreatedAt).ToListAsync(cancellationToken);
     }
 
-    public Task<List<ExerciseScore>> GetByUserAndExercisesAsync(Guid userId, List<Guid> exerciseIds, CancellationToken cancellationToken = default)
+    public Task<List<ExerciseScore>> GetByUserAndExercisesAsync(Id<User> userId, List<Id<Exercise>> exerciseIds, CancellationToken cancellationToken = default)
     {
         return _dbContext.ExerciseScores
             .AsNoTracking()
@@ -69,7 +70,7 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<ExerciseScore>> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, Guid? gymId, CancellationToken cancellationToken = default)
+    public Task<List<ExerciseScore>> GetLatestByUserExerciseSeriesAsync(Id<User> userId, Id<Exercise> exerciseId, Id<Gym>? gymId, CancellationToken cancellationToken = default)
     {
         var filteredQuery = _dbContext.ExerciseScores
             .AsNoTracking()
@@ -94,7 +95,7 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, int series, Guid? gymId, CancellationToken cancellationToken = default)
+    public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Id<User> userId, Id<Exercise> exerciseId, int series, Id<Gym>? gymId, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.ExerciseScores
             .AsNoTracking()
@@ -111,7 +112,7 @@ public sealed class ExerciseScoreRepository : IExerciseScoreRepository
         return query.OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public Task<ExerciseScore?> GetBestScoreAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ExerciseScores
             .AsNoTracking()

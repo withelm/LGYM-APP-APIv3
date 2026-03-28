@@ -5,6 +5,8 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -39,7 +41,7 @@ public sealed class TraineeReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SubmitRequest([FromRoute] string requestId, [FromBody] SubmitReportRequestRequest request)
     {
-        if (!Guid.TryParse(requestId, out var parsedRequestId))
+        if (!Id<ReportRequest>.TryParse(requestId, out var parsedRequestId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }

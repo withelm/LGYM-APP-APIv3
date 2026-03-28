@@ -6,6 +6,7 @@ using LgymApi.Api.Features.Tutorial.Contracts;
 using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
 {
 
 
-    private async Task InitializeTutorialAsync(Guid userId)
+    private async Task InitializeTutorialAsync(Id<User> userId)
     {
         using var scope = Factory.Services.CreateScope();
         var tutorialService = scope.ServiceProvider.GetRequiredService<ITutorialService>();

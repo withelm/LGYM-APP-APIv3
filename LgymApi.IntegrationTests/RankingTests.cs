@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.IntegrationTests;
 
@@ -168,7 +170,7 @@ public sealed class RankingTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "authuser", email: "auth@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var response = await Client.GetAsync($"/api/userInfo/{Guid.NewGuid()}/getUserEloPoints");
+        var response = await Client.GetAsync($"/api/userInfo/{Id<User>.New()}/getUserEloPoints");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 

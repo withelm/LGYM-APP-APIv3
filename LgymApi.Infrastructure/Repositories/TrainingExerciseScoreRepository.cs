@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,14 +20,14 @@ public sealed class TrainingExerciseScoreRepository : ITrainingExerciseScoreRepo
         return _dbContext.TrainingExerciseScores.AddRangeAsync(scores, cancellationToken);
     }
 
-    public Task<List<TrainingExerciseScore>> GetByTrainingIdsAsync(List<Guid> trainingIds, CancellationToken cancellationToken = default)
+    public Task<List<TrainingExerciseScore>> GetByTrainingIdsAsync(List<Id<Training>> trainingIds, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainingExerciseScores
             .AsNoTracking()
             .Where(t => trainingIds.Contains(t.TrainingId))
-            .OrderBy(t => t.TrainingId)
+            .OrderBy(t => t.TrainingId.GetValue())
             .ThenBy(t => t.Order)
-            .ThenBy(t => t.Id)
+            .ThenBy(t => t.Id.GetValue())
             .ToListAsync(cancellationToken);
     }
 }

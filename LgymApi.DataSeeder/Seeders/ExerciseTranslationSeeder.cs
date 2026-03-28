@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -66,12 +67,12 @@ public sealed class ExerciseTranslationSeeder : IEntitySeeder
         SeedOperationConsole.Done("exercise translations");
     }
 
-    private static ExerciseTranslation CreateTranslation(Guid exerciseId, string culture, string name)
-    {
-        return new ExerciseTranslation
-        {
-            Id = Guid.NewGuid(),
-            ExerciseId = exerciseId,
+     private static ExerciseTranslation CreateTranslation(Id<Exercise> exerciseId, string culture, string name)
+     {
+         return new ExerciseTranslation
+         {
+             Id = Id<ExerciseTranslation>.New(),
+             ExerciseId = exerciseId,
             Culture = culture,
             Name = name
         };

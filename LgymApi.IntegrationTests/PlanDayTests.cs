@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.IntegrationTests;
@@ -107,7 +109,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var exerciseId = await CreateExerciseViaEndpointAsync(userId, "PlanDay Exercise 4", BodyParts.Shoulders);
 
-        var nonExistentPlanId = Guid.NewGuid();
+        var nonExistentPlanId = Domain.ValueObjects.Id<Plan>.New();
         var request = new
         {
             name = "Test Day",
@@ -168,7 +170,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         var translationResponse = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", translationRequest);
         translationResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var planId = await CreatePlanViaEndpointAsync(admin.Id, "Translated Plan");
+         var planId = await CreatePlanViaEndpointAsync(admin.Id, "Translation Test Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(admin.Id, planId, "Translated Day", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "8" }
@@ -232,7 +234,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var nonExistentId = Guid.NewGuid();
+        var nonExistentId = Domain.ValueObjects.Id<PlanDay>.New();
         var response = await Client.GetAsync($"/api/planDay/{nonExistentId}/getPlanDay");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -436,12 +438,12 @@ public sealed class PlanDayTests : IntegrationTestBase
             .Should()
             .ContainInOrder(exerciseC.ToString(), exerciseA.ToString(), exerciseB.ToString());
 
-        var dbContext = GetDbContext();
-        var persistedOrders = await dbContext.PlanDayExercises
-            .Where(x => x.PlanDayId == planDayId)
-            .OrderBy(x => x.Order)
-            .Select(x => x.Order)
-            .ToListAsync();
+         var dbContext = GetDbContext();
+         var persistedOrders = await dbContext.PlanDayExercises
+             .Where(x => x.PlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDayId)
+             .OrderBy(x => x.Order)
+             .Select(x => x.Order)
+             .ToListAsync();
 
         persistedOrders.Should().Equal(0, 1, 2);
     }
@@ -516,7 +518,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var nonExistentId = Guid.NewGuid();
+        var nonExistentId = Domain.ValueObjects.Id<PlanDay>.New();
         var response = await Client.GetAsync($"/api/planDay/{nonExistentId}/deletePlanDay");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);

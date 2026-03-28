@@ -2,7 +2,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using LgymApi.Application.Services;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -17,7 +19,7 @@ public sealed class TokenService : ITokenService
         _configuration = configuration;
     }
 
-    public string CreateToken(Guid userId, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
+    public string CreateToken(Id<User> userId, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
     {
         var signingKey = _configuration["Jwt:SigningKey"];
         if (string.IsNullOrWhiteSpace(signingKey) || signingKey.Length < 32)
@@ -28,10 +30,11 @@ public sealed class TokenService : ITokenService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        var userIdString = userId.ToString();
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new("userId", userId.ToString())
+            new(JwtRegisteredClaimNames.Sub, userIdString),
+            new("userId", userIdString)
         };
 
         foreach (var role in roles.Distinct(StringComparer.Ordinal))

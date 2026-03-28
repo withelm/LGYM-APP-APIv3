@@ -25,17 +25,17 @@ public sealed class NotificationMessageSeeder : IEntitySeeder
             .Select(message => new { message.Channel, message.Type, message.CorrelationId, message.Recipient })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(NotificationChannel Channel, EmailNotificationType Type, Guid CorrelationId, Email Recipient)>(
+        var existingSet = new HashSet<(NotificationChannel Channel, EmailNotificationType Type, Id<CorrelationScope> CorrelationId, Email Recipient)>(
             existing.Select(entry => (entry.Channel, entry.Type, entry.CorrelationId, entry.Recipient)));
 
         var messages = new List<NotificationMessage>
         {
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = Id<NotificationMessage>.New(),
                 Channel = NotificationChannel.Email,
                 Type = EmailNotificationTypes.TrainerInvitation,
-                CorrelationId = Guid.NewGuid(),
+                CorrelationId = Id<CorrelationScope>.New(),
                 Recipient = "trainee@lgym.app",
                 PayloadJson = "{\"template\":\"trainer-invite\"}",
                 Status = EmailNotificationStatus.Sent,
@@ -45,10 +45,10 @@ public sealed class NotificationMessageSeeder : IEntitySeeder
             },
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = Id<NotificationMessage>.New(),
                 Channel = NotificationChannel.Email,
                 Type = EmailNotificationTypes.Welcome,
-                CorrelationId = Guid.NewGuid(),
+                CorrelationId = Id<CorrelationScope>.New(),
                 Recipient = "trainee@lgym.app",
                 PayloadJson = "{\"template\":\"welcome\"}",
                 Status = EmailNotificationStatus.Pending,

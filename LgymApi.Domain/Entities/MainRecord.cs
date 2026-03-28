@@ -3,13 +3,13 @@ using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
-public sealed class MainRecord : EntityBase
+public sealed class MainRecord : EntityBase<MainRecord>
 {
     private double _weightValue;
     private WeightUnits _unit;
 
-    public Guid UserId { get; set; }
-    public Guid ExerciseId { get; set; }
+    public Id<User> UserId { get; set; }
+    public Id<Exercise> ExerciseId { get; set; }
     public double WeightValue => _weightValue;
     public Weight Weight
     {

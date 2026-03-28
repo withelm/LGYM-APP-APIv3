@@ -1,6 +1,7 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.PlanDay.Models;
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using PlanDayEntity = LgymApi.Domain.Entities.PlanDay;
 using PlanDayExerciseEntity = LgymApi.Domain.Entities.PlanDayExercise;
@@ -27,9 +28,9 @@ public sealed class PlanDayService : IPlanDayService
         _unitOfWork = dependencies.UnitOfWork;
     }
 
-    public async Task CreatePlanDayAsync(UserEntity currentUser, Guid planId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises, CancellationToken cancellationToken = default)
+    public async Task CreatePlanDayAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Plan> planId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || planId == Guid.Empty)
+        if (currentUser == null || planId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -52,7 +53,7 @@ public sealed class PlanDayService : IPlanDayService
 
         var planDay = new PlanDayEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<PlanDayEntity>.New(),
             PlanId = plan.Id,
             Name = name,
             IsDeleted = false
@@ -64,16 +65,16 @@ public sealed class PlanDayService : IPlanDayService
         var order = 0;
         foreach (var exercise in exercises)
         {
-            if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
+            if (exercise.ExerciseId.IsEmpty)
             {
                 continue;
             }
 
             exercisesToAdd.Add(new PlanDayExerciseEntity
             {
-                Id = Guid.NewGuid(),
+                Id = Id<PlanDayExerciseEntity>.New(),
                 PlanDayId = planDay.Id,
-                ExerciseId = exerciseId,
+                ExerciseId = exercise.ExerciseId,
                 Order = order++,
                 Series = exercise.Series,
                 Reps = exercise.Reps
@@ -88,7 +89,7 @@ public sealed class PlanDayService : IPlanDayService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdatePlanDayAsync(UserEntity currentUser, string planDayId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises, CancellationToken cancellationToken = default)
+    public async Task UpdatePlanDayAsync(UserEntity currentUser, Id<PlanDayEntity> planDayId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
@@ -100,12 +101,12 @@ public sealed class PlanDayService : IPlanDayService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        if (!Guid.TryParse(planDayId, out var planDayGuid))
+        if (planDayId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.DidntFind);
         }
 
-        var planDay = await _planDayRepository.FindByIdAsync(planDayGuid, cancellationToken);
+        var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
         if (planDay == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -134,16 +135,16 @@ public sealed class PlanDayService : IPlanDayService
             var order = 0;
             foreach (var exercise in exercises)
             {
-                if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
+                if (exercise.ExerciseId.IsEmpty)
                 {
                     continue;
                 }
 
                 exercisesToAdd.Add(new PlanDayExerciseEntity
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Id<PlanDayExerciseEntity>.New(),
                     PlanDayId = planDay.Id,
-                    ExerciseId = exerciseId,
+                    ExerciseId = exercise.ExerciseId,
                     Order = order++,
                     Series = exercise.Series,
                     Reps = exercise.Reps
@@ -165,9 +166,9 @@ public sealed class PlanDayService : IPlanDayService
         }
     }
 
-    public async Task<PlanDayDetailsContext> GetPlanDayAsync(UserEntity currentUser, Guid planDayId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+    public async Task<PlanDayDetailsContext> GetPlanDayAsync(UserEntity currentUser, Id<PlanDayEntity> planDayId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || planDayId == Guid.Empty)
+        if (currentUser == null || planDayId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -208,9 +209,9 @@ public sealed class PlanDayService : IPlanDayService
         };
     }
 
-    public async Task<PlanDaysContext> GetPlanDaysAsync(UserEntity currentUser, Guid planId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+    public async Task<PlanDaysContext> GetPlanDaysAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Plan> planId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || planId == Guid.Empty)
+        if (currentUser == null || planId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -253,9 +254,9 @@ public sealed class PlanDayService : IPlanDayService
         };
     }
 
-    public async Task<List<PlanDayEntity>> GetPlanDaysTypesAsync(UserEntity currentUser, Guid routeUserId, CancellationToken cancellationToken = default)
+    public async Task<List<PlanDayEntity>> GetPlanDaysTypesAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || routeUserId == Guid.Empty)
+        if (currentUser == null || routeUserId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -274,9 +275,9 @@ public sealed class PlanDayService : IPlanDayService
         return await _planDayRepository.GetByPlanIdAsync(plan.Id, cancellationToken);
     }
 
-    public async Task DeletePlanDayAsync(UserEntity currentUser, Guid planDayId, CancellationToken cancellationToken = default)
+    public async Task DeletePlanDayAsync(UserEntity currentUser, Id<PlanDayEntity> planDayId, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || planDayId == Guid.Empty)
+        if (currentUser == null || planDayId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -302,9 +303,9 @@ public sealed class PlanDayService : IPlanDayService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<PlanDaysInfoContext> GetPlanDaysInfoAsync(UserEntity currentUser, Guid planId, CancellationToken cancellationToken = default)
+    public async Task<PlanDaysInfoContext> GetPlanDaysInfoAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Plan> planId, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || planId == Guid.Empty)
+        if (currentUser == null || planId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }

@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,12 +16,12 @@ public sealed class ExerciseRepository : IExerciseRepository
         _dbContext = dbContext;
     }
 
-    public Task<Exercise?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<Exercise?> FindByIdAsync(Id<Exercise> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
-    public Task<List<Exercise>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<Exercise>> GetAllForUserAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises
             .AsNoTracking()
@@ -36,7 +37,7 @@ public sealed class ExerciseRepository : IExerciseRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<Exercise>> GetUserExercisesAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<Exercise>> GetUserExercisesAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises
             .AsNoTracking()
@@ -44,7 +45,7 @@ public sealed class ExerciseRepository : IExerciseRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<Exercise>> GetByBodyPartAsync(Guid userId, BodyParts bodyPart, CancellationToken cancellationToken = default)
+    public Task<List<Exercise>> GetByBodyPartAsync(Id<User> userId, BodyParts bodyPart, CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises
             .AsNoTracking()
@@ -52,7 +53,7 @@ public sealed class ExerciseRepository : IExerciseRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<Exercise>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default)
+    public Task<List<Exercise>> GetByIdsAsync(List<Id<Exercise>> ids, CancellationToken cancellationToken = default)
     {
         return _dbContext.Exercises
             .AsNoTracking()
@@ -60,12 +61,12 @@ public sealed class ExerciseRepository : IExerciseRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<Dictionary<Guid, string>> GetTranslationsAsync(IEnumerable<Guid> exerciseIds, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+    public async Task<Dictionary<Id<Exercise>, string>> GetTranslationsAsync(IEnumerable<Id<Exercise>> exerciseIds, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
         var ids = exerciseIds.Distinct().ToList();
         if (ids.Count == 0 || cultures.Count == 0)
         {
-            return new Dictionary<Guid, string>();
+            return new Dictionary<Id<Exercise>, string>();
         }
 
         var normalizedCultures = cultures
@@ -76,7 +77,7 @@ public sealed class ExerciseRepository : IExerciseRepository
 
         if (normalizedCultures.Count == 0)
         {
-            return new Dictionary<Guid, string>();
+            return new Dictionary<Id<Exercise>, string>();
         }
 
         var cultureIndex = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -105,7 +106,7 @@ public sealed class ExerciseRepository : IExerciseRepository
             .ToDictionary(g => g.Key, g => g.First().Name);
     }
 
-    public async Task UpsertTranslationAsync(Guid exerciseId, string culture, string name, CancellationToken cancellationToken = default)
+    public async Task UpsertTranslationAsync(Id<Exercise> exerciseId, string culture, string name, CancellationToken cancellationToken = default)
     {
         culture = culture.Trim().ToLowerInvariant();
         name = name.Trim();
@@ -117,7 +118,7 @@ public sealed class ExerciseRepository : IExerciseRepository
         {
             translation = new ExerciseTranslation
             {
-                Id = Guid.NewGuid(),
+                Id = Id<ExerciseTranslation>.New(),
                 ExerciseId = exerciseId,
                 Culture = culture,
                 Name = name

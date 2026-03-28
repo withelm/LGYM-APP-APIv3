@@ -1,4 +1,6 @@
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Infrastructure.Services;
 
@@ -7,7 +9,7 @@ namespace LgymApi.Infrastructure.Services;
 /// </summary>
 public sealed class NoOpActionMessageScheduler : IActionMessageScheduler
 {
-    public void Enqueue(Guid actionMessageId)
+    public void Enqueue(Id<CommandEnvelope> actionMessageId)
     {
         // No-op for test mode
     }

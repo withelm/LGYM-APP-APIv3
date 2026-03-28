@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -123,7 +124,7 @@ public static class TestDataFactory
         var passwordData = new LegacyPasswordService().Create(password);
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = name,
             Email = email,
             IsVisibleInRanking = isVisibleInRanking,
@@ -151,7 +152,7 @@ public static class TestDataFactory
 
         dbContext.EloRegistries.Add(new EloRegistry
         {
-            Id = Guid.NewGuid(),
+            Id = Id<EloRegistry>.New(),
             UserId = user.Id,
             Date = DateTimeOffset.UtcNow,
             Elo = elo

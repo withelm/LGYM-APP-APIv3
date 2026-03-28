@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,12 +58,12 @@ public sealed class ExerciseSeeder : IEntitySeeder
         SeedOperationConsole.Done("exercises");
     }
 
-    private static Exercise CreateExercise(string name, BodyParts bodyPart)
-    {
-        return new Exercise
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
+     private static Exercise CreateExercise(string name, BodyParts bodyPart)
+     {
+         return new Exercise
+         {
+             Id = Id<Exercise>.New(),
+             Name = name,
             BodyPart = bodyPart
         };
     }

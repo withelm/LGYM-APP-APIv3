@@ -5,6 +5,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.EloRegistry.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Features.EloRegistry.Controllers;

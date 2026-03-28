@@ -1,4 +1,6 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +15,7 @@ public sealed class EmailNotificationSubscriptionRepository : IEmailNotification
         _dbContext = dbContext;
     }
 
-    public Task<bool> IsSubscribedAsync(Guid userId, string notificationType, CancellationToken cancellationToken = default)
+    public Task<bool> IsSubscribedAsync(Id<User> userId, string notificationType, CancellationToken cancellationToken = default)
     {
         return _dbContext.EmailNotificationSubscriptions
             .AsNoTracking()

@@ -34,21 +34,21 @@ public sealed class SupplementationService : ISupplementationService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<SupplementPlanResult>> GetTraineePlansAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task<List<SupplementPlanResult>> GetTraineePlansAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         var plans = await _supplementationRepository.GetPlansByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
         return plans.Select(MapPlan).ToList();
     }
 
-    public async Task<SupplementPlanResult> CreateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, UpsertSupplementPlanCommand command, CancellationToken cancellationToken = default)
+    public async Task<SupplementPlanResult> CreateTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, UpsertSupplementPlanCommand command, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         var normalizedItems = ValidateAndNormalizeItems(command);
 
         var plan = new SupplementPlan
         {
-            Id = Guid.NewGuid(),
+            Id = Id<SupplementPlan>.New(),
             TrainerId = currentTrainer.Id,
             TraineeId = traineeId,
             Name = command.Name.Trim(),
@@ -57,7 +57,7 @@ public sealed class SupplementationService : ISupplementationService
             IsDeleted = false,
             Items = normalizedItems.Select(item => new SupplementPlanItem
             {
-                Id = Guid.NewGuid(),
+                Id = Id<SupplementPlanItem>.New(),
                 SupplementName = item.SupplementName,
                 Dosage = item.Dosage,
                 TimeOfDay = item.TimeOfDay,
@@ -72,7 +72,7 @@ public sealed class SupplementationService : ISupplementationService
         return MapPlan(plan);
     }
 
-    public async Task<SupplementPlanResult> UpdateTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, UpsertSupplementPlanCommand command, CancellationToken cancellationToken = default)
+    public async Task<SupplementPlanResult> UpdateTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<SupplementPlan> planId, UpsertSupplementPlanCommand command, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         var normalizedItems = ValidateAndNormalizeItems(command);
@@ -84,7 +84,7 @@ public sealed class SupplementationService : ISupplementationService
 
         var newPlan = new SupplementPlan
         {
-            Id = Guid.NewGuid(),
+            Id = Id<SupplementPlan>.New(),
             TrainerId = currentTrainer.Id,
             TraineeId = traineeId,
             Name = command.Name.Trim(),
@@ -93,7 +93,7 @@ public sealed class SupplementationService : ISupplementationService
             IsDeleted = false,
             Items = normalizedItems.Select(item => new SupplementPlanItem
             {
-                Id = Guid.NewGuid(),
+                Id = Id<SupplementPlanItem>.New(),
                 SupplementName = item.SupplementName,
                 Dosage = item.Dosage,
                 TimeOfDay = item.TimeOfDay,
@@ -108,7 +108,7 @@ public sealed class SupplementationService : ISupplementationService
         return MapPlan(newPlan);
     }
 
-    public async Task DeleteTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, CancellationToken cancellationToken = default)
+    public async Task DeleteTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<SupplementPlan> planId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         var plan = await EnsureOwnedPlanAsync(currentTrainer, traineeId, planId, cancellationToken);
@@ -117,7 +117,7 @@ public sealed class SupplementationService : ISupplementationService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task AssignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, CancellationToken cancellationToken = default)
+    public async Task AssignTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<SupplementPlan> planId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         var plan = await EnsureOwnedPlanAsync(currentTrainer, traineeId, planId, cancellationToken);
@@ -132,7 +132,7 @@ public sealed class SupplementationService : ISupplementationService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UnassignTraineePlanAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken = default)
+    public async Task UnassignTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
 
@@ -181,7 +181,7 @@ public sealed class SupplementationService : ISupplementationService
 
     public async Task<SupplementScheduleEntryResult> CheckOffIntakeAsync(UserEntity currentTrainee, CheckOffSupplementIntakeCommand command, CancellationToken cancellationToken = default)
     {
-        if (command.PlanItemId == Guid.Empty)
+        if (command.PlanItemId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -208,7 +208,7 @@ public sealed class SupplementationService : ISupplementationService
         {
             existing = new SupplementIntakeLog
             {
-                Id = Guid.NewGuid(),
+                Id = Id<SupplementIntakeLog>.New(),
                 TraineeId = currentTrainee.Id,
                 PlanItemId = command.PlanItemId,
                 IntakeDate = command.IntakeDate,
@@ -250,7 +250,7 @@ public sealed class SupplementationService : ISupplementationService
         };
     }
 
-    public async Task<SupplementComplianceSummaryResult> GetComplianceSummaryAsync(UserEntity currentTrainer, Guid traineeId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
+    public async Task<SupplementComplianceSummaryResult> GetComplianceSummaryAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
     {
         await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
         if (toDate < fromDate)
@@ -299,7 +299,7 @@ public sealed class SupplementationService : ISupplementationService
         };
     }
 
-    private async Task EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Guid traineeId, CancellationToken cancellationToken)
+    private async Task EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
     {
         var isTrainer = await _roleRepository.UserHasRoleAsync(currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
         if (!isTrainer)
@@ -307,7 +307,7 @@ public sealed class SupplementationService : ISupplementationService
             throw AppException.Forbidden(Messages.TrainerRoleRequired);
         }
 
-        if (traineeId == Guid.Empty)
+        if (traineeId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -319,9 +319,9 @@ public sealed class SupplementationService : ISupplementationService
         }
     }
 
-    private async Task<SupplementPlan> EnsureOwnedPlanAsync(UserEntity currentTrainer, Guid traineeId, Guid planId, CancellationToken cancellationToken)
+    private async Task<SupplementPlan> EnsureOwnedPlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<SupplementPlan> planId, CancellationToken cancellationToken)
     {
-        if (planId == Guid.Empty)
+        if (planId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }

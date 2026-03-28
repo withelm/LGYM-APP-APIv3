@@ -6,6 +6,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -49,7 +50,7 @@ public sealed class BackgroundActionOrchestratorService
     /// </summary>
     /// <param name="envelopeId">Durable command envelope id</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    public async Task OrchestrateAsync(Guid envelopeId, CancellationToken cancellationToken = default)
+    public async Task OrchestrateAsync(Id<CommandEnvelope> envelopeId, CancellationToken cancellationToken = default)
     {
         // Load envelope with execution logs
         var envelope = await _commandEnvelopeRepository.FindByIdAsync(envelopeId, cancellationToken);

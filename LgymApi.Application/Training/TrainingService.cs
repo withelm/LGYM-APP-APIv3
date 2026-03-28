@@ -42,19 +42,19 @@ public sealed class TrainingService : ITrainingService
     }
 
     public async Task<TrainingSummaryResult> AddTrainingAsync(
-        Guid userId,
+        Id<LgymApi.Domain.Entities.User> userId,
         AddTrainingInput input,
         CancellationToken cancellationToken = default)
     {
         var (gymId, planDayId, createdAt, exercises) = input;
         try
         {
-            if (userId == Guid.Empty || gymId == Guid.Empty || planDayId == Guid.Empty)
+            if (userId.IsEmpty || gymId.IsEmpty || planDayId.IsEmpty)
             {
                 throw AppException.NotFound(Messages.DidntFind);
             }
 
-            var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+            var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
             if (user == null)
             {
                 throw AppException.NotFound(Messages.DidntFind);
@@ -68,9 +68,8 @@ public sealed class TrainingService : ITrainingService
 
             var uniqueExerciseIds = exercises
                 .Select(e => e.ExerciseId)
-                .Where(e => Guid.TryParse(e, out _))
+                .Where(id => !id.IsEmpty)
                 .Distinct()
-                .Select(Guid.Parse)
                 .ToList();
 
             var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds, cancellationToken);
@@ -84,7 +83,7 @@ public sealed class TrainingService : ITrainingService
                 var createdAtUtc = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
                 var training = new TrainingEntity
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Id<LgymApi.Domain.Entities.Training>.New(),
                     UserId = user.Id,
                     TypePlanDayId = planDayId,
                     CreatedAt = new DateTimeOffset(createdAtUtc),
@@ -93,16 +92,18 @@ public sealed class TrainingService : ITrainingService
 
                 await _trainingRepository.AddAsync(training, cancellationToken);
 
-                var savedScoreIds = new List<Guid>();
+                var savedScoreIds = new List<Id<ExerciseScore>>();
                 var totalElo = 0;
                 var scoresToAdd = new List<ExerciseScore>();
                 var index = 0;
                 foreach (var exercise in exercises)
                 {
-                    if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
+                    if (exercise.ExerciseId.IsEmpty)
                     {
                         continue;
                     }
+
+                    var exerciseId = exercise.ExerciseId;
 
                     if (exercise.Unit == WeightUnits.Unknown)
                     {
@@ -111,7 +112,7 @@ public sealed class TrainingService : ITrainingService
 
                     var scoreEntity = new ExerciseScore
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Id<ExerciseScore>.New(),
                         ExerciseId = exerciseId,
                         UserId = user.Id,
                         Reps = exercise.Reps,
@@ -140,7 +141,7 @@ public sealed class TrainingService : ITrainingService
 
                 var trainingScores = savedScoreIds.Select((scoreId, index) => new TrainingExerciseScore
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Id<TrainingExerciseScore>.New(),
                     TrainingId = training.Id,
                     ExerciseScoreId = scoreId,
                     Order = index
@@ -165,7 +166,7 @@ public sealed class TrainingService : ITrainingService
                 user.ProfileRank = currentRank.Name;
                 await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Id<LgymApi.Domain.Entities.EloRegistry>.New(),
                     UserId = user.Id,
                     Date = DateTimeOffset.UtcNow,
                     Elo = newElo,
@@ -207,14 +208,14 @@ public sealed class TrainingService : ITrainingService
 
 
 
-    public async Task<TrainingEntity> GetLastTrainingAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<TrainingEntity> GetLastTrainingAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -229,14 +230,14 @@ public sealed class TrainingService : ITrainingService
         return training;
     }
 
-    public async Task<List<TrainingByDateDetails>> GetTrainingByDateAsync(Guid userId, DateTime createdAt, CancellationToken cancellationToken = default)
+    public async Task<List<TrainingByDateDetails>> GetTrainingByDateAsync(Id<LgymApi.Domain.Entities.User> userId, DateTime createdAt, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -262,8 +263,8 @@ public sealed class TrainingService : ITrainingService
         foreach (var training in trainings)
         {
             var exerciseRefs = trainingScoreRefs.Where(t => t.TrainingId == training.Id).ToList();
-            var grouped = new Dictionary<Guid, EnrichedExercise>();
-            var exerciseOrderMap = new Dictionary<Guid, int>();
+            var grouped = new Dictionary<Id<LgymApi.Domain.Entities.Exercise>, EnrichedExercise>();
+            var exerciseOrderMap = new Dictionary<Id<LgymApi.Domain.Entities.Exercise>, int>();
 
             foreach (var reference in exerciseRefs)
             {
@@ -315,9 +316,9 @@ public sealed class TrainingService : ITrainingService
         return result;
     }
 
-    public async Task<List<DateTime>> GetTrainingDatesAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<List<DateTime>> GetTrainingDatesAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -370,7 +371,7 @@ public sealed class TrainingService : ITrainingService
         return (int)Math.Round(points);
     }
 
-    private async Task<Dictionary<string, ExerciseScore>> FetchPreviousScores(Guid userId, Guid gymId, List<Guid> exerciseIds, CancellationToken cancellationToken)
+    private async Task<Dictionary<string, ExerciseScore>> FetchPreviousScores(Id<LgymApi.Domain.Entities.User> userId, Id<LgymApi.Domain.Entities.Gym> gymId, List<Id<LgymApi.Domain.Entities.Exercise>> exerciseIds, CancellationToken cancellationToken)
     {
         var scores = await _exerciseScoreRepository.GetByUserAndExercisesAsync(userId, exerciseIds, cancellationToken);
         scores = scores
@@ -394,16 +395,18 @@ public sealed class TrainingService : ITrainingService
     internal List<GroupedExerciseComparison> BuildComparisonReport(
         IReadOnlyCollection<TrainingExerciseInput> currentExercises,
         Dictionary<string, ExerciseScore> previousScores,
-        Dictionary<Guid, string> exerciseDetails)
+        Dictionary<Id<LgymApi.Domain.Entities.Exercise>, string> exerciseDetails)
     {
-        var comparisonMap = new Dictionary<Guid, GroupedExerciseComparison>();
+        var comparisonMap = new Dictionary<Id<LgymApi.Domain.Entities.Exercise>, GroupedExerciseComparison>();
 
         foreach (var current in currentExercises)
         {
-            if (!Guid.TryParse(current.ExerciseId, out var exerciseId))
+            if (current.ExerciseId.IsEmpty)
             {
                 continue;
             }
+
+            var exerciseId = current.ExerciseId;
 
             if (!comparisonMap.TryGetValue(exerciseId, out var group))
             {
@@ -440,8 +443,7 @@ public sealed class TrainingService : ITrainingService
 
         var exerciseOrder = currentExercises
             .Select(e => e.ExerciseId)
-            .Where(id => Guid.TryParse(id, out _))
-            .Select(id => Guid.Parse(id))
+            .Where(id => !id.IsEmpty)
             .Distinct()
             .ToList();
 

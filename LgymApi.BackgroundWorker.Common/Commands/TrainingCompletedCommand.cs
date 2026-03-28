@@ -7,7 +7,7 @@ namespace LgymApi.BackgroundWorker.Common.Commands;
 /// </summary>
 public sealed class TrainingCompletedCommand : IActionCommand
 {
-    public Guid UserId { get; init; }
-    public Guid TrainingId { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> UserId { get; init; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training> TrainingId { get; init; }
 
 }

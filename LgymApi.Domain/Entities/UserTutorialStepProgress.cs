@@ -1,10 +1,11 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
-public sealed class UserTutorialStepProgress : EntityBase
+public sealed class UserTutorialStepProgress : EntityBase<UserTutorialStepProgress>
 {
-    public Guid UserTutorialProgressId { get; set; }
+    public Id<UserTutorialProgress> UserTutorialProgressId { get; set; }
     public TutorialStep TutorialStep { get; set; }
     public DateTimeOffset CompletedAt { get; set; }
 

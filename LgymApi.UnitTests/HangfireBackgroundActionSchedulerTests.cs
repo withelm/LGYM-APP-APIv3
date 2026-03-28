@@ -3,6 +3,8 @@ using Hangfire.Common;
 using Hangfire.States;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Jobs;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Services;
 
 namespace LgymApi.UnitTests;
@@ -15,7 +17,7 @@ public sealed class HangfireBackgroundActionSchedulerTests
     {
         var client = new FakeBackgroundJobClient();
         var scheduler = new HangfireActionMessageScheduler(client);
-        var actionMessageId = Guid.NewGuid();
+        var actionMessageId = Id<CommandEnvelope>.New();
 
         scheduler.Enqueue(actionMessageId);
 
@@ -31,11 +33,11 @@ public sealed class HangfireBackgroundActionSchedulerTests
     }
 
     [Test]
-    public void Enqueue_PassesOnlyGuid_NoPayloadObject()
+    public void Enqueue_PassesOnlyTypedId_NoPayloadObject()
     {
         var client = new FakeBackgroundJobClient();
         var scheduler = new HangfireActionMessageScheduler(client);
-        var actionMessageId = Guid.NewGuid();
+        var actionMessageId = Id<CommandEnvelope>.New();
 
         scheduler.Enqueue(actionMessageId);
 
@@ -43,7 +45,7 @@ public sealed class HangfireBackgroundActionSchedulerTests
         Assert.Multiple(() =>
         {
             Assert.That(created.Job.Args, Has.Count.EqualTo(1));
-            Assert.That(created.Job.Args[0], Is.TypeOf<Guid>());
+            Assert.That(created.Job.Args[0], Is.TypeOf<Id<CommandEnvelope>>());
         });
     }
 
@@ -54,7 +56,7 @@ public sealed class HangfireBackgroundActionSchedulerTests
         public string Create(Job job, IState state)
         {
             CreatedJobs.Add((job, state));
-            return Guid.NewGuid().ToString();
+            return Id<FakeBackgroundJobClient>.New().ToString();
         }
 
         public bool ChangeState(string jobId, IState state, string expectedState)

@@ -1,4 +1,4 @@
-using System;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.BackgroundWorker.Common;
 
@@ -13,17 +13,17 @@ public static class IdempotencyKeyPolicy
     /// Calculates an idempotency key from a correlation ID.
     /// The key is a stable, deterministic representation suitable for database storage and lookup.
     /// </summary>
-    /// <param name="correlationId">Correlation ID (must not be Guid.Empty)</param>
+    /// <param name="correlationId">Correlation ID (must not be empty)</param>
     /// <returns>Idempotency key as string (format: correlation ID in "D" format)</returns>
-    /// <exception cref="ArgumentException">Thrown if correlationId is Guid.Empty</exception>
-    public static string CalculateKey(Guid correlationId)
+    /// <exception cref="ArgumentException">Thrown if correlationId is empty</exception>
+    public static string CalculateKey(Id<CorrelationScope> correlationId)
     {
-        if (correlationId == Guid.Empty)
+        if (correlationId.IsEmpty)
         {
             throw new ArgumentException("Correlation ID cannot be empty.", nameof(correlationId));
         }
 
-        return correlationId.ToString("D");
+        return correlationId.ToString();
     }
 
     /// <summary>
@@ -45,7 +45,7 @@ public static class IdempotencyKeyPolicy
     /// <param name="idempotencyKey">Idempotency key to verify (may be null)</param>
     /// <param name="correlationId">Correlation ID to match against</param>
     /// <returns>True if the key matches the correlation ID, false otherwise</returns>
-    public static bool IsKeyForCorrelation(string? idempotencyKey, Guid correlationId)
+    public static bool IsKeyForCorrelation(string? idempotencyKey, Id<CorrelationScope> correlationId)
     {
         if (string.IsNullOrEmpty(idempotencyKey))
         {

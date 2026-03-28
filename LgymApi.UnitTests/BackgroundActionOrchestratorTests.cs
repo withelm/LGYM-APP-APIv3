@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using System.Text.Json;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
@@ -44,7 +45,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_HappyPath_TwoHandlersSucceed()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -58,7 +59,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
@@ -70,7 +71,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_OneHandlerFails_OthersContinue()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -85,7 +86,7 @@ public sealed class BackgroundActionOrchestratorTests
 
         // Act & Assert - Should throw because one handler failed
         var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await orchestrator.OrchestrateAsync(envelopeId));
+            await orchestrator.OrchestrateAsync((Id<CommandEnvelope>)envelopeId));
         
         // Assert - Failure recorded and exception thrown for Hangfire retry
         Assert.That(ex!.Message, Does.Contain("Retry scheduled"));
@@ -97,7 +98,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_RetryIncrement_AfterFailure()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -111,7 +112,7 @@ public sealed class BackgroundActionOrchestratorTests
 
         // Act & Assert
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await orchestrator.OrchestrateAsync(envelopeId));
+            await orchestrator.OrchestrateAsync((Id<CommandEnvelope>)envelopeId));
         
         // Assert - Failure recorded, retry scheduled, exception thrown
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
@@ -123,7 +124,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_DeadLettered_AfterMaxAttempts()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         
@@ -148,7 +149,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
@@ -160,7 +161,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_ExactTypeOnly_NoPolymorphicMatching()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var derivedCommand = new DerivedTestCommand { Value = "derived", Extra = 42 };
         var envelope = CreateEnvelope(envelopeId, derivedCommand);
         _repository.AddEnvelope(envelope);
@@ -173,7 +174,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert - No handlers should match, zero-handler path
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
@@ -184,7 +185,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_ZeroHandlers_CompletesWithWarning()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -197,7 +198,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
@@ -208,7 +209,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_EnvelopeNotFound_Skips()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
 
         var services = new ServiceCollection();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
@@ -217,7 +218,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert
         Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(0));
@@ -227,7 +228,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_AlreadyCompleted_SkipsDuplicate()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         envelope.MarkCompleted();
@@ -241,7 +242,7 @@ public sealed class BackgroundActionOrchestratorTests
         var initialUpdateCount = _repository.UpdateCallCount;
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert - Should not update envelope after initial load
         Assert.That(_repository.UpdateCallCount, Is.EqualTo(initialUpdateCount));
@@ -251,11 +252,11 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_InvalidCommandType_MarksDeadLettered()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var envelope = new CommandEnvelope
         {
-            Id = envelopeId,
-            CorrelationId = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
+            CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = "{}",
             CommandTypeFullName = "NonExistent.FakeCommand",
             Status = ActionExecutionStatus.Pending
@@ -269,7 +270,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
@@ -279,11 +280,11 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_InvalidPayloadJson_MarksDeadLettered()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var envelope = new CommandEnvelope
         {
-            Id = envelopeId,
-            CorrelationId = Guid.NewGuid(),
+            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
+            CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = "{invalid json",
             CommandTypeFullName = typeof(TestCommand).AssemblyQualifiedName!,
             Status = ActionExecutionStatus.Pending
@@ -297,7 +298,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
@@ -306,7 +307,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_ScopeIsolation_EachHandlerGetsDistinctScopedDependency()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "scope-test" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -323,7 +324,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert - Each handler should have seen a distinct ScopedTracker instance
         // Assert - Each handler execution should use distinct scoped instance
@@ -336,7 +337,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_ParallelismLimit_MaxFourConcurrentHandlers()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "concurrency-test" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -355,7 +356,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert - Max concurrent handlers never exceeds 4
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
@@ -368,7 +369,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_PerHandlerErrorTracking_DurableExecutionLogs()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "error-tracking" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -383,7 +384,7 @@ public sealed class BackgroundActionOrchestratorTests
 
         // Act & Assert - Should throw because one handler failed (retry trigger)
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await orchestrator.OrchestrateAsync(envelopeId));
+            await orchestrator.OrchestrateAsync((Id<CommandEnvelope>)envelopeId));
         
         // Assert - Each handler execution should be tracked in ExecutionLogs
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
@@ -401,7 +402,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_FullNameTypeResolution_ResolvesWithoutAssemblyQualifiedName()
     {
         // Arrange: Use FullName only (no assembly qualification)
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         // Override with FullName only (Type.FullName instead of AssemblyQualifiedName)
@@ -416,7 +417,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert: Should resolve successfully using CommandDescriptor.ResolveCommandType
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed),
@@ -427,7 +428,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_AllHandlersSucceed_CreatesPerHandlerExecutionLogs()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -441,7 +442,7 @@ public sealed class BackgroundActionOrchestratorTests
         var orchestrator = CreateOrchestrator();
 
         // Act
-        await orchestrator.OrchestrateAsync(envelopeId);
+         await orchestrator.OrchestrateAsync(envelopeId);
 
         // Assert: Verify per-handler ExecutionLog entries exist for successful execution
         var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
@@ -458,7 +459,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_RetryableFailure_ThrowsExceptionToTriggerHangfireRetry()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -472,7 +473,7 @@ public sealed class BackgroundActionOrchestratorTests
 
         // Act & Assert - Should throw to trigger Hangfire AutomaticRetry
         var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await orchestrator.OrchestrateAsync(envelopeId));
+            await orchestrator.OrchestrateAsync((Id<CommandEnvelope>)envelopeId));
         
         Assert.That(ex!.Message, Does.Contain("Retry scheduled"), "Exception message should indicate retry scheduled");
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed), "Should be in Failed state");
@@ -484,7 +485,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_RetryableFailure_SecondAttemptAlsoThrows()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         // Simulate first failure already recorded
@@ -510,7 +511,7 @@ public sealed class BackgroundActionOrchestratorTests
 
         // Act & Assert - Second attempt should also throw (ShouldRetry still true)
         var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await orchestrator.OrchestrateAsync(envelopeId));
+            await orchestrator.OrchestrateAsync((Id<CommandEnvelope>)envelopeId));
         
         Assert.That(ex!.Message, Does.Contain("Retry scheduled"), "Exception should indicate retry");
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
@@ -521,7 +522,7 @@ public sealed class BackgroundActionOrchestratorTests
     public async Task OrchestrateAsync_ErrorContextDurability_StoresFullExceptionStackTrace()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+         var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "error-context" };
         var envelope = CreateEnvelope(envelopeId, command);
         _repository.AddEnvelope(envelope);
@@ -535,7 +536,7 @@ public sealed class BackgroundActionOrchestratorTests
 
         // Act & Assert - Should throw to trigger retry
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await orchestrator.OrchestrateAsync(envelopeId));
+            await orchestrator.OrchestrateAsync((Id<CommandEnvelope>)envelopeId));
         
         // Assert - ExecutionLog should contain full exception details
         var handlerLogs = envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
@@ -559,13 +560,13 @@ public sealed class BackgroundActionOrchestratorTests
             new FakeLogger());
     }
 
-    private static CommandEnvelope CreateEnvelope<TCommand>(Guid envelopeId, TCommand command)
+    private static CommandEnvelope CreateEnvelope<TCommand>(Id<CommandEnvelope> envelopeId, TCommand command)
         where TCommand : IActionCommand
     {
         return new CommandEnvelope
         {
             Id = envelopeId,
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = JsonSerializer.Serialize(command, SharedSerializationOptions.Current),
             CommandTypeFullName = typeof(TCommand).AssemblyQualifiedName!,
             Status = ActionExecutionStatus.Pending
@@ -619,7 +620,7 @@ public sealed class BackgroundActionOrchestratorTests
 
     private sealed class ScopedTracker
     {
-        public string InstanceId { get; } = Guid.NewGuid().ToString();
+        public string InstanceId { get; } = $"{Id<ScopedTracker>.New():N}";
     }
 
     private sealed class ConcurrencyTracker
@@ -688,9 +689,9 @@ public sealed class BackgroundActionOrchestratorTests
     }
 
     // Fake implementations for testing
-    private sealed class FakeCommandEnvelopeRepository : ICommandEnvelopeRepository
-    {
-        private readonly Dictionary<Guid, CommandEnvelope> _envelopes = new();
+     private sealed class FakeCommandEnvelopeRepository : ICommandEnvelopeRepository
+     {
+         private readonly Dictionary<Id<CommandEnvelope>, CommandEnvelope> _envelopes = new();
         public int UpdateCallCount { get; private set; }
 
         public void AddEnvelope(CommandEnvelope envelope)
@@ -704,13 +705,13 @@ public sealed class BackgroundActionOrchestratorTests
             return Task.CompletedTask;
         }
 
-        public Task<CommandEnvelope?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<CommandEnvelope?> FindByIdAsync(Id<CommandEnvelope> id, CancellationToken cancellationToken = default)
         {
             _envelopes.TryGetValue(id, out var envelope);
             return Task.FromResult(envelope);
         }
 
-        public Task<CommandEnvelope?> FindByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)
+        public Task<CommandEnvelope?> FindByCorrelationIdAsync(Id<CorrelationScope> correlationId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_envelopes.Values.FirstOrDefault(e => e.CorrelationId == correlationId));
         }

@@ -9,6 +9,7 @@ using LgymApi.BackgroundWorker;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
 using LgymApi.TestUtils;
@@ -90,7 +91,7 @@ public abstract class IntegrationTestBase : IDisposable
         return user;
     }
 
-    protected string GenerateJwt(Guid userId)
+    protected string GenerateJwt(Id<User> userId)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -112,20 +113,20 @@ public abstract class IntegrationTestBase : IDisposable
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(CustomWebApplicationFactory.TestJwtSigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new List<Claim>
+        var claims = new List<System.Security.Claims.Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new Claim("userId", userId.ToString())
+            new System.Security.Claims.Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new System.Security.Claims.Claim("userId", userId.ToString())
         };
 
         foreach (var role in roles)
         {
-            claims.Add(new Claim(ClaimTypes.Role, role));
+            claims.Add(new System.Security.Claims.Claim(ClaimTypes.Role, role));
         }
 
         foreach (var permission in permissionClaims)
         {
-            claims.Add(new Claim(AuthConstants.PermissionClaimType, permission));
+            claims.Add(new System.Security.Claims.Claim(AuthConstants.PermissionClaimType, permission));
         }
 
         var token = new JwtSecurityToken(
@@ -136,7 +137,7 @@ public abstract class IntegrationTestBase : IDisposable
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    protected void SetAuthorizationHeader(Guid userId)
+    protected void SetAuthorizationHeader(Id<User> userId)
     {
         using var scope = Factory.Services.CreateScope();
         var userSessionCache = scope.ServiceProvider.GetRequiredService<IUserSessionCache>();
@@ -171,7 +172,7 @@ public abstract class IntegrationTestBase : IDisposable
         return Client.PostAsync(requestUri, content);
     }
 
-    protected async Task<(Guid UserId, string Token)> RegisterUserViaEndpointAsync(
+    protected async Task<(Id<User> UserId, string Token)> RegisterUserViaEndpointAsync(
         string name = "testuser",
         string email = "test@example.com",
         string password = "password123",
@@ -192,10 +193,15 @@ public abstract class IntegrationTestBase : IDisposable
         var loginResponse = await Client.PostAsJsonAsync("/api/login", loginRequest);
         var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
 
-        return (Guid.Parse(loginBody!.User!.Id!), loginBody.Token!);
+        if (!Id<User>.TryParse(loginBody!.User!.Id!, out var userId))
+        {
+            throw new InvalidOperationException($"Failed to parse user ID: {loginBody.User.Id}");
+        }
+
+        return (userId, loginBody.Token!);
     }
 
-    protected async Task<Guid> CreateGymViaEndpointAsync(Guid userId, string name = "Test Gym")
+    protected async Task<Id<Gym>> CreateGymViaEndpointAsync(Id<User> userId, string name = "Test Gym")
     {
         SetAuthorizationHeader(userId);
         var request = new { name, address = (string?)null };
@@ -203,10 +209,16 @@ public abstract class IntegrationTestBase : IDisposable
 
         var gymsResponse = await Client.GetAsync($"/api/gym/{userId}/getGyms");
         var gyms = await gymsResponse.Content.ReadFromJsonAsync<List<GymResult>>();
-        return Guid.Parse(gyms!.First(g => g.Name == name).Id!);
+        
+        if (!Id<Gym>.TryParse(gyms!.First(g => g.Name == name).Id!, out var gymId))
+        {
+            throw new InvalidOperationException($"Failed to parse gym ID");
+        }
+
+        return gymId;
     }
 
-    protected async Task<Guid> CreatePlanViaEndpointAsync(Guid userId, string name = "Test Plan")
+    protected async Task<Id<Plan>> CreatePlanViaEndpointAsync(Id<User> userId, string name = "Test Plan")
     {
         SetAuthorizationHeader(userId);
         var request = new { name };
@@ -214,10 +226,16 @@ public abstract class IntegrationTestBase : IDisposable
 
         var plansResponse = await Client.GetAsync($"/api/{userId}/getPlansList");
         var plans = await plansResponse.Content.ReadFromJsonAsync<List<PlanResult>>();
-        return Guid.Parse(plans!.First(p => p.Name == name).Id!);
+        
+        if (!Id<Plan>.TryParse(plans!.First(p => p.Name == name).Id!, out var planId))
+        {
+            throw new InvalidOperationException($"Failed to parse plan ID");
+        }
+
+        return planId;
     }
 
-    protected async Task<Guid> CreateExerciseViaEndpointAsync(Guid userId, string name = "Test Exercise", BodyParts bodyPart = BodyParts.Chest)
+    protected async Task<Id<Exercise>> CreateExerciseViaEndpointAsync(Id<User> userId, string name = "Test Exercise", BodyParts bodyPart = BodyParts.Chest)
     {
         SetAuthorizationHeader(userId);
         var request = new { name, bodyPart = bodyPart.ToString(), description = "Test description" };
@@ -225,10 +243,16 @@ public abstract class IntegrationTestBase : IDisposable
 
         var exercisesResponse = await Client.GetAsync($"/api/exercise/{userId}/getAllUserExercises");
         var exercises = await exercisesResponse.Content.ReadFromJsonAsync<List<ExerciseResult>>();
-        return Guid.Parse(exercises!.First(e => e.Name == name).Id!);
+        
+        if (!Id<Exercise>.TryParse(exercises!.First(e => e.Name == name).Id!, out var exerciseId))
+        {
+            throw new InvalidOperationException($"Failed to parse exercise ID");
+        }
+
+        return exerciseId;
     }
 
-    protected async Task<Guid> CreateGlobalExerciseViaEndpointAsync(Guid userId, string name = "Global Exercise", BodyParts bodyPart = BodyParts.Chest)
+    protected async Task<Id<Exercise>> CreateGlobalExerciseViaEndpointAsync(Id<User> userId, string name = "Global Exercise", BodyParts bodyPart = BodyParts.Chest)
     {
         SetAuthorizationHeader(userId);
         var request = new { name, bodyPart = bodyPart.ToString(), description = "Global exercise description" };
@@ -236,18 +260,32 @@ public abstract class IntegrationTestBase : IDisposable
 
         var exercisesResponse = await Client.GetAsync("/api/exercise/getAllGlobalExercises");
         var exercises = await exercisesResponse.Content.ReadFromJsonAsync<List<ExerciseResult>>();
-        return Guid.Parse(exercises!.First(e => e.Name == name).Id!);
+        
+        if (!Id<Exercise>.TryParse(exercises!.First(e => e.Name == name).Id!, out var exerciseId))
+        {
+            throw new InvalidOperationException($"Failed to parse exercise ID");
+        }
+
+        return exerciseId;
     }
 
-    protected async Task<Guid> CreatePlanDayViaEndpointAsync(Guid userId, Guid planId, string name, List<PlanDayExerciseInput> exercises)
+    protected async Task<Id<PlanDay>> CreatePlanDayViaEndpointAsync(Id<User> userId, Id<Plan> planId, string name, List<PlanDayExerciseInput> exercises)
     {
         SetAuthorizationHeader(userId);
-        var request = new { name, exercises };
+        // Convert internal typed ID model to HTTP request DTO format (with string IDs)
+        var exerciseDtos = exercises.Select(e => new { exercise = e.ExerciseId.ToString()!, series = e.Series, reps = e.Reps }).ToList();
+        var request = new { name, exercises = exerciseDtos };
         await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", request);
 
         var planDaysResponse = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
         var planDays = await planDaysResponse.Content.ReadFromJsonAsync<List<PlanDayResult>>();
-        return Guid.Parse(planDays!.First(pd => pd.Name == name).Id!);
+        
+        if (!Id<PlanDay>.TryParse(planDays!.First(pd => pd.Name == name).Id!, out var planDayId))
+        {
+            throw new InvalidOperationException($"Failed to parse plan day ID");
+        }
+
+        return planDayId;
     }
 
     protected sealed class LoginResult

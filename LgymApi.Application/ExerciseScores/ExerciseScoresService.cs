@@ -2,6 +2,7 @@ using System.Globalization;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
 namespace LgymApi.Application.Features.ExerciseScores;
@@ -17,14 +18,14 @@ public sealed class ExerciseScoresService : IExerciseScoresService
         _exerciseScoreRepository = exerciseScoreRepository;
     }
 
-    public async Task<List<ExerciseScoresChartData>> GetExerciseScoresChartDataAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public async Task<List<ExerciseScoresChartData>> GetExerciseScoresChartDataAsync(Id<LgymApi.Domain.Entities.User> userId, Id<LgymApi.Domain.Entities.Exercise> exerciseId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty || exerciseId == Guid.Empty)
+        if (userId.IsEmpty || exerciseId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);

@@ -4,6 +4,7 @@ using LgymApi.Api.Features.MainRecords.Contracts;
 using LgymApi.Application.Features.MainRecords.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Api.Mapping.Profiles;
 
@@ -11,7 +12,7 @@ public sealed class MainRecordProfile : IMappingProfile
 {
     internal static class Keys
     {
-        internal static readonly ContextKey<IReadOnlyDictionary<Guid, Exercise>> ExerciseMap = new("MainRecord.ExerciseMap");
+        internal static readonly ContextKey<IReadOnlyDictionary<Id<Exercise>, Exercise>> ExerciseMap = new("MainRecord.ExerciseMap");
     }
 
     public void Configure(MappingConfiguration configuration)

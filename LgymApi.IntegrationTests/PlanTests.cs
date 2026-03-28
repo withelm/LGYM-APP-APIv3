@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -192,7 +193,7 @@ public sealed class PlanTests : IntegrationTestBase
         SetAuthorizationHeader(user.Id);
 
         var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Delete Plan Exercise", BodyParts.Chest);
-        var planId = await CreatePlanViaEndpointAsync(user.Id, "Plan To Delete");
+         var planId = await CreatePlanViaEndpointAsync(user.Id, "Test Plan");
         await CreatePlanDayViaEndpointAsync(user.Id, planId, "Delete Day 1", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
@@ -215,14 +216,14 @@ public sealed class PlanTests : IntegrationTestBase
 
         var updatedPlan = await db.Plans
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.Id == planId);
+            .FirstOrDefaultAsync(p => p.Id == (Domain.ValueObjects.Id<Plan>)planId);
         updatedPlan.Should().NotBeNull();
         updatedPlan!.IsActive.Should().BeFalse();
         updatedPlan.IsDeleted.Should().BeTrue();
 
         var planDays = await db.PlanDays
             .IgnoreQueryFilters()
-            .Where(pd => pd.PlanId == planId)
+            .Where(pd => pd.PlanId == (Domain.ValueObjects.Id<Plan>)planId)
             .ToListAsync();
         planDays.Should().HaveCount(3);
         planDays.All(pd => pd.IsDeleted).Should().BeTrue();
@@ -273,9 +274,9 @@ public sealed class PlanTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "deleteplanownertrain", email: "deleteplanownertrain@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Owner Delete Exercise", BodyParts.Chest);
-        var gymId = await CreateGymViaEndpointAsync(user.Id, "Owner Delete Gym");
-        var planId = await CreatePlanViaEndpointAsync(user.Id, "Owner Delete Plan");
+         var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Owner Delete Exercise", BodyParts.Chest);
+         var gymId = await CreateGymViaEndpointAsync(user.Id, "Test Gym");
+         var planId = await CreatePlanViaEndpointAsync(user.Id, "Test Plan");
         var planDay1Id = await CreatePlanDayViaEndpointAsync(user.Id, planId, "Owner Delete Day 1", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
@@ -297,20 +298,20 @@ public sealed class PlanTests : IntegrationTestBase
 
         var updatedPlan = await db.Plans
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.Id == planId);
+            .FirstOrDefaultAsync(p => p.Id == (Domain.ValueObjects.Id<Plan>)planId);
         updatedPlan.Should().NotBeNull();
         updatedPlan!.IsActive.Should().BeFalse();
         updatedPlan.IsDeleted.Should().BeTrue();
 
         var planDays = await db.PlanDays
             .IgnoreQueryFilters()
-            .Where(pd => pd.PlanId == planId)
+            .Where(pd => pd.PlanId == (Domain.ValueObjects.Id<Plan>)planId)
             .ToListAsync();
         planDays.Should().HaveCount(2);
         planDays.All(pd => pd.IsDeleted).Should().BeTrue();
 
         var trainings = await db.Trainings
-            .Where(t => t.UserId == user.Id && (t.TypePlanDayId == planDay1Id || t.TypePlanDayId == planDay2Id))
+            .Where(t => t.UserId == (Domain.ValueObjects.Id<User>)user.Id && (t.TypePlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDay1Id || t.TypePlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDay2Id))
             .ToListAsync();
         trainings.Should().HaveCount(2);
     }
@@ -321,10 +322,10 @@ public sealed class PlanTests : IntegrationTestBase
         var owner = await SeedUserAsync(name: "deleteplannonowner1", email: "deleteplannonowner1@example.com");
         var attacker = await SeedUserAsync(name: "deleteplannonowner2", email: "deleteplannonowner2@example.com");
 
-        SetAuthorizationHeader(owner.Id);
-        var exerciseId = await CreateExerciseViaEndpointAsync(owner.Id, "NonOwner Delete Exercise", BodyParts.Back);
-        var gymId = await CreateGymViaEndpointAsync(owner.Id, "NonOwner Delete Gym");
-        var planId = await CreatePlanViaEndpointAsync(owner.Id, "NonOwner Protected Plan");
+         SetAuthorizationHeader(owner.Id);
+         var exerciseId = await CreateExerciseViaEndpointAsync(owner.Id, "NonOwner Delete Exercise", BodyParts.Back);
+         var gymId = await CreateGymViaEndpointAsync(owner.Id, "Test Gym");
+         var planId = await CreatePlanViaEndpointAsync(owner.Id, "Test Plan");
         var planDay1Id = await CreatePlanDayViaEndpointAsync(owner.Id, planId, "NonOwner Day 1", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
@@ -345,17 +346,17 @@ public sealed class PlanTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var unchangedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId);
+        var unchangedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == (Domain.ValueObjects.Id<Plan>)planId);
         unchangedPlan.Should().NotBeNull();
         unchangedPlan!.IsActive.Should().BeTrue();
         unchangedPlan.IsDeleted.Should().BeFalse();
 
-        var unchangedPlanDays = await db.PlanDays.Where(pd => pd.PlanId == planId).ToListAsync();
+        var unchangedPlanDays = await db.PlanDays.Where(pd => pd.PlanId == (Domain.ValueObjects.Id<Plan>)planId).ToListAsync();
         unchangedPlanDays.Should().HaveCount(2);
         unchangedPlanDays.All(pd => !pd.IsDeleted).Should().BeTrue();
 
         var trainings = await db.Trainings
-            .Where(t => t.UserId == owner.Id && (t.TypePlanDayId == planDay1Id || t.TypePlanDayId == planDay2Id))
+            .Where(t => t.UserId == (Domain.ValueObjects.Id<User>)owner.Id && (t.TypePlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDay1Id || t.TypePlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDay2Id))
             .ToListAsync();
         trainings.Should().HaveCount(2);
     }
@@ -482,7 +483,7 @@ public sealed class PlanTests : IntegrationTestBase
         updatedUser!.PlanId.Should().BeNull();
     }
 
-    private async Task AddTrainingViaEndpointAsync(Guid userId, Guid gymId, Guid planDayId, Guid exerciseId)
+    private async Task AddTrainingViaEndpointAsync(Id<User> userId, Id<Gym> gymId, Id<PlanDay> planDayId, Id<Exercise> exerciseId)
     {
         var request = new
         {
@@ -499,14 +500,14 @@ public sealed class PlanTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    private async Task<Plan> SeedPlanAsync(Guid userId, string name, bool isActive = true)
+    private async Task<Plan> SeedPlanAsync(Id<User> userId, string name, bool isActive = true)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var plan = new Plan
         {
-            Id = Guid.NewGuid(),
+            Id = Id<Plan>.New(),
             UserId = userId,
             Name = name,
             IsActive = isActive
@@ -545,7 +546,7 @@ public sealed class PlanTests : IntegrationTestBase
     private sealed class CopiedPlanResponse
     {
         [JsonPropertyName("id")]
-        public Guid Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
@@ -554,7 +555,7 @@ public sealed class PlanTests : IntegrationTestBase
         public bool IsActive { get; set; }
 
         [JsonPropertyName("userId")]
-        public Guid UserId { get; set; }
+        public string UserId { get; set; } = string.Empty;
     }
 
     [Test]
@@ -580,7 +581,7 @@ public sealed class PlanTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "shareuser2", email: "share2@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var nonExistentPlanId = Guid.NewGuid();
+        var nonExistentPlanId = Id<Plan>.New();
         var response = await Client.PostAsync($"/api/{nonExistentPlanId}/share", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -620,7 +621,7 @@ public sealed class PlanTests : IntegrationTestBase
         var copyBody = await copyResponse.Content.ReadFromJsonAsync<CopiedPlanResponse>();
         copyBody.Should().NotBeNull();
         copyBody!.Name.Should().Be("Plan To Copy");
-        copyBody.UserId.Should().Be(user2.Id);
+        copyBody.UserId.Should().Be(user2.Id.ToString());
         copyBody.IsActive.Should().BeTrue();
     }
 

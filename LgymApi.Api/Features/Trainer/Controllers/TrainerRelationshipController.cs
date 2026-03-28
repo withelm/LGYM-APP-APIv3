@@ -13,9 +13,13 @@ using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
+using PlanEntity = LgymApi.Domain.Entities.Plan;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.Trainer.Controllers;
 
@@ -37,7 +41,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(TrainerInvitationDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateInvitation([FromBody] CreateTrainerInvitationRequest request)
     {
-        if (!Guid.TryParse(request.TraineeId, out var traineeId))
+        if (!Id<UserEntity>.TryParse(request.TraineeId, out var traineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -86,7 +90,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeTrainingDates([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -102,7 +106,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeTrainingByDate([FromRoute] string traineeId, [FromBody] TrainingByDateRequestDto request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -118,12 +122,12 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeExerciseScoresChartData([FromRoute] string traineeId, [FromBody] ExerciseScoresChartRequestDto request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(request.ExerciseId, out var parsedExerciseId))
+        if (!Id<ExerciseEntity>.TryParse(request.ExerciseId, out var parsedExerciseId))
         {
             throw AppException.BadRequest(Messages.ExerciseIdRequired);
         }
@@ -139,7 +143,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeEloChart([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -155,7 +159,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeMainRecordsHistory([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -170,7 +174,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UnlinkTrainee([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -184,7 +188,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(List<TrainerManagedPlanDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTraineePlans([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -198,7 +202,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(TrainerManagedPlanDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateTraineePlan([FromRoute] string traineeId, [FromBody] TrainerPlanFormRequest request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -212,12 +216,12 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(TrainerManagedPlanDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, [FromBody] TrainerPlanFormRequest request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(planId, out var parsedPlanId))
+        if (!Id<PlanEntity>.TryParse(planId, out var parsedPlanId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -231,12 +235,12 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(planId, out var parsedPlanId))
+        if (!Id<PlanEntity>.TryParse(planId, out var parsedPlanId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -250,12 +254,12 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> AssignTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(planId, out var parsedPlanId))
+        if (!Id<PlanEntity>.TryParse(planId, out var parsedPlanId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -269,7 +273,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UnassignTraineePlan([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }

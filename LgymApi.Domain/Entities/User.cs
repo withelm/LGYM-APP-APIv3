@@ -3,13 +3,13 @@ using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
-public sealed class User : EntityBase
+public sealed class User : EntityBase<User>
 {
     public string Name { get; set; } = string.Empty;
     public Email Email { get; set; } = new("placeholder@example.com");
     public string PreferredLanguage { get; set; } = string.Empty;
     public string PreferredTimeZone { get; set; } = string.Empty;
-    public Guid? PlanId { get; set; }
+    public Id<Plan>? PlanId { get; set; }
     public string ProfileRank { get; set; } = string.Empty;
     public string? Avatar { get; set; }
     public bool IsVisibleInRanking { get; set; } = true;

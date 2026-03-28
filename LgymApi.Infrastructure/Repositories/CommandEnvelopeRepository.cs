@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,14 +21,14 @@ public sealed class CommandEnvelopeRepository : ICommandEnvelopeRepository
         await _dbContext.CommandEnvelopes.AddAsync(envelope, cancellationToken);
     }
 
-    public Task<CommandEnvelope?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<CommandEnvelope?> FindByIdAsync(Id<CommandEnvelope> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.CommandEnvelopes
             .Include(e => e.ExecutionLogs)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
-    public Task<CommandEnvelope?> FindByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)
+    public Task<CommandEnvelope?> FindByCorrelationIdAsync(Id<CorrelationScope> correlationId, CancellationToken cancellationToken = default)
     {
         return _dbContext.CommandEnvelopes
             .Include(e => e.ExecutionLogs)

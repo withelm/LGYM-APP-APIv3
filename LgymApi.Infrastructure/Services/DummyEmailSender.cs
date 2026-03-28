@@ -1,5 +1,6 @@
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Options;
 using System.Text;
 
@@ -26,7 +27,7 @@ public sealed class DummyEmailSender : IEmailSender
         var outputDirectory = ResolveOutputDirectory(_emailOptions.DummyOutputDirectory);
         Directory.CreateDirectory(outputDirectory);
 
-        var fileName = $"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfff}-{Guid.NewGuid():N}.email.txt";
+        var fileName = $"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfff}-{Id<DummyEmailSender>.New():N}.email.txt";
         var filePath = Path.Combine(outputDirectory, fileName);
 
         var content = BuildContent(message);

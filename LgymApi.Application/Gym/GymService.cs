@@ -1,7 +1,9 @@
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Gym.Models;
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.Entities;
 using LgymApi.Resources;
+using LgymApi.Domain.ValueObjects;
 using GymEntity = LgymApi.Domain.Entities.Gym;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -20,9 +22,9 @@ public sealed class GymService : IGymService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddGymAsync(UserEntity currentUser, Guid routeUserId, string name, string? address, CancellationToken cancellationToken = default)
+    public async Task AddGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.User> routeUserId, string name, string? address, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || routeUserId == Guid.Empty)
+        if (currentUser == null || routeUserId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -37,15 +39,15 @@ public sealed class GymService : IGymService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        Guid? addressId = null;
-        if (!string.IsNullOrWhiteSpace(address) && Guid.TryParse(address, out var parsedAddressId))
+        Id<Address>? addressId = null;
+        if (!string.IsNullOrWhiteSpace(address) && Id<Address>.TryParse(address, out var parsedAddressId))
         {
             addressId = parsedAddressId;
         }
 
         var gym = new GymEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<LgymApi.Domain.Entities.Gym>.New(),
             UserId = currentUser.Id,
             Name = name,
             AddressId = addressId,
@@ -56,14 +58,14 @@ public sealed class GymService : IGymService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteGymAsync(UserEntity currentUser, Guid gymId, CancellationToken cancellationToken = default)
+    public async Task DeleteGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (gymId == Guid.Empty)
+        if (gymId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -84,9 +86,9 @@ public sealed class GymService : IGymService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<GymListContext> GetGymsAsync(UserEntity currentUser, Guid routeUserId, CancellationToken cancellationToken = default)
+    public async Task<GymListContext> GetGymsAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.User> routeUserId, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || routeUserId == Guid.Empty)
+        if (currentUser == null || routeUserId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -112,14 +114,14 @@ public sealed class GymService : IGymService
         };
     }
 
-    public async Task<GymEntity> GetGymAsync(UserEntity currentUser, Guid gymId, CancellationToken cancellationToken = default)
+    public async Task<GymEntity> GetGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (gymId == Guid.Empty)
+        if (gymId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -138,14 +140,14 @@ public sealed class GymService : IGymService
         return gym;
     }
 
-    public async Task UpdateGymAsync(UserEntity currentUser, Guid gymId, string name, string? address, CancellationToken cancellationToken = default)
+    public async Task UpdateGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, string name, string? address, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (gymId == Guid.Empty)
+        if (gymId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -162,7 +164,7 @@ public sealed class GymService : IGymService
         }
 
         gym.Name = name;
-        if (!string.IsNullOrWhiteSpace(address) && Guid.TryParse(address, out var addressId))
+        if (!string.IsNullOrWhiteSpace(address) && Id<Address>.TryParse(address, out var addressId))
         {
             gym.AddressId = addressId;
         }

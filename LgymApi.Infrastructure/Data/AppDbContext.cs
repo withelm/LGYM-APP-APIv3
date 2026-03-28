@@ -49,19 +49,129 @@ public sealed class AppDbContext : DbContext
     public DbSet<UserTutorialStepProgress> UserTutorialStepProgresses => Set<UserTutorialStepProgress>();
     public DbSet<UserTutorialProgress> UserTutorialProgresses => Set<UserTutorialProgress>();
 
-    public static readonly Guid UserRoleSeedId = Guid.Parse("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
-    public static readonly Guid AdminRoleSeedId = Guid.Parse("1754c6f8-c021-41aa-b610-17088f9476f9");
-    public static readonly Guid TesterRoleSeedId = Guid.Parse("f93f03af-ae11-4fd8-a60e-f970f89df6fb");
-    public static readonly Guid TrainerRoleSeedId = Guid.Parse("8c1a3db8-72a3-47cc-b3de-f5347c6ae501");
-    public static readonly Guid AdminAccessClaimSeedId = Guid.Parse("9dbfd057-cf88-4597-b668-2fdf16a2def6");
-    public static readonly Guid ManageUserRolesClaimSeedId = Guid.Parse("97f7ea56-0032-4f18-8703-ab2d1485ad45");
-    public static readonly Guid ManageAppConfigClaimSeedId = Guid.Parse("d12f9f84-48f4-4f4b-9614-843f31ea0f96");
-    public static readonly Guid ManageGlobalExercisesClaimSeedId = Guid.Parse("27965bf4-ff55-4261-8f98-218ccf00e537");
+    public static readonly Id<Role> UserRoleSeedId = ParseSeedId<Role>("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
+    public static readonly Id<Role> AdminRoleSeedId = ParseSeedId<Role>("1754c6f8-c021-41aa-b610-17088f9476f9");
+    public static readonly Id<Role> TesterRoleSeedId = ParseSeedId<Role>("f93f03af-ae11-4fd8-a60e-f970f89df6fb");
+    public static readonly Id<Role> TrainerRoleSeedId = ParseSeedId<Role>("8c1a3db8-72a3-47cc-b3de-f5347c6ae501");
+    public static readonly Id<RoleClaim> AdminAccessClaimSeedId = ParseSeedId<RoleClaim>("9dbfd057-cf88-4597-b668-2fdf16a2def6");
+    public static readonly Id<RoleClaim> ManageUserRolesClaimSeedId = ParseSeedId<RoleClaim>("97f7ea56-0032-4f18-8703-ab2d1485ad45");
+    public static readonly Id<RoleClaim> ManageAppConfigClaimSeedId = ParseSeedId<RoleClaim>("d12f9f84-48f4-4f4b-9614-843f31ea0f96");
+    public static readonly Id<RoleClaim> ManageGlobalExercisesClaimSeedId = ParseSeedId<RoleClaim>("27965bf4-ff55-4261-8f98-218ccf00e537");
     private static readonly DateTimeOffset RoleSeedTimestamp = new(2026, 2, 15, 0, 0, 0, TimeSpan.Zero);
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+
+        // T5: Register typed-ID value converters for all entity types.
+        // These converters enable Id<TEntity> and Id<TEntity>? to map to/from GUID columns
+        // in the database without changing schema (GUID columns remain GUID-backed).
+        
+        // Discover all entity types that inherit from EntityBase<T>
+        // Load types from Domain assembly where entities are defined
+        var domainAssembly = typeof(EntityBase<>).Assembly;
+        var entityTypes = domainAssembly
+            .GetTypes()
+            .Where(t => t.Namespace == "LgymApi.Domain.Entities" && !t.IsAbstract && t.IsClass)
+            .Where(t =>
+            {
+                var baseType = t.BaseType;
+                while (baseType != null)
+                {
+                    // Check if this is EntityBase<T> by looking at generic type definition
+                    if (baseType.IsGenericType && 
+                        baseType.GetGenericTypeDefinition().Name == "EntityBase`1")
+                    {
+                        return true;
+                    }
+                    baseType = baseType.BaseType;
+                }
+                return false;
+            })
+            .ToList();
+
+        // Register converters for each entity type
+        foreach (var entityType in entityTypes)
+        {
+            var idType = typeof(Id<>).MakeGenericType(entityType);
+            var nullableIdType = typeof(Nullable<>).MakeGenericType(idType);
+            
+            var converterType = typeof(TypedIdValueConverter<>).MakeGenericType(entityType);
+            var nullableConverterType = typeof(NullableTypedIdValueConverter<>).MakeGenericType(entityType);
+
+            // Register conversion for Id<TEntity> properties
+            configurationBuilder.Properties(idType).HaveConversion(converterType);
+            
+            // Register conversion for nullable Id<TEntity>? properties
+            configurationBuilder.Properties(nullableIdType).HaveConversion(nullableConverterType);
+        }
+
+        configurationBuilder.Properties<Id<CorrelationScope>>().HaveConversion<TypedIdValueConverter<CorrelationScope>>();
+        configurationBuilder.Properties<Id<CorrelationScope>?>().HaveConversion<NullableTypedIdValueConverter<CorrelationScope>>();
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // T5: Explicitly configure typed-ID converters with comparers to enable key validation
+        // Register each entity type that has a typed ID property
+        var entityTypesWithTypedIds = typeof(AppDbContext).Assembly
+            .GetTypes()
+            .Where(t => t.Namespace == "LgymApi.Domain.Entities" && !t.IsAbstract && t.IsClass)
+            .Where(t =>
+            {
+                var baseType = t.BaseType;
+                while (baseType != null)
+                {
+                    if (baseType.IsGenericType && 
+                        baseType.GetGenericTypeDefinition().Name == "EntityBase`1")
+                    {
+                        return true;
+                    }
+                    baseType = baseType.BaseType;
+                }
+                return false;
+            })
+            .ToList();
+
+        foreach (var entityType in entityTypesWithTypedIds)
+        {
+            var converterType = typeof(TypedIdValueConverter<>).MakeGenericType(entityType);
+            var nullableConverterType = typeof(NullableTypedIdValueConverter<>).MakeGenericType(entityType);
+            
+            var converterInstance = (dynamic)Activator.CreateInstance(converterType)!;
+            var nullableConverterInstance = (dynamic)Activator.CreateInstance(nullableConverterType)!;
+
+            // Use reflection to call Entity<T>().Property(...).HasConversion(converter)
+            var entityMethod = typeof(ModelBuilder)
+                .GetMethod("Entity", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                ?.MakeGenericMethod(entityType);
+            
+            if (entityMethod == null)
+                continue;
+
+            dynamic entityBuilder = entityMethod.Invoke(modelBuilder, null)!;
+            
+            // Configure Id property
+            var propertyMethod = entityBuilder.GetType()
+                .GetMethod("Property", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                ?.MakeGenericMethod(typeof(Id<>).MakeGenericType(entityType));
+            
+            if (propertyMethod == null)
+                continue;
+
+            var idParam = System.Linq.Expressions.Expression.Parameter(entityType, "e");
+            var idProp = System.Linq.Expressions.Expression.Property(idParam, "Id");
+            var idLambda = System.Linq.Expressions.Expression.Lambda(idProp, idParam);
+            
+            dynamic propBuilder = propertyMethod.Invoke(entityBuilder, new object[] { idLambda })!;
+            var hasConversionMethod = propBuilder.GetType()
+                .GetMethod("HasConversion", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                ?.MakeGenericMethod(converterInstance.GetType().GetProperty("ModelClrType")!.GetValue(converterInstance));
+            
+            hasConversionMethod?.Invoke(propBuilder, new object?[] { converterInstance });
+        }
 
         ApplySoftDeleteQueryFilters(modelBuilder);
 
@@ -227,7 +337,7 @@ public sealed class AppDbContext : DbContext
             entity.HasData(
                 new Role
                 {
-                    Id = UserRoleSeedId,
+                    Id = (Id<Role>)UserRoleSeedId,
                     Name = AuthConstants.Roles.User,
                     Description = "Default role for all users",
                     CreatedAt = RoleSeedTimestamp,
@@ -235,7 +345,7 @@ public sealed class AppDbContext : DbContext
                 },
                 new Role
                 {
-                    Id = AdminRoleSeedId,
+                    Id = (Id<Role>)AdminRoleSeedId,
                     Name = AuthConstants.Roles.Admin,
                     Description = "Administrative privileges",
                     CreatedAt = RoleSeedTimestamp,
@@ -243,7 +353,7 @@ public sealed class AppDbContext : DbContext
                 },
                 new Role
                 {
-                    Id = TesterRoleSeedId,
+                    Id = (Id<Role>)TesterRoleSeedId,
                     Name = AuthConstants.Roles.Tester,
                     Description = "Excluded from ranking",
                     CreatedAt = RoleSeedTimestamp,
@@ -251,7 +361,7 @@ public sealed class AppDbContext : DbContext
                 },
                 new Role
                 {
-                    Id = TrainerRoleSeedId,
+                    Id = (Id<Role>)TrainerRoleSeedId,
                     Name = AuthConstants.Roles.Trainer,
                     Description = "Trainer role for coach-facing APIs",
                     CreatedAt = RoleSeedTimestamp,
@@ -288,8 +398,8 @@ public sealed class AppDbContext : DbContext
             entity.HasData(
                 new RoleClaim
                 {
-                    Id = AdminAccessClaimSeedId,
-                    RoleId = AdminRoleSeedId,
+                    Id = (Id<RoleClaim>)AdminAccessClaimSeedId,
+                    RoleId = (Id<Role>)AdminRoleSeedId,
                     ClaimType = AuthConstants.PermissionClaimType,
                     ClaimValue = AuthConstants.Permissions.AdminAccess,
                     CreatedAt = RoleSeedTimestamp,
@@ -297,8 +407,8 @@ public sealed class AppDbContext : DbContext
                 },
                 new RoleClaim
                 {
-                    Id = ManageUserRolesClaimSeedId,
-                    RoleId = AdminRoleSeedId,
+                    Id = (Id<RoleClaim>)ManageUserRolesClaimSeedId,
+                    RoleId = (Id<Role>)AdminRoleSeedId,
                     ClaimType = AuthConstants.PermissionClaimType,
                     ClaimValue = AuthConstants.Permissions.ManageUserRoles,
                     CreatedAt = RoleSeedTimestamp,
@@ -306,8 +416,8 @@ public sealed class AppDbContext : DbContext
                 },
                 new RoleClaim
                 {
-                    Id = ManageAppConfigClaimSeedId,
-                    RoleId = AdminRoleSeedId,
+                    Id = (Id<RoleClaim>)ManageAppConfigClaimSeedId,
+                    RoleId = (Id<Role>)AdminRoleSeedId,
                     ClaimType = AuthConstants.PermissionClaimType,
                     ClaimValue = AuthConstants.Permissions.ManageAppConfig,
                     CreatedAt = RoleSeedTimestamp,
@@ -315,8 +425,8 @@ public sealed class AppDbContext : DbContext
                 },
                 new RoleClaim
                 {
-                    Id = ManageGlobalExercisesClaimSeedId,
-                    RoleId = AdminRoleSeedId,
+                    Id = (Id<RoleClaim>)ManageGlobalExercisesClaimSeedId,
+                    RoleId = (Id<Role>)AdminRoleSeedId,
                     ClaimType = AuthConstants.PermissionClaimType,
                     ClaimValue = AuthConstants.Permissions.ManageGlobalExercises,
                     CreatedAt = RoleSeedTimestamp,
@@ -505,6 +615,20 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<CommandEnvelope>(entity =>
         {
             entity.ToTable("CommandEnvelopes");
+            var idProp = entity.Property(e => e.Id);
+            idProp.HasConversion(typeof(TypedIdValueConverter<CommandEnvelope>));
+            var metadata = entity.Metadata.FindProperty("Id");
+            if (metadata != null)
+            {
+                var comparerType = typeof(IdValueComparer<>).MakeGenericType(typeof(CommandEnvelope));
+                var comparer = Activator.CreateInstance(comparerType);
+                if (comparer != null)
+                {
+                    var setMethod = metadata.GetType()
+                        .GetMethod("SetValueComparer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    setMethod?.Invoke(metadata, new[] { comparer });
+                }
+            }
             entity.Property(e => e.PayloadJson).IsRequired();
             entity.Property(e => e.CommandTypeFullName).IsRequired();
             entity.Property(e => e.Status).HasConversion<string>();
@@ -527,6 +651,20 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<ActionExecutionLog>(entity =>
         {
             entity.ToTable("ActionExecutionLogs");
+            var idProp = entity.Property(e => e.Id);
+            idProp.HasConversion(typeof(TypedIdValueConverter<ActionExecutionLog>));
+            var idMetadata = entity.Metadata.FindProperty("Id");
+            if (idMetadata != null)
+            {
+                var idComparerType = typeof(IdValueComparer<>).MakeGenericType(typeof(ActionExecutionLog));
+                var idComparer = Activator.CreateInstance(idComparerType);
+                if (idComparer != null)
+                {
+                    var setMethod = idMetadata.GetType()
+                        .GetMethod("SetValueComparer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    setMethod?.Invoke(idMetadata, new[] { idComparer });
+                }
+            }
             entity.Property(e => e.ActionType).HasConversion<string>();
             entity.Property(e => e.HandlerTypeName);
             entity.Property(e => e.Status).HasConversion<string>();
@@ -545,33 +683,36 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<UserTutorialProgress>(entity =>
         {
             entity.ToTable("UserTutorialProgresses");
-            entity.Property(e => e.TutorialType).HasConversion<string>();
-            entity.HasIndex(e => new { e.UserId, e.TutorialType })
+            entity.Property(utp => utp.TutorialType).HasConversion<string>();
+            entity.HasOne(utp => utp.User)
+                .WithMany()
+                .HasForeignKey(utp => utp.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // Unique index on UserId + TutorialType (enforces one progress per user per tutorial)
+            entity.HasIndex(utp => new { utp.UserId, utp.TutorialType })
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
-            entity.HasIndex(e => new { e.UserId, e.IsCompleted })
+            // Index on UserId + IsCompleted (for querying completion status)
+            entity.HasIndex(utp => new { utp.UserId, utp.IsCompleted })
                 .HasFilter("\"IsDeleted\" = FALSE");
-            entity.HasOne(e => e.User)
-                .WithMany()
-                .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasMany(e => e.CompletedSteps)
-                .WithOne(s => s.UserTutorialProgress)
-                .HasForeignKey(s => s.UserTutorialProgressId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<UserTutorialStepProgress>(entity =>
         {
             entity.ToTable("UserTutorialStepProgresses");
-            entity.Property(e => e.TutorialStep).HasConversion<string>();
-            entity.HasIndex(e => new { e.UserTutorialProgressId, e.TutorialStep })
+            entity.Property(utsp => utsp.TutorialStep).HasConversion<string>();
+            entity.HasOne(utsp => utsp.UserTutorialProgress)
+                .WithMany(utp => utp.CompletedSteps)
+                .HasForeignKey(utsp => utsp.UserTutorialProgressId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // Unique index on UserTutorialProgressId + TutorialStep (prevents duplicate step completions)
+            entity.HasIndex(utsp => new { utsp.UserTutorialProgressId, utsp.TutorialStep })
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
-        });
-    }
+         });
+     }
 
-    private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)
+     private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)
     {
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
@@ -581,7 +722,7 @@ public sealed class AppDbContext : DbContext
             }
 
             var clrType = entityType.ClrType;
-            if (!typeof(EntityBase).IsAssignableFrom(clrType))
+            if (!IsEntityBase(clrType))
             {
                 continue;
             }
@@ -592,12 +733,26 @@ public sealed class AppDbContext : DbContext
                 nameof(EF.Property),
                 new[] { typeof(bool) },
                 parameter,
-                Expression.Constant(nameof(EntityBase.IsDeleted)));
+                Expression.Constant("IsDeleted"));
             var compareExpression = Expression.Equal(isDeletedProperty, Expression.Constant(false));
             var lambda = Expression.Lambda(compareExpression, parameter);
 
             modelBuilder.Entity(clrType).HasQueryFilter(lambda);
         }
+    }
+
+    private static bool IsEntityBase(Type type)
+    {
+        var baseType = type.BaseType;
+        while (baseType != null)
+        {
+            if (baseType.IsGenericType && baseType.GetGenericTypeDefinition().Name.StartsWith("EntityBase"))
+            {
+                return true;
+            }
+            baseType = baseType.BaseType;
+        }
+        return false;
     }
 
     public override int SaveChanges()
@@ -615,21 +770,36 @@ public sealed class AppDbContext : DbContext
     private void SetTimestamps()
     {
         var utcNow = DateTimeOffset.UtcNow;
-        foreach (var entry in ChangeTracker.Entries<EntityBase>())
+        foreach (var entry in ChangeTracker.Entries())
         {
+            if (entry.Entity == null || !IsEntityBase(entry.Entity.GetType()))
+            {
+                continue;
+            }
+
             if (entry.State == EntityState.Added)
             {
-                if (entry.Entity.CreatedAt == default)
+                var createdAtProperty = entry.Property("CreatedAt");
+                if (createdAtProperty.CurrentValue is DateTimeOffset createdAt && createdAt == default)
                 {
-                    entry.Entity.CreatedAt = utcNow;
+                    createdAtProperty.CurrentValue = utcNow;
                 }
 
-                entry.Entity.UpdatedAt = utcNow;
+                entry.Property("UpdatedAt").CurrentValue = utcNow;
             }
             else if (entry.State == EntityState.Modified)
             {
-                entry.Entity.UpdatedAt = utcNow;
+                entry.Property("UpdatedAt").CurrentValue = utcNow;
             }
         }
+    }
+
+    private static Id<TEntity> ParseSeedId<TEntity>(string idString)
+    {
+        if (!Id<TEntity>.TryParse(idString, out var id))
+        {
+            throw new InvalidOperationException($"Failed to parse seed ID: {idString}");
+        }
+        return id;
     }
 }

@@ -2,6 +2,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,21 +22,23 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         await _dbContext.TrainerInvitations.AddAsync(invitation, cancellationToken);
     }
 
-    public Task<TrainerInvitation?> FindInvitationByIdAsync(Guid invitationId, CancellationToken cancellationToken = default)
+    public Task<TrainerInvitation?> FindInvitationByIdAsync(Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerInvitations
             .FirstOrDefaultAsync(i => i.Id == invitationId, cancellationToken);
     }
 
-    public Task<TrainerInvitation?> FindPendingInvitationAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
+    public Task<TrainerInvitation?> FindPendingInvitationAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerInvitations
-            .Where(i => i.TrainerId == trainerId && i.TraineeId == traineeId && i.Status == TrainerInvitationStatus.Pending)
+            .Where(i => i.TrainerId == trainerId
+                && i.TraineeId == traineeId
+                && i.Status == TrainerInvitationStatus.Pending)
             .OrderByDescending(i => i.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default)
+    public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerInvitations
             .Where(i => i.TrainerId == trainerId)
@@ -43,24 +46,26 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
             .ToListAsync(cancellationToken);
     }
 
-    public Task<bool> HasActiveLinkForTraineeAsync(Guid traineeId, CancellationToken cancellationToken = default)
+    public Task<bool> HasActiveLinkForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerTraineeLinks.AnyAsync(l => l.TraineeId == traineeId, cancellationToken);
     }
 
-    public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
+    public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerTraineeLinks
-            .FirstOrDefaultAsync(l => l.TrainerId == trainerId && l.TraineeId == traineeId, cancellationToken);
+            .FirstOrDefaultAsync(
+                l => l.TrainerId == trainerId && l.TraineeId == traineeId,
+                cancellationToken);
     }
 
-    public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default)
+    public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerTraineeLinks
             .FirstOrDefaultAsync(l => l.TraineeId == traineeId, cancellationToken);
     }
 
-    public async Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Guid trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
+    public async Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
     {
         var page = query.Page < 1 ? 1 : query.Page;
         var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 100);
@@ -122,7 +127,7 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         };
     }
 
-    private IQueryable<DashboardTraineeProjection> BuildDashboardBaseQuery(Guid trainerId)
+    private IQueryable<DashboardTraineeProjection> BuildDashboardBaseQuery(Id<User> trainerId)
     {
 
         var trainerLinks = _dbContext.TrainerTraineeLinks
@@ -321,7 +326,7 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
 
     private sealed class DashboardTraineeProjection
     {
-        public Guid Id { get; init; }
+        public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> Id { get; init; }
         public string Name { get; init; } = string.Empty;
         public string Email { get; init; } = string.Empty;
         public string? Avatar { get; init; }

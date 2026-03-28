@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,36 +24,36 @@ public sealed class RoleClaimSeeder : IEntitySeeder
             .Select(claim => new { claim.RoleId, claim.ClaimType, claim.ClaimValue })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid RoleId, string ClaimType, string ClaimValue)>(
+        var existingSet = new HashSet<(Id<Role> RoleId, string ClaimType, string ClaimValue)>(
             existing.Select(entry => (entry.RoleId, entry.ClaimType, entry.ClaimValue)));
 
         var claims = new List<RoleClaim>
         {
             new()
             {
-                Id = AppDbContext.AdminAccessClaimSeedId,
-                RoleId = AppDbContext.AdminRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<RoleClaim>)AppDbContext.AdminAccessClaimSeedId,
+                RoleId = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.AdminRoleSeedId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = AuthConstants.Permissions.AdminAccess
             },
             new()
             {
-                Id = AppDbContext.ManageUserRolesClaimSeedId,
-                RoleId = AppDbContext.AdminRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<RoleClaim>)AppDbContext.ManageUserRolesClaimSeedId,
+                RoleId = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.AdminRoleSeedId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = AuthConstants.Permissions.ManageUserRoles
             },
             new()
             {
-                Id = AppDbContext.ManageAppConfigClaimSeedId,
-                RoleId = AppDbContext.AdminRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<RoleClaim>)AppDbContext.ManageAppConfigClaimSeedId,
+                RoleId = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.AdminRoleSeedId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = AuthConstants.Permissions.ManageAppConfig
             },
             new()
             {
-                Id = AppDbContext.ManageGlobalExercisesClaimSeedId,
-                RoleId = AppDbContext.AdminRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<RoleClaim>)AppDbContext.ManageGlobalExercisesClaimSeedId,
+                RoleId = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.AdminRoleSeedId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = AuthConstants.Permissions.ManageGlobalExercises
             }

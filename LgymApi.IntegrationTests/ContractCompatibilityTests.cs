@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.IntegrationTests;
 
@@ -140,11 +141,11 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     [Test]
     public async Task Gym_GetGyms_ReturnsListWithLegacyIdFields()
     {
-        var user = await SeedUserAsync(name: "contract_gym_list", email: "contract_gym_list@example.com");
-        SetAuthorizationHeader(user.Id);
+         var user = await SeedUserAsync(name: "contract_gym_list", email: "contract_gym_list@example.com");
+         SetAuthorizationHeader(user.Id);
 
-        var gymId = await CreateGymViaEndpointAsync(user.Id, "Gym One");
-        await CreateGymViaEndpointAsync(user.Id, "Gym Two");
+         var gymId = await CreateGymViaEndpointAsync(user.Id, "Test Gym 1");
+         await CreateGymViaEndpointAsync(user.Id, "Test Gym 2");
 
         var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -156,10 +157,10 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     [Test]
     public async Task Gym_GetGym_ReturnsEntityWithLegacyIdField()
     {
-        var user = await SeedUserAsync(name: "contract_gym_get", email: "contract_gym_get@example.com");
-        SetAuthorizationHeader(user.Id);
+         var user = await SeedUserAsync(name: "contract_gym_get", email: "contract_gym_get@example.com");
+         SetAuthorizationHeader(user.Id);
 
-        var gymId = await CreateGymViaEndpointAsync(user.Id, "Single Gym");
+         var gymId = await CreateGymViaEndpointAsync(user.Id, "Test Gym");
 
         var response = await Client.GetAsync($"/api/gym/{gymId}/getGym");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -187,11 +188,11 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     [Test]
     public async Task Plan_GetPlansList_ReturnsListWithLegacyIdFields()
     {
-        var user = await SeedUserAsync(name: "contract_plan_list", email: "contract_plan_list@example.com");
-        SetAuthorizationHeader(user.Id);
+         var user = await SeedUserAsync(name: "contract_plan_list", email: "contract_plan_list@example.com");
+         SetAuthorizationHeader(user.Id);
 
-        await CreatePlanViaEndpointAsync(user.Id, "Plan Alpha");
-        await CreatePlanViaEndpointAsync(user.Id, "Plan Beta");
+         await CreatePlanViaEndpointAsync(user.Id, "Test Plan 1");
+         await CreatePlanViaEndpointAsync(user.Id, "Test Plan 2");
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlansList");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -240,7 +241,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     [TestCase("/api/{0}/createPlan", "name", "Test Plan 1")]
     public async Task PostMutationEndpoint_ReturnsLegacyMsgField(string routeTemplate, string propertyName, string propertyValue)
     {
-        var user = await SeedUserAsync($"contract_{Guid.NewGuid():N}", $"contract_{Guid.NewGuid():N}@example.com");
+        var user = await SeedUserAsync($"contract_{Id<ContractCompatibilityTests>.New()}", $"contract_{Id<ContractCompatibilityTests>.New()}@example.com");
         SetAuthorizationHeader(user.Id);
 
         var route = string.Format(routeTemplate, user.Id);
@@ -258,18 +259,18 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     [TestCase("/api/exercise/{0}/getAllUserExercises")]
     public async Task GetListEndpoint_ReturnsLegacyIdFields(string routeTemplate)
     {
-        var user = await SeedUserAsync($"contract_list_{Guid.NewGuid():N}", $"contract_list_{Guid.NewGuid():N}@example.com");
+        var user = await SeedUserAsync($"contract_list_{Id<ContractCompatibilityTests>.New()}", $"contract_list_{Id<ContractCompatibilityTests>.New()}@example.com");
         SetAuthorizationHeader(user.Id);
 
-        // Seed test data for each endpoint
-        if (routeTemplate.Contains("gym"))
-        {
-            await CreateGymViaEndpointAsync(user.Id, "Seed Gym");
-        }
-        else if (routeTemplate.Contains("Plan"))
-        {
-            await CreatePlanViaEndpointAsync(user.Id, "Seed Plan");
-        }
+         // Seed test data for each endpoint
+         if (routeTemplate.Contains("gym"))
+         {
+             await CreateGymViaEndpointAsync(user.Id, "Seed Gym");
+         }
+         else if (routeTemplate.Contains("Plan"))
+         {
+             await CreatePlanViaEndpointAsync(user.Id, "Seed Plan");
+         }
         else if (routeTemplate.Contains("exercise"))
         {
             await CreateExerciseViaEndpointAsync(user.Id, "Seed Exercise");

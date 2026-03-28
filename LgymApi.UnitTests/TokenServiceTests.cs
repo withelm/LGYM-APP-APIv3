@@ -1,4 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 
@@ -14,7 +16,7 @@ public sealed class TokenServiceTests
         var service = new TokenService(configuration);
 
         Assert.Throws<InvalidOperationException>(() =>
-            service.CreateToken(Guid.NewGuid(), Array.Empty<string>(), Array.Empty<string>()));
+            service.CreateToken(Id<User>.New(), Array.Empty<string>(), Array.Empty<string>()));
     }
 
     [Test]
@@ -27,7 +29,7 @@ public sealed class TokenServiceTests
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var service = new TokenService(configuration);
 
-        var userId = Guid.NewGuid();
+        var userId = Id<User>.New();
         var token = service.CreateToken(userId, ["User"], ["admin:access"]);
 
         Assert.That(token, Is.Not.Null.And.Not.Empty);

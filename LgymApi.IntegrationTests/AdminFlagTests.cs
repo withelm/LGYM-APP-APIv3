@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.IntegrationTests;
 
@@ -24,7 +26,7 @@ public sealed class AdminFlagTests : IntegrationTestBase
     private static IEnumerable<TestCaseData> IsAdmin_FalseResultCases()
     {
         yield return new TestCaseData(
-                new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
+                new Func<AdminFlagTests, Task<(Id<User> authUserId, string queryId)>>(async self =>
                 {
                     var user = await self.SeedUserAsync(name: "normaluser", email: "normal@example.com", isAdmin: false);
                     return (user.Id, user.Id.ToString());
@@ -32,7 +34,7 @@ public sealed class AdminFlagTests : IntegrationTestBase
             .SetName("IsAdmin_WithNonAdminUser_ReturnsFalse");
 
         yield return new TestCaseData(
-                new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
+                new Func<AdminFlagTests, Task<(Id<User> authUserId, string queryId)>>(async self =>
                 {
                     var user = await self.SeedUserAsync(name: "nulladmin", email: "nulladmin@example.com");
                     return (user.Id, user.Id.ToString());
@@ -40,15 +42,15 @@ public sealed class AdminFlagTests : IntegrationTestBase
             .SetName("IsAdmin_WithNullAdminFlag_ReturnsFalse");
 
         yield return new TestCaseData(
-                new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
+                new Func<AdminFlagTests, Task<(Id<User> authUserId, string queryId)>>(async self =>
                 {
                     var user = await self.SeedUserAsync(name: "authuser", email: "auth-nonexistent@example.com");
-                    return (user.Id, Guid.NewGuid().ToString());
+                    return (user.Id, Id<User>.New().ToString());
                 }))
             .SetName("IsAdmin_WithNonExistentUser_ReturnsFalse");
 
         yield return new TestCaseData(
-                new Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>>(async self =>
+                new Func<AdminFlagTests, Task<(Id<User> authUserId, string queryId)>>(async self =>
                 {
                     var user = await self.SeedUserAsync(name: "authuser", email: "auth-invalid@example.com");
                     return (user.Id, "invalid-guid");
@@ -58,7 +60,7 @@ public sealed class AdminFlagTests : IntegrationTestBase
 
     [TestCaseSource(nameof(IsAdmin_FalseResultCases))]
     public async Task IsAdmin_WithVariousNonAdminScenarios_ReturnsFalse(
-        Func<AdminFlagTests, Task<(Guid authUserId, string queryId)>> setupAsync)
+        Func<AdminFlagTests, Task<(Id<User> authUserId, string queryId)>> setupAsync)
     {
         var (authUserId, queryId) = await setupAsync(this);
         SetAuthorizationHeader(authUserId);

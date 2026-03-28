@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +22,7 @@ public sealed class AddressSeeder : IEntitySeeder
         {
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = Id<Address>.New(),
                 Name = "LGYM Downtown",
                 City = "Warsaw",
                 Country = "Poland",
@@ -33,7 +34,7 @@ public sealed class AddressSeeder : IEntitySeeder
             },
             new()
             {
-                Id = Guid.NewGuid(),
+                Id = Id<Address>.New(),
                 Name = "LGYM Riverside",
                 City = "Krakow",
                 Country = "Poland",

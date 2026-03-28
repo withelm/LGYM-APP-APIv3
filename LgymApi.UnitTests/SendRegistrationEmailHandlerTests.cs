@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Models;
 using LgymApi.BackgroundWorker.Actions;
@@ -27,53 +28,53 @@ public sealed class SendRegistrationEmailHandlerTests
         _handler = new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, _testLogger, new AppDefaultsOptions());
     }
 
-    [Test]
-    public async Task ExecuteAsync_WithValidCommand_SchedulesWelcomeEmail()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        _testUserRepository.UserToReturn = new User
-        {
-            Id = userId,
-            Name = "JohnDoe",
-            Email = "john.doe@example.com",
-            PreferredLanguage = "en-US"
-        };
+     [Test]
+     public async Task ExecuteAsync_WithValidCommand_SchedulesWelcomeEmail()
+     {
+         // Arrange
+         var userId = Id<User>.New();
+         _testUserRepository.UserToReturn = new User
+         {
+             Id = userId,
+             Name = "JohnDoe",
+             Email = "john.doe@example.com",
+             PreferredLanguage = "en-US"
+         };
 
-        var command = new UserRegisteredCommand
-        {
-            UserId = userId
-        };
+         var command = new UserRegisteredCommand
+         {
+             UserId = userId
+         };
 
-        // Act
-        await _handler.ExecuteAsync(command);
+         // Act
+         await _handler.ExecuteAsync(command);
 
-        // Assert
-        Assert.That(_testScheduler.ScheduledPayloads, Has.Count.EqualTo(1));
-        var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.UserId, Is.EqualTo(userId));
+         // Assert
+         Assert.That(_testScheduler.ScheduledPayloads, Has.Count.EqualTo(1));
+         var payload = _testScheduler.ScheduledPayloads[0];
+         Assert.That(payload.UserId, Is.EqualTo(userId));
         Assert.That(payload.UserName, Is.EqualTo("JohnDoe"));
         Assert.That(payload.RecipientEmail, Is.EqualTo("john.doe@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
     }
 
-    [Test]
-    public async Task ExecuteAsync_WithEmptyEmail_SkipsSchedulingGracefully()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        _testUserRepository.UserToReturn = new User
-        {
-            Id = userId,
-            Name = "TestUser",
-            Email = string.Empty,
-            PreferredLanguage = "en-US"
-        };
+     [Test]
+     public async Task ExecuteAsync_WithEmptyEmail_SkipsSchedulingGracefully()
+     {
+         // Arrange
+         var userId = Id<User>.New();
+         _testUserRepository.UserToReturn = new User
+         {
+             Id = userId,
+             Name = "TestUser",
+             Email = string.Empty,
+             PreferredLanguage = "en-US"
+         };
 
-        var command = new UserRegisteredCommand
-        {
-            UserId = userId
-        };
+         var command = new UserRegisteredCommand
+         {
+             UserId = userId
+         };
 
         // Act
         await _handler.ExecuteAsync(command);
@@ -84,23 +85,23 @@ public sealed class SendRegistrationEmailHandlerTests
         Assert.That(_testLogger.WarningMessages[0], Does.Contain("no recipient email"));
     }
 
-    [Test]
-    public async Task ExecuteAsync_WithWhitespaceEmail_SkipsSchedulingGracefully()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        _testUserRepository.UserToReturn = new User
-        {
-            Id = userId,
-            Name = "TestUser",
-            Email = "   ",
-            PreferredLanguage = "en-US"
-        };
+     [Test]
+     public async Task ExecuteAsync_WithWhitespaceEmail_SkipsSchedulingGracefully()
+     {
+         // Arrange
+         var userId = Id<User>.New();
+         _testUserRepository.UserToReturn = new User
+         {
+             Id = userId,
+             Name = "TestUser",
+             Email = "   ",
+             PreferredLanguage = "en-US"
+         };
 
-        var command = new UserRegisteredCommand
-        {
-            UserId = userId
-        };
+         var command = new UserRegisteredCommand
+         {
+             UserId = userId
+         };
 
         // Act
         await _handler.ExecuteAsync(command);
@@ -110,52 +111,52 @@ public sealed class SendRegistrationEmailHandlerTests
         Assert.That(_testLogger.WarningMessages, Has.Count.EqualTo(1));
     }
 
-    [Test]
-    public async Task ExecuteAsync_MapsAllUserFieldsToPayload()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        _testUserRepository.UserToReturn = new User
-        {
-            Id = userId,
-            Name = "MariaGarcia",
-            Email = "maria.garcia@example.com",
-            PreferredLanguage = "es-ES"
-        };
+     [Test]
+     public async Task ExecuteAsync_MapsAllUserFieldsToPayload()
+     {
+         // Arrange
+         var userId = Id<User>.New();
+         _testUserRepository.UserToReturn = new User
+         {
+             Id = userId,
+             Name = "MariaGarcia",
+             Email = "maria.garcia@example.com",
+             PreferredLanguage = "es-ES"
+         };
 
-        var command = new UserRegisteredCommand
-        {
-            UserId = userId
-        };
+         var command = new UserRegisteredCommand
+         {
+             UserId = userId
+         };
 
-        // Act
-        await _handler.ExecuteAsync(command);
+         // Act
+         await _handler.ExecuteAsync(command);
 
-        // Assert
-        var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.UserId, Is.EqualTo(userId));
+         // Assert
+         var payload = _testScheduler.ScheduledPayloads[0];
+         Assert.That(payload.UserId, Is.EqualTo(userId));
         Assert.That(payload.UserName, Is.EqualTo("MariaGarcia"));
         Assert.That(payload.RecipientEmail, Is.EqualTo("maria.garcia@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("es-ES"));
     }
 
-    [Test]
-    public async Task ExecuteAsync_WithCancellationToken_PassesTokenToScheduler()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        _testUserRepository.UserToReturn = new User
-        {
-            Id = userId,
-            Name = "TestUser",
-            Email = "test@example.com",
-            PreferredLanguage = "en-US"
-        };
+     [Test]
+     public async Task ExecuteAsync_WithCancellationToken_PassesTokenToScheduler()
+     {
+         // Arrange
+         var userId = Id<User>.New();
+         _testUserRepository.UserToReturn = new User
+         {
+             Id = userId,
+             Name = "TestUser",
+             Email = "test@example.com",
+             PreferredLanguage = "en-US"
+         };
 
-        var command = new UserRegisteredCommand
-        {
-            UserId = userId
-        };
+         var command = new UserRegisteredCommand
+         {
+             UserId = userId
+         };
 
         using var cts = new CancellationTokenSource();
 
@@ -166,23 +167,23 @@ public sealed class SendRegistrationEmailHandlerTests
         Assert.That(_testScheduler.ReceivedToken, Is.EqualTo(cts.Token));
     }
 
-    [Test]
-    public async Task ExecuteAsync_LogsInformationOnSuccess()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        _testUserRepository.UserToReturn = new User
-        {
-            Id = userId,
-            Name = "TestUser",
-            Email = "test@example.com",
-            PreferredLanguage = "en-US"
-        };
+     [Test]
+     public async Task ExecuteAsync_LogsInformationOnSuccess()
+     {
+         // Arrange
+         var userId = Id<User>.New();
+         _testUserRepository.UserToReturn = new User
+         {
+             Id = userId,
+             Name = "TestUser",
+             Email = "test@example.com",
+             PreferredLanguage = "en-US"
+         };
 
-        var command = new UserRegisteredCommand
-        {
-            UserId = userId
-        };
+         var command = new UserRegisteredCommand
+         {
+             UserId = userId
+         };
 
         // Act
         await _handler.ExecuteAsync(command);
@@ -219,23 +220,23 @@ public sealed class SendRegistrationEmailHandlerTests
         Assert.That(ex.ParamName, Is.EqualTo("logger"));
     }
 
-    [Test]
-    public async Task ExecuteAsync_WithDifferentCulture_PreservesCultureName()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        _testUserRepository.UserToReturn = new User
-        {
-            Id = userId,
-            Name = "PierreDupont",
-            Email = "pierre@example.fr",
-            PreferredLanguage = "fr-FR"
-        };
+     [Test]
+     public async Task ExecuteAsync_WithDifferentCulture_PreservesCultureName()
+     {
+         // Arrange
+         var userId = Id<User>.New();
+         _testUserRepository.UserToReturn = new User
+         {
+             Id = userId,
+             Name = "PierreDupont",
+             Email = "pierre@example.fr",
+             PreferredLanguage = "fr-FR"
+         };
 
-        var command = new UserRegisteredCommand
-        {
-            UserId = userId
-        };
+         var command = new UserRegisteredCommand
+         {
+             UserId = userId
+         };
 
         // Act
         await _handler.ExecuteAsync(command);
@@ -253,7 +254,7 @@ public sealed class SendRegistrationEmailHandlerTests
 
         var command = new UserRegisteredCommand
         {
-            UserId = Guid.NewGuid()
+            UserId = Id<User>.New()
         };
 
         // Act
@@ -265,23 +266,23 @@ public sealed class SendRegistrationEmailHandlerTests
         Assert.That(_testLogger.WarningMessages[0], Does.Contain("user not found"));
     }
 
-    [Test]
-    public async Task ExecuteAsync_WithNoPreferredLanguage_DefaultsToEnUs()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        _testUserRepository.UserToReturn = new User
-        {
-            Id = userId,
-            Name = "TestUser",
-            Email = "test@example.com",
-            PreferredLanguage = null
-        };
+     [Test]
+     public async Task ExecuteAsync_WithNoPreferredLanguage_DefaultsToEnUs()
+     {
+         // Arrange
+         var userId = Id<User>.New();
+         _testUserRepository.UserToReturn = new User
+         {
+             Id = userId,
+             Name = "TestUser",
+             Email = "test@example.com",
+             PreferredLanguage = null
+         };
 
-        var command = new UserRegisteredCommand
-        {
-            UserId = userId
-        };
+         var command = new UserRegisteredCommand
+         {
+             UserId = userId
+         };
 
         // Act
         await _handler.ExecuteAsync(command);
@@ -291,25 +292,25 @@ public sealed class SendRegistrationEmailHandlerTests
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
     }
 
-    [Test]
-    public async Task ExecuteAsync_WithWhitespacePreferredLanguage_UsesConfiguredDefault()
-    {
-        var userId = Guid.NewGuid();
-        _testUserRepository.UserToReturn = new User
-        {
-            Id = userId,
-            Name = "TestUser",
-            Email = "test@example.com",
-            PreferredLanguage = "   "
-        };
+     [Test]
+     public async Task ExecuteAsync_WithWhitespacePreferredLanguage_UsesConfiguredDefault()
+     {
+         var userId = Id<User>.New();
+         _testUserRepository.UserToReturn = new User
+         {
+             Id = userId,
+             Name = "TestUser",
+             Email = "test@example.com",
+             PreferredLanguage = "   "
+         };
 
-        var handler = new SendRegistrationEmailHandler(
-            _testUserRepository,
-            _testScheduler,
-            _testLogger,
-            new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "Europe/Warsaw" });
+         var handler = new SendRegistrationEmailHandler(
+             _testUserRepository,
+             _testScheduler,
+             _testLogger,
+             new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "Europe/Warsaw" });
 
-        var command = new UserRegisteredCommand { UserId = userId };
+         var command = new UserRegisteredCommand { UserId = userId };
 
         await handler.ExecuteAsync(command);
 
@@ -322,12 +323,12 @@ public sealed class SendRegistrationEmailHandlerTests
     {
         public User? UserToReturn { get; set; }
 
-        public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<User?> FindByIdAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(UserToReturn);
         }
 
-        public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<User?> FindByIdIncludingDeletedAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();

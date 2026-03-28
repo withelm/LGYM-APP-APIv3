@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using LgymApi.Application.Services;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 
 namespace LgymApi.Infrastructure.Services;
@@ -9,8 +11,8 @@ public sealed class UserSessionCache : IUserSessionCache
     private const int DefaultCapacity = 1000;
     private readonly int _capacity;
 
-    private readonly ConcurrentDictionary<Guid, LinkedListNode<Guid>> _nodes = new();
-    private readonly LinkedList<Guid> _lru = new();
+    private readonly ConcurrentDictionary<Id<User>, LinkedListNode<Id<User>>> _nodes = new();
+    private readonly LinkedList<Id<User>> _lru = new();
     private readonly object _sync = new();
 
     public UserSessionCache(IConfiguration configuration)
@@ -34,9 +36,9 @@ public sealed class UserSessionCache : IUserSessionCache
         }
     }
 
-    public void AddOrRefresh(Guid userId)
+    public void AddOrRefresh(Id<User> userId)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             return;
         }
@@ -50,7 +52,7 @@ public sealed class UserSessionCache : IUserSessionCache
                 return;
             }
 
-            var node = new LinkedListNode<Guid>(userId);
+            var node = new LinkedListNode<Id<User>>(userId);
             _lru.AddFirst(node);
             _nodes[userId] = node;
 
@@ -70,9 +72,9 @@ public sealed class UserSessionCache : IUserSessionCache
         }
     }
 
-    public bool Remove(Guid userId)
+    public bool Remove(Id<User> userId)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             return false;
         }
@@ -89,8 +91,13 @@ public sealed class UserSessionCache : IUserSessionCache
         }
     }
 
-    public bool Contains(Guid userId)
+    public bool Contains(Id<User> userId)
     {
+        if (userId.IsEmpty)
+        {
+            return false;
+        }
+
         return _nodes.ContainsKey(userId);
     }
 }

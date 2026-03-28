@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,7 +31,7 @@ public sealed class ReportTemplateFieldSeeder : IEntitySeeder
             .Select(field => new { field.TemplateId, field.Key })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid TemplateId, string Key)>(
+        var existingSet = new HashSet<(Id<ReportTemplate> TemplateId, string Key)>(
             existing.Select(entry => (entry.TemplateId, entry.Key)));
 
         var addedAny = false;
@@ -38,21 +39,21 @@ public sealed class ReportTemplateFieldSeeder : IEntitySeeder
         {
             var fields = new List<ReportTemplateField>
             {
-                new()
-                {
-                    Id = Guid.NewGuid(),
-                    TemplateId = template.Id,
-                    Key = "mood",
+                 new()
+                 {
+                     Id = Id<ReportTemplateField>.New(),
+                     TemplateId = template.Id,
+                     Key = "mood",
                     Label = "Mood",
                     Type = ReportFieldType.Text,
                     IsRequired = false,
                     Order = 1
                 },
-                new()
-                {
-                    Id = Guid.NewGuid(),
-                    TemplateId = template.Id,
-                    Key = "energy",
+                 new()
+                 {
+                     Id = Id<ReportTemplateField>.New(),
+                     TemplateId = template.Id,
+                     Key = "energy",
                     Label = "Energy level",
                     Type = ReportFieldType.Number,
                     IsRequired = false,

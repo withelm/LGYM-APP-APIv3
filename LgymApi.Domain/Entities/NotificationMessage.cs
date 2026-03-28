@@ -4,12 +4,13 @@ using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
-public abstract class NotificationMessage<TType> : EntityBase
+public abstract class NotificationMessageBase<TType, TDerived> : EntityBase<TDerived>
     where TType : notnull
+    where TDerived : NotificationMessageBase<TType, TDerived>
 {
     public NotificationChannel Channel { get; set; } = NotificationChannel.Email;
     public TType Type { get; set; } = default!;
-    public Guid CorrelationId { get; set; }
+    public Id<CorrelationScope> CorrelationId { get; set; }
     public Email Recipient { get; set; } = new("placeholder@example.com");
     public string PayloadJson { get; set; } = string.Empty;
     public EmailNotificationStatus Status { get; set; } = EmailNotificationStatus.Pending;
@@ -20,6 +21,6 @@ public abstract class NotificationMessage<TType> : EntityBase
     public DateTimeOffset? SentAt { get; set; }
 }
 
-public sealed class NotificationMessage : NotificationMessage<EmailNotificationType>
+public sealed class NotificationMessage : NotificationMessageBase<EmailNotificationType, NotificationMessage>
 {
 }

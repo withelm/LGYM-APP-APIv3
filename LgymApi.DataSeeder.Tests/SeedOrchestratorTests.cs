@@ -1,6 +1,7 @@
 using LgymApi.Application.Services;
 using LgymApi.DataSeeder.Seeders;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +14,7 @@ public sealed class SeedOrchestratorTests
     public async Task RunAsync_Should_Skip_Demo_Seeders_When_Disabled()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Id<User>.New().ToString())
             .Options;
 
         await using var context = new AppDbContext(options);
@@ -45,13 +46,13 @@ public sealed class SeedOrchestratorTests
     public async Task RunAsync_Should_Set_Admin_And_Tester_When_Present_In_Database()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Id<User>.New().ToString())
             .Options;
 
         await using var context = new AppDbContext(options);
 
-        var admin = new User { Id = Guid.NewGuid(), Name = "Admin" };
-        var tester = new User { Id = Guid.NewGuid(), Name = "Tester" };
+        var admin = new User { Id = Id<User>.New(), Name = "Admin" };
+        var tester = new User { Id = Id<User>.New(), Name = "Tester" };
         context.Users.AddRange(admin, tester);
         await context.SaveChangesAsync();
 

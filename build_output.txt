@@ -1,0 +1,37 @@
+C:\code\LGYM-APP-APIv3\LgymApi.Infrastructure\LgymApi.Infrastructure.csproj : warning NU1902: Pakiet „MimeKit” 4.14.0 ma znane umiarkowana luki w zabezpieczeniach o ważności, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.DataSeeder\LgymApi.DataSeeder.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.UnitTests\LgymApi.UnitTests.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.ArchitectureTests\LgymApi.ArchitectureTests.csproj : warning NU1902: Pakiet „MimeKit” 4.14.0 ma znane umiarkowana luki w zabezpieczeniach o ważności, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.IntegrationTests\LgymApi.IntegrationTests.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.DataSeeder.Tests\LgymApi.DataSeeder.Tests.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.TestUtils\LgymApi.TestUtils.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+  LgymApi.Resources.Generator -> C:\code\LGYM-APP-APIv3\LgymApi.Resources.Generator\bin\Release\netstandard2.0\LgymApi.Resources.Generator.dll
+  LgymApi.Resources -> C:\code\LGYM-APP-APIv3\LgymApi.Resources\bin\Release\net10.0\LgymApi.Resources.dll
+C:\code\LGYM-APP-APIv3\LgymApi.Api\LgymApi.Api.csproj : warning NU1902: Pakiet „MimeKit” 4.14.0 ma znane umiarkowana luki w zabezpieczeniach o ważności, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+  LgymApi.Domain -> C:\code\LGYM-APP-APIv3\LgymApi.Domain\bin\Release\net10.0\LgymApi.Domain.dll
+  LgymApi.BackgroundWorker.Common -> C:\code\LGYM-APP-APIv3\LgymApi.BackgroundWorker.Common\bin\Release\net10.0\LgymApi.BackgroundWorker.Common.dll
+  LgymApi.Application -> C:\code\LGYM-APP-APIv3\LgymApi.Application\bin\Release\net10.0\LgymApi.Application.dll
+  LgymApi.Infrastructure -> C:\code\LGYM-APP-APIv3\LgymApi.Infrastructure\bin\Release\net10.0\LgymApi.Infrastructure.dll
+  LgymApi.BackgroundWorker -> C:\code\LGYM-APP-APIv3\LgymApi.BackgroundWorker\bin\Release\net10.0\LgymApi.BackgroundWorker.dll
+  LgymApi.TestUtils -> C:\code\LGYM-APP-APIv3\LgymApi.TestUtils\bin\Release\net10.0\LgymApi.TestUtils.dll
+  LgymApi.DataSeeder -> C:\code\LGYM-APP-APIv3\LgymApi.DataSeeder\bin\Release\net10.0\LgymApi.DataSeeder.dll
+  LgymApi.DataSeeder.Tests -> C:\code\LGYM-APP-APIv3\LgymApi.DataSeeder.Tests\bin\Release\net10.0\LgymApi.DataSeeder.Tests.dll
+  LgymApi.Api -> C:\code\LGYM-APP-APIv3\LgymApi.Api\bin\Release\net10.0\LgymApi.Api.dll
+  LgymApi.ArchitectureTests -> C:\code\LGYM-APP-APIv3\LgymApi.ArchitectureTests\bin\Release\net10.0\LgymApi.ArchitectureTests.dll
+  LgymApi.UnitTests -> C:\code\LGYM-APP-APIv3\LgymApi.UnitTests\bin\Release\net10.0\LgymApi.UnitTests.dll
+  LgymApi.IntegrationTests -> C:\code\LGYM-APP-APIv3\LgymApi.IntegrationTests\bin\Release\net10.0\LgymApi.IntegrationTests.dll
+
+Kompilacja powiodła się.
+
+C:\code\LGYM-APP-APIv3\LgymApi.Infrastructure\LgymApi.Infrastructure.csproj : warning NU1902: Pakiet „MimeKit” 4.14.0 ma znane umiarkowana luki w zabezpieczeniach o ważności, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.DataSeeder\LgymApi.DataSeeder.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.UnitTests\LgymApi.UnitTests.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.ArchitectureTests\LgymApi.ArchitectureTests.csproj : warning NU1902: Pakiet „MimeKit” 4.14.0 ma znane umiarkowana luki w zabezpieczeniach o ważności, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.IntegrationTests\LgymApi.IntegrationTests.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.DataSeeder.Tests\LgymApi.DataSeeder.Tests.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.TestUtils\LgymApi.TestUtils.csproj : warning NU1902: Package 'MimeKit' 4.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+C:\code\LGYM-APP-APIv3\LgymApi.Api\LgymApi.Api.csproj : warning NU1902: Pakiet „MimeKit” 4.14.0 ma znane umiarkowana luki w zabezpieczeniach o ważności, https://github.com/advisories/GHSA-g7hc-96xr-gvvx
+    Ostrzeżenia: 8
+    Liczba błędów: 0
+
+Czas, który upłynął: 00:00:04.55

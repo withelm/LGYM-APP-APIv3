@@ -1,8 +1,8 @@
 namespace LgymApi.Domain.Entities;
 
-public sealed class PlanDay : EntityBase
+public sealed class PlanDay : EntityBase<PlanDay>
 {
-    public Guid PlanId { get; set; }
+    public ValueObjects.Id<Plan> PlanId { get; set; }
     public string Name { get; set; } = string.Empty;
 
     public Plan? Plan { get; set; }

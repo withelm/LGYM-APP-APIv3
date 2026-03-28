@@ -31,18 +31,18 @@ public sealed class MainRecordsService : IMainRecordsService
 
     public async Task AddNewRecordAsync(AddMainRecordInput input, CancellationToken cancellationToken = default)
     {
-        if (input.UserId == Guid.Empty || !Guid.TryParse(input.ExerciseId, out var exerciseGuid))
+        if (input.UserId.IsEmpty || input.ExerciseId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(input.UserId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)input.UserId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync(exerciseGuid, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync(input.ExerciseId, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -55,7 +55,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         var record = new MainRecordEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<LgymApi.Domain.Entities.MainRecord>.New(),
             UserId = user.Id,
             ExerciseId = exercise.Id,
             Weight = new Weight(input.Weight, input.Unit),
@@ -66,14 +66,14 @@ public sealed class MainRecordsService : IMainRecordsService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<List<MainRecordEntity>> GetMainRecordsHistoryAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<List<MainRecordEntity>> GetMainRecordsHistoryAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -90,14 +90,14 @@ public sealed class MainRecordsService : IMainRecordsService
         return records.Reverse<MainRecordEntity>().ToList();
     }
 
-    public async Task<MainRecordsLastContext> GetLastMainRecordsAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<MainRecordsLastContext> GetLastMainRecordsAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -131,9 +131,9 @@ public sealed class MainRecordsService : IMainRecordsService
         };
     }
 
-    public async Task DeleteMainRecordAsync(Guid currentUserId, Guid recordId, CancellationToken cancellationToken = default)
+    public async Task DeleteMainRecordAsync(Id<LgymApi.Domain.Entities.User> currentUserId, Id<LgymApi.Domain.Entities.MainRecord> recordId, CancellationToken cancellationToken = default)
     {
-        if (currentUserId == Guid.Empty || recordId == Guid.Empty)
+        if (currentUserId.IsEmpty || recordId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -155,7 +155,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
     public async Task UpdateMainRecordAsync(UpdateMainRecordInput input, CancellationToken cancellationToken = default)
     {
-        if (input.RouteUserId == Guid.Empty || input.CurrentUserId == Guid.Empty)
+        if (input.RouteUserId.IsEmpty || input.CurrentUserId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -165,12 +165,12 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (!Guid.TryParse(input.RecordId, out var recordGuid))
+        if (input.RecordId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var existingRecord = await _mainRecordRepository.FindByIdAsync(recordGuid, cancellationToken);
+        var existingRecord = await _mainRecordRepository.FindByIdAsync(input.RecordId, cancellationToken);
         if (existingRecord == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -181,12 +181,12 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (!Guid.TryParse(input.ExerciseId, out var exerciseGuid))
+        if (input.ExerciseId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync(exerciseGuid, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync(input.ExerciseId, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -205,14 +205,14 @@ public sealed class MainRecordsService : IMainRecordsService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<PossibleRecordResult> GetRecordOrPossibleRecordInExerciseAsync(Guid userId, string exerciseId, CancellationToken cancellationToken = default)
+    public async Task<PossibleRecordResult> GetRecordOrPossibleRecordInExerciseAsync(Id<LgymApi.Domain.Entities.User> userId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty || !Guid.TryParse(exerciseId, out var exerciseGuid))
+        if (userId.IsEmpty || exerciseId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, new[] { exerciseGuid }, cancellationToken);
+        var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, [exerciseId], cancellationToken);
         var comparableRecords = records
             .Where(r => r.Weight.Unit != WeightUnits.Unknown)
             .ToList();
@@ -221,7 +221,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         if (record == null)
         {
-            var possible = await _exerciseScoreRepository.GetBestScoreAsync(userId, exerciseGuid, cancellationToken);
+            var possible = await _exerciseScoreRepository.GetBestScoreAsync(userId, exerciseId, cancellationToken);
             if (possible == null)
             {
                 throw AppException.NotFound(Messages.DidntFind);

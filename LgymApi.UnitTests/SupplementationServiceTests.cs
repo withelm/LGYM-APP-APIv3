@@ -5,6 +5,7 @@ using LgymApi.Application.Features.Supplementation.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
 namespace LgymApi.UnitTests;
@@ -69,12 +70,12 @@ public sealed class SupplementationServiceTests
         var trainee = NewTrainee();
         var date = DateOnly.FromDateTime(new DateTime(2026, 2, 23));
         var mask = MaskForDate(date);
-        var activePlan = NewPlan(Guid.NewGuid(), trainee.Id, isActive: true, "Cut",
+        var activePlan = NewPlan(Id<User>.New(), trainee.Id, isActive: true, "Cut",
             NewPlanItem("Omega", "2", "08:00", mask, 0));
         _supplementationRepository.Plans.Add(activePlan);
         _supplementationRepository.IntakeLogs.Add(new SupplementIntakeLog
         {
-            Id = Guid.NewGuid(),
+            Id = Id<SupplementIntakeLog>.New(),
             TraineeId = trainee.Id,
             PlanItemId = activePlan.Items.First().Id,
             IntakeDate = date,
@@ -100,7 +101,7 @@ public sealed class SupplementationServiceTests
         var mask = MaskForDate(date);
         var firstExpected = NewPlanItem("First", "1", "21:00", mask, 0);
         var secondExpected = NewPlanItem("Second", "1", "08:00", mask, 1);
-        var activePlan = NewPlan(Guid.NewGuid(), trainee.Id, isActive: true, "Cut", secondExpected, firstExpected);
+        var activePlan = NewPlan(Id<User>.New(), trainee.Id, isActive: true, "Cut", secondExpected, firstExpected);
         _supplementationRepository.Plans.Add(activePlan);
 
         var result = await _service.GetActiveScheduleForDateAsync(trainee, date);
@@ -221,7 +222,7 @@ public sealed class SupplementationServiceTests
         var exception = Assert.ThrowsAsync<AppException>(async () =>
             await _service.CheckOffIntakeAsync(trainee, new CheckOffSupplementIntakeCommand
             {
-                PlanItemId = Guid.NewGuid(),
+                PlanItemId = Id<SupplementPlanItem>.New(),
                 IntakeDate = default
             }));
 
@@ -237,7 +238,7 @@ public sealed class SupplementationServiceTests
         var date = DateOnly.FromDateTime(new DateTime(2026, 2, 23));
         var mask = MaskForDate(date);
         var item = NewPlanItem("Omega", "2", "08:00", mask, 0);
-        var activePlan = NewPlan(Guid.NewGuid(), trainee.Id, isActive: true, "Cut", item);
+        var activePlan = NewPlan(Id<User>.New(), trainee.Id, isActive: true, "Cut", item);
         _supplementationRepository.Plans.Add(activePlan);
         _unitOfWork.ThrowOnNextSave = true;
         var findCallCount = 0;
@@ -251,9 +252,9 @@ public sealed class SupplementationServiceTests
 
             return new SupplementIntakeLog
             {
-                Id = Guid.NewGuid(),
-                TraineeId = traineeId,
-                PlanItemId = planItemId,
+                Id = Id<SupplementIntakeLog>.New(),
+                TraineeId = (LgymApi.Domain.ValueObjects.Id<User>)traineeId,
+                PlanItemId = (LgymApi.Domain.ValueObjects.Id<SupplementPlanItem>)planItemId,
                 IntakeDate = intakeDate,
                 TakenAt = DateTimeOffset.UtcNow,
                 PlanItem = item
@@ -312,7 +313,7 @@ public sealed class SupplementationServiceTests
         var trainee = NewTrainee();
         var date = new DateOnly(2026, 2, 23);
         var notTodayMask = 1 << (((int)date.DayOfWeek + 5) % 7);
-        var activePlan = NewPlan(Guid.NewGuid(), trainee.Id, isActive: true, "Cut",
+        var activePlan = NewPlan(Id<User>.New(), trainee.Id, isActive: true, "Cut",
             NewPlanItem("Omega", "2", "08:00", notTodayMask, 0));
         _supplementationRepository.Plans.Add(activePlan);
 
@@ -332,13 +333,13 @@ public sealed class SupplementationServiceTests
     {
         var notTrainer = new User
         {
-            Id = Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "u",
             Email = "u@example.com"
         };
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.GetTraineePlansAsync(notTrainer, Guid.NewGuid()));
+            await _service.GetTraineePlansAsync(notTrainer, Id<User>.New()));
 
         Assert.That(exception, Is.Not.Null);
         Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
@@ -348,9 +349,9 @@ public sealed class SupplementationServiceTests
     {
         var user = new User
         {
-            Id = Guid.NewGuid(),
-            Name = $"trainer-{Guid.NewGuid():N}",
-            Email = $"{Guid.NewGuid():N}@example.com"
+            Id = Id<User>.New(),
+            Name = $"trainer-{Id<User>.New():N}",
+            Email = $"{Id<User>.New():N}@example.com"
         };
 
         _roleRepository.TrainerUserIds.Add(user.Id);
@@ -361,27 +362,27 @@ public sealed class SupplementationServiceTests
     {
         return new User
         {
-            Id = Guid.NewGuid(),
-            Name = $"trainee-{Guid.NewGuid():N}",
-            Email = $"{Guid.NewGuid():N}@example.com"
+            Id = Id<User>.New(),
+            Name = $"trainee-{Id<User>.New():N}",
+            Email = $"{Id<User>.New():N}@example.com"
         };
     }
 
-    private void Link(Guid trainerId, Guid traineeId)
+    private void Link(Id<User> trainerId, Id<User> traineeId)
     {
         _trainerRelationshipRepository.Links[(trainerId, traineeId)] = new TrainerTraineeLink
         {
-            Id = Guid.NewGuid(),
+            Id = Id<TrainerTraineeLink>.New(),
             TrainerId = trainerId,
             TraineeId = traineeId
         };
     }
 
-    private static SupplementPlan NewPlan(Guid trainerId, Guid traineeId, bool isActive, string name, params SupplementPlanItem[] items)
+    private static SupplementPlan NewPlan(Id<User> trainerId, Id<User> traineeId, bool isActive, string name, params SupplementPlanItem[] items)
     {
         var plan = new SupplementPlan
         {
-            Id = Guid.NewGuid(),
+            Id = Id<SupplementPlan>.New(),
             TrainerId = trainerId,
             TraineeId = traineeId,
             Name = name,
@@ -403,7 +404,7 @@ public sealed class SupplementationServiceTests
     {
         return new SupplementPlanItem
         {
-            Id = Guid.NewGuid(),
+            Id = Id<SupplementPlanItem>.New(),
             SupplementName = supplementName,
             Dosage = dosage,
             TimeOfDay = TimeOnly.Parse(timeOfDay).ToTimeSpan(),
@@ -420,43 +421,43 @@ public sealed class SupplementationServiceTests
 
     private sealed class FakeRoleRepository : IRoleRepository
     {
-        public HashSet<Guid> TrainerUserIds { get; } = [];
+        public HashSet<Id<User>> TrainerUserIds { get; } = [];
 
-        public Task<bool> UserHasRoleAsync(Guid userId, string roleName, CancellationToken cancellationToken = default)
+        public Task<bool> UserHasRoleAsync(Id<User> userId, string roleName, CancellationToken cancellationToken = default)
             => Task.FromResult(TrainerUserIds.Contains(userId) && roleName == AuthConstants.Roles.Trainer);
 
         public Task<List<LgymApi.Domain.Entities.Role>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<LgymApi.Domain.Entities.Role>());
-        public Task<LgymApi.Domain.Entities.Role?> FindByIdAsync(Guid roleId, CancellationToken cancellationToken = default) => Task.FromResult<LgymApi.Domain.Entities.Role?>(null);
+        public Task<LgymApi.Domain.Entities.Role?> FindByIdAsync(Id<LgymApi.Domain.Entities.Role> roleId, CancellationToken cancellationToken = default) => Task.FromResult<LgymApi.Domain.Entities.Role?>(null);
         public Task<LgymApi.Domain.Entities.Role?> FindByNameAsync(string roleName, CancellationToken cancellationToken = default) => Task.FromResult<LgymApi.Domain.Entities.Role?>(null);
         public Task<List<LgymApi.Domain.Entities.Role>> GetByNamesAsync(IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default) => Task.FromResult(new List<LgymApi.Domain.Entities.Role>());
-        public Task<bool> ExistsByNameAsync(string roleName, Guid? excludeRoleId = null, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<List<string>> GetRoleNamesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
-        public Task<List<string>> GetPermissionClaimsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
-        public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
-        public Task<Dictionary<Guid, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default) => Task.FromResult(new Dictionary<Guid, List<string>>());
-        public Task<bool> UserHasPermissionAsync(Guid userId, string permission, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> ExistsByNameAsync(string roleName, Id<LgymApi.Domain.Entities.Role>? excludeRoleId = null, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<List<string>> GetRoleNamesByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
+        public Task<List<string>> GetPermissionClaimsByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
+        public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Id<LgymApi.Domain.Entities.Role> roleId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
+        public Task<Dictionary<Id<LgymApi.Domain.Entities.Role>, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Id<LgymApi.Domain.Entities.Role>> roleIds, CancellationToken cancellationToken = default) => Task.FromResult(new Dictionary<Id<LgymApi.Domain.Entities.Role>, List<string>>());
+        public Task<bool> UserHasPermissionAsync(Id<User> userId, string permission, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task AddRoleAsync(LgymApi.Domain.Entities.Role role, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task UpdateRoleAsync(LgymApi.Domain.Entities.Role role, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task DeleteRoleAsync(LgymApi.Domain.Entities.Role role, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task ReplaceRolePermissionClaimsAsync(Guid roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task AddUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task ReplaceUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task ReplaceRolePermissionClaimsAsync(Id<LgymApi.Domain.Entities.Role> roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task AddUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<LgymApi.Domain.Entities.Role>> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task ReplaceUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<LgymApi.Domain.Entities.Role>> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class FakeTrainerRelationshipRepository : ITrainerRelationshipRepository
     {
-        public Dictionary<(Guid TrainerId, Guid TraineeId), TrainerTraineeLink> Links { get; } = new();
+        public Dictionary<(Id<User> TrainerId, Id<User> TraineeId), TrainerTraineeLink> Links { get; } = new();
 
-        public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
+        public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
             => Task.FromResult(Links.TryGetValue((trainerId, traineeId), out var link) ? link : null);
 
         public Task AddInvitationAsync(TrainerInvitation invitation, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<TrainerInvitation?> FindInvitationByIdAsync(Guid invitationId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
-        public Task<TrainerInvitation?> FindPendingInvitationAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
-        public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Guid trainerId, CancellationToken cancellationToken = default) => Task.FromResult(new List<TrainerInvitation>());
-        public Task<bool> HasActiveLinkForTraineeAsync(Guid traineeId, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Guid traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerTraineeLink?>(null);
-        public Task<LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Guid trainerId, LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
+        public Task<TrainerInvitation?> FindInvitationByIdAsync(Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
+        public Task<TrainerInvitation?> FindPendingInvitationAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
+        public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default) => Task.FromResult(new List<TrainerInvitation>());
+        public Task<bool> HasActiveLinkForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerTraineeLink?>(null);
+        public Task<LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
             => Task.FromResult(new LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeListResult());
         public Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -466,7 +467,7 @@ public sealed class SupplementationServiceTests
     {
         public List<SupplementPlan> Plans { get; } = [];
         public List<SupplementIntakeLog> IntakeLogs { get; } = [];
-        public Func<Guid, Guid, DateOnly, SupplementIntakeLog?>? OnFindIntakeLog { get; set; }
+        public Func<Id<User>, Id<SupplementPlanItem>, DateOnly, SupplementIntakeLog?>? OnFindIntakeLog { get; set; }
 
         public Task AddPlanAsync(SupplementPlan plan, CancellationToken cancellationToken = default)
         {
@@ -474,16 +475,16 @@ public sealed class SupplementationServiceTests
             return Task.CompletedTask;
         }
 
-        public Task<SupplementPlan?> FindPlanByIdAsync(Guid planId, CancellationToken cancellationToken = default)
+        public Task<SupplementPlan?> FindPlanByIdAsync(Id<SupplementPlan> planId, CancellationToken cancellationToken = default)
             => Task.FromResult(Plans.FirstOrDefault(x => x.Id == planId));
 
-        public Task<List<SupplementPlan>> GetPlansByTrainerAndTraineeAsync(Guid trainerId, Guid traineeId, CancellationToken cancellationToken = default)
+        public Task<List<SupplementPlan>> GetPlansByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
             => Task.FromResult(Plans.Where(x => x.TrainerId == trainerId && x.TraineeId == traineeId && !x.IsDeleted).ToList());
 
-        public Task<SupplementPlan?> GetActivePlanForTraineeAsync(Guid traineeId, CancellationToken cancellationToken = default)
+        public Task<SupplementPlan?> GetActivePlanForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
             => Task.FromResult(Plans.FirstOrDefault(x => x.TraineeId == traineeId && x.IsActive && !x.IsDeleted));
 
-        public Task<List<SupplementIntakeLog>> GetIntakeLogsForPlanAsync(Guid traineeId, Guid planId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
+        public Task<List<SupplementIntakeLog>> GetIntakeLogsForPlanAsync(Id<User> traineeId, Id<SupplementPlan> planId, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default)
         {
             var planItemIds = Plans
                 .Where(p => p.Id == planId)
@@ -501,7 +502,7 @@ public sealed class SupplementationServiceTests
             return Task.FromResult(logs);
         }
 
-        public Task<SupplementIntakeLog?> FindIntakeLogAsync(Guid traineeId, Guid planItemId, DateOnly intakeDate, CancellationToken cancellationToken = default)
+        public Task<SupplementIntakeLog?> FindIntakeLogAsync(Id<User> traineeId, Id<SupplementPlanItem> planItemId, DateOnly intakeDate, CancellationToken cancellationToken = default)
         {
             var overrideResult = OnFindIntakeLog?.Invoke(traineeId, planItemId, intakeDate);
             if (overrideResult != null)

@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Options;
@@ -14,7 +15,7 @@ public sealed class InvitationEmailTemplateComposerTests
     [SetUp]
     public void SetUp()
     {
-        _templateRootPath = Path.Combine(Path.GetTempPath(), $"lgym-email-templates-{Guid.NewGuid():N}");
+        _templateRootPath = Path.Combine(Path.GetTempPath(), $"lgym-email-templates-{Id<InvitationEmailTemplateComposerTests>.New():N}");
         Directory.CreateDirectory(Path.Combine(_templateRootPath, "TrainerInvitation"));
         File.WriteAllText(
             Path.Combine(_templateRootPath, "TrainerInvitation", "en.email"),
@@ -38,7 +39,7 @@ public sealed class InvitationEmailTemplateComposerTests
     {
         var composer = CreateComposer();
 
-        var invitationId = Guid.NewGuid();
+        var invitationId = Id<LgymApi.Domain.Entities.TrainerInvitation>.New();
         var payload = new InvitationEmailPayload
         {
             InvitationId = invitationId,
@@ -70,7 +71,7 @@ public sealed class InvitationEmailTemplateComposerTests
     {
         var composer = CreateComposer();
 
-        var invitationId = Guid.NewGuid();
+        var invitationId = Id<LgymApi.Domain.Entities.TrainerInvitation>.New();
         var payload = new InvitationEmailPayload
         {
             InvitationId = invitationId,
@@ -99,7 +100,7 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var payload = new InvitationEmailPayload
         {
-            InvitationId = Guid.NewGuid(),
+            InvitationId = Id<LgymApi.Domain.Entities.TrainerInvitation>.New(),
             InvitationCode = "UTC123",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach UTC",
@@ -120,7 +121,7 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var payload = new InvitationEmailPayload
         {
-            InvitationId = Guid.NewGuid(),
+            InvitationId = Id<LgymApi.Domain.Entities.TrainerInvitation>.New(),
             InvitationCode = "UTC456",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach UTC",

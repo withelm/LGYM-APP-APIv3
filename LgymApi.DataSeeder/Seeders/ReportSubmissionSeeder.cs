@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,21 +30,21 @@ public sealed class ReportSubmissionSeeder : IEntitySeeder
             .Select(submission => submission.ReportRequestId)
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<Guid>(existing);
+        var existingRequestIdSet = new HashSet<Id<ReportRequest>>(existing);
 
         var addedAny = false;
         foreach (var requestId in requestIdSet)
         {
-            if (!existingSet.Add(requestId))
+            if (!existingRequestIdSet.Add(requestId))
             {
                 continue;
             }
 
             var request = seedContext.ReportRequests.First(entry => entry.Id == requestId);
-            var submission = new ReportSubmission
-            {
-                Id = Guid.NewGuid(),
-                ReportRequestId = request.Id,
+             var submission = new ReportSubmission
+             {
+                 Id = Id<ReportSubmission>.New(),
+                 ReportRequestId = request.Id,
                 TraineeId = request.TraineeId,
                 PayloadJson = "{\"weight\":80,\"sleep\":7,\"notes\":\"All good\"}"
             };

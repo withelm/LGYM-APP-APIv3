@@ -2,6 +2,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Measurements.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 using MeasurementEntity = LgymApi.Domain.Entities.Measurement;
@@ -39,7 +40,7 @@ public sealed class MeasurementsService : IMeasurementsService
 
         var measurement = new MeasurementEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<MeasurementEntity>.New(),
             UserId = currentUser.Id,
             BodyPart = bodyPart,
             Unit = unit.ToString(),
@@ -50,14 +51,14 @@ public sealed class MeasurementsService : IMeasurementsService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<MeasurementEntity> GetMeasurementDetailAsync(UserEntity currentUser, Guid measurementId, CancellationToken cancellationToken = default)
+    public async Task<MeasurementEntity> GetMeasurementDetailAsync(UserEntity currentUser, Id<MeasurementEntity> measurementId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        if (measurementId == Guid.Empty)
+        if (measurementId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -76,19 +77,19 @@ public sealed class MeasurementsService : IMeasurementsService
         return measurement;
     }
 
-    public Task<List<MeasurementEntity>> GetMeasurementsListAsync(UserEntity currentUser, Guid routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
+    public Task<List<MeasurementEntity>> GetMeasurementsListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
     {
         return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: false, cancellationToken);
     }
 
-    public Task<List<MeasurementEntity>> GetMeasurementsHistoryAsync(UserEntity currentUser, Guid routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
+    public Task<List<MeasurementEntity>> GetMeasurementsHistoryAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
     {
         return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: true, cancellationToken);
     }
 
     public async Task<MeasurementTrendResult> GetMeasurementsTrendAsync(
         UserEntity currentUser,
-        Guid routeUserId,
+        Id<UserEntity> routeUserId,
         BodyParts bodyPart,
         HeightUnits unit,
         CancellationToken cancellationToken = default)
@@ -140,7 +141,7 @@ public sealed class MeasurementsService : IMeasurementsService
 
     private async Task<List<MeasurementEntity>> GetMeasurementsInternalAsync(
         UserEntity currentUser,
-        Guid routeUserId,
+        Id<UserEntity> routeUserId,
         BodyParts? bodyPart,
         HeightUnits? unit,
         bool orderAscending,
@@ -187,9 +188,9 @@ public sealed class MeasurementsService : IMeasurementsService
         }).ToList();
     }
 
-    private static void ValidateAccess(UserEntity currentUser, Guid routeUserId)
+    private static void ValidateAccess(UserEntity currentUser, Id<UserEntity> routeUserId)
     {
-        if (currentUser == null || routeUserId == Guid.Empty)
+        if (currentUser == null || routeUserId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }

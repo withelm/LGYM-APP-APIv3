@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using NUnit.Framework;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -21,8 +22,8 @@ public class CommandEnvelopeStatusPolicyTests
         // Fresh envelope for each test, Pending status
         _envelope = new CommandEnvelope
         {
-            Id = Guid.NewGuid(),
-            CorrelationId = Guid.NewGuid(),
+            Id = LgymApi.Domain.ValueObjects.Id<CommandEnvelope>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = "{\"test\": true}",
             CommandTypeFullName = "TestNamespace.TestCommand",
             Status = ActionExecutionStatus.Pending

@@ -5,6 +5,7 @@ using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
 
@@ -46,10 +47,10 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithNewPersonalRecord_CreatesMainRecordEntry()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScoreId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var exerciseScoreId = Id<ExerciseScore>.New();
         var trainingDate = DateTimeOffset.UtcNow.AddDays(-1);
 
         _testTrainingRepository.TrainingToReturn = new Training
@@ -84,7 +85,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new MainRecordEntity
             {
-                Id = Guid.NewGuid(),
+                Id = Id<MainRecordEntity>.New(),
                 UserId = userId,
                 ExerciseId = exerciseId,
                 Weight = 80,
@@ -116,10 +117,10 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithNoImprovement_DoesNotCreateRecord()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScoreId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var exerciseScoreId = Id<ExerciseScore>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -153,7 +154,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new MainRecordEntity
             {
-                Id = Guid.NewGuid(),
+                Id = Id<MainRecordEntity>.New(),
                 UserId = userId,
                 ExerciseId = exerciseId,
                 Weight = 100,
@@ -179,10 +180,10 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithFirstExerciseAttempt_CreatesFirstRecord()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScoreId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var exerciseScoreId = Id<ExerciseScore>.New();
         var trainingDate = DateTimeOffset.UtcNow;
 
         _testTrainingRepository.TrainingToReturn = new Training
@@ -196,7 +197,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             new TrainingExerciseScore
             {
                 TrainingId = trainingId,
-                ExerciseScoreId = exerciseScoreId
+                ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId
             }
         };
 
@@ -218,7 +219,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -226,21 +227,21 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         // Assert
         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
-        var newRecord = _testMainRecordRepository.AddedRecords[0];
-        Assert.That(newRecord.Weight.Value, Is.EqualTo(120));
-        Assert.That(newRecord.ExerciseId, Is.EqualTo(exerciseId));
+         var newRecord = _testMainRecordRepository.AddedRecords[0];
+         Assert.That(newRecord.Weight.Value, Is.EqualTo(120));
+         Assert.That(newRecord.ExerciseId, Is.EqualTo(exerciseId));
     }
 
     [Test]
     public async Task ExecuteAsync_WithMultipleExercises_CreatesMultipleRecords()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId1 = Guid.NewGuid();
-        var exerciseId2 = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var scoreId1 = Guid.NewGuid();
-        var scoreId2 = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId1 = Id<Exercise>.New();
+        var exerciseId2 = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var scoreId1 = Id<ExerciseScore>.New();
+        var scoreId2 = Id<ExerciseScore>.New();
         var trainingDate = DateTimeOffset.UtcNow;
 
         _testTrainingRepository.TrainingToReturn = new Training
@@ -251,8 +252,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId1 },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId2 }
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId1 },
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId2 }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -282,7 +283,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -298,12 +299,12 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithUnknownUnit_SkipsExercise()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var validExerciseId = Guid.NewGuid();
-        var invalidExerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var validScoreId = Guid.NewGuid();
-        var invalidScoreId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var validExerciseId = Id<Exercise>.New();
+        var invalidExerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var validScoreId = Id<ExerciseScore>.New();
+        var invalidScoreId = Id<ExerciseScore>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -313,8 +314,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = invalidScoreId },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = validScoreId }
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)invalidScoreId },
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)validScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -344,25 +345,25 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
         await _handler.ExecuteAsync(command);
 
-        // Assert
-        Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
-        Assert.That(_testMainRecordRepository.AddedRecords[0].ExerciseId, Is.EqualTo(validExerciseId));
+         // Assert
+         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
+         Assert.That(_testMainRecordRepository.AddedRecords[0].ExerciseId, Is.EqualTo(validExerciseId));
     }
 
     [Test]
     public async Task ExecuteAsync_WithCrossFitConversion_ComparesCorrectly()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScoreId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var exerciseScoreId = Id<ExerciseScore>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -372,7 +373,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -392,7 +393,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new MainRecordEntity
             {
-                Id = Guid.NewGuid(),
+                Id = Id<MainRecordEntity>.New(),
                 UserId = userId,
                 ExerciseId = exerciseId,
                 Weight = 90,
@@ -404,7 +405,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -421,12 +422,12 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithMultipleSetsOfSameExercise_RecordsOnlyBest()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var scoreId1 = Guid.NewGuid();
-        var scoreId2 = Guid.NewGuid();
-        var scoreId3 = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var scoreId1 = Id<ExerciseScore>.New();
+        var scoreId2 = Id<ExerciseScore>.New();
+        var scoreId3 = Id<ExerciseScore>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -436,9 +437,9 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId1 },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId2 },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId3 }
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId1 },
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId2 },
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId3 }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -477,7 +478,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -492,15 +493,15 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_TrainingNotFound_SkipsProcessing()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var trainingId = Id<Training>.New();
 
         _testTrainingRepository.TrainingToReturn = null;
 
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -516,8 +517,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_NoExerciseScores_SkipsProcessing()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var trainingId = Id<Training>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -530,7 +531,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -546,10 +547,10 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithNewRecords_CallsSaveChanges()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScoreId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var exerciseScoreId = Id<ExerciseScore>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -559,7 +560,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -580,7 +581,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -594,10 +595,10 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithNoNewRecords_DoesNotCallSaveChanges()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScoreId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var exerciseScoreId = Id<ExerciseScore>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -607,7 +608,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -627,7 +628,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         {
             new MainRecordEntity
             {
-                Id = Guid.NewGuid(),
+                Id = Id<MainRecordEntity>.New(),
                 UserId = userId,
                 ExerciseId = exerciseId,
                 Weight = 100,
@@ -639,7 +640,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -717,10 +718,10 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithPartialReps_DoesNotCreateRecord()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScoreId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var exerciseScoreId = Id<ExerciseScore>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -730,7 +731,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -751,7 +752,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -766,10 +767,10 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithZeroReps_DoesNotCreateRecord()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScoreId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var exerciseScoreId = Id<ExerciseScore>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -779,7 +780,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = exerciseScoreId }
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)exerciseScoreId }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -800,7 +801,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
@@ -815,12 +816,12 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     public async Task ExecuteAsync_WithMixedFullAndPartialReps_OnlyCreatesRecordForFullReps()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var exerciseId1 = Guid.NewGuid();
-        var exerciseId2 = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var scoreId1 = Guid.NewGuid();
-        var scoreId2 = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var exerciseId1 = Id<Exercise>.New();
+        var exerciseId2 = Id<Exercise>.New();
+        var trainingId = Id<Training>.New();
+        var scoreId1 = Id<ExerciseScore>.New();
+        var scoreId2 = Id<ExerciseScore>.New();
 
         _testTrainingRepository.TrainingToReturn = new Training
         {
@@ -830,8 +831,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         _testTrainingExerciseScoreRepository.TrainingExercisesToReturn = new List<TrainingExerciseScore>
         {
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId1 },
-            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = scoreId2 }
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId1 },
+            new TrainingExerciseScore { TrainingId = trainingId, ExerciseScoreId = (Domain.ValueObjects.Id<ExerciseScore>)scoreId2 }
         };
 
         _testExerciseScoreRepository.ExerciseScoresToReturn = new List<ExerciseScore>
@@ -861,17 +862,17 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         var command = new TrainingCompletedCommand
         {
             UserId = userId,
-            TrainingId = trainingId
+            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
         };
 
         // Act
         await _handler.ExecuteAsync(command);
 
-        // Assert
-        Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
-        Assert.That(_testMainRecordRepository.AddedRecords[0].ExerciseId, Is.EqualTo(exerciseId2));
-        Assert.That(_testMainRecordRepository.AddedRecords[0].Weight.Value, Is.EqualTo(80));
-        Assert.That(_testUnitOfWork.SaveChangesCalled, Is.True);
+         // Assert
+         Assert.That(_testMainRecordRepository.AddedRecords, Has.Count.EqualTo(1));
+         Assert.That(_testMainRecordRepository.AddedRecords[0].ExerciseId, Is.EqualTo(exerciseId2));
+         Assert.That(_testMainRecordRepository.AddedRecords[0].Weight.Value, Is.EqualTo(80));
+         Assert.That(_testUnitOfWork.SaveChangesCalled, Is.True);
     }
 
     // Test doubles
@@ -881,8 +882,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         public List<MainRecordEntity> ExistingRecords { get; set; } = new();
 
         public Task<List<MainRecordEntity>> GetBestByUserGroupedByExerciseAndUnitAsync(
-            Guid userId,
-            IReadOnlyCollection<Guid>? exerciseIds,
+            Id<User> userId,
+            IReadOnlyCollection<Id<Exercise>>? exerciseIds,
             CancellationToken cancellationToken = default)
             => Task.FromResult(ExistingRecords);
 
@@ -892,16 +893,16 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             return Task.CompletedTask;
         }
 
-        public Task<List<MainRecordEntity>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<List<MainRecordEntity>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<MainRecordEntity>> GetByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+        public Task<List<MainRecordEntity>> GetByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<MainRecordEntity>> GetByUserAndExercisesAsync(Guid userId, IReadOnlyCollection<Guid> exerciseIds, CancellationToken cancellationToken = default)
+        public Task<List<MainRecordEntity>> GetByUserAndExercisesAsync(Id<User> userId, IReadOnlyCollection<Id<Exercise>> exerciseIds, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<MainRecordEntity?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<MainRecordEntity?> FindByIdAsync(Id<MainRecordEntity> id, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(MainRecordEntity record, CancellationToken cancellationToken = default)
@@ -910,7 +911,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         public Task UpdateAsync(MainRecordEntity record, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<MainRecordEntity?> GetLatestByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+        public Task<MainRecordEntity?> GetLatestByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 
@@ -918,25 +919,25 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     {
         public Training? TrainingToReturn { get; set; }
 
-        public Task<Training?> GetByIdAsync(Guid trainingId, CancellationToken cancellationToken = default)
+        public Task<Training?> GetByIdAsync(Id<Training> trainingId, CancellationToken cancellationToken = default)
             => Task.FromResult(TrainingToReturn);
 
         public Task AddAsync(Training training, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<Training?> GetLastByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<Training?> GetLastByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<Training>> GetByUserIdAndDateAsync(Guid userId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
+        public Task<List<Training>> GetByUserIdAndDateAsync(Id<User> userId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<DateTimeOffset>> GetDatesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<List<DateTimeOffset>> GetDatesByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<Training>> GetByGymIdsAsync(List<Guid> gymIds, CancellationToken cancellationToken = default)
+        public Task<List<Training>> GetByGymIdsAsync(List<Id<Gym>> gymIds, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<Training>> GetByPlanDayIdsAsync(List<Guid> planDayIds, CancellationToken cancellationToken = default)
+        public Task<List<Training>> GetByPlanDayIdsAsync(List<Id<PlanDay>> planDayIds, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 
@@ -945,7 +946,7 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         public List<TrainingExerciseScore> TrainingExercisesToReturn { get; set; } = new();
 
         public Task<List<TrainingExerciseScore>> GetByTrainingIdsAsync(
-            List<Guid> trainingIds,
+            List<Id<Training>> trainingIds,
             CancellationToken cancellationToken = default)
             => Task.FromResult(TrainingExercisesToReturn);
 
@@ -958,29 +959,29 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         public List<ExerciseScore> ExerciseScoresToReturn { get; set; } = new();
 
         public Task<List<ExerciseScore>> GetByIdsAsync(
-            List<Guid> exerciseScoreIds,
+            List<Id<ExerciseScore>> exerciseScoreIds,
             CancellationToken cancellationToken = default)
             => Task.FromResult(ExerciseScoresToReturn);
 
         public Task AddRangeAsync(IEnumerable<ExerciseScore> scores, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<ExerciseScore>> GetByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+        public Task<List<ExerciseScore>> GetByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<ExerciseScore>> GetByUserAndExerciseAndGymAsync(Guid userId, Guid exerciseId, Guid? gymId, CancellationToken cancellationToken = default)
+        public Task<List<ExerciseScore>> GetByUserAndExerciseAndGymAsync(Id<User> userId, Id<Exercise> exerciseId, Id<Gym>? gymId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<ExerciseScore>> GetByUserAndExercisesAsync(Guid userId, List<Guid> exerciseIds, CancellationToken cancellationToken = default)
+        public Task<List<ExerciseScore>> GetByUserAndExercisesAsync(Id<User> userId, List<Id<Exercise>> exerciseIds, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<List<ExerciseScore>> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, Guid? gymId, CancellationToken cancellationToken = default)
+        public Task<List<ExerciseScore>> GetLatestByUserExerciseSeriesAsync(Id<User> userId, Id<Exercise> exerciseId, Id<Gym>? gymId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Guid userId, Guid exerciseId, int series, Guid? gymId, CancellationToken cancellationToken = default)
+        public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Id<User> userId, Id<Exercise> exerciseId, int series, Id<Gym>? gymId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<ExerciseScore?> GetBestScoreAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+        public Task<ExerciseScore?> GetBestScoreAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 

@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -243,14 +244,14 @@ public sealed class GymTests : IntegrationTestBase
         updatedGym!.Name.Should().Be("New Name");
     }
 
-    private async Task<Gym> SeedGymAsync(Guid userId, string name, bool isDeleted = false)
+    private async Task<Gym> SeedGymAsync(Id<User> userId, string name, bool isDeleted = false)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var gym = new Gym
         {
-            Id = Guid.NewGuid(),
+            Id = Id<Gym>.New(),
             UserId = userId,
             Name = name,
             IsDeleted = isDeleted

@@ -1,12 +1,13 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
-public sealed class ReportRequest : EntityBase
+public sealed class ReportRequest : EntityBase<ReportRequest>
 {
-    public Guid TrainerId { get; set; }
-    public Guid TraineeId { get; set; }
-    public Guid TemplateId { get; set; }
+    public Id<User> TrainerId { get; set; }
+    public Id<User> TraineeId { get; set; }
+    public Id<ReportTemplate> TemplateId { get; set; }
     public ReportRequestStatus Status { get; set; } = ReportRequestStatus.Pending;
     public DateTimeOffset? DueAt { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }

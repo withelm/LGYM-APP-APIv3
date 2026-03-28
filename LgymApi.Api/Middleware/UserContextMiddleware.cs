@@ -1,5 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 
 namespace LgymApi.Api.Middleware;
@@ -23,7 +25,7 @@ public sealed class UserContextMiddleware
         }
 
         var userIdClaim = context.User.FindFirst("userId")?.Value;
-        if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        if (string.IsNullOrWhiteSpace(userIdClaim) || !Id<User>.TryParse(userIdClaim, out var userId))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });

@@ -4,7 +4,10 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Mapping.Core;
+using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.Training.Controllers;
 
@@ -29,11 +32,11 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> AddTraining([FromRoute] string id, [FromBody] TrainingFormDto form)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var gymId = Guid.TryParse(form.GymId, out var parsedGymId) ? parsedGymId : Guid.Empty;
-        var planDayId = Guid.TryParse(form.TypePlanDayId, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
+        var gymId = form.GymId.ToIdOrEmpty<LgymApi.Domain.Entities.Gym>();
+        var planDayId = form.TypePlanDayId.ToIdOrEmpty<LgymApi.Domain.Entities.PlanDay>();
         var exercises = form.Exercises.Select(exercise => new TrainingExerciseInput
         {
-                ExerciseId = exercise.ExerciseId,
+                ExerciseId = exercise.ExerciseId.ToIdOrEmpty<ExerciseEntity>(),
                 Series = exercise.Series,
                 Reps = exercise.Reps,
                 Weight = exercise.Weight,

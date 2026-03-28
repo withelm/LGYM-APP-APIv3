@@ -1,0 +1,55 @@
+using LgymApi.Api.Middleware;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
+
+namespace LgymApi.UnitTests;
+
+[TestFixture]
+public sealed class IdParsingExtensionsTests
+{
+    [Test]
+    public void ToIdOrEmpty_ReturnsParsedId_ForValidInput()
+    {
+        var expected = Id<User>.New();
+
+        var actual = expected.ToString().ToIdOrEmpty<User>();
+
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void ToIdOrEmpty_ReturnsEmpty_ForNullOrInvalidInput()
+    {
+        var fromNull = ((string?)null).ToIdOrEmpty<User>();
+        var fromInvalid = "not-a-guid".ToIdOrEmpty<User>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fromNull.IsEmpty, Is.True);
+            Assert.That(fromInvalid.IsEmpty, Is.True);
+        });
+    }
+
+    [Test]
+    public void ToNullableId_ReturnsParsedId_ForValidInput()
+    {
+        var expected = Id<Exercise>.New();
+
+        var actual = expected.ToString().ToNullableId<Exercise>();
+
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void ToNullableId_ReturnsNull_ForNullOrInvalidInput()
+    {
+        var fromNull = ((string?)null).ToNullableId<Exercise>();
+        var fromInvalid = "invalid".ToNullableId<Exercise>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fromNull, Is.Null);
+            Assert.That(fromInvalid, Is.Null);
+        });
+    }
+}

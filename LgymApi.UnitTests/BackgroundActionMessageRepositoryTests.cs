@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
@@ -19,7 +20,7 @@ public sealed class BackgroundActionMessageRepositoryTests
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"command-envelope-repo-{Guid.NewGuid()}")
+            .UseInMemoryDatabase($"command-envelope-repo-{Id<CommandEnvelope>.New():N}")
             .Options;
 
         await using var dbContext = new AppDbContext(options);
@@ -27,7 +28,7 @@ public sealed class BackgroundActionMessageRepositoryTests
 
         var envelope = new CommandEnvelope
         {
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
             PayloadJson = "{\"test\":\"data\"}",
             Status = ActionExecutionStatus.Pending,
@@ -51,7 +52,7 @@ public sealed class BackgroundActionMessageRepositoryTests
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"command-envelope-repo-{Guid.NewGuid()}")
+            .UseInMemoryDatabase($"command-envelope-repo-{Id<CommandEnvelope>.New():N}")
             .Options;
 
         await using var dbContext = new AppDbContext(options);
@@ -59,7 +60,7 @@ public sealed class BackgroundActionMessageRepositoryTests
 
         var envelope = new CommandEnvelope
         {
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
             PayloadJson = "{}",
             Status = ActionExecutionStatus.Pending,
@@ -83,14 +84,14 @@ public sealed class BackgroundActionMessageRepositoryTests
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"command-envelope-repo-{Guid.NewGuid()}")
+            .UseInMemoryDatabase($"command-envelope-repo-{Id<CommandEnvelope>.New():N}")
             .Options;
 
         await using var dbContext = new AppDbContext(options);
         var repository = new CommandEnvelopeRepository(dbContext);
 
         // Act
-        var found = await repository.FindByIdAsync(Guid.NewGuid());
+        var found = await repository.FindByIdAsync(Id<CommandEnvelope>.New());
 
         // Assert
         Assert.That(found, Is.Null);
@@ -101,13 +102,13 @@ public sealed class BackgroundActionMessageRepositoryTests
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"command-envelope-repo-{Guid.NewGuid()}")
+            .UseInMemoryDatabase($"command-envelope-repo-{Id<CommandEnvelope>.New():N}")
             .Options;
 
         await using var dbContext = new AppDbContext(options);
         var repository = new CommandEnvelopeRepository(dbContext);
 
-        var correlationId = Guid.NewGuid();
+        var correlationId = Id<CorrelationScope>.New();
         var envelope = new CommandEnvelope
         {
             CorrelationId = correlationId,
@@ -134,62 +135,65 @@ public sealed class BackgroundActionMessageRepositoryTests
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"command-envelope-repo-{Guid.NewGuid()}")
+            .UseInMemoryDatabase($"command-envelope-repo-{Id<CommandEnvelope>.New():N}")
             .Options;
 
         await using var dbContext = new AppDbContext(options);
         var repository = new CommandEnvelopeRepository(dbContext);
 
         // Act
-        var found = await repository.FindByCorrelationIdAsync(Guid.NewGuid());
+        var found = await repository.FindByCorrelationIdAsync(Id<CorrelationScope>.New());
 
         // Assert
         Assert.That(found, Is.Null);
     }
 
-    [Test]
-    public async Task CommandEnvelope_GetPendingRetriesAsync_ReturnsFailedEnvelopesReadyForRetry()
-    {
-        // Arrange
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"command-envelope-repo-{Guid.NewGuid()}")
-            .Options;
+      [Test]
+      public async Task CommandEnvelope_GetPendingRetriesAsync_ReturnsFailedEnvelopesReadyForRetry()
+      {
+          // Arrange
+          var options = new DbContextOptionsBuilder<AppDbContext>()
+              .UseInMemoryDatabase($"command-envelope-repo-{Id<CommandEnvelope>.New():N}")
+              .Options;
 
-        await using var dbContext = new AppDbContext(options);
-        var repository = new CommandEnvelopeRepository(dbContext);
+          await using var dbContext = new AppDbContext(options);
+          var repository = new CommandEnvelopeRepository(dbContext);
 
-        var readyForRetry = new CommandEnvelope
-        {
-            CorrelationId = Guid.NewGuid(),
-            CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
-            PayloadJson = "{}",
-            Status = ActionExecutionStatus.Failed,
-            CreatedAt = DateTimeOffset.UtcNow.AddHours(-2),
-            UpdatedAt = DateTimeOffset.UtcNow,
-            NextAttemptAt = DateTimeOffset.UtcNow.AddMinutes(-5)
-        };
+          var readyForRetry = new CommandEnvelope
+          {
+              Id = Domain.ValueObjects.Id<CommandEnvelope>.New(),
+              CorrelationId = Id<CorrelationScope>.New(),
+              CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
+              PayloadJson = "{}",
+              Status = ActionExecutionStatus.Failed,
+              CreatedAt = DateTimeOffset.UtcNow.AddHours(-2),
+              UpdatedAt = DateTimeOffset.UtcNow,
+              NextAttemptAt = DateTimeOffset.UtcNow.AddMinutes(-5)
+          };
 
-        var notYetReady = new CommandEnvelope
-        {
-            CorrelationId = Guid.NewGuid(),
-            CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
-            PayloadJson = "{}",
-            Status = ActionExecutionStatus.Failed,
-            CreatedAt = DateTimeOffset.UtcNow.AddHours(-1),
-            UpdatedAt = DateTimeOffset.UtcNow,
-            NextAttemptAt = DateTimeOffset.UtcNow.AddMinutes(30)
-        };
+          var notYetReady = new CommandEnvelope
+          {
+              Id = Domain.ValueObjects.Id<CommandEnvelope>.New(),
+              CorrelationId = Id<CorrelationScope>.New(),
+              CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
+              PayloadJson = "{}",
+              Status = ActionExecutionStatus.Failed,
+              CreatedAt = DateTimeOffset.UtcNow.AddHours(-1),
+              UpdatedAt = DateTimeOffset.UtcNow,
+              NextAttemptAt = DateTimeOffset.UtcNow.AddMinutes(30)
+          };
 
-        var succeeded = new CommandEnvelope
-        {
-            CorrelationId = Guid.NewGuid(),
-            CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
-            PayloadJson = "{}",
-            Status = ActionExecutionStatus.Completed,
-            CreatedAt = DateTimeOffset.UtcNow.AddHours(-3),
-            UpdatedAt = DateTimeOffset.UtcNow,
-            CompletedAt = DateTimeOffset.UtcNow.AddHours(-2)
-        };
+          var succeeded = new CommandEnvelope
+          {
+              Id = Domain.ValueObjects.Id<CommandEnvelope>.New(),
+              CorrelationId = Id<CorrelationScope>.New(),
+              CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
+              PayloadJson = "{}",
+              Status = ActionExecutionStatus.Completed,
+              CreatedAt = DateTimeOffset.UtcNow.AddHours(-3),
+              UpdatedAt = DateTimeOffset.UtcNow,
+              CompletedAt = DateTimeOffset.UtcNow.AddHours(-2)
+          };
 
         await repository.AddAsync(readyForRetry);
         await repository.AddAsync(notYetReady);
@@ -209,7 +213,7 @@ public sealed class BackgroundActionMessageRepositoryTests
     {
         // Arrange
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"command-envelope-repo-{Guid.NewGuid()}")
+            .UseInMemoryDatabase($"command-envelope-repo-{Id<CommandEnvelope>.New():N}")
             .Options;
 
         await using var dbContext = new AppDbContext(options);
@@ -217,7 +221,7 @@ public sealed class BackgroundActionMessageRepositoryTests
 
         var envelope = new CommandEnvelope
         {
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
             PayloadJson = "{}",
             Status = ActionExecutionStatus.Pending,

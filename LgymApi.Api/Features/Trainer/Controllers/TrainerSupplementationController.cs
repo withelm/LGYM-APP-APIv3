@@ -5,7 +5,9 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Supplementation.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,7 +32,7 @@ public sealed class TrainerSupplementationController : ControllerBase
     [ProducesResponseType(typeof(List<SupplementPlanDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTraineePlans([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -44,7 +46,7 @@ public sealed class TrainerSupplementationController : ControllerBase
     [ProducesResponseType(typeof(SupplementPlanDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateTraineePlan([FromRoute] string traineeId, [FromBody] UpsertSupplementPlanRequest request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -58,12 +60,12 @@ public sealed class TrainerSupplementationController : ControllerBase
     [ProducesResponseType(typeof(SupplementPlanDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, [FromBody] UpsertSupplementPlanRequest request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(planId, out var parsedPlanId))
+        if (!Id<SupplementPlan>.TryParse(planId, out var parsedPlanId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -77,12 +79,12 @@ public sealed class TrainerSupplementationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(planId, out var parsedPlanId))
+        if (!Id<SupplementPlan>.TryParse(planId, out var parsedPlanId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -96,12 +98,12 @@ public sealed class TrainerSupplementationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> AssignTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(planId, out var parsedPlanId))
+        if (!Id<SupplementPlan>.TryParse(planId, out var parsedPlanId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -115,7 +117,7 @@ public sealed class TrainerSupplementationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UnassignTraineePlan([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
@@ -129,7 +131,7 @@ public sealed class TrainerSupplementationController : ControllerBase
     [ProducesResponseType(typeof(SupplementComplianceSummaryDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetComplianceSummary([FromRoute] string traineeId, [FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }

@@ -1,3 +1,6 @@
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
+
 namespace LgymApi.BackgroundWorker.Common;
 
 /// <summary>
@@ -10,5 +13,5 @@ public interface IActionMessageScheduler
     /// Enqueues a background action message for orchestrated processing.
     /// </summary>
     /// <param name="actionMessageId">The durable action message envelope id.</param>
-    void Enqueue(Guid actionMessageId);
+    void Enqueue(Id<CommandEnvelope> actionMessageId);
 }

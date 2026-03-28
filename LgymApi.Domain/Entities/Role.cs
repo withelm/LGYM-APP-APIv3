@@ -1,6 +1,6 @@
 namespace LgymApi.Domain.Entities;
 
-public sealed class Role : EntityBase
+public sealed class Role : EntityBase<Role>
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }

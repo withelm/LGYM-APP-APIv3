@@ -13,6 +13,7 @@ using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
 using UserEntity = LgymApi.Domain.Entities.User;
 using LgymApi.Application.Features.Tutorial;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Application.Features.User;
 
@@ -120,7 +121,7 @@ public sealed class UserService : IUserService
         var passwordData = _legacyPasswordService.Create(password);
         var user = new UserEntity
         {
-            Id = Guid.NewGuid(),
+            Id = Id<LgymApi.Domain.Entities.User>.New(),
             Name = name,
             Email = normalizedEmail!,
             IsVisibleInRanking = input.IsVisibleInRanking ?? true,
@@ -146,7 +147,7 @@ public sealed class UserService : IUserService
 
         await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
         {
-            Id = Guid.NewGuid(),
+            Id = Id<LgymApi.Domain.Entities.EloRegistry>.New(),
             UserId = user.Id,
             Date = DateTimeOffset.UtcNow,
             Elo = 1000
@@ -245,9 +246,9 @@ public sealed class UserService : IUserService
         };
     }
 
-    public async Task<bool> IsAdminAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> IsAdminAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             return false;
         }
@@ -305,9 +306,9 @@ public sealed class UserService : IUserService
         }).ToList();
     }
 
-    public async Task<int> GetUserEloAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<int> GetUserEloAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -390,14 +391,14 @@ public sealed class UserService : IUserService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateUserRolesAsync(Guid userId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default)
+    public async Task UpdateUserRolesAsync(Id<UserEntity> targetUserId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (targetUserId.IsEmpty)
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)targetUserId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -415,7 +416,7 @@ public sealed class UserService : IUserService
             throw AppException.BadRequest(Messages.InvalidRoleSelection);
         }
 
-        await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => r.Id).ToList(), cancellationToken);
+        await _roleRepository.ReplaceUserRolesAsync(targetUserId, rolesToSet.Select(r => r.Id).ToList(), cancellationToken);
     }
 
     private string ResolvePreferredLanguage(string? preferredLanguageHeader)

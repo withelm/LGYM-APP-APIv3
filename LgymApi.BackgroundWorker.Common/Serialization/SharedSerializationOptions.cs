@@ -30,6 +30,9 @@ public static class SharedSerializationOptions
             PropertyNameCaseInsensitive = true
         };
 
+        // Typed ID converter factory for Id<TEntity> serialization/deserialization
+        options.Converters.Add(new TypedIdJsonConverterFactory());
+
         // String enums with integer fallback for backward compatibility with persisted payloads
         // Legacy payloads may contain integer enum values; we support both string names and integers on read
         options.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: true));

@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +24,7 @@ public sealed class RoleRepository : IRoleRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<Role?> FindByIdAsync(Guid roleId, CancellationToken cancellationToken = default)
+    public Task<Role?> FindByIdAsync(Id<Role> roleId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
     }
@@ -35,7 +36,7 @@ public sealed class RoleRepository : IRoleRepository
             .FirstOrDefaultAsync(r => r.Name == roleName, cancellationToken);
     }
 
-    public Task<bool> ExistsByNameAsync(string roleName, Guid? excludeRoleId = null, CancellationToken cancellationToken = default)
+    public Task<bool> ExistsByNameAsync(string roleName, Id<Role>? excludeRoleId = null, CancellationToken cancellationToken = default)
     {
         var normalizedName = roleName.Trim();
         var query = _dbContext.Roles.AsQueryable();
@@ -72,7 +73,7 @@ public sealed class RoleRepository : IRoleRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<string>> GetRoleNamesByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<string>> GetRoleNamesByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserRoles
             .AsNoTracking()
@@ -83,7 +84,7 @@ public sealed class RoleRepository : IRoleRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<string>> GetPermissionClaimsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<string>> GetPermissionClaimsByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserRoles
             .AsNoTracking()
@@ -96,27 +97,27 @@ public sealed class RoleRepository : IRoleRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default)
+    public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Id<Role> targetRoleId, CancellationToken cancellationToken = default)
     {
         return _dbContext.RoleClaims
             .AsNoTracking()
-            .Where(rc => rc.RoleId == roleId && rc.ClaimType == AuthConstants.PermissionClaimType)
+            .Where(rc => rc.RoleId == targetRoleId && rc.ClaimType == AuthConstants.PermissionClaimType)
             .Select(rc => rc.ClaimValue)
             .Distinct()
             .OrderBy(value => value)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<Dictionary<Guid, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
+    public async Task<Dictionary<Id<Role>, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Id<Role>> targetRoleIds, CancellationToken cancellationToken = default)
     {
-        if (roleIds.Count == 0)
+        if (targetRoleIds.Count == 0)
         {
-            return new Dictionary<Guid, List<string>>();
+            return new Dictionary<Id<Role>, List<string>>();
         }
 
         var items = await _dbContext.RoleClaims
             .AsNoTracking()
-            .Where(rc => roleIds.Contains(rc.RoleId) && rc.ClaimType == AuthConstants.PermissionClaimType)
+            .Where(rc => targetRoleIds.Contains(rc.RoleId) && rc.ClaimType == AuthConstants.PermissionClaimType)
             .Select(rc => new { rc.RoleId, rc.ClaimValue })
             .ToListAsync(cancellationToken);
 
@@ -130,14 +131,14 @@ public sealed class RoleRepository : IRoleRepository
                     .ToList());
     }
 
-    public Task<bool> UserHasRoleAsync(Guid userId, string roleName, CancellationToken cancellationToken = default)
+    public Task<bool> UserHasRoleAsync(Id<User> userId, string roleName, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserRoles
             .AsNoTracking()
             .AnyAsync(ur => ur.UserId == userId && ur.Role.Name == roleName, cancellationToken);
     }
 
-    public Task<bool> UserHasPermissionAsync(Guid userId, string permission, CancellationToken cancellationToken = default)
+    public Task<bool> UserHasPermissionAsync(Id<User> userId, string permission, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserRoles
             .AsNoTracking()
@@ -163,10 +164,10 @@ public sealed class RoleRepository : IRoleRepository
         return Task.CompletedTask;
     }
 
-    public async Task ReplaceRolePermissionClaimsAsync(Guid roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
+    public async Task ReplaceRolePermissionClaimsAsync(Id<Role> targetRoleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
     {
         var existingClaims = await _dbContext.RoleClaims
-            .Where(rc => rc.RoleId == roleId && rc.ClaimType == AuthConstants.PermissionClaimType)
+            .Where(rc => rc.RoleId == targetRoleId && rc.ClaimType == AuthConstants.PermissionClaimType)
             .ToListAsync(cancellationToken);
 
         if (existingClaims.Count > 0)
@@ -181,8 +182,8 @@ public sealed class RoleRepository : IRoleRepository
             .OrderBy(pc => pc, StringComparer.Ordinal)
             .Select(pc => new RoleClaim
             {
-                Id = Guid.NewGuid(),
-                RoleId = roleId,
+                Id = Id<RoleClaim>.New(),
+                RoleId = targetRoleId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = pc
             })
@@ -195,7 +196,7 @@ public sealed class RoleRepository : IRoleRepository
 
     }
 
-    public async Task AddUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
+    public async Task AddUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default)
     {
         if (roleIds.Count == 0)
         {
@@ -220,7 +221,7 @@ public sealed class RoleRepository : IRoleRepository
         await _dbContext.UserRoles.AddRangeAsync(missing, cancellationToken);
     }
 
-    public async Task ReplaceUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default)
+    public async Task ReplaceUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default)
     {
         var existing = await _dbContext.UserRoles
             .Where(ur => ur.UserId == userId)

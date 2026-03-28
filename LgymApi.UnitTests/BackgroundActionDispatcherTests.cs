@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
@@ -214,12 +215,12 @@ public sealed class BackgroundActionDispatcherTests
             return Task.CompletedTask;
         }
 
-        public Task<CommandEnvelope?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<CommandEnvelope?> FindByIdAsync(Id<CommandEnvelope> id, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Envelopes.FirstOrDefault(e => e.Id == id));
         }
 
-        public Task<CommandEnvelope?> FindByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)
+        public Task<CommandEnvelope?> FindByCorrelationIdAsync(Id<CorrelationScope> correlationId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Envelopes.FirstOrDefault(e => e.CorrelationId == correlationId));
         }
@@ -278,9 +279,9 @@ public sealed class BackgroundActionDispatcherTests
 
     private sealed class FakeActionMessageScheduler : IActionMessageScheduler
     {
-        public List<Guid> EnqueuedIds { get; } = new();
+        public List<Id<CommandEnvelope>> EnqueuedIds { get; } = new();
 
-        public void Enqueue(Guid actionMessageId)
+        public void Enqueue(Id<CommandEnvelope> actionMessageId)
         {
             EnqueuedIds.Add(actionMessageId);
         }

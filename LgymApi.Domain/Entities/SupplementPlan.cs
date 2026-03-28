@@ -1,9 +1,11 @@
+using LgymApi.Domain.ValueObjects;
+
 namespace LgymApi.Domain.Entities;
 
-public sealed class SupplementPlan : EntityBase
+public sealed class SupplementPlan : EntityBase<SupplementPlan>
 {
-    public Guid TrainerId { get; set; }
-    public Guid TraineeId { get; set; }
+    public Id<User> TrainerId { get; set; }
+    public Id<User> TraineeId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Notes { get; set; }
     public bool IsActive { get; set; }

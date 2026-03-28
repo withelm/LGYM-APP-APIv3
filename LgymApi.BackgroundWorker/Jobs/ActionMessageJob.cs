@@ -1,5 +1,7 @@
 using Hangfire;
 using LgymApi.BackgroundWorker.Common.Jobs;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.BackgroundWorker.Jobs;
 
@@ -21,7 +23,7 @@ public sealed class ActionMessageJob : IActionMessageJob
     /// Executes background action message orchestration for the given envelope id.
     /// </summary>
     /// <param name="actionMessageId">Durable command envelope id from persistent store</param>
-    public async Task ExecuteAsync(Guid actionMessageId)
+    public async Task ExecuteAsync(Id<CommandEnvelope> actionMessageId)
     {
         await _orchestrator.OrchestrateAsync(actionMessageId);
     }

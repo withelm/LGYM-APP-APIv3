@@ -1,24 +1,27 @@
 using LgymApi.Application.Exceptions;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
 namespace LgymApi.Api.Middleware;
 
 public static class RouteUserAccessGuard
 {
-    public static Guid ParseRouteUserIdForCurrentUser(this HttpContext context, string routeUserId)
+    public static Id<User> ParseRouteUserIdForCurrentUser(this HttpContext context, string routeUserId)
     {
-        var currentUserId = context.GetCurrentUser()?.Id ?? Guid.Empty;
-        if (currentUserId == Guid.Empty)
+        var currentUser = context.GetCurrentUser();
+        if (currentUser == null || currentUser.Id.IsEmpty)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (!Guid.TryParse(routeUserId, out var parsedRouteUserId))
+       
+        if (!Id<User>.TryParse(routeUserId, out var parsedRouteUserId))
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (parsedRouteUserId != currentUserId)
+        if (parsedRouteUserId != currentUser.Id)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
@@ -26,15 +29,15 @@ public static class RouteUserAccessGuard
         return parsedRouteUserId;
     }
 
-    public static Guid ParseRouteUserIdForCurrentAdmin(this HttpContext context, string routeUserId)
+    public static Id<User> ParseRouteUserIdForCurrentAdmin(this HttpContext context, string routeUserId)
     {
         var currentUser = context.GetCurrentUser();
-        if (currentUser == null || currentUser.Id == Guid.Empty)
+        if (currentUser == null || currentUser.Id.IsEmpty)
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }
 
-        if (!Guid.TryParse(routeUserId, out var parsedRouteUserId))
+        if (!Id<User>.TryParse(routeUserId, out var parsedRouteUserId))
         {
             throw AppException.Forbidden(Messages.Forbidden);
         }

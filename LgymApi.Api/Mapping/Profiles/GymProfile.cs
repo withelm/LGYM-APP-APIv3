@@ -1,6 +1,7 @@
 using LgymApi.Api.Features.Gym.Contracts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Api.Mapping.Profiles;
 
@@ -8,7 +9,7 @@ public sealed class GymProfile : IMappingProfile
 {
     internal static class Keys
     {
-        internal static readonly ContextKey<IReadOnlyDictionary<Guid, LgymApi.Domain.Entities.Training>> LastTrainingMap = new("Gym.LastTrainingMap");
+        internal static readonly ContextKey<IReadOnlyDictionary<Id<Gym>, LgymApi.Domain.Entities.Training>> LastTrainingMap = new("Gym.LastTrainingMap");
     }
 
     public void Configure(MappingConfiguration configuration)

@@ -5,9 +5,11 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TrainerInvitationEntity = LgymApi.Domain.Entities.TrainerInvitation;
 
 namespace LgymApi.Api.Features.Trainer.Controllers;
 
@@ -29,7 +31,7 @@ public sealed class TraineeRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> AcceptInvitation([FromRoute] string invitationId)
     {
-        if (!Guid.TryParse(invitationId, out var parsedInvitationId))
+        if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -43,7 +45,7 @@ public sealed class TraineeRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> RejectInvitation([FromRoute] string invitationId)
     {
-        if (!Guid.TryParse(invitationId, out var parsedInvitationId))
+        if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }

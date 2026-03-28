@@ -1,3 +1,4 @@
+using LgymApi.Domain.ValueObjects;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
@@ -21,7 +22,7 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_UserRegisteredCommand_DeserializesFromPersistedCamelCasePayload()
     {
         // Arrange - simulate persisted envelope with camelCase payload
-        var userId = Guid.NewGuid();
+        var userId = Id<User>.New();
         var persistedPayloadJson = $$"""{"userId":"{{userId}}"}""";
         var persistedDiscriminator = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand";
 
@@ -42,7 +43,7 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_UserRegisteredCommand_DeserializesFromPersistedPascalCasePayload()
     {
         // Arrange - simulate legacy persisted envelope with PascalCase payload
-        var userId = Guid.NewGuid();
+        var userId = Id<User>.New();
         var legacyPayloadJson = $$"""{"UserId":"{{userId}}"}""";
         var persistedDiscriminator = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand";
 
@@ -62,7 +63,7 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_UserRegisteredCommand_RoundTripPreservesPayloadAndDiscriminator()
     {
         // Arrange - create command and simulate full envelope lifecycle
-        var userId = Guid.NewGuid();
+        var userId = Id<User>.New();
         var command = new UserRegisteredCommand { UserId = userId };
         var commandType = typeof(UserRegisteredCommand);
 
@@ -94,8 +95,8 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_TrainingCompletedCommand_DeserializesFromPersistedCamelCasePayload()
     {
         // Arrange - simulate persisted envelope with camelCase payload
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var trainingId = Id<Training>.New();
         var persistedPayloadJson = $$"""{"userId":"{{userId}}","trainingId":"{{trainingId}}"}""";
         var persistedDiscriminator = "LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand";
 
@@ -116,8 +117,8 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_TrainingCompletedCommand_DeserializesFromPersistedPascalCasePayload()
     {
         // Arrange - simulate legacy persisted envelope with PascalCase payload
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var trainingId = Id<Training>.New();
         var legacyPayloadJson = $$"""{"UserId":"{{userId}}","TrainingId":"{{trainingId}}"}""";
         var persistedDiscriminator = "LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand";
 
@@ -138,8 +139,8 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_TrainingCompletedCommand_RoundTripPreservesAllFields()
     {
         // Arrange - create command with multiple properties
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var trainingId = Id<Training>.New();
         var command = new TrainingCompletedCommand { UserId = userId, TrainingId = trainingId };
         var commandType = typeof(TrainingCompletedCommand);
 
@@ -168,7 +169,7 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_InvitationCreatedCommand_DeserializesFromPersistedCamelCasePayload()
     {
         // Arrange - simulate persisted envelope with camelCase payload
-        var invitationId = Guid.NewGuid();
+        var invitationId = Id<TrainerInvitation>.New();
         var persistedPayloadJson = $$"""{"invitationId":"{{invitationId}}"}""";
         var persistedDiscriminator = "LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand";
 
@@ -188,7 +189,7 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_InvitationCreatedCommand_DeserializesFromPersistedPascalCasePayload()
     {
         // Arrange - simulate legacy persisted envelope with PascalCase payload
-        var invitationId = Guid.NewGuid();
+        var invitationId = Id<TrainerInvitation>.New();
         var legacyPayloadJson = $$"""{"InvitationId":"{{invitationId}}"}""";
         var persistedDiscriminator = "LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand";
 
@@ -208,7 +209,7 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_InvitationCreatedCommand_RoundTripPreservesPayloadAndDiscriminator()
     {
         // Arrange - create command
-        var invitationId = Guid.NewGuid();
+        var invitationId = Id<TrainerInvitation>.New();
         var command = new InvitationCreatedCommand { InvitationId = invitationId };
         var commandType = typeof(InvitationCreatedCommand);
 
@@ -236,9 +237,9 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_AllKnownCommands_DeserializeFromPersistedEnvelopes()
     {
         // Arrange - simulate persisted envelopes for all known commands
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var invitationId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var trainingId = Id<Training>.New();
+        var invitationId = Id<TrainerInvitation>.New();
 
         var persistedEnvelopes = new[]
         {
@@ -281,8 +282,8 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_MixedCasePayloads_AllDeserializeSuccessfully()
     {
         // Arrange - simulate mixed legacy and current payloads
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var trainingId = Id<Training>.New();
 
         var mixedPayloads = new[]
         {
@@ -326,9 +327,9 @@ public sealed class CommandEnvelopeCompatibilityTests
     public void CommandEnvelope_FullLifecycleSimulation_PreservesPayloadIntegrity()
     {
         // Arrange - simulate full CommandEnvelope lifecycle for all known commands
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var invitationId = Guid.NewGuid();
+        var userId = Id<User>.New();
+        var trainingId = Id<Training>.New();
+        var invitationId = Id<TrainerInvitation>.New();
 
         var commands = new IActionCommand[]
         {
@@ -349,8 +350,8 @@ public sealed class CommandEnvelopeCompatibilityTests
             // Step 2: Persist envelope (simulated database storage)
             var envelope = new CommandEnvelope
             {
-                Id = Guid.NewGuid(),
-                CorrelationId = Guid.NewGuid(),
+                Id = Id<CommandEnvelope>.New(),
+                CorrelationId = Id<CorrelationScope>.New(),
                 PayloadJson = payloadJson,
                 CommandTypeFullName = discriminator,
                 Status = ActionExecutionStatus.Pending,

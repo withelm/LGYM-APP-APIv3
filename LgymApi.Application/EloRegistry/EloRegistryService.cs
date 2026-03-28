@@ -2,6 +2,7 @@ using System.Globalization;
 using LgymApi.Application.Features.EloRegistry.Models;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
 namespace LgymApi.Application.Features.EloRegistry;
@@ -17,14 +18,14 @@ public sealed class EloRegistryService : IEloRegistryService
         _eloRepository = eloRepository;
     }
 
-    public async Task<List<EloRegistryChartEntry>> GetChartAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<List<EloRegistryChartEntry>> GetChartAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        if (userId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
             throw AppException.NotFound(Messages.DidntFind);

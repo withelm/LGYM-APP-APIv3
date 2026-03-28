@@ -4,6 +4,7 @@ using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
@@ -56,7 +57,7 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         }
 
         // Fetch trainee email and language
-        var trainee = await _userRepository.FindByIdAsync(invitation.TraineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)invitation.TraineeId, cancellationToken);
         if (trainee == null)
         {
             _logger.LogWarning(
@@ -67,7 +68,7 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         }
 
         // Fetch trainer name and preferred language
-        var trainer = await _userRepository.FindByIdAsync(invitation.TrainerId, cancellationToken);
+        var trainer = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)invitation.TrainerId, cancellationToken);
         if (trainer == null)
         {
             _logger.LogWarning(

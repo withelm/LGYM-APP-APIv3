@@ -1,9 +1,11 @@
+using LgymApi.Domain.ValueObjects;
+
 namespace LgymApi.Domain.Entities;
 
-public sealed class ReportSubmission : EntityBase
+public sealed class ReportSubmission : EntityBase<ReportSubmission>
 {
-    public Guid ReportRequestId { get; set; }
-    public Guid TraineeId { get; set; }
+    public Id<ReportRequest> ReportRequestId { get; set; }
+    public Id<User> TraineeId { get; set; }
     public string PayloadJson { get; set; } = "{}";
 
     public ReportRequest ReportRequest { get; set; } = null!;

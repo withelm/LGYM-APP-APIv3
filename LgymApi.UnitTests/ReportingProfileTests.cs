@@ -1,3 +1,5 @@
+using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Entities;
 using System.Reflection;
 using System.Text.Json;
 using LgymApi.Api.Features.Trainer.Contracts;
@@ -18,8 +20,8 @@ public sealed class ReportingProfileTests
 
         var templateResult = new ReportTemplateResult
         {
-            Id = Guid.NewGuid(),
-            TrainerId = Guid.NewGuid(),
+             Id = Id<LgymApi.Domain.Entities.ReportTemplate>.New(),
+             TrainerId = Id<LgymApi.Domain.Entities.User>.New(),
             Name = "Weekly",
             Fields =
             [
@@ -32,10 +34,10 @@ public sealed class ReportingProfileTests
 
         var requestResult = new ReportRequestResult
         {
-            Id = Guid.NewGuid(),
-            TrainerId = Guid.NewGuid(),
-            TraineeId = Guid.NewGuid(),
-            TemplateId = Guid.NewGuid(),
+             Id = Id<LgymApi.Domain.Entities.ReportRequest>.New(),
+             TrainerId = Id<LgymApi.Domain.Entities.User>.New(),
+             TraineeId = Id<LgymApi.Domain.Entities.User>.New(),
+             TemplateId = Id<LgymApi.Domain.Entities.ReportTemplate>.New(),
             Status = ReportRequestStatus.Pending,
             Template = templateResult
         };
@@ -45,9 +47,9 @@ public sealed class ReportingProfileTests
 
         var submissionResult = new ReportSubmissionResult
         {
-            Id = Guid.NewGuid(),
-            ReportRequestId = Guid.NewGuid(),
-            TraineeId = Guid.NewGuid(),
+             Id = Id<LgymApi.Domain.Entities.ReportSubmission>.New(),
+             ReportRequestId = Id<LgymApi.Domain.Entities.ReportRequest>.New(),
+             TraineeId = Id<LgymApi.Domain.Entities.User>.New(),
             Answers = new Dictionary<string, JsonElement>(),
             Request = requestResult
         };
@@ -67,19 +69,19 @@ public sealed class ReportingProfileTests
 
         var submissionResult = new ReportSubmissionResult
         {
-            Id = Guid.NewGuid(),
-            ReportRequestId = Guid.NewGuid(),
-            TraineeId = Guid.NewGuid(),
+             Id = Id<LgymApi.Domain.Entities.ReportSubmission>.New(),
+             ReportRequestId = Id<LgymApi.Domain.Entities.ReportRequest>.New(),
+             TraineeId = Id<LgymApi.Domain.Entities.User>.New(),
             Answers = new Dictionary<string, JsonElement>
             {
                 ["Weight"] = JsonSerializer.SerializeToElement(82)
             },
             Request = new ReportRequestResult
             {
-                Id = Guid.NewGuid(),
-                TrainerId = Guid.NewGuid(),
-                TraineeId = Guid.NewGuid(),
-                TemplateId = Guid.NewGuid(),
+                Id = Id<LgymApi.Domain.Entities.ReportRequest>.New(),
+                TrainerId = Id<LgymApi.Domain.Entities.User>.New(),
+                TraineeId = Id<LgymApi.Domain.Entities.User>.New(),
+                 TemplateId = Id<LgymApi.Domain.Entities.ReportTemplate>.New(),
                 Status = ReportRequestStatus.Submitted,
                 Template = new ReportTemplateResult()
             }

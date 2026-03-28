@@ -14,6 +14,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
@@ -30,7 +31,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task CreatePlanAsync_PersistsPlanAndUserPointer()
     {
-        var dbName = $"service-commit-plan-{Guid.NewGuid()}";
+        var dbName = $"service-commit-plan-{Id<Plan>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -38,7 +39,7 @@ public sealed class ServiceCommitBehaviorTests
         await using var dbContext = new AppDbContext(options);
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "plan-user",
             Email = "plan-user@example.com",
             ProfileRank = "Junior 1",
@@ -70,7 +71,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task RegisterAsync_PersistsUserAndInitialElo()
     {
-        var dbName = $"service-commit-register-{Guid.NewGuid()}";
+        var dbName = $"service-commit-register-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -79,7 +80,7 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
@@ -128,7 +129,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task RegisterAsync_UsesPrimaryCultureFromAcceptLanguageHeader()
     {
-        var dbName = $"service-commit-register-culture-header-{Guid.NewGuid()}";
+        var dbName = $"service-commit-register-culture-header-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -137,7 +138,7 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
@@ -183,7 +184,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task RegisterAsync_FallsBackToConfiguredPreferredLanguage_WhenHeaderInvalid()
     {
-        var dbName = $"service-commit-register-culture-fallback-{Guid.NewGuid()}";
+        var dbName = $"service-commit-register-culture-fallback-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -192,7 +193,7 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
@@ -240,7 +241,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task UpdateTimeZoneAsync_PersistsUserPreference()
     {
-        var dbName = $"service-commit-timezone-{Guid.NewGuid()}";
+        var dbName = $"service-commit-timezone-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -249,14 +250,14 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
 
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "timezone-user",
             Email = "timezone-user@example.com",
             ProfileRank = "Junior 1",
@@ -304,7 +305,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task UpdateTimeZoneAsync_ThrowsBadRequest_WhenTimeZoneInvalid()
     {
-        var dbName = $"service-commit-timezone-invalid-{Guid.NewGuid()}";
+        var dbName = $"service-commit-timezone-invalid-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -313,14 +314,14 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
 
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "timezone-invalid-user",
             Email = "timezone-invalid-user@example.com",
             ProfileRank = "Junior 1",
@@ -365,7 +366,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task CreateRoleAsync_PersistsRoleAndClaims()
     {
-        var dbName = $"service-commit-role-create-{Guid.NewGuid()}";
+        var dbName = $"service-commit-role-create-{Id<Plan>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -383,11 +384,11 @@ public sealed class ServiceCommitBehaviorTests
             "Role for coaching",
             [AuthConstants.Permissions.ManageGlobalExercises, AuthConstants.Permissions.ManageAppConfig]);
 
-        var savedRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == created.Id);
+        var savedRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == (Id<Role>)created.Id);
         Assert.That(savedRole, Is.Not.Null);
 
         var savedClaims = await dbContext.RoleClaims
-            .Where(rc => rc.RoleId == created.Id)
+            .Where(rc => rc.RoleId == (Id<Role>)created.Id)
             .Select(rc => rc.ClaimValue)
             .OrderBy(v => v)
             .ToListAsync();
@@ -402,7 +403,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task UpdateUserRolesAsync_PersistsUserRoleAssignments()
     {
-        var dbName = $"service-commit-role-assign-{Guid.NewGuid()}";
+        var dbName = $"service-commit-role-assign-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -411,7 +412,7 @@ public sealed class ServiceCommitBehaviorTests
 
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "role-user",
             Email = "role-user@example.com",
             ProfileRank = "Junior 1",
@@ -423,8 +424,8 @@ public sealed class ServiceCommitBehaviorTests
         };
 
         dbContext.Users.Add(user);
-        dbContext.Roles.Add(new Role { Id = Guid.NewGuid(), Name = AuthConstants.Roles.User, Description = "Default" });
-        dbContext.Roles.Add(new Role { Id = Guid.NewGuid(), Name = "Coach", Description = "Custom" });
+        dbContext.Roles.Add(new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.User, Description = "Default" });
+        dbContext.Roles.Add(new Role { Id = Id<Role>.New(), Name = "Coach", Description = "Custom" });
         await dbContext.SaveChangesAsync();
 
         IRoleRepository roleRepository = new RoleRepository(dbContext);
@@ -490,7 +491,7 @@ public sealed class ServiceCommitBehaviorTests
 
     private sealed class NoOpTokenService : ITokenService
     {
-        public string CreateToken(Guid userId, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
+        public string CreateToken(Id<User> userId, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
         {
             return userId.ToString();
         }
@@ -500,16 +501,16 @@ public sealed class ServiceCommitBehaviorTests
     {
         public int Count => 0;
 
-        public void AddOrRefresh(Guid userId)
+        public void AddOrRefresh(Id<User> userId)
         {
         }
 
-        public bool Remove(Guid userId)
+        public bool Remove(Id<User> userId)
         {
             return true;
         }
 
-        public bool Contains(Guid userId)
+        public bool Contains(Id<User> userId)
         {
             return false;
         }
@@ -537,32 +538,32 @@ public sealed class ServiceCommitBehaviorTests
 
     private sealed class NoOpTutorialService : ITutorialService
     {
-        public Task InitializeOnboardingTutorialAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task InitializeOnboardingTutorialAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
 
-        public Task<bool> HasActiveTutorialsAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<bool> HasActiveTutorialsAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(false);
         }
 
-        public Task<List<TutorialProgressResult>> GetActiveTutorialsAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<List<TutorialProgressResult>> GetActiveTutorialsAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new List<TutorialProgressResult>());
         }
 
-        public Task<TutorialProgressResult?> GetTutorialProgressAsync(Guid userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+        public Task<TutorialProgressResult?> GetTutorialProgressAsync(Id<User> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<TutorialProgressResult?>(null);
         }
 
-        public Task CompleteStepAsync(Guid userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default)
+        public Task CompleteStepAsync(Id<User> userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
 
-        public Task CompleteTutorialAsync(Guid userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+        public Task CompleteTutorialAsync(Id<User> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }

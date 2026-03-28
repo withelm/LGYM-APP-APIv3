@@ -1,6 +1,7 @@
 using LgymApi.Application.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,12 +16,12 @@ public sealed class UserRepository : IUserRepository
         _dbContext = dbContext;
     }
 
-    public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
-    public Task<User?> FindByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.Users
             .IgnoreQueryFilters()

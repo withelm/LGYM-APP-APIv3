@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,10 +31,10 @@ public sealed class TrainingExerciseScoreSeeder : IEntitySeeder
             .Select(entry => new { entry.TrainingId, entry.ExerciseScoreId })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Guid TrainingId, Guid ExerciseScoreId)>(
+        var existingSet = new HashSet<(Id<Training> TrainingId, Id<ExerciseScore> ExerciseScoreId)>(
             existingPairs.Select(pair => (pair.TrainingId, pair.ExerciseScoreId)));
 
-        var trainingOrderMap = new Dictionary<Guid, int>();
+        var trainingOrderMap = new Dictionary<Id<Training>, int>();
         var index = 0;
         var addedAny = false;
         foreach (var score in exerciseScores)
@@ -51,10 +52,10 @@ public sealed class TrainingExerciseScoreSeeder : IEntitySeeder
                 trainingOrderMap[training.Id] = 0;
             }
             
-            var entry = new TrainingExerciseScore
-            {
-                Id = Guid.NewGuid(),
-                TrainingId = training.Id,
+             var entry = new TrainingExerciseScore
+             {
+                 Id = Id<TrainingExerciseScore>.New(),
+                 TrainingId = training.Id,
                 ExerciseScoreId = score.Id,
                 Order = trainingOrderMap[training.Id]
             };

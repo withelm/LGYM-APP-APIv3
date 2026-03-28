@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
         return _dbContext.MainRecords.AddAsync(record, cancellationToken).AsTask();
     }
 
-    public Task<List<MainRecord>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<MainRecord>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
             .AsNoTracking()
@@ -27,7 +28,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<MainRecord>> GetByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public Task<List<MainRecord>> GetByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
             .AsNoTracking()
@@ -35,7 +36,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<MainRecord>> GetByUserAndExercisesAsync(Guid userId, IReadOnlyCollection<Guid> exerciseIds, CancellationToken cancellationToken = default)
+    public Task<List<MainRecord>> GetByUserAndExercisesAsync(Id<User> userId, IReadOnlyCollection<Id<Exercise>> exerciseIds, CancellationToken cancellationToken = default)
     {
         if (exerciseIds.Count == 0)
         {
@@ -48,7 +49,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<MainRecord>> GetBestByUserGroupedByExerciseAndUnitAsync(Guid userId, IReadOnlyCollection<Guid>? exerciseIds = null, CancellationToken cancellationToken = default)
+    public Task<List<MainRecord>> GetBestByUserGroupedByExerciseAndUnitAsync(Id<User> userId, IReadOnlyCollection<Id<Exercise>>? exerciseIds = null, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.MainRecords
             .AsNoTracking()
@@ -68,7 +69,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<MainRecord?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<MainRecord?> FindByIdAsync(Id<MainRecord> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
     }
@@ -86,7 +87,7 @@ public sealed class MainRecordRepository : IMainRecordRepository
         return Task.CompletedTask;
     }
 
-    public Task<MainRecord?> GetLatestByUserAndExerciseAsync(Guid userId, Guid exerciseId, CancellationToken cancellationToken = default)
+    public Task<MainRecord?> GetLatestByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
     {
         return _dbContext.MainRecords
             .AsNoTracking()

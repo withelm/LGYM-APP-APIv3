@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,7 @@ public sealed class EloRegistryRepository : IEloRegistryRepository
         return _dbContext.EloRegistries.AddAsync(registry, cancellationToken).AsTask();
     }
 
-    public Task<int?> GetLatestEloAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<int?> GetLatestEloAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.EloRegistries
             .AsNoTracking()
@@ -29,7 +30,7 @@ public sealed class EloRegistryRepository : IEloRegistryRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<EloRegistry?> GetLatestEntryAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<EloRegistry?> GetLatestEntryAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.EloRegistries
             .AsNoTracking()
@@ -38,7 +39,7 @@ public sealed class EloRegistryRepository : IEloRegistryRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<List<EloRegistry>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task<List<EloRegistry>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.EloRegistries
             .AsNoTracking()

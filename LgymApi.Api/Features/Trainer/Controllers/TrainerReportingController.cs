@@ -5,7 +5,9 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -55,7 +57,7 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetTemplate([FromRoute] string templateId)
     {
-        if (!Guid.TryParse(templateId, out var parsedTemplateId))
+        if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -70,7 +72,7 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateTemplate([FromRoute] string templateId, [FromBody] UpsertReportTemplateRequest request)
     {
-        if (!Guid.TryParse(templateId, out var parsedTemplateId))
+        if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -91,7 +93,7 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> DeleteTemplate([FromRoute] string templateId)
     {
-        if (!Guid.TryParse(templateId, out var parsedTemplateId))
+        if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -106,12 +108,12 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateReportRequest([FromRoute] string traineeId, [FromBody] CreateReportRequestRequest request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(request.TemplateId, out var parsedTemplateId))
+        if (!Id<ReportTemplate>.TryParse(request.TemplateId, out var parsedTemplateId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -132,7 +134,7 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetTraineeSubmissions([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }

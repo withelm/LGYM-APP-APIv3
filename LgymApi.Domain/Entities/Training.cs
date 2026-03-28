@@ -1,10 +1,10 @@
 namespace LgymApi.Domain.Entities;
 
-public sealed class Training : EntityBase
+public sealed class Training : EntityBase<Training>
 {
-    public Guid UserId { get; set; }
-    public Guid TypePlanDayId { get; set; }
-    public Guid GymId { get; set; }
+    public ValueObjects.Id<User> UserId { get; set; }
+    public ValueObjects.Id<PlanDay> TypePlanDayId { get; set; }
+    public ValueObjects.Id<Gym> GymId { get; set; }
 
     public User? User { get; set; }
     public PlanDay? PlanDay { get; set; }

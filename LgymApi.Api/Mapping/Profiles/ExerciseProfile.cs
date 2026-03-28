@@ -3,6 +3,7 @@ using LgymApi.Api.Features.Enum;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Api.Mapping.Profiles;
 
@@ -10,7 +11,7 @@ public sealed class ExerciseProfile : IMappingProfile
 {
     internal static class Keys
     {
-        internal static readonly ContextKey<IReadOnlyDictionary<Guid, string>> Translations = new("Exercise.Translations");
+        internal static readonly ContextKey<IReadOnlyDictionary<Id<Exercise>, string>> Translations = new("Exercise.Translations");
     }
 
     public void Configure(MappingConfiguration configuration)

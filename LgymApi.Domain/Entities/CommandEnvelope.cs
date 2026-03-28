@@ -1,4 +1,5 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
@@ -6,7 +7,7 @@ namespace LgymApi.Domain.Entities;
 /// Durable command envelope for storing background action commands with full lifecycle tracking.
 /// Ensures idempotency and traceability of command execution.
 /// </summary>
-public sealed class CommandEnvelope : EntityBase
+public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
 {
 
     // Retry policy configuration
@@ -15,7 +16,7 @@ public sealed class CommandEnvelope : EntityBase
     /// <summary>
     /// Unique correlation identifier to link related commands and logs.
     /// </summary>
-    public Guid CorrelationId { get; set; }
+    public Id<CorrelationScope> CorrelationId { get; set; }
 
     /// <summary>
     /// Serialized command payload as JSON.
