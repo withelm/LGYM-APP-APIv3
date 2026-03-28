@@ -32,11 +32,11 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> AddTraining([FromRoute] string id, [FromBody] TrainingFormDto form)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var gymId = Id<LgymApi.Domain.Entities.Gym>.TryParse(form.GymId, out var parsedGymId) ? parsedGymId : Id<LgymApi.Domain.Entities.Gym>.Empty;
-        var planDayId = Id<LgymApi.Domain.Entities.PlanDay>.TryParse(form.TypePlanDayId, out var parsedPlanDayId) ? parsedPlanDayId : Id<LgymApi.Domain.Entities.PlanDay>.Empty;
+        var gymId = form.GymId.ToIdOrEmpty<LgymApi.Domain.Entities.Gym>();
+        var planDayId = form.TypePlanDayId.ToIdOrEmpty<LgymApi.Domain.Entities.PlanDay>();
         var exercises = form.Exercises.Select(exercise => new TrainingExerciseInput
         {
-                ExerciseId = Id<ExerciseEntity>.TryParse(exercise.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Id<ExerciseEntity>.Empty,
+                ExerciseId = exercise.ExerciseId.ToIdOrEmpty<ExerciseEntity>(),
                 Series = exercise.Series,
                 Reps = exercise.Reps,
                 Weight = exercise.Weight,
