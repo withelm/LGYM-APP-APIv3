@@ -272,7 +272,9 @@ public abstract class IntegrationTestBase : IDisposable
     protected async Task<Id<PlanDay>> CreatePlanDayViaEndpointAsync(Id<User> userId, Id<Plan> planId, string name, List<PlanDayExerciseInput> exercises)
     {
         SetAuthorizationHeader(userId);
-        var request = new { name, exercises };
+        // Convert internal typed ID model to HTTP request DTO format (with string IDs)
+        var exerciseDtos = exercises.Select(e => new { exercise = e.ExerciseId.ToString()!, series = e.Series, reps = e.Reps }).ToList();
+        var request = new { name, exercises = exerciseDtos };
         await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", request);
 
         var planDaysResponse = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
