@@ -42,8 +42,8 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     public async Task<IActionResult> GetMeasurementDetail([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var measurementId = Guid.TryParse(id, out var parsedId) ? parsedId : Guid.Empty;
-        var measurement = await _measurementsService.GetMeasurementDetailAsync(user!, (Id<Measurement>)measurementId, HttpContext.RequestAborted);
+        var measurementId = Id<Measurement>.TryParse(id, out var parsedId) ? parsedId : Id<Measurement>.Empty;
+        var measurement = await _measurementsService.GetMeasurementDetailAsync(user!, measurementId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<Measurement, MeasurementResponseDto>(measurement));
     }
 
@@ -55,8 +55,8 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     public async Task<IActionResult> GetMeasurementsHistory([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var measurements = await _measurementsService.GetMeasurementsHistoryAsync(user!, (Id<UserEntity>)routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
+        var measurements = await _measurementsService.GetMeasurementsHistoryAsync(user!, routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
         var result = _mapper.Map<List<Measurement>, MeasurementsHistoryDto>(measurements);
 
         return Ok(result);
@@ -70,8 +70,8 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     public async Task<IActionResult> GetMeasurementsList([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var measurements = await _measurementsService.GetMeasurementsListAsync(user!, (Id<UserEntity>)routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
+        var measurements = await _measurementsService.GetMeasurementsListAsync(user!, routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
         var result = _mapper.Map<List<Measurement>, MeasurementsListDto>(measurements);
         return Ok(result);
     }
@@ -84,8 +84,8 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     public async Task<IActionResult> GetMeasurementsTrend([FromRoute] string id, [FromQuery] MeasurementTrendRequestDto request)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var trend = await _measurementsService.GetMeasurementsTrendAsync(user!, (Id<UserEntity>)routeUserId, request.BodyPart, request.Unit, HttpContext.RequestAborted);
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
+        var trend = await _measurementsService.GetMeasurementsTrendAsync(user!, routeUserId, request.BodyPart, request.Unit, HttpContext.RequestAborted);
         return Ok(_mapper.Map<MeasurementTrendResult, MeasurementTrendDto>(trend));
     }
 

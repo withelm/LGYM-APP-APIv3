@@ -23,7 +23,7 @@ public interface ICommandEnvelopeRepository
     /// Finds a command envelope by correlation ID for idempotency checking.
     /// Used to prevent duplicate command execution for the same logical operation.
     /// </summary>
-    Task<CommandEnvelope?> FindByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default);
+    Task<CommandEnvelope?> FindByCorrelationIdAsync(Id<CorrelationScope> correlationId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves all command envelopes with status Failed that have NextAttemptAt in the past and should be retried.

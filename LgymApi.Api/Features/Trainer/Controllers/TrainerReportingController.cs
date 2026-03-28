@@ -57,13 +57,13 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetTemplate([FromRoute] string templateId)
     {
-        if (!Guid.TryParse(templateId, out var parsedTemplateId))
+        if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var template = await _reportingService.GetTrainerTemplateAsync(trainer!, (Id<ReportTemplate>)parsedTemplateId, HttpContext.RequestAborted);
+        var template = await _reportingService.GetTrainerTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<ReportTemplateResult, ReportTemplateDto>(template));
     }
 
@@ -72,13 +72,13 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateTemplate([FromRoute] string templateId, [FromBody] UpsertReportTemplateRequest request)
     {
-        if (!Guid.TryParse(templateId, out var parsedTemplateId))
+        if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var template = await _reportingService.UpdateTemplateAsync(trainer!, (Id<ReportTemplate>)parsedTemplateId, new CreateReportTemplateCommand
+        var template = await _reportingService.UpdateTemplateAsync(trainer!, parsedTemplateId, new CreateReportTemplateCommand
         {
             Name = request.Name,
             Description = request.Description,
@@ -93,13 +93,13 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> DeleteTemplate([FromRoute] string templateId)
     {
-        if (!Guid.TryParse(templateId, out var parsedTemplateId))
+        if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _reportingService.DeleteTemplateAsync(trainer!, (Id<ReportTemplate>)parsedTemplateId, HttpContext.RequestAborted);
+        await _reportingService.DeleteTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -108,20 +108,20 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateReportRequest([FromRoute] string traineeId, [FromBody] CreateReportRequestRequest request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(request.TemplateId, out var parsedTemplateId))
+        if (!Id<ReportTemplate>.TryParse(request.TemplateId, out var parsedTemplateId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _reportingService.CreateReportRequestAsync(trainer!, (Id<LgymApi.Domain.Entities.User>)parsedTraineeId, new CreateReportRequestCommand
+        var result = await _reportingService.CreateReportRequestAsync(trainer!, parsedTraineeId, new CreateReportRequestCommand
         {
-            TemplateId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportTemplate>)parsedTemplateId,
+            TemplateId = parsedTemplateId,
             DueAt = request.DueAt,
             Note = request.Note
         }, HttpContext.RequestAborted);
@@ -134,13 +134,13 @@ public sealed class TrainerReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetTraineeSubmissions([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var submissions = await _reportingService.GetTraineeSubmissionsAsync(trainer!, (Id<LgymApi.Domain.Entities.User>)parsedTraineeId, HttpContext.RequestAborted);
+        var submissions = await _reportingService.GetTraineeSubmissionsAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<ReportSubmissionResult, ReportSubmissionDto>(submissions));
     }
 

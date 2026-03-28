@@ -49,10 +49,10 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public async Task ExecuteAsync_WithValidCommand_SchedulesEmail()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScoreId = Guid.NewGuid();
-        var exerciseId = Guid.NewGuid();
+         var userId = Id<User>.New();
+         var trainingId = Id<Training>.New();
+         var exerciseScoreId = Id<ExerciseScore>.New();
+         var exerciseId = Id<Exercise>.New();
 
         _testUserRepository.UserToReturn = new User
         {
@@ -103,8 +103,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
         // Assert
         Assert.That(_testScheduler.ScheduledPayloads, Has.Count.EqualTo(1));
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That((Guid)payload.UserId, Is.EqualTo(userId));
-        Assert.That((Guid)payload.TrainingId, Is.EqualTo(trainingId));
+        Assert.That(payload.UserId, Is.EqualTo(userId));
+        Assert.That(payload.TrainingId, Is.EqualTo(trainingId));
         Assert.That(payload.RecipientEmail, Is.EqualTo("user@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("en-US"));
         Assert.That(payload.PreferredTimeZone, Is.EqualTo("Europe/Warsaw"));
@@ -117,8 +117,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public async Task ExecuteAsync_WithEmptyEmail_SkipsSchedulingGracefully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+         var userId = Id<User>.New();
+         var trainingId = Id<Training>.New();
 
         _testUserRepository.UserToReturn = new User
         {
@@ -146,8 +146,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public async Task ExecuteAsync_WithWhitespaceEmail_SkipsSchedulingGracefully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+         var userId = Id<User>.New();
+         var trainingId = Id<Training>.New();
 
         _testUserRepository.UserToReturn = new User
         {
@@ -173,11 +173,11 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public async Task ExecuteAsync_MapsAllDataToPayload()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var exerciseScore1Id = Guid.NewGuid();
-        var exerciseScore2Id = Guid.NewGuid();
-        var trainingDate = DateTimeOffset.UtcNow.AddDays(-1);
+          var userId = Id<User>.New();
+          var trainingId = Id<Training>.New();
+         var exerciseScore1Id = Id<ExerciseScore>.New();
+         var exerciseScore2Id = Id<ExerciseScore>.New();
+         var trainingDate = DateTimeOffset.UtcNow.AddDays(-1);
 
         _testUserRepository.UserToReturn = new User
         {
@@ -232,8 +232,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         // Assert
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That((Guid)payload.UserId, Is.EqualTo(userId));
-        Assert.That((Guid)payload.TrainingId, Is.EqualTo(trainingId));
+        Assert.That(payload.UserId, Is.EqualTo(userId));
+        Assert.That(payload.TrainingId, Is.EqualTo(trainingId));
         Assert.That(payload.RecipientEmail, Is.EqualTo("athlete@example.com"));
         Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
         Assert.That(payload.PreferredTimeZone, Is.EqualTo("Europe/Warsaw"));
@@ -247,8 +247,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     [Test]
     public async Task ExecuteAsync_UsesConfiguredDefaults_WhenLanguageAndTimeZoneWhitespace()
     {
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+         var userId = Id<User>.New();
+         var trainingId = Id<Training>.New();
 
         _testUserRepository.UserToReturn = new User
         {
@@ -289,8 +289,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public async Task ExecuteAsync_WithCancellationToken_PassesTokenToScheduler()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+         var userId = Id<User>.New();
+         var trainingId = Id<Training>.New();
 
         _testUserRepository.UserToReturn = new User
         {
@@ -411,11 +411,11 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public async Task ExecuteAsync_WithMultipleExercises_PreservesAllExerciseData()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var score1Id = Guid.NewGuid();
-        var score2Id = Guid.NewGuid();
-        var score3Id = Guid.NewGuid();
+         var userId = Id<User>.New();
+         var trainingId = Id<Training>.New();
+        var score1Id = Id<ExerciseScore>.New();
+        var score2Id = Id<ExerciseScore>.New();
+        var score3Id = Id<ExerciseScore>.New();
 
         _testUserRepository.UserToReturn = new User
         {
@@ -498,8 +498,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public async Task ExecuteAsync_UserNotFound_SkipsSchedulingGracefully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+         var userId = Id<User>.New();
+         var trainingId = Id<Training>.New();
 
         _testUserRepository.UserToReturn = null;
 
@@ -523,8 +523,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public async Task ExecuteAsync_TrainingNotFound_SkipsSchedulingGracefully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+         var userId = Id<User>.New();
+         var trainingId = Id<Training>.New();
 
         _testUserRepository.UserToReturn = new User
         {
@@ -555,8 +555,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
     public async Task ExecuteAsync_UserNotSubscribed_SkipsSchedulingGracefully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+         var userId = Id<User>.New();
+         var trainingId = Id<Training>.New();
 
         _testUserRepository.UserToReturn = new User
         {

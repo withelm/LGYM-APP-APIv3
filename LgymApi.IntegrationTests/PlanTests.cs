@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,7 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task CreatePlan_WithValidData_CreatesPlanAndAssignsToUser()
     {
         var user = await SeedUserAsync(name: "planuser", email: "plan@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var request = new
         {
@@ -48,7 +49,7 @@ public sealed class PlanTests : IntegrationTestBase
     {
         var user1 = await SeedUserAsync(name: "user1", email: "user1@example.com");
         var user2 = await SeedUserAsync(name: "user2", email: "user2@example.com");
-        SetAuthorizationHeader((Guid)user1.Id);
+        SetAuthorizationHeader(user1.Id);
 
         var request = new
         {
@@ -64,8 +65,8 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task UpdatePlan_WithValidData_UpdatesPlanName()
     {
         var user = await SeedUserAsync(name: "planuser", email: "plan@example.com");
-        var plan = await SeedPlanAsync((Guid)user.Id, "Old Name");
-        SetAuthorizationHeader((Guid)user.Id);
+        var plan = await SeedPlanAsync(user.Id, "Old Name");
+        SetAuthorizationHeader(user.Id);
 
         var request = new
         {
@@ -89,8 +90,8 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task GetPlanConfig_WithActivePlan_ReturnsPlan()
     {
         var user = await SeedUserAsync(name: "planuser", email: "plan@example.com");
-        var plan = await SeedPlanAsync((Guid)user.Id, "Active Plan", isActive: true);
-        SetAuthorizationHeader((Guid)user.Id);
+        var plan = await SeedPlanAsync(user.Id, "Active Plan", isActive: true);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlanConfig");
 
@@ -107,8 +108,8 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task GetPlanConfig_WithNoActivePlan_ReturnsNotFound()
     {
         var user = await SeedUserAsync(name: "planuser", email: "plan@example.com");
-        await SeedPlanAsync((Guid)user.Id, "Inactive Plan", isActive: false);
-        SetAuthorizationHeader((Guid)user.Id);
+        await SeedPlanAsync(user.Id, "Inactive Plan", isActive: false);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlanConfig");
 
@@ -119,7 +120,7 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task CheckIsUserHavePlan_WithNoPlan_ReturnsFalse()
     {
         var user = await SeedUserAsync(name: "planuser", email: "plan@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync($"/api/{user.Id}/checkIsUserHavePlan");
 
@@ -133,9 +134,9 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task GetPlansList_WithMultiplePlans_ReturnsAllPlans()
     {
         var user = await SeedUserAsync(name: "planuser", email: "plan@example.com");
-        await SeedPlanAsync((Guid)user.Id, "Plan 1", isActive: true);
-        await SeedPlanAsync((Guid)user.Id, "Plan 2", isActive: false);
-        SetAuthorizationHeader((Guid)user.Id);
+        await SeedPlanAsync(user.Id, "Plan 1", isActive: true);
+        await SeedPlanAsync(user.Id, "Plan 2", isActive: false);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlansList");
 
@@ -151,7 +152,7 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task GetPlansList_WithNoPlans_ReturnsNotFound()
     {
         var user = await SeedUserAsync(name: "planuser", email: "plan@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlansList");
 
@@ -162,9 +163,9 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task SetNewActivePlan_WithValidPlanId_SetsActivePlan()
     {
         var user = await SeedUserAsync(name: "planuser", email: "plan@example.com");
-        var plan1 = await SeedPlanAsync((Guid)user.Id, "Plan 1", isActive: true);
-        var plan2 = await SeedPlanAsync((Guid)user.Id, "Plan 2", isActive: false);
-        SetAuthorizationHeader((Guid)user.Id);
+        var plan1 = await SeedPlanAsync(user.Id, "Plan 1", isActive: true);
+        var plan2 = await SeedPlanAsync(user.Id, "Plan 2", isActive: false);
+        SetAuthorizationHeader(user.Id);
 
         var request = new
         {
@@ -189,10 +190,10 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task DeletePlan_WithValidId_SoftDeletesPlanAndAllPlanDays()
     {
         var user = await SeedUserAsync(name: "deleteplanuser", email: "deleteplan@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Delete Plan Exercise", BodyParts.Chest);
-         var planId = await CreatePlanViaEndpointAsync((Guid)user.Id, "Test Plan");
+         var planId = await CreatePlanViaEndpointAsync(user.Id, "Test Plan");
         await CreatePlanDayViaEndpointAsync(user.Id, planId, "Delete Day 1", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
@@ -237,18 +238,18 @@ public sealed class PlanTests : IntegrationTestBase
     {
         var user1 = await SeedUserAsync(name: "deleteplanuser2", email: "deleteplan2@example.com");
         var user2 = await SeedUserAsync(name: "deleteplanuser3", email: "deleteplan3@example.com");
-        var plan = await SeedPlanAsync((Guid)user2.Id, "Other User Plan", isActive: true);
+        var plan = await SeedPlanAsync(user2.Id, "Other User Plan", isActive: true);
         var exerciseId = await CreateExerciseViaEndpointAsync(user2.Id, "Protected Plan Exercise", BodyParts.Back);
-        await CreatePlanDayViaEndpointAsync(user2.Id, (Guid)plan.Id, "Protected Day 1", new List<PlanDayExerciseInput>
+        await CreatePlanDayViaEndpointAsync(user2.Id, plan.Id, "Protected Day 1", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
         });
-        await CreatePlanDayViaEndpointAsync(user2.Id, (Guid)plan.Id, "Protected Day 2", new List<PlanDayExerciseInput>
+        await CreatePlanDayViaEndpointAsync(user2.Id, plan.Id, "Protected Day 2", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 5, Reps = "5" }
         });
 
-        SetAuthorizationHeader((Guid)user1.Id);
+        SetAuthorizationHeader(user1.Id);
 
         var response = await Client.PostAsync($"/api/{plan.Id}/deletePlan", null);
 
@@ -271,11 +272,11 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task DeletePlan_WithPlanDaysAndTrainings_ByOwner_SoftDeletesPlanAndPlanDaysAndKeepsTrainings()
     {
         var user = await SeedUserAsync(name: "deleteplanownertrain", email: "deleteplanownertrain@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
          var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Owner Delete Exercise", BodyParts.Chest);
-         var gymId = await CreateGymViaEndpointAsync((Guid)user.Id, "Test Gym");
-         var planId = await CreatePlanViaEndpointAsync((Guid)user.Id, "Test Plan");
+         var gymId = await CreateGymViaEndpointAsync(user.Id, "Test Gym");
+         var planId = await CreatePlanViaEndpointAsync(user.Id, "Test Plan");
         var planDay1Id = await CreatePlanDayViaEndpointAsync(user.Id, planId, "Owner Delete Day 1", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
@@ -285,8 +286,8 @@ public sealed class PlanTests : IntegrationTestBase
             new() { ExerciseId = exerciseId.ToString(), Series = 4, Reps = "8" }
         });
 
-        await AddTrainingViaEndpointAsync((Guid)user.Id, gymId, planDay1Id, exerciseId);
-        await AddTrainingViaEndpointAsync((Guid)user.Id, gymId, planDay2Id, exerciseId);
+        await AddTrainingViaEndpointAsync(user.Id, gymId, planDay1Id, exerciseId);
+        await AddTrainingViaEndpointAsync(user.Id, gymId, planDay2Id, exerciseId);
 
         var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
 
@@ -321,10 +322,10 @@ public sealed class PlanTests : IntegrationTestBase
         var owner = await SeedUserAsync(name: "deleteplannonowner1", email: "deleteplannonowner1@example.com");
         var attacker = await SeedUserAsync(name: "deleteplannonowner2", email: "deleteplannonowner2@example.com");
 
-         SetAuthorizationHeader((Guid)owner.Id);
+         SetAuthorizationHeader(owner.Id);
          var exerciseId = await CreateExerciseViaEndpointAsync(owner.Id, "NonOwner Delete Exercise", BodyParts.Back);
-         var gymId = await CreateGymViaEndpointAsync((Guid)owner.Id, "Test Gym");
-         var planId = await CreatePlanViaEndpointAsync((Guid)owner.Id, "Test Plan");
+         var gymId = await CreateGymViaEndpointAsync(owner.Id, "Test Gym");
+         var planId = await CreatePlanViaEndpointAsync(owner.Id, "Test Plan");
         var planDay1Id = await CreatePlanDayViaEndpointAsync(owner.Id, planId, "NonOwner Day 1", new List<PlanDayExerciseInput>
         {
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
@@ -334,10 +335,10 @@ public sealed class PlanTests : IntegrationTestBase
             new() { ExerciseId = exerciseId.ToString(), Series = 5, Reps = "5" }
         });
 
-        await AddTrainingViaEndpointAsync((Guid)owner.Id, gymId, planDay1Id, exerciseId);
-        await AddTrainingViaEndpointAsync((Guid)owner.Id, gymId, planDay2Id, exerciseId);
+        await AddTrainingViaEndpointAsync(owner.Id, gymId, planDay1Id, exerciseId);
+        await AddTrainingViaEndpointAsync(owner.Id, gymId, planDay2Id, exerciseId);
 
-        SetAuthorizationHeader((Guid)attacker.Id);
+        SetAuthorizationHeader(attacker.Id);
         var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -364,8 +365,8 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task DeletePlan_WhenDeletingNonActivePlan_DoesNotClearUserPlanId()
     {
         var user = await SeedUserAsync(name: "deleteinactiveplanuser", email: "deleteinactiveplan@example.com");
-        var activePlan = await SeedPlanAsync((Guid)user.Id, "Active Plan", isActive: true);
-        var inactivePlan = await SeedPlanAsync((Guid)user.Id, "Inactive Plan To Delete", isActive: false);
+        var activePlan = await SeedPlanAsync(user.Id, "Active Plan", isActive: true);
+        var inactivePlan = await SeedPlanAsync(user.Id, "Inactive Plan To Delete", isActive: false);
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -376,7 +377,7 @@ public sealed class PlanTests : IntegrationTestBase
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.PostAsync($"/api/{inactivePlan.Id}/deletePlan", null);
 
@@ -401,8 +402,8 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task DeletePlan_WhenDeletingActivePlan_WithInactivePlan_ReassignsUserToLatestInactivePlan()
     {
         var user = await SeedUserAsync(name: "deleteactiveplanuser", email: "deleteactiveplan@example.com");
-        var activePlan = await SeedPlanAsync((Guid)user.Id, "Active Plan", isActive: true);
-        var fallbackPlan = await SeedPlanAsync((Guid)user.Id, "Fallback Plan", isActive: false);
+        var activePlan = await SeedPlanAsync(user.Id, "Active Plan", isActive: true);
+        var fallbackPlan = await SeedPlanAsync(user.Id, "Fallback Plan", isActive: false);
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -413,7 +414,7 @@ public sealed class PlanTests : IntegrationTestBase
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.PostAsync($"/api/{activePlan.Id}/deletePlan", null);
 
@@ -443,8 +444,8 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task DeletePlan_WhenDeletingActivePlan_WithOnlyDeletedInactivePlans_ClearsUserPlanId()
     {
         var user = await SeedUserAsync(name: "deleteactiveplanuser2", email: "deleteactiveplan2@example.com");
-        var activePlan = await SeedPlanAsync((Guid)user.Id, "Active Plan", isActive: true);
-        var deletedFallbackPlan = await SeedPlanAsync((Guid)user.Id, "Deleted Fallback", isActive: false);
+        var activePlan = await SeedPlanAsync(user.Id, "Active Plan", isActive: true);
+        var deletedFallbackPlan = await SeedPlanAsync(user.Id, "Deleted Fallback", isActive: false);
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -461,7 +462,7 @@ public sealed class PlanTests : IntegrationTestBase
             await db.SaveChangesAsync();
         }
 
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.PostAsync($"/api/{activePlan.Id}/deletePlan", null);
 
@@ -482,7 +483,7 @@ public sealed class PlanTests : IntegrationTestBase
         updatedUser!.PlanId.Should().BeNull();
     }
 
-    private async Task AddTrainingViaEndpointAsync(Guid userId, Guid gymId, Guid planDayId, Guid exerciseId)
+    private async Task AddTrainingViaEndpointAsync(Id<User> userId, Id<Gym> gymId, Id<PlanDay> planDayId, Id<Exercise> exerciseId)
     {
         var request = new
         {
@@ -499,15 +500,15 @@ public sealed class PlanTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    private async Task<Plan> SeedPlanAsync(Guid userId, string name, bool isActive = true)
+    private async Task<Plan> SeedPlanAsync(Id<User> userId, string name, bool isActive = true)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var plan = new Plan
         {
-            Id = (Domain.ValueObjects.Id<Plan>)Guid.NewGuid(),
-            UserId = (Domain.ValueObjects.Id<User>)userId,
+            Id = Id<Plan>.New(),
+            UserId = userId,
             Name = name,
             IsActive = isActive
         };
@@ -545,7 +546,7 @@ public sealed class PlanTests : IntegrationTestBase
     private sealed class CopiedPlanResponse
     {
         [JsonPropertyName("id")]
-        public Guid Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
@@ -554,15 +555,15 @@ public sealed class PlanTests : IntegrationTestBase
         public bool IsActive { get; set; }
 
         [JsonPropertyName("userId")]
-        public Guid UserId { get; set; }
+        public string UserId { get; set; } = string.Empty;
     }
 
     [Test]
     public async Task GenerateShareCode_WithValidPlan_ReturnsShareCode()
     {
         var user = await SeedUserAsync(name: "shareuser", email: "share@example.com");
-        var plan = await SeedPlanAsync((Guid)user.Id, "Shareable Plan");
-        SetAuthorizationHeader((Guid)user.Id);
+        var plan = await SeedPlanAsync(user.Id, "Shareable Plan");
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.PostAsync($"/api/{plan.Id}/share", null);
 
@@ -578,9 +579,9 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task GenerateShareCode_WithInvalidPlanId_ReturnsNotFound()
     {
         var user = await SeedUserAsync(name: "shareuser2", email: "share2@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
-        var nonExistentPlanId = Guid.NewGuid();
+        var nonExistentPlanId = Id<Plan>.New();
         var response = await Client.PostAsync($"/api/{nonExistentPlanId}/share", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -591,8 +592,8 @@ public sealed class PlanTests : IntegrationTestBase
     {
         var user1 = await SeedUserAsync(name: "shareuser3", email: "share3@example.com");
         var user2 = await SeedUserAsync(name: "shareuser4", email: "share4@example.com");
-        var plan = await SeedPlanAsync((Guid)user2.Id, "Other User Plan");
-        SetAuthorizationHeader((Guid)user1.Id);
+        var plan = await SeedPlanAsync(user2.Id, "Other User Plan");
+        SetAuthorizationHeader(user1.Id);
 
         var response = await Client.PostAsync($"/api/{plan.Id}/share", null);
 
@@ -604,14 +605,14 @@ public sealed class PlanTests : IntegrationTestBase
     {
         var user1 = await SeedUserAsync(name: "copyuser1", email: "copy1@example.com");
         var user2 = await SeedUserAsync(name: "copyuser2", email: "copy2@example.com");
-        var plan = await SeedPlanAsync((Guid)user1.Id, "Plan To Copy");
+        var plan = await SeedPlanAsync(user1.Id, "Plan To Copy");
         
-        SetAuthorizationHeader((Guid)user1.Id);
+        SetAuthorizationHeader(user1.Id);
         var shareResponse = await Client.PostAsync($"/api/{plan.Id}/share", null);
         var shareBody = await shareResponse.Content.ReadFromJsonAsync<ShareCodeResponse>();
         var shareCode = shareBody!.ShareCode;
 
-        SetAuthorizationHeader((Guid)user2.Id);
+        SetAuthorizationHeader(user2.Id);
         var copyRequest = new { shareCode };
         var copyResponse = await Client.PostAsJsonAsync("/api/copy", copyRequest);
 
@@ -620,7 +621,7 @@ public sealed class PlanTests : IntegrationTestBase
         var copyBody = await copyResponse.Content.ReadFromJsonAsync<CopiedPlanResponse>();
         copyBody.Should().NotBeNull();
         copyBody!.Name.Should().Be("Plan To Copy");
-        copyBody.UserId.Should().Be((Guid)user2.Id);
+        copyBody.UserId.Should().Be(user2.Id.ToString());
         copyBody.IsActive.Should().BeTrue();
     }
 
@@ -628,7 +629,7 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task CopyPlan_WithInvalidShareCode_ReturnsNotFound()
     {
         var user = await SeedUserAsync(name: "copyuser3", email: "copy3@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var copyRequest = new { shareCode = "INVALID1" };
         var copyResponse = await Client.PostAsJsonAsync("/api/copy", copyRequest);
@@ -651,8 +652,8 @@ public sealed class PlanTests : IntegrationTestBase
     public async Task GenerateShareCode_CalledTwice_ReturnsSameCode()
     {
         var user = await SeedUserAsync(name: "sharetwice", email: "sharetwice@example.com");
-        var plan = await SeedPlanAsync((Guid)user.Id, "Double Share Plan");
-        SetAuthorizationHeader((Guid)user.Id);
+        var plan = await SeedPlanAsync(user.Id, "Double Share Plan");
+        SetAuthorizationHeader(user.Id);
 
         var response1 = await Client.PostAsync($"/api/{plan.Id}/share", null);
         var body1 = await response1.Content.ReadFromJsonAsync<ShareCodeResponse>();

@@ -34,7 +34,7 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> CreatePlanDay([FromRoute] string id, [FromBody] PlanDayFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
+        var planId = Id<PlanEntity>.TryParse(id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
         var exercises = form.Exercises
             .Select(exercise => new PlanDayExerciseInput
             {
@@ -43,7 +43,7 @@ public sealed class PlanDayController : ControllerBase
                 Reps = exercise.Reps
             })
             .ToList();
-        await _planDayService.CreatePlanDayAsync(user!, (Id<PlanEntity>)planId, form.Name, exercises, HttpContext.RequestAborted);
+        await _planDayService.CreatePlanDayAsync(user!, planId, form.Name, exercises, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -63,8 +63,8 @@ public sealed class PlanDayController : ControllerBase
                 Reps = exercise.Reps
             })
             .ToList();
-        var planDayId = Guid.TryParse(form.Id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
-        await _planDayService.UpdatePlanDayAsync(user!, (Id<PlanDayEntity>)planDayId, form.Name, exercises, HttpContext.RequestAborted);
+        var planDayId = Id<PlanDayEntity>.TryParse(form.Id, out var parsedPlanDayId) ? parsedPlanDayId : Id<PlanDayEntity>.Empty;
+        await _planDayService.UpdatePlanDayAsync(user!, planDayId, form.Name, exercises, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -75,9 +75,9 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> GetPlanDay([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planDayId = Guid.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
+        var planDayId = Id<PlanDayEntity>.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Id<PlanDayEntity>.Empty;
         var cultures = HttpContext.GetCulturePreferences();
-        var context = await _planDayService.GetPlanDayAsync(user!, (Id<PlanDayEntity>)planDayId, cultures, HttpContext.RequestAborted);
+        var context = await _planDayService.GetPlanDayAsync(user!, planDayId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.Exercises);
         mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
@@ -93,9 +93,9 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> GetPlanDays([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
+        var planId = Id<PlanEntity>.TryParse(id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
         var cultures = HttpContext.GetCulturePreferences();
-        var context = await _planDayService.GetPlanDaysAsync(user!, (Id<PlanEntity>)planId, cultures, HttpContext.RequestAborted);
+        var context = await _planDayService.GetPlanDaysAsync(user!, planId, cultures, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
         mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
@@ -111,8 +111,8 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> GetPlanDaysTypes([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var planDays = await _planDayService.GetPlanDaysTypesAsync(user!, (Id<UserEntity>)routeUserId, HttpContext.RequestAborted);
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
+        var planDays = await _planDayService.GetPlanDaysTypesAsync(user!, routeUserId, HttpContext.RequestAborted);
         var planDayDtos = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayChooseDto>(planDays);
         return Ok(planDayDtos);
     }
@@ -124,8 +124,8 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> DeletePlanDay([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planDayId = Guid.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Guid.Empty;
-        await _planDayService.DeletePlanDayAsync(user!, (Id<PlanDayEntity>)planDayId, HttpContext.RequestAborted);
+        var planDayId = Id<PlanDayEntity>.TryParse(id, out var parsedPlanDayId) ? parsedPlanDayId : Id<PlanDayEntity>.Empty;
+        await _planDayService.DeletePlanDayAsync(user!, planDayId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -136,8 +136,8 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> GetPlanDaysInfo([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = Guid.TryParse(id, out var parsedPlanId) ? parsedPlanId : Guid.Empty;
-        var context = await _planDayService.GetPlanDaysInfoAsync(user!, (Id<PlanEntity>)planId, HttpContext.RequestAborted);
+        var planId = Id<PlanEntity>.TryParse(id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
+        var context = await _planDayService.GetPlanDaysInfoAsync(user!, planId, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
         mappingContext.Set(PlanDayProfile.Keys.PlanDayLastTrainings, context.LastTrainingMap);

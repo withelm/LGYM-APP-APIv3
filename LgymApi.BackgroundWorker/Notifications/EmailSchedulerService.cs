@@ -7,6 +7,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Notifications;
@@ -73,7 +74,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
-        _backgroundScheduler.Enqueue((Guid)message.Id);
+        _backgroundScheduler.Enqueue(message.Id);
         _metrics.RecordEnqueued(payload.NotificationType);
         _logger.LogInformation(
             "Created and enqueued email notification {NotificationId} for {NotificationType} correlation {CorrelationId}.",
@@ -82,7 +83,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             payload.CorrelationId);
     }
 
-    private bool IsSchedulingEnabled(EmailNotificationType notificationType, Guid correlationId)
+    private bool IsSchedulingEnabled(EmailNotificationType notificationType, Id<CorrelationScope> correlationId)
     {
         if (_emailNotificationsFeature.Enabled)
         {
@@ -116,7 +117,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
-        _backgroundScheduler.Enqueue((Guid)existing.Id);
+        _backgroundScheduler.Enqueue(existing.Id);
         _metrics.RecordRetried(payload.NotificationType);
         _logger.LogInformation(
             "Re-enqueued failed email notification {NotificationId} (attempts: {Attempts}).",
@@ -154,7 +155,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
                 payload.NotificationType,
                 payload.CorrelationId,
                 concurrent.Id);
-            _backgroundScheduler.Enqueue((Guid)concurrent.Id);
+            _backgroundScheduler.Enqueue(concurrent.Id);
             _metrics.RecordEnqueued(payload.NotificationType);
             return false;
         }

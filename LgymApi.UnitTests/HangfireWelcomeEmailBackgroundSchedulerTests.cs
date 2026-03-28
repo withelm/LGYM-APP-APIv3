@@ -3,6 +3,8 @@ using Hangfire.Common;
 using Hangfire.States;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Jobs;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Services;
 
 namespace LgymApi.UnitTests;
@@ -15,7 +17,7 @@ public sealed class HangfireEmailBackgroundSchedulerTests
     {
         var client = new FakeBackgroundJobClient();
         var scheduler = new HangfireEmailBackgroundScheduler(client);
-        var notificationId = Guid.NewGuid();
+        var notificationId = Id<NotificationMessage>.New();
 
         scheduler.Enqueue(notificationId);
 
@@ -37,7 +39,7 @@ public sealed class HangfireEmailBackgroundSchedulerTests
         public string Create(Job job, IState state)
         {
             CreatedJobs.Add((job, state));
-            return Guid.NewGuid().ToString();
+            return Id<FakeBackgroundJobClient>.New().ToString();
         }
 
         public bool ChangeState(string jobId, IState state, string expectedState)

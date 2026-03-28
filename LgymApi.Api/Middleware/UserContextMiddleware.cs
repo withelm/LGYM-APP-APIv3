@@ -25,14 +25,14 @@ public sealed class UserContextMiddleware
         }
 
         var userIdClaim = context.User.FindFirst("userId")?.Value;
-        if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        if (string.IsNullOrWhiteSpace(userIdClaim) || !Id<User>.TryParse(userIdClaim, out var userId))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
             return;
         }
 
-        var user = await userRepository.FindByIdIncludingDeletedAsync((Id<LgymApi.Domain.Entities.User>)userId);
+        var user = await userRepository.FindByIdIncludingDeletedAsync(userId);
         if (user == null)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -47,7 +47,7 @@ public sealed class UserContextMiddleware
             return;
         }
 
-        if (!userSessionCache.Contains((Id<LgymApi.Domain.Entities.User>)userId))
+        if (!userSessionCache.Contains(userId))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsJsonAsync(new { message = Messages.Unauthorized });

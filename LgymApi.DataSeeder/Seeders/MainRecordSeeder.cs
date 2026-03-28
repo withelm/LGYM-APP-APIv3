@@ -45,10 +45,10 @@ public sealed class MainRecordSeeder : IEntitySeeder
                 recordIndex++;
                 continue;
             }
-            var record = new MainRecord
-            {
-                Id = (LgymApi.Domain.ValueObjects.Id<MainRecord>)Guid.NewGuid(),
-                UserId = user.Id,
+             var record = new MainRecord
+             {
+                 Id = Id<MainRecord>.New(),
+                 UserId = user.Id,
                 ExerciseId = exercise.Id,
                 Weight = new Weight(100 + recordIndex * 5, WeightUnits.Kilograms),
                 Date = DateTimeOffset.UtcNow.AddDays(-recordIndex)

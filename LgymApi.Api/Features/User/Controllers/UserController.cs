@@ -104,8 +104,8 @@ public sealed class UserController : ControllerBase
 
     private static Id<UserEntity> ParseUserId(string value)
     {
-        return Guid.TryParse(value, out var parsedUserId)
-            ? (Id<UserEntity>)parsedUserId
+        return Id<UserEntity>.TryParse(value, out var parsedUserId)
+            ? parsedUserId
             : Id<UserEntity>.Empty;
     }
 

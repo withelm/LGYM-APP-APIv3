@@ -1,5 +1,6 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,10 +25,10 @@ public sealed class AppConfigSeeder : IEntitySeeder
             .ToListAsync(cancellationToken);
 
         var configs = new List<AppConfig>
-        {
+         {
             new()
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<AppConfig>)Guid.NewGuid(),
+                Id = Id<AppConfig>.New(),
                 Platform = Platforms.Android,
                 MinRequiredVersion = "1.0.0",
                 LatestVersion = "1.0.0",
@@ -37,7 +38,7 @@ public sealed class AppConfigSeeder : IEntitySeeder
             },
             new()
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<AppConfig>)Guid.NewGuid(),
+                Id = Id<AppConfig>.New(),
                 Platform = Platforms.Ios,
                 MinRequiredVersion = "1.0.0",
                 LatestVersion = "1.0.0",

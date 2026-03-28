@@ -30,7 +30,7 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> CreatePlan([FromRoute] string id, [FromBody] PlanFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? (Id<UserEntity>)parsedUserId : Id<UserEntity>.Empty;
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
         await _planService.CreatePlanAsync(user!, routeUserId, form.Name, HttpContext.RequestAborted);
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
@@ -44,8 +44,8 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> UpdatePlan([FromRoute] string id, [FromBody] PlanFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? (Id<UserEntity>)parsedUserId : Id<UserEntity>.Empty;
-        var planId = Guid.TryParse(form.Id, out var parsedPlanId) ? (Id<PlanEntity>)parsedPlanId : Id<PlanEntity>.Empty;
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
+        var planId = Id<PlanEntity>.TryParse(form.Id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
         await _planService.UpdatePlanAsync(user!, routeUserId, planId, form.Name, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
@@ -57,7 +57,7 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> GetPlanConfig([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? (Id<UserEntity>)parsedUserId : Id<UserEntity>.Empty;
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
         var plan = await _planService.GetPlanConfigAsync(user!, routeUserId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Domain.Entities.Plan, PlanFormDto>(plan));
     }
@@ -69,7 +69,7 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> CheckIsUserHavePlan([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? (Id<UserEntity>)parsedUserId : Id<UserEntity>.Empty;
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
         var result = await _planService.CheckIsUserHavePlanAsync(user!, routeUserId, HttpContext.RequestAborted);
         return Ok(result);
     }
@@ -81,7 +81,7 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> GetPlansList([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? (Id<UserEntity>)parsedUserId : Id<UserEntity>.Empty;
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
         var plans = await _planService.GetPlansListAsync(user!, routeUserId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<LgymApi.Domain.Entities.Plan, PlanFormDto>(plans);
         return Ok(mapped);
@@ -94,8 +94,8 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> SetNewActivePlan([FromRoute] string id, [FromBody] SetActivePlanDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? (Id<UserEntity>)parsedUserId : Id<UserEntity>.Empty;
-        var planId = Guid.TryParse(form.Id, out var parsedPlanId) ? (Id<PlanEntity>)parsedPlanId : Id<PlanEntity>.Empty;
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
+        var planId = Id<PlanEntity>.TryParse(form.Id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
         await _planService.SetNewActivePlanAsync(user!, routeUserId, planId, HttpContext.RequestAborted);
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
@@ -120,7 +120,7 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> GenerateShareCode([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = Guid.TryParse(id, out var parsedPlanId) ? (Id<PlanEntity>)parsedPlanId : Id<PlanEntity>.Empty;
+        var planId = Id<PlanEntity>.TryParse(id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
         var shareCode = await _planService.GenerateShareCodeAsync(user!, planId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ShareCodeResponseDto>(shareCode));
     }
@@ -132,7 +132,7 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> DeletePlan([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = Guid.TryParse(id, out var parsedPlanId) ? (Id<PlanEntity>)parsedPlanId : Id<PlanEntity>.Empty;
+        var planId = Id<PlanEntity>.TryParse(id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
         await _planService.DeletePlanAsync(user!, planId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }

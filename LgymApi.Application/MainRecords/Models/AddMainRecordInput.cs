@@ -5,7 +5,7 @@ namespace LgymApi.Application.Features.MainRecords.Models;
 
 public sealed record AddMainRecordInput(
     Id<LgymApi.Domain.Entities.User> UserId,
-    string ExerciseId,
+    Id<LgymApi.Domain.Entities.Exercise> ExerciseId,
     double Weight,
     WeightUnits Unit,
     DateTime Date);

@@ -10,7 +10,7 @@ public abstract class NotificationMessageBase<TType, TDerived> : EntityBase<TDer
 {
     public NotificationChannel Channel { get; set; } = NotificationChannel.Email;
     public TType Type { get; set; } = default!;
-    public Guid CorrelationId { get; set; }
+    public Id<CorrelationScope> CorrelationId { get; set; }
     public Email Recipient { get; set; } = new("placeholder@example.com");
     public string PayloadJson { get; set; } = string.Empty;
     public EmailNotificationStatus Status { get; set; } = EmailNotificationStatus.Pending;

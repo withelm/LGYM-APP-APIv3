@@ -117,7 +117,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
             correlationId);
 
         // Enqueue orchestration job by envelope ID only (durable reference)
-        _scheduler.Enqueue((Guid)envelope.Id);
+        _scheduler.Enqueue(envelope.Id);
 
         _logger.LogInformation(
             "Command envelope {EnvelopeId} enqueued for orchestration.",
@@ -128,14 +128,14 @@ public sealed class CommandDispatcher : ICommandDispatcher
     /// Computes a deterministic correlation ID from command type and payload.
     /// Uses SHA256 hash to ensure identical commands produce identical correlation IDs for idempotency.
     /// </summary>
-    private static Guid ComputeDeterministicCorrelationId(string typeFullName, string payloadJson)
+    private static Id<CorrelationScope> ComputeDeterministicCorrelationId(string typeFullName, string payloadJson)
     {
         var input = $"{typeFullName}|{payloadJson}";
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
 
-        // Use first 16 bytes of SHA256 hash as Guid (deterministic)
-        var guidBytes = new byte[16];
-        Array.Copy(hashBytes, guidBytes, 16);
-        return new Guid(guidBytes);
+        // Use first 16 bytes of SHA256 hash as typed correlation ID (deterministic)
+        var correlationBytes = new byte[16];
+        Array.Copy(hashBytes, correlationBytes, 16);
+        return Id<CorrelationScope>.FromBytes(correlationBytes);
     }
 }

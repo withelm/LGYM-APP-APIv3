@@ -30,11 +30,11 @@ public sealed class TokenService : ITokenService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var userIdGuid = (Guid)userId;
+        var userIdString = userId.ToString();
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, userIdGuid.ToString()),
-            new("userId", userIdGuid.ToString())
+            new(JwtRegisteredClaimNames.Sub, userIdString),
+            new("userId", userIdString)
         };
 
         foreach (var role in roles.Distinct(StringComparer.Ordinal))

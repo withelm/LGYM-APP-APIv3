@@ -310,7 +310,7 @@ public sealed class UserAuthTests : IntegrationTestBase
     public async Task CheckToken_WithValidToken_ReturnsUserInfo()
     {
         var user = await SeedUserAsync(name: "tokenuser", email: "token@example.com", elo: 2000);
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync("/api/checkToken");
 
@@ -355,7 +355,7 @@ public sealed class UserAuthTests : IntegrationTestBase
     public async Task CheckToken_WithDeletedUser_ReturnsUnauthorized()
     {
         var user = await SeedUserAsync(name: "deleteduser", email: "deleted@example.com", isDeleted: true);
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync("/api/checkToken");
 
@@ -397,7 +397,7 @@ public sealed class UserAuthTests : IntegrationTestBase
     public async Task DeleteAccount_WithValidToken_AnonymizesUserAndReturnsDeleted()
     {
         var user = await SeedUserAsync(name: "todelete", email: "todelete@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync("/api/deleteAccount");
 

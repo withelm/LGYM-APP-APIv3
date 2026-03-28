@@ -39,21 +39,21 @@ public sealed class ReportTemplateFieldSeeder : IEntitySeeder
         {
             var fields = new List<ReportTemplateField>
             {
-                new()
-                {
-                    Id = (LgymApi.Domain.ValueObjects.Id<ReportTemplateField>)Guid.NewGuid(),
-                    TemplateId = template.Id,
-                    Key = "mood",
+                 new()
+                 {
+                     Id = Id<ReportTemplateField>.New(),
+                     TemplateId = template.Id,
+                     Key = "mood",
                     Label = "Mood",
                     Type = ReportFieldType.Text,
                     IsRequired = false,
                     Order = 1
                 },
-                new()
-                {
-                    Id = (LgymApi.Domain.ValueObjects.Id<ReportTemplateField>)Guid.NewGuid(),
-                    TemplateId = template.Id,
-                    Key = "energy",
+                 new()
+                 {
+                     Id = Id<ReportTemplateField>.New(),
+                     TemplateId = template.Id,
+                     Key = "energy",
                     Label = "Energy level",
                     Type = ReportFieldType.Number,
                     IsRequired = false,

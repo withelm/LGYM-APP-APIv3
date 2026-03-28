@@ -30,8 +30,8 @@ public sealed class GymController : ControllerBase
     public async Task<IActionResult> AddGym([FromRoute] string id, [FromBody] GymFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _gymService.AddGymAsync(user!, (Id<LgymApi.Domain.Entities.User>)routeUserId, form.Name, form.Address, HttpContext.RequestAborted);
+        var routeUserId = Id<LgymApi.Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<LgymApi.Domain.Entities.User>.Empty;
+        await _gymService.AddGymAsync(user!, routeUserId, form.Name, form.Address, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -43,8 +43,8 @@ public sealed class GymController : ControllerBase
     public async Task<IActionResult> DeleteGym([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var gymId = Guid.TryParse(id, out var parsedGymId) ? parsedGymId : Guid.Empty;
-        await _gymService.DeleteGymAsync(user!, (Id<LgymApi.Domain.Entities.Gym>)gymId, HttpContext.RequestAborted);
+        var gymId = Id<LgymApi.Domain.Entities.Gym>.TryParse(id, out var parsedGymId) ? parsedGymId : Id<LgymApi.Domain.Entities.Gym>.Empty;
+        await _gymService.DeleteGymAsync(user!, gymId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -55,8 +55,8 @@ public sealed class GymController : ControllerBase
     public async Task<IActionResult> GetGyms([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        var context = await _gymService.GetGymsAsync(user!, (Id<LgymApi.Domain.Entities.User>)routeUserId, HttpContext.RequestAborted);
+        var routeUserId = Id<LgymApi.Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<LgymApi.Domain.Entities.User>.Empty;
+        var context = await _gymService.GetGymsAsync(user!, routeUserId, HttpContext.RequestAborted);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(GymProfile.Keys.LastTrainingMap, context.LastTrainings);
 
@@ -73,8 +73,8 @@ public sealed class GymController : ControllerBase
     public async Task<IActionResult> GetGym([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var gymId = Guid.TryParse(id, out var parsedGymId) ? parsedGymId : Guid.Empty;
-        var gym = await _gymService.GetGymAsync(user!, (Id<LgymApi.Domain.Entities.Gym>)gymId, HttpContext.RequestAborted);
+        var gymId = Id<LgymApi.Domain.Entities.Gym>.TryParse(id, out var parsedGymId) ? parsedGymId : Id<LgymApi.Domain.Entities.Gym>.Empty;
+        var gym = await _gymService.GetGymAsync(user!, gymId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Domain.Entities.Gym, GymFormDto>(gym));
     }
 
@@ -86,8 +86,8 @@ public sealed class GymController : ControllerBase
     public async Task<IActionResult> EditGym([FromBody] GymFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var gymId = Guid.TryParse(form.Id, out var parsedGymId) ? parsedGymId : Guid.Empty;
-        await _gymService.UpdateGymAsync(user!, (Id<LgymApi.Domain.Entities.Gym>)gymId, form.Name, form.Address, HttpContext.RequestAborted);
+        var gymId = Id<LgymApi.Domain.Entities.Gym>.TryParse(form.Id, out var parsedGymId) ? parsedGymId : Id<LgymApi.Domain.Entities.Gym>.Empty;
+        await _gymService.UpdateGymAsync(user!, gymId, form.Name, form.Address, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

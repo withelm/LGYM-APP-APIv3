@@ -7,6 +7,7 @@ using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,7 +50,7 @@ public sealed class TrainingTests : IntegrationTestBase
              var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
              await db.EmailNotificationSubscriptions.AddAsync(new EmailNotificationSubscription
              {
-                 Id = (Domain.ValueObjects.Id<EmailNotificationSubscription>)Guid.NewGuid(),
+                 Id = Domain.ValueObjects.Id<EmailNotificationSubscription>.New(),
                  UserId = (Domain.ValueObjects.Id<User>)userId,
                  NotificationType = EmailNotificationTypes.TrainingCompleted.Value
              });
@@ -260,7 +261,7 @@ public sealed class TrainingTests : IntegrationTestBase
             new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "5" }
         });
 
-        var nonExistentGymId = Guid.NewGuid();
+        var nonExistentGymId = Domain.ValueObjects.Id<Gym>.New();
         var request = new
         {
             gym = nonExistentGymId.ToString(),
@@ -1177,12 +1178,15 @@ public sealed class TrainingTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var returnedExercises = new List<Guid>();
+        var returnedExercises = new List<Id<Exercise>>();
         foreach (var ex in exercisesReturned)
         {
-            var scoreId = Guid.Parse(ex.ExerciseScoreId);
-             var score = await db.ExerciseScores.FirstAsync(s => s.Id == (Domain.ValueObjects.Id<ExerciseScore>)scoreId);
-             returnedExercises.Add((Guid)score.ExerciseId);
+            if (!Id<ExerciseScore>.TryParse(ex.ExerciseScoreId, out var scoreId))
+            {
+                throw new InvalidOperationException($"Failed to parse exercise score ID: {ex.ExerciseScoreId}");
+            }
+             var score = await db.ExerciseScores.FirstAsync(s => s.Id == scoreId);
+             returnedExercises.Add(score.ExerciseId);
         }
 
         returnedExercises[0].Should().Be(exerciseIdShoulders);

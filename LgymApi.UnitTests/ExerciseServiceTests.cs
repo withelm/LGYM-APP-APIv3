@@ -13,13 +13,13 @@ public sealed class ExerciseServiceTests
     [Test]
     public async Task GetLastExerciseScoresAsync_WithSeriesAboveLimit_ClampsToThirty()
     {
-        var exerciseId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
+        var exerciseId = Id<Exercise>.New();
+        var userId = Id<User>.New();
 
         var scores = new List<ExerciseScore>
         {
-            new() { Id = (Id<ExerciseScore>)Guid.NewGuid(), ExerciseId = (Id<Exercise>)exerciseId, UserId = (Id<User>)userId, Series = 1, Reps = 8, Weight = 80, Unit = WeightUnits.Kilograms },
-            new() { Id = (Id<ExerciseScore>)Guid.NewGuid(), ExerciseId = (Id<Exercise>)exerciseId, UserId = (Id<User>)userId, Series = 2, Reps = 6, Weight = 90, Unit = WeightUnits.Kilograms }
+            new() { Id = Id<ExerciseScore>.New(), ExerciseId = exerciseId, UserId = userId, Series = 1, Reps = 8, Weight = 80, Unit = WeightUnits.Kilograms },
+            new() { Id = Id<ExerciseScore>.New(), ExerciseId = exerciseId, UserId = userId, Series = 2, Reps = 6, Weight = 90, Unit = WeightUnits.Kilograms }
         };
 
         var service = new ExerciseService(
@@ -29,7 +29,7 @@ public sealed class ExerciseServiceTests
             new StubExerciseScoreRepository(scores),
             new NoOpUnitOfWork());
 
-        var input = new GetLastExerciseScoresInput((Id<User>)userId, (Id<User>)userId, (Id<Exercise>)exerciseId, 100, null, "Bench press");
+        var input = new GetLastExerciseScoresInput(userId, userId, exerciseId, 100, null, "Bench press");
         var result = await service.GetLastExerciseScoresAsync(input);
 
         Assert.Multiple(() =>

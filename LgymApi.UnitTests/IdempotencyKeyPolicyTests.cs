@@ -16,30 +16,30 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public void CalculateKey_WithValidCorrelationId_ReturnsConsistentKey()
     {
-        var id = Guid.NewGuid();
+        var id = Id<CorrelationScope>.New();
         var k1 = IdempotencyKeyPolicy.CalculateKey(id);
         var k2 = IdempotencyKeyPolicy.CalculateKey(id);
         Assert.That(k1, Is.EqualTo(k2));
     }
 
     [Test]
-    public void CalculateKey_WithEmptyGuid_Throws()
+    public void CalculateKey_WithEmptyCorrelationId_Throws()
     {
-        Assert.Throws<ArgumentException>(() => IdempotencyKeyPolicy.CalculateKey(Guid.Empty));
+        Assert.Throws<ArgumentException>(() => IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.Empty));
     }
 
     [Test]
     public void CalculateKey_DifferentIds_DifferentKeys()
     {
-        var k1 = IdempotencyKeyPolicy.CalculateKey(Guid.NewGuid());
-        var k2 = IdempotencyKeyPolicy.CalculateKey(Guid.NewGuid());
+        var k1 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
+        var k2 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
         Assert.That(k1, Is.Not.EqualTo(k2));
     }
 
     [Test]
     public void AreKeysEqual_SameKeys_True()
     {
-        var id = Guid.NewGuid();
+        var id = Id<CorrelationScope>.New();
         var k1 = IdempotencyKeyPolicy.CalculateKey(id);
         var k2 = IdempotencyKeyPolicy.CalculateKey(id);
         Assert.That(IdempotencyKeyPolicy.AreKeysEqual(k1, k2), Is.True);
@@ -48,8 +48,8 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public void AreKeysEqual_DifferentKeys_False()
     {
-        var k1 = IdempotencyKeyPolicy.CalculateKey(Guid.NewGuid());
-        var k2 = IdempotencyKeyPolicy.CalculateKey(Guid.NewGuid());
+        var k1 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
+        var k2 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
         Assert.That(IdempotencyKeyPolicy.AreKeysEqual(k1, k2), Is.False);
     }
 
@@ -62,7 +62,7 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public void AreKeysEqual_OneNullKey_False()
     {
-        var k1 = IdempotencyKeyPolicy.CalculateKey(Guid.NewGuid());
+        var k1 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
         Assert.That(IdempotencyKeyPolicy.AreKeysEqual(k1, null), Is.False);
         Assert.That(IdempotencyKeyPolicy.AreKeysEqual(null, k1), Is.False);
     }
@@ -70,7 +70,7 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public void IsKeyForCorrelation_WithMatchingKey_ReturnsTrue()
     {
-        var id = Guid.NewGuid();
+        var id = Id<CorrelationScope>.New();
         var key = IdempotencyKeyPolicy.CalculateKey(id);
         Assert.That(IdempotencyKeyPolicy.IsKeyForCorrelation(key, id), Is.True);
     }
@@ -78,8 +78,8 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public void IsKeyForCorrelation_WithNonMatchingKey_ReturnsFalse()
     {
-        var id1 = Guid.NewGuid();
-        var id2 = Guid.NewGuid();
+        var id1 = Id<CorrelationScope>.New();
+        var id2 = Id<CorrelationScope>.New();
         var key = IdempotencyKeyPolicy.CalculateKey(id1);
         Assert.That(IdempotencyKeyPolicy.IsKeyForCorrelation(key, id2), Is.False);
     }
@@ -87,16 +87,16 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public void IsKeyForCorrelation_WithNullKey_ReturnsFalse()
     {
-        var id = Guid.NewGuid();
+        var id = Id<CorrelationScope>.New();
         Assert.That(IdempotencyKeyPolicy.IsKeyForCorrelation(null, id), Is.False);
     }
 
     [Test]
     public async Task Persistence_FirstEnqueueCreatesOneRecord()
     {
-        var cid = Guid.NewGuid();
+        var cid = Id<CorrelationScope>.New();
         var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: $"T1_{Guid.NewGuid()}")
+            .UseInMemoryDatabase(databaseName: $"T1_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}")
             .Options;
 
         using var ctx = new AppDbContext(opts);
@@ -112,9 +112,9 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public async Task Persistence_DuplicateEnqueueDetectedByRepository()
     {
-        var cid = Guid.NewGuid();
+        var cid = Id<CorrelationScope>.New();
         var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: $"T2_{Guid.NewGuid()}")
+            .UseInMemoryDatabase(databaseName: $"T2_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}")
             .Options;
 
         using var ctx = new AppDbContext(opts);
@@ -130,9 +130,9 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public async Task Persistence_AddOrGetExistingAsync_ReturnsDuplicateNotNewRecord()
     {
-        var cid = Guid.NewGuid();
+        var cid = Id<CorrelationScope>.New();
         var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: $"T3_{Guid.NewGuid()}")
+            .UseInMemoryDatabase(databaseName: $"T3_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}")
             .Options;
 
         using var ctx = new AppDbContext(opts);
@@ -151,8 +151,8 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public async Task Persistence_ConcurrentDuplicateEnqueueResultsInSingleRecord()
     {
-        var cid = Guid.NewGuid();
-        var dbName = $"T4_{Guid.NewGuid()}";
+        var cid = Id<CorrelationScope>.New();
+        var dbName = $"T4_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}";
 
         var t1 = Task.Run(async () =>
         {
@@ -193,10 +193,10 @@ public sealed class IdempotencyKeyPolicyTests
      [Test]
      public async Task Persistence_MultipleEnvelopesWithDifferentCorrelationIds()
      {
-         var cid1 = Guid.NewGuid();
-         var cid2 = Guid.NewGuid();
+         var cid1 = Id<CorrelationScope>.New();
+         var cid2 = Id<CorrelationScope>.New();
          var opts = new DbContextOptionsBuilder<AppDbContext>()
-             .UseInMemoryDatabase(databaseName: $"T5_{Guid.NewGuid()}")
+             .UseInMemoryDatabase(databaseName: $"T5_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}")
              .Options;
 
          using var ctx = new AppDbContext(opts);

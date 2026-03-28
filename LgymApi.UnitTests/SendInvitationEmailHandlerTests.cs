@@ -38,9 +38,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_WithValidCommand_SchedulesInvitationEmail()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
             var expiresAt = DateTimeOffset.UtcNow.AddDays(7);
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
@@ -77,7 +77,7 @@ public sealed class SendInvitationEmailHandlerTests
         // Assert
         Assert.That(_testScheduler.ScheduledPayloads, Has.Count.EqualTo(1));
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That((Guid)payload.InvitationId, Is.EqualTo(invitationId));
+        Assert.That(payload.InvitationId, Is.EqualTo(invitationId));
         Assert.That(payload.InvitationCode, Is.EqualTo("ABC123XYZ"));
         Assert.That(payload.ExpiresAt, Is.EqualTo(expiresAt));
         Assert.That(payload.TrainerName, Is.EqualTo("Coach Smith"));
@@ -90,9 +90,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_WithEmptyEmail_SkipsSchedulingGracefully()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
             {
@@ -134,9 +134,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_WithWhitespaceEmail_SkipsSchedulingGracefully()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
             {
@@ -177,9 +177,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_MapsAllFieldsToPayload()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
             var expiresAt = DateTimeOffset.UtcNow.AddDays(14);
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
@@ -216,7 +216,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         // Assert
         var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That((Guid)payload.InvitationId, Is.EqualTo(invitationId));
+        Assert.That(payload.InvitationId, Is.EqualTo(invitationId));
         Assert.That(payload.InvitationCode, Is.EqualTo("INVITE2024"));
         Assert.That(payload.ExpiresAt, Is.EqualTo(expiresAt));
         Assert.That(payload.TrainerName, Is.EqualTo("Maria Rodriguez"));
@@ -229,9 +229,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_WithCancellationToken_PassesTokenToScheduler()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
             {
@@ -273,9 +273,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_LogsInformationOnSuccess()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
             {
@@ -352,9 +352,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_WithDifferentCulture_PreservesCultureName()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
             {
@@ -397,9 +397,9 @@ public sealed class SendInvitationEmailHandlerTests
     [Test]
         public async Task ExecuteAsync_UsesConfiguredDefaults_WhenLanguageAndTimeZoneWhitespace()
         {
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
             {
@@ -443,9 +443,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_WithShortExpirationPeriod_PreservesExpiresAt()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
             var expiresAt = DateTimeOffset.UtcNow.AddHours(24);
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
@@ -491,7 +491,7 @@ public sealed class SendInvitationEmailHandlerTests
 
         var command = new InvitationCreatedCommand
         {
-            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid()
+            InvitationId = Id<TrainerInvitation>.New()
         };
 
         // Act
@@ -507,9 +507,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_WithTraineeNotFound_SkipsSchedulingGracefully()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
             {
@@ -546,9 +546,9 @@ public sealed class SendInvitationEmailHandlerTests
         public async Task ExecuteAsync_WithTrainerNotFound_SkipsSchedulingGracefully()
         {
             // Arrange
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
             {
@@ -586,9 +586,9 @@ public sealed class SendInvitationEmailHandlerTests
         {
             // Arrange
             _testEmailNotificationsFeature.Enabled = false;
-            var invitationId = Guid.NewGuid();
-            var trainerId = Guid.NewGuid();
-            var traineeId = Guid.NewGuid();
+            var invitationId = Id<TrainerInvitation>.New();
+            var trainerId = Id<User>.New();
+            var traineeId = Id<User>.New();
 
             _testInvitationRepository.InvitationToReturn = new TrainerInvitation
             {

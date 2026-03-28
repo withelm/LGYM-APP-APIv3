@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,14 +25,14 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                  var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                  db.TrainerTraineeLinks.Add(new TrainerTraineeLink
                  {
-                     Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                     Id = Domain.ValueObjects.Id<TrainerTraineeLink>.New(),
                      TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
                      TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id
                  });
                  await db.SaveChangesAsync();
              }
 
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
         var createTemplateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
         {
             name = "Weekly Check-in",
@@ -59,7 +60,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         request.Should().NotBeNull();
         request!.Status.Should().Be("Pending");
 
-        SetAuthorizationHeader((Guid)trainee.Id);
+        SetAuthorizationHeader(trainee.Id);
         var pendingResponse = await Client.GetAsync("/api/trainee/report-requests");
         pendingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var pending = await pendingResponse.Content.ReadFromJsonAsync<List<ReportRequestResponse>>();
@@ -77,7 +78,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
 
         submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
         var submissionsResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/report-submissions");
         submissionsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var submissions = await submissionsResponse.Content.ReadFromJsonAsync<List<ReportSubmissionResponse>>();
@@ -98,14 +99,14 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                  var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                  db.TrainerTraineeLinks.Add(new TrainerTraineeLink
                  {
-                     Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
+                     Id = Domain.ValueObjects.Id<TrainerTraineeLink>.New(),
                      TrainerId = (Domain.ValueObjects.Id<User>)trainer.Id,
                      TraineeId = (Domain.ValueObjects.Id<User>)trainee.Id
                  });
                  await db.SaveChangesAsync();
              }
 
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
         var templateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
         {
             name = "Daily",
@@ -122,7 +123,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         });
         var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
 
-        SetAuthorizationHeader((Guid)trainee.Id);
+        SetAuthorizationHeader(trainee.Id);
         var submitResponse = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request!.Id}/submit", new
         {
             answers = new
@@ -138,7 +139,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     public async Task TrainerReportingController_InvalidIds_ReturnBadRequest()
     {
         var trainer = await SeedTrainerAsync("trainer-report-invalid-ids", "trainer-report-invalid-ids@example.com");
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
 
         var getTemplate = await Client.GetAsync("/api/trainer/report-templates/not-a-guid");
         var updateTemplate = await Client.PostAsJsonAsync("/api/trainer/report-templates/not-a-guid/update", new
@@ -149,9 +150,9 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         var deleteTemplate = await Client.PostAsync("/api/trainer/report-templates/not-a-guid/delete", content: null);
         var createRequestBadTrainee = await Client.PostAsJsonAsync("/api/trainer/trainees/not-a-guid/report-requests", new
         {
-            templateId = Guid.NewGuid().ToString()
+            templateId = Domain.ValueObjects.Id<object>.New().ToString()
         });
-        var createRequestBadTemplate = await Client.PostAsJsonAsync($"/api/trainer/trainees/{Guid.NewGuid()}/report-requests", new
+        var createRequestBadTemplate = await Client.PostAsJsonAsync($"/api/trainer/trainees/{Domain.ValueObjects.Id<User>.New()}/report-requests", new
         {
             templateId = "not-a-guid"
         });
@@ -169,7 +170,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     public async Task TrainerReportingController_TemplateCreateAndReadFlow_Works()
     {
         var trainer = await SeedTrainerAsync("trainer-report-crud", "trainer-report-crud@example.com");
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
 
         var createTemplateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
         {

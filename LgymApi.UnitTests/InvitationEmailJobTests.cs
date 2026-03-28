@@ -1,4 +1,6 @@
 using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Jobs;
 
 namespace LgymApi.UnitTests;
@@ -9,7 +11,7 @@ public sealed class InvitationEmailJobTests
     [Test]
     public async Task ExecuteAsync_DelegatesToHandler()
     {
-        var notificationId = Guid.NewGuid();
+        var notificationId = Id<NotificationMessage>.New();
         var handler = new FakeEmailJobHandler();
         var job = new InvitationEmailJob(handler);
 
@@ -25,9 +27,9 @@ public sealed class InvitationEmailJobTests
     private sealed class FakeEmailJobHandler : IEmailJobHandler
     {
         public int Calls { get; private set; }
-        public Guid LastNotificationId { get; private set; }
+        public Id<NotificationMessage> LastNotificationId { get; private set; }
 
-        public Task ProcessAsync(Guid notificationId, CancellationToken cancellationToken = default)
+        public Task ProcessAsync(Id<NotificationMessage> notificationId, CancellationToken cancellationToken = default)
         {
             Calls += 1;
             LastNotificationId = notificationId;

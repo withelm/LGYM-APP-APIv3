@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,10 +38,10 @@ public sealed class PlanSeeder : IEntitySeeder
                 continue;
             }
 
-            var plan = new Plan
-            {
-                Id = (LgymApi.Domain.ValueObjects.Id<Plan>)Guid.NewGuid(),
-                UserId = user.Id,
+             var plan = new Plan
+             {
+                 Id = Id<Plan>.New(),
+                 UserId = user.Id,
                 Name = "Push Pull Legs",
                 IsActive = true
             };

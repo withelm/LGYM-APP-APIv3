@@ -22,20 +22,20 @@ public sealed class UserSessionCacheTests
     public void AddOrRefresh_EvictsLeastRecentlyUsed_WhenCapacityExceeded()
     {
         var cache = CreateCache(capacity: 2);
-        var first = Guid.NewGuid();
-        var second = Guid.NewGuid();
-        var third = Guid.NewGuid();
+        var first = Id<User>.New();
+        var second = Id<User>.New();
+        var third = Id<User>.New();
 
-        cache.AddOrRefresh((Id<User>)first);
-        cache.AddOrRefresh((Id<User>)second);
-        cache.AddOrRefresh((Id<User>)third);
+        cache.AddOrRefresh(first);
+        cache.AddOrRefresh(second);
+        cache.AddOrRefresh(third);
 
         Assert.Multiple(() =>
         {
             Assert.That(cache.Count, Is.EqualTo(2));
-            Assert.That(cache.Contains((Id<User>)first), Is.False);
-            Assert.That(cache.Contains((Id<User>)second), Is.True);
-            Assert.That(cache.Contains((Id<User>)third), Is.True);
+            Assert.That(cache.Contains(first), Is.False);
+            Assert.That(cache.Contains(second), Is.True);
+            Assert.That(cache.Contains(third), Is.True);
         });
     }
 
@@ -43,20 +43,20 @@ public sealed class UserSessionCacheTests
     public void AddOrRefresh_RefreshesExistingItem()
     {
         var cache = CreateCache(capacity: 2);
-        var first = Guid.NewGuid();
-        var second = Guid.NewGuid();
-        var third = Guid.NewGuid();
+        var first = Id<User>.New();
+        var second = Id<User>.New();
+        var third = Id<User>.New();
 
-        cache.AddOrRefresh((Id<User>)first);
-        cache.AddOrRefresh((Id<User>)second);
-        cache.AddOrRefresh((Id<User>)first);
-        cache.AddOrRefresh((Id<User>)third);
+        cache.AddOrRefresh(first);
+        cache.AddOrRefresh(second);
+        cache.AddOrRefresh(first);
+        cache.AddOrRefresh(third);
 
         Assert.Multiple(() =>
         {
-            Assert.That(cache.Contains((Id<User>)first), Is.True);
-            Assert.That(cache.Contains((Id<User>)second), Is.False);
-            Assert.That(cache.Contains((Id<User>)third), Is.True);
+            Assert.That(cache.Contains(first), Is.True);
+            Assert.That(cache.Contains(second), Is.False);
+            Assert.That(cache.Contains(third), Is.True);
         });
     }
 
@@ -64,15 +64,15 @@ public sealed class UserSessionCacheTests
     public void Remove_ReturnsExpectedValues()
     {
         var cache = CreateCache(capacity: 2);
-        var userId = Guid.NewGuid();
-        cache.AddOrRefresh((Id<User>)userId);
+        var userId = Id<User>.New();
+        cache.AddOrRefresh(userId);
 
         Assert.Multiple(() =>
         {
             Assert.That(cache.Remove(Id<User>.Empty), Is.False);
-            Assert.That(cache.Remove((Id<User>)Guid.NewGuid()), Is.False);
-            Assert.That(cache.Remove((Id<User>)userId), Is.True);
-            Assert.That(cache.Contains((Id<User>)userId), Is.False);
+            Assert.That(cache.Remove(Id<User>.New()), Is.False);
+            Assert.That(cache.Remove(userId), Is.True);
+            Assert.That(cache.Contains(userId), Is.False);
         });
     }
 
@@ -83,7 +83,7 @@ public sealed class UserSessionCacheTests
 
         for (var i = 0; i < 1001; i++)
         {
-            cache.AddOrRefresh((Id<User>)Guid.NewGuid());
+            cache.AddOrRefresh(Id<User>.New());
         }
 
         Assert.That(cache.Count, Is.EqualTo(1000));

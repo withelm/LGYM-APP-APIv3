@@ -60,8 +60,8 @@ public sealed class SeederSmokeExtensionTests
          var context = await CreateContextAsync();
          var seedContext = new SeedContext();
 
-         seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" });
-         seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainee" });
+         seedContext.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Trainer" });
+         seedContext.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Trainee" });
 
          var seeder = new TrainerTraineeLinkSeeder();
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
@@ -70,13 +70,13 @@ public sealed class SeederSmokeExtensionTests
         Assert.That(await context.TrainerTraineeLinks.CountAsync(), Is.EqualTo(1));
     }
 
-    [Test]
-    public async Task ReportTemplateSeeder_Should_Add_Template_With_Fields()
-    {
-        var context = await CreateContextAsync();
-        var seedContext = new SeedContext();
+     [Test]
+     public async Task ReportTemplateSeeder_Should_Add_Template_With_Fields()
+     {
+         var context = await CreateContextAsync();
+         var seedContext = new SeedContext();
 
-        seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" });
+         seedContext.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Trainer" });
 
         var seeder = new ReportTemplateSeeder();
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
@@ -92,8 +92,8 @@ public sealed class SeederSmokeExtensionTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var trainer = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" };
-        var trainee = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainee" };
+         var trainer = new User { Id = Id<User>.New(), Name = "Trainer" };
+         var trainee = new User { Id = Id<User>.New(), Name = "Trainee" };
         seedContext.DemoUsers.Add(trainer);
         seedContext.DemoUsers.Add(trainee);
 
@@ -115,8 +115,8 @@ public sealed class SeederSmokeExtensionTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" });
-        seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainee" });
+         seedContext.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Trainer" });
+         seedContext.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Trainee" });
 
         var planSeeder = new SupplementPlanSeeder();
         await planSeeder.SeedAsync(context, seedContext, CancellationToken.None);
@@ -167,8 +167,8 @@ public sealed class SeederSmokeExtensionTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var trainer = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Trainer" };
-        seedContext.DemoUsers.Add(trainer);
+         var trainer = new User { Id = Id<User>.New(), Name = "Trainer" };
+         seedContext.DemoUsers.Add(trainer);
 
         var templateSeeder = new ReportTemplateSeeder();
         await templateSeeder.SeedAsync(context, seedContext, CancellationToken.None);
@@ -181,14 +181,14 @@ public sealed class SeederSmokeExtensionTests
         Assert.That(await context.ReportTemplateFields.CountAsync(), Is.GreaterThan(0));
     }
 
-    private static async Task<AppDbContext> CreateContextAsync()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
+     private static async Task<AppDbContext> CreateContextAsync()
+     {
+         var options = new DbContextOptionsBuilder<AppDbContext>()
+             .UseInMemoryDatabase(Id<Exercise>.New().ToString())
+             .Options;
 
-        var context = new AppDbContext(options);
-        await context.Database.EnsureCreatedAsync();
-        return context;
-    }
+         var context = new AppDbContext(options);
+         await context.Database.EnsureCreatedAsync();
+         return context;
+     }
 }

@@ -1,4 +1,5 @@
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 
@@ -12,7 +13,7 @@ public sealed class DummyEmailSenderTests
     [SetUp]
     public void SetUp()
     {
-        _tempDirectory = Path.Combine(Path.GetTempPath(), $"lgym-dummy-email-{Guid.NewGuid():N}");
+        _tempDirectory = Path.Combine(Path.GetTempPath(), $"lgym-dummy-email-{Id<DummyEmailSenderTests>.New():N}");
     }
 
     [TearDown]

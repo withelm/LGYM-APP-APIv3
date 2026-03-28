@@ -12,17 +12,17 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class ServiceTransactionBehaviorTests
 {
-     [Test]
-     public async Task SetNewActivePlanAsync_WhenSuccessful_CommitsTransaction()
-     {
-         var userId = new Id<User>(Guid.NewGuid());
-         var planId = new Id<Plan>(Guid.NewGuid());
-         var currentUser = new User { Id = userId };
-         var unitOfWork = new RecordingUnitOfWork();
-         var planRepository = new PlanRepositoryStub
-         {
-             PlanToReturn = new Plan { Id = planId, UserId = userId }
-         };
+      [Test]
+      public async Task SetNewActivePlanAsync_WhenSuccessful_CommitsTransaction()
+      {
+          var userId = Id<User>.New();
+          var planId = Id<Plan>.New();
+          var currentUser = new User { Id = userId };
+          var unitOfWork = new RecordingUnitOfWork();
+          var planRepository = new PlanRepositoryStub
+          {
+              PlanToReturn = new Plan { Id = planId, UserId = userId }
+          };
 
          var service = new PlanService(
              new UserRepositoryStub(),
@@ -42,18 +42,18 @@ public sealed class ServiceTransactionBehaviorTests
          });
      }
 
-     [Test]
-     public void SetNewActivePlanAsync_WhenSetActiveFails_RollsBackTransaction()
-     {
-         var userId = new Id<User>(Guid.NewGuid());
-         var planId = new Id<Plan>(Guid.NewGuid());
-         var currentUser = new User { Id = userId };
-         var unitOfWork = new RecordingUnitOfWork();
-         var planRepository = new PlanRepositoryStub
-         {
-             PlanToReturn = new Plan { Id = planId, UserId = userId },
-             SetActiveException = new InvalidOperationException("boom")
-         };
+      [Test]
+      public void SetNewActivePlanAsync_WhenSetActiveFails_RollsBackTransaction()
+      {
+          var userId = Id<User>.New();
+          var planId = Id<Plan>.New();
+          var currentUser = new User { Id = userId };
+          var unitOfWork = new RecordingUnitOfWork();
+          var planRepository = new PlanRepositoryStub
+          {
+              PlanToReturn = new Plan { Id = planId, UserId = userId },
+              SetActiveException = new InvalidOperationException("boom")
+          };
 
          var service = new PlanService(
              new UserRepositoryStub(),
@@ -71,14 +71,14 @@ public sealed class ServiceTransactionBehaviorTests
          });
      }
 
-     [Test]
-     public async Task UpdatePlanDayAsync_WhenSuccessful_CommitsTransaction()
-     {
-         var userId = new Id<User>(Guid.NewGuid());
-         var planId = new Id<Plan>(Guid.NewGuid());
-         var planDayId = new Id<PlanDay>(Guid.NewGuid());
-         var unitOfWork = new RecordingUnitOfWork();
-         var exercisesRepository = new PlanDayExerciseRepositoryStub();
+      [Test]
+      public async Task UpdatePlanDayAsync_WhenSuccessful_CommitsTransaction()
+      {
+          var userId = Id<User>.New();
+          var planId = Id<Plan>.New();
+          var planDayId = Id<PlanDay>.New();
+          var unitOfWork = new RecordingUnitOfWork();
+          var exercisesRepository = new PlanDayExerciseRepositoryStub();
 
          var planRepository = new PlanRepositoryStub
          {
@@ -98,12 +98,12 @@ public sealed class ServiceTransactionBehaviorTests
              new TrainingRepositoryStub(),
              unitOfWork));
 
-        await service.UpdatePlanDayAsync(
-            new User { Id = userId },
-            planDayId,
-            "new",
-            [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
-            CancellationToken.None);
+         await service.UpdatePlanDayAsync(
+             new User { Id = userId },
+             planDayId,
+             "new",
+             [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New().ToString(), Series = 3, Reps = "8" }],
+             CancellationToken.None);
 
          Assert.Multiple(() =>
          {
@@ -116,17 +116,17 @@ public sealed class ServiceTransactionBehaviorTests
          });
      }
 
-     [Test]
-     public void UpdatePlanDayAsync_WhenRemoveFails_RollsBackTransaction()
-     {
-         var userId = new Id<User>(Guid.NewGuid());
-         var planId = new Id<Plan>(Guid.NewGuid());
-         var planDayId = new Id<PlanDay>(Guid.NewGuid());
-         var unitOfWork = new RecordingUnitOfWork();
-         var exercisesRepository = new PlanDayExerciseRepositoryStub
-         {
-             RemoveException = new InvalidOperationException("remove failed")
-         };
+      [Test]
+      public void UpdatePlanDayAsync_WhenRemoveFails_RollsBackTransaction()
+      {
+          var userId = Id<User>.New();
+          var planId = Id<Plan>.New();
+          var planDayId = Id<PlanDay>.New();
+          var unitOfWork = new RecordingUnitOfWork();
+          var exercisesRepository = new PlanDayExerciseRepositoryStub
+          {
+              RemoveException = new InvalidOperationException("remove failed")
+          };
 
          var service = new PlanDayService(new PlanDayServiceDependenciesStub(
              new PlanRepositoryStub
@@ -142,13 +142,13 @@ public sealed class ServiceTransactionBehaviorTests
              new TrainingRepositoryStub(),
              unitOfWork));
 
-        Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await service.UpdatePlanDayAsync(
-                new User { Id = userId },
-                planDayId,
-                "new",
-                [new PlanDayExerciseInput { ExerciseId = Guid.NewGuid().ToString(), Series = 3, Reps = "8" }],
-                CancellationToken.None));
+         Assert.ThrowsAsync<InvalidOperationException>(async () =>
+             await service.UpdatePlanDayAsync(
+                 new User { Id = userId },
+                 planDayId,
+                 "new",
+                 [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New().ToString(), Series = 3, Reps = "8" }],
+                 CancellationToken.None));
 
          Assert.Multiple(() =>
          {

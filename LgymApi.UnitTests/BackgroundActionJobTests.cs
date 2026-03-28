@@ -1,6 +1,8 @@
 using Hangfire;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.BackgroundWorker.Jobs;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
@@ -17,9 +19,9 @@ public class BackgroundActionJobTests
     /// </summary>
     private class TestDoubleOrchestratorService
     {
-        public List<(Guid EnvelopeId, CancellationToken Token)> OrchestrationCalls { get; } = [];
+        public List<(Id<CommandEnvelope> EnvelopeId, CancellationToken Token)> OrchestrationCalls { get; } = [];
 
-        public async Task OrchestrateAsync(Guid envelopeId, CancellationToken cancellationToken = default)
+        public async Task OrchestrateAsync(Id<CommandEnvelope> envelopeId, CancellationToken cancellationToken = default)
         {
             OrchestrationCalls.Add((envelopeId, cancellationToken));
             await Task.CompletedTask;
@@ -38,7 +40,7 @@ public class BackgroundActionJobTests
             _testOrchestrator = testOrchestrator ?? throw new ArgumentNullException(nameof(testOrchestrator));
         }
 
-        public async Task ExecuteAsync(Guid actionMessageId)
+        public async Task ExecuteAsync(Id<CommandEnvelope> actionMessageId)
         {
             await _testOrchestrator.OrchestrateAsync(actionMessageId);
         }
@@ -61,7 +63,7 @@ public class BackgroundActionJobTests
     public async Task ExecuteAsync_DelegatesToOrchestratorWithMessageId()
     {
         // Arrange
-        var messageId = Guid.NewGuid();
+        var messageId = Id<CommandEnvelope>.New();
 
         // Act
         await _testableJob.ExecuteAsync(messageId);
@@ -116,7 +118,7 @@ public class BackgroundActionJobTests
     public async Task ExecuteAsync_CanBeCalledMultipleTimes()
     {
         // Arrange
-        var messageIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+        var messageIds = new[] { Id<CommandEnvelope>.New(), Id<CommandEnvelope>.New(), Id<CommandEnvelope>.New() };
 
         // Act
         foreach (var id in messageIds)
@@ -182,7 +184,7 @@ public class BackgroundActionJobTests
     }
 
     /// <summary>
-    /// Validates ExecuteAsync accepts exactly one Guid parameter.
+    /// Validates ExecuteAsync accepts exactly one typed-id parameter.
     /// </summary>
     [Test]
     public void ExecuteAsync_HasCorrectSignature()
@@ -195,8 +197,8 @@ public class BackgroundActionJobTests
         Assert.That(parameters?.Length, Is.EqualTo(1), "ExecuteAsync should accept exactly 1 parameter");
         Assert.That(
             parameters?[0].ParameterType,
-            Is.EqualTo(typeof(Guid)),
-            "Parameter should be Guid (actionMessageId)");
+            Is.EqualTo(typeof(Id<CommandEnvelope>)),
+            "Parameter should be Id<CommandEnvelope> (actionMessageId)");
     }
 
     /// <summary>
@@ -206,7 +208,7 @@ public class BackgroundActionJobTests
     public async Task ExecuteAsync_WithUnknownMessageId_StillDelegatesToOrchestrator()
     {
         // Arrange
-        var unknownMessageId = Guid.NewGuid();
+        var unknownMessageId = Id<CommandEnvelope>.New();
 
         // Act
         await _testableJob.ExecuteAsync(unknownMessageId);

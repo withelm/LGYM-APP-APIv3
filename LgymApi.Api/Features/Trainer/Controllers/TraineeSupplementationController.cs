@@ -5,6 +5,7 @@ using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Supplementation.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -39,7 +40,7 @@ public sealed class TraineeSupplementationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CheckOffIntake([FromBody] CheckOffSupplementIntakeRequest request)
     {
-        if (!Guid.TryParse(request.PlanItemId, out var parsedPlanItemId))
+        if (!Id<LgymApi.Domain.Entities.SupplementPlanItem>.TryParse(request.PlanItemId, out var parsedPlanItemId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -52,7 +53,7 @@ public sealed class TraineeSupplementationController : ControllerBase
         var trainee = HttpContext.GetCurrentUser();
         var result = await _supplementationService.CheckOffIntakeAsync(trainee!, new CheckOffSupplementIntakeCommand
         {
-            PlanItemId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.SupplementPlanItem>)parsedPlanItemId,
+            PlanItemId = parsedPlanItemId,
             IntakeDate = request.IntakeDate,
             TakenAt = request.TakenAt
         }, HttpContext.RequestAborted);

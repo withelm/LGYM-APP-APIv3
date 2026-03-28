@@ -1,7 +1,9 @@
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Repositories;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Notifications;
@@ -31,9 +33,9 @@ public sealed class EmailJobHandlerService : IEmailJobHandler
         _logger = logger;
     }
 
-    public async Task ProcessAsync(Guid notificationId, CancellationToken cancellationToken = default)
+    public async Task ProcessAsync(Id<NotificationMessage> notificationId, CancellationToken cancellationToken = default)
     {
-        var notification = await _notificationLogRepository.FindByIdAsync((LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.NotificationMessage>)notificationId, cancellationToken);
+        var notification = await _notificationLogRepository.FindByIdAsync(notificationId, cancellationToken);
         if (notification == null)
         {
             _logger.LogWarning(

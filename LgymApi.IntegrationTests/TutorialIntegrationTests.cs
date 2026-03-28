@@ -70,7 +70,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "active-tutorial-user", email: "active@example.com");
         await InitializeTutorialAsync(user.Id);
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         // Get active tutorials
         var response = await Client.GetAsync("/api/tutorials/active");
@@ -91,7 +91,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "progress-user", email: "progress@example.com");
         await InitializeTutorialAsync(user.Id);
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         // Get tutorial progress
         var response = await Client.GetAsync("/api/tutorials/OnboardingDemo");
@@ -111,7 +111,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "step-complete-user", email: "step@example.com");
         await InitializeTutorialAsync(user.Id);
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         // Complete first step
         var completeStepRequest = new CompleteStepRequest
@@ -141,7 +141,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "complete-tutorial-user", email: "complete@example.com");
         await InitializeTutorialAsync(user.Id);
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         // Complete tutorial
         var completeTutorialRequest = new CompleteTutorialRequest
@@ -175,7 +175,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "complete-all-steps-user", email: "allsteps@example.com");
         await InitializeTutorialAsync(user.Id);
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         // Complete all 6 steps
         var steps = new[]
@@ -232,7 +232,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         // Seed user and initialize tutorial
         var user = await SeedUserAsync(name: "idempotent-user", email: "idempotent@example.com");
         await InitializeTutorialAsync(user.Id);
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var completeTutorialRequest = new CompleteTutorialRequest
         {

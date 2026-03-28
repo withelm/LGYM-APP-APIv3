@@ -15,7 +15,7 @@ public sealed class InvitationEmailTemplateComposerTests
     [SetUp]
     public void SetUp()
     {
-        _templateRootPath = Path.Combine(Path.GetTempPath(), $"lgym-email-templates-{Guid.NewGuid():N}");
+        _templateRootPath = Path.Combine(Path.GetTempPath(), $"lgym-email-templates-{Id<InvitationEmailTemplateComposerTests>.New():N}");
         Directory.CreateDirectory(Path.Combine(_templateRootPath, "TrainerInvitation"));
         File.WriteAllText(
             Path.Combine(_templateRootPath, "TrainerInvitation", "en.email"),
@@ -39,10 +39,10 @@ public sealed class InvitationEmailTemplateComposerTests
     {
         var composer = CreateComposer();
 
-        var invitationId = Guid.NewGuid();
+        var invitationId = Id<LgymApi.Domain.Entities.TrainerInvitation>.New();
         var payload = new InvitationEmailPayload
         {
-            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId,
+            InvitationId = invitationId,
             InvitationCode = "ABC123XYZ789",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach Mike",
@@ -71,10 +71,10 @@ public sealed class InvitationEmailTemplateComposerTests
     {
         var composer = CreateComposer();
 
-        var invitationId = Guid.NewGuid();
+        var invitationId = Id<LgymApi.Domain.Entities.TrainerInvitation>.New();
         var payload = new InvitationEmailPayload
         {
-            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId,
+            InvitationId = invitationId,
             InvitationCode = "ZZZ999YYY888",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach Jane",
@@ -100,7 +100,7 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var payload = new InvitationEmailPayload
         {
-            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid(),
+            InvitationId = Id<LgymApi.Domain.Entities.TrainerInvitation>.New(),
             InvitationCode = "UTC123",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach UTC",
@@ -121,7 +121,7 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var payload = new InvitationEmailPayload
         {
-            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid(),
+            InvitationId = Id<LgymApi.Domain.Entities.TrainerInvitation>.New(),
             InvitationCode = "UTC456",
             ExpiresAt = DateTimeOffset.Parse("2026-03-01T10:00:00+00:00"),
             TrainerName = "Coach UTC",

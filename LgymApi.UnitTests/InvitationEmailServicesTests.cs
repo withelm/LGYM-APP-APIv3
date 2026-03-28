@@ -34,7 +34,7 @@ public sealed class InvitationEmailServicesTests
 
         await service.ScheduleAsync(new InvitationEmailPayload
         {
-            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid(),
+             InvitationId = Id<TrainerInvitation>.New(),
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
@@ -57,11 +57,11 @@ public sealed class InvitationEmailServicesTests
     {
         var existing = new NotificationMessage
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
+             Id = Id<NotificationMessage>.New(),
             Status = EmailNotificationStatus.Failed,
             Attempts = 5,
             Type = EmailNotificationTypes.TrainerInvitation,
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             Recipient = "trainee@example.com",
             PayloadJson = "{}"
         };
@@ -81,7 +81,7 @@ public sealed class InvitationEmailServicesTests
 
         await service.ScheduleAsync(new InvitationEmailPayload
         {
-            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)existing.CorrelationId,
+            InvitationId = existing.CorrelationId.Rebind<LgymApi.Domain.Entities.TrainerInvitation>(),
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
@@ -116,7 +116,7 @@ public sealed class InvitationEmailServicesTests
 
         await service.ScheduleAsync(new InvitationEmailPayload
         {
-            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid(),
+             InvitationId = Id<TrainerInvitation>.New(),
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
@@ -139,10 +139,10 @@ public sealed class InvitationEmailServicesTests
     {
         var existing = new NotificationMessage
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
+             Id = Id<NotificationMessage>.New(),
             Status = EmailNotificationStatus.Pending,
             Type = EmailNotificationTypes.TrainerInvitation,
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             Recipient = "trainee@example.com",
             PayloadJson = "{}"
         };
@@ -165,7 +165,7 @@ public sealed class InvitationEmailServicesTests
 
         await service.ScheduleAsync(new InvitationEmailPayload
         {
-            InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)existing.CorrelationId,
+            InvitationId = existing.CorrelationId.Rebind<LgymApi.Domain.Entities.TrainerInvitation>(),
             InvitationCode = "ABC123",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             TrainerName = "Coach",
@@ -176,7 +176,7 @@ public sealed class InvitationEmailServicesTests
         Assert.Multiple(() =>
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
-            Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo((Guid)existing.Id));
+            Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -187,11 +187,11 @@ public sealed class InvitationEmailServicesTests
     {
         var notification = new NotificationMessage
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
+             Id = Id<NotificationMessage>.New(),
             Status = EmailNotificationStatus.Pending,
             Attempts = 0,
             Type = EmailNotificationTypes.TrainerInvitation,
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             Recipient = "trainee@example.com",
             PayloadJson = "{\"invitationId\":\"d75e53b9-2701-4cb0-b2d1-c02f0dbf8aa0\",\"invitationCode\":\"ABC123\",\"expiresAt\":\"2026-03-01T10:00:00+00:00\",\"trainerName\":\"Coach\",\"recipientEmail\":\"trainee@example.com\",\"cultureName\":\"en-US\"}"
         };
@@ -207,7 +207,7 @@ public sealed class InvitationEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync((Guid)notification.Id));
+        Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notification.Id));
         Assert.Multiple(() =>
         {
             Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
@@ -222,11 +222,11 @@ public sealed class InvitationEmailServicesTests
     {
         var notification = new NotificationMessage
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
+             Id = Id<NotificationMessage>.New(),
             Status = EmailNotificationStatus.Sent,
             Attempts = 2,
             Type = EmailNotificationTypes.TrainerInvitation,
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             Recipient = "trainee@example.com",
             PayloadJson = "{}"
         };
@@ -243,7 +243,7 @@ public sealed class InvitationEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        await handler.ProcessAsync((Guid)notification.Id);
+        await handler.ProcessAsync(notification.Id);
 
         Assert.Multiple(() =>
         {
@@ -275,7 +275,7 @@ public sealed class InvitationEmailServicesTests
             return Task.FromResult(ExistingById);
         }
 
-        public Task<NotificationMessage?> FindByCorrelationAsync(EmailNotificationType type, Guid correlationId, string recipient, CancellationToken cancellationToken = default)
+        public Task<NotificationMessage?> FindByCorrelationAsync(EmailNotificationType type, Id<CorrelationScope> correlationId, string recipient, CancellationToken cancellationToken = default)
         {
             _correlationLookups += 1;
             if (_correlationLookups >= 2 && ExistingByCorrelationOnSecondLookup != null)
@@ -289,9 +289,9 @@ public sealed class InvitationEmailServicesTests
 
     private sealed class FakeBackgroundScheduler : IEmailBackgroundScheduler
     {
-        public List<Guid> EnqueuedNotificationIds { get; } = new();
+        public List<Id<NotificationMessage>> EnqueuedNotificationIds { get; } = new();
 
-        public void Enqueue(Guid notificationId)
+        public void Enqueue(Id<NotificationMessage> notificationId)
         {
             EnqueuedNotificationIds.Add(notificationId);
         }

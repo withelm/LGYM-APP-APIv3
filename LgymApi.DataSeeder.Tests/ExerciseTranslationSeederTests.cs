@@ -13,14 +13,14 @@ public sealed class ExerciseTranslationSeederTests
     public async Task SeedAsync_Should_Add_Polish_Translation_For_Bench_Press()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Id<Exercise>.New().ToString())
             .Options;
 
         await using var context = new AppDbContext(options);
 
         var exercise = new Exercise
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<Exercise>)Guid.NewGuid(),
+            Id = Id<Exercise>.New(),
             Name = "Bench Press"
         };
 

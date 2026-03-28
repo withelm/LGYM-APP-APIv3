@@ -35,8 +35,8 @@ public sealed class TypedIdValueConverter<TEntity> : ValueConverter<Id<TEntity>,
     /// </summary>
     public TypedIdValueConverter()
         : base(
-            id => (Guid)id,              // Convert Id<TEntity> to Guid for database storage
-            guid => (Id<TEntity>)guid,   // Convert Guid to Id<TEntity> when reading from database
+            id => id.GetValue(),                 // Convert Id<TEntity> to Guid for database storage
+            guid => new Id<TEntity>(guid),       // Convert Guid to Id<TEntity> when reading from database
             new ConverterMappingHints(valueGeneratorFactory: null))
     {
         // Set the comparer using reflection on the internal property
@@ -102,8 +102,8 @@ public sealed class NullableTypedIdValueConverter<TEntity> : ValueConverter<Id<T
     /// </summary>
     public NullableTypedIdValueConverter()
         : base(
-            id => id.HasValue ? (Guid)id.Value : (Guid?)null,
-            guid => guid.HasValue ? (Id<TEntity>?)guid.Value : null,
+            id => id.HasValue ? id.Value.GetValue() : null,
+            guid => guid.HasValue ? new Id<TEntity>(guid.Value) : null,
             new ConverterMappingHints(valueGeneratorFactory: null))
     {
     }

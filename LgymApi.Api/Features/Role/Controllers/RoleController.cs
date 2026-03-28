@@ -39,8 +39,8 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> GetRole([FromRoute] string id)
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
-        var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        var role = await _roleService.GetRoleAsync((Id<Domain.Entities.Role>)roleId, cancellationToken);
+        var roleId = Id<Domain.Entities.Role>.TryParse(id, out var parsedRoleId) ? parsedRoleId : Id<Domain.Entities.Role>.Empty;
+        var role = await _roleService.GetRoleAsync(roleId, cancellationToken);
         return Ok(_mapper.Map<RoleResult, RoleDto>(role));
     }
 
@@ -69,8 +69,8 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> UpdateRole([FromRoute] string id, [FromBody] UpsertRoleRequest request)
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
-        var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        await _roleService.UpdateRoleAsync((Id<Domain.Entities.Role>)roleId, request.Name, request.Description, request.PermissionClaims, cancellationToken);
+        var roleId = Id<Domain.Entities.Role>.TryParse(id, out var parsedRoleId) ? parsedRoleId : Id<Domain.Entities.Role>.Empty;
+        await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims, cancellationToken);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -80,8 +80,8 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> DeleteRole([FromRoute] string id)
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
-        var roleId = Guid.TryParse(id, out var parsedRoleId) ? parsedRoleId : Guid.Empty;
-        await _roleService.DeleteRoleAsync((Id<Domain.Entities.Role>)roleId, cancellationToken);
+        var roleId = Id<Domain.Entities.Role>.TryParse(id, out var parsedRoleId) ? parsedRoleId : Id<Domain.Entities.Role>.Empty;
+        await _roleService.DeleteRoleAsync(roleId, cancellationToken);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -92,8 +92,8 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> UpdateUserRoles([FromRoute] string id, [FromBody] UpdateUserRolesRequest request)
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
-        var userId = Guid.TryParse(id, out var parsedUserId) ? parsedUserId : Guid.Empty;
-        await _roleService.UpdateUserRolesAsync((Id<Domain.Entities.User>)userId, request.Roles, cancellationToken);
+        var userId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        await _roleService.UpdateUserRolesAsync(userId, request.Roles, cancellationToken);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 

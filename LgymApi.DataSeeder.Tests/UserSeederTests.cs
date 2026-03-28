@@ -1,5 +1,6 @@
 using LgymApi.Application.Services;
 using LgymApi.DataSeeder.Seeders;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,7 @@ public sealed class UserSeederTests
     public async Task SeedAsync_Should_Create_Admin_And_Tester()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Id<User>.New().ToString())
             .Options;
 
         await using var context = new AppDbContext(options);
@@ -31,7 +32,7 @@ public sealed class UserSeederTests
     public async Task SeedAsync_Should_Create_Demo_Users_When_Enabled()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Id<User>.New().ToString())
             .Options;
 
         await using var context = new AppDbContext(options);

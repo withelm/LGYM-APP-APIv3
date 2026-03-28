@@ -134,7 +134,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.CorrelationId, Is.EqualTo(userId));
+        Assert.That((Guid)deserialized!.CorrelationId, Is.EqualTo(userId));
     }
 
     #endregion
@@ -282,7 +282,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.CorrelationId, Is.EqualTo(invitationId));
+        Assert.That((Guid)deserialized!.CorrelationId, Is.EqualTo(invitationId));
     }
 
     #endregion
@@ -617,7 +617,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.CorrelationId, Is.EqualTo(trainingId));
+        Assert.That((Guid)deserialized!.CorrelationId, Is.EqualTo(trainingId));
     }
 
     #endregion

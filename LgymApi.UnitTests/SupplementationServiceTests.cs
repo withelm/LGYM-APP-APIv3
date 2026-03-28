@@ -34,8 +34,8 @@ public sealed class SupplementationServiceTests
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
-        Link((Guid)trainer.Id, (Guid)trainee.Id);
-        var existing = NewPlan((Guid)trainer.Id, (Guid)trainee.Id, isActive: true, "Old");
+        Link(trainer.Id, trainee.Id);
+        var existing = NewPlan(trainer.Id, trainee.Id, isActive: true, "Old");
         _supplementationRepository.Plans.Add(existing);
 
         var result = await _service.UpdateTraineePlanAsync(trainer, trainee.Id, existing.Id, new UpsertSupplementPlanCommand
@@ -56,7 +56,7 @@ public sealed class SupplementationServiceTests
 
         Assert.Multiple(() =>
         {
-            Assert.That((Guid)result.Id, Is.Not.EqualTo((Guid)existing.Id));
+            Assert.That(result.Id, Is.Not.EqualTo(existing.Id));
             Assert.That(existing.IsDeleted, Is.True);
             Assert.That(existing.IsActive, Is.False);
             Assert.That(result.IsActive, Is.True);
@@ -70,12 +70,12 @@ public sealed class SupplementationServiceTests
         var trainee = NewTrainee();
         var date = DateOnly.FromDateTime(new DateTime(2026, 2, 23));
         var mask = MaskForDate(date);
-        var activePlan = NewPlan(Guid.NewGuid(), (Guid)trainee.Id, isActive: true, "Cut",
+        var activePlan = NewPlan(Id<User>.New(), trainee.Id, isActive: true, "Cut",
             NewPlanItem("Omega", "2", "08:00", mask, 0));
         _supplementationRepository.Plans.Add(activePlan);
         _supplementationRepository.IntakeLogs.Add(new SupplementIntakeLog
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<SupplementIntakeLog>)Guid.NewGuid(),
+            Id = Id<SupplementIntakeLog>.New(),
             TraineeId = trainee.Id,
             PlanItemId = activePlan.Items.First().Id,
             IntakeDate = date,
@@ -101,7 +101,7 @@ public sealed class SupplementationServiceTests
         var mask = MaskForDate(date);
         var firstExpected = NewPlanItem("First", "1", "21:00", mask, 0);
         var secondExpected = NewPlanItem("Second", "1", "08:00", mask, 1);
-        var activePlan = NewPlan(Guid.NewGuid(), (Guid)trainee.Id, isActive: true, "Cut", secondExpected, firstExpected);
+        var activePlan = NewPlan(Id<User>.New(), trainee.Id, isActive: true, "Cut", secondExpected, firstExpected);
         _supplementationRepository.Plans.Add(activePlan);
 
         var result = await _service.GetActiveScheduleForDateAsync(trainee, date);
@@ -119,7 +119,7 @@ public sealed class SupplementationServiceTests
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
-        Link((Guid)trainer.Id, (Guid)trainee.Id);
+        Link(trainer.Id, trainee.Id);
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
             await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 2, 2)));
@@ -137,11 +137,11 @@ public sealed class SupplementationServiceTests
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
-        Link((Guid)trainer.Id, (Guid)trainee.Id);
+        Link(trainer.Id, trainee.Id);
 
         var result = await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1));
 
-        Assert.That((Guid)result.TraineeId, Is.EqualTo((Guid)trainee.Id));
+        Assert.That(result.TraineeId, Is.EqualTo(trainee.Id));
     }
 
     [Test]
@@ -149,7 +149,7 @@ public sealed class SupplementationServiceTests
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
-        Link((Guid)trainer.Id, (Guid)trainee.Id);
+        Link(trainer.Id, trainee.Id);
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
             await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 2)));
@@ -163,7 +163,7 @@ public sealed class SupplementationServiceTests
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
-        Link((Guid)trainer.Id, (Guid)trainee.Id);
+        Link(trainer.Id, trainee.Id);
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
             await _service.CreateTraineePlanAsync(trainer, trainee.Id, new UpsertSupplementPlanCommand
@@ -191,7 +191,7 @@ public sealed class SupplementationServiceTests
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
-        Link((Guid)trainer.Id, (Guid)trainee.Id);
+        Link(trainer.Id, trainee.Id);
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
             await _service.CreateTraineePlanAsync(trainer, trainee.Id, new UpsertSupplementPlanCommand
@@ -222,7 +222,7 @@ public sealed class SupplementationServiceTests
         var exception = Assert.ThrowsAsync<AppException>(async () =>
             await _service.CheckOffIntakeAsync(trainee, new CheckOffSupplementIntakeCommand
             {
-                PlanItemId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.SupplementPlanItem>)Guid.NewGuid(),
+                PlanItemId = Id<SupplementPlanItem>.New(),
                 IntakeDate = default
             }));
 
@@ -238,7 +238,7 @@ public sealed class SupplementationServiceTests
         var date = DateOnly.FromDateTime(new DateTime(2026, 2, 23));
         var mask = MaskForDate(date);
         var item = NewPlanItem("Omega", "2", "08:00", mask, 0);
-        var activePlan = NewPlan(Guid.NewGuid(), (Guid)trainee.Id, isActive: true, "Cut", item);
+        var activePlan = NewPlan(Id<User>.New(), trainee.Id, isActive: true, "Cut", item);
         _supplementationRepository.Plans.Add(activePlan);
         _unitOfWork.ThrowOnNextSave = true;
         var findCallCount = 0;
@@ -252,7 +252,7 @@ public sealed class SupplementationServiceTests
 
             return new SupplementIntakeLog
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<SupplementIntakeLog>)Guid.NewGuid(),
+                Id = Id<SupplementIntakeLog>.New(),
                 TraineeId = (LgymApi.Domain.ValueObjects.Id<User>)traineeId,
                 PlanItemId = (LgymApi.Domain.ValueObjects.Id<SupplementPlanItem>)planItemId,
                 IntakeDate = intakeDate,
@@ -279,10 +279,10 @@ public sealed class SupplementationServiceTests
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
-        Link((Guid)trainer.Id, (Guid)trainee.Id);
+        Link(trainer.Id, trainee.Id);
 
-        var oldActive = NewPlan((Guid)trainer.Id, (Guid)trainee.Id, isActive: true, "Old", NewPlanItem("A", "1", "08:00", 127, 0));
-        var toAssign = NewPlan((Guid)trainer.Id, (Guid)trainee.Id, isActive: false, "New", NewPlanItem("B", "1", "09:00", 127, 0));
+        var oldActive = NewPlan(trainer.Id, trainee.Id, isActive: true, "Old", NewPlanItem("A", "1", "08:00", 127, 0));
+        var toAssign = NewPlan(trainer.Id, trainee.Id, isActive: false, "New", NewPlanItem("B", "1", "09:00", 127, 0));
         _supplementationRepository.Plans.Add(oldActive);
         _supplementationRepository.Plans.Add(toAssign);
 
@@ -300,7 +300,7 @@ public sealed class SupplementationServiceTests
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
-        Link((Guid)trainer.Id, (Guid)trainee.Id);
+        Link(trainer.Id, trainee.Id);
 
         await _service.UnassignTraineePlanAsync(trainer, trainee.Id);
 
@@ -313,7 +313,7 @@ public sealed class SupplementationServiceTests
         var trainee = NewTrainee();
         var date = new DateOnly(2026, 2, 23);
         var notTodayMask = 1 << (((int)date.DayOfWeek + 5) % 7);
-        var activePlan = NewPlan(Guid.NewGuid(), (Guid)trainee.Id, isActive: true, "Cut",
+        var activePlan = NewPlan(Id<User>.New(), trainee.Id, isActive: true, "Cut",
             NewPlanItem("Omega", "2", "08:00", notTodayMask, 0));
         _supplementationRepository.Plans.Add(activePlan);
 
@@ -333,13 +333,13 @@ public sealed class SupplementationServiceTests
     {
         var notTrainer = new User
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<User>)Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "u",
             Email = "u@example.com"
         };
 
         var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.GetTraineePlansAsync(notTrainer, (Id<User>)Guid.NewGuid()));
+            await _service.GetTraineePlansAsync(notTrainer, Id<User>.New()));
 
         Assert.That(exception, Is.Not.Null);
         Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
@@ -349,12 +349,12 @@ public sealed class SupplementationServiceTests
     {
         var user = new User
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<User>)Guid.NewGuid(),
-            Name = $"trainer-{Guid.NewGuid():N}",
-            Email = $"{Guid.NewGuid():N}@example.com"
+            Id = Id<User>.New(),
+            Name = $"trainer-{Id<User>.New():N}",
+            Email = $"{Id<User>.New():N}@example.com"
         };
 
-        _roleRepository.TrainerUserIds.Add((Guid)user.Id);
+        _roleRepository.TrainerUserIds.Add(user.Id);
         return user;
     }
 
@@ -362,29 +362,29 @@ public sealed class SupplementationServiceTests
     {
         return new User
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<User>)Guid.NewGuid(),
-            Name = $"trainee-{Guid.NewGuid():N}",
-            Email = $"{Guid.NewGuid():N}@example.com"
+            Id = Id<User>.New(),
+            Name = $"trainee-{Id<User>.New():N}",
+            Email = $"{Id<User>.New():N}@example.com"
         };
     }
 
-    private void Link(Guid trainerId, Guid traineeId)
+    private void Link(Id<User> trainerId, Id<User> traineeId)
     {
         _trainerRelationshipRepository.Links[(trainerId, traineeId)] = new TrainerTraineeLink
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
-            TrainerId = (LgymApi.Domain.ValueObjects.Id<User>)trainerId,
-            TraineeId = (LgymApi.Domain.ValueObjects.Id<User>)traineeId
+            Id = Id<TrainerTraineeLink>.New(),
+            TrainerId = trainerId,
+            TraineeId = traineeId
         };
     }
 
-    private static SupplementPlan NewPlan(Guid trainerId, Guid traineeId, bool isActive, string name, params SupplementPlanItem[] items)
+    private static SupplementPlan NewPlan(Id<User> trainerId, Id<User> traineeId, bool isActive, string name, params SupplementPlanItem[] items)
     {
         var plan = new SupplementPlan
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<SupplementPlan>)Guid.NewGuid(),
-            TrainerId = (LgymApi.Domain.ValueObjects.Id<User>)trainerId,
-            TraineeId = (LgymApi.Domain.ValueObjects.Id<User>)traineeId,
+            Id = Id<SupplementPlan>.New(),
+            TrainerId = trainerId,
+            TraineeId = traineeId,
             Name = name,
             IsActive = isActive,
             IsDeleted = false,
@@ -404,7 +404,7 @@ public sealed class SupplementationServiceTests
     {
         return new SupplementPlanItem
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<SupplementPlanItem>)Guid.NewGuid(),
+            Id = Id<SupplementPlanItem>.New(),
             SupplementName = supplementName,
             Dosage = dosage,
             TimeOfDay = TimeOnly.Parse(timeOfDay).ToTimeSpan(),
@@ -421,10 +421,10 @@ public sealed class SupplementationServiceTests
 
     private sealed class FakeRoleRepository : IRoleRepository
     {
-        public HashSet<Guid> TrainerUserIds { get; } = [];
+        public HashSet<Id<User>> TrainerUserIds { get; } = [];
 
         public Task<bool> UserHasRoleAsync(Id<User> userId, string roleName, CancellationToken cancellationToken = default)
-            => Task.FromResult(TrainerUserIds.Contains((Guid)userId) && roleName == AuthConstants.Roles.Trainer);
+            => Task.FromResult(TrainerUserIds.Contains(userId) && roleName == AuthConstants.Roles.Trainer);
 
         public Task<List<LgymApi.Domain.Entities.Role>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<LgymApi.Domain.Entities.Role>());
         public Task<LgymApi.Domain.Entities.Role?> FindByIdAsync(Id<LgymApi.Domain.Entities.Role> roleId, CancellationToken cancellationToken = default) => Task.FromResult<LgymApi.Domain.Entities.Role?>(null);
@@ -446,10 +446,10 @@ public sealed class SupplementationServiceTests
 
     private sealed class FakeTrainerRelationshipRepository : ITrainerRelationshipRepository
     {
-        public Dictionary<(Guid TrainerId, Guid TraineeId), TrainerTraineeLink> Links { get; } = new();
+        public Dictionary<(Id<User> TrainerId, Id<User> TraineeId), TrainerTraineeLink> Links { get; } = new();
 
         public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Links.TryGetValue(((Guid)trainerId, (Guid)traineeId), out var link) ? link : null);
+            => Task.FromResult(Links.TryGetValue((trainerId, traineeId), out var link) ? link : null);
 
         public Task AddInvitationAsync(TrainerInvitation invitation, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<TrainerInvitation?> FindInvitationByIdAsync(Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);

@@ -1,4 +1,5 @@
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Entities;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
@@ -14,7 +15,7 @@ public sealed class WelcomeEmailTemplateComposerTests
     [SetUp]
     public void SetUp()
     {
-        _templateRootPath = Path.Combine(Path.GetTempPath(), $"lgym-welcome-email-templates-{Guid.NewGuid():N}");
+         _templateRootPath = Path.Combine(Path.GetTempPath(), $"lgym-welcome-email-templates-{Id<WelcomeEmailTemplateComposerTests>.New():N}");
         Directory.CreateDirectory(Path.Combine(_templateRootPath, "Welcome"));
         File.WriteAllText(
             Path.Combine(_templateRootPath, "Welcome", "en.email"),
@@ -39,7 +40,7 @@ public sealed class WelcomeEmailTemplateComposerTests
         var composer = CreateComposer();
         var payload = new WelcomeEmailPayload
         {
-            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+             UserId = Id<LgymApi.Domain.Entities.User>.New(),
             UserName = "Alicja",
             RecipientEmail = "alicja@example.com",
             CultureName = "pl-PL"
@@ -61,7 +62,7 @@ public sealed class WelcomeEmailTemplateComposerTests
         var composer = CreateComposer();
         var payload = new WelcomeEmailPayload
         {
-            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+             UserId = Id<LgymApi.Domain.Entities.User>.New(),
             UserName = "Alex",
             RecipientEmail = "alex@example.com",
             CultureName = "de-DE"

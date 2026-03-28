@@ -33,12 +33,12 @@ public sealed class TypedIdJsonConverter<TEntity> : JsonConverter<Id<TEntity>>
             throw new JsonException("Id<TEntity> string value cannot be empty.");
         }
 
-        if (!Guid.TryParse(guidString, out var guid))
+        if (!Id<TEntity>.TryParse(guidString, out var id))
         {
             throw new JsonException($"Invalid GUID format for Id<TEntity>: '{guidString}'.");
         }
 
-        return new Id<TEntity>(guid);
+        return id;
     }
 
     /// <summary>
@@ -46,6 +46,6 @@ public sealed class TypedIdJsonConverter<TEntity> : JsonConverter<Id<TEntity>>
     /// </summary>
     public override void Write(Utf8JsonWriter writer, Id<TEntity> value, JsonSerializerOptions options)
     {
-        writer.WriteStringValue(value.GetValue().ToString());
+        writer.WriteStringValue(value.ToString());
     }
 }

@@ -1,4 +1,5 @@
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
 
@@ -15,7 +16,7 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
     /// <summary>
     /// Unique correlation identifier to link related commands and logs.
     /// </summary>
-    public Guid CorrelationId { get; set; }
+    public Id<CorrelationScope> CorrelationId { get; set; }
 
     /// <summary>
     /// Serialized command payload as JSON.

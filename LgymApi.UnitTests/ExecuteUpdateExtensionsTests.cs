@@ -25,7 +25,7 @@ public sealed class ExecuteUpdateExtensionsTests
 
         var user = new User
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<User>)Guid.NewGuid(),
+            Id = LgymApi.Domain.ValueObjects.Id<User>.New(),
             Name = "user",
             Email = "user@example.com",
             ProfileRank = "Rookie"
@@ -33,7 +33,7 @@ public sealed class ExecuteUpdateExtensionsTests
 
         var plan = new Plan
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<Plan>)Guid.NewGuid(),
+            Id = LgymApi.Domain.ValueObjects.Id<Plan>.New(),
             UserId = user.Id,
             Name = "Plan",
             IsActive = true
@@ -78,7 +78,7 @@ public sealed class ExecuteUpdateExtensionsTests
 
         var user = new User
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<User>)Guid.NewGuid(),
+            Id = LgymApi.Domain.ValueObjects.Id<User>.New(),
             Name = "user2",
             Email = "user2@example.com",
             ProfileRank = "Rookie"
@@ -86,7 +86,7 @@ public sealed class ExecuteUpdateExtensionsTests
 
         var plan = new Plan
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<Plan>)Guid.NewGuid(),
+            Id = LgymApi.Domain.ValueObjects.Id<Plan>.New(),
             UserId = user.Id,
             Name = "Plan 2",
             IsActive = true

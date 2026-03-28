@@ -31,13 +31,13 @@ public sealed class TraineeRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> AcceptInvitation([FromRoute] string invitationId)
     {
-        if (!Guid.TryParse(invitationId, out var parsedInvitationId))
+        if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.AcceptInvitationAsync(trainee!, (Id<TrainerInvitationEntity>)parsedInvitationId, HttpContext.RequestAborted);
+        await _trainerRelationshipService.AcceptInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -45,13 +45,13 @@ public sealed class TraineeRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> RejectInvitation([FromRoute] string invitationId)
     {
-        if (!Guid.TryParse(invitationId, out var parsedInvitationId))
+        if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.RejectInvitationAsync(trainee!, (Id<TrainerInvitationEntity>)parsedInvitationId, HttpContext.RequestAborted);
+        await _trainerRelationshipService.RejectInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 

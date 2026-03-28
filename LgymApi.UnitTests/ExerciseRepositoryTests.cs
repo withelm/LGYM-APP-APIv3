@@ -13,28 +13,28 @@ public sealed class ExerciseRepositoryTests
     public async Task GetTranslationsAsync_WithOnlyEmptyCultures_ReturnsEmptyDictionary()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"exercise-repo-{Guid.NewGuid()}")
+            .UseInMemoryDatabase($"exercise-repo-{LgymApi.Domain.ValueObjects.Id<ExerciseRepositoryTests>.New():N}")
             .Options;
 
         await using var dbContext = new AppDbContext(options);
 
-        var exerciseId = Guid.NewGuid();
+        var exerciseId = LgymApi.Domain.ValueObjects.Id<Exercise>.New();
         dbContext.Exercises.Add(new Exercise
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<Exercise>)exerciseId,
+            Id = exerciseId,
             Name = "Bench press"
         });
         dbContext.ExerciseTranslations.Add(new ExerciseTranslation
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<ExerciseTranslation>)Guid.NewGuid(),
-            ExerciseId = (LgymApi.Domain.ValueObjects.Id<Exercise>)exerciseId,
+            Id = LgymApi.Domain.ValueObjects.Id<ExerciseTranslation>.New(),
+            ExerciseId = exerciseId,
             Culture = "en",
             Name = "Bench press"
         });
         await dbContext.SaveChangesAsync();
 
         var repository = new ExerciseRepository(dbContext);
-        var result = await repository.GetTranslationsAsync([(LgymApi.Domain.ValueObjects.Id<Exercise>)exerciseId], ["   ", ""], CancellationToken.None);
+        var result = await repository.GetTranslationsAsync([exerciseId], ["   ", ""], CancellationToken.None);
 
         Assert.That(result, Is.Empty);
     }

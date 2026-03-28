@@ -1,5 +1,6 @@
 using System.Reflection;
 using LgymApi.Api;
+using LgymApi.Domain.Entities;
 using LgymApi.Api.Features.Role.Contracts;
 using LgymApi.Api.Features.Role.Controllers;
 using LgymApi.Application.Features.Role;
@@ -18,38 +19,39 @@ public sealed class RoleControllerTests
     private static readonly List<string> ManageUserRolesClaim = ["users.roles.manage"];
 
     [Test]
-    public async Task CreateRole_ReturnsMappedRoleDto()
-    {
-        var fakeService = new StubRoleService
-        {
-            CreateRoleHandler = (_, _, _) => Task.FromResult(new RoleResult
-            {
-                Id = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Role>)Guid.Parse("11111111-1111-1111-1111-111111111111"),
-                Name = "Coach",
-                Description = "desc",
-                PermissionClaims = ManageUserRolesClaim
-            })
-        };
-        var controller = new RoleController(fakeService, BuildMapper());
+     public async Task CreateRole_ReturnsMappedRoleDto()
+     {
+         var roleId = Id<LgymApi.Domain.Entities.Role>.New();
+         var fakeService = new StubRoleService
+         {
+             CreateRoleHandler = (_, _, _) => Task.FromResult(new RoleResult
+             {
+                 Id = roleId,
+                 Name = "Coach",
+                 Description = "desc",
+                 PermissionClaims = ManageUserRolesClaim
+             })
+         };
+         var controller = new RoleController(fakeService, BuildMapper());
 
-        var action = await controller.CreateRole(new UpsertRoleRequest
-        {
-            Name = "Coach",
-            Description = "desc",
-            PermissionClaims = ManageUserRolesClaim
-        });
+         var action = await controller.CreateRole(new UpsertRoleRequest
+         {
+             Name = "Coach",
+             Description = "desc",
+             PermissionClaims = ManageUserRolesClaim
+         });
 
-        var ok = action as OkObjectResult;
-        Assert.That(ok, Is.Not.Null);
-        var dto = ok!.Value as RoleDto;
-        Assert.Multiple(() =>
-        {
-            Assert.That(dto, Is.Not.Null);
-            Assert.That(dto!.Id, Is.EqualTo("11111111-1111-1111-1111-111111111111"));
-            Assert.That(dto.Name, Is.EqualTo("Coach"));
-            Assert.That(dto.PermissionClaims, Is.EqualTo(ManageUserRolesClaim));
-        });
-    }
+         var ok = action as OkObjectResult;
+         Assert.That(ok, Is.Not.Null);
+         var dto = ok!.Value as RoleDto;
+         Assert.Multiple(() =>
+         {
+             Assert.That(dto, Is.Not.Null);
+             Assert.That(dto!.Id, Is.EqualTo($"{roleId:N}"));
+             Assert.That(dto.Name, Is.EqualTo("Coach"));
+             Assert.That(dto.PermissionClaims, Is.EqualTo(ManageUserRolesClaim));
+         });
+     }
 
     private static IMapper BuildMapper()
     {
@@ -102,7 +104,7 @@ public sealed class RoleControllerTests
 
         public Task<RoleResult> CreateRoleAsync(string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
             => CreateRoleHandler?.Invoke(name, description, permissionClaims)
-               ?? Task.FromResult(new RoleResult { Id = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Role>)Guid.NewGuid(), Name = name, Description = description, PermissionClaims = permissionClaims.ToList() });
+               ?? Task.FromResult(new RoleResult { Id = Id<LgymApi.Domain.Entities.Role>.New(), Name = name, Description = description, PermissionClaims = permissionClaims.ToList() });
 
         public Task UpdateRoleAsync(Id<Domain.Entities.Role> roleId, string name, string? description, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default)
             => Task.CompletedTask;

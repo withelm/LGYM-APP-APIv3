@@ -80,7 +80,7 @@ public sealed class TypedIdEfTests : IntegrationTestBase
     private TestDbContext CreateTestDbContext()
     {
         var options = new DbContextOptionsBuilder<TestDbContext>()
-            .UseInMemoryDatabase($"TypedIdTest_{Guid.NewGuid():N}")
+            .UseInMemoryDatabase($"TypedIdTest_{Id<TestDbContext>.New()}")
             .Options;
         var context = new TestDbContext(options);
         context.Database.EnsureCreated();
@@ -103,7 +103,7 @@ public sealed class TypedIdEfTests : IntegrationTestBase
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 
-        // Act - FindAsync with Id<TestEntity> (converter translates to Guid lookup)
+        // Act - FindAsync with Id<TestEntity> (converter translates to underlying ID lookup)
         var found = await dbContext.TestEntities.FindAsync(testId);
 
         // Assert

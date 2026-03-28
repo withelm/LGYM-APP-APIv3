@@ -50,10 +50,10 @@ public sealed class BackgroundActionOrchestratorService
     /// </summary>
     /// <param name="envelopeId">Durable command envelope id</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    public async Task OrchestrateAsync(Guid envelopeId, CancellationToken cancellationToken = default)
+    public async Task OrchestrateAsync(Id<CommandEnvelope> envelopeId, CancellationToken cancellationToken = default)
     {
         // Load envelope with execution logs
-        var envelope = await _commandEnvelopeRepository.FindByIdAsync((Id<CommandEnvelope>)envelopeId, cancellationToken);
+        var envelope = await _commandEnvelopeRepository.FindByIdAsync(envelopeId, cancellationToken);
         if (envelope == null)
         {
             _logger.LogWarning(

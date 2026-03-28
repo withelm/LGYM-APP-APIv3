@@ -10,6 +10,7 @@ public sealed class EntityIdLeakageGuardTests
     private static readonly HashSet<string> EntityIdPatterns = new()
     {
         "Id",
+        "id",  // Explicit lowercase variant for clarity (case-insensitive comparison below)
         "UserId",
         "PlanId",
         "ExerciseId",

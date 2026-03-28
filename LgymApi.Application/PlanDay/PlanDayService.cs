@@ -193,13 +193,12 @@ public sealed class PlanDayService : IPlanDayService
         var exercises = await _planDayExerciseRepository.GetByPlanDayIdAsync(planDay.Id, cancellationToken);
         var exerciseIds = exercises.Select(e => e.ExerciseId).Distinct().ToList();
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
-        var exerciseMap = exerciseList.ToDictionary(e => (Guid)e.Id, e => e);
+        var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
         var globalExerciseIds = exerciseList
             .Where(e => e.UserId == null)
             .Select(e => e.Id)
             .ToList();
-        var translations = (await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken))
-            .ToDictionary(x => (Guid)x.Key, x => x.Value);
+        var translations = await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken);
 
         return new PlanDayDetailsContext
         {
@@ -239,13 +238,12 @@ public sealed class PlanDayService : IPlanDayService
 
         var exerciseIds = planDayExercises.Select(e => e.ExerciseId).Distinct().ToList();
         var exerciseList = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
-        var exerciseMap = exerciseList.ToDictionary(e => (Guid)e.Id, e => e);
+        var exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e);
         var globalExerciseIds = exerciseList
             .Where(e => e.UserId == null)
             .Select(e => e.Id)
             .ToList();
-        var translations = (await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken))
-            .ToDictionary(x => (Guid)x.Key, x => x.Value);
+        var translations = await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken);
 
         return new PlanDaysContext
         {
@@ -331,7 +329,7 @@ public sealed class PlanDayService : IPlanDayService
         var trainings = await _trainingRepository.GetByPlanDayIdsAsync(planDayIds, cancellationToken);
         var lastTrainingMap = trainings
             .GroupBy(t => t.TypePlanDayId)
-            .ToDictionary(g => (Guid)g.Key, g => (DateTime?)g.Max(t => t.CreatedAt).UtcDateTime);
+            .ToDictionary(g => g.Key, g => (DateTime?)g.Max(t => t.CreatedAt).UtcDateTime);
 
         return new PlanDaysInfoContext
         {

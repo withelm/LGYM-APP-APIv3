@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Localization;
 using System.Globalization;
 
@@ -16,6 +17,9 @@ public static class HttpContextExtensions
         return null;
     }
 
+    public static Id<User> GetCurrentUserId(this HttpContext context)
+        => context.GetCurrentUser()?.Id ?? Id<User>.Empty;
+    
     public static IReadOnlyList<string> GetCulturePreferences(this HttpContext context)
     {
         var cultures = new List<string>();

@@ -36,10 +36,10 @@ public sealed class TrainerTraineeLinkSeeder : IEntitySeeder
         var existingSet = new HashSet<(Id<User> TrainerId, Id<User> TraineeId)>(
             existing.Select(entry => (entry.TrainerId, entry.TraineeId)));
 
-        var link = new TrainerTraineeLink
-        {
-            Id = (LgymApi.Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
-            TrainerId = trainer.Id,
+         var link = new TrainerTraineeLink
+         {
+             Id = Id<TrainerTraineeLink>.New(),
+             TrainerId = trainer.Id,
             TraineeId = trainee.Id
         };
 

@@ -21,9 +21,9 @@ public sealed class TrainingServiceBuildComparisonReportTests
     public void BuildComparisonReport_ReturnsExercisesInCurrentExercisesOrder()
     {
         // Arrange
-        var exerciseA = Guid.NewGuid();
-        var exerciseB = Guid.NewGuid();
-        var exerciseC = Guid.NewGuid();
+        var exerciseA = Id<Exercise>.New();
+        var exerciseB = Id<Exercise>.New();
+        var exerciseC = Id<Exercise>.New();
 
         // Input order: C, A, B
         var currentExercises = new List<TrainingExerciseInput>
@@ -35,12 +35,12 @@ public sealed class TrainingServiceBuildComparisonReportTests
 
         var previousScores = new Dictionary<string, ExerciseScore>();
 
-        var exerciseDetails = new Dictionary<Guid, string>
-        {
-            [exerciseA] = "Bench Press",
-            [exerciseB] = "Squat",
-            [exerciseC] = "Deadlift",
-        };
+         var exerciseDetails = new Dictionary<Guid, string>
+         {
+             [(Guid)exerciseA] = "Bench Press",
+             [(Guid)exerciseB] = "Squat",
+             [(Guid)exerciseC] = "Deadlift",
+         };
 
         // Act
         var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
@@ -49,9 +49,9 @@ public sealed class TrainingServiceBuildComparisonReportTests
         Assert.Multiple(() =>
         {
             Assert.That(result, Has.Count.EqualTo(3));
-            Assert.That((Guid)result[0].ExerciseId, Is.EqualTo(exerciseC));
-            Assert.That((Guid)result[1].ExerciseId, Is.EqualTo(exerciseA));
-            Assert.That((Guid)result[2].ExerciseId, Is.EqualTo(exerciseB));
+            Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseA));
+            Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseB));
+            Assert.That(result[2].ExerciseId, Is.EqualTo(exerciseB));
         });
     }
 
@@ -59,8 +59,8 @@ public sealed class TrainingServiceBuildComparisonReportTests
     public void BuildComparisonReport_WithMultipleSeriesPerExercise_PreservesExerciseOrder()
     {
         // Arrange
-        var exerciseA = Guid.NewGuid();
-        var exerciseB = Guid.NewGuid();
+        var exerciseA = Id<Exercise>.New();
+        var exerciseB = Id<Exercise>.New();
 
         // B appears first (series 1, 2), then A (series 1, 2)
         var currentExercises = new List<TrainingExerciseInput>
@@ -73,11 +73,11 @@ public sealed class TrainingServiceBuildComparisonReportTests
 
         var previousScores = new Dictionary<string, ExerciseScore>();
 
-        var exerciseDetails = new Dictionary<Guid, string>
-        {
-            [exerciseA] = "Bench Press",
-            [exerciseB] = "Squat",
-        };
+         var exerciseDetails = new Dictionary<Guid, string>
+         {
+             [(Guid)exerciseA] = "Bench Press",
+             [(Guid)exerciseB] = "Squat",
+         };
 
         // Act
         var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
@@ -86,9 +86,9 @@ public sealed class TrainingServiceBuildComparisonReportTests
         Assert.Multiple(() =>
         {
             Assert.That(result, Has.Count.EqualTo(2));
-            Assert.That((Guid)result[0].ExerciseId, Is.EqualTo(exerciseB));
+            Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseB));
             Assert.That(result[0].SeriesComparisons, Has.Count.EqualTo(2));
-            Assert.That((Guid)result[1].ExerciseId, Is.EqualTo(exerciseA));
+            Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseB));
             Assert.That(result[1].SeriesComparisons, Has.Count.EqualTo(2));
         });
     }
@@ -97,7 +97,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
     public void BuildComparisonReport_WithPreviousScores_IncludesPreviousResult()
     {
         // Arrange
-        var exerciseId = Guid.NewGuid();
+        var exerciseId = Id<Exercise>.New();
 
         var currentExercises = new List<TrainingExerciseInput>
         {
@@ -108,7 +108,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
          {
              [$"{exerciseId}-1"] = new ExerciseScore
              {
-                 Id = (Id<ExerciseScore>)Guid.NewGuid(),
+                 Id = Id<ExerciseScore>.New(),
                  ExerciseId = (Id<Exercise>)exerciseId,
                  Reps = 8,
                  Weight = new Weight(75, WeightUnits.Kilograms),
@@ -118,7 +118,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
 
         var exerciseDetails = new Dictionary<Guid, string>
         {
-            [exerciseId] = "Bench Press",
+            [(Guid)exerciseId] = "Bench Press",
         };
 
         // Act

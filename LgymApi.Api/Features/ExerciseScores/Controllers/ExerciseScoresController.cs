@@ -30,8 +30,8 @@ public sealed class ExerciseScoresController : ControllerBase
     public async Task<IActionResult> GetExerciseScoresChartData([FromRoute] string id, [FromBody] ExerciseScoresChartRequestDto request)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var exerciseId = Guid.TryParse(request.ExerciseId, out var parsedExerciseId) ? parsedExerciseId : Guid.Empty;
-        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync((Id<LgymApi.Domain.Entities.User>)userId, (Id<LgymApi.Domain.Entities.Exercise>)exerciseId, HttpContext.RequestAborted);
+        Id<LgymApi.Domain.Entities.Exercise>.TryParse(request.ExerciseId, out var parsedExerciseId);
+        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, parsedExerciseId, HttpContext.RequestAborted);
         var mapped = _mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result);
         return Ok(mapped);
     }

@@ -31,7 +31,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task CreatePlanAsync_PersistsPlanAndUserPointer()
     {
-        var dbName = $"service-commit-plan-{Guid.NewGuid()}";
+        var dbName = $"service-commit-plan-{Id<Plan>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -39,7 +39,7 @@ public sealed class ServiceCommitBehaviorTests
         await using var dbContext = new AppDbContext(options);
         var user = new User
         {
-            Id = (Id<User>)Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "plan-user",
             Email = "plan-user@example.com",
             ProfileRank = "Junior 1",
@@ -71,7 +71,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task RegisterAsync_PersistsUserAndInitialElo()
     {
-        var dbName = $"service-commit-register-{Guid.NewGuid()}";
+        var dbName = $"service-commit-register-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -80,7 +80,7 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = (Id<Role>)Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
@@ -129,7 +129,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task RegisterAsync_UsesPrimaryCultureFromAcceptLanguageHeader()
     {
-        var dbName = $"service-commit-register-culture-header-{Guid.NewGuid()}";
+        var dbName = $"service-commit-register-culture-header-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -138,7 +138,7 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = (Id<Role>)Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
@@ -184,7 +184,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task RegisterAsync_FallsBackToConfiguredPreferredLanguage_WhenHeaderInvalid()
     {
-        var dbName = $"service-commit-register-culture-fallback-{Guid.NewGuid()}";
+        var dbName = $"service-commit-register-culture-fallback-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -193,7 +193,7 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = (Id<Role>)Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
@@ -241,7 +241,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task UpdateTimeZoneAsync_PersistsUserPreference()
     {
-        var dbName = $"service-commit-timezone-{Guid.NewGuid()}";
+        var dbName = $"service-commit-timezone-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -250,14 +250,14 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = (Id<Role>)Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
 
         var user = new User
         {
-            Id = (Id<User>)Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "timezone-user",
             Email = "timezone-user@example.com",
             ProfileRank = "Junior 1",
@@ -305,7 +305,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task UpdateTimeZoneAsync_ThrowsBadRequest_WhenTimeZoneInvalid()
     {
-        var dbName = $"service-commit-timezone-invalid-{Guid.NewGuid()}";
+        var dbName = $"service-commit-timezone-invalid-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -314,14 +314,14 @@ public sealed class ServiceCommitBehaviorTests
 
         dbContext.Roles.Add(new Role
         {
-            Id = (Id<Role>)Guid.NewGuid(),
+            Id = Id<Role>.New(),
             Name = AuthConstants.Roles.User,
             Description = "Default user role"
         });
 
         var user = new User
         {
-            Id = (Id<User>)Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "timezone-invalid-user",
             Email = "timezone-invalid-user@example.com",
             ProfileRank = "Junior 1",
@@ -366,7 +366,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task CreateRoleAsync_PersistsRoleAndClaims()
     {
-        var dbName = $"service-commit-role-create-{Guid.NewGuid()}";
+        var dbName = $"service-commit-role-create-{Id<Plan>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -403,7 +403,7 @@ public sealed class ServiceCommitBehaviorTests
     [Test]
     public async Task UpdateUserRolesAsync_PersistsUserRoleAssignments()
     {
-        var dbName = $"service-commit-role-assign-{Guid.NewGuid()}";
+        var dbName = $"service-commit-role-assign-{Id<User>.New():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
@@ -412,7 +412,7 @@ public sealed class ServiceCommitBehaviorTests
 
         var user = new User
         {
-            Id = (Id<User>)Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = "role-user",
             Email = "role-user@example.com",
             ProfileRank = "Junior 1",
@@ -424,8 +424,8 @@ public sealed class ServiceCommitBehaviorTests
         };
 
         dbContext.Users.Add(user);
-        dbContext.Roles.Add(new Role { Id = (Id<Role>)Guid.NewGuid(), Name = AuthConstants.Roles.User, Description = "Default" });
-        dbContext.Roles.Add(new Role { Id = (Id<Role>)Guid.NewGuid(), Name = "Coach", Description = "Custom" });
+        dbContext.Roles.Add(new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.User, Description = "Default" });
+        dbContext.Roles.Add(new Role { Id = Id<Role>.New(), Name = "Coach", Description = "Custom" });
         await dbContext.SaveChangesAsync();
 
         IRoleRepository roleRepository = new RoleRepository(dbContext);
@@ -493,7 +493,7 @@ public sealed class ServiceCommitBehaviorTests
     {
         public string CreateToken(Id<User> userId, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
         {
-            return ((Guid)userId).ToString();
+            return userId.ToString();
         }
     }
 

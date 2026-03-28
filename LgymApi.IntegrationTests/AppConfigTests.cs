@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.IntegrationTests;
 
@@ -13,7 +14,7 @@ public sealed class AppConfigTests : IntegrationTestBase
     public async Task GetAppVersion_WithValidPlatform_ReturnsConfig()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader((Guid)admin.Id);
+        SetAuthorizationHeader(admin.Id);
 
         var createRequest = new
         {
@@ -57,8 +58,8 @@ public sealed class AppConfigTests : IntegrationTestBase
     {
         var user = await SeedUserAsync(
             name: $"testuser-{TestContext.CurrentContext.Test.Name}",
-            email: $"test-{Guid.NewGuid():N}@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+            email: $"test-{Id<CustomWebApplicationFactory>.New():N}@example.com");
+        SetAuthorizationHeader(user.Id);
 
         var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", requestBody);
 
@@ -69,7 +70,7 @@ public sealed class AppConfigTests : IntegrationTestBase
     public async Task GetAppVersion_WithNoConfig_ReturnsNotFound()
     {
         var user = await SeedUserAsync(name: "testuser", email: "test@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var request = new { platform = Platforms.Ios.ToString() };
         var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", request);
@@ -81,7 +82,7 @@ public sealed class AppConfigTests : IntegrationTestBase
     public async Task CreateNewAppVersion_AsAdmin_CreatesConfig()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader((Guid)admin.Id);
+        SetAuthorizationHeader(admin.Id);
 
         var request = new
         {
@@ -106,7 +107,7 @@ public sealed class AppConfigTests : IntegrationTestBase
     public async Task CreateNewAppVersion_AsAdminWithMismatchedRouteUserId_ReturnsForbidden()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader((Guid)admin.Id);
+        SetAuthorizationHeader(admin.Id);
 
         var otherAdmin = await SeedUserAsync(
             name: "otheradmin",
@@ -132,7 +133,7 @@ public sealed class AppConfigTests : IntegrationTestBase
     public async Task CreateNewAppVersion_AsNonAdmin_ReturnsForbidden()
     {
         var user = await SeedUserAsync(name: "normaluser", email: "normal@example.com");
-        SetAuthorizationHeader((Guid)user.Id);
+        SetAuthorizationHeader(user.Id);
 
         var request = new
         {
@@ -172,7 +173,7 @@ public sealed class AppConfigTests : IntegrationTestBase
     public async Task CreateNewAppVersion_WithInvalidPlatformData_ReturnsBadRequest(object requestBody)
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader((Guid)admin.Id);
+        SetAuthorizationHeader(admin.Id);
 
         var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", requestBody);
 
@@ -183,7 +184,7 @@ public sealed class AppConfigTests : IntegrationTestBase
     public async Task GetAppVersion_ReturnsLatestConfig_WhenMultipleExist()
     {
         var admin = await SeedAdminAsync();
-        SetAuthorizationHeader((Guid)admin.Id);
+        SetAuthorizationHeader(admin.Id);
 
         var firstRequest = new
         {

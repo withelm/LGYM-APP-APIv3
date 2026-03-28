@@ -52,10 +52,10 @@ public sealed class TrainingExerciseScoreSeeder : IEntitySeeder
                 trainingOrderMap[training.Id] = 0;
             }
             
-            var entry = new TrainingExerciseScore
-            {
-                Id = (LgymApi.Domain.ValueObjects.Id<TrainingExerciseScore>)Guid.NewGuid(),
-                TrainingId = training.Id,
+             var entry = new TrainingExerciseScore
+             {
+                 Id = Id<TrainingExerciseScore>.New(),
+                 TrainingId = training.Id,
                 ExerciseScoreId = score.Id,
                 Order = trainingOrderMap[training.Id]
             };

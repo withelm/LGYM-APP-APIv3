@@ -1,5 +1,6 @@
 using System.Globalization;
 using LgymApi.Domain.Notifications;
+using LgymApi.Domain.ValueObjects;
 using System.Text.Json.Serialization;
 
 namespace LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -14,7 +15,7 @@ public sealed class InvitationEmailPayload : IEmailPayload
     public string CultureName { get; init; } = string.Empty;
     public string PreferredTimeZone { get; init; } = string.Empty;
 
-    public Guid CorrelationId => (Guid)InvitationId;
+    public Id<CorrelationScope> CorrelationId => InvitationId.Rebind<CorrelationScope>();
     public EmailNotificationType NotificationType => Domain.Notifications.EmailNotificationTypes.TrainerInvitation;
 
     [JsonIgnore]

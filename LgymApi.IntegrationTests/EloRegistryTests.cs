@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.IntegrationTests;
 
@@ -117,7 +118,7 @@ public sealed class EloRegistryTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = 
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var nonExistentId = Guid.NewGuid();
+        var nonExistentId = Domain.ValueObjects.Id<object>.New();
         var response = await Client.GetAsync($"/api/userInfo/{nonExistentId}/getUserEloPoints");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);

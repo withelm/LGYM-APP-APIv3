@@ -34,7 +34,7 @@ public sealed class WelcomeEmailServicesTests
 
         await service.ScheduleAsync(new WelcomeEmailPayload
         {
-            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            UserId = Id<LgymApi.Domain.Entities.User>.New(),
             UserName = "Alex",
             RecipientEmail = "alex@example.com",
             CultureName = "en-US"
@@ -55,11 +55,11 @@ public sealed class WelcomeEmailServicesTests
     {
         var existing = new NotificationMessage
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
+            Id = Id<NotificationMessage>.New(),
             Status = EmailNotificationStatus.Failed,
             Attempts = 5,
             Type = EmailNotificationTypes.Welcome,
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             Recipient = "alex@example.com",
             PayloadJson = "{}"
         };
@@ -79,7 +79,7 @@ public sealed class WelcomeEmailServicesTests
 
         await service.ScheduleAsync(new WelcomeEmailPayload
         {
-            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)existing.CorrelationId,
+            UserId = existing.CorrelationId.Rebind<LgymApi.Domain.Entities.User>(),
             UserName = "Alex",
             RecipientEmail = existing.Recipient,
             CultureName = "en-US"
@@ -112,7 +112,7 @@ public sealed class WelcomeEmailServicesTests
 
         await service.ScheduleAsync(new WelcomeEmailPayload
         {
-            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
+            UserId = Id<LgymApi.Domain.Entities.User>.New(),
             UserName = "Alex",
             RecipientEmail = "alex@example.com",
             CultureName = "en-US"
@@ -133,10 +133,10 @@ public sealed class WelcomeEmailServicesTests
     {
         var existing = new NotificationMessage
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
+            Id = Id<NotificationMessage>.New(),
             Status = EmailNotificationStatus.Pending,
             Type = EmailNotificationTypes.Welcome,
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             Recipient = "alex@example.com",
             PayloadJson = "{}"
         };
@@ -159,7 +159,7 @@ public sealed class WelcomeEmailServicesTests
 
         await service.ScheduleAsync(new WelcomeEmailPayload
         {
-            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)existing.CorrelationId,
+            UserId = existing.CorrelationId.Rebind<LgymApi.Domain.Entities.User>(),
             UserName = "Alex",
             RecipientEmail = existing.Recipient,
             CultureName = "en-US"
@@ -168,7 +168,7 @@ public sealed class WelcomeEmailServicesTests
         Assert.Multiple(() =>
         {
             Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
-            Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo((Guid)existing.Id));
+            Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -179,11 +179,11 @@ public sealed class WelcomeEmailServicesTests
     {
         var notification = new NotificationMessage
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
+            Id = Id<NotificationMessage>.New(),
             Status = EmailNotificationStatus.Pending,
             Attempts = 0,
             Type = EmailNotificationTypes.Welcome,
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             Recipient = "alex@example.com",
             PayloadJson = "{\"userId\":\"d75e53b9-2701-4cb0-b2d1-c02f0dbf8aa0\",\"userName\":\"Alex\",\"recipientEmail\":\"alex@example.com\",\"cultureName\":\"en-US\"}"
         };
@@ -199,7 +199,7 @@ public sealed class WelcomeEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync((Guid)notification.Id));
+        Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notification.Id));
         Assert.Multiple(() =>
         {
             Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
@@ -214,11 +214,11 @@ public sealed class WelcomeEmailServicesTests
     {
         var notification = new NotificationMessage
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<NotificationMessage>)Guid.NewGuid(),
+            Id = Id<NotificationMessage>.New(),
             Status = EmailNotificationStatus.Sent,
             Attempts = 2,
             Type = EmailNotificationTypes.Welcome,
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Id<CorrelationScope>.New(),
             Recipient = "alex@example.com",
             PayloadJson = "{}"
         };
@@ -235,7 +235,7 @@ public sealed class WelcomeEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        await handler.ProcessAsync((Guid)notification.Id);
+        await handler.ProcessAsync(notification.Id);
 
         Assert.Multiple(() =>
         {
@@ -267,7 +267,7 @@ public sealed class WelcomeEmailServicesTests
             return Task.FromResult(ExistingById);
         }
 
-        public Task<NotificationMessage?> FindByCorrelationAsync(EmailNotificationType type, Guid correlationId, string recipient, CancellationToken cancellationToken = default)
+        public Task<NotificationMessage?> FindByCorrelationAsync(EmailNotificationType type, Id<CorrelationScope> correlationId, string recipient, CancellationToken cancellationToken = default)
         {
             _correlationLookups += 1;
             if (_correlationLookups >= 2 && ExistingByCorrelationOnSecondLookup != null)
@@ -281,9 +281,9 @@ public sealed class WelcomeEmailServicesTests
 
     private sealed class FakeBackgroundScheduler : IEmailBackgroundScheduler
     {
-        public List<Guid> EnqueuedNotificationIds { get; } = new();
+        public List<Id<NotificationMessage>> EnqueuedNotificationIds { get; } = new();
 
-        public void Enqueue(Guid notificationId)
+        public void Enqueue(Id<NotificationMessage> notificationId)
         {
             EnqueuedNotificationIds.Add(notificationId);
         }

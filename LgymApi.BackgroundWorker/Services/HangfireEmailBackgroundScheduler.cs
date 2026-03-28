@@ -2,6 +2,8 @@ using Hangfire;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Jobs;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Jobs;
 
 namespace LgymApi.Infrastructure.Services;
@@ -15,7 +17,7 @@ public sealed class HangfireEmailBackgroundScheduler : IEmailBackgroundScheduler
         _backgroundJobClient = backgroundJobClient;
     }
 
-    public void Enqueue(Guid notificationId)
+    public void Enqueue(Id<NotificationMessage> notificationId)
     {
         _backgroundJobClient.Enqueue<IEmailJob>(job => job.ExecuteAsync(notificationId));
     }

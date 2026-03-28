@@ -38,21 +38,21 @@ public sealed class SupplementPlanItemSeeder : IEntitySeeder
         {
             var items = new List<SupplementPlanItem>
             {
-                new()
-                {
-                    Id = (LgymApi.Domain.ValueObjects.Id<SupplementPlanItem>)Guid.NewGuid(),
-                    PlanId = plan.Id,
-                    SupplementName = "Whey protein",
+                 new()
+                 {
+                     Id = Id<SupplementPlanItem>.New(),
+                     PlanId = plan.Id,
+                     SupplementName = "Whey protein",
                     Dosage = "30g",
                     DaysOfWeekMask = DaysOfWeekSet.EveryDay,
                     TimeOfDay = new TimeSpan(7, 30, 0),
                     Order = 1
                 },
-                new()
-                {
-                    Id = (LgymApi.Domain.ValueObjects.Id<SupplementPlanItem>)Guid.NewGuid(),
-                    PlanId = plan.Id,
-                    SupplementName = "Creatine",
+                 new()
+                 {
+                     Id = Id<SupplementPlanItem>.New(),
+                     PlanId = plan.Id,
+                     SupplementName = "Creatine",
                     Dosage = "5g",
                     DaysOfWeekMask = DaysOfWeekSet.EveryDay,
                     TimeOfDay = new TimeSpan(18, 0, 0),

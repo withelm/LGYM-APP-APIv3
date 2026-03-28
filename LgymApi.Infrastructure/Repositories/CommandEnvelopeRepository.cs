@@ -28,7 +28,7 @@ public sealed class CommandEnvelopeRepository : ICommandEnvelopeRepository
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
-    public Task<CommandEnvelope?> FindByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)
+    public Task<CommandEnvelope?> FindByCorrelationIdAsync(Id<CorrelationScope> correlationId, CancellationToken cancellationToken = default)
     {
         return _dbContext.CommandEnvelopes
             .Include(e => e.ExecutionLogs)

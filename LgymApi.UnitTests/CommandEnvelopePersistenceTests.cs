@@ -22,7 +22,7 @@ public class CommandEnvelopePersistenceTests
     {
         // Use in-memory database for test isolation
         _contextOptions = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName: Id<CommandEnvelope>.New().ToString())
             .Options;
 
         _context = new AppDbContext(_contextOptions);
@@ -38,10 +38,10 @@ public class CommandEnvelopePersistenceTests
     public async Task CommandEnvelope_CanBePersisted_WithAllRequiredFields()
     {
         // Arrange
-        var correlationId = Guid.NewGuid();
+        var correlationId = Id<CorrelationScope>.New();
         var envelope = new CommandEnvelope
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
+            Id = Id<CommandEnvelope>.New(),
             CorrelationId = correlationId,
             PayloadJson = """{"data":"test"}""",
             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
@@ -57,7 +57,7 @@ public class CommandEnvelopePersistenceTests
 
         // Assert
         var retrieved = await _context.CommandEnvelopes
-            .FirstOrDefaultAsync(e => (Guid)e.Id == (Guid)envelope.Id);
+            .FirstOrDefaultAsync(e => e.Id == envelope.Id);
         Assert.That(retrieved, Is.Not.Null);
         Assert.That(retrieved!.CorrelationId, Is.EqualTo(correlationId));
         Assert.That(retrieved.Status, Is.EqualTo(ActionExecutionStatus.Pending));
@@ -67,11 +67,11 @@ public class CommandEnvelopePersistenceTests
     public async Task ActionExecutionLog_CanBeLinked_ToCommandEnvelope()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+        var envelopeId = Id<CommandEnvelope>.New();
         var envelope = new CommandEnvelope
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
-            CorrelationId = Guid.NewGuid(),
+            Id = envelopeId,
+            CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = """{"data":"test"}""",
             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
             Status = ActionExecutionStatus.Failed,
@@ -84,8 +84,8 @@ public class CommandEnvelopePersistenceTests
 
         var log1 = new ActionExecutionLog
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<ActionExecutionLog>)Guid.NewGuid(),
-            CommandEnvelopeId = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
+            Id = Id<ActionExecutionLog>.New(),
+            CommandEnvelopeId = envelopeId,
             ActionType = ActionExecutionLogType.Execute,
             Status = ActionExecutionStatus.Failed,
             AttemptNumber = 1,
@@ -96,8 +96,8 @@ public class CommandEnvelopePersistenceTests
 
         var log2 = new ActionExecutionLog
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<ActionExecutionLog>)Guid.NewGuid(),
-            CommandEnvelopeId = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
+            Id = Id<ActionExecutionLog>.New(),
+            CommandEnvelopeId = envelopeId,
             ActionType = ActionExecutionLogType.Retry,
             Status = ActionExecutionStatus.Processing,
             AttemptNumber = 2,
@@ -111,7 +111,7 @@ public class CommandEnvelopePersistenceTests
 
         // Assert
         var logs = await _context.ActionExecutionLogs
-            .Where(l => (Guid)l.CommandEnvelopeId == envelopeId)
+            .Where(l => l.CommandEnvelopeId == envelopeId)
             .OrderBy(l => l.AttemptNumber)
             .ToListAsync();
 
@@ -128,8 +128,8 @@ public class CommandEnvelopePersistenceTests
         // Arrange
         var envelope = new CommandEnvelope
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
-            CorrelationId = Guid.NewGuid(),
+            Id = Id<CommandEnvelope>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = """{"data":"test"}""",
             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
             Status = ActionExecutionStatus.Pending,
@@ -159,8 +159,8 @@ public class CommandEnvelopePersistenceTests
         // Arrange
         var envelope = new CommandEnvelope
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
-            CorrelationId = Guid.NewGuid(),
+            Id = Id<CommandEnvelope>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = """{"data":"test"}""",
             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
             Status = ActionExecutionStatus.Pending,
@@ -188,11 +188,11 @@ public class CommandEnvelopePersistenceTests
     public async Task ActionExecutionLog_ErrorTracking_Persists()
     {
         // Arrange
-        var envelopeId = Guid.NewGuid();
+        var envelopeId = Id<CommandEnvelope>.New();
         var envelope = new CommandEnvelope
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
-            CorrelationId = Guid.NewGuid(),
+            Id = envelopeId,
+            CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = """{"data":"test"}""",
             CommandTypeFullName = "TestNamespace.TestCommand, TestAssembly",
             Status = ActionExecutionStatus.Failed,
@@ -202,8 +202,8 @@ public class CommandEnvelopePersistenceTests
 
         var log = new ActionExecutionLog
         {
-            Id = (LgymApi.Domain.ValueObjects.Id<ActionExecutionLog>)Guid.NewGuid(),
-            CommandEnvelopeId = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
+            Id = Id<ActionExecutionLog>.New(),
+            CommandEnvelopeId = envelopeId,
             ActionType = ActionExecutionLogType.Execute,
             Status = ActionExecutionStatus.Failed,
             AttemptNumber = 1,
@@ -228,12 +228,12 @@ public class CommandEnvelopePersistenceTests
     public async Task CommandEnvelope_CorrelationId_EnablesTracing()
     {
         // Arrange - simulate related commands with same correlation
-        var correlationId = Guid.NewGuid();
+        var correlationId = Id<CorrelationScope>.New();
         var envelopes = new[]
         {
             new CommandEnvelope
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
+                Id = Id<CommandEnvelope>.New(),
                 CorrelationId = correlationId,
                 PayloadJson = """{"cmd":"send-email"}""",
                 CommandTypeFullName = "SendEmailCommand, MyAssembly",
@@ -243,7 +243,7 @@ public class CommandEnvelopePersistenceTests
             },
             new CommandEnvelope
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
+                Id = Id<CommandEnvelope>.New(),
                 CorrelationId = correlationId,
                 PayloadJson = """{"cmd":"log-event"}""",
                 CommandTypeFullName = "LogEventCommand, MyAssembly",
@@ -275,8 +275,8 @@ public class CommandEnvelopePersistenceTests
         {
             new CommandEnvelope
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
-                CorrelationId = Guid.NewGuid(),
+                Id = Id<CommandEnvelope>.New(),
+                CorrelationId = Id<CorrelationScope>.New(),
                 PayloadJson = """{}""",
                 CommandTypeFullName = "Cmd1, Asm",
                 Status = ActionExecutionStatus.Failed,
@@ -286,8 +286,8 @@ public class CommandEnvelopePersistenceTests
             },
             new CommandEnvelope
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
-                CorrelationId = Guid.NewGuid(),
+                Id = Id<CommandEnvelope>.New(),
+                CorrelationId = Id<CorrelationScope>.New(),
                 PayloadJson = """{}""",
                 CommandTypeFullName = "Cmd2, Asm",
                 Status = ActionExecutionStatus.Failed,
@@ -297,8 +297,8 @@ public class CommandEnvelopePersistenceTests
             },
             new CommandEnvelope
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)Guid.NewGuid(),
-                CorrelationId = Guid.NewGuid(),
+                Id = Id<CommandEnvelope>.New(),
+                CorrelationId = Id<CorrelationScope>.New(),
                 PayloadJson = """{}""",
                 CommandTypeFullName = "Cmd3, Asm",
                 Status = ActionExecutionStatus.Completed,

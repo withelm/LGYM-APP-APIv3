@@ -441,7 +441,7 @@ public sealed class ExerciseService : IExerciseService
         return result;
     }
 
-    private async Task<Dictionary<Guid, string>> GetTranslationsForExercisesAsync(IEnumerable<Domain.Entities.Exercise> exercises, IReadOnlyList<string> cultures, CancellationToken cancellationToken)
+    private async Task<Dictionary<Id<Domain.Entities.Exercise>, string>> GetTranslationsForExercisesAsync(IEnumerable<Domain.Entities.Exercise> exercises, IReadOnlyList<string> cultures, CancellationToken cancellationToken)
     {
         var globalIds = exercises
             .Where(e => e.UserId == null)
@@ -450,10 +450,10 @@ public sealed class ExerciseService : IExerciseService
 
         if (globalIds.Count == 0)
         {
-            return new Dictionary<Guid, string>();
+            return new Dictionary<Id<Domain.Entities.Exercise>, string>();
         }
 
         var translations = await _exerciseRepository.GetTranslationsAsync(globalIds, cultures, cancellationToken);
-        return translations.ToDictionary(x => (Guid)x.Key, x => x.Value);
+        return translations;
     }
 }

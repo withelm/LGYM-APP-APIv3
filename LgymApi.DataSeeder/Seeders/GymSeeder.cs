@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,10 +48,10 @@ public sealed class GymSeeder : IEntitySeeder
                 continue;
             }
 
-            var gym = new Gym
-            {
-                Id = (LgymApi.Domain.ValueObjects.Id<Gym>)Guid.NewGuid(),
-                UserId = user.Id,
+             var gym = new Gym
+             {
+                 Id = Id<Gym>.New(),
+                 UserId = user.Id,
                 Name = name,
                 AddressId = address.Id
             };

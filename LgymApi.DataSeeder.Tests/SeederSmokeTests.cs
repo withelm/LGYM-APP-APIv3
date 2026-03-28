@@ -42,8 +42,8 @@ public sealed class SeederSmokeTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Demo1" });
-        seedContext.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Demo2" });
+        seedContext.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Demo1" });
+        seedContext.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Demo2" });
 
         var addressSeeder = new AddressSeeder();
         await addressSeeder.SeedAsync(context, seedContext, CancellationToken.None);
@@ -62,7 +62,7 @@ public sealed class SeederSmokeTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var demoUser = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Demo" };
+        var demoUser = new User { Id = Id<User>.New(), Name = "Demo" };
         seedContext.DemoUsers.Add(demoUser);
 
         var seeder = new PlanSeeder();
@@ -80,7 +80,7 @@ public sealed class SeederSmokeTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var plan = new Plan { Id = (Id<Plan>)Guid.NewGuid(), Name = "PPL", UserId = (Id<User>)Guid.NewGuid() };
+        var plan = new Plan { Id = Id<Plan>.New(), Name = "PPL", UserId = Id<User>.New() };
         seedContext.Plans.Add(plan);
 
         var seeder = new PlanDaySeeder();
@@ -93,14 +93,14 @@ public sealed class SeederSmokeTests
         Assert.That(names, Does.Contain("Legs"));
     }
 
-    [Test]
-    public async Task PlanDayExerciseSeeder_Should_Add_Exercises_To_Days()
-    {
-        var context = await CreateContextAsync();
-        var seedContext = new SeedContext();
+     [Test]
+     public async Task PlanDayExerciseSeeder_Should_Add_Exercises_To_Days()
+     {
+         var context = await CreateContextAsync();
+         var seedContext = new SeedContext();
 
-        var planDay = new PlanDay { Id = (Id<PlanDay>)Guid.NewGuid(), Name = "Push", PlanId = (Id<Plan>)Guid.NewGuid() };
-        seedContext.PlanDays.Add(planDay);
+         var planDay = new PlanDay { Id = Id<PlanDay>.New(), Name = "Push", PlanId = Id<Plan>.New() };
+         seedContext.PlanDays.Add(planDay);
 
         var exerciseSeeder = new ExerciseSeeder();
         await exerciseSeeder.SeedAsync(context, seedContext, CancellationToken.None);
@@ -119,10 +119,10 @@ public sealed class SeederSmokeTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var user = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Demo" };
+        var user = new User { Id = Id<User>.New(), Name = "Demo" };
         seedContext.DemoUsers.Add(user);
 
-        var planDay = new PlanDay { Id = (Id<PlanDay>)Guid.NewGuid(), Name = "Push", PlanId = (Id<Plan>)Guid.NewGuid() };
+        var planDay = new PlanDay { Id = Id<PlanDay>.New(), Name = "Push", PlanId = Id<Plan>.New() };
         seedContext.PlanDays.Add(planDay);
 
         var addressSeeder = new AddressSeeder();
@@ -146,14 +146,14 @@ public sealed class SeederSmokeTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var user = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Demo" };
+        var user = new User { Id = Id<User>.New(), Name = "Demo" };
         seedContext.DemoUsers.Add(user);
 
         var exerciseSeeder = new ExerciseSeeder();
         await exerciseSeeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        var training = new Training { Id = (Id<Training>)Guid.NewGuid(), UserId = user.Id, TypePlanDayId = (Id<PlanDay>)Guid.NewGuid(), GymId = (Id<Gym>)Guid.NewGuid() };
+        var training = new Training { Id = Id<Training>.New(), UserId = user.Id, TypePlanDayId = Id<PlanDay>.New(), GymId = Id<Gym>.New() };
         seedContext.Trainings.Add(training);
         context.Trainings.Add(training);
         await context.SaveChangesAsync();
@@ -171,8 +171,8 @@ public sealed class SeederSmokeTests
         var context = await CreateContextAsync();
         var seedContext = new SeedContext();
 
-        var training = new Training { Id = (Id<Training>)Guid.NewGuid(), UserId = (Id<User>)Guid.NewGuid(), TypePlanDayId = (Id<PlanDay>)Guid.NewGuid(), GymId = (Id<Gym>)Guid.NewGuid() };
-        var exerciseScore = new ExerciseScore { Id = (Id<ExerciseScore>)Guid.NewGuid(), ExerciseId = (Id<Exercise>)Guid.NewGuid(), UserId = training.UserId, TrainingId = training.Id, Series = 3, Reps = 8, Weight = 50, Unit = WeightUnits.Kilograms };
+        var training = new Training { Id = Id<Training>.New(), UserId = Id<User>.New(), TypePlanDayId = Id<PlanDay>.New(), GymId = Id<Gym>.New() };
+        var exerciseScore = new ExerciseScore { Id = Id<ExerciseScore>.New(), ExerciseId = Id<Exercise>.New(), UserId = training.UserId, TrainingId = training.Id, Series = 3, Reps = 8, Weight = 50, Unit = WeightUnits.Kilograms };
 
         seedContext.Trainings.Add(training);
         seedContext.ExerciseScores.Add(exerciseScore);
@@ -194,10 +194,10 @@ public sealed class SeederSmokeTests
          var context = await CreateContextAsync();
          var seedContext = new SeedContext();
 
-         var user = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Demo" };
+         var user = new User { Id = Id<User>.New(), Name = "Demo" };
          seedContext.DemoUsers.Add(user);
 
-        var seeder = new MeasurementSeeder();
+         var seeder = new MeasurementSeeder();
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
@@ -210,10 +210,10 @@ public sealed class SeederSmokeTests
          var context = await CreateContextAsync();
          var seedContext = new SeedContext();
 
-         var user = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Demo" };
+         var user = new User { Id = Id<User>.New(), Name = "Demo" };
          seedContext.DemoUsers.Add(user);
 
-        var exerciseSeeder = new ExerciseSeeder();
+         var exerciseSeeder = new ExerciseSeeder();
         await exerciseSeeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
@@ -228,10 +228,10 @@ public sealed class SeederSmokeTests
     public async Task EloRegistrySeeder_Should_Add_Initial_Entries()
     {
         var context = await CreateContextAsync();
-        var seedContext = new SeedContext
-        {
-            AdminUser = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Admin" }
-        };
+         var seedContext = new SeedContext
+         {
+             AdminUser = new User { Id = Id<User>.New(), Name = "Admin" }
+         };
 
         var seeder = new EloRegistrySeeder();
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
@@ -253,14 +253,14 @@ public sealed class SeederSmokeTests
         Assert.That(await context.AppConfigs.CountAsync(), Is.EqualTo(2));
     }
 
-    private static async Task<AppDbContext> CreateContextAsync()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
+     private static async Task<AppDbContext> CreateContextAsync()
+     {
+         var options = new DbContextOptionsBuilder<AppDbContext>()
+             .UseInMemoryDatabase(Id<Exercise>.New().ToString())
+             .Options;
 
-        var context = new AppDbContext(options);
-        await context.Database.EnsureCreatedAsync();
-        return context;
-    }
+         var context = new AppDbContext(options);
+         await context.Database.EnsureCreatedAsync();
+         return context;
+     }
 }

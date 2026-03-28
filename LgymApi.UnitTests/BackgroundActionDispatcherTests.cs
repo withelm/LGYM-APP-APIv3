@@ -64,7 +64,7 @@ public sealed class BackgroundActionDispatcherTests
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
         Assert.That(envelope.CommandTypeFullName, Is.EqualTo(typeof(TestCommand).FullName));
         Assert.That(envelope.PayloadJson, Does.Contain("test-single"));
-        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo((Guid)envelope.Id));
+        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo(envelope.Id));
     }
 
     [Test]
@@ -189,7 +189,7 @@ public sealed class BackgroundActionDispatcherTests
         Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(1));
         
         var envelope = _repository.Envelopes.First();
-        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo((Guid)envelope.Id), "Scheduler must receive persisted envelope ID");
+        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo(envelope.Id), "Scheduler must receive persisted envelope ID");
     }
 
     private CommandDispatcher CreateDispatcher()
@@ -220,7 +220,7 @@ public sealed class BackgroundActionDispatcherTests
             return Task.FromResult(Envelopes.FirstOrDefault(e => e.Id == id));
         }
 
-        public Task<CommandEnvelope?> FindByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)
+        public Task<CommandEnvelope?> FindByCorrelationIdAsync(Id<CorrelationScope> correlationId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Envelopes.FirstOrDefault(e => e.CorrelationId == correlationId));
         }
@@ -279,9 +279,9 @@ public sealed class BackgroundActionDispatcherTests
 
     private sealed class FakeActionMessageScheduler : IActionMessageScheduler
     {
-        public List<Guid> EnqueuedIds { get; } = new();
+        public List<Id<CommandEnvelope>> EnqueuedIds { get; } = new();
 
-        public void Enqueue(Guid actionMessageId)
+        public void Enqueue(Id<CommandEnvelope> actionMessageId)
         {
             EnqueuedIds.Add(actionMessageId);
         }

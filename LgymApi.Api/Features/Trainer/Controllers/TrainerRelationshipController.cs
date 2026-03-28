@@ -41,13 +41,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(TrainerInvitationDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateInvitation([FromBody] CreateTrainerInvitationRequest request)
     {
-        if (!Guid.TryParse(request.TraineeId, out var traineeId))
+        if (!Id<UserEntity>.TryParse(request.TraineeId, out var traineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var invitation = await _trainerRelationshipService.CreateInvitationAsync(trainer!, (Id<UserEntity>)traineeId, HttpContext.RequestAborted);
+        var invitation = await _trainerRelationshipService.CreateInvitationAsync(trainer!, traineeId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(invitation));
     }
 
@@ -90,13 +90,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeTrainingDates([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var dates = await _trainerRelationshipService.GetTraineeTrainingDatesAsync(trainer!, (Id<UserEntity>)parsedTraineeId, HttpContext.RequestAborted);
+        var dates = await _trainerRelationshipService.GetTraineeTrainingDatesAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(dates);
     }
 
@@ -106,13 +106,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeTrainingByDate([FromRoute] string traineeId, [FromBody] TrainingByDateRequestDto request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeTrainingByDateAsync(trainer!, (Id<UserEntity>)parsedTraineeId, request.CreatedAt, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetTraineeTrainingByDateAsync(trainer!, parsedTraineeId, request.CreatedAt, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result));
     }
 
@@ -122,18 +122,18 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeExerciseScoresChartData([FromRoute] string traineeId, [FromBody] ExerciseScoresChartRequestDto request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(request.ExerciseId, out var parsedExerciseId))
+        if (!Id<ExerciseEntity>.TryParse(request.ExerciseId, out var parsedExerciseId))
         {
             throw AppException.BadRequest(Messages.ExerciseIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, (Id<UserEntity>)parsedTraineeId, (Id<ExerciseEntity>)parsedExerciseId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, parsedTraineeId, parsedExerciseId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result));
     }
 
@@ -143,13 +143,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeEloChart([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeEloChartAsync(trainer!, (Id<UserEntity>)parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetTraineeEloChartAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result));
     }
 
@@ -159,13 +159,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTraineeMainRecordsHistory([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var records = await _trainerRelationshipService.GetTraineeMainRecordsHistoryAsync(trainer!, (Id<UserEntity>)parsedTraineeId, HttpContext.RequestAborted);
+        var records = await _trainerRelationshipService.GetTraineeMainRecordsHistoryAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(records);
         return Ok(mappedRecords);
     }
@@ -174,13 +174,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UnlinkTrainee([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.UnlinkTraineeAsync(trainer!, (Id<UserEntity>)parsedTraineeId, HttpContext.RequestAborted);
+        await _trainerRelationshipService.UnlinkTraineeAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -188,13 +188,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(List<TrainerManagedPlanDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTraineePlans([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plans = await _trainerRelationshipService.GetTraineePlansAsync(trainer!, (Id<UserEntity>)parsedTraineeId, HttpContext.RequestAborted);
+        var plans = await _trainerRelationshipService.GetTraineePlansAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.MapList<TrainerManagedPlanResult, TrainerManagedPlanDto>(plans));
     }
 
@@ -202,13 +202,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(TrainerManagedPlanDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateTraineePlan([FromRoute] string traineeId, [FromBody] TrainerPlanFormRequest request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _trainerRelationshipService.CreateTraineePlanAsync(trainer!, (Id<UserEntity>)parsedTraineeId, request.Name, HttpContext.RequestAborted);
+        var plan = await _trainerRelationshipService.CreateTraineePlanAsync(trainer!, parsedTraineeId, request.Name, HttpContext.RequestAborted);
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(plan));
     }
 
@@ -216,18 +216,18 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(TrainerManagedPlanDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, [FromBody] TrainerPlanFormRequest request)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(planId, out var parsedPlanId))
+        if (!Id<PlanEntity>.TryParse(planId, out var parsedPlanId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _trainerRelationshipService.UpdateTraineePlanAsync(trainer!, (Id<UserEntity>)parsedTraineeId, (Id<PlanEntity>)parsedPlanId, request.Name, HttpContext.RequestAborted);
+        var plan = await _trainerRelationshipService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, request.Name, HttpContext.RequestAborted);
         return Ok(_mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(plan));
     }
 
@@ -235,18 +235,18 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(planId, out var parsedPlanId))
+        if (!Id<PlanEntity>.TryParse(planId, out var parsedPlanId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.DeleteTraineePlanAsync(trainer!, (Id<UserEntity>)parsedTraineeId, (Id<PlanEntity>)parsedPlanId, HttpContext.RequestAborted);
+        await _trainerRelationshipService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -254,18 +254,18 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> AssignTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
-        if (!Guid.TryParse(planId, out var parsedPlanId))
+        if (!Id<PlanEntity>.TryParse(planId, out var parsedPlanId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.AssignTraineePlanAsync(trainer!, (Id<UserEntity>)parsedTraineeId, (Id<PlanEntity>)parsedPlanId, HttpContext.RequestAborted);
+        await _trainerRelationshipService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -273,13 +273,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UnassignTraineePlan([FromRoute] string traineeId)
     {
-        if (!Guid.TryParse(traineeId, out var parsedTraineeId))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
             throw AppException.BadRequest(Messages.UserIdRequired);
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.UnassignTraineePlanAsync(trainer!, (Id<UserEntity>)parsedTraineeId, HttpContext.RequestAborted);
+        await _trainerRelationshipService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

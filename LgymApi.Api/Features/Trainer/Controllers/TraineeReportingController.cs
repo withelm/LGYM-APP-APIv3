@@ -41,13 +41,13 @@ public sealed class TraineeReportingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SubmitRequest([FromRoute] string requestId, [FromBody] SubmitReportRequestRequest request)
     {
-        if (!Guid.TryParse(requestId, out var parsedRequestId))
+        if (!Id<ReportRequest>.TryParse(requestId, out var parsedRequestId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        var submission = await _reportingService.SubmitReportRequestAsync(trainee!, (Id<ReportRequest>)parsedRequestId, new SubmitReportRequestCommand
+        var submission = await _reportingService.SubmitReportRequestAsync(trainee!, parsedRequestId, new SubmitReportRequestCommand
         {
             Answers = new Dictionary<string, System.Text.Json.JsonElement>(request.Answers, StringComparer.OrdinalIgnoreCase)
         }, HttpContext.RequestAborted);

@@ -41,7 +41,7 @@ public sealed class AppConfigController : ControllerBase
     public async Task<IActionResult> CreateNewAppVersion([FromRoute] string id, [FromBody] AppConfigInfoWithPlatformDto form)
     {
         var guidUserId = HttpContext.ParseRouteUserIdForCurrentAdmin(id);
-        var userId = (Id<LgymApi.Domain.Entities.User>)guidUserId;
+        var userId = guidUserId;
         var input = new CreateAppVersionInput(
             form.Platform,
             form.MinRequiredVersion,

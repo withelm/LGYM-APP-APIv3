@@ -1,5 +1,6 @@
 using LgymApi.Infrastructure.Data;
 using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.TestUtils;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -11,7 +12,7 @@ namespace LgymApi.IntegrationTests;
 
 public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
-    public string DatabaseName { get; } = $"LgymTests_{Guid.NewGuid()}";
+    public string DatabaseName { get; } = $"LgymTests_{Id<CustomWebApplicationFactory>.New():N}";
     public TestEmailSender EmailSender { get; } = new();
 
     public const string TestJwtSigningKey = "IntegrationTestSigningKey_MustBeAtLeast32Characters!";

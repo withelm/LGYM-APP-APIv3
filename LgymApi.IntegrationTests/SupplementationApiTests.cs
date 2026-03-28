@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,12 +18,12 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-supp", "trainer-supp@example.com");
         var trainee = await SeedUserAsync(name: "trainee-supp", email: "trainee-supp@example.com", password: "password123");
-        await LinkTrainerAndTraineeAsync((Guid)trainer.Id, (Guid)trainee.Id);
+        await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
 
         var date = DateOnly.FromDateTime(DateTime.UtcNow);
         var dayMask = MaskForDate(date);
 
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
         var createPlanResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans", new
         {
             name = "Cut Stack",
@@ -40,7 +41,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{createdPlan!.Id}/assign", content: null);
         assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        SetAuthorizationHeader((Guid)trainee.Id);
+        SetAuthorizationHeader(trainee.Id);
         var scheduleResponse = await Client.GetAsync($"/api/trainee/supplements/schedule?date={date:yyyy-MM-dd}");
         scheduleResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var schedule = await scheduleResponse.Content.ReadFromJsonAsync<List<SupplementScheduleEntryResponse>>();
@@ -63,7 +64,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         scheduleAfter.Should().NotBeNull();
         scheduleAfter![0].Taken.Should().BeTrue();
 
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
         var complianceResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance?fromDate={date:yyyy-MM-dd}&toDate={date:yyyy-MM-dd}");
         complianceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var compliance = await complianceResponse.Content.ReadFromJsonAsync<SupplementComplianceResponse>();
@@ -79,14 +80,14 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         var trainerOwner = await SeedTrainerAsync("trainer-owner", "trainer-owner@example.com");
         var trainerOther = await SeedTrainerAsync("trainer-other", "trainer-other@example.com");
         var trainee = await SeedUserAsync(name: "trainee-auth", email: "trainee-auth@example.com", password: "password123");
-        await LinkTrainerAndTraineeAsync((Guid)trainerOwner.Id, (Guid)trainee.Id);
+        await LinkTrainerAndTraineeAsync(trainerOwner.Id, trainee.Id);
 
-        SetAuthorizationHeader((Guid)trainerOther.Id);
+        SetAuthorizationHeader(trainerOther.Id);
         var summaryByOtherTrainer = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance?fromDate=2026-01-01&toDate=2026-01-02");
         summaryByOtherTrainer.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var regularUser = await SeedUserAsync(name: "normal-user", email: "normal-user@example.com", password: "password123");
-        SetAuthorizationHeader((Guid)regularUser.Id);
+        SetAuthorizationHeader(regularUser.Id);
         var trainerOnlyEndpoint = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans");
         trainerOnlyEndpoint.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -95,7 +96,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     public async Task SupplementationEndpoints_InvalidIds_ReturnBadRequest()
     {
         var trainer = await SeedTrainerAsync("trainer-invalid-supp", "trainer-invalid-supp@example.com");
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
 
         var badTraineeIdResponse = await Client.GetAsync("/api/trainer/trainees/not-a-guid/supplement-plans");
         var badPlanIdResponse = await Client.PostAsJsonAsync("/api/trainer/trainees/00000000-0000-0000-0000-000000000001/supplement-plans/not-a-guid/update", new
@@ -113,9 +114,9 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-supp-crud", "trainer-supp-crud@example.com");
         var trainee = await SeedUserAsync(name: "trainee-supp-crud", email: "trainee-supp-crud@example.com", password: "password123");
-        await LinkTrainerAndTraineeAsync((Guid)trainer.Id, (Guid)trainee.Id);
+        await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
 
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
         var createResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans", new
         {
             name = "Bulk",
@@ -160,7 +161,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     public async Task TraineeCheckOff_WithInvalidPlanItemId_ReturnsBadRequest()
     {
         var trainee = await SeedUserAsync(name: "trainee-invalid-check", email: "trainee-invalid-check@example.com", password: "password123");
-        SetAuthorizationHeader((Guid)trainee.Id);
+        SetAuthorizationHeader(trainee.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainee/supplements/intakes/check-off", new
         {
@@ -176,9 +177,9 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     {
          var trainer = await SeedTrainerAsync("trainer-supp-range", "trainer-supp-range@example.com");
          var trainee = await SeedUserAsync(name: "trainee-supp-range", email: "trainee-supp-range@example.com", password: "password123");
-         await LinkTrainerAndTraineeAsync((Guid)trainer.Id, (Guid)trainee.Id);
+         await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
 
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
         var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance?fromDate=2025-01-01&toDate=2026-12-31");
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -188,9 +189,9 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     {
          var trainer = await SeedTrainerAsync("trainer-supp-missing-dates", "trainer-supp-missing-dates@example.com");
          var trainee = await SeedUserAsync(name: "trainee-supp-missing-dates", email: "trainee-supp-missing-dates@example.com", password: "password123");
-         await LinkTrainerAndTraineeAsync((Guid)trainer.Id, (Guid)trainee.Id);
+         await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
 
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
         var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -201,9 +202,9 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     {
          var trainer = await SeedTrainerAsync("trainer-supp-null-items", "trainer-supp-null-items@example.com");
          var trainee = await SeedUserAsync(name: "trainee-supp-null-items", email: "trainee-supp-null-items@example.com", password: "password123");
-         await LinkTrainerAndTraineeAsync((Guid)trainer.Id, (Guid)trainee.Id);
+         await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
 
-        SetAuthorizationHeader((Guid)trainer.Id);
+        SetAuthorizationHeader(trainer.Id);
         var response = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans", new
         {
             name = "Plan",
@@ -218,11 +219,11 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     public async Task TraineeCheckOff_WithoutIntakeDate_ReturnsBadRequest()
     {
         var trainee = await SeedUserAsync(name: "trainee-missing-intake-date", email: "trainee-missing-intake-date@example.com", password: "password123");
-        SetAuthorizationHeader((Guid)trainee.Id);
+        SetAuthorizationHeader(trainee.Id);
 
         var response = await Client.PostAsJsonAsync("/api/trainee/supplements/intakes/check-off", new
         {
-            planItemId = Guid.NewGuid().ToString()
+            planItemId = Domain.ValueObjects.Id<object>.New().ToString()
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -234,29 +235,29 @@ public sealed class SupplementationApiTests : IntegrationTestBase
 
         using var scope = Factory.Services.CreateScope();
          var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-         var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == (Domain.ValueObjects.Id<User>)trainer.Id && ur.RoleId == (Domain.ValueObjects.Id<Role>)AppDbContext.TrainerRoleSeedId);
+         var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == trainer.Id && ur.RoleId == AppDbContext.TrainerRoleSeedId);
          if (!alreadyLinked)
          {
-             db.UserRoles.Add(new UserRole
-             {
-                 UserId = (Domain.ValueObjects.Id<User>)trainer.Id,
-                 RoleId = (Domain.ValueObjects.Id<Role>)AppDbContext.TrainerRoleSeedId
-             });
+              db.UserRoles.Add(new UserRole
+              {
+                  UserId = trainer.Id,
+                  RoleId = AppDbContext.TrainerRoleSeedId
+              });
              await db.SaveChangesAsync();
          }
 
         return trainer;
     }
 
-    private async Task LinkTrainerAndTraineeAsync(Guid trainerId, Guid traineeId)
+    private async Task LinkTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
          db.TrainerTraineeLinks.Add(new TrainerTraineeLink
          {
-             Id = (Domain.ValueObjects.Id<TrainerTraineeLink>)Guid.NewGuid(),
-             TrainerId = (Domain.ValueObjects.Id<User>)trainerId,
-             TraineeId = (Domain.ValueObjects.Id<User>)traineeId
+             Id = Id<TrainerTraineeLink>.New(),
+             TrainerId = trainerId,
+             TraineeId = traineeId
          });
         await db.SaveChangesAsync();
     }

@@ -105,7 +105,7 @@ public sealed class GymService : IGymService
             .GroupBy(t => t.GymId)
             .Select(g => g.OrderByDescending(t => t.CreatedAt).FirstOrDefault())
             .Where(t => t != null)
-            .ToDictionary(t => (Guid)t!.GymId, t => t!);
+            .ToDictionary(t => t!.GymId, t => t!);
 
         return new GymListContext
         {

@@ -26,7 +26,7 @@ public static class TestDataFactory
         dbContext.Roles.AddRange(
             new Role
             {
-                Id = (Id<Role>)AppDbContext.UserRoleSeedId,
+                Id = AppDbContext.UserRoleSeedId,
                 Name = AuthConstants.Roles.User,
                 Description = "Default role for all users",
                 CreatedAt = timestamp,
@@ -34,7 +34,7 @@ public static class TestDataFactory
             },
             new Role
             {
-                Id = (Id<Role>)AppDbContext.AdminRoleSeedId,
+                Id = AppDbContext.AdminRoleSeedId,
                 Name = AuthConstants.Roles.Admin,
                 Description = "Administrative privileges",
                 CreatedAt = timestamp,
@@ -42,7 +42,7 @@ public static class TestDataFactory
             },
             new Role
             {
-                Id = (Id<Role>)AppDbContext.TesterRoleSeedId,
+                Id = AppDbContext.TesterRoleSeedId,
                 Name = AuthConstants.Roles.Tester,
                 Description = "Excluded from ranking",
                 CreatedAt = timestamp,
@@ -50,7 +50,7 @@ public static class TestDataFactory
             },
             new Role
             {
-                Id = (Id<Role>)AppDbContext.TrainerRoleSeedId,
+                Id = AppDbContext.TrainerRoleSeedId,
                 Name = AuthConstants.Roles.Trainer,
                 Description = "Trainer role for coach-facing APIs",
                 CreatedAt = timestamp,
@@ -60,8 +60,8 @@ public static class TestDataFactory
         dbContext.RoleClaims.AddRange(
             new RoleClaim
             {
-                Id = (Id<RoleClaim>)AppDbContext.AdminAccessClaimSeedId,
-                RoleId = (Id<Role>)AppDbContext.AdminRoleSeedId,
+                Id = AppDbContext.AdminAccessClaimSeedId,
+                RoleId = AppDbContext.AdminRoleSeedId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = AuthConstants.Permissions.AdminAccess,
                 CreatedAt = timestamp,
@@ -69,8 +69,8 @@ public static class TestDataFactory
             },
             new RoleClaim
             {
-                Id = (Id<RoleClaim>)AppDbContext.ManageUserRolesClaimSeedId,
-                RoleId = (Id<Role>)AppDbContext.AdminRoleSeedId,
+                Id = AppDbContext.ManageUserRolesClaimSeedId,
+                RoleId = AppDbContext.AdminRoleSeedId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = AuthConstants.Permissions.ManageUserRoles,
                 CreatedAt = timestamp,
@@ -78,8 +78,8 @@ public static class TestDataFactory
             },
             new RoleClaim
             {
-                Id = (Id<RoleClaim>)AppDbContext.ManageAppConfigClaimSeedId,
-                RoleId = (Id<Role>)AppDbContext.AdminRoleSeedId,
+                Id = AppDbContext.ManageAppConfigClaimSeedId,
+                RoleId = AppDbContext.AdminRoleSeedId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = AuthConstants.Permissions.ManageAppConfig,
                 CreatedAt = timestamp,
@@ -87,8 +87,8 @@ public static class TestDataFactory
             },
             new RoleClaim
             {
-                Id = (Id<RoleClaim>)AppDbContext.ManageGlobalExercisesClaimSeedId,
-                RoleId = (Id<Role>)AppDbContext.AdminRoleSeedId,
+                Id = AppDbContext.ManageGlobalExercisesClaimSeedId,
+                RoleId = AppDbContext.AdminRoleSeedId,
                 ClaimType = AuthConstants.PermissionClaimType,
                 ClaimValue = AuthConstants.Permissions.ManageGlobalExercises,
                 CreatedAt = timestamp,
@@ -124,7 +124,7 @@ public static class TestDataFactory
         var passwordData = new LegacyPasswordService().Create(password);
         var user = new User
         {
-            Id = (Id<User>)Guid.NewGuid(),
+            Id = Id<User>.New(),
             Name = name,
             Email = email,
             IsVisibleInRanking = isVisibleInRanking,
@@ -138,21 +138,21 @@ public static class TestDataFactory
         };
 
         dbContext.Users.Add(user);
-        dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = (Id<Role>)AppDbContext.UserRoleSeedId });
+        dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = AppDbContext.UserRoleSeedId });
 
         if (isAdmin)
         {
-            dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = (Id<Role>)AppDbContext.AdminRoleSeedId });
+            dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = AppDbContext.AdminRoleSeedId });
         }
 
         if (isTester)
         {
-            dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = (Id<Role>)AppDbContext.TesterRoleSeedId });
+            dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = AppDbContext.TesterRoleSeedId });
         }
 
         dbContext.EloRegistries.Add(new EloRegistry
         {
-            Id = (Id<EloRegistry>)Guid.NewGuid(),
+            Id = Id<EloRegistry>.New(),
             UserId = user.Id,
             Date = DateTimeOffset.UtcNow,
             Elo = elo

@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.IntegrationTests;
 
@@ -123,7 +125,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var nonExistentExerciseId = Guid.NewGuid();
+        var nonExistentExerciseId = Domain.ValueObjects.Id<Exercise>.New();
         var request = new
         {
             exercise = nonExistentExerciseId.ToString(),
@@ -330,7 +332,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var nonExistentId = Guid.NewGuid();
+        var nonExistentId = Domain.ValueObjects.Id<MainRecord>.New();
         var response = await Client.GetAsync($"/api/mainRecords/{nonExistentId}/deleteMainRecord");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);

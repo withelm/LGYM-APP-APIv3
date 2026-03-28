@@ -14,37 +14,37 @@ public sealed class SeedStatisticsPrinterTests
     {
         var context = new SeedContext
         {
-            AdminUser = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Admin" },
-            TesterUser = new User { Id = (Id<User>)Guid.NewGuid(), Name = "Tester" }
+            AdminUser = new User { Id = Id<User>.New(), Name = "Admin" },
+            TesterUser = new User { Id = Id<User>.New(), Name = "Tester" }
         };
 
-        context.DemoUsers.Add(new User { Id = (Id<User>)Guid.NewGuid(), Name = "Demo" });
-        context.Exercises.Add(new Exercise { Id = (Id<Exercise>)Guid.NewGuid(), Name = "Bench" });
-        context.ExerciseTranslations.Add(new ExerciseTranslation { Id = (Id<ExerciseTranslation>)Guid.NewGuid(), ExerciseId = context.Exercises[0].Id, Culture = "pl", Name = "Wyciskanie" });
-        context.Addresses.Add(new Address { Id = (Id<Address>)Guid.NewGuid(), Name = "Main" });
-        context.Gyms.Add(new Gym { Id = (Id<Gym>)Guid.NewGuid(), Name = "Gym" });
-        context.Plans.Add(new Plan { Id = (Id<Plan>)Guid.NewGuid(), Name = "Plan" });
-        context.PlanDays.Add(new PlanDay { Id = (Id<PlanDay>)Guid.NewGuid(), Name = "Day" });
-        context.PlanDayExercises.Add(new PlanDayExercise { Id = (Id<PlanDayExercise>)Guid.NewGuid(), Order = 1, Series = 3, Reps = "8-12" });
-        context.Trainings.Add(new Training { Id = (Id<Training>)Guid.NewGuid() });
-        context.ExerciseScores.Add(new ExerciseScore { Id = (Id<ExerciseScore>)Guid.NewGuid() });
-        context.TrainingExerciseScores.Add(new TrainingExerciseScore { Id = (Id<TrainingExerciseScore>)Guid.NewGuid() });
-        context.Measurements.Add(new Measurement { Id = (Id<Measurement>)Guid.NewGuid(), Unit = "cm" });
-        context.MainRecords.Add(new MainRecord { Id = (Id<MainRecord>)Guid.NewGuid() });
-        context.EloRegistries.Add(new EloRegistry { Id = (Id<EloRegistry>)Guid.NewGuid(), Elo = 1000 });
-        context.AppConfigs.Add(new AppConfig { Id = (Id<AppConfig>)Guid.NewGuid() });
-        context.Roles.Add(new Role { Id = (Id<Role>)Guid.NewGuid(), Name = "Admin" });
-        context.RoleClaims.Add(new RoleClaim { Id = (Id<RoleClaim>)Guid.NewGuid(), RoleId = (Id<Role>)Guid.NewGuid(), ClaimType = "permission", ClaimValue = "admin.access" });
-        context.TrainerInvitations.Add(new TrainerInvitation { Id = (Id<TrainerInvitation>)Guid.NewGuid(), TrainerId = (Id<User>)Guid.NewGuid(), TraineeId = (Id<User>)Guid.NewGuid(), Code = "INV", ExpiresAt = DateTimeOffset.UtcNow });
-        context.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = (Id<TrainerTraineeLink>)Guid.NewGuid(), TrainerId = (Id<User>)Guid.NewGuid(), TraineeId = (Id<User>)Guid.NewGuid() });
-        context.NotificationMessages.Add(new NotificationMessage { Id = (Id<NotificationMessage>)Guid.NewGuid(), Channel = NotificationChannel.Email, Type = EmailNotificationTypes.TrainerInvitation, CorrelationId = Guid.NewGuid(), Recipient = "test@lgym.app", PayloadJson = "{}" });
-        context.ReportTemplates.Add(new ReportTemplate { Id = (Id<ReportTemplate>)Guid.NewGuid(), TrainerId = (Id<User>)Guid.NewGuid(), Name = "Report" });
-        context.ReportTemplateFields.Add(new ReportTemplateField { Id = (Id<ReportTemplateField>)Guid.NewGuid(), TemplateId = context.ReportTemplates[0].Id, Key = "k", Label = "l", Type = ReportFieldType.Text, Order = 1 });
-        context.ReportRequests.Add(new ReportRequest { Id = (Id<ReportRequest>)Guid.NewGuid(), TrainerId = (Id<User>)Guid.NewGuid(), TraineeId = (Id<User>)Guid.NewGuid(), TemplateId = context.ReportTemplates[0].Id });
-        context.ReportSubmissions.Add(new ReportSubmission { Id = (Id<ReportSubmission>)Guid.NewGuid(), ReportRequestId = context.ReportRequests[0].Id, TraineeId = (Id<User>)Guid.NewGuid(), PayloadJson = "{}" });
-        context.SupplementPlans.Add(new SupplementPlan { Id = (Id<SupplementPlan>)Guid.NewGuid(), TrainerId = (Id<User>)Guid.NewGuid(), TraineeId = (Id<User>)Guid.NewGuid(), Name = "Plan", IsActive = true });
-        context.SupplementPlanItems.Add(new SupplementPlanItem { Id = (Id<SupplementPlanItem>)Guid.NewGuid(), PlanId = context.SupplementPlans[0].Id, SupplementName = "Whey", Dosage = "30g", TimeOfDay = TimeSpan.Zero, Order = 1 });
-        context.SupplementIntakeLogs.Add(new SupplementIntakeLog { Id = (Id<SupplementIntakeLog>)Guid.NewGuid(), TraineeId = (Id<User>)Guid.NewGuid(), PlanItemId = context.SupplementPlanItems[0].Id, IntakeDate = DateOnly.FromDateTime(DateTime.UtcNow), TakenAt = DateTimeOffset.UtcNow });
+        context.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Demo" });
+        context.Exercises.Add(new Exercise { Id = Id<Exercise>.New(), Name = "Bench" });
+        context.ExerciseTranslations.Add(new ExerciseTranslation { Id = Id<ExerciseTranslation>.New(), ExerciseId = context.Exercises[0].Id, Culture = "pl", Name = "Wyciskanie" });
+        context.Addresses.Add(new Address { Id = Id<Address>.New(), Name = "Main" });
+        context.Gyms.Add(new Gym { Id = Id<Gym>.New(), Name = "Gym" });
+        context.Plans.Add(new Plan { Id = Id<Plan>.New(), Name = "Plan" });
+        context.PlanDays.Add(new PlanDay { Id = Id<PlanDay>.New(), Name = "Day" });
+        context.PlanDayExercises.Add(new PlanDayExercise { Id = Id<PlanDayExercise>.New(), Order = 1, Series = 3, Reps = "8-12" });
+        context.Trainings.Add(new Training { Id = Id<Training>.New() });
+        context.ExerciseScores.Add(new ExerciseScore { Id = Id<ExerciseScore>.New() });
+        context.TrainingExerciseScores.Add(new TrainingExerciseScore { Id = Id<TrainingExerciseScore>.New() });
+        context.Measurements.Add(new Measurement { Id = Id<Measurement>.New(), Unit = "cm" });
+        context.MainRecords.Add(new MainRecord { Id = Id<MainRecord>.New() });
+        context.EloRegistries.Add(new EloRegistry { Id = Id<EloRegistry>.New(), Elo = 1000 });
+        context.AppConfigs.Add(new AppConfig { Id = Id<AppConfig>.New() });
+        context.Roles.Add(new Role { Id = Id<Role>.New(), Name = "Admin" });
+        context.RoleClaims.Add(new RoleClaim { Id = Id<RoleClaim>.New(), RoleId = Id<Role>.New(), ClaimType = "permission", ClaimValue = "admin.access" });
+        context.TrainerInvitations.Add(new TrainerInvitation { Id = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New(), Code = "INV", ExpiresAt = DateTimeOffset.UtcNow });
+        context.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
+        context.NotificationMessages.Add(new NotificationMessage { Id = Id<NotificationMessage>.New(), Channel = NotificationChannel.Email, Type = EmailNotificationTypes.TrainerInvitation, CorrelationId = Id<CorrelationScope>.New(), Recipient = "test@lgym.app", PayloadJson = "{}" });
+        context.ReportTemplates.Add(new ReportTemplate { Id = Id<ReportTemplate>.New(), TrainerId = Id<User>.New(), Name = "Report" });
+        context.ReportTemplateFields.Add(new ReportTemplateField { Id = Id<ReportTemplateField>.New(), TemplateId = context.ReportTemplates[0].Id, Key = "k", Label = "l", Type = ReportFieldType.Text, Order = 1 });
+        context.ReportRequests.Add(new ReportRequest { Id = Id<ReportRequest>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New(), TemplateId = context.ReportTemplates[0].Id });
+        context.ReportSubmissions.Add(new ReportSubmission { Id = Id<ReportSubmission>.New(), ReportRequestId = context.ReportRequests[0].Id, TraineeId = Id<User>.New(), PayloadJson = "{}" });
+        context.SupplementPlans.Add(new SupplementPlan { Id = Id<SupplementPlan>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New(), Name = "Plan", IsActive = true });
+        context.SupplementPlanItems.Add(new SupplementPlanItem { Id = Id<SupplementPlanItem>.New(), PlanId = context.SupplementPlans[0].Id, SupplementName = "Whey", Dosage = "30g", TimeOfDay = TimeSpan.Zero, Order = 1 });
+        context.SupplementIntakeLogs.Add(new SupplementIntakeLog { Id = Id<SupplementIntakeLog>.New(), TraineeId = Id<User>.New(), PlanItemId = context.SupplementPlanItems[0].Id, IntakeDate = DateOnly.FromDateTime(DateTime.UtcNow), TakenAt = DateTimeOffset.UtcNow });
 
         using var writer = new StringWriter();
         var original = Console.Out;

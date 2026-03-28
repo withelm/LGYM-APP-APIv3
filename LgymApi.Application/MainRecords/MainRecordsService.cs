@@ -31,7 +31,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
     public async Task AddNewRecordAsync(AddMainRecordInput input, CancellationToken cancellationToken = default)
     {
-        if (input.UserId.IsEmpty || !Guid.TryParse(input.ExerciseId, out var exerciseGuid))
+        if (input.UserId.IsEmpty || input.ExerciseId.IsEmpty)
         {
             throw AppException.NotFound(Messages.DidntFind);
         }
@@ -42,7 +42,7 @@ public sealed class MainRecordsService : IMainRecordsService
             throw AppException.NotFound(Messages.DidntFind);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync((Id<ExerciseEntity>)exerciseGuid, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync(input.ExerciseId, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -122,7 +122,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         var exerciseIds = bestRecords.Select(r => r.ExerciseId).Distinct().ToList();
         var exercises = await _exerciseRepository.GetByIdsAsync(exerciseIds, cancellationToken);
-        var exerciseMap = exercises.ToDictionary(e => (Guid)e.Id, e => e);
+        var exerciseMap = exercises.ToDictionary(e => e.Id, e => e);
 
         return new MainRecordsLastContext
         {
