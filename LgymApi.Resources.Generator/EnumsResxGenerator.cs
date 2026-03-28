@@ -20,7 +20,7 @@ public sealed class EnumsResxGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor ResxNoKeys = new(
         id: "LGYMRES004",
         title: "No resource keys found in Enums.resx",
-        messageFormat: "No resource keys found in Enums.resx at '{0}'.",
+        messageFormat: "No resource keys found in Enums.resx at '{0}'",
         category: "Resources",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);

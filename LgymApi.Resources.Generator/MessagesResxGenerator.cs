@@ -20,7 +20,7 @@ public sealed class MessagesResxGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor ResxNoKeys = new(
         id: "LGYMRES002",
         title: "No resource keys found",
-        messageFormat: "No resource keys found in '{0}' at '{1}'.",
+        messageFormat: "No resource keys found in '{0}' at '{1}'",
         category: "Resources",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
