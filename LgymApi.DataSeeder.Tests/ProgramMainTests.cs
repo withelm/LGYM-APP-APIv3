@@ -69,7 +69,7 @@ public sealed class ProgramMainTests
 
     private static string CreateTempRepo(bool withBaseSettings, bool includeConnection = true)
     {
-        var root = Path.Combine(Path.GetTempPath(), "lgym-seeder-program", Id<DataSeederProgram>.New().ToString());
+        var root = Path.Combine(Path.GetTempPath(), "lgym-seeder-program", Id<ProgramMainTests>.New().ToString());
         Directory.CreateDirectory(root);
         File.WriteAllText(Path.Combine(root, "LgymApi.sln"), string.Empty);
 

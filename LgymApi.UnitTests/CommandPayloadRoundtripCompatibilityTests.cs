@@ -17,13 +17,23 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class CommandPayloadRoundtripCompatibilityTests
 {
+    // Helper to parse fixed test IDs from UUID string literals
+    private static Id<T> ParseTestId<T>(string uuid)
+    {
+        if (!Id<T>.TryParse(uuid, out var id))
+        {
+            throw new ArgumentException($"Invalid UUID: {uuid}", nameof(uuid));
+        }
+        return id;
+    }
+
     #region UserRegisteredCommand Tests
 
     [Test]
     public void UserRegisteredCommand_RoundtripsSuccessfully()
     {
         // Arrange
-        var originalCommand = new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() };
+        var originalCommand = new UserRegisteredCommand { UserId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New() };
         var json = JsonSerializer.Serialize(originalCommand, SharedSerializationOptions.Current);
 
         // Act
@@ -38,7 +48,7 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     public void UserRegisteredCommand_SerializedJsonUsesCamelCase()
     {
         // Arrange
-        var command = new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() };
+        var command = new UserRegisteredCommand { UserId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New() };
 
         // Act
         var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
@@ -52,15 +62,15 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     public void UserRegisteredCommand_DeserializesFromLegacyPascalCaseJson()
     {
         // Arrange - simulate legacy payload with PascalCase property names
-        var userId = Guid.NewGuid();
-        var legacyJson = "{\"UserId\":\"" + userId.ToString() + "\"}";
+        const string legacyUserId = "550e8400-e29b-41d4-a716-446655440001";
+        var legacyJson = "{\"UserId\":\"" + legacyUserId + "\"}";
 
         // Act
         var deserialized = JsonSerializer.Deserialize<UserRegisteredCommand>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert - PropertyNameCaseInsensitive=true allows reading PascalCase
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That(deserialized!.UserId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId)));
     }
 
     [Test]
@@ -69,9 +79,9 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         // Arrange
         var commands = new[]
         {
-            new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() },
-            new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() },
-            new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() }
+            new UserRegisteredCommand { UserId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New() },
+            new UserRegisteredCommand { UserId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New() },
+            new UserRegisteredCommand { UserId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New() }
         };
 
         // Act & Assert
@@ -93,12 +103,12 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     public void TrainingCompletedCommand_RoundtripsSuccessfully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+        var userId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New();
+        var trainingId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>.New();
         var originalCommand = new TrainingCompletedCommand 
         { 
-            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
-            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
+            UserId = userId,
+            TrainingId = trainingId
         };
         var json = JsonSerializer.Serialize(originalCommand, SharedSerializationOptions.Current);
 
@@ -107,8 +117,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId));
+        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
+        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId));
     }
 
     [Test]
@@ -117,8 +127,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         // Arrange
         var command = new TrainingCompletedCommand 
         { 
-            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(),
-            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid()
+            UserId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New(),
+            TrainingId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>.New()
         };
 
         // Act
@@ -135,46 +145,46 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     public void TrainingCompletedCommand_DeserializesFromLegacyPascalCaseJson()
     {
         // Arrange - simulate legacy payload with PascalCase property names
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var legacyJson = "{\"UserId\":\"" + userId.ToString() + "\",\"TrainingId\":\"" + trainingId.ToString() + "\"}";
+        const string legacyUserId = "550e8400-e29b-41d4-a716-446655440002";
+        const string legacyTrainingId = "550e8400-e29b-41d4-a716-446655440003";
+        var legacyJson = "{\"UserId\":\"" + legacyUserId + "\",\"TrainingId\":\"" + legacyTrainingId + "\"}";
 
         // Act
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedCommand>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId));
+        Assert.That(deserialized!.UserId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId)));
+        Assert.That(deserialized.TrainingId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId)));
     }
 
     [Test]
     public void TrainingCompletedCommand_DeserializesFromMixedCaseJson()
     {
         // Arrange - simulate mixed-case payload (camelCase and PascalCase combined)
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
-        var mixedJson = "{\"userId\":\"" + userId.ToString() + "\",\"TrainingId\":\"" + trainingId.ToString() + "\"}";
+        const string legacyUserId = "550e8400-e29b-41d4-a716-446655440004";
+        const string legacyTrainingId = "550e8400-e29b-41d4-a716-446655440005";
+        var mixedJson = "{\"userId\":\"" + legacyUserId + "\",\"TrainingId\":\"" + legacyTrainingId + "\"}";
 
         // Act
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedCommand>(mixedJson, SharedSerializationOptions.Current);
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId));
+        Assert.That(deserialized!.UserId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId)));
+        Assert.That(deserialized.TrainingId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId)));
     }
 
     [Test]
     public void TrainingCompletedCommand_RoundtripsPreservesFieldValuesExactly()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var trainingId = Guid.NewGuid();
+        var userId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New();
+        var trainingId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>.New();
         var originalCommand = new TrainingCompletedCommand 
         { 
-            UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)userId,
-            TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)trainingId
+            UserId = userId,
+            TrainingId = trainingId
         };
         var json = JsonSerializer.Serialize(originalCommand, SharedSerializationOptions.Current);
 
@@ -183,8 +193,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert - each field must match exactly
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That((Guid)deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
-        Assert.That((Guid)deserialized.TrainingId, Is.EqualTo(trainingId), "TrainingId not preserved");
+        Assert.That(deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
+        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId), "TrainingId not preserved");
     }
 
     #endregion
@@ -195,8 +205,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     public void InvitationCreatedCommand_RoundtripsSuccessfully()
     {
         // Arrange
-        var invitationId = Guid.NewGuid();
-        var originalCommand = new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId };
+        var invitationId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>.New();
+        var originalCommand = new InvitationCreatedCommand { InvitationId = invitationId };
         var json = JsonSerializer.Serialize(originalCommand, SharedSerializationOptions.Current);
 
         // Act
@@ -204,14 +214,14 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That((Guid)deserialized!.InvitationId, Is.EqualTo(invitationId));
+        Assert.That(deserialized!.InvitationId, Is.EqualTo(invitationId));
     }
 
     [Test]
     public void InvitationCreatedCommand_SerializedJsonUsesCamelCase()
     {
         // Arrange
-        var command = new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid() };
+        var command = new InvitationCreatedCommand { InvitationId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>.New() };
 
         // Act
         var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
@@ -225,32 +235,37 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     public void InvitationCreatedCommand_DeserializesFromLegacyPascalCaseJson()
     {
         // Arrange - simulate legacy payload with PascalCase property name
-        var invitationId = Guid.NewGuid();
-        var legacyJson = "{\"InvitationId\":\"" + invitationId.ToString() + "\"}";
+        const string legacyInvitationId = "550e8400-e29b-41d4-a716-446655440006";
+        var legacyJson = "{\"InvitationId\":\"" + legacyInvitationId + "\"}";
 
         // Act
         var deserialized = JsonSerializer.Deserialize<InvitationCreatedCommand>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That((Guid)deserialized!.InvitationId, Is.EqualTo(invitationId));
+        Assert.That(deserialized!.InvitationId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.TrainerInvitation>(legacyInvitationId)));
     }
 
     [Test]
     public void InvitationCreatedCommand_RoundtripsWithVariousGuidValues()
     {
-        // Arrange
-        var testGuids = new[] { Guid.NewGuid(), Guid.Empty, Guid.NewGuid() };
+        // Arrange - test with Empty and various UUID values
+        var testIds = new[] 
+        { 
+            ParseTestId<LgymApi.Domain.Entities.TrainerInvitation>("550e8400-e29b-41d4-a716-446655440007"),
+            Id<LgymApi.Domain.Entities.TrainerInvitation>.Empty,
+            ParseTestId<LgymApi.Domain.Entities.TrainerInvitation>("550e8400-e29b-41d4-a716-446655440008")
+        };
 
         // Act & Assert
-        foreach (var guid in testGuids)
+        foreach (var id in testIds)
         {
-            var command = new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)guid };
+            var command = new InvitationCreatedCommand { InvitationId = id };
             var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
             var deserialized = JsonSerializer.Deserialize<InvitationCreatedCommand>(json, SharedSerializationOptions.Current);
             
             Assert.That(deserialized, Is.Not.Null);
-        Assert.That((Guid)deserialized!.InvitationId, Is.EqualTo(guid));
+            Assert.That(deserialized!.InvitationId, Is.EqualTo(id));
         }
     }
 
@@ -264,9 +279,9 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         // Arrange
         var commands = new object[]
         {
-            new UserRegisteredCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid() },
-            new TrainingCompletedCommand { UserId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)Guid.NewGuid(), TrainingId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>)Guid.NewGuid() },
-            new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)Guid.NewGuid() }
+            new UserRegisteredCommand { UserId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New() },
+            new TrainingCompletedCommand { UserId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>.New(), TrainingId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Training>.New() },
+            new InvitationCreatedCommand { InvitationId = LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>.New() }
         };
 
         // Act & Assert - all commands serialize to JSON without exception

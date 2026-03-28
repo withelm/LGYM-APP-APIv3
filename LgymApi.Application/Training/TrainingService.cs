@@ -68,13 +68,14 @@ public sealed class TrainingService : ITrainingService
 
             var uniqueExerciseIds = exercises
                 .Select(e => e.ExerciseId)
-                .Where(e => Guid.TryParse(e, out _))
+                .Select(TryParseExerciseId)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
                 .Distinct()
-                .Select(id => (Id<LgymApi.Domain.Entities.Exercise>)Guid.Parse(id))
                 .ToList();
 
             var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds, cancellationToken);
-            var exerciseDetailsMap = exerciseDetails.ToDictionary(e => (Guid)e.Id, e => e.Name);
+            var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
 
             var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds, cancellationToken);
 
@@ -99,7 +100,7 @@ public sealed class TrainingService : ITrainingService
                 var index = 0;
                 foreach (var exercise in exercises)
                 {
-                    if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
+                    if (!Id<LgymApi.Domain.Entities.Exercise>.TryParse(exercise.ExerciseId, out var exerciseId))
                     {
                         continue;
                     }
@@ -112,7 +113,7 @@ public sealed class TrainingService : ITrainingService
                     var scoreEntity = new ExerciseScore
                     {
                         Id = Id<ExerciseScore>.New(),
-                        ExerciseId = (Id<LgymApi.Domain.Entities.Exercise>)exerciseId,
+                        ExerciseId = exerciseId,
                         UserId = user.Id,
                         Reps = exercise.Reps,
                         Series = exercise.Series,
@@ -256,7 +257,7 @@ public sealed class TrainingService : ITrainingService
 
         var scoreIds = trainingScoreRefs.Select(t => t.ExerciseScoreId).Distinct().ToList();
         var scores = await _exerciseScoreRepository.GetByIdsAsync(scoreIds, cancellationToken);
-        var scoreMap = scores.ToDictionary(s => (Guid)s.Id, s => s);
+        var scoreMap = scores.ToDictionary(s => s.Id, s => s);
 
         var result = new List<TrainingByDateDetails>();
         foreach (var training in trainings)
@@ -267,7 +268,7 @@ public sealed class TrainingService : ITrainingService
 
             foreach (var reference in exerciseRefs)
             {
-                if (!scoreMap.TryGetValue((Guid)reference.ExerciseScoreId, out var score) || score.Exercise == null)
+                if (!scoreMap.TryGetValue(reference.ExerciseScoreId, out var score) || score.Exercise == null)
                 {
                     continue;
                 }
@@ -394,13 +395,13 @@ public sealed class TrainingService : ITrainingService
     internal List<GroupedExerciseComparison> BuildComparisonReport(
         IReadOnlyCollection<TrainingExerciseInput> currentExercises,
         Dictionary<string, ExerciseScore> previousScores,
-        Dictionary<Guid, string> exerciseDetails)
+        Dictionary<Id<LgymApi.Domain.Entities.Exercise>, string> exerciseDetails)
     {
-        var comparisonMap = new Dictionary<Guid, GroupedExerciseComparison>();
+        var comparisonMap = new Dictionary<Id<LgymApi.Domain.Entities.Exercise>, GroupedExerciseComparison>();
 
         foreach (var current in currentExercises)
         {
-            if (!Guid.TryParse(current.ExerciseId, out var exerciseId))
+            if (!Id<LgymApi.Domain.Entities.Exercise>.TryParse(current.ExerciseId, out var exerciseId))
             {
                 continue;
             }
@@ -409,7 +410,7 @@ public sealed class TrainingService : ITrainingService
             {
                 comparisonMap[exerciseId] = new GroupedExerciseComparison
                 {
-                    ExerciseId = (Id<LgymApi.Domain.Entities.Exercise>)exerciseId,
+                    ExerciseId = exerciseId,
                     ExerciseName = exerciseDetails.TryGetValue(exerciseId, out var name) ? name : "Nieznane cwiczenie",
                     SeriesComparisons = new List<SeriesComparison>()
                 };
@@ -440,8 +441,9 @@ public sealed class TrainingService : ITrainingService
 
         var exerciseOrder = currentExercises
             .Select(e => e.ExerciseId)
-            .Where(id => Guid.TryParse(id, out _))
-            .Select(id => Guid.Parse(id))
+            .Select(TryParseExerciseId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
             .Distinct()
             .ToList();
 
@@ -449,6 +451,13 @@ public sealed class TrainingService : ITrainingService
             .Where(comparisonMap.ContainsKey)
             .Select(id => comparisonMap[id])
             .ToList();
+    }
+
+    private static Id<LgymApi.Domain.Entities.Exercise>? TryParseExerciseId(string rawId)
+    {
+        return Id<LgymApi.Domain.Entities.Exercise>.TryParse(rawId, out var parsedId)
+            ? parsedId
+            : null;
     }
 
 }

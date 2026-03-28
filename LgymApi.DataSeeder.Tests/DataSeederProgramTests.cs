@@ -44,7 +44,7 @@ public sealed class DataSeederProgramTests
 
     private static string CreateTempRepo()
     {
-        var root = Path.Combine(Path.GetTempPath(), "lgym-seeder-tests", Id<DataSeederProgram>.New().ToString());
+        var root = Path.Combine(Path.GetTempPath(), "lgym-seeder-tests", Id<DataSeederProgramTests>.New().ToString());
         Directory.CreateDirectory(root);
         File.WriteAllText(Path.Combine(root, "LgymApi.sln"), string.Empty);
 

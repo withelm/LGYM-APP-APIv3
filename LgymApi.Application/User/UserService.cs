@@ -164,7 +164,7 @@ public sealed class UserService : IUserService
             _logger.LogWarning(
                 ex,
                 "Failed to initialize onboarding tutorial for user {UserId}. Registration is still successful.",
-                (Guid)user.Id);
+                user.Id);
         }
         try
         {
@@ -175,7 +175,7 @@ public sealed class UserService : IUserService
             _logger.LogWarning(
                 ex,
                 "Failed to dispatch UserRegisteredCommand for user {UserId}. Registration is still successful.",
-                (Guid)user.Id);
+                user.Id);
         }
     }
 

@@ -35,24 +35,24 @@ public sealed class TrainingServiceBuildComparisonReportTests
 
         var previousScores = new Dictionary<string, ExerciseScore>();
 
-         var exerciseDetails = new Dictionary<Guid, string>
-         {
-             [(Guid)exerciseA] = "Bench Press",
-             [(Guid)exerciseB] = "Squat",
-             [(Guid)exerciseC] = "Deadlift",
-         };
+        var exerciseDetails = new Dictionary<Id<Exercise>, string>
+        {
+            [exerciseA] = "Bench Press",
+            [exerciseB] = "Squat",
+            [exerciseC] = "Deadlift",
+        };
 
         // Act
         var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
 
         // Assert
-        Assert.Multiple(() =>
-        {
-            Assert.That(result, Has.Count.EqualTo(3));
-            Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseA));
-            Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseB));
-            Assert.That(result[2].ExerciseId, Is.EqualTo(exerciseB));
-        });
+         Assert.Multiple(() =>
+         {
+             Assert.That(result, Has.Count.EqualTo(3));
+             Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseC));
+             Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseA));
+             Assert.That(result[2].ExerciseId, Is.EqualTo(exerciseB));
+         });
     }
 
     [Test]
@@ -73,24 +73,24 @@ public sealed class TrainingServiceBuildComparisonReportTests
 
         var previousScores = new Dictionary<string, ExerciseScore>();
 
-         var exerciseDetails = new Dictionary<Guid, string>
-         {
-             [(Guid)exerciseA] = "Bench Press",
-             [(Guid)exerciseB] = "Squat",
-         };
+          var exerciseDetails = new Dictionary<Id<Exercise>, string>
+          {
+              [exerciseA] = "Bench Press",
+              [exerciseB] = "Squat",
+          };
 
         // Act
         var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
 
-        // Assert
-        Assert.Multiple(() =>
-        {
-            Assert.That(result, Has.Count.EqualTo(2));
-            Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseB));
-            Assert.That(result[0].SeriesComparisons, Has.Count.EqualTo(2));
-            Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseB));
-            Assert.That(result[1].SeriesComparisons, Has.Count.EqualTo(2));
-        });
+         // Assert
+         Assert.Multiple(() =>
+         {
+             Assert.That(result, Has.Count.EqualTo(2));
+             Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseB));
+             Assert.That(result[0].SeriesComparisons, Has.Count.EqualTo(2));
+             Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseA));
+             Assert.That(result[1].SeriesComparisons, Has.Count.EqualTo(2));
+         });
     }
 
     [Test]
@@ -116,10 +116,10 @@ public sealed class TrainingServiceBuildComparisonReportTests
              },
          };
 
-        var exerciseDetails = new Dictionary<Guid, string>
-        {
-            [(Guid)exerciseId] = "Bench Press",
-        };
+         var exerciseDetails = new Dictionary<Id<Exercise>, string>
+         {
+             [exerciseId] = "Bench Press",
+         };
 
         // Act
         var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);

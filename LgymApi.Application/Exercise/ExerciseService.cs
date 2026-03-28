@@ -119,7 +119,7 @@ public sealed class ExerciseService : IExerciseService
                 throw AppException.BadRequest(Messages.Forbidden);
             }
 
-            if ((Guid)exercise.UserId.Value != (Guid)user.Id)
+            if (exercise.UserId.Value != user.Id)
             {
                 throw AppException.Forbidden(Messages.Forbidden);
             }
@@ -135,12 +135,12 @@ public sealed class ExerciseService : IExerciseService
     {
         var (exerciseId, name, bodyPart, description, image) = input;
 
-        if (!Guid.TryParse(exerciseId, out var exerciseGuid))
+        if (!Id<Domain.Entities.Exercise>.TryParse(exerciseId, out var parsedExerciseId))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync((Id<Domain.Entities.Exercise>)exerciseGuid, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync(parsedExerciseId, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -185,7 +185,9 @@ public sealed class ExerciseService : IExerciseService
         var cultureInput = culture?.Trim();
         var nameInput = name?.Trim();
 
-        if (!Guid.TryParse(exerciseId, out var exerciseGuid) || string.IsNullOrWhiteSpace(cultureInput) || string.IsNullOrWhiteSpace(nameInput))
+        if (!Id<Domain.Entities.Exercise>.TryParse(exerciseId, out var parsedExerciseId)
+            || string.IsNullOrWhiteSpace(cultureInput)
+            || string.IsNullOrWhiteSpace(nameInput))
         {
             throw AppException.BadRequest(Messages.FieldRequired);
         }
@@ -204,7 +206,7 @@ public sealed class ExerciseService : IExerciseService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync((Id<Domain.Entities.Exercise>)exerciseGuid, cancellationToken);
+        var exercise = await _exerciseRepository.FindByIdAsync(parsedExerciseId, cancellationToken);
         if (exercise == null)
         {
             throw AppException.NotFound(Messages.DidntFind);
@@ -216,7 +218,7 @@ public sealed class ExerciseService : IExerciseService
         }
 
         var normalizedCulture = cultureInput.ToLowerInvariant();
-        await _exerciseRepository.UpsertTranslationAsync((Id<Domain.Entities.Exercise>)exerciseGuid, normalizedCulture, nameInput, cancellationToken);
+        await _exerciseRepository.UpsertTranslationAsync(parsedExerciseId, normalizedCulture, nameInput, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 

@@ -106,7 +106,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             _logger.LogWarning(
                 ex,
                 "Failed to dispatch InvitationCreatedCommand for invitation {InvitationId}. Invitation creation is still successful.",
-                (Guid)invitation.Id);
+                invitation.Id);
         }
 
         return MapInvitation(invitation);
@@ -518,7 +518,7 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
     private static string CreateInvitationCode()
     {
-        return Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+        return Id<TrainerInvitation>.New().ToString().Replace("-", string.Empty, StringComparison.Ordinal)[..12].ToUpperInvariant();
     }
 
 }

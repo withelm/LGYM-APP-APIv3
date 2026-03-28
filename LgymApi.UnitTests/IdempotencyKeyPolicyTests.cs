@@ -96,7 +96,7 @@ public sealed class IdempotencyKeyPolicyTests
     {
         var cid = Id<CorrelationScope>.New();
         var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: $"T1_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}")
+            .UseInMemoryDatabase(databaseName: $"T1_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
             .Options;
 
         using var ctx = new AppDbContext(opts);
@@ -113,9 +113,9 @@ public sealed class IdempotencyKeyPolicyTests
     public async Task Persistence_DuplicateEnqueueDetectedByRepository()
     {
         var cid = Id<CorrelationScope>.New();
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: $"T2_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}")
-            .Options;
+         var opts = new DbContextOptionsBuilder<AppDbContext>()
+             .UseInMemoryDatabase(databaseName: $"T2_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
+             .Options;
 
         using var ctx = new AppDbContext(opts);
         await ctx.Database.EnsureCreatedAsync();
@@ -131,9 +131,9 @@ public sealed class IdempotencyKeyPolicyTests
     public async Task Persistence_AddOrGetExistingAsync_ReturnsDuplicateNotNewRecord()
     {
         var cid = Id<CorrelationScope>.New();
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: $"T3_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}")
-            .Options;
+         var opts = new DbContextOptionsBuilder<AppDbContext>()
+             .UseInMemoryDatabase(databaseName: $"T3_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
+             .Options;
 
         using var ctx = new AppDbContext(opts);
         await ctx.Database.EnsureCreatedAsync();
@@ -151,8 +151,8 @@ public sealed class IdempotencyKeyPolicyTests
     [Test]
     public async Task Persistence_ConcurrentDuplicateEnqueueResultsInSingleRecord()
     {
-        var cid = Id<CorrelationScope>.New();
-        var dbName = $"T4_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}";
+         var cid = Id<CorrelationScope>.New();
+         var dbName = $"T4_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}";
 
         var t1 = Task.Run(async () =>
         {
@@ -195,9 +195,9 @@ public sealed class IdempotencyKeyPolicyTests
      {
          var cid1 = Id<CorrelationScope>.New();
          var cid2 = Id<CorrelationScope>.New();
-         var opts = new DbContextOptionsBuilder<AppDbContext>()
-             .UseInMemoryDatabase(databaseName: $"T5_{((Guid)Id<IdempotencyKeyPolicyTests>.New()).ToString("N")}")
-             .Options;
+          var opts = new DbContextOptionsBuilder<AppDbContext>()
+              .UseInMemoryDatabase(databaseName: $"T5_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
+              .Options;
 
          using var ctx = new AppDbContext(opts);
          await ctx.Database.EnsureCreatedAsync();

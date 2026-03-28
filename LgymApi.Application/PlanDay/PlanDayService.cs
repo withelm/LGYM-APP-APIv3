@@ -65,7 +65,7 @@ public sealed class PlanDayService : IPlanDayService
         var order = 0;
         foreach (var exercise in exercises)
         {
-            if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
+            if (!Id<LgymApi.Domain.Entities.Exercise>.TryParse(exercise.ExerciseId, out var exerciseId))
             {
                 continue;
             }
@@ -74,7 +74,7 @@ public sealed class PlanDayService : IPlanDayService
             {
                 Id = Id<PlanDayExerciseEntity>.New(),
                 PlanDayId = planDay.Id,
-                ExerciseId = (Id<LgymApi.Domain.Entities.Exercise>)exerciseId,
+                ExerciseId = exerciseId,
                 Order = order++,
                 Series = exercise.Series,
                 Reps = exercise.Reps
@@ -135,7 +135,7 @@ public sealed class PlanDayService : IPlanDayService
             var order = 0;
             foreach (var exercise in exercises)
             {
-                if (!Guid.TryParse(exercise.ExerciseId, out var exerciseId))
+                if (!Id<LgymApi.Domain.Entities.Exercise>.TryParse(exercise.ExerciseId, out var exerciseId))
                 {
                     continue;
                 }
@@ -144,7 +144,7 @@ public sealed class PlanDayService : IPlanDayService
                 {
                     Id = Id<PlanDayExerciseEntity>.New(),
                     PlanDayId = planDay.Id,
-                    ExerciseId = (Id<LgymApi.Domain.Entities.Exercise>)exerciseId,
+                    ExerciseId = exerciseId,
                     Order = order++,
                     Series = exercise.Series,
                     Reps = exercise.Reps

@@ -12,14 +12,23 @@ public sealed class TypedIdTests
     private class User { }
     private class Plan { }
 
+    // Helper to parse fixed test IDs from UUID string literals
+    private static Id<T> ParseTestId<T>(string uuid)
+    {
+        if (!Id<T>.TryParse(uuid, out var id))
+        {
+            throw new ArgumentException($"Invalid UUID: {uuid}", nameof(uuid));
+        }
+        return id;
+    }
+
     #region Equality and Default Behavior
 
     [Test]
     public void RecordStruct_ImplementsValueEquality()
     {
-        var fixedGuid = System.Guid.Parse("00000000-0000-0000-0000-000000000001");
-        var id1 = new Id<User>(fixedGuid);
-        var id2 = new Id<User>(fixedGuid);
+        var id1 = ParseTestId<User>("00000000-0000-0000-0000-000000000001");
+        var id2 = ParseTestId<User>("00000000-0000-0000-0000-000000000001");
 
         Assert.That(id1, Is.EqualTo(id2));
     }
@@ -27,10 +36,8 @@ public sealed class TypedIdTests
     [Test]
     public void RecordStruct_DifferentiatesDifferentValues()
     {
-        var guid1 = System.Guid.Parse("00000000-0000-0000-0000-000000000001");
-        var guid2 = System.Guid.Parse("00000000-0000-0000-0000-000000000002");
-        var id1 = new Id<User>(guid1);
-        var id2 = new Id<User>(guid2);
+        var id1 = ParseTestId<User>("00000000-0000-0000-0000-000000000001");
+        var id2 = ParseTestId<User>("00000000-0000-0000-0000-000000000002");
 
         Assert.That(id1, Is.Not.EqualTo(id2));
     }
@@ -40,8 +47,8 @@ public sealed class TypedIdTests
     {
         var empty = Id<User>.Empty;
 
-        Assert.That(empty.GetValue(), Is.EqualTo(default(System.Guid)));
         Assert.That(empty.IsEmpty, Is.True);
+        Assert.That(empty, Is.EqualTo(default(Id<User>)));
     }
 
     [Test]
@@ -49,8 +56,8 @@ public sealed class TypedIdTests
     {
         Id<User> id = default;
 
-        Assert.That(id.GetValue(), Is.EqualTo(default(System.Guid)));
         Assert.That(id.IsEmpty, Is.True);
+        Assert.That(id, Is.EqualTo(Id<User>.Empty));
     }
 
     [Test]
@@ -64,11 +71,11 @@ public sealed class TypedIdTests
     [Test]
     public void Nullable_AllowsNonNullValue()
     {
-        var guid = Id<User>.New().GetValue();
-        Id<User>? id = new Id<User>(guid);
+        var id = Id<User>.New();
+        Id<User>? nullableId = id;
 
-        Assert.That(id, Is.Not.Null);
-        Assert.That(id.Value.GetValue(), Is.EqualTo(guid));
+        Assert.That(nullableId, Is.Not.Null);
+        Assert.That(nullableId.Value, Is.EqualTo(id));
     }
 
     #endregion
@@ -80,8 +87,8 @@ public sealed class TypedIdTests
     {
         var id = Id<User>.New();
 
-        Assert.That(id.GetValue(), Is.Not.EqualTo(default(System.Guid)));
         Assert.That(id.IsEmpty, Is.False);
+        Assert.That(id, Is.Not.EqualTo(Id<User>.Empty));
     }
 
     [Test]
@@ -100,21 +107,18 @@ public sealed class TypedIdTests
     [Test]
     public void ExplicitOperator_UnwrapsGuid()
     {
-        var guid = System.Guid.Parse("00000000-0000-0000-0000-000000000099");
-        var id = new Id<User>(guid);
+        var id = ParseTestId<User>("00000000-0000-0000-0000-000000000099");
+        var unwrapped = id.GetValue();
 
-        var unwrapped = (System.Guid)id;
-
-        Assert.That(unwrapped, Is.EqualTo(guid));
+        Assert.That(unwrapped.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000099"));
     }
 
     [Test]
     public void ExplicitOperator_WrapsGuid()
     {
-        var guid = System.Guid.Parse("00000000-0000-0000-0000-000000000099");
-        var id = (Id<User>)guid;
-
-        Assert.That(id.GetValue(), Is.EqualTo(guid));
+        var id = ParseTestId<User>("00000000-0000-0000-0000-000000000099");
+        
+        Assert.That(id.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000099"));
     }
 
     [Test]
@@ -124,9 +128,9 @@ public sealed class TypedIdTests
         // If this compiles, the design is violated.
         // If this does not compile, the test passes.
 #pragma warning disable CS0219 // Variable is assigned but its value is never used
-        var guid = Id<User>.New().GetValue();
+        var id = Id<User>.New();
         // Uncomment the following line to verify compilation fails:
-        // Id<User> id = guid; // This should NOT compile
+        // Id<User> id2 = id.GetValue(); // This should NOT compile
 #pragma warning restore CS0219
     }
 
@@ -139,7 +143,7 @@ public sealed class TypedIdTests
 #pragma warning disable CS0219 // Variable is assigned but its value is never used
         var id = Id<User>.New();
         // Uncomment the following line to verify compilation fails:
-        // System.Guid guid = id; // This should NOT compile
+        // var unwrapped = id; // Cannot assign Id<T> to Guid implicitly
 #pragma warning restore CS0219
     }
 
@@ -154,7 +158,7 @@ public sealed class TypedIdTests
         var planId = Id<Plan>.New();
 
         // userId and planId have different types at compile time
-        // This test documents that intent even though runtime equates them if Guid is same
+        // This test documents that intent even though runtime equates them if underlying value is same
         Assert.That(userId.GetType().Name, Is.EqualTo("Id`1"));
         Assert.That(planId.GetType().Name, Is.EqualTo("Id`1"));
         
@@ -169,8 +173,7 @@ public sealed class TypedIdTests
     [Test]
     public void ToString_ReturnsGuidString()
     {
-        var guid = System.Guid.Parse("00000000-0000-0000-0000-000000000077");
-        var id = new Id<User>(guid);
+        var id = ParseTestId<User>("00000000-0000-0000-0000-000000000077");
 
         Assert.That(id.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000077"));
     }
@@ -182,10 +185,10 @@ public sealed class TypedIdTests
     [Test]
     public void Value_Property_ExposesSingleGuidField()
     {
-        var guid = Id<User>.New().GetValue();
-        var id = new Id<User>(guid);
+        var id = Id<User>.New();
+        var value = id.GetValue();
 
-        Assert.That(id.GetValue(), Is.EqualTo(guid));
+        Assert.That(value.ToString().Length, Is.EqualTo(36)); // Standard UUID format
     }
 
     #endregion
@@ -195,7 +198,7 @@ public sealed class TypedIdTests
     [Test]
     public void IsEmpty_ReturnsTrueForGuidEmpty()
     {
-        var id = new Id<User>(default(System.Guid));
+        var id = Id<User>.Empty;
 
         Assert.That(id.IsEmpty, Is.True);
     }
@@ -222,8 +225,7 @@ public sealed class TypedIdTests
     [Test]
     public void Serialize_ProducesGuidString()
     {
-        var guid = System.Guid.Parse("00000000-0000-0000-0000-000000000042");
-        var id = new Id<User>(guid);
+        var id = ParseTestId<User>("00000000-0000-0000-0000-000000000042");
 
         var json = JsonSerializer.Serialize(id, _serializerOptions);
 
@@ -239,19 +241,18 @@ public sealed class TypedIdTests
         
         var id = JsonSerializer.Deserialize<Id<User>>(guidString, _serializerOptions);
 
-        Assert.That(id.GetValue(), Is.EqualTo(System.Guid.Parse("00000000-0000-0000-0000-000000000043")));
+        Assert.That(id.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000043"));
     }
 
     [Test]
     public void RoundTrip_SerializeDeserialize_PreservesValue()
     {
-        var originalGuid = Id<User>.New().GetValue();
-        var id = new Id<User>(originalGuid);
+        var originalId = Id<User>.New();
 
-        var json = JsonSerializer.Serialize(id, _serializerOptions);
+        var json = JsonSerializer.Serialize(originalId, _serializerOptions);
         var deserialized = JsonSerializer.Deserialize<Id<User>>(json, _serializerOptions);
 
-        Assert.That(deserialized.GetValue(), Is.EqualTo(originalGuid));
+        Assert.That(deserialized, Is.EqualTo(originalId));
     }
 
     [Test]
@@ -263,7 +264,7 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(original, _serializerOptions);
         var deserialized = JsonSerializer.Deserialize<UserDto>(json, _serializerOptions);
 
-        Assert.That(deserialized!.Id.GetValue(), Is.EqualTo(userId.GetValue()));
+        Assert.That(deserialized!.Id, Is.EqualTo(userId));
     }
 
     [Test]
@@ -317,7 +318,7 @@ public sealed class TypedIdTests
     [Test]
     public void Serialize_NullableId_WithValue_ProducesGuidString()
     {
-        Id<User>? id = new Id<User>(System.Guid.Parse("00000000-0000-0000-0000-000000000044"));
+        Id<User>? id = ParseTestId<User>("00000000-0000-0000-0000-000000000044");
 
         var json = JsonSerializer.Serialize(id, _serializerOptions);
 
@@ -342,7 +343,7 @@ public sealed class TypedIdTests
         var id = JsonSerializer.Deserialize<Id<User>?>(guidJson, _serializerOptions);
 
         Assert.That(id, Is.Not.Null);
-        Assert.That(id!.Value.GetValue(), Is.EqualTo(System.Guid.Parse("00000000-0000-0000-0000-000000000045")));
+        Assert.That(id!.Value.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000045"));
     }
 
     [Test]
@@ -358,14 +359,14 @@ public sealed class TypedIdTests
     [Test]
     public void RoundTrip_NullableId_WithValue_PreservesValue()
     {
-        var originalGuid = Id<User>.New().GetValue();
-        Id<User>? id = new Id<User>(originalGuid);
+        var originalId = Id<User>.New();
+        Id<User>? id = originalId;
 
         var json = JsonSerializer.Serialize(id, _serializerOptions);
         var deserialized = JsonSerializer.Deserialize<Id<User>?>(json, _serializerOptions);
 
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.Value.GetValue(), Is.EqualTo(originalGuid));
+        Assert.That(deserialized!.Value, Is.EqualTo(originalId));
     }
 
     [Test]
@@ -400,7 +401,7 @@ public sealed class TypedIdTests
         var deserialized = JsonSerializer.Deserialize<UserWithOptionalIdDto>(json, _serializerOptions);
 
         Assert.That(deserialized!.Id, Is.Not.Null);
-        Assert.That(deserialized.Id!.Value.GetValue(), Is.EqualTo(userId.GetValue()));
+        Assert.That(deserialized.Id!.Value, Is.EqualTo(userId));
     }
 
     #endregion
@@ -410,13 +411,12 @@ public sealed class TypedIdTests
     [Test]
     public void SharedSerializationOptions_Supports_TypedIdSerialization()
     {
-        var userId = Id<User>.New();
-        var id = new Id<User>(userId.GetValue());
+        var id = Id<User>.New();
 
         var json = JsonSerializer.Serialize(id, SharedSerializationOptions.Current);
         var deserialized = JsonSerializer.Deserialize<Id<User>>(json, SharedSerializationOptions.Current);
 
-        Assert.That(deserialized.GetValue(), Is.EqualTo(id.GetValue()));
+        Assert.That(deserialized, Is.EqualTo(id));
     }
 
     [Test]
@@ -428,7 +428,7 @@ public sealed class TypedIdTests
         var deserialized = JsonSerializer.Deserialize<Id<User>?>(json, SharedSerializationOptions.Current);
 
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.Value.GetValue(), Is.EqualTo(id!.Value.GetValue()));
+        Assert.That(deserialized!.Value, Is.EqualTo(id!.Value));
     }
 
     #endregion
@@ -444,16 +444,16 @@ public sealed class TypedIdTests
         var deserialized = JsonSerializer.Deserialize<CreatePlanRequest>(requestJson, _serializerOptions);
 
         Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId.GetValue(), Is.EqualTo(System.Guid.Parse("00000000-0000-0000-0000-000000000050")));
-        Assert.That(deserialized.PlanId.GetValue(), Is.EqualTo(System.Guid.Parse("00000000-0000-0000-0000-000000000051")));
+        Assert.That(deserialized!.UserId.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000050"));
+        Assert.That(deserialized.PlanId.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000051"));
     }
 
     [Test]
     public void ModelBinding_SerializesForResponseJson_WithTypedId()
     {
         // Simulates outgoing HTTP response body with typed ID
-        var userId = System.Guid.Parse("00000000-0000-0000-0000-000000000052");
-        var response = new UserResponse { Id = new Id<User>(userId) };
+        var id = ParseTestId<User>("00000000-0000-0000-0000-000000000052");
+        var response = new UserResponse { Id = id };
 
         var json = JsonSerializer.Serialize(response, _serializerOptions);
 
@@ -472,15 +472,15 @@ public sealed class TypedIdTests
 
         var request = new CreatePlanRequest
         {
-            UserId = (Id<User>)Id<User>.New().GetValue(),
-            PlanId = (Id<Plan>)Id<Plan>.New().GetValue()
+            UserId = Id<User>.New(),
+            PlanId = Id<Plan>.New()
         };
 
         var json = JsonSerializer.Serialize(request, options);
         var parsed = JsonSerializer.Deserialize<CreatePlanRequest>(json, options);
 
-        Assert.That(parsed!.UserId.GetValue(), Is.EqualTo(request.UserId.GetValue()));
-        Assert.That(parsed.PlanId.GetValue(), Is.EqualTo(request.PlanId.GetValue()));
+        Assert.That(parsed!.UserId, Is.EqualTo(request.UserId));
+        Assert.That(parsed.PlanId, Is.EqualTo(request.PlanId));
     }
 
     #endregion

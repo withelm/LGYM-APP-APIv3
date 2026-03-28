@@ -54,3 +54,159 @@
 ### Task 8 Status
 **COMPLETED** - All API layer files (middleware, controllers, validators) migrated from direct Guid to typed IDs. Zero handwritten Guid usage remains in LgymApi.Api layer.
 
+
+## 2026-03-28 Task 17: Roslyn Semantic Analysis Research for Strict Guid Detection
+
+### Research Summary
+Authoritative documentation and real-world analyzer patterns confirm the semantic-model approach is mandatory for reliable type detection. Syntax-only scanning cannot distinguish between type references, namespace paths, comments, or string literals.
+
+### Core Semantic Analysis Patterns
+
+#### 1. SemanticModel.GetTypeInfo() - Primary Type Detection
+Official Microsoft Docs: https://learn.microsoft.com/en-us/dotnet/csharp/roslyn-sdk/get-started/semantic-analysis
+
+Pattern: For any syntax node representing an expression or type reference, use SemanticModel.GetTypeInfo(node) to resolve the semantic type symbol.
+
+Use Cases:
+- Variable declarations: int x = 0 returns ITypeSymbol for System.Int32
+- Object creation: new Guid() returns ITypeSymbol for System.Guid
+- Casts: (Guid)value via GetTypeInfo(castExpression.Type)
+- Generic arguments: Inspect INamedTypeSymbol.TypeArguments collection
+
+Real-world Evidence: GitHub codeql Roslyn extractor uses GetModel(node).GetTypeInfo(node).Type for object creation analysis
+
+#### 2. Compilation.GetTypeByMetadataName() - Reference Type Resolution
+Official Microsoft Docs: https://learn.microsoft.com/en-us/dotnet/csharp/roslyn-sdk/tutorials/how-to-write-csharp-analyzer-code-fix
+
+Pattern: Resolve well-known types by fully qualified metadata name for comparison.
+Example: INamedTypeSymbol guidType = compilation.GetTypeByMetadataName("System.Guid");
+
+Pitfall: Returns null if type does not exist or multiple assemblies define the same type (ambiguous reference).
+
+#### 3. SymbolEqualityComparer - Type Comparison
+Official Meziantou blog: https://www.meziantou.net/working-with-types-in-a-roslyn-analyzer.htm
+
+Pattern: NEVER use == operator for ITypeSymbol comparison. Roslyn does not guarantee reference identity for symbols.
+
+Correct: SymbolEqualityComparer.Default.Equals(nodeType, guidType)
+Wrong: nodeType == guidType (may produce false negatives)
+
+Variants:
+- SymbolEqualityComparer.Default: Ignores nullable annotations
+- SymbolEqualityComparer.IncludeNullability: Considers nullable annotations
+
+#### 4. Generic Type Detection
+Pattern: Check INamedTypeSymbol.TypeArguments collection for generic parameters.
+Recursive Pattern for Nested Generics: Dictionary<int, List<Guid>> requires recursive traversal of TypeArguments.
+
+Example for Nullable<T>:
+if (namedType.ConstructedFrom.SpecialType == SpecialType.System_Nullable_T)
+{
+    var underlyingType = namedType.TypeArguments[0];
+}
+
+#### 5. typeof(Guid) Detection
+Official Docs: https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typeofexpressionsyntax
+
+Pattern: typeof(T) is a TypeOfExpressionSyntax node. Get the type argument and resolve it.
+TypeOfExpressionSyntax has a Type property; use GetTypeInfo(typeOfExpression.Type) to resolve.
+
+### Syntax Node Registration Patterns
+
+#### 6. RegisterSyntaxNodeAction() - Node-Kind Filtering
+Official Docs: https://learn.microsoft.com/en-us/dotnet/csharp/roslyn-sdk/tutorials/how-to-write-csharp-analyzer-code-fix
+
+Pattern: Register analyzer callbacks for specific syntax node kinds to minimize performance overhead.
+
+Recommended SyntaxKind set for Guid detection:
+- SyntaxKind.IdentifierName (Type references: Guid x)
+- SyntaxKind.GenericName (Generic type refs: List<Guid>)
+- SyntaxKind.ObjectCreationExpression (new Guid(...))
+- SyntaxKind.CastExpression ((Guid)value)
+- SyntaxKind.TypeOfExpression (typeof(Guid))
+- SyntaxKind.MemberAccessExpression (Guid.Empty, Guid.NewGuid)
+- SyntaxKind.InvocationExpression (Guid.Parse(), Guid.TryParse())
+
+Real-world Evidence: StyleCop SA1110 Analyzer registers 20+ syntax node kinds for comprehensive detection.
+
+Performance Tip: Register minimal node kinds. Semantic model queries are expensive; syntax filtering is cheap.
+
+### Critical Pitfalls and False Positive/Negative Scenarios
+
+#### 7. False Negative: Implicit Conversions
+Problem: Code like object x = Guid.NewGuid() has GetTypeInfo(node).Type == System.Object, not System.Guid.
+
+Solution: Use GetTypeInfo(node).ConvertedType to detect post-conversion type, or analyze the initializer expression separately.
+
+Pattern:
+var declaredType = context.SemanticModel.GetTypeInfo(variableDeclaration.Type).Type;
+var initializerType = context.SemanticModel.GetTypeInfo(initializer).Type;
+// Check both declared type AND initializer type for Guid
+
+#### 8. False Negative: var Declarations
+Problem: var x = Guid.NewGuid() has IdentifierName syntax node with text "var", not "Guid".
+
+Solution: For var declarations, ALWAYS inspect the initializer's type via GetTypeInfo(initializer).
+
+Pattern:
+if (typeSyntax.IsVar)
+{
+    var initializerType = context.SemanticModel.GetTypeInfo(initializer.Value).Type;
+}
+
+Official Microsoft tutorial demonstrates explicit IsVar check and type inference handling.
+
+#### 9. False Positive: Namespaces, Comments, String Literals
+Problem: Regex pattern matches System.Guid namespace, comments with "Guid", string literals "Guid".
+
+Solution: ONLY analyze syntax nodes that represent semantic code elements. Comments and literals are SyntaxTrivia and LiteralExpressionSyntax, not type references.
+
+Filter Pattern:
+- Skip trivia (comments, whitespace) via node.IsKind(SyntaxKind.SingleLineCommentTrivia)
+- Skip string literals via LiteralExpressionSyntax with StringLiteralExpression kind
+
+#### 10. False Positive: Aliases and Using Directives
+Problem: using GuidAlias = System.Guid; followed by GuidAlias x should trigger detection, but using System; should not.
+
+Solution: GetTypeInfo() resolves aliases correctly. A GuidAlias x declaration will return System.Guid as the semantic type, even though syntax text is "GuidAlias".
+
+Pattern: GetTypeInfo resolves through aliases automatically. type.ToString() == "System.Guid" even if syntax is "GuidAlias".
+
+Real-world Evidence: Roslyn GlobalUsingDirectiveTests verify alias resolution with GetTypeInfo.
+
+### Checklist for Strict Semantic Guid Detection
+
+Detection Scope (must detect all):
+- Type declarations: Guid id, public Guid UserId { get; set; }
+- Invocations: Guid.NewGuid(), Guid.TryParse(), Guid.Parse()
+- Member access: Guid.Empty
+- Object creation: new Guid(...), new Guid(bytes)
+- Casts: (Guid)value, (Guid?)nullableValue
+- typeof: typeof(Guid), typeof(Guid?)
+- Generic arguments: List<Guid>, Dictionary<Guid, T>, Nullable<Guid>
+- Nested generics: Dictionary<int, List<Guid>>
+- var declarations: var x = Guid.NewGuid()
+- Implicit conversions: object x = Guid.NewGuid()
+- Aliases: using G = System.Guid; G x;
+
+Exclusion Scope (must NOT detect):
+- Comments: // Guid usage, /* System.Guid */
+- String literals: "Guid", "System.Guid"
+- Namespace paths in using directives: using System; (not a type reference)
+- Allowed bridge code: ValueConverter<Id<T>, Guid> type parameters in excluded files
+- Allowed constructor: new Guid("literal") in Id.cs (explicitly excluded file)
+
+### Architecture Test Hardening Recommendations
+
+1. Use RegisterCompilationStartAction: Resolve System.Guid symbol once per compilation, not per file.
+2. Register minimal SyntaxKind set: IdentifierName, GenericName, ObjectCreationExpression, CastExpression, TypeOfExpression, MemberAccessExpression, InvocationExpression.
+3. Always use SymbolEqualityComparer.Default.Equals() for type comparison.
+4. Recursively traverse TypeArguments for generic types (detect nested Dictionary<int, List<Guid>>).
+5. Check both Type and ConvertedType from GetTypeInfo() to handle implicit conversions.
+6. Handle IsVar declarations by inspecting initializer type, not declared type syntax.
+7. Test edge cases: Nullable<Guid>, var declarations, tuple types (Guid, int), array types Guid[], pointer types Guid* (unsafe context).
+
+### Authoritative References
+- Official Roslyn Semantic Analysis Tutorial: https://learn.microsoft.com/en-us/dotnet/csharp/roslyn-sdk/get-started/semantic-analysis
+- Official Analyzer Tutorial: https://learn.microsoft.com/en-us/dotnet/csharp/roslyn-sdk/tutorials/how-to-write-csharp-analyzer-code-fix
+- Type Comparison Best Practices: https:/

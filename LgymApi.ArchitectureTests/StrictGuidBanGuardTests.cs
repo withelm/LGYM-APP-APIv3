@@ -35,7 +35,7 @@ public sealed class StrictGuidBanGuardTests
 
         foreach (var tree in syntaxTrees)
         {
-            // Skip excluded paths: migrations, generated files, and Id.cs
+            // Skip excluded paths: migrations and Id.cs
             if (IsExcludedPath(tree.FilePath))
             {
                 continue;
@@ -260,13 +260,8 @@ public sealed class StrictGuidBanGuardTests
             return true;
         }
 
-        // Exclude the sole handwritten Guid-allowed file: Id.cs in ValueObjects
-        if (normalized.Contains("ValueObjects/Id.cs", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return false;
+        // Exclude the sole handwritten Guid-allowed file: LgymApi.Domain/ValueObjects/Id.cs
+        return normalized.EndsWith("/LgymApi.Domain/ValueObjects/Id.cs", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -276,6 +271,15 @@ public sealed class StrictGuidBanGuardTests
     {
         try
         {
+            var normalized = Normalize(tree.FilePath);
+            if (normalized.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".g.i.cs", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".designer.cs", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".generated.cs", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
             var fileContent = File.ReadAllText(tree.FilePath);
             var lines = fileContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             

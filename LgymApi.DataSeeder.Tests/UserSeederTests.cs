@@ -1,5 +1,6 @@
 using LgymApi.Application.Services;
 using LgymApi.DataSeeder.Seeders;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;

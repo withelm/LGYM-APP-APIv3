@@ -39,8 +39,8 @@ public sealed class GymService : IGymService
             throw AppException.BadRequest(Messages.FieldRequired);
         }
 
-        Guid? addressId = null;
-        if (!string.IsNullOrWhiteSpace(address) && Guid.TryParse(address, out var parsedAddressId))
+        Id<Address>? addressId = null;
+        if (!string.IsNullOrWhiteSpace(address) && Id<Address>.TryParse(address, out var parsedAddressId))
         {
             addressId = parsedAddressId;
         }
@@ -50,7 +50,7 @@ public sealed class GymService : IGymService
             Id = Id<LgymApi.Domain.Entities.Gym>.New(),
             UserId = currentUser.Id,
             Name = name,
-            AddressId = addressId.HasValue ? (Id<Address>)addressId.Value : null,
+            AddressId = addressId,
             IsDeleted = false
         };
 
@@ -164,9 +164,9 @@ public sealed class GymService : IGymService
         }
 
         gym.Name = name;
-        if (!string.IsNullOrWhiteSpace(address) && Guid.TryParse(address, out var addressId))
+        if (!string.IsNullOrWhiteSpace(address) && Id<Address>.TryParse(address, out var addressId))
         {
-            gym.AddressId = (Id<Address>)addressId;
+            gym.AddressId = addressId;
         }
 
         await _gymRepository.UpdateAsync(gym, cancellationToken);

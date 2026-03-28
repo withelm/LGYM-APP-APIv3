@@ -593,7 +593,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     public async Task GetDashboardTrainees_WithInvalidQueryParam_ReturnsBadRequestWithResourceMessage(string queryString, string expectedMessagePropertyName)
     {
         var uniqueKey = queryString.Replace("=", "-").Replace("&", "-");
-        var trainer = await SeedTrainerAsync($"trainer-dashboard-{uniqueKey}", $"trainer-dashboard-{Id<User>.New():N}@example.com");
+        var trainer = await SeedTrainerAsync(
+            $"trainer-dashboard-{uniqueKey}",
+            $"trainer-dashboard-{Id<TrainerRelationshipTests>.New().ToString().Replace("-", string.Empty, StringComparison.Ordinal)}@example.com");
         SetAuthorizationHeader(trainer.Id);
 
         var response = await Client.GetAsync($"/api/trainer/trainees?{queryString}");
@@ -621,7 +623,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     [TestCase(101)]
     public async Task GetDashboardTrainees_WithInvalidPageSize_ReturnsBadRequestWithResourceMessage(int pageSize)
     {
-        var trainer = await SeedTrainerAsync($"trainer-dashboard-invalid-pagesize-{pageSize}", $"trainer-dashboard-invalid-pagesize-{Id<User>.New():N}@example.com");
+        var trainer = await SeedTrainerAsync(
+            $"trainer-dashboard-invalid-pagesize-{pageSize}",
+            $"trainer-dashboard-invalid-pagesize-{Id<TrainerRelationshipTests>.New().ToString().Replace("-", string.Empty, StringComparison.Ordinal)}@example.com");
         SetAuthorizationHeader(trainer.Id);
 
         var response = await Client.GetAsync($"/api/trainer/trainees?pageSize={pageSize}");
