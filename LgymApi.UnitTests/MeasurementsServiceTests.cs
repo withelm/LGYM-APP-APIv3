@@ -1,0 +1,160 @@
+using LgymApi.Application.Exceptions;
+using LgymApi.Application.Features.Measurements;
+using LgymApi.Application.Repositories;
+using LgymApi.Application.Units;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
+
+namespace LgymApi.UnitTests;
+
+[TestFixture]
+public sealed class MeasurementsServiceTests
+{
+    [Test]
+    public async Task GetMeasurementDetailAsync_WhenMeasurementBelongsToDifferentUser_ThrowsForbidden()
+    {
+        var currentUser = new User { Id = Id<User>.New(), Name = "current", Email = "current-measure@example.com", ProfileRank = "Rookie" };
+        var foreignUserId = Id<User>.New();
+        var measurementId = Id<Measurement>.New();
+        var measurement = new Measurement
+        {
+            Id = measurementId,
+            UserId = foreignUserId,
+            BodyPart = BodyParts.Chest,
+            Unit = HeightUnits.Centimeters.ToString(),
+            Value = 100
+        };
+
+        var service = CreateService(findById: (_, _) => Task.FromResult<Measurement?>(measurement));
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await service.GetMeasurementDetailAsync(currentUser, measurementId));
+
+        Assert.That(exception!.StatusCode, Is.EqualTo(403));
+    }
+
+    [Test]
+    public async Task GetMeasurementsListAsync_WhenStoredUnitIsInvalid_ThrowsBadRequest()
+    {
+        var userId = Id<User>.New();
+        var currentUser = new User { Id = userId, Name = "user", Email = "list-invalid-unit@example.com", ProfileRank = "Rookie" };
+
+        var measurements = new List<Measurement>
+        {
+            new()
+            {
+                Id = Id<Measurement>.New(),
+                UserId = userId,
+                BodyPart = BodyParts.Chest,
+                Unit = "invalid-unit",
+                Value = 95,
+                CreatedAt = DateTimeOffset.UtcNow
+            }
+        };
+
+        var service = CreateService(getByUser: (_, _, _) => Task.FromResult(measurements));
+
+        var exception = Assert.ThrowsAsync<AppException>(async () =>
+            await service.GetMeasurementsListAsync(currentUser, userId, BodyParts.Chest, HeightUnits.Centimeters));
+
+        Assert.That(exception!.StatusCode, Is.EqualTo(400));
+    }
+
+    [Test]
+    public async Task GetMeasurementsTrendAsync_WhenStartValueIsNearZero_ReturnsZeroPercentageAndFlatDirection()
+    {
+        var userId = Id<User>.New();
+        var currentUser = new User { Id = userId, Name = "user", Email = "trend-zero@example.com", ProfileRank = "Rookie" };
+        var createdAt = DateTimeOffset.UtcNow;
+
+        var measurements = new List<Measurement>
+        {
+            new()
+            {
+                Id = Id<Measurement>.New(),
+                UserId = userId,
+                BodyPart = BodyParts.Chest,
+                Unit = HeightUnits.Centimeters.ToString(),
+                Value = 0,
+                CreatedAt = createdAt
+            },
+            new()
+            {
+                Id = Id<Measurement>.New(),
+                UserId = userId,
+                BodyPart = BodyParts.Chest,
+                Unit = HeightUnits.Centimeters.ToString(),
+                Value = 0,
+                CreatedAt = createdAt.AddMinutes(5)
+            }
+        };
+
+        var service = CreateService(getByUser: (_, _, _) => Task.FromResult(measurements));
+
+        var trend = await service.GetMeasurementsTrendAsync(currentUser, userId, BodyParts.Chest, HeightUnits.Centimeters);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(trend.ChangePercentage, Is.EqualTo(0));
+            Assert.That(trend.Direction, Is.EqualTo("flat"));
+            Assert.That(trend.Points, Is.EqualTo(2));
+        });
+    }
+
+    private static MeasurementsService CreateService(
+        Func<Id<Measurement>, CancellationToken, Task<Measurement?>>? findById = null,
+        Func<Id<User>, BodyParts?, CancellationToken, Task<List<Measurement>>>? getByUser = null)
+    {
+        var measurementRepository = new StubMeasurementRepository
+        {
+            FindByIdHandler = findById ?? ((_, _) => Task.FromResult<Measurement?>(null)),
+            GetByUserHandler = getByUser ?? ((_, _, _) => Task.FromResult(new List<Measurement>()))
+        };
+
+        var converter = new StubHeightUnitConverter();
+        var unitOfWork = new StubUnitOfWork();
+
+        return new MeasurementsService(measurementRepository, converter, unitOfWork);
+    }
+
+    private sealed class StubMeasurementRepository : IMeasurementRepository
+    {
+        public Func<Id<Measurement>, CancellationToken, Task<Measurement?>> FindByIdHandler { get; init; } = (_, _) => Task.FromResult<Measurement?>(null);
+        public Func<Id<User>, BodyParts?, CancellationToken, Task<List<Measurement>>> GetByUserHandler { get; init; } = (_, _, _) => Task.FromResult(new List<Measurement>());
+
+        public Task AddAsync(Measurement measurement, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<Measurement?> FindByIdAsync(Id<Measurement> id, CancellationToken cancellationToken = default)
+            => FindByIdHandler(id, cancellationToken);
+
+        public Task<List<Measurement>> GetByUserAsync(Id<User> userId, BodyParts? bodyPart, CancellationToken cancellationToken = default)
+            => GetByUserHandler(userId, bodyPart, cancellationToken);
+    }
+
+    private sealed class StubHeightUnitConverter : IUnitConverter<HeightUnits>
+    {
+        public double Convert(double value, HeightUnits fromUnit, HeightUnits toUnit)
+        {
+            if (fromUnit == toUnit)
+            {
+                return value;
+            }
+
+            return (fromUnit, toUnit) switch
+            {
+                (HeightUnits.Meters, HeightUnits.Centimeters) => value * 100d,
+                (HeightUnits.Centimeters, HeightUnits.Meters) => value / 100d,
+                _ => value
+            };
+        }
+    }
+
+    private sealed class StubUnitOfWork : IUnitOfWork
+    {
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
+
+        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+}
