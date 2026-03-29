@@ -79,9 +79,32 @@ public sealed class BackgroundActionOrchestratorService
             return;
         }
 
+        if (envelope.Status == ActionExecutionStatus.Processing)
+        {
+            _logger.LogInformation(
+                "Command envelope {EnvelopeId} is already processing. Skipping duplicate redelivery.",
+                envelopeId);
+            return;
+        }
+
+        var currentAttemptNumber = envelope.GetExecutionAttemptCount();
+        var envelopeAttemptLog = new ActionExecutionLog
+        {
+            Id = Id<ActionExecutionLog>.New(),
+            CommandEnvelopeId = envelope.Id,
+            ActionType = ActionExecutionLogType.Execute,
+            Status = ActionExecutionStatus.Processing,
+            AttemptNumber = currentAttemptNumber,
+            HandlerTypeName = null,
+            ErrorMessage = null,
+            ErrorDetails = null
+        };
+
         // Update status to Processing
         envelope.Status = ActionExecutionStatus.Processing;
         envelope.LastAttemptAt = DateTimeOffset.UtcNow;
+        envelope.NextAttemptAt = null;
+        envelope.ExecutionLogs.Add(envelopeAttemptLog);
         await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -97,7 +120,10 @@ public sealed class BackgroundActionOrchestratorService
                 "Failed to resolve command type for envelope {EnvelopeId}. Marking dead-lettered.",
                 envelopeId);
 
-            envelope.MarkDeadLettered();
+            envelopeAttemptLog.Status = ActionExecutionStatus.Failed;
+            envelopeAttemptLog.ErrorMessage = ex.Message;
+            envelopeAttemptLog.ErrorDetails = ex.ToString();
+            envelope.MarkDeadLettered("Dead-lettered because command type could not be resolved", ex.ToString());
             await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return;
@@ -116,7 +142,10 @@ public sealed class BackgroundActionOrchestratorService
                 "Failed to deserialize command payload for envelope {EnvelopeId}. Marking dead-lettered.",
                 envelopeId);
 
-            envelope.MarkDeadLettered();
+            envelopeAttemptLog.Status = ActionExecutionStatus.Failed;
+            envelopeAttemptLog.ErrorMessage = ex.Message;
+            envelopeAttemptLog.ErrorDetails = ex.ToString();
+            envelope.MarkDeadLettered("Dead-lettered because command payload could not be deserialized", ex.ToString());
             await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return;
@@ -144,6 +173,7 @@ public sealed class BackgroundActionOrchestratorService
                 commandType.FullName,
                 envelopeId);
 
+            envelopeAttemptLog.Status = ActionExecutionStatus.Completed;
             envelope.MarkCompleted();
             await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -187,14 +217,12 @@ public sealed class BackgroundActionOrchestratorService
         // Evaluate results and update envelope status
         var hasFailures = results.Any(r => !r.Success);
 
-        // Calculate current attempt number BEFORE adding new HandlerExecution logs
-        var currentAttemptNumber = envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution);
-
         // Record per-handler execution outcomes in durable ExecutionLog
         foreach (var result in results)
         {
             var executionLog = new ActionExecutionLog
             {
+                Id = Id<ActionExecutionLog>.New(),
                 CommandEnvelopeId = envelope.Id,
                 ActionType = ActionExecutionLogType.HandlerExecution,
                 Status = result.Success ? ActionExecutionStatus.Completed : ActionExecutionStatus.Failed,
@@ -210,6 +238,15 @@ public sealed class BackgroundActionOrchestratorService
         {
             var errorMessages = results.Where(r => !r.Success).Select(r => r.ErrorMessage).ToList();
             var combinedError = string.Join("; ", errorMessages);
+            var combinedErrorDetails = string.Join(
+                Environment.NewLine + Environment.NewLine,
+                results
+                    .Where(r => !r.Success && !string.IsNullOrWhiteSpace(r.ErrorDetails))
+                    .Select(r => r.ErrorDetails));
+
+            envelopeAttemptLog.Status = ActionExecutionStatus.Failed;
+            envelopeAttemptLog.ErrorMessage = combinedError;
+            envelopeAttemptLog.ErrorDetails = string.IsNullOrWhiteSpace(combinedErrorDetails) ? null : combinedErrorDetails;
 
             envelope.RecordAttemptFailure(combinedError);
             await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
@@ -220,7 +257,7 @@ public sealed class BackgroundActionOrchestratorService
                 _logger.LogWarning(
                     "Envelope {EnvelopeId} has failures. Retry attempt {AttemptNumber}/{MaxAttempts}. Hangfire will retry after {NextAttemptAt}.",
                     envelopeId,
-                    envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution),
+                    currentAttemptNumber + 1,
                     CommandEnvelope.MaxRetryAttempts,
                     envelope.NextAttemptAt);
                 
@@ -235,7 +272,9 @@ public sealed class BackgroundActionOrchestratorService
                     "Envelope {EnvelopeId} exceeded max retry attempts. Marking dead-lettered.",
                     envelopeId);
 
-                envelope.MarkDeadLettered();
+                envelope.MarkDeadLettered(
+                    "Dead-lettered after maximum retry attempts exceeded",
+                    string.IsNullOrWhiteSpace(combinedErrorDetails) ? combinedError : combinedErrorDetails);
                 await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
@@ -243,6 +282,7 @@ public sealed class BackgroundActionOrchestratorService
         else
         {
             // All handlers succeeded
+            envelopeAttemptLog.Status = ActionExecutionStatus.Completed;
             envelope.MarkCompleted();
             await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

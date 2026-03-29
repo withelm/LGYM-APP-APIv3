@@ -38,7 +38,10 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
             isVisibleInRanking = true
         };
 
+        SetIdempotencyKey("test-register-tutorial-user");
         var registerResponse = await Client.PostAsJsonAsync("/api/register", registerRequest);
+        ClearIdempotencyKey();
+        
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Get user ID from database and initialize tutorial

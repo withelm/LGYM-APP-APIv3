@@ -9,8 +9,8 @@ namespace LgymApi.Infrastructure.Services;
 /// </summary>
 public sealed class NoOpActionMessageScheduler : IActionMessageScheduler
 {
-    public void Enqueue(Id<CommandEnvelope> actionMessageId)
+    public string? Enqueue(Id<CommandEnvelope> actionMessageId)
     {
-        // No-op for test mode
+        return $"noop-command-{actionMessageId}";
     }
 }

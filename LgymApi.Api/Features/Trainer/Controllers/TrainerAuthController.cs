@@ -1,5 +1,6 @@
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
+using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
@@ -24,6 +25,7 @@ public sealed class TrainerAuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [ApiIdempotency("/api/trainer/register", ApiIdempotencyScopeSource.NormalizedEmail)]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)

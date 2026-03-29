@@ -5,5 +5,5 @@ namespace LgymApi.BackgroundWorker.Common;
 
 public interface IEmailBackgroundScheduler
 {
-    void Enqueue(Id<NotificationMessage> notificationId);
+    string? Enqueue(Id<NotificationMessage> notificationId);
 }

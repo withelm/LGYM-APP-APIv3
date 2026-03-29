@@ -46,6 +46,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<SupplementIntakeLog> SupplementIntakeLogs => Set<SupplementIntakeLog>();
     public DbSet<CommandEnvelope> CommandEnvelopes => Set<CommandEnvelope>();
     public DbSet<ActionExecutionLog> ActionExecutionLogs => Set<ActionExecutionLog>();
+    public DbSet<ApiIdempotencyRecord> ApiIdempotencyRecords => Set<ApiIdempotencyRecord>();
     public DbSet<UserTutorialStepProgress> UserTutorialStepProgresses => Set<UserTutorialStepProgress>();
     public DbSet<UserTutorialProgress> UserTutorialProgresses => Set<UserTutorialProgress>();
 
@@ -632,14 +633,13 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.PayloadJson).IsRequired();
             entity.Property(e => e.CommandTypeFullName).IsRequired();
             entity.Property(e => e.Status).HasConversion<string>();
-            // Idempotency index: (CorrelationId, Status) for checking duplicates
-            entity.HasIndex(e => new { e.CorrelationId, e.Status })
+            // CRITICAL: Unique constraint on CorrelationId to fix duplicate race condition (Issue #232)
+            // This enforces DB-level duplicate protection for concurrent dispatch attempts
+            entity.HasIndex(e => e.CorrelationId)
+                .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
             // Work retrieval index: (Status, NextAttemptAt) for pending retries
             entity.HasIndex(e => new { e.Status, e.NextAttemptAt })
-                .HasFilter("\"IsDeleted\" = FALSE");
-            // Correlation lookup for tracing
-            entity.HasIndex(e => e.CorrelationId)
                 .HasFilter("\"IsDeleted\" = FALSE");
             // One-to-many relationship with ExecutionLog
             entity.HasMany(e => e.ExecutionLogs)
@@ -710,6 +710,23 @@ public sealed class AppDbContext : DbContext
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
          });
+
+        modelBuilder.Entity<ApiIdempotencyRecord>(entity =>
+        {
+            entity.ToTable("ApiIdempotencyRecords");
+            entity.Property(e => e.IdempotencyKey).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.ScopeTuple).IsRequired().HasMaxLength(512);
+            entity.Property(e => e.RequestFingerprint).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.ResponseBodyJson).IsRequired();
+            // CRITICAL: Unique constraint on (ScopeTuple, IdempotencyKey) for API-level duplicate protection (Issue #232)
+            // Enforces one idempotency record per endpoint scope + key combination
+            entity.HasIndex(e => new { e.ScopeTuple, e.IdempotencyKey })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            // Lookup index for replay/conflict checks
+            entity.HasIndex(e => new { e.ScopeTuple, e.IdempotencyKey, e.RequestFingerprint })
+                .HasFilter("\"IsDeleted\" = FALSE");
+        });
      }
 
      private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)

@@ -1,5 +1,6 @@
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
+using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User;
@@ -26,6 +27,7 @@ public sealed class UserController : ControllerBase
     }
 
     [HttpPost("register")]
+    [ApiIdempotency("/api/register", ApiIdempotencyScopeSource.NormalizedEmail)]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)

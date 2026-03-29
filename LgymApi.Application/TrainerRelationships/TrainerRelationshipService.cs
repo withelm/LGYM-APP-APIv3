@@ -95,19 +95,8 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         };
 
         await _trainerRelationshipRepository.AddInvitationAsync(invitation, cancellationToken);
+        await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = invitation.Id });
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        try
-        {
-            await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = invitation.Id });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Failed to dispatch InvitationCreatedCommand for invitation {InvitationId}. Invitation creation is still successful.",
-                invitation.Id);
-        }
 
         return MapInvitation(invitation);
     }

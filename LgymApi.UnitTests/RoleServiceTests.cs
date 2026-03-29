@@ -429,6 +429,8 @@ public sealed class RoleServiceTests
 
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IUnitOfWorkTransaction>(new FakeUnitOfWorkTransaction());
+
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
     }
 
     private sealed class FakeUnitOfWorkTransaction : IUnitOfWorkTransaction

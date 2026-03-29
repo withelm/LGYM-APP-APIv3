@@ -83,6 +83,7 @@ public sealed class BackgroundActionOrchestratorTests
         _serviceProvider = services.BuildServiceProvider();
 
         var orchestrator = CreateOrchestrator();
+        var startedAt = DateTimeOffset.UtcNow;
 
         // Act & Assert - Should throw because one handler failed
         var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -92,6 +93,10 @@ public sealed class BackgroundActionOrchestratorTests
         Assert.That(ex!.Message, Does.Contain("Retry scheduled"));
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
         Assert.That(envelope.ExecutionLogs.Count, Is.GreaterThanOrEqualTo(1));
+        Assert.That(envelope.NextAttemptAt, Is.Not.Null);
+        Assert.That(envelope.NextAttemptAt!.Value - startedAt,
+            Is.EqualTo(TimeSpan.FromSeconds(60)).Within(TimeSpan.FromSeconds(2)),
+            "First failed orchestration should schedule first retry delay even with multiple handlers.");
     }
 
     [Test]
@@ -128,15 +133,14 @@ public sealed class BackgroundActionOrchestratorTests
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
         
-        // Simulate 3 prior attempts
-        // Simulate 3 prior attempts with HandlerExecution logs
-        envelope.ExecutionLogs.Add(new ActionExecutionLog { CommandEnvelopeId = envelope.Id, ActionType = ActionExecutionLogType.HandlerExecution, Status = ActionExecutionStatus.Failed, AttemptNumber = 0, HandlerTypeName = "TestActionHandlerFailure", ErrorMessage = "Attempt 1 failed" });
+        // Simulate 3 prior failed executions so current run exceeds retry limit.
+        AddExecuteAttemptLog(envelope, 0, ActionExecutionStatus.Failed, "Attempt 1 failed");
         envelope.RecordAttemptFailure("Attempt 1 failed");
-        
-        envelope.ExecutionLogs.Add(new ActionExecutionLog { CommandEnvelopeId = envelope.Id, ActionType = ActionExecutionLogType.HandlerExecution, Status = ActionExecutionStatus.Failed, AttemptNumber = 1, HandlerTypeName = "TestActionHandlerFailure", ErrorMessage = "Attempt 2 failed" });
+
+        AddExecuteAttemptLog(envelope, 1, ActionExecutionStatus.Failed, "Attempt 2 failed");
         envelope.RecordAttemptFailure("Attempt 2 failed");
-        
-        envelope.ExecutionLogs.Add(new ActionExecutionLog { CommandEnvelopeId = envelope.Id, ActionType = ActionExecutionLogType.HandlerExecution, Status = ActionExecutionStatus.Failed, AttemptNumber = 2, HandlerTypeName = "TestActionHandlerFailure", ErrorMessage = "Attempt 3 failed" });
+
+        AddExecuteAttemptLog(envelope, 2, ActionExecutionStatus.Failed, "Attempt 3 failed");
         envelope.RecordAttemptFailure("Attempt 3 failed");
         
         _repository.AddEnvelope(envelope);
@@ -488,17 +492,8 @@ public sealed class BackgroundActionOrchestratorTests
          var envelopeId = Id<CommandEnvelope>.New();
         var command = new TestCommand { Value = "test" };
         var envelope = CreateEnvelope(envelopeId, command);
-        // Simulate first failure already recorded
-        // Simulate first failure already recorded (with HandlerExecution log from previous orchestration)
-        envelope.ExecutionLogs.Add(new ActionExecutionLog
-        {
-            CommandEnvelopeId = envelope.Id,
-            ActionType = ActionExecutionLogType.HandlerExecution,
-            Status = ActionExecutionStatus.Failed,
-            AttemptNumber = 0,
-            HandlerTypeName = "TestActionHandlerFailure",
-            ErrorMessage = "First attempt failed"
-        });
+        // Simulate first failure already recorded.
+        AddExecuteAttemptLog(envelope, 0, ActionExecutionStatus.Failed, "First attempt failed");
         envelope.RecordAttemptFailure("First attempt failed");
         _repository.AddEnvelope(envelope);
 
@@ -515,7 +510,34 @@ public sealed class BackgroundActionOrchestratorTests
         
         Assert.That(ex!.Message, Does.Contain("Retry scheduled"), "Exception should indicate retry");
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
-        Assert.That(envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution), Is.EqualTo(2), "Should have 2 execution attempts");
+        Assert.That(envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute), Is.EqualTo(2), "Should have 2 execution attempts");
+    }
+
+    [Test]
+    public async Task OrchestrateAsync_AlreadyProcessing_SkipsDuplicateRedelivery()
+    {
+        // Arrange
+        var envelopeId = Id<CommandEnvelope>.New();
+        var command = new TestCommand { Value = "duplicate-redelivery" };
+        var envelope = CreateEnvelope(envelopeId, command);
+        envelope.Status = ActionExecutionStatus.Processing;
+        envelope.LastAttemptAt = DateTimeOffset.UtcNow;
+        _repository.AddEnvelope(envelope);
+
+        var services = new ServiceCollection();
+        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerFailure>();
+        services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
+        _serviceProvider = services.BuildServiceProvider();
+
+        var orchestrator = CreateOrchestrator();
+
+        // Act
+        await orchestrator.OrchestrateAsync(envelopeId);
+
+        // Assert
+        Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Processing));
+        Assert.That(envelope.ExecutionLogs, Is.Empty);
+        Assert.That(_repository.UpdateCallCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -571,6 +593,18 @@ public sealed class BackgroundActionOrchestratorTests
             CommandTypeFullName = typeof(TCommand).AssemblyQualifiedName!,
             Status = ActionExecutionStatus.Pending
         };
+    }
+
+    private static void AddExecuteAttemptLog(CommandEnvelope envelope, int attemptNumber, ActionExecutionStatus status, string? errorMessage = null)
+    {
+        envelope.ExecutionLogs.Add(new ActionExecutionLog
+        {
+            CommandEnvelopeId = envelope.Id,
+            ActionType = ActionExecutionLogType.Execute,
+            Status = status,
+            AttemptNumber = attemptNumber,
+            ErrorMessage = errorMessage
+        });
     }
 
     // Test command and handlers
@@ -753,9 +787,16 @@ public sealed class BackgroundActionOrchestratorTests
         }
 
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
+            => throw new NotSupportedException();
+
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
+    }
+
+    private sealed class FakeTransaction : IUnitOfWorkTransaction
+    {
+        public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RollbackAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class FakeLogger : ILogger<BackgroundActionOrchestratorService>

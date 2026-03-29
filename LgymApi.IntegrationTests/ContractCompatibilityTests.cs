@@ -22,7 +22,14 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             isVisibleInRanking = true
         };
 
+        // Set idempotency key for registration endpoint (required by T9 middleware)
+        SetIdempotencyKey("test-contract-register-legacy-msg");
+        
         var response = await Client.PostAsJsonAsync("/api/register", request);
+        
+        // Clear idempotency key after request
+        ClearIdempotencyKey();
+        
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var json = await ReadJsonAsync(response);

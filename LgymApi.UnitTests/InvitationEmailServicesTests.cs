@@ -26,7 +26,6 @@ public sealed class InvitationEmailServicesTests
 
         var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             new EnabledFeature(),
             metrics,
@@ -46,7 +45,7 @@ public sealed class InvitationEmailServicesTests
         {
             Assert.That(repository.Added, Has.Count.EqualTo(1));
             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-            Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
+            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -73,7 +72,6 @@ public sealed class InvitationEmailServicesTests
 
         var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             new EnabledFeature(),
             metrics,
@@ -108,7 +106,6 @@ public sealed class InvitationEmailServicesTests
 
         var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             new DisabledFeature(),
             metrics,
@@ -157,7 +154,6 @@ public sealed class InvitationEmailServicesTests
 
         var service = new EmailSchedulerService<InvitationEmailPayload>(
             repository,
-            scheduler,
             unitOfWork,
             new EnabledFeature(),
             metrics,
@@ -175,8 +171,7 @@ public sealed class InvitationEmailServicesTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(scheduler.EnqueuedNotificationIds, Has.Count.EqualTo(1));
-            Assert.That(scheduler.EnqueuedNotificationIds[0], Is.EqualTo(existing.Id));
+            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
             Assert.That(metrics.Enqueued, Is.EqualTo(1));
             Assert.That(metrics.Retried, Is.EqualTo(0));
         });
@@ -291,9 +286,10 @@ public sealed class InvitationEmailServicesTests
     {
         public List<Id<NotificationMessage>> EnqueuedNotificationIds { get; } = new();
 
-        public void Enqueue(Id<NotificationMessage> notificationId)
+        public string? Enqueue(Id<NotificationMessage> notificationId)
         {
             EnqueuedNotificationIds.Add(notificationId);
+            return "test-email-job-id";
         }
     }
 
@@ -317,6 +313,8 @@ public sealed class InvitationEmailServicesTests
         {
             return Task.FromResult<IUnitOfWorkTransaction>(new FakeTransaction());
         }
+
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
     }
 
     private sealed class FakeTransaction : IUnitOfWorkTransaction

@@ -25,6 +25,12 @@ public sealed class UnitOfWorkCommitGuardTests
         "/LgymApi.ArchitectureTests/"
     };
 
+    private static readonly string[] AllowedFileSuffixes =
+    {
+        "/LgymApi.Api/Middleware/ApiIdempotencyMiddleware.cs",
+        "/LgymApi.Infrastructure/Services/CommittedIntentDispatcher.cs"
+    };
+
     [Test]
     public void SaveChanges_Should_Be_Invoked_Only_From_Service_Layer()
     {
@@ -82,6 +88,11 @@ public sealed class UnitOfWorkCommitGuardTests
         var normalized = Normalize(path);
 
         if (IsTestPath(normalized))
+        {
+            return true;
+        }
+
+        if (AllowedFileSuffixes.Any(suffix => normalized.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)))
         {
             return true;
         }

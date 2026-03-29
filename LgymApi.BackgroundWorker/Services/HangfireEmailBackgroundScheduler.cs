@@ -17,8 +17,8 @@ public sealed class HangfireEmailBackgroundScheduler : IEmailBackgroundScheduler
         _backgroundJobClient = backgroundJobClient;
     }
 
-    public void Enqueue(Id<NotificationMessage> notificationId)
+    public string? Enqueue(Id<NotificationMessage> notificationId)
     {
-        _backgroundJobClient.Enqueue<IEmailJob>(job => job.ExecuteAsync(notificationId));
+        return _backgroundJobClient.Enqueue<IEmailJob>(job => job.ExecuteAsync(notificationId));
     }
 }

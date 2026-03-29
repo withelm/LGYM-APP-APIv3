@@ -1,5 +1,6 @@
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Training.Contracts;
+using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
@@ -25,6 +26,7 @@ public sealed class TrainingController : ControllerBase
     }
 
     [HttpPost("{id}/addTraining")]
+    [ApiIdempotency("/api/{id}/addTraining", ApiIdempotencyScopeSource.AuthenticatedUser)]
     [ProducesResponseType(typeof(TrainingSummaryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]

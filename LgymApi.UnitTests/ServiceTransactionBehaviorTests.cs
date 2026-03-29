@@ -198,6 +198,8 @@ public sealed class ServiceTransactionBehaviorTests
         {
             return Task.FromResult<IUnitOfWorkTransaction>(Transaction);
         }
+
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
     }
 
     private sealed class RecordingTransaction : IUnitOfWorkTransaction

@@ -52,14 +52,33 @@ public sealed class CommandEnvelopeRepository : ICommandEnvelopeRepository
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Adds a command envelope or returns the existing one if duplicate.
+    /// 
+    /// Implementation strategy:
+    /// 1. Check for existing envelope by CorrelationId (read phase)
+    /// 2. If exists, return it immediately (idempotent path)
+    /// 3. If not exists, stage new envelope for insert (write phase)
+    /// 
+    /// Duplicate protection relies on DB unique constraint (IX_CommandEnvelopes_CorrelationId).
+    /// Concurrent duplicate attempts will be rejected at SaveChangesAsync (caller responsibility).
+    /// Caller must handle DbUpdateException and retry by calling this method again to fetch existing.
+    /// 
+    /// This is a "stage-then-persist" pattern aligned with Unit of Work discipline:
+    /// - Repository stages changes but does not call SaveChanges
+    /// - Caller controls transaction boundary and handles constraint violations
+    /// - On constraint violation, caller detaches failed entity and retries this method
+    /// </summary>
     public async Task<CommandEnvelope> AddOrGetExistingAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
     {
+        // Read phase: check for existing envelope by unique CorrelationId
         var existing = await FindByCorrelationIdAsync(envelope.CorrelationId, cancellationToken);
         if (existing != null)
         {
-            return existing;
+            return existing; // Idempotent: duplicate detected, return existing
         }
 
+        // Write phase: stage new envelope for insert (caller will persist via SaveChangesAsync)
         await AddAsync(envelope, cancellationToken);
         return envelope;
     }

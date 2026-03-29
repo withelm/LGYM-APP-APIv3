@@ -7,6 +7,8 @@ using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -22,6 +24,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
     private readonly IServiceProvider _serviceProvider;
     private readonly ICommandEnvelopeRepository _commandEnvelopeRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly AppDbContext _dbContext;
     private readonly IActionMessageScheduler _scheduler;
     private readonly ILogger<CommandDispatcher> _logger;
 
@@ -29,12 +32,14 @@ public sealed class CommandDispatcher : ICommandDispatcher
         IServiceProvider serviceProvider,
         ICommandEnvelopeRepository commandEnvelopeRepository,
         IUnitOfWork unitOfWork,
+        AppDbContext dbContext,
         IActionMessageScheduler scheduler,
         ILogger<CommandDispatcher> logger)
     {
         _serviceProvider = serviceProvider;
         _commandEnvelopeRepository = commandEnvelopeRepository;
         _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _scheduler = scheduler;
         _logger = logger;
     }
@@ -43,6 +48,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
     /// Enqueues a strongly-typed command for background action execution asynchronously.
     /// Validates exact-type handler availability (1:1), checks idempotency, persists envelope, and enqueues orchestration job.
     /// Zero-handler path short-circuits safely with warning and no enqueue.
+    /// </summary>
     public async Task EnqueueAsync<TCommand>(TCommand command) where TCommand : class, IActionCommand
     {
         if (command == default(TCommand))
@@ -84,6 +90,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
             commandType.FullName);
 
         // Check idempotency: attempt to add envelope with unique CorrelationId
+        // Uses DB-level uniqueness constraint (IX_CommandEnvelopes_CorrelationId) for atomic duplicate detection
 
         var envelope = new CommandEnvelope
         {
@@ -95,12 +102,12 @@ public sealed class CommandDispatcher : ICommandDispatcher
             NextAttemptAt = DateTimeOffset.UtcNow
         };
 
-        // AddOrGetExistingAsync uses durable idempotency check (database-level uniqueness or conflict detection)
+        // AddOrGetExistingAsync stages envelope for insert or returns existing if already present
         var envelopeResult = await _commandEnvelopeRepository.AddOrGetExistingAsync(envelope);
 
         if (!ReferenceEquals(envelopeResult, envelope))
         {
-            // Duplicate: existing envelope found with same CorrelationId
+            // Duplicate detected during read phase (existing envelope found by CorrelationId)
             _logger.LogInformation(
                 "Command envelope already exists for correlation {CorrelationId} (envelope {EnvelopeId}). Skipping duplicate enqueue.",
                 correlationId,
@@ -108,8 +115,45 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return; // Idempotent path: no duplicate enqueue
         }
 
-        // Persist new envelope
-        await _unitOfWork.SaveChangesAsync();
+        // Persist new envelope - DB unique constraint will enforce duplicate protection atomically
+        try
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            // Conflict: unique constraint violation on CorrelationId (concurrent duplicate insert)
+            // This handles the race condition where two concurrent callers passed the read phase
+            // but both attempted insert - DB constraint ensures only one succeeds
+            
+            _logger.LogInformation(
+                ex,
+                "Unique constraint violation on CorrelationId {CorrelationId}. Concurrent duplicate detected. Fetching existing envelope.",
+                correlationId);
+
+            // Detach the failed envelope to avoid tracking conflicts
+            _dbContext.Entry(envelope).State = EntityState.Detached;
+
+            // Fetch the winning envelope that was persisted by concurrent caller
+            var existing = await _commandEnvelopeRepository.FindByCorrelationIdAsync(correlationId);
+            
+            if (existing == null)
+            {
+                // Edge case: constraint violation but envelope not found
+                // This indicates soft-delete race or unexpected DB state
+                _logger.LogError(
+                    "Unique constraint violation but existing envelope not found for correlation {CorrelationId}. Re-throwing exception.",
+                    correlationId);
+                throw;
+            }
+
+            _logger.LogInformation(
+                "Concurrent duplicate resolved: using existing envelope {EnvelopeId} for correlation {CorrelationId}. Skipping enqueue.",
+                existing.Id,
+                correlationId);
+            
+            return; // Idempotent path: conflict resolved, skip enqueue
+        }
 
         _logger.LogInformation(
             "Command envelope {EnvelopeId} persisted for correlation {CorrelationId}.",

@@ -30,9 +30,10 @@ public sealed class EntitySeedCoverageGuardTests
         var entities = entityFiles
             .SelectMany(path => ExtractEntityNames(path, parseOptions))
             .Where(name => !string.Equals(name, "EntityBase", StringComparison.Ordinal))
-            // CommandEnvelope and ActionExecutionLog are runtime orchestration artifacts, not fixture data
+            // CommandEnvelope, ActionExecutionLog, and ApiIdempotencyRecord are runtime orchestration artifacts, not fixture data
             .Where(name => !string.Equals(name, "CommandEnvelope", StringComparison.Ordinal)
-                       && !string.Equals(name, "ActionExecutionLog", StringComparison.Ordinal))
+                       && !string.Equals(name, "ActionExecutionLog", StringComparison.Ordinal)
+                       && !string.Equals(name, "ApiIdempotencyRecord", StringComparison.Ordinal))
             .ToHashSet(StringComparer.Ordinal);
 
         Assert.That(entities, Is.Not.Empty, "No entities detected in Domain/Entities.");

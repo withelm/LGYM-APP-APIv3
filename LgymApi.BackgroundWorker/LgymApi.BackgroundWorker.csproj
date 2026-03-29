@@ -13,5 +13,6 @@
   <ItemGroup>
     <ProjectReference Include="..\LgymApi.Application\LgymApi.Application.csproj" />
     <ProjectReference Include="..\LgymApi.BackgroundWorker.Common\LgymApi.BackgroundWorker.Common.csproj" />
+    <ProjectReference Include="..\LgymApi.Infrastructure\LgymApi.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

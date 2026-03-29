@@ -538,7 +538,11 @@ public sealed class ReportingServiceTests
         }
 
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IUnitOfWorkTransaction>(new FakeTransaction());
+        {
+            return Task.FromResult<IUnitOfWorkTransaction>(new FakeTransaction());
+        }
+
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
     }
 
     private sealed class FakeTransaction : IUnitOfWorkTransaction

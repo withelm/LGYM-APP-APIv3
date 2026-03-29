@@ -445,6 +445,19 @@ public class CommandEnvelopeStatusPolicyTests
     // Helper method to simulate orchestrator adding HandlerExecution logs
     private void AddMockHandlerExecutionLog(CommandEnvelope envelope, int attemptNumber, ActionExecutionStatus status, string? errorMessage = null, string? errorDetails = null)
     {
+        if (envelope.ExecutionLogs.All(log => log.ActionType != ActionExecutionLogType.Execute || log.AttemptNumber != attemptNumber))
+        {
+            envelope.ExecutionLogs.Add(new ActionExecutionLog
+            {
+                CommandEnvelopeId = envelope.Id,
+                ActionType = ActionExecutionLogType.Execute,
+                Status = status,
+                AttemptNumber = attemptNumber,
+                ErrorMessage = errorMessage,
+                ErrorDetails = errorDetails
+            });
+        }
+
         envelope.ExecutionLogs.Add(new ActionExecutionLog
         {
             CommandEnvelopeId = envelope.Id,

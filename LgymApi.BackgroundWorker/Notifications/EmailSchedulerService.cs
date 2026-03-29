@@ -1,5 +1,4 @@
 using System.Text.Json;
-using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Serialization;
@@ -18,7 +17,6 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
     private const int MaxManualRequeueAttempts = 5;
 
     private readonly IEmailNotificationLogRepository _notificationLogRepository;
-    private readonly IEmailBackgroundScheduler _backgroundScheduler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly IEmailMetrics _metrics;
@@ -26,14 +24,12 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
 
     public EmailSchedulerService(
         IEmailNotificationLogRepository notificationLogRepository,
-        IEmailBackgroundScheduler backgroundScheduler,
         IUnitOfWork unitOfWork,
         IEmailNotificationsFeature emailNotificationsFeature,
         IEmailMetrics metrics,
         ILogger<EmailSchedulerService<TPayload>> logger)
     {
         _notificationLogRepository = notificationLogRepository;
-        _backgroundScheduler = backgroundScheduler;
         _unitOfWork = unitOfWork;
         _emailNotificationsFeature = emailNotificationsFeature;
         _metrics = metrics;
@@ -55,7 +51,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
 
         if (existing != null)
         {
-            HandleExistingNotification(payload, existing);
+            await HandleExistingNotificationAsync(payload, existing, cancellationToken);
             return;
         }
 
@@ -74,10 +70,9 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
-        _backgroundScheduler.Enqueue(message.Id);
         _metrics.RecordEnqueued(payload.NotificationType);
         _logger.LogInformation(
-            "Created and enqueued email notification {NotificationId} for {NotificationType} correlation {CorrelationId}.",
+            "Created email notification intent {NotificationId} for {NotificationType} correlation {CorrelationId}.",
             message.Id,
             payload.NotificationType,
             payload.CorrelationId);
@@ -97,7 +92,7 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
         return false;
     }
 
-    private void HandleExistingNotification(TPayload payload, NotificationMessage existing)
+    private async Task HandleExistingNotificationAsync(TPayload payload, NotificationMessage existing, CancellationToken cancellationToken)
     {
         if (existing.Status != EmailNotificationStatus.Failed)
         {
@@ -117,10 +112,17 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
             return;
         }
 
-        _backgroundScheduler.Enqueue(existing.Id);
+        existing.Status = EmailNotificationStatus.Pending;
+        existing.NextAttemptAt = DateTimeOffset.UtcNow;
+        existing.LastError = null;
+        existing.LastAttemptAt = null;
+        existing.DispatchedAt = null;
+        existing.SchedulerJobId = null;
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
         _metrics.RecordRetried(payload.NotificationType);
         _logger.LogInformation(
-            "Re-enqueued failed email notification {NotificationId} (attempts: {Attempts}).",
+            "Rescheduled failed email notification intent {NotificationId} (attempts: {Attempts}).",
             existing.Id,
             existing.Attempts);
     }
@@ -155,7 +157,6 @@ public sealed class EmailSchedulerService<TPayload> : IEmailScheduler<TPayload>
                 payload.NotificationType,
                 payload.CorrelationId,
                 concurrent.Id);
-            _backgroundScheduler.Enqueue(concurrent.Id);
             _metrics.RecordEnqueued(payload.NotificationType);
             return false;
         }

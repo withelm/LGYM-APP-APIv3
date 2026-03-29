@@ -26,7 +26,9 @@ public sealed class UserAuthTests : IntegrationTestBase
             isVisibleInRanking = true
         };
 
+        SetIdempotencyKey("test-register-newuser");
         var response = await Client.PostAsJsonAsync("/api/register", request);
+        ClearIdempotencyKey();
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -60,7 +62,10 @@ public sealed class UserAuthTests : IntegrationTestBase
             isVisibleInRanking = true
         };
 
+        SetIdempotencyKey("test-register-bob-en");
         var response = await Client.PostAsJsonAsync("/api/register", request);
+        ClearIdempotencyKey();
+        
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         await ProcessPendingCommandsAsync();
@@ -98,6 +103,7 @@ public sealed class UserAuthTests : IntegrationTestBase
             Content = System.Net.Http.Json.JsonContent.Create(request)
         };
         msg.Headers.Add("Accept-Language", "pl;q=1.0");
+        msg.Headers.Add("Idempotency-Key", "test-register-alicja-hdr");
 
         var response = await Client.SendAsync(msg);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -140,6 +146,7 @@ public sealed class UserAuthTests : IntegrationTestBase
             Content = System.Net.Http.Json.JsonContent.Create(request)
         };
         msg.Headers.Add("Accept-Language", "pl-PL;q=1.0");
+        msg.Headers.Add("Idempotency-Key", "test-register-alicja-pl");
 
         var response = await Client.SendAsync(msg);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -179,7 +186,9 @@ public sealed class UserAuthTests : IntegrationTestBase
             cpassword
         };
 
+        SetIdempotencyKey($"test-register-invalid-{name}-{email}");
         var response = await Client.PostAsJsonAsync("/api/register", request);
+        ClearIdempotencyKey();
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -197,7 +206,9 @@ public sealed class UserAuthTests : IntegrationTestBase
             cpassword = "password123"
         };
 
+        SetIdempotencyKey("test-register-existingname");
         var response = await Client.PostAsJsonAsync("/api/register", request);
+        ClearIdempotencyKey();
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
@@ -219,7 +230,9 @@ public sealed class UserAuthTests : IntegrationTestBase
             cpassword = "password123"
         };
 
+        SetIdempotencyKey("test-register-existingemail");
         var response = await Client.PostAsJsonAsync("/api/register", request);
+        ClearIdempotencyKey();
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 

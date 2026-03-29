@@ -152,6 +152,8 @@ public sealed class UserService : IUserService
             Date = DateTimeOffset.UtcNow,
             Elo = 1000
         }, cancellationToken);
+
+        await _commandDispatcher.EnqueueAsync(new UserRegisteredCommand { UserId = user.Id });
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Initialize onboarding tutorial for new user
@@ -164,17 +166,6 @@ public sealed class UserService : IUserService
             _logger.LogWarning(
                 ex,
                 "Failed to initialize onboarding tutorial for user {UserId}. Registration is still successful.",
-                user.Id);
-        }
-        try
-        {
-            await _commandDispatcher.EnqueueAsync(new UserRegisteredCommand { UserId = user.Id });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Failed to dispatch UserRegisteredCommand for user {UserId}. Registration is still successful.",
                 user.Id);
         }
     }
