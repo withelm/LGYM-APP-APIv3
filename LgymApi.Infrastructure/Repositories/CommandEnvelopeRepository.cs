@@ -82,4 +82,72 @@ public sealed class CommandEnvelopeRepository : ICommandEnvelopeRepository
         await AddAsync(envelope, cancellationToken);
         return envelope;
     }
+
+    /// <summary>
+    /// Retrieves all command envelopes with Pending status that have not yet been dispatched.
+    /// Used for operational observability of queued-but-not-yet-scheduled work.
+    /// </summary>
+    public async Task<List<CommandEnvelope>> GetPendingUndispatchedAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.CommandEnvelopes
+            .Include(e => e.ExecutionLogs)
+            .Where(x => x.Status == ActionExecutionStatus.Pending && x.DispatchedAt == null)
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Retrieves all command envelopes with Failed status for operational visibility.
+    /// Includes both retry-eligible failures and those awaiting retry scheduling.
+    /// </summary>
+    public async Task<List<CommandEnvelope>> GetFailedAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.CommandEnvelopes
+            .Include(e => e.ExecutionLogs)
+            .Where(x => x.Status == ActionExecutionStatus.Failed)
+            .OrderBy(x => x.LastAttemptAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Retrieves all dead-lettered command envelopes (terminal poison state).
+    /// Used for operational alerts and troubleshooting stranded work items.
+    /// </summary>
+    public async Task<List<CommandEnvelope>> GetDeadLetteredAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.CommandEnvelopes
+            .Include(e => e.ExecutionLogs)
+            .Where(x => x.Status == ActionExecutionStatus.DeadLettered)
+            .OrderBy(x => x.LastAttemptAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Counts command envelopes by status for operational metrics and reporting.
+    /// </summary>
+    public async Task<int> CountByStatusAsync(ActionExecutionStatus status, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.CommandEnvelopes
+            .Where(x => x.Status == status)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Deletes completed command envelopes older than the specified cutoff date.
+    /// Bounded cleanup prevents unbounded table growth while preserving recent audit trail.
+    /// Returns the count of deleted records.
+    /// </summary>
+    public async Task<int> DeleteCompletedOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
+    {
+        var envelopesToDelete = await _dbContext.CommandEnvelopes
+            .Where(x => x.Status == ActionExecutionStatus.Completed && x.CompletedAt != null && x.CompletedAt < cutoffDate)
+            .ToListAsync(cancellationToken);
+
+        foreach (var envelope in envelopesToDelete)
+        {
+            _dbContext.CommandEnvelopes.Remove(envelope);
+        }
+
+        return envelopesToDelete.Count;
+    }
 }

@@ -272,6 +272,21 @@ public sealed class WelcomeEmailServicesTests
 
             return Task.FromResult(ExistingByCorrelation);
         }
+
+        public Task<List<NotificationMessage>> GetPendingUndispatchedAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<NotificationMessage>());
+
+        public Task<List<NotificationMessage>> GetFailedAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<NotificationMessage>());
+
+        public Task<List<NotificationMessage>> GetDeadLetteredAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<NotificationMessage>());
+
+        public Task<int> CountByStatusAsync(EmailNotificationStatus status, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+
+        public Task<int> DeleteSentOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
     }
 
     private sealed class FakeBackgroundScheduler : IEmailBackgroundScheduler

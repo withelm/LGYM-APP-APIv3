@@ -73,42 +73,58 @@ public sealed class ApiIdempotencyMiddleware
             idempotencyKey,
             context.RequestAborted);
 
+        ApiIdempotencyRecord? record = null;
+
         if (existingRecord != null)
         {
-            // Same fingerprint = replay
-            if (existingRecord.RequestFingerprint == requestFingerprint)
+            // If response not yet captured (in-progress), do not replay - let request proceed normally
+            // This handles crash-window scenario where record was persisted but response not yet captured
+            if (existingRecord.ResponseStatusCode < 100)
             {
-                context.Response.StatusCode = existingRecord.ResponseStatusCode;
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(existingRecord.ResponseBodyJson, context.RequestAborted);
+                // Record exists but is in-progress - this is a concurrent request or crash-window recovery
+                // Update our local reference to the existing record and continue processing
+                record = existingRecord;
+            }
+            else
+            {
+                // Same fingerprint = replay completed response
+                if (existingRecord.RequestFingerprint == requestFingerprint)
+                {
+                    context.Response.StatusCode = existingRecord.ResponseStatusCode;
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsync(existingRecord.ResponseBodyJson, context.RequestAborted);
+                    return;
+                }
+
+                // Different fingerprint = conflict
+                context.Response.StatusCode = StatusCodes.Status409Conflict;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    message = "Idempotency key reused with different request payload.",
+                    code = "IDEMPOTENCY_KEY_FINGERPRINT_MISMATCH"
+                });
                 return;
             }
-
-            // Different fingerprint = conflict
-            context.Response.StatusCode = StatusCodes.Status409Conflict;
-            await context.Response.WriteAsJsonAsync(new
-            {
-                message = "Idempotency key reused with different request payload.",
-                code = "IDEMPOTENCY_KEY_FINGERPRINT_MISMATCH"
-            });
-            return;
         }
 
-        // Create in-progress idempotency record
-        var record = new ApiIdempotencyRecord
+        // Create in-progress idempotency record (if not already exists from concurrent request)
+        if (record == null)
         {
-            Id = Id<ApiIdempotencyRecord>.New(),
-            IdempotencyKey = idempotencyKey,
-            ScopeTuple = scopeTuple,
-            RequestFingerprint = requestFingerprint,
-            ResponseStatusCode = 0,
-            ResponseBodyJson = string.Empty,
-            ProcessedAt = DateTimeOffset.UtcNow
-        };
+            record = new ApiIdempotencyRecord
+            {
+                Id = Id<ApiIdempotencyRecord>.New(),
+                IdempotencyKey = idempotencyKey,
+                ScopeTuple = scopeTuple,
+                RequestFingerprint = requestFingerprint,
+                ResponseStatusCode = 0,
+                ResponseBodyJson = string.Empty,
+                ProcessedAt = DateTimeOffset.UtcNow
+            };
 
-        // Persist idempotency record
-        await idempotencyRepository.AddOrGetExistingAsync(record, context.RequestAborted);
-        await unitOfWork.SaveChangesAsync(context.RequestAborted);
+            // Persist idempotency record (capture return value in case existing record found during race)
+            record = await idempotencyRepository.AddOrGetExistingAsync(record, context.RequestAborted);
+            await unitOfWork.SaveChangesAsync(context.RequestAborted);
+        }
 
         // Capture response
         var originalBodyStream = context.Response.Body;

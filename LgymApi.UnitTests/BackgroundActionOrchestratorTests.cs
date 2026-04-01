@@ -774,6 +774,33 @@ public sealed class BackgroundActionOrchestratorTests
             _envelopes[envelope.Id] = envelope;
             return Task.FromResult(envelope);
         }
+
+        public Task<List<CommandEnvelope>> GetPendingUndispatchedAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_envelopes.Values.Where(e => e.Status == ActionExecutionStatus.Pending && e.DispatchedAt == null).ToList());
+
+        public Task<List<CommandEnvelope>> GetFailedAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_envelopes.Values.Where(e => e.Status == ActionExecutionStatus.Failed).ToList());
+
+        public Task<List<CommandEnvelope>> GetDeadLetteredAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_envelopes.Values.Where(e => e.Status == ActionExecutionStatus.DeadLettered).ToList());
+
+        public Task<int> CountByStatusAsync(ActionExecutionStatus status, CancellationToken cancellationToken = default)
+            => Task.FromResult(_envelopes.Values.Count(e => e.Status == status));
+
+        public Task<int> DeleteCompletedOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
+        {
+            var toDelete = _envelopes.Values
+                .Where(e => e.Status == ActionExecutionStatus.Completed && e.CompletedAt.HasValue && e.CompletedAt < cutoffDate)
+                .ToList();
+            
+            var count = toDelete.Count;
+            foreach (var e in toDelete)
+            {
+                _envelopes.Remove(e.Id);
+            }
+
+            return Task.FromResult(count);
+        }
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

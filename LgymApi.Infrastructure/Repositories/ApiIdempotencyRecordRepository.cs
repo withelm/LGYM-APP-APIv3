@@ -50,4 +50,44 @@ public sealed class ApiIdempotencyRecordRepository : IApiIdempotencyRecordReposi
         _dbContext.ApiIdempotencyRecords.Update(record);
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Counts idempotency records with in-progress state (ResponseStatusCode = 0).
+    /// Used for operational visibility of concurrent requests being processed.
+    /// </summary>
+    public async Task<int> CountInProgressAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.ApiIdempotencyRecords
+            .Where(x => x.ResponseStatusCode < 100)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Counts idempotency records by response status code for operational metrics.
+    /// </summary>
+    public async Task<int> CountByStatusCodeAsync(int statusCode, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.ApiIdempotencyRecords
+            .Where(x => x.ResponseStatusCode == statusCode)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Deletes idempotency records older than the specified cutoff date.
+    /// Bounded cleanup prevents unbounded table growth while preserving recent audit trail.
+    /// Returns the count of deleted records.
+    /// </summary>
+    public async Task<int> DeleteOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
+    {
+        var recordsToDelete = await _dbContext.ApiIdempotencyRecords
+            .Where(x => x.ProcessedAt < cutoffDate)
+            .ToListAsync(cancellationToken);
+
+        foreach (var record in recordsToDelete)
+        {
+            _dbContext.ApiIdempotencyRecords.Remove(record);
+        }
+
+        return recordsToDelete.Count;
+    }
 }

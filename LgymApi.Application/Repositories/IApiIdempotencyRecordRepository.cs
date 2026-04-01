@@ -32,4 +32,22 @@ public interface IApiIdempotencyRecordRepository
     Task UpdateAsync(
         ApiIdempotencyRecord record,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts idempotency records with in-progress state (ResponseStatusCode = 0).
+    /// Used for operational visibility of concurrent requests being processed.
+    /// </summary>
+    Task<int> CountInProgressAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts idempotency records by response status code for operational metrics.
+    /// </summary>
+    Task<int> CountByStatusCodeAsync(int statusCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes idempotency records older than the specified cutoff date.
+    /// Bounded cleanup prevents unbounded table growth while preserving recent audit trail.
+    /// Returns the count of deleted records.
+    /// </summary>
+    Task<int> DeleteOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default);
 }
