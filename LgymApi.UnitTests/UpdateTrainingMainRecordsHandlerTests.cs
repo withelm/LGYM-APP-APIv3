@@ -996,9 +996,18 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         }
 
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+        {
+            return Task.FromResult<IUnitOfWorkTransaction>(new FakeTransaction());
+        }
 
-        public void Dispose() { }
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
+    }
+
+    private sealed class FakeTransaction : IUnitOfWorkTransaction
+    {
+        public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RollbackAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class TestWeightUnitConverter : IUnitConverter<WeightUnits>

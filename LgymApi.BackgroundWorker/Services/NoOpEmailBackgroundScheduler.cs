@@ -6,7 +6,8 @@ namespace LgymApi.Infrastructure.Services;
 
 public sealed class NoOpEmailBackgroundScheduler : IEmailBackgroundScheduler
 {
-    public void Enqueue(Id<NotificationMessage> notificationId)
+    public string? Enqueue(Id<NotificationMessage> notificationId)
     {
+        return $"noop-email-{notificationId}";
     }
 }

@@ -13,5 +13,5 @@ public interface IActionMessageScheduler
     /// Enqueues a background action message for orchestrated processing.
     /// </summary>
     /// <param name="actionMessageId">The durable action message envelope id.</param>
-    void Enqueue(Id<CommandEnvelope> actionMessageId);
+    string? Enqueue(Id<CommandEnvelope> actionMessageId);
 }

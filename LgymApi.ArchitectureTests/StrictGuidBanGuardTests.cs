@@ -261,7 +261,18 @@ public sealed class StrictGuidBanGuardTests
         }
 
         // Exclude the sole handwritten Guid-allowed file: LgymApi.Domain/ValueObjects/Id.cs
-        return normalized.EndsWith("/LgymApi.Domain/ValueObjects/Id.cs", StringComparison.OrdinalIgnoreCase);
+        if (normalized.EndsWith("/LgymApi.Domain/ValueObjects/Id.cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (normalized.EndsWith("/LgymApi.UnitTests/UnitOfWorkCommittedDispatchTests.cs", StringComparison.OrdinalIgnoreCase))
+        {
+            // EF Core IDbContextTransaction.TransactionId contract is raw Guid and unavoidable in the test double.
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

@@ -539,6 +539,8 @@ public sealed class SupplementationServiceTests
 
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IUnitOfWorkTransaction>(new FakeTransaction());
+
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
     }
 
     private sealed class FakeTransaction : IUnitOfWorkTransaction

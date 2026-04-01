@@ -32,17 +32,25 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-invite", email: "trainee-invite@example.com", password: "password123");
         SetAuthorizationHeader(trainer.Id);
 
-        var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+        SetIdempotencyKey("test-invitation-create-pending");
+        try
         {
-            traineeId = trainee.Id.ToString()
-        });
+            var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+            {
+                traineeId = trainee.Id.ToString()
+            });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
-        body.Should().NotBeNull();
-        body!.Status.Should().Be("Pending");
-        body.TraineeId.Should().Be(trainee.Id.ToString());
-        body.Code.Should().NotBeNullOrWhiteSpace();
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var body = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+            body.Should().NotBeNull();
+            body!.Status.Should().Be("Pending");
+            body.TraineeId.Should().Be(trainee.Id.ToString());
+            body.Code.Should().NotBeNullOrWhiteSpace();
+        }
+        finally
+        {
+            ClearIdempotencyKey();
+        }
     }
 
     [Test]
@@ -52,10 +60,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-email-log", email: "trainee-email-log@example.com", password: "password123");
         SetAuthorizationHeader(trainer.Id);
 
+        SetIdempotencyKey("test-invitation-email-log");
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
+        ClearIdempotencyKey();
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Process pending commands to trigger handler execution
@@ -85,10 +95,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-email-job", email: "trainee-email-job@example.com", password: "password123");
         SetAuthorizationHeader(trainer.Id);
 
+        SetIdempotencyKey("test-invitation-email-job");
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
+        ClearIdempotencyKey();
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
         // Process pending commands to trigger handler execution
@@ -135,10 +147,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-email-pl", email: "trainee-email-pl@example.com", password: "password123");
         SetAuthorizationHeader(trainer.Id);
 
+        SetIdempotencyKey("test-invitation-email-pl");
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
+        ClearIdempotencyKey();
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
         // Process pending commands to trigger handler execution
@@ -176,10 +190,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-email-idempotent", email: "trainee-email-idempotent@example.com", password: "password123");
         SetAuthorizationHeader(trainer.Id);
 
+        SetIdempotencyKey("test-invitation-email-idempotent");
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
+        ClearIdempotencyKey();
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
         // Process pending commands to trigger handler execution
@@ -225,10 +241,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-email-retry", email: "trainee-email-retry@example.com", password: "password123");
         SetAuthorizationHeader(trainer.Id);
 
+        SetIdempotencyKey("test-invitation-email-retry");
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
+        ClearIdempotencyKey();
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
         // Process pending commands to trigger handler execution
@@ -276,13 +294,17 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-repeat", email: "trainee-repeat@example.com", password: "password123");
         SetAuthorizationHeader(trainer.Id);
 
+        SetIdempotencyKey("test-invitation-repeat-same-key");
         var first = await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
         var firstBody = await first.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
         // Process pending commands to trigger handler execution
         await ProcessPendingCommandsAsync();
 
+        // Same key for replay test - should return cached response
+        SetIdempotencyKey("test-invitation-repeat-same-key");
         var second = await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
+        ClearIdempotencyKey();
         var secondBody = await second.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
         // Process pending commands to trigger handler execution
@@ -313,8 +335,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var traineeB = await SeedUserAsync(name: "trainee-list-b", email: "trainee-list-b@example.com", password: "password123");
         SetAuthorizationHeader(trainer.Id);
 
+        SetIdempotencyKey("test-invitation-list-a");
         await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = traineeA.Id.ToString() });
+        ClearIdempotencyKey();
+        
+        SetIdempotencyKey("test-invitation-list-b");
         await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = traineeB.Id.ToString() });
+        ClearIdempotencyKey();
 
         var response = await Client.GetAsync("/api/trainer/invitations");
 
@@ -959,10 +986,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-accept", email: "trainee-accept@example.com", password: "password123");
 
         SetAuthorizationHeader(trainer.Id);
+        SetIdempotencyKey("test-invitation-accept-link");
         var createResponse = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
+        ClearIdempotencyKey();
         var invitation = await createResponse.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
         SetAuthorizationHeader(trainee.Id);
@@ -983,10 +1012,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-reject", email: "trainee-reject@example.com", password: "password123");
 
         SetAuthorizationHeader(trainer.Id);
+        SetIdempotencyKey("test-invitation-reject");
         var createResponse = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
+        ClearIdempotencyKey();
         var invitation = await createResponse.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
 
         SetAuthorizationHeader(trainee.Id);
@@ -1047,10 +1078,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "regular-target", email: "regular-target@example.com", password: "password123");
         SetAuthorizationHeader(regularUser.Id);
 
+        SetIdempotencyKey("test-invitation-regular-forbidden");
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
         {
             traineeId = trainee.Id.ToString()
         });
+        ClearIdempotencyKey();
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }

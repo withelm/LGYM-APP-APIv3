@@ -25,7 +25,9 @@ public sealed class TrainerAuthTests : IntegrationTestBase
             cpassword = "password123"
         };
 
+        SetIdempotencyKey("test-register-trainer-one");
         var response = await Client.PostAsJsonAsync("/api/trainer/register", request);
+        ClearIdempotencyKey();
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -46,6 +48,7 @@ public sealed class TrainerAuthTests : IntegrationTestBase
     [Test]
     public async Task TrainerCheckToken_WithTrainerToken_ReturnsOk()
     {
+        SetIdempotencyKey("test-register-trainer-auth");
         await Client.PostAsJsonAsync("/api/trainer/register", new
         {
             name = "trainer-auth",
@@ -53,6 +56,7 @@ public sealed class TrainerAuthTests : IntegrationTestBase
             password = "password123",
             cpassword = "password123"
         });
+        ClearIdempotencyKey();
 
         var loginResponse = await Client.PostAsJsonAsync("/api/trainer/login", new
         {

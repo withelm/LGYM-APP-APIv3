@@ -21,6 +21,7 @@ using LgymApi.Domain.Security;
 using Hangfire;
 using LgymApi.Api.Serialization;
 using LgymApi.BackgroundWorker.Common.Serialization;
+using LgymApi.BackgroundWorker.Common.Jobs;
 
 const string TestingEnvironment = "Testing";
 
@@ -197,6 +198,11 @@ if (!app.Environment.IsEnvironment(TestingEnvironment))
     {
         Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
     });
+
+    RecurringJob.AddOrUpdate<ICommittedIntentDispatchJob>(
+        "reliability-committed-intent-dispatch",
+        job => job.ExecuteAsync(CancellationToken.None),
+        Cron.Minutely);
 }
 
 app.UseRequestLocalization(localizationOptions);
@@ -210,6 +216,7 @@ if (!app.Environment.IsEnvironment(TestingEnvironment))
 }
 
 app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
+app.UseMiddleware<LgymApi.Api.Middleware.ApiIdempotencyMiddleware>();
 
 app.MapControllers();
 

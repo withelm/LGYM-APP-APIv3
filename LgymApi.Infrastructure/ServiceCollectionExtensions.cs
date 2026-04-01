@@ -125,6 +125,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAppConfigRepository, AppConfigRepository>();
         services.AddScoped<ICommandEnvelopeRepository, CommandEnvelopeRepository>();
         services.AddScoped<ITutorialProgressRepository, TutorialProgressRepository>();
+        services.AddScoped<IApiIdempotencyRecordRepository, ApiIdempotencyRecordRepository>();
+        services.AddScoped<ICommittedIntentDispatcher, CommittedIntentDispatcher>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         return services;

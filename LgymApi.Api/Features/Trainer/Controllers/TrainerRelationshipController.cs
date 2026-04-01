@@ -4,6 +4,7 @@ using LgymApi.Api.Features.ExerciseScores.Contracts;
 using LgymApi.Api.Features.MainRecords.Contracts;
 using LgymApi.Api.Features.Training.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
+using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.EloRegistry.Models;
@@ -38,6 +39,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     }
 
     [HttpPost("invitations")]
+    [ApiIdempotency("/api/trainer/invitations", ApiIdempotencyScopeSource.AuthenticatedUser)]
     [ProducesResponseType(typeof(TrainerInvitationDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateInvitation([FromBody] CreateTrainerInvitationRequest request)
     {

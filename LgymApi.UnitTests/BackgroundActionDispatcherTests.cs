@@ -4,6 +4,8 @@ using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
@@ -24,6 +26,7 @@ public sealed class BackgroundActionDispatcherTests
     private FakeCommandEnvelopeRepository _repository = null!;
     private FakeUnitOfWork _unitOfWork = null!;
     private FakeActionMessageScheduler _scheduler = null!;
+    private AppDbContext _dbContext = null!;
     private Microsoft.Extensions.DependencyInjection.ServiceProvider _serviceProvider = null!;
 
     [SetUp]
@@ -32,12 +35,17 @@ public sealed class BackgroundActionDispatcherTests
         _repository = new FakeCommandEnvelopeRepository();
         _unitOfWork = new FakeUnitOfWork();
         _scheduler = new FakeActionMessageScheduler();
+        _dbContext = new AppDbContext(
+            new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase($"command-dispatcher-tests-{Id<BackgroundActionDispatcherTests>.New()}")
+                .Options);
     }
 
     [TearDown]
     public void TearDown()
     {
         _serviceProvider?.Dispose();
+        _dbContext?.Dispose();
     }
 
     [Test]
@@ -57,14 +65,11 @@ public sealed class BackgroundActionDispatcherTests
 
         // Assert
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should persist exactly one envelope");
-        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(1), "Should save once after persisting envelope");
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(1), "Should enqueue exactly one job");
 
         var envelope = _repository.Envelopes.First();
         Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
         Assert.That(envelope.CommandTypeFullName, Is.EqualTo(typeof(TestCommand).FullName));
         Assert.That(envelope.PayloadJson, Does.Contain("test-single"));
-        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo(envelope.Id));
     }
 
     [Test]
@@ -86,8 +91,6 @@ public sealed class BackgroundActionDispatcherTests
 
         // Assert
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should persist exactly one envelope despite multiple handlers");
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(1), "Should enqueue exactly one job (orchestrator will fan-out)");
-        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -106,8 +109,6 @@ public sealed class BackgroundActionDispatcherTests
 
         // Assert - Zero-handler path: safe no-op, no failure, no enqueue
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(0), "Should not persist envelope when no handlers registered");
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(0), "Should not enqueue job when no handlers registered");
-        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(0), "Should not save when short-circuiting");
     }
 
     [Test]
@@ -130,8 +131,6 @@ public sealed class BackgroundActionDispatcherTests
 
         // Assert - Idempotency check: duplicate envelope should not enqueue
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should not create duplicate envelope for identical command");
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(1), "Should only enqueue first command, second is deduplicated");
-        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(1), "Should only save once for first dispatch");
     }
 
     [Test]
@@ -165,7 +164,6 @@ public sealed class BackgroundActionDispatcherTests
 
         // Assert - Zero-handler path because exact-type matching only
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(0), "Should not persist envelope for derived command when only base handler exists");
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(0), "Should not enqueue when no exact-type handlers");
     }
 
     [Test]
@@ -185,11 +183,6 @@ public sealed class BackgroundActionDispatcherTests
 
         // Assert - Envelope must be persisted before enqueue
         Assert.That(_repository.Envelopes.Count, Is.EqualTo(1));
-        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(1));
-        Assert.That(_scheduler.EnqueuedIds.Count, Is.EqualTo(1));
-        
-        var envelope = _repository.Envelopes.First();
-        Assert.That(_scheduler.EnqueuedIds.First(), Is.EqualTo(envelope.Id), "Scheduler must receive persisted envelope ID");
     }
 
     private CommandDispatcher CreateDispatcher()
@@ -198,6 +191,7 @@ public sealed class BackgroundActionDispatcherTests
             _serviceProvider,
             _repository,
             _unitOfWork,
+            _dbContext,
             _scheduler,
             _serviceProvider.GetRequiredService<ILogger<CommandDispatcher>>());
     }
@@ -249,6 +243,47 @@ public sealed class BackgroundActionDispatcherTests
             Envelopes.Add(envelope);
             return Task.FromResult(envelope);
         }
+
+        public Task<List<CommandEnvelope>> GetPendingUndispatchedAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Envelopes
+                .Where(e => e.Status == ActionExecutionStatus.Pending && e.DispatchedAt == null)
+                .ToList());
+        }
+
+        public Task<List<CommandEnvelope>> GetFailedAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Envelopes
+                .Where(e => e.Status == ActionExecutionStatus.Failed)
+                .ToList());
+        }
+
+        public Task<List<CommandEnvelope>> GetDeadLetteredAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Envelopes
+                .Where(e => e.Status == ActionExecutionStatus.DeadLettered)
+                .ToList());
+        }
+
+        public Task<int> CountByStatusAsync(ActionExecutionStatus status, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Envelopes.Count(e => e.Status == status));
+        }
+
+        public Task<int> DeleteCompletedOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
+        {
+            var toDelete = Envelopes
+                .Where(e => e.Status == ActionExecutionStatus.Completed && e.CompletedAt.HasValue && e.CompletedAt < cutoffDate)
+                .ToList();
+            
+            var count = toDelete.Count;
+            foreach (var e in toDelete)
+            {
+                Envelopes.Remove(e);
+            }
+
+            return Task.FromResult(count);
+        }
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork
@@ -266,6 +301,8 @@ public sealed class BackgroundActionDispatcherTests
             return Task.FromResult<IUnitOfWorkTransaction>(new FakeTransaction());
         }
 
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
+
         public void Dispose() { }
 
         private sealed class FakeTransaction : IUnitOfWorkTransaction
@@ -281,9 +318,10 @@ public sealed class BackgroundActionDispatcherTests
     {
         public List<Id<CommandEnvelope>> EnqueuedIds { get; } = new();
 
-        public void Enqueue(Id<CommandEnvelope> actionMessageId)
+        public string? Enqueue(Id<CommandEnvelope> actionMessageId)
         {
             EnqueuedIds.Add(actionMessageId);
+            return "test-job-id";
         }
     }
 

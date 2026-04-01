@@ -279,6 +279,12 @@ public sealed class DirectGuidUsageGuardTests
             return true;
         }
 
+        if (normalized.EndsWith("/LgymApi.UnitTests/UnitOfWorkCommittedDispatchTests.cs", StringComparison.OrdinalIgnoreCase))
+        {
+            // EF Core IDbContextTransaction.TransactionId contract is raw Guid and unavoidable in the test double.
+            return true;
+        }
+
         return normalized.EndsWith("/LgymApi.UnitTests/TypedIdTests.cs", StringComparison.OrdinalIgnoreCase);
     }
 

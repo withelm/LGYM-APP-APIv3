@@ -52,6 +52,18 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
     public DateTimeOffset? CompletedAt { get; set; }
 
     /// <summary>
+    /// Timestamp when the envelope was dispatched to the background scheduler.
+    /// Marks transition from Pending to Dispatched state in the durable-intent lifecycle.
+    /// </summary>
+    public DateTimeOffset? DispatchedAt { get; set; }
+
+    /// <summary>
+    /// Background scheduler job ID or queue reference assigned when dispatched.
+    /// Enables correlation with external scheduler state (e.g., Hangfire job ID).
+    /// </summary>
+    public string? SchedulerJobId { get; set; }
+
+    /// <summary>
     /// Related execution logs for this envelope (one-to-many).
     /// </summary>
     public ICollection<ActionExecutionLog> ExecutionLogs { get; set; } = new List<ActionExecutionLog>();
@@ -67,8 +79,7 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
             throw new InvalidOperationException("Cannot record failure on dead-lettered envelope.");
         }
 
-        // Calculate attempt number from HandlerExecution logs (orchestrator adds logs BEFORE calling this)
-        var attemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution);
+        var attemptNumber = GetExecutionAttemptCount();
 
         // No execution log added - orchestrator already recorded per-handler logs
 
@@ -97,6 +108,11 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
     /// </summary>
     public void MarkDeadLettered()
     {
+        MarkDeadLettered("Dead-lettered after maximum retry attempts exceeded");
+    }
+
+    public void MarkDeadLettered(string reason, string? errorDetails = null)
+    {
         if (Status == ActionExecutionStatus.DeadLettered)
         {
             return; // Already dead-lettered, idempotent
@@ -110,12 +126,13 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
         // Record dead-letter event in execution log
         var executionLog = new ActionExecutionLog
         {
+            Id = Id<ActionExecutionLog>.New(),
             CommandEnvelopeId = Id,
             ActionType = ActionExecutionLogType.DeadLetter,
             Status = ActionExecutionStatus.DeadLettered,
-            AttemptNumber = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution),
-            ErrorMessage = "Dead-lettered after maximum retry attempts exceeded",
-            ErrorDetails = null
+            AttemptNumber = GetExecutionAttemptCount(),
+            ErrorMessage = reason,
+            ErrorDetails = errorDetails
         };
         ExecutionLogs.Add(executionLog);
     }
@@ -148,7 +165,12 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
             return false;
         }
 
-        var executionLogCount = ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution);
-        return executionLogCount < MaxRetryAttempts;
+        var executionAttemptCount = GetExecutionAttemptCount();
+        return executionAttemptCount <= MaxRetryAttempts;
+    }
+
+    public int GetExecutionAttemptCount()
+    {
+        return ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute);
     }
 }

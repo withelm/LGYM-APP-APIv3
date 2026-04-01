@@ -114,5 +114,6 @@ public sealed class ExerciseServiceTests
     {
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class => throw new NotSupportedException();
     }
 }

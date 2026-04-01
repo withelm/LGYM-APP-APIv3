@@ -173,11 +173,10 @@ public sealed class TrainingService : ITrainingService
                     TrainingId = training.Id
                 }, cancellationToken);
                 await _userRepository.UpdateAsync(user, cancellationToken);
+                await _commandDispatcher.EnqueueAsync(new TrainingCompletedCommand { UserId = user.Id, TrainingId = training.Id });
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
-
-                await _commandDispatcher.EnqueueAsync(new TrainingCompletedCommand { UserId = user.Id, TrainingId = training.Id });
 
                 await transaction.CommitAsync(cancellationToken);
                 return new TrainingSummaryResult

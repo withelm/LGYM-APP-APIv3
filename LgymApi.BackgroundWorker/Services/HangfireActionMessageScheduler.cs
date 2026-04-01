@@ -19,8 +19,8 @@ public sealed class HangfireActionMessageScheduler : IActionMessageScheduler
         _backgroundJobClient = backgroundJobClient;
     }
 
-    public void Enqueue(Id<CommandEnvelope> actionMessageId)
+    public string? Enqueue(Id<CommandEnvelope> actionMessageId)
     {
-        _backgroundJobClient.Enqueue<IActionMessageJob>(job => job.ExecuteAsync(actionMessageId));
+        return _backgroundJobClient.Enqueue<IActionMessageJob>(job => job.ExecuteAsync(actionMessageId));
     }
 }
