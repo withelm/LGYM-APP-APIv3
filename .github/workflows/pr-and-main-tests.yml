@@ -35,6 +35,11 @@ jobs:
       - name: Build
         run: dotnet build LgymApi.sln --configuration Release --no-restore
 
+      - name: Verify nullable warnings gate (gated projects)
+        run: |
+          dotnet build LgymApi.Domain/LgymApi.Domain.csproj --configuration Release --no-restore
+          dotnet build LgymApi.BackgroundWorker.Common/LgymApi.BackgroundWorker.Common.csproj --configuration Release --no-restore
+
       - name: Run unit tests
         run: dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=unit-tests.trx" --results-directory ./TestResults/Unit
 
