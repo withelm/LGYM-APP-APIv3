@@ -1,5 +1,3 @@
-using System.Net;
-
 namespace LgymApi.Application.Common.Errors;
 
 /// <summary>
@@ -15,7 +13,7 @@ public abstract class AppError
     /// <summary>
     /// Gets the HTTP status code associated with this error.
     /// </summary>
-    public abstract HttpStatusCode HttpStatusCode { get; }
+    public abstract int HttpStatusCode { get; }
 
     /// <summary>
     /// Gets the error payload, if any. Returns null by default.
@@ -27,7 +25,7 @@ public abstract class AppError
 /// <summary>
 /// Error indicating the requested resource was not found (HTTP 404).
 /// </summary>
-public sealed class NotFoundError : AppError
+public class NotFoundError : AppError
 {
     private readonly string _message;
 
@@ -48,13 +46,13 @@ public sealed class NotFoundError : AppError
     /// <summary>
     /// Gets the HTTP status code (404 Not Found).
     /// </summary>
-    public override HttpStatusCode HttpStatusCode => HttpStatusCode.NotFound;
+    public override int HttpStatusCode => 404;
 }
 
 /// <summary>
 /// Error indicating the request was malformed or invalid (HTTP 400).
 /// </summary>
-public sealed class BadRequestError : AppError
+public class BadRequestError : AppError
 {
     private readonly string _message;
     private readonly object? _payload;
@@ -78,7 +76,7 @@ public sealed class BadRequestError : AppError
     /// <summary>
     /// Gets the HTTP status code (400 Bad Request).
     /// </summary>
-    public override HttpStatusCode HttpStatusCode => HttpStatusCode.BadRequest;
+    public override int HttpStatusCode => 400;
 
     /// <summary>
     /// Gets the error payload.
@@ -90,7 +88,7 @@ public sealed class BadRequestError : AppError
 /// <summary>
 /// Error indicating the user is not authenticated (HTTP 401).
 /// </summary>
-public sealed class UnauthorizedError : AppError
+public class UnauthorizedError : AppError
 {
     private readonly string _message;
 
@@ -111,13 +109,13 @@ public sealed class UnauthorizedError : AppError
     /// <summary>
     /// Gets the HTTP status code (401 Unauthorized).
     /// </summary>
-    public override HttpStatusCode HttpStatusCode => HttpStatusCode.Unauthorized;
+    public override int HttpStatusCode => 401;
 }
 
 /// <summary>
 /// Error indicating the user does not have permission to perform the action (HTTP 403).
 /// </summary>
-public sealed class ForbiddenError : AppError
+public class ForbiddenError : AppError
 {
     private readonly string _message;
 
@@ -138,13 +136,13 @@ public sealed class ForbiddenError : AppError
     /// <summary>
     /// Gets the HTTP status code (403 Forbidden).
     /// </summary>
-    public override HttpStatusCode HttpStatusCode => HttpStatusCode.Forbidden;
+    public override int HttpStatusCode => 403;
 }
 
 /// <summary>
 /// Error indicating a conflict with the current state of the resource (HTTP 409).
 /// </summary>
-public sealed class ConflictError : AppError
+public class ConflictError : AppError
 {
     private readonly string _message;
 
@@ -165,5 +163,5 @@ public sealed class ConflictError : AppError
     /// <summary>
     /// Gets the HTTP status code (409 Conflict).
     /// </summary>
-    public override HttpStatusCode HttpStatusCode => HttpStatusCode.Conflict;
+    public override int HttpStatusCode => 409;
 }

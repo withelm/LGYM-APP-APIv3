@@ -3,6 +3,8 @@ using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using Microsoft.AspNetCore.Mvc;
 
+using Unit = LgymApi.Application.Common.Results.Unit;
+
 namespace LgymApi.Api.Extensions;
 
 /// <summary>
@@ -34,14 +36,48 @@ public static class ResultExtensions
         {
             return new ObjectResult(payload)
             {
-                StatusCode = (int)error.HttpStatusCode
+                StatusCode = error.HttpStatusCode
             };
         }
 
         var responseDto = new ResponseMessageDto { Message = error.Message };
         return new ObjectResult(responseDto)
         {
-            StatusCode = (int)error.HttpStatusCode
+            StatusCode = error.HttpStatusCode
+        };
+    }
+
+    /// <summary>
+    /// Converts a Result&lt;Unit, TError&gt; to an IActionResult.
+    /// Success results return 200 OK with no content.
+    /// Failure results return the HTTP status code from the error with either the error payload or a response message DTO.
+    /// </summary>
+    /// <typeparam name="TError">The type of the error, must be AppError or derived.</typeparam>
+    /// <param name="result">The result to convert.</param>
+    /// <returns>An IActionResult representing either success or failure.</returns>
+    public static IActionResult ToActionResult<TError>(this Result<Unit, TError> result)
+        where TError : AppError
+    {
+        if (result.IsSuccess)
+        {
+            return new OkResult();
+        }
+
+        var error = result.Error;
+        var payload = error.GetPayload();
+
+        if (payload != null)
+        {
+            return new ObjectResult(payload)
+            {
+                StatusCode = error.HttpStatusCode
+            };
+        }
+
+        var responseDto = new ResponseMessageDto { Message = error.Message };
+        return new ObjectResult(responseDto)
+        {
+            StatusCode = error.HttpStatusCode
         };
     }
 }
