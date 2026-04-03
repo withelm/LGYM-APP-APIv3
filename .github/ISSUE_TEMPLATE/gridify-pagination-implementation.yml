@@ -1,0 +1,78 @@
+name: Gridify Pagination Implementation
+about: Implement generic pagination/filter/sort service with Gridify wrappers and PoC adoption in trainer dashboard.
+title: "[Pagination] Implement Gridify-backed generic pagination service"
+labels:
+  - enhancement
+  - backend
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Implement a reusable pagination service for query-driven read endpoints using Gridify as the execution engine behind internal wrappers/facade.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      value: |
+        Build generic pagination/filter/sort pipeline with:
+        - validated multi-sort,
+        - nested AND/OR filters,
+        - deterministic tie-breaker ordering,
+        - DTO/projection output,
+        - field whitelist and validation policies.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope (v1)
+      value: |
+        - Add application contracts for pagination/filter/sort.
+        - Add infrastructure Gridify translator/mapper/executor with Count + Skip/Take + ToList.
+        - Add validation policies (page/pageSize/depth/operator compatibility/duplicate sort checks).
+        - Integrate only trainer dashboard flow as PoC.
+        - Add unit + integration tests in existing test projects.
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals (v1)
+      value: |
+        - No MediatR/CQRS dispatcher rewrite.
+        - No cursor/keyset pagination.
+        - No broad migration of all listing endpoints.
+        - No IQueryable leakage to Application/API.
+
+  - type: checkboxes
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      options:
+        - label: All filter/sort fields are explicitly whitelisted
+        - label: Nested AND/OR groups are supported with max-depth guardrails
+        - label: No path materializes full collection before Skip/Take
+        - label: Application contracts remain EF/IQueryable agnostic
+        - label: Unit and integration tests pass for pagination behavior and PoC flow
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification Commands
+      value: |
+        dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build
+        dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build
+
+  - type: textarea
+    id: rollout
+    attributes:
+      label: Implementation Waves
+      value: |
+        1) Contracts + RED test scaffolding
+        2) Validation + Gridify translator/mapper + tie-breaker sorting
+        3) Infrastructure pagination executor + DI
+        4) Trainer dashboard PoC integration
+        5) Architecture/regression hardening
