@@ -26,6 +26,9 @@ using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Infrastructure.Services;
+using LgymApi.Notifications;
+using Microsoft.AspNetCore.SignalR;
+
 
 const string TestingEnvironment = "Testing";
 
@@ -60,7 +63,7 @@ builder.Services.AddCors(options =>
     {
         if (corsAllowedOrigins.Length > 0)
         {
-            policy.WithOrigins(corsAllowedOrigins).AllowAnyMethod().AllowAnyHeader();
+            policy.WithOrigins(corsAllowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials();
             return;
         }
 
@@ -71,6 +74,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddLocalization();
 builder.Services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
 builder.Services.AddApplicationServices();
+builder.Services.AddNotificationsModule();
 
 builder.Services.AddInfrastructure(
     builder.Configuration,
@@ -81,6 +85,10 @@ builder.Services.AddBackgroundWorkerServices(builder.Environment.IsEnvironment(T
 
 // Register password recovery email scheduler in Api layer (allowed scope per plan guardrail)
 builder.Services.AddScoped<IEmailScheduler<PasswordRecoveryEmailPayload>, EmailSchedulerService<PasswordRecoveryEmailPayload>>();
+
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, LgymApi.Api.Hubs.NotificationHubUserIdProvider>();
+builder.Services.AddScoped<LgymApi.Notifications.Application.IInAppNotificationPushPublisher, LgymApi.Api.Features.InAppNotification.SignalRNotificationPushPublisher>();
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
@@ -101,6 +109,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
             OnAuthenticationFailed = context =>
             {
                 if (context.Exception is SecurityTokenExpiredException)
@@ -242,6 +260,7 @@ app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
 app.UseMiddleware<LgymApi.Api.Middleware.ApiIdempotencyMiddleware>();
 
 app.MapControllers();
+app.MapHub<LgymApi.Api.Hubs.NotificationHub>("/hubs/notifications");
 
 await app.RunAsync();
 
