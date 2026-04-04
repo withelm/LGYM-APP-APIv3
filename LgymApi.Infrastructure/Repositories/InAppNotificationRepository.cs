@@ -1,8 +1,8 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
-using LgymApi.Notifications.Application;
-using LgymApi.Notifications.Domain;
+using LgymApi.Application.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -32,23 +32,23 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
         Id<User> userId,
         int limit,
         DateTimeOffset? cursorCreatedAt,
-        Guid? cursorId,
+        Id<User>? cursorId,
         CancellationToken cancellationToken = default)
     {
         var query = _dbContext.InAppNotifications
             .AsNoTracking()
             .Where(x => x.RecipientId == userId && !x.IsDeleted);
 
-        if (cursorCreatedAt.HasValue)
+        if (cursorCreatedAt.HasValue && cursorId.HasValue)
         {
             var cursorTs = cursorCreatedAt.Value;
-            var cursorGuid = cursorId!.Value;
-            query = query.Where(x => x.CreatedAt < cursorTs || (x.CreatedAt == cursorTs && x.Id.GetValue().CompareTo(cursorGuid) < 0));
+            var cursorIdText = cursorId.Value.ToString();
+            query = query.Where(x => x.CreatedAt < cursorTs || (x.CreatedAt == cursorTs && string.CompareOrdinal(x.Id.ToString(), cursorIdText) < 0));
         }
 
         var results = await query
             .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id)
+            .ThenByDescending(x => x.Id.ToString())
             .Take(limit + 1)
             .ToListAsync(cancellationToken);
 

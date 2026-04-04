@@ -1,6 +1,6 @@
-using LgymApi.Notifications.Application.Models;
+using LgymApi.Application.Notifications.Models;
 
-namespace LgymApi.Notifications.Application;
+namespace LgymApi.Application.Notifications;
 
 public interface IInAppNotificationPushPublisher
 {

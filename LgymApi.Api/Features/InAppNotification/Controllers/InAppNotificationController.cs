@@ -3,8 +3,11 @@ using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.InAppNotification.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Mapping.Core;
-using LgymApi.Notifications.Application;
-using LgymApi.Notifications.Application.Models;
+using LgymApi.Domain.Entities;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
+using NotificationEntity = global::LgymApi.Domain.Entities.InAppNotification;
+using InAppNotificationServiceContract = global::LgymApi.Application.Notifications.IInAppNotificationService;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,10 +17,10 @@ namespace LgymApi.Api.Features.InAppNotification.Controllers;
 [Route("api")]
 public sealed class InAppNotificationController : ControllerBase
 {
-    private readonly IInAppNotificationService _notificationService;
+    private readonly InAppNotificationServiceContract _notificationService;
     private readonly IMapper _mapper;
 
-    public InAppNotificationController(IInAppNotificationService notificationService, IMapper mapper)
+    public InAppNotificationController(InAppNotificationServiceContract notificationService, IMapper mapper)
     {
         _notificationService = notificationService;
         _mapper = mapper;
@@ -31,7 +34,7 @@ public sealed class InAppNotificationController : ControllerBase
         [FromQuery] GetNotificationsQueryDto query)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var cursorQuery = new CursorPaginationQuery(query.Limit, query.CursorCreatedAt, query.CursorId);
+        var cursorQuery = _mapper.Map<GetNotificationsQueryDto, CursorPaginationQuery>(query);
         var result = await _notificationService.GetForUserAsync(userId, cursorQuery, HttpContext.RequestAborted);
         if (result.IsFailure)
         {
@@ -51,14 +54,14 @@ public sealed class InAppNotificationController : ControllerBase
         [FromRoute] string notificationId)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var notifId = notificationId.ToIdOrEmpty<Notifications.Domain.InAppNotification>();
+        var notifId = notificationId.ToIdOrEmpty<NotificationEntity>();
         var result = await _notificationService.MarkAsReadAsync(notifId, userId, HttpContext.RequestAborted);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.InAppNotificationMarkedAsRead));
+        return Ok(_mapper.Map<string, ResponseMessageDto>("Notification marked as read"));
     }
 
     [HttpPost("{id}/notifications/mark-all-read")]
@@ -75,7 +78,7 @@ public sealed class InAppNotificationController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.InAppNotificationAllMarkedAsRead));
+        return Ok(_mapper.Map<string, ResponseMessageDto>("All notifications marked as read"));
     }
 
     [HttpGet("{id}/notifications/unread-count")]
@@ -90,6 +93,6 @@ public sealed class InAppNotificationController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(new UnreadCountDto(result.Value));
+        return Ok(_mapper.Map<int, UnreadCountDto>(result.Value));
     }
 }

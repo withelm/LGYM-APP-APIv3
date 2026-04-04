@@ -1,7 +1,7 @@
 using LgymApi.BackgroundWorker.Common.Commands;
-using LgymApi.Notifications.Domain;
+using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging;
-using NotificationsApp = global::LgymApi.Notifications.Application;
+using NotificationsApp = global::LgymApi.Application.Notifications;
 
 namespace LgymApi.BackgroundWorker.Actions;
 

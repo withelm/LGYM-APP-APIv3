@@ -1,7 +1,7 @@
-using LgymApi.Domain.Entities;
+using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 
-namespace LgymApi.Notifications.Domain;
+namespace LgymApi.Domain.Entities;
 
 public sealed class InAppNotification : EntityBase<InAppNotification>
 {

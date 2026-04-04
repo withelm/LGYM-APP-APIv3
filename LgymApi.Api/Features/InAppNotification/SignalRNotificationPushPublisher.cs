@@ -1,6 +1,6 @@
 using LgymApi.Api.Hubs;
-using LgymApi.Notifications.Application;
-using LgymApi.Notifications.Application.Models;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using Microsoft.AspNetCore.SignalR;
 
 namespace LgymApi.Api.Features.InAppNotification;

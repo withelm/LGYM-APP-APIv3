@@ -8,7 +8,7 @@ using LgymApi.BackgroundWorker.Jobs;
 using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Infrastructure.Jobs;
 using LgymApi.Infrastructure.Services;
-using LgymApi.Notifications;
+using LgymApi.Application.Notifications;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.BackgroundWorker;

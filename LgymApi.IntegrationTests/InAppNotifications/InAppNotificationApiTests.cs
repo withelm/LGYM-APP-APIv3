@@ -3,10 +3,11 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
-using NotificationEntity = global::LgymApi.Notifications.Domain.InAppNotification;
-using NotificationTypes = global::LgymApi.Notifications.Domain.InAppNotificationTypes;
+using NotificationEntity = global::LgymApi.Domain.Entities.InAppNotification;
+using NotificationTypes = global::LgymApi.Domain.Notifications.InAppNotificationTypes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -67,7 +68,7 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         body.Items[1].SenderUserId.Should().Be(sender.Id.ToString());
         body.HasNextPage.Should().BeTrue();
         body.NextCursorCreatedAt.Should().Be(middle.CreatedAt);
-        body.NextCursorId.Should().Be(middle.Id.GetValue());
+        body.NextCursorId.Should().Be(middle.Id.Rebind<User>().ToString());
         body.Items.Select(x => x.Id).Should().NotContain(oldest.Id.ToString());
     }
 
@@ -210,7 +211,7 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         public DateTimeOffset? NextCursorCreatedAt { get; set; }
 
         [JsonPropertyName("nextCursorId")]
-        public Guid? NextCursorId { get; set; }
+        public string? NextCursorId { get; set; }
     }
 
     private sealed class InAppNotificationResponse

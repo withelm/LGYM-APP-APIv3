@@ -19,14 +19,14 @@ public sealed class NotificationHub : Hub
     public override async Task OnConnectedAsync()
     {
         var userId = Context.User?.FindFirst("userId")?.Value;
-        if (userId == null || !Guid.TryParse(userId, out var userGuid))
+        if (userId == null || !Id<User>.TryParse(userId, out var userIdParsed))
         {
             Context.Abort();
             return;
         }
 
         // Check session cache — reject if logged out
-        if (!_userSessionCache.Contains(new Id<User>(userGuid)))
+        if (!_userSessionCache.Contains(userIdParsed))
         {
             Context.Abort();
             return;

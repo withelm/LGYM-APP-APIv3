@@ -1,6 +1,6 @@
 using LgymApi.Application.Repositories;
 
-namespace LgymApi.Notifications.Application;
+namespace LgymApi.Application.Notifications;
 
 public interface IInAppNotificationServiceDependencies
 {
@@ -15,10 +15,7 @@ internal sealed record InAppNotificationServiceDependencies : IInAppNotification
     public IUnitOfWork UnitOfWork { get; }
     public IInAppNotificationPushPublisher PushPublisher { get; }
 
-    public InAppNotificationServiceDependencies(
-        IInAppNotificationRepository inAppNotificationRepository,
-        IUnitOfWork unitOfWork,
-        IInAppNotificationPushPublisher pushPublisher)
+    public InAppNotificationServiceDependencies(IInAppNotificationRepository inAppNotificationRepository, IUnitOfWork unitOfWork, IInAppNotificationPushPublisher pushPublisher)
     {
         InAppNotificationRepository = inAppNotificationRepository;
         UnitOfWork = unitOfWork;

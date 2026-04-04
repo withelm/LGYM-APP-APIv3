@@ -9,7 +9,7 @@ using LgymApi.Infrastructure.UnitOfWork;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Repositories;
-using LgymApi.Notifications.Application;
+using LgymApi.Application.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

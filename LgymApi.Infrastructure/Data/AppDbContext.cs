@@ -3,7 +3,6 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Notifications.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System.Linq.Expressions;
@@ -113,8 +112,6 @@ public sealed class AppDbContext : DbContext
         configurationBuilder.Properties<Id<CorrelationScope>>().HaveConversion<TypedIdValueConverter<CorrelationScope>>();
         configurationBuilder.Properties<Id<CorrelationScope>?>().HaveConversion<NullableTypedIdValueConverter<CorrelationScope>>();
 
-        configurationBuilder.Properties<Id<InAppNotification>>().HaveConversion<TypedIdValueConverter<InAppNotification>>();
-        configurationBuilder.Properties<Id<InAppNotification>?>().HaveConversion<NullableTypedIdValueConverter<InAppNotification>>();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

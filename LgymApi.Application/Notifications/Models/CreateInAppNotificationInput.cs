@@ -1,8 +1,8 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Notifications.Domain;
 
-namespace LgymApi.Notifications.Application.Models;
+namespace LgymApi.Application.Notifications.Models;
 
 public sealed record CreateInAppNotificationInput(
     Id<User> RecipientId,

@@ -3,10 +3,14 @@ using LgymApi.Application.Common.Results;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Notifications.Application;
-using LgymApi.Notifications.Application.Errors;
-using LgymApi.Notifications.Application.Models;
-using LgymApi.Notifications.Domain;
+using InAppNotificationService = global::LgymApi.Application.Notifications.InAppNotificationService;
+using IInAppNotificationServiceDependencies = global::LgymApi.Application.Notifications.IInAppNotificationServiceDependencies;
+using IInAppNotificationRepository = global::LgymApi.Application.Notifications.IInAppNotificationRepository;
+using IInAppNotificationPushPublisher = global::LgymApi.Application.Notifications.IInAppNotificationPushPublisher;
+using LgymApi.Application.Notifications.Errors;
+using LgymApi.Application.Notifications.Models;
+using LgymApi.Domain.Notifications;
+using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests.InAppNotifications;
@@ -252,7 +256,7 @@ public sealed class InAppNotificationServiceTests
             repository ?? new FakeInAppNotificationRepository(),
             unitOfWork ?? new FakeUnitOfWork(),
             pushPublisher ?? new FakePushPublisher());
-        return new InAppNotificationService(deps);
+        return new InAppNotificationService(deps, NullLogger<InAppNotificationService>.Instance);
     }
 
     private static InAppNotification AddNotification(
@@ -322,16 +326,16 @@ public sealed class InAppNotificationServiceTests
             Id<User> userId,
             int limit,
             DateTimeOffset? cursorCreatedAt,
-            Guid? cursorId,
+            Id<User>? cursorId,
             CancellationToken cancellationToken = default)
         {
             var query = Added.Where(n => n.RecipientId == userId);
 
-            if (cursorCreatedAt.HasValue)
+            if (cursorCreatedAt.HasValue && cursorId.HasValue)
             {
                 query = query.Where(n =>
                     n.CreatedAt < cursorCreatedAt.Value ||
-                    (n.CreatedAt == cursorCreatedAt.Value && n.Id.GetValue().CompareTo(cursorId!.Value) < 0));
+                    (n.CreatedAt == cursorCreatedAt.Value && n.Id.GetValue().CompareTo(cursorId.Value.GetValue()) < 0));
             }
 
             var result = query

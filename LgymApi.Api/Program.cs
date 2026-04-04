@@ -26,7 +26,7 @@ using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Infrastructure.Services;
-using LgymApi.Notifications;
+using LgymApi.Application.Notifications;
 using Microsoft.AspNetCore.SignalR;
 
 
@@ -88,7 +88,7 @@ builder.Services.AddScoped<IEmailScheduler<PasswordRecoveryEmailPayload>, EmailS
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IUserIdProvider, LgymApi.Api.Hubs.NotificationHubUserIdProvider>();
-builder.Services.AddScoped<LgymApi.Notifications.Application.IInAppNotificationPushPublisher, LgymApi.Api.Features.InAppNotification.SignalRNotificationPushPublisher>();
+builder.Services.AddScoped<IInAppNotificationPushPublisher, LgymApi.Api.Features.InAppNotification.SignalRNotificationPushPublisher>();
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
