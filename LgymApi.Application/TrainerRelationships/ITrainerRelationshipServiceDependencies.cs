@@ -4,6 +4,7 @@ using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
+using System;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Features.TrainerRelationships;
@@ -20,6 +21,7 @@ public interface ITrainerRelationshipServiceDependencies
     IEloRegistryService EloRegistryService { get; }
     IMainRecordsService MainRecordsService { get; }
     IUnitOfWork UnitOfWork { get; }
+    IServiceProvider ServiceProvider { get; }
     ILogger<TrainerRelationshipService> Logger { get; }
 }
 
@@ -36,6 +38,7 @@ internal sealed class TrainerRelationshipServiceDependencies : ITrainerRelations
         IEloRegistryService eloRegistryService,
         IMainRecordsService mainRecordsService,
         IUnitOfWork unitOfWork,
+        IServiceProvider serviceProvider,
         ILogger<TrainerRelationshipService> logger)
     {
         UserRepository = userRepository;
@@ -48,6 +51,7 @@ internal sealed class TrainerRelationshipServiceDependencies : ITrainerRelations
         EloRegistryService = eloRegistryService;
         MainRecordsService = mainRecordsService;
         UnitOfWork = unitOfWork;
+        ServiceProvider = serviceProvider;
         Logger = logger;
     }
 
@@ -61,5 +65,6 @@ internal sealed class TrainerRelationshipServiceDependencies : ITrainerRelations
     public IEloRegistryService EloRegistryService { get; }
     public IMainRecordsService MainRecordsService { get; }
     public IUnitOfWork UnitOfWork { get; }
+    public IServiceProvider ServiceProvider { get; }
     public ILogger<TrainerRelationshipService> Logger { get; }
 }
