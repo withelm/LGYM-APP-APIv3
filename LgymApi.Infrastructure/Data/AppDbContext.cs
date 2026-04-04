@@ -3,6 +3,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Notifications.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System.Linq.Expressions;
@@ -50,6 +51,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<UserTutorialStepProgress> UserTutorialStepProgresses => Set<UserTutorialStepProgress>();
     public DbSet<UserTutorialProgress> UserTutorialProgresses => Set<UserTutorialProgress>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
 
     public static readonly Id<Role> UserRoleSeedId = ParseSeedId<Role>("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Id<Role> AdminRoleSeedId = ParseSeedId<Role>("1754c6f8-c021-41aa-b610-17088f9476f9");
@@ -110,6 +112,9 @@ public sealed class AppDbContext : DbContext
 
         configurationBuilder.Properties<Id<CorrelationScope>>().HaveConversion<TypedIdValueConverter<CorrelationScope>>();
         configurationBuilder.Properties<Id<CorrelationScope>?>().HaveConversion<NullableTypedIdValueConverter<CorrelationScope>>();
+
+        configurationBuilder.Properties<Id<InAppNotification>>().HaveConversion<TypedIdValueConverter<InAppNotification>>();
+        configurationBuilder.Properties<Id<InAppNotification>?>().HaveConversion<NullableTypedIdValueConverter<InAppNotification>>();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -740,6 +745,17 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InAppNotification>(entity =>
+        {
+            entity.ToTable("in_app_notifications");
+            entity.Property(e => e.Type)
+                .HasConversion(
+                    notificationType => notificationType.Value,
+                    value => InAppNotificationType.Parse(value))
+                .IsRequired();
+            entity.HasIndex(e => new { e.RecipientId, e.CreatedAt, e.Id });
         });
      }
 

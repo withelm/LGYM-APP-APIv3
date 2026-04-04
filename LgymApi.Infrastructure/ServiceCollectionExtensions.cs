@@ -9,6 +9,7 @@ using LgymApi.Infrastructure.UnitOfWork;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Repositories;
+using LgymApi.Notifications.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -129,6 +130,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommandEnvelopeRepository, CommandEnvelopeRepository>();
         services.AddScoped<ITutorialProgressRepository, TutorialProgressRepository>();
         services.AddScoped<IApiIdempotencyRecordRepository, ApiIdempotencyRecordRepository>();
+        services.AddScoped<IInAppNotificationRepository, InAppNotificationRepository>();
         services.AddScoped<ICommittedIntentDispatcher, CommittedIntentDispatcher>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
