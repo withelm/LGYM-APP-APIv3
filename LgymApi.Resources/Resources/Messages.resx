@@ -201,10 +201,37 @@
    <data name="ForgotPasswordRequested" xml:space="preserve">
      <value>If an account with that email exists, a password reset link has been sent.</value>
    </data>
-   <data name="PasswordResetSucceeded" xml:space="preserve">
-     <value>Password reset successfully.</value>
-   </data>
-   <data name="PasswordResetInvalidOrExpiredToken" xml:space="preserve">
-     <value>Invalid or expired reset token.</value>
-   </data>
- </root>
+    <data name="PasswordResetSucceeded" xml:space="preserve">
+      <value>Password reset successfully.</value>
+    </data>
+     <data name="PasswordResetInvalidOrExpiredToken" xml:space="preserve">
+       <value>Invalid or expired reset token.</value>
+     </data>
+  <data name="InAppNotificationNotFound" xml:space="preserve">
+    <value>Notification not found.</value>
+  </data>
+  <data name="InAppNotificationForbidden" xml:space="preserve">
+    <value>You are not allowed to access this notification.</value>
+  </data>
+  <data name="InAppNotificationInvalidRedirectUrl" xml:space="preserve">
+    <value>Redirect URL must be a relative path starting with '/'.</value>
+  </data>
+  <data name="InAppNotificationLimitOutOfRange" xml:space="preserve">
+    <value>Limit must be between 1 and 50.</value>
+  </data>
+  <data name="InAppNotificationMarkedAsRead" xml:space="preserve">
+    <value>Notification marked as read.</value>
+  </data>
+  <data name="InAppNotificationAllMarkedAsRead" xml:space="preserve">
+    <value>All notifications marked as read.</value>
+  </data>
+  <data name="TrainerInvitationSent" xml:space="preserve">
+    <value>Your trainer invitation has been sent.</value>
+  </data>
+  <data name="TrainerInvitationAccepted" xml:space="preserve">
+    <value>A trainer has accepted your invitation.</value>
+  </data>
+  <data name="TrainerInvitationRejected" xml:space="preserve">
+    <value>A trainee has rejected your invitation.</value>
+  </data>
+</root>

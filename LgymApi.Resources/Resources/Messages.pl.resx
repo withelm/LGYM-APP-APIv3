@@ -201,10 +201,37 @@
    <data name="ForgotPasswordRequested" xml:space="preserve">
      <value>Jeśli konto z tym adresem email istnieje, link do resetowania hasła został wysłany.</value>
    </data>
-   <data name="PasswordResetSucceeded" xml:space="preserve">
-     <value>Hasło zostało zresetowane pomyślnie.</value>
-   </data>
-   <data name="PasswordResetInvalidOrExpiredToken" xml:space="preserve">
-     <value>Nieprawidłowy lub wygaśnięty token resetowania.</value>
-   </data>
- </root>
+    <data name="PasswordResetSucceeded" xml:space="preserve">
+      <value>Hasło zostało zresetowane pomyślnie.</value>
+    </data>
+  <data name="PasswordResetInvalidOrExpiredToken" xml:space="preserve">
+      <value>Nieprawidłowy lub wygaśnięty token resetowania.</value>
+    </data>
+  <data name="InAppNotificationNotFound" xml:space="preserve">
+    <value>Nie znaleziono powiadomienia.</value>
+  </data>
+  <data name="InAppNotificationForbidden" xml:space="preserve">
+    <value>Nie masz dostępu do tego powiadomienia.</value>
+  </data>
+  <data name="InAppNotificationInvalidRedirectUrl" xml:space="preserve">
+    <value>Adres przekierowania musi być ścieżką względną zaczynającą się od '/'.</value>
+  </data>
+  <data name="InAppNotificationLimitOutOfRange" xml:space="preserve">
+    <value>Limit musi wynosić od 1 do 50.</value>
+  </data>
+  <data name="InAppNotificationMarkedAsRead" xml:space="preserve">
+    <value>Powiadomienie oznaczone jako przeczytane.</value>
+  </data>
+  <data name="InAppNotificationAllMarkedAsRead" xml:space="preserve">
+    <value>Wszystkie powiadomienia oznaczone jako przeczytane.</value>
+  </data>
+  <data name="TrainerInvitationSent" xml:space="preserve">
+    <value>Twoje zaproszenie do trenera zostało wysłane.</value>
+  </data>
+  <data name="TrainerInvitationAccepted" xml:space="preserve">
+    <value>Trener zaakceptował Twoje zaproszenie.</value>
+  </data>
+  <data name="TrainerInvitationRejected" xml:space="preserve">
+    <value>Uczeń odrzucił Twoje zaproszenie.</value>
+  </data>
+</root>
