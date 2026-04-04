@@ -1,7 +1,7 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Mapping.Core;
@@ -32,8 +32,14 @@ public sealed class TraineeReportingController : ControllerBase
     public async Task<IActionResult> GetPendingRequests()
     {
         var trainee = HttpContext.GetCurrentUser();
-        var requests = await _reportingService.GetPendingRequestsForTraineeAsync(trainee!, HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<ReportRequestResult, ReportRequestDto>(requests));
+        var result = await _reportingService.GetPendingRequestsForTraineeAsync(trainee!, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<ReportRequestResult, ReportRequestDto>(result.Value));
     }
 
     [HttpPost("report-requests/{requestId}/submit")]
@@ -43,15 +49,20 @@ public sealed class TraineeReportingController : ControllerBase
     {
         if (!Id<ReportRequest>.TryParse(requestId, out var parsedRequestId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        var submission = await _reportingService.SubmitReportRequestAsync(trainee!, parsedRequestId, new SubmitReportRequestCommand
+        var result = await _reportingService.SubmitReportRequestAsync(trainee!, parsedRequestId, new SubmitReportRequestCommand
         {
             Answers = new Dictionary<string, System.Text.Json.JsonElement>(request.Answers, StringComparer.OrdinalIgnoreCase)
         }, HttpContext.RequestAborted);
 
-        return Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(submission));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
     }
 }

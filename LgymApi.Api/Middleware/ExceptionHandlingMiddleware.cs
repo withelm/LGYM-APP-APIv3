@@ -21,22 +21,6 @@ public sealed class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
-        catch (AppException ex)
-        {
-            if (context.Response.HasStarted)
-            {
-                throw;
-            }
-
-            context.Response.StatusCode = ex.StatusCode;
-            if (ex.Payload != null)
-            {
-                await context.Response.WriteAsJsonAsync(ex.Payload);
-                return;
-            }
-
-            await context.Response.WriteAsJsonAsync(new ResponseMessageDto { Message = ex.Message });
-        }
         catch (Exception ex)
         {
             if (context.Response.HasStarted)
@@ -44,6 +28,17 @@ public sealed class ExceptionHandlingMiddleware
                 throw;
             }
 
+            // Handle AppException (from excluded infrastructure components like RouteUserAccessGuard)
+            if (ex is AppException appEx)
+            {
+                _logger.LogError(ex, "Application exception");
+                context.Response.StatusCode = appEx.StatusCode;
+                var response = appEx.Payload ?? new ResponseMessageDto { Message = appEx.Message };
+                await context.Response.WriteAsJsonAsync(response);
+                return;
+            }
+
+            // Handle all other exceptions as 500 Internal Server Error
             _logger.LogError(ex, "Unhandled exception");
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             await context.Response.WriteAsJsonAsync(new ResponseMessageDto { Message = Messages.TryAgain });

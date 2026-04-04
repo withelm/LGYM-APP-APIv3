@@ -1,3 +1,4 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.AppConfig.Contracts;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Middleware;
@@ -30,8 +31,13 @@ public sealed class AppConfigController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request)
     {
-        var config = await _appConfigService.GetLatestByPlatformAsync(request.Platform, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<AppConfigEntity, AppConfigInfoDto>(config));
+        var result = await _appConfigService.GetLatestByPlatformAsync(request.Platform, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
+        return Ok(_mapper.Map<AppConfigEntity, AppConfigInfoDto>(result.Value));
     }
 
     [HttpPost("appConfig/createNewAppVersion/{id}")]
@@ -49,7 +55,12 @@ public sealed class AppConfigController : ControllerBase
             form.ForceUpdate,
             form.UpdateUrl,
             form.ReleaseNotes);
-        await _appConfigService.CreateNewAppVersionAsync(userId, input, HttpContext.RequestAborted);
+        var result = await _appConfigService.CreateNewAppVersionAsync(userId, input, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 }

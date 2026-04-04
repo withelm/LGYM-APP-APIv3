@@ -1,6 +1,7 @@
 using System.Globalization;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.EloRegistry.Models;
-using LgymApi.Application.Exceptions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
@@ -18,30 +19,32 @@ public sealed class EloRegistryService : IEloRegistryService
         _eloRepository = eloRepository;
     }
 
-    public async Task<List<EloRegistryChartEntry>> GetChartAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
+    public async Task<Result<List<EloRegistryChartEntry>, AppError>> GetChartAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<EloRegistryChartEntry>, AppError>.Failure(new EloRegistryNotFoundError(Messages.DidntFind));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<EloRegistryChartEntry>, AppError>.Failure(new EloRegistryNotFoundError(Messages.DidntFind));
         }
 
         var eloRegistry = await _eloRepository.GetByUserIdAsync(user.Id, cancellationToken);
         if (eloRegistry.Count == 0)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<EloRegistryChartEntry>, AppError>.Failure(new EloRegistryNotFoundError(Messages.DidntFind));
         }
 
-        return eloRegistry.Select(entry => new EloRegistryChartEntry
+        var result = eloRegistry.Select(entry => new EloRegistryChartEntry
         {
             Id = entry.Id.ToString(),
             Value = entry.Elo,
             Date = entry.Date.UtcDateTime.ToString("MM/dd", CultureInfo.InvariantCulture)
         }).ToList();
+
+        return Result<List<EloRegistryChartEntry>, AppError>.Success(result);
     }
 }

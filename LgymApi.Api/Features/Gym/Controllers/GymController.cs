@@ -1,3 +1,4 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Gym.Contracts;
 using LgymApi.Api.Middleware;
@@ -31,7 +32,13 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<LgymApi.Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<LgymApi.Domain.Entities.User>.Empty;
-        await _gymService.AddGymAsync(user!, routeUserId, form.Name, form.Address, HttpContext.RequestAborted);
+        
+        var result = await _gymService.AddGymAsync(user!, routeUserId, form.Name, form.Address, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -44,7 +51,13 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var gymId = Id<LgymApi.Domain.Entities.Gym>.TryParse(id, out var parsedGymId) ? parsedGymId : Id<LgymApi.Domain.Entities.Gym>.Empty;
-        await _gymService.DeleteGymAsync(user!, gymId, HttpContext.RequestAborted);
+        
+        var result = await _gymService.DeleteGymAsync(user!, gymId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -56,13 +69,20 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<LgymApi.Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<LgymApi.Domain.Entities.User>.Empty;
-        var context = await _gymService.GetGymsAsync(user!, routeUserId, HttpContext.RequestAborted);
+        
+        var result = await _gymService.GetGymsAsync(user!, routeUserId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var context = result.Value;
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(GymProfile.Keys.LastTrainingMap, context.LastTrainings);
 
-        var result = _mapper.MapList<LgymApi.Domain.Entities.Gym, GymChoiceInfoDto>(context.Gyms, mappingContext);
+        var gyms = _mapper.MapList<LgymApi.Domain.Entities.Gym, GymChoiceInfoDto>(context.Gyms, mappingContext);
 
-        return Ok(result);
+        return Ok(gyms);
     }
 
     [HttpGet("gym/{id}/getGym")]
@@ -74,8 +94,14 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var gymId = Id<LgymApi.Domain.Entities.Gym>.TryParse(id, out var parsedGymId) ? parsedGymId : Id<LgymApi.Domain.Entities.Gym>.Empty;
-        var gym = await _gymService.GetGymAsync(user!, gymId, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<LgymApi.Domain.Entities.Gym, GymFormDto>(gym));
+        
+        var result = await _gymService.GetGymAsync(user!, gymId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<LgymApi.Domain.Entities.Gym, GymFormDto>(result.Value));
     }
 
     [HttpPost("gym/editGym")]
@@ -87,7 +113,13 @@ public sealed class GymController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var gymId = Id<LgymApi.Domain.Entities.Gym>.TryParse(form.Id, out var parsedGymId) ? parsedGymId : Id<LgymApi.Domain.Entities.Gym>.Empty;
-        await _gymService.UpdateGymAsync(user!, gymId, form.Name, form.Address, HttpContext.RequestAborted);
+        
+        var result = await _gymService.UpdateGymAsync(user!, gymId, form.Name, form.Address, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

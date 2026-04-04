@@ -34,25 +34,24 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
-    public async Task CreateTemplateAsync_ThrowsBadRequest_WhenFieldKeyWhitespace()
+    public async Task CreateTemplateAsync_ReturnsBadRequest_WhenFieldKeyWhitespace()
     {
         var trainer = NewUser();
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.CreateTemplateAsync(trainer, new CreateReportTemplateCommand
+        var result = await _service.CreateTemplateAsync(trainer, new CreateReportTemplateCommand
             {
                 Name = "Weekly",
                 Fields =
                 [
                     new ReportTemplateFieldCommand { Key = " ", Label = "Weight", Type = ReportFieldType.Number, IsRequired = true, Order = 0 }
                 ]
-            }));
+            });
 
         Assert.Multiple(() =>
         {
-            Assert.That(exception, Is.Not.Null);
-            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-            Assert.That(exception.Message, Is.EqualTo(Messages.FieldRequired));
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+            Assert.That(result.Error.Message, Is.EqualTo(Messages.FieldRequired));
         });
     }
 
@@ -74,29 +73,29 @@ public sealed class ReportingServiceTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Name, Is.EqualTo("Weekly Report"));
-            Assert.That(result.Description, Is.EqualTo("Notes"));
-            Assert.That(result.Fields.Select(f => f.Key).ToArray(), Is.EqualTo(OrderedTemplateKeys));
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.Name, Is.EqualTo("Weekly Report"));
+            Assert.That(result.Value.Description, Is.EqualTo("Notes"));
+            Assert.That(result.Value.Fields.Select(f => f.Key).ToArray(), Is.EqualTo(OrderedTemplateKeys));
             Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
         });
     }
 
     [Test]
-    public void CreateTemplateAsync_ThrowsForbidden_WhenUserIsNotTrainer()
+    public async Task CreateTemplateAsync_ReturnsForbidden_WhenUserIsNotTrainer()
     {
         var notTrainer = NewPlainUser();
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.CreateTemplateAsync(notTrainer, new CreateReportTemplateCommand
+        var result = await _service.CreateTemplateAsync(notTrainer, new CreateReportTemplateCommand
             {
                 Name = "Weekly",
                 Fields = [new ReportTemplateFieldCommand { Key = "weight", Label = "Weight", Type = ReportFieldType.Number, IsRequired = true, Order = 0 }]
-            }));
+            });
 
         Assert.Multiple(() =>
         {
-            Assert.That(exception, Is.Not.Null);
-            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
         });
     }
 
@@ -134,7 +133,8 @@ public sealed class ReportingServiceTests
         Assert.Multiple(() =>
         {
             Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-            Assert.That(result, Has.Count.EqualTo(1));
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value, Has.Count.EqualTo(1));
             Assert.That(_reportingRepository.Requests.Count(r => r.Status == ReportRequestStatus.Expired), Is.EqualTo(1));
         });
     }
@@ -161,7 +161,8 @@ public sealed class ReportingServiceTests
 
          Assert.Multiple(() =>
          {
-             Assert.That(result, Has.Count.EqualTo(1));
+             Assert.That(result.IsSuccess, Is.True);
+             Assert.That(result.Value, Has.Count.EqualTo(1));
              Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
          });
      }
@@ -185,8 +186,9 @@ public sealed class ReportingServiceTests
 
           Assert.Multiple(() =>
           {
-              Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
-              Assert.That(result.Answers.ContainsKey("WEIGHT"), Is.True);
+              Assert.That(result.IsSuccess, Is.True);
+              Assert.That(result.Value.ReportRequestId, Is.EqualTo(request.Id));
+              Assert.That(result.Value.Answers.ContainsKey("WEIGHT"), Is.True);
               Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
           });
      }
@@ -207,14 +209,15 @@ public sealed class ReportingServiceTests
 
           Assert.Multiple(() =>
           {
-              Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
-              Assert.That(result.Answers, Is.Empty);
+              Assert.That(result.IsSuccess, Is.True);
+              Assert.That(result.Value.ReportRequestId, Is.EqualTo(request.Id));
+              Assert.That(result.Value.Answers, Is.Empty);
               Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
           });
      }
 
        [Test]
-       public async Task SubmitReportRequestAsync_ThrowsBadRequest_WhenRequiredFieldMissing()
+       public async Task SubmitReportRequestAsync_ReturnsBadRequest_WhenRequiredFieldMissing()
        {
            var trainee = NewUser();
            var trainer = NewUser();
@@ -222,17 +225,16 @@ public sealed class ReportingServiceTests
            var request = NewPendingRequest(trainer.Id, trainee.Id, template);
           _reportingRepository.Requests.Add(request);
 
-           var exception = Assert.ThrowsAsync<AppException>(async () =>
-               await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
+           var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
                {
                    Answers = new Dictionary<string, JsonElement>()
-               }));
+               });
 
           Assert.Multiple(() =>
           {
-              Assert.That(exception, Is.Not.Null);
-              Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-              Assert.That(exception.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
+              Assert.That(result.IsFailure, Is.True);
+              Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+              Assert.That(result.Error.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
           });
       }
 
@@ -255,13 +257,14 @@ public sealed class ReportingServiceTests
 
           Assert.Multiple(() =>
           {
-              Assert.That(result.ReportRequestId, Is.EqualTo(request.Id));
+              Assert.That(result.IsSuccess, Is.True);
+              Assert.That(result.Value.ReportRequestId, Is.EqualTo(request.Id));
               Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
           });
      }
 
       [Test]
-      public void SubmitReportRequestAsync_MapsDuplicateSubmissionToBadRequest()
+      public async Task SubmitReportRequestAsync_MapsDuplicateSubmissionToBadRequest()
       {
           var trainee = NewUser();
           var trainer = NewUser();
@@ -270,25 +273,24 @@ public sealed class ReportingServiceTests
          _reportingRepository.Requests.Add(request);
          _unitOfWork.ThrowOnSave = new Exception("duplicate key value violates unique constraint ReportRequestId");
 
-          var exception = Assert.ThrowsAsync<AppException>(async () =>
-              await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
+          var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
               {
                   Answers = new Dictionary<string, JsonElement>
                   {
                       ["weight"] = JsonSerializer.SerializeToElement(80)
                   }
-              }));
+              });
 
-          Assert.Multiple(() =>
-          {
-              Assert.That(exception, Is.Not.Null);
-              Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-              Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
-          });
-      }
+         Assert.Multiple(() =>
+         {
+             Assert.That(result.IsFailure, Is.True);
+             Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+             Assert.That(result.Error.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+         });
+     }
 
        [Test]
-       public void SubmitReportRequestAsync_ThrowsBadRequest_WhenStatusNotPending()
+       public async Task SubmitReportRequestAsync_ReturnsBadRequest_WhenStatusNotPending()
       {
           var trainee = NewUser();
           var trainer = NewUser();
@@ -297,25 +299,24 @@ public sealed class ReportingServiceTests
          request.Status = ReportRequestStatus.Submitted;
          _reportingRepository.Requests.Add(request);
 
-          var exception = Assert.ThrowsAsync<AppException>(async () =>
-              await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
+          var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
               {
                   Answers = new Dictionary<string, JsonElement>
                   {
                       ["weight"] = JsonSerializer.SerializeToElement(80)
                   }
-              }));
+              });
 
           Assert.Multiple(() =>
           {
-              Assert.That(exception, Is.Not.Null);
-              Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-              Assert.That(exception.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+              Assert.That(result.IsFailure, Is.True);
+              Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+              Assert.That(result.Error.Message, Is.EqualTo(Messages.ReportRequestNotPending));
           });
       }
 
        [Test]
-       public void SubmitReportRequestAsync_ThrowsBadRequest_WhenExpired()
+       public async Task SubmitReportRequestAsync_ReturnsBadRequest_WhenExpired()
        {
            var trainee = NewUser();
            var trainer = NewUser();
@@ -324,19 +325,18 @@ public sealed class ReportingServiceTests
           request.DueAt = DateTimeOffset.UtcNow.AddMinutes(-1);
           _reportingRepository.Requests.Add(request);
 
-          var exception = Assert.ThrowsAsync<AppException>(async () =>
-              await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
+          var result = await _service.SubmitReportRequestAsync(trainee, request.Id, new SubmitReportRequestCommand
              {
                  Answers = new Dictionary<string, JsonElement>
                  {
                      ["weight"] = JsonSerializer.SerializeToElement(80)
                  }
-             }));
+             });
 
          Assert.Multiple(() =>
          {
-             Assert.That(exception, Is.Not.Null);
-             Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+             Assert.That(result.IsFailure, Is.True);
+             Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
              Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Expired));
          });
      }
@@ -362,8 +362,9 @@ public sealed class ReportingServiceTests
 
          Assert.Multiple(() =>
          {
-             Assert.That(result, Has.Count.EqualTo(1));
-             Assert.That(result[0].Answers.ContainsKey("WEIGHT"), Is.True);
+             Assert.That(result.IsSuccess, Is.True);
+             Assert.That(result.Value, Has.Count.EqualTo(1));
+             Assert.That(result.Value[0].Answers.ContainsKey("WEIGHT"), Is.True);
          });
      }
 

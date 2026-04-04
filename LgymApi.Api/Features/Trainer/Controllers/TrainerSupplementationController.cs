@@ -1,7 +1,8 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Supplementation.Models;
 using LgymApi.Application.Mapping.Core;
@@ -32,28 +33,34 @@ public sealed class TrainerSupplementationController : ControllerBase
     [ProducesResponseType(typeof(List<SupplementPlanDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTraineePlans([FromRoute] string traineeId)
     {
-        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
-        {
-            throw AppException.BadRequest(Messages.UserIdRequired);
-        }
+        Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId);
 
         var trainer = HttpContext.GetCurrentUser();
-        var plans = await _supplementationService.GetTraineePlansAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<SupplementPlanResult, SupplementPlanDto>(plans));
+        var result = await _supplementationService.GetTraineePlansAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<SupplementPlanResult, SupplementPlanDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/supplement-plans")]
     [ProducesResponseType(typeof(SupplementPlanDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateTraineePlan([FromRoute] string traineeId, [FromBody] UpsertSupplementPlanRequest request)
     {
-        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
-        {
-            throw AppException.BadRequest(Messages.UserIdRequired);
-        }
+        Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId);
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _supplementationService.CreateTraineePlanAsync(trainer!, parsedTraineeId, MapPlanCommand(request), HttpContext.RequestAborted);
-        return StatusCode(StatusCodes.Status201Created, _mapper.Map<SupplementPlanResult, SupplementPlanDto>(plan));
+        var result = await _supplementationService.CreateTraineePlanAsync(trainer!, parsedTraineeId, MapPlanCommand(request), HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return StatusCode(StatusCodes.Status201Created, _mapper.Map<SupplementPlanResult, SupplementPlanDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/supplement-plans/{planId}/update")]
@@ -62,17 +69,23 @@ public sealed class TrainerSupplementationController : ControllerBase
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
         if (!Id<SupplementPlan>.TryParse(planId, out var parsedPlanId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _supplementationService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, MapPlanCommand(request), HttpContext.RequestAborted);
-        return Ok(_mapper.Map<SupplementPlanResult, SupplementPlanDto>(plan));
+        var result = await _supplementationService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, MapPlanCommand(request), HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<SupplementPlanResult, SupplementPlanDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/supplement-plans/{planId}/delete")]
@@ -81,16 +94,22 @@ public sealed class TrainerSupplementationController : ControllerBase
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
         if (!Id<SupplementPlan>.TryParse(planId, out var parsedPlanId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _supplementationService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        var result = await _supplementationService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -100,16 +119,22 @@ public sealed class TrainerSupplementationController : ControllerBase
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
         if (!Id<SupplementPlan>.TryParse(planId, out var parsedPlanId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _supplementationService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        var result = await _supplementationService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -119,11 +144,17 @@ public sealed class TrainerSupplementationController : ControllerBase
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _supplementationService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _supplementationService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -133,17 +164,23 @@ public sealed class TrainerSupplementationController : ControllerBase
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
         if (fromDate is null || toDate is null)
         {
-            throw AppException.BadRequest(Messages.DateRangeRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.DateRangeRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var summary = await _supplementationService.GetComplianceSummaryAsync(trainer!, parsedTraineeId, fromDate.Value, toDate.Value, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<SupplementComplianceSummaryResult, SupplementComplianceSummaryDto>(summary));
+        var result = await _supplementationService.GetComplianceSummaryAsync(trainer!, parsedTraineeId, fromDate.Value, toDate.Value, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<SupplementComplianceSummaryResult, SupplementComplianceSummaryDto>(result.Value));
     }
 
     private static UpsertSupplementPlanCommand MapPlanCommand(UpsertSupplementPlanRequest request)
@@ -165,11 +202,6 @@ public sealed class TrainerSupplementationController : ControllerBase
 
     private static int ParseDaysOfWeekMask(int mask)
     {
-        if (mask is < 1 or > 127)
-        {
-            throw AppException.BadRequest(Messages.FieldRequired);
-        }
-
         return mask;
     }
 }

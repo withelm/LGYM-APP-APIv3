@@ -1,4 +1,5 @@
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Gym.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -22,21 +23,21 @@ public sealed class GymService : IGymService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.User> routeUserId, string name, string? address, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> AddGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.User> routeUserId, string name, string? address, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidGymError(Messages.FieldRequired));
         }
 
         Id<Address>? addressId = null;
@@ -56,46 +57,50 @@ public sealed class GymService : IGymService
 
         await _gymRepository.AddAsync(gym, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task DeleteGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> DeleteGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
         if (gymId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidGymError(Messages.FieldRequired));
         }
 
         var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
         if (gym == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
         if (gym.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }
 
         gym.IsDeleted = true;
         await _gymRepository.UpdateAsync(gym, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<GymListContext> GetGymsAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.User> routeUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<GymListContext, AppError>> GetGymsAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.User> routeUserId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<GymListContext, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<GymListContext, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }
 
         var gyms = await _gymRepository.GetByUserIdAsync(currentUser.Id, cancellationToken);
@@ -107,60 +112,60 @@ public sealed class GymService : IGymService
             .Where(t => t != null)
             .ToDictionary(t => t!.GymId, t => t!);
 
-        return new GymListContext
+        return Result<GymListContext, AppError>.Success(new GymListContext
         {
             Gyms = gyms,
             LastTrainings = lastTrainings
-        };
+        });
     }
 
-    public async Task<GymEntity> GetGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, CancellationToken cancellationToken = default)
+    public async Task<Result<GymEntity, AppError>> GetGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<GymEntity, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
         if (gymId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<GymEntity, AppError>.Failure(new InvalidGymError(Messages.FieldRequired));
         }
 
         var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
         if (gym == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<GymEntity, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
         if (gym.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<GymEntity, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }
 
-        return gym;
+        return Result<GymEntity, AppError>.Success(gym);
     }
 
-    public async Task UpdateGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, string name, string? address, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> UpdateGymAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Gym> gymId, string name, string? address, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
         if (gymId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidGymError(Messages.FieldRequired));
         }
 
         var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
         if (gym == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
         if (gym.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }
 
         gym.Name = name;
@@ -171,5 +176,7 @@ public sealed class GymService : IGymService
 
         await _gymRepository.UpdateAsync(gym, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 }

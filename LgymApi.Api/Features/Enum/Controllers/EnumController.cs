@@ -1,7 +1,7 @@
 using System.Globalization;
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Enum.Contracts;
-using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Enum;
 using LgymApi.Application.Features.Enum.Models;
 using LgymApi.Application.Mapping.Core;
@@ -53,17 +53,17 @@ public sealed class EnumController : ControllerBase
     [HttpGet("{enumType}")]
     [ProducesResponseType(typeof(EnumLookupResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public IActionResult GetEnumLookup([FromRoute] string enumType)
+    public async Task<IActionResult> GetEnumLookup([FromRoute] string enumType, CancellationToken cancellationToken)
     {
         var culture = GetRequestCulture();
-        var lookup = _enumService.GetLookupByName(enumType, culture);
+        var result = await _enumService.GetLookupByNameAsync(enumType, culture, cancellationToken);
 
-        if (lookup == null)
+        if (result.IsFailure)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return result.ToActionResult();
         }
 
-        return Ok(_mapper.Map<EnumLookupResponse, EnumLookupResponseDto>(lookup));
+        return Ok(_mapper.Map<EnumLookupResponse, EnumLookupResponseDto>(result.Value));
     }
 
     private CultureInfo GetRequestCulture()

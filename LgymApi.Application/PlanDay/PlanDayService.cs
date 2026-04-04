@@ -1,4 +1,5 @@
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.PlanDay.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.ValueObjects;
@@ -28,27 +29,27 @@ public sealed class PlanDayService : IPlanDayService
         _unitOfWork = dependencies.UnitOfWork;
     }
 
-    public async Task CreatePlanDayAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Plan> planId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> CreatePlanDayAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Plan> planId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || planId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         if (plan.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
 
         if (string.IsNullOrWhiteSpace(name) || exercises.Count == 0)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidPlanDayError(Messages.FieldRequired));
         }
 
         var planDay = new PlanDayEntity
@@ -87,40 +88,41 @@ public sealed class PlanDayService : IPlanDayService
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task UpdatePlanDayAsync(UserEntity currentUser, Id<PlanDayEntity> planDayId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> UpdatePlanDayAsync(UserEntity currentUser, Id<PlanDayEntity> planDayId, string name, IReadOnlyCollection<PlanDayExerciseInput> exercises, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         if (string.IsNullOrWhiteSpace(name) || exercises.Count == 0)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidPlanDayError(Messages.FieldRequired));
         }
 
         if (planDayId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new InvalidPlanDayError(Messages.DidntFind));
         }
 
         var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
         if (planDay == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         var plan = await _planRepository.FindByIdAsync(planDay.PlanId, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         if (plan.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
 
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -158,6 +160,7 @@ public sealed class PlanDayService : IPlanDayService
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            return Result<Unit, AppError>.Success(Unit.Value);
         }
         catch
         {
@@ -166,28 +169,28 @@ public sealed class PlanDayService : IPlanDayService
         }
     }
 
-    public async Task<PlanDayDetailsContext> GetPlanDayAsync(UserEntity currentUser, Id<PlanDayEntity> planDayId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+    public async Task<Result<PlanDayDetailsContext, AppError>> GetPlanDayAsync(UserEntity currentUser, Id<PlanDayEntity> planDayId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || planDayId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanDayDetailsContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
         if (planDay == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanDayDetailsContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         var plan = await _planRepository.FindByIdAsync(planDay.PlanId, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanDayDetailsContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         if (plan.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<PlanDayDetailsContext, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
 
         var exercises = await _planDayExerciseRepository.GetByPlanDayIdAsync(planDay.Id, cancellationToken);
@@ -200,37 +203,37 @@ public sealed class PlanDayService : IPlanDayService
             .ToList();
         var translations = await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken);
 
-        return new PlanDayDetailsContext
+        return Result<PlanDayDetailsContext, AppError>.Success(new PlanDayDetailsContext
         {
             PlanDay = planDay,
             Exercises = exercises,
             ExerciseMap = exerciseMap,
             Translations = translations
-        };
+        });
     }
 
-    public async Task<PlanDaysContext> GetPlanDaysAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Plan> planId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+    public async Task<Result<PlanDaysContext, AppError>> GetPlanDaysAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Plan> planId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || planId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanDaysContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanDaysContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         if (plan.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<PlanDaysContext, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
 
         var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id, cancellationToken);
         if (planDays.Count == 0)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanDaysContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         var planDayIds = planDays.Select(pd => pd.Id).ToList();
@@ -245,80 +248,82 @@ public sealed class PlanDayService : IPlanDayService
             .ToList();
         var translations = await _exerciseRepository.GetTranslationsAsync(globalExerciseIds, cultures, cancellationToken);
 
-        return new PlanDaysContext
+        return Result<PlanDaysContext, AppError>.Success(new PlanDaysContext
         {
             PlanDays = planDays,
             PlanDayExercises = planDayExercises,
             ExerciseMap = exerciseMap,
             Translations = translations
-        };
+        });
     }
 
-    public async Task<List<PlanDayEntity>> GetPlanDaysTypesAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<List<PlanDayEntity>, AppError>> GetPlanDaysTypesAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<PlanDayEntity>, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<List<PlanDayEntity>, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
 
         var plan = await _planRepository.FindActiveByUserIdAsync(currentUser.Id, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<PlanDayEntity>, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        return await _planDayRepository.GetByPlanIdAsync(plan.Id, cancellationToken);
+        var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id, cancellationToken);
+        return Result<List<PlanDayEntity>, AppError>.Success(planDays);
     }
 
-    public async Task DeletePlanDayAsync(UserEntity currentUser, Id<PlanDayEntity> planDayId, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> DeletePlanDayAsync(UserEntity currentUser, Id<PlanDayEntity> planDayId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || planDayId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
         if (planDay == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         var plan = await _planRepository.FindByIdAsync(planDay.PlanId, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         if (plan.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
 
         await _planDayRepository.MarkDeletedAsync(planDay.Id, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<PlanDaysInfoContext> GetPlanDaysInfoAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Plan> planId, CancellationToken cancellationToken = default)
+    public async Task<Result<PlanDaysInfoContext, AppError>> GetPlanDaysInfoAsync(UserEntity currentUser, Id<LgymApi.Domain.Entities.Plan> planId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || planId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanDaysInfoContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanDaysInfoContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
         if (plan.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<PlanDaysInfoContext, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
 
         var planDays = await _planDayRepository.GetByPlanIdAsync(plan.Id, cancellationToken);
@@ -331,11 +336,11 @@ public sealed class PlanDayService : IPlanDayService
             .GroupBy(t => t.TypePlanDayId)
             .ToDictionary(g => g.Key, g => (DateTime?)g.Max(t => t.CreatedAt).UtcDateTime);
 
-        return new PlanDaysInfoContext
+        return Result<PlanDaysInfoContext, AppError>.Success(new PlanDaysInfoContext
         {
             PlanDays = planDays,
             PlanDayExercises = planDayExercises,
             LastTrainingMap = lastTrainingMap
-        };
+        });
     }
 }

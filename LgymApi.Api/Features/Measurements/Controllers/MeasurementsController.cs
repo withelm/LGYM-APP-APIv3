@@ -1,3 +1,4 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Measurements.Contracts;
 using LgymApi.Api.Middleware;
@@ -30,7 +31,12 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     public async Task<IActionResult> AddMeasurement([FromBody] MeasurementFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        await _measurementsService.AddMeasurementAsync(user!, form.BodyPart, form.Unit, form.Value, HttpContext.RequestAborted);
+        var result = await _measurementsService.AddMeasurementAsync(user!, form.BodyPart, form.Unit, form.Value, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
@@ -43,8 +49,14 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     {
         var user = HttpContext.GetCurrentUser();
         var measurementId = Id<Measurement>.TryParse(id, out var parsedId) ? parsedId : Id<Measurement>.Empty;
-        var measurement = await _measurementsService.GetMeasurementDetailAsync(user!, measurementId, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<Measurement, MeasurementResponseDto>(measurement));
+        var result = await _measurementsService.GetMeasurementDetailAsync(user!, measurementId, HttpContext.RequestAborted);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<Measurement, MeasurementResponseDto>(result.Value));
     }
 
     [HttpGet("measurements/{id}/getHistory")]
@@ -56,10 +68,15 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var measurements = await _measurementsService.GetMeasurementsHistoryAsync(user!, routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
-        var result = _mapper.Map<List<Measurement>, MeasurementsHistoryDto>(measurements);
+        var result = await _measurementsService.GetMeasurementsHistoryAsync(user!, routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
 
-        return Ok(result);
+        var dto = _mapper.Map<List<Measurement>, MeasurementsHistoryDto>(result.Value);
+        return Ok(dto);
     }
 
     [HttpGet("measurements/{id}/list")]
@@ -71,9 +88,15 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var measurements = await _measurementsService.GetMeasurementsListAsync(user!, routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
-        var result = _mapper.Map<List<Measurement>, MeasurementsListDto>(measurements);
-        return Ok(result);
+        var result = await _measurementsService.GetMeasurementsListAsync(user!, routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var dto = _mapper.Map<List<Measurement>, MeasurementsListDto>(result.Value);
+        return Ok(dto);
     }
 
     [HttpGet("measurements/{id}/trend")]
@@ -85,8 +108,14 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var trend = await _measurementsService.GetMeasurementsTrendAsync(user!, routeUserId, request.BodyPart, request.Unit, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<MeasurementTrendResult, MeasurementTrendDto>(trend));
+        var result = await _measurementsService.GetMeasurementsTrendAsync(user!, routeUserId, request.BodyPart, request.Unit, HttpContext.RequestAborted);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<MeasurementTrendResult, MeasurementTrendDto>(result.Value));
     }
 
 }

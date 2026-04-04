@@ -1,4 +1,4 @@
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
@@ -12,7 +12,7 @@ namespace LgymApi.UnitTests;
 public sealed class MeasurementsServiceTests
 {
     [Test]
-    public async Task GetMeasurementDetailAsync_WhenMeasurementBelongsToDifferentUser_ThrowsForbidden()
+    public async Task GetMeasurementDetailAsync_WhenMeasurementBelongsToDifferentUser_ReturnsForbidden()
     {
         var currentUser = new User { Id = Id<User>.New(), Name = "current", Email = "current-measure@example.com", ProfileRank = "Rookie" };
         var foreignUserId = Id<User>.New();
@@ -28,14 +28,18 @@ public sealed class MeasurementsServiceTests
 
         var service = CreateService(findById: (_, _) => Task.FromResult<Measurement?>(measurement));
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await service.GetMeasurementDetailAsync(currentUser, measurementId));
+        var result = await service.GetMeasurementDetailAsync(currentUser, measurementId);
 
-        Assert.That(exception!.StatusCode, Is.EqualTo(403));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<MeasurementForbiddenError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo(403));
+        });
     }
 
     [Test]
-    public async Task GetMeasurementsListAsync_WhenStoredUnitIsInvalid_ThrowsBadRequest()
+    public async Task GetMeasurementsListAsync_WhenStoredUnitIsInvalid_ReturnsBadRequest()
     {
         var userId = Id<User>.New();
         var currentUser = new User { Id = userId, Name = "user", Email = "list-invalid-unit@example.com", ProfileRank = "Rookie" };
@@ -55,10 +59,14 @@ public sealed class MeasurementsServiceTests
 
         var service = CreateService(getByUser: (_, _, _) => Task.FromResult(measurements));
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await service.GetMeasurementsListAsync(currentUser, userId, BodyParts.Chest, HeightUnits.Centimeters));
+        var result = await service.GetMeasurementsListAsync(currentUser, userId, BodyParts.Chest, HeightUnits.Centimeters);
 
-        Assert.That(exception!.StatusCode, Is.EqualTo(400));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<InvalidMeasurementError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo(400));
+        });
     }
 
     [Test]
@@ -92,13 +100,14 @@ public sealed class MeasurementsServiceTests
 
         var service = CreateService(getByUser: (_, _, _) => Task.FromResult(measurements));
 
-        var trend = await service.GetMeasurementsTrendAsync(currentUser, userId, BodyParts.Chest, HeightUnits.Centimeters);
+        var result = await service.GetMeasurementsTrendAsync(currentUser, userId, BodyParts.Chest, HeightUnits.Centimeters);
 
         Assert.Multiple(() =>
         {
-            Assert.That(trend.ChangePercentage, Is.EqualTo(0));
-            Assert.That(trend.Direction, Is.EqualTo("flat"));
-            Assert.That(trend.Points, Is.EqualTo(2));
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.ChangePercentage, Is.EqualTo(0));
+            Assert.That(result.Value.Direction, Is.EqualTo("flat"));
+            Assert.That(result.Value.Points, Is.EqualTo(2));
         });
     }
 

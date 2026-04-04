@@ -1,4 +1,5 @@
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
@@ -22,16 +23,16 @@ public sealed class PlanService : IPlanService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task CreatePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, string name, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> CreatePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, string name, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
         var plan = new PlanEntity
@@ -47,126 +48,130 @@ public sealed class PlanService : IPlanService
         await _planRepository.AddAsync(plan, cancellationToken);
         await _userRepository.UpdateAsync(currentUser, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task UpdatePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, Id<PlanEntity> planId, string name, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> UpdatePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, Id<PlanEntity> planId, string name, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.FieldRequired));
         }
 
         if (planId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         plan.Name = name;
         await _planRepository.UpdateAsync(plan, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<PlanEntity> GetPlanConfigAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<PlanEntity, AppError>> GetPlanConfigAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanEntity, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<PlanEntity, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
         var plan = await _planRepository.FindActiveByUserIdAsync(currentUser.Id, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanEntity, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
-        return plan;
+        return Result<PlanEntity, AppError>.Success(plan);
     }
 
-    public async Task<bool> CheckIsUserHavePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, AppError>> CheckIsUserHavePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind, false);
+            return Result<bool, AppError>.Failure(new PlanFlagNotFoundError(Messages.DidntFind, false));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden, false);
+            return Result<bool, AppError>.Failure(new PlanFlagForbiddenError(Messages.Forbidden, false));
         }
 
         var plan = await _planRepository.FindActiveByUserIdAsync(currentUser.Id, cancellationToken);
         if (plan == null)
         {
-            return false;
+            return Result<bool, AppError>.Success(false);
         }
 
         var planDayExists = await _planDayRepository.AnyByPlanIdAsync(plan.Id, cancellationToken);
-        return planDayExists;
+        return Result<bool, AppError>.Success(planDayExists);
     }
 
-    public async Task<List<PlanEntity>> GetPlansListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<List<PlanEntity>, AppError>> GetPlansListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<PlanEntity>, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<List<PlanEntity>, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
         var plans = await _planRepository.GetByUserIdAsync(currentUser.Id, cancellationToken);
         if (plans.Count == 0)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<PlanEntity>, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
-        return plans;
+        return Result<List<PlanEntity>, AppError>.Success(plans);
     }
 
-    public async Task SetNewActivePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> SetNewActivePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || routeUserId.IsEmpty || planId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         if (plan.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -177,6 +182,7 @@ public sealed class PlanService : IPlanService
             await _userRepository.UpdateAsync(currentUser, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            return Result<Unit, AppError>.Success(Unit.Value);
         }
         catch
         {
@@ -185,22 +191,22 @@ public sealed class PlanService : IPlanService
         }
     }
 
-    public async Task DeletePlanAsync(UserEntity currentUser, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> DeletePlanAsync(UserEntity currentUser, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || planId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
         if (plan == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         if (plan.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -228,6 +234,7 @@ public sealed class PlanService : IPlanService
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            return Result<Unit, AppError>.Success(Unit.Value);
         }
         catch
         {
@@ -236,11 +243,11 @@ public sealed class PlanService : IPlanService
         }
     }
 
-    public async Task<PlanEntity> CopyPlanAsync(UserEntity currentUser, string shareCode, CancellationToken cancellationToken = default)
+    public async Task<Result<PlanEntity, AppError>> CopyPlanAsync(UserEntity currentUser, string shareCode, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.Unauthorized(Messages.Unauthorized);
+            return Result<PlanEntity, AppError>.Failure(new PlanUnauthorizedError(Messages.Unauthorized));
         }
 
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -250,12 +257,12 @@ public sealed class PlanService : IPlanService
             var plan = await _planRepository.CopyPlanByShareCodeAsync(shareCode, currentUser.Id, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            return plan;
+            return Result<PlanEntity, AppError>.Success(plan);
         }
         catch (InvalidOperationException)
         {
             await transaction.RollbackAsync(CancellationToken.None);
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<PlanEntity, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
         catch
         {
@@ -264,30 +271,56 @@ public sealed class PlanService : IPlanService
         }
     }
 
-    public async Task<string> GenerateShareCodeAsync(UserEntity currentUser, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
+    public async Task<Result<string, AppError>> GenerateShareCodeAsync(UserEntity currentUser, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null || planId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<string, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
         try
         {
             var shareCode = await _planRepository.GenerateShareCodeAsync(planId, currentUser.Id, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return shareCode;
+            return Result<string, AppError>.Success(shareCode);
         }
         catch (KeyNotFoundException)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<string, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
         catch (Exception exception) when (exception is InvalidOperationException || exception.GetType().Name == "DbUpdateException")
         {
-            throw AppException.Internal(Messages.TryAgain);
+            throw;
         }
         catch (UnauthorizedAccessException)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<string, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
+    }
+
+    private sealed class PlanFlagNotFoundError : NotFoundError
+    {
+        private readonly object? _payload;
+
+        public PlanFlagNotFoundError(string message, object? payload)
+            : base(message)
+        {
+            _payload = payload;
+        }
+
+        public override object? GetPayload() => _payload;
+    }
+
+    private sealed class PlanFlagForbiddenError : ForbiddenError
+    {
+        private readonly object? _payload;
+
+        public PlanFlagForbiddenError(string message, object? payload)
+            : base(message)
+        {
+            _payload = payload;
+        }
+
+        public override object? GetPayload() => _payload;
     }
 }

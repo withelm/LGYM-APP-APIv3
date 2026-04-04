@@ -1,5 +1,5 @@
 using System.Net;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Supplementation.Models;
 using LgymApi.Application.Repositories;
@@ -54,12 +54,13 @@ public sealed class SupplementationServiceTests
             ]
         });
 
+        Assert.That(result.IsSuccess, Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(result.Id, Is.Not.EqualTo(existing.Id));
+            Assert.That(result.Value.Id, Is.Not.EqualTo(existing.Id));
             Assert.That(existing.IsDeleted, Is.True);
             Assert.That(existing.IsActive, Is.False);
-            Assert.That(result.IsActive, Is.True);
+            Assert.That(result.Value.IsActive, Is.True);
             Assert.That(_supplementationRepository.Plans.Count, Is.EqualTo(2));
         });
     }
@@ -85,11 +86,12 @@ public sealed class SupplementationServiceTests
 
         var result = await _service.GetActiveScheduleForDateAsync(trainee, date);
 
+        Assert.That(result.IsSuccess, Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(result, Has.Count.EqualTo(1));
-            Assert.That(result[0].Taken, Is.True);
-            Assert.That(result[0].TakenAt, Is.Not.Null);
+            Assert.That(result.Value, Has.Count.EqualTo(1));
+            Assert.That(result.Value[0].Taken, Is.True);
+            Assert.That(result.Value[0].TakenAt, Is.Not.Null);
         });
     }
 
@@ -106,29 +108,30 @@ public sealed class SupplementationServiceTests
 
         var result = await _service.GetActiveScheduleForDateAsync(trainee, date);
 
+        Assert.That(result.IsSuccess, Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(result, Has.Count.EqualTo(2));
-            Assert.That(result[0].SupplementName, Is.EqualTo("First"));
-            Assert.That(result[1].SupplementName, Is.EqualTo("Second"));
+            Assert.That(result.Value, Has.Count.EqualTo(2));
+            Assert.That(result.Value[0].SupplementName, Is.EqualTo("First"));
+            Assert.That(result.Value[1].SupplementName, Is.EqualTo("Second"));
         });
     }
 
     [Test]
-    public void GetComplianceSummaryAsync_ThrowsBadRequest_WhenRangeTooLarge()
+    public async Task GetComplianceSummaryAsync_ThrowsBadRequest_WhenRangeTooLarge()
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
         Link(trainer.Id, trainee.Id);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 2, 2)));
+        var result = await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 2, 2));
 
+        Assert.That(result.IsFailure, Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(exception, Is.Not.Null);
-            Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-            Assert.That(exception.Message, Is.EqualTo(Messages.DateRangeTooLarge));
+            Assert.That(result.Error, Is.InstanceOf<InvalidSupplementationError>());
+            Assert.That(result.Error.Message, Is.EqualTo(Messages.DateRangeTooLarge));
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
         });
     }
 
@@ -141,94 +144,107 @@ public sealed class SupplementationServiceTests
 
         var result = await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1));
 
-        Assert.That(result.TraineeId, Is.EqualTo(trainee.Id));
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.TraineeId, Is.EqualTo(trainee.Id));
     }
 
     [Test]
-    public void GetComplianceSummaryAsync_ThrowsBadRequest_WhenRangeExceedsLimitByOneDay()
+    public async Task GetComplianceSummaryAsync_ThrowsBadRequest_WhenRangeExceedsLimitByOneDay()
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
         Link(trainer.Id, trainee.Id);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 2)));
+        var result = await _service.GetComplianceSummaryAsync(trainer, trainee.Id, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 2));
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Error, Is.InstanceOf<InvalidSupplementationError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        });
     }
 
     [Test]
-    public void CreateTraineePlanAsync_ThrowsBadRequest_WhenTimeFormatInvalid()
+    public async Task CreateTraineePlanAsync_ThrowsBadRequest_WhenTimeFormatInvalid()
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
         Link(trainer.Id, trainee.Id);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.CreateTraineePlanAsync(trainer, trainee.Id, new UpsertSupplementPlanCommand
-            {
-                Name = "Plan",
-                Items =
-                [
-                    new UpsertSupplementPlanItemCommand
-                    {
-                        SupplementName = "Omega",
-                        Dosage = "1",
-                        TimeOfDay = "invalid",
-                        DaysOfWeekMask = 127,
-                        Order = 0
-                    }
-                ]
-            }));
+        var result = await _service.CreateTraineePlanAsync(trainer, trainee.Id, new UpsertSupplementPlanCommand
+        {
+            Name = "Plan",
+            Items =
+            [
+                new UpsertSupplementPlanItemCommand
+                {
+                    SupplementName = "Omega",
+                    Dosage = "1",
+                    TimeOfDay = "invalid",
+                    DaysOfWeekMask = 127,
+                    Order = 0
+                }
+            ]
+        });
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Error, Is.InstanceOf<InvalidSupplementationError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        });
     }
 
     [Test]
-    public void CreateTraineePlanAsync_ThrowsBadRequest_WhenNameExceedsMaxLength()
+    public async Task CreateTraineePlanAsync_ThrowsBadRequest_WhenNameExceedsMaxLength()
     {
         var trainer = NewTrainer();
         var trainee = NewTrainee();
         Link(trainer.Id, trainee.Id);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.CreateTraineePlanAsync(trainer, trainee.Id, new UpsertSupplementPlanCommand
-            {
-                Name = new string('A', 121),
-                Items =
-                [
-                    new UpsertSupplementPlanItemCommand
-                    {
-                        SupplementName = "Omega",
-                        Dosage = "1",
-                        TimeOfDay = "08:00",
-                        DaysOfWeekMask = 127,
-                        Order = 0
-                    }
-                ]
-            }));
+        var result = await _service.CreateTraineePlanAsync(trainer, trainee.Id, new UpsertSupplementPlanCommand
+        {
+            Name = new string('A', 121),
+            Items =
+            [
+                new UpsertSupplementPlanItemCommand
+                {
+                    SupplementName = "Omega",
+                    Dosage = "1",
+                    TimeOfDay = "08:00",
+                    DaysOfWeekMask = 127,
+                    Order = 0
+                }
+            ]
+        });
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Error, Is.InstanceOf<InvalidSupplementationError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        });
     }
 
     [Test]
-    public void CheckOffIntakeAsync_ThrowsBadRequest_WhenIntakeDateIsDefault()
+    public async Task CheckOffIntakeAsync_ThrowsBadRequest_WhenIntakeDateIsDefault()
     {
         var trainee = NewTrainee();
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.CheckOffIntakeAsync(trainee, new CheckOffSupplementIntakeCommand
-            {
-                PlanItemId = Id<SupplementPlanItem>.New(),
-                IntakeDate = default
-            }));
+        var result = await _service.CheckOffIntakeAsync(trainee, new CheckOffSupplementIntakeCommand
+        {
+            PlanItemId = Id<SupplementPlanItem>.New(),
+            IntakeDate = default
+        });
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-        Assert.That(exception.Message, Is.EqualTo(Messages.DateRequired));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Error, Is.InstanceOf<InvalidSupplementationError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+            Assert.That(result.Error.Message, Is.EqualTo(Messages.DateRequired));
+        });
     }
 
     [Test]
@@ -267,10 +283,11 @@ public sealed class SupplementationServiceTests
             IntakeDate = date
         });
 
+        Assert.That(result.IsSuccess, Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(result.Taken, Is.True);
-            Assert.That(result.TakenAt, Is.Not.Null);
+            Assert.That(result.Value.Taken, Is.True);
+            Assert.That(result.Value.TakenAt, Is.Not.Null);
         });
     }
 
@@ -286,8 +303,9 @@ public sealed class SupplementationServiceTests
         _supplementationRepository.Plans.Add(oldActive);
         _supplementationRepository.Plans.Add(toAssign);
 
-        await _service.AssignTraineePlanAsync(trainer, trainee.Id, toAssign.Id);
+        var result = await _service.AssignTraineePlanAsync(trainer, trainee.Id, toAssign.Id);
 
+        Assert.That(result.IsSuccess, Is.True);
         Assert.Multiple(() =>
         {
             Assert.That(oldActive.IsActive, Is.False);
@@ -302,13 +320,14 @@ public sealed class SupplementationServiceTests
         var trainee = NewTrainee();
         Link(trainer.Id, trainee.Id);
 
-        await _service.UnassignTraineePlanAsync(trainer, trainee.Id);
+        var result = await _service.UnassignTraineePlanAsync(trainer, trainee.Id);
 
+        Assert.That(result.IsSuccess, Is.True);
         Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
-    public void CheckOffIntakeAsync_ThrowsNotFound_WhenItemNotScheduledForDate()
+    public async Task CheckOffIntakeAsync_ThrowsNotFound_WhenItemNotScheduledForDate()
     {
         var trainee = NewTrainee();
         var date = new DateOnly(2026, 2, 23);
@@ -317,19 +336,22 @@ public sealed class SupplementationServiceTests
             NewPlanItem("Omega", "2", "08:00", notTodayMask, 0));
         _supplementationRepository.Plans.Add(activePlan);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.CheckOffIntakeAsync(trainee, new CheckOffSupplementIntakeCommand
-            {
-                PlanItemId = activePlan.Items.First().Id,
-                IntakeDate = date
-            }));
+        var result = await _service.CheckOffIntakeAsync(trainee, new CheckOffSupplementIntakeCommand
+        {
+            PlanItemId = activePlan.Items.First().Id,
+            IntakeDate = date
+        });
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Error, Is.InstanceOf<SupplementationNotFoundError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
+        });
     }
 
     [Test]
-    public void GetTraineePlansAsync_ThrowsForbidden_WhenUserIsNotTrainer()
+    public async Task GetTraineePlansAsync_ThrowsForbidden_WhenUserIsNotTrainer()
     {
         var notTrainer = new User
         {
@@ -338,11 +360,14 @@ public sealed class SupplementationServiceTests
             Email = "u@example.com"
         };
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.GetTraineePlansAsync(notTrainer, Id<User>.New()));
+        var result = await _service.GetTraineePlansAsync(notTrainer, Id<User>.New());
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Error, Is.InstanceOf<SupplementationForbiddenError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        });
     }
 
     private User NewTrainer()

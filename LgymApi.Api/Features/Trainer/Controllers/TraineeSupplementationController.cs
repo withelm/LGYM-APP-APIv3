@@ -1,7 +1,8 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Supplementation.Models;
 using LgymApi.Application.Mapping.Core;
@@ -31,8 +32,14 @@ public sealed class TraineeSupplementationController : ControllerBase
     public async Task<IActionResult> GetSchedule([FromQuery] DateOnly? date)
     {
         var trainee = HttpContext.GetCurrentUser();
-        var schedule = await _supplementationService.GetActiveScheduleForDateAsync(trainee!, date ?? DateOnly.FromDateTime(DateTime.UtcNow), HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<SupplementScheduleEntryResult, SupplementScheduleEntryDto>(schedule));
+        var result = await _supplementationService.GetActiveScheduleForDateAsync(trainee!, date ?? DateOnly.FromDateTime(DateTime.UtcNow), HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<SupplementScheduleEntryResult, SupplementScheduleEntryDto>(result.Value));
     }
 
     [HttpPost("supplements/intakes/check-off")]
@@ -40,16 +47,8 @@ public sealed class TraineeSupplementationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CheckOffIntake([FromBody] CheckOffSupplementIntakeRequest request)
     {
-        if (!Id<LgymApi.Domain.Entities.SupplementPlanItem>.TryParse(request.PlanItemId, out var parsedPlanItemId))
-        {
-            throw AppException.BadRequest(Messages.FieldRequired);
-        }
-
-        if (request.IntakeDate == default)
-        {
-            throw AppException.BadRequest(Messages.DateRequired);
-        }
-
+        Id<LgymApi.Domain.Entities.SupplementPlanItem>.TryParse(request.PlanItemId, out var parsedPlanItemId);
+        
         var trainee = HttpContext.GetCurrentUser();
         var result = await _supplementationService.CheckOffIntakeAsync(trainee!, new CheckOffSupplementIntakeCommand
         {
@@ -58,6 +57,11 @@ public sealed class TraineeSupplementationController : ControllerBase
             TakenAt = request.TakenAt
         }, HttpContext.RequestAborted);
 
-        return Ok(_mapper.Map<SupplementScheduleEntryResult, SupplementScheduleEntryDto>(result));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<SupplementScheduleEntryResult, SupplementScheduleEntryDto>(result.Value));
     }
 }

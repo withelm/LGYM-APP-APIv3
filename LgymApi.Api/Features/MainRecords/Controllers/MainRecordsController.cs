@@ -1,6 +1,7 @@
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Enum;
 using LgymApi.Api.Features.MainRecords.Contracts;
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Features.MainRecords;
@@ -32,7 +33,12 @@ public sealed class MainRecordsController : ControllerBase
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var exerciseId = form.ExerciseId.ToIdOrEmpty<Domain.Entities.Exercise>();
         var input = new AddMainRecordInput(userId, exerciseId, form.Weight, form.Unit, form.Date);
-        await _mainRecordsService.AddNewRecordAsync(input, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.AddNewRecordAsync(input, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -43,8 +49,13 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetMainRecordsHistory([FromRoute] string id)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var records = await _mainRecordsService.GetMainRecordsHistoryAsync(userId, HttpContext.RequestAborted);
-        var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(records);
+        var result = await _mainRecordsService.GetMainRecordsHistoryAsync(userId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(result.Value);
         return Ok(mappedRecords);
     }
 
@@ -56,7 +67,13 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetLastMainRecords([FromRoute] string id)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var context = await _mainRecordsService.GetLastMainRecordsAsync(userId, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.GetLastMainRecordsAsync(userId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var context = result.Value;
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(MainRecordProfile.Keys.ExerciseMap, context.ExerciseMap);
         var mapped = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordsLastDto>(context.Records, mappingContext);
@@ -71,7 +88,12 @@ public sealed class MainRecordsController : ControllerBase
     {
         var currentUserId = HttpContext.GetCurrentUserId();
         var recordId = id.ToIdOrEmpty<Domain.Entities.MainRecord>();
-        await _mainRecordsService.DeleteMainRecordAsync(currentUserId, recordId, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.DeleteMainRecordAsync(currentUserId, recordId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -85,7 +107,12 @@ public sealed class MainRecordsController : ControllerBase
         var recordId = form.Id.ToIdOrEmpty<Domain.Entities.MainRecord>();
         var exerciseId = form.ExerciseId.ToIdOrEmpty<Domain.Entities.Exercise>();
         var input = new UpdateMainRecordInput(routeUserId, routeUserId, recordId, exerciseId, form.Weight, form.Unit, form.Date);
-        await _mainRecordsService.UpdateMainRecordAsync(input, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.UpdateMainRecordAsync(input, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -97,6 +124,11 @@ public sealed class MainRecordsController : ControllerBase
         var userId = HttpContext.GetCurrentUserId();
         var exerciseId = request.ExerciseId.ToIdOrEmpty<Domain.Entities.Exercise>();
         var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, exerciseId, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<PossibleRecordResult, PossibleRecordForExerciseDto>(result));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<PossibleRecordResult, PossibleRecordForExerciseDto>(result.Value));
     }
 }

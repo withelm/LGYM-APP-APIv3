@@ -1,5 +1,5 @@
 using System.Net;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -38,7 +38,8 @@ public sealed class RoleServiceTests
             AuthConstants.Permissions.ManageUserRoles
         ];
 
-        var roles = await _service.GetRolesAsync();
+        var result = await _service.GetRolesAsync();
+        var roles = result.Value;
 
         Assert.Multiple(() =>
         {
@@ -49,19 +50,23 @@ public sealed class RoleServiceTests
     }
 
      [Test]
-     public void GetRoleAsync_ThrowsBadRequest_WhenRoleIdEmpty()
+     public async Task GetRoleAsync_ReturnsFailure_WhenRoleIdEmpty()
      {
          var emptyId = default(Id<Role>);
-        var exception = Assert.ThrowsAsync<AppException>(async () => await _service.GetRoleAsync(emptyId));
+        var result = await _service.GetRoleAsync(emptyId);
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<InvalidRoleError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        });
     }
 
     [Test]
     public async Task CreateRoleAsync_NormalizesAndStoresClaims()
     {
-        var result = await _service.CreateRoleAsync(
+        var roleResult = await _service.CreateRoleAsync(
             "  Coach  ",
             "  Training tools  ",
             [
@@ -69,6 +74,8 @@ public sealed class RoleServiceTests
                 AuthConstants.Permissions.ManageUserRoles,
                 AuthConstants.Permissions.ManageAppConfig
             ]);
+        
+        var result = roleResult.Value;
 
         Assert.Multiple(() =>
         {
@@ -85,30 +92,36 @@ public sealed class RoleServiceTests
     }
 
     [Test]
-    public void CreateRoleAsync_ThrowsBadRequest_WhenClaimInvalid()
+    public async Task CreateRoleAsync_ReturnsFailure_WhenClaimInvalid()
     {
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.CreateRoleAsync("Coach", null, ["invalid.claim"]));
+        var result = await _service.CreateRoleAsync("Coach", null, ["invalid.claim"]);
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<InvalidRoleError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        });
     }
 
     [Test]
-    public async Task UpdateRoleAsync_ThrowsForbidden_ForSystemRole()
+    public async Task UpdateRoleAsync_ReturnsFailure_ForSystemRole()
     {
         var adminRole = new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.Admin };
         _roleRepository.Roles.Add(adminRole);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.UpdateRoleAsync(
-                adminRole.Id,
-                "AdminUpdated",
-                null,
-                [AuthConstants.Permissions.ManageUserRoles]));
+        var result = await _service.UpdateRoleAsync(
+            adminRole.Id,
+            "AdminUpdated",
+            null,
+            [AuthConstants.Permissions.ManageUserRoles]);
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<RoleForbiddenError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        });
     }
 
     [Test]
@@ -134,15 +147,19 @@ public sealed class RoleServiceTests
     }
 
     [Test]
-    public void DeleteRoleAsync_ThrowsForbidden_ForSystemRole()
+    public async Task DeleteRoleAsync_ReturnsFailure_ForSystemRole()
     {
         var userRole = new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.User };
         _roleRepository.Roles.Add(userRole);
 
-        var exception = Assert.ThrowsAsync<AppException>(async () => await _service.DeleteRoleAsync(userRole.Id));
+        var result = await _service.DeleteRoleAsync(userRole.Id);
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<RoleForbiddenError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
+        });
     }
 
     [Test]
@@ -181,26 +198,32 @@ public sealed class RoleServiceTests
     }
 
     [Test]
-    public void UpdateUserRolesAsync_ThrowsNotFound_WhenUserMissing()
+    public async Task UpdateUserRolesAsync_ReturnsFailure_WhenUserMissing()
     {
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.UpdateUserRolesAsync(Id<User>.New(), ["Coach"]));
+        var result = await _service.UpdateUserRolesAsync(Id<User>.New(), ["Coach"]);
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<RoleNotFoundError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
+        });
     }
 
     [Test]
-    public void UpdateUserRolesAsync_ThrowsBadRequest_WhenRoleMissing()
+    public async Task UpdateUserRolesAsync_ReturnsFailure_WhenRoleMissing()
     {
         var userId = Id<User>.New();
         _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "u", Email = "u@x.com" });
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await _service.UpdateUserRolesAsync((Id<User>)userId, ["UnknownRole"]));
+        var result = await _service.UpdateUserRolesAsync((Id<User>)userId, ["UnknownRole"]);
 
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.StatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<InvalidRoleError>());
+            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        });
     }
 
     [Test]

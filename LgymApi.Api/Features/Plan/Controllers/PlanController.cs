@@ -1,9 +1,13 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Plan.Contracts;
 using LgymApi.Api.Middleware;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Resources;
 using Microsoft.AspNetCore.Mvc;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -30,8 +34,16 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> CreatePlan([FromRoute] string id, [FromBody] PlanFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        await _planService.CreatePlanAsync(user!, routeUserId, form.Name, HttpContext.RequestAborted);
+        if (!Id<UserEntity>.TryParse(id, out var routeUserId))
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planService.CreatePlanAsync(user!, routeUserId, form.Name, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
@@ -44,9 +56,22 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> UpdatePlan([FromRoute] string id, [FromBody] PlanFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var planId = Id<PlanEntity>.TryParse(form.Id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
-        await _planService.UpdatePlanAsync(user!, routeUserId, planId, form.Name, HttpContext.RequestAborted);
+        if (!Id<UserEntity>.TryParse(id, out var routeUserId))
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        if (!Id<PlanEntity>.TryParse(form.Id ?? string.Empty, out var planId))
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planService.UpdatePlanAsync(user!, routeUserId, planId, form.Name, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -57,9 +82,18 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> GetPlanConfig([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var plan = await _planService.GetPlanConfigAsync(user!, routeUserId, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<LgymApi.Domain.Entities.Plan, PlanFormDto>(plan));
+        if (!Id<UserEntity>.TryParse(id, out var routeUserId))
+        {
+            return Result<PlanEntity, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planService.GetPlanConfigAsync(user!, routeUserId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<PlanEntity, PlanFormDto>(result.Value));
     }
 
     [HttpGet("{id}/checkIsUserHavePlan")]
@@ -71,7 +105,12 @@ public sealed class PlanController : ControllerBase
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
         var result = await _planService.CheckIsUserHavePlanAsync(user!, routeUserId, HttpContext.RequestAborted);
-        return Ok(result);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(result.Value);
     }
 
     [HttpGet("{id}/getPlansList")]
@@ -81,9 +120,18 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> GetPlansList([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var plans = await _planService.GetPlansListAsync(user!, routeUserId, HttpContext.RequestAborted);
-        var mapped = _mapper.MapList<LgymApi.Domain.Entities.Plan, PlanFormDto>(plans);
+        if (!Id<UserEntity>.TryParse(id, out var routeUserId))
+        {
+            return Result<List<PlanEntity>, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planService.GetPlansListAsync(user!, routeUserId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var mapped = _mapper.MapList<PlanEntity, PlanFormDto>(result.Value);
         return Ok(mapped);
     }
 
@@ -94,9 +142,21 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> SetNewActivePlan([FromRoute] string id, [FromBody] SetActivePlanDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var planId = Id<PlanEntity>.TryParse(form.Id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
-        await _planService.SetNewActivePlanAsync(user!, routeUserId, planId, HttpContext.RequestAborted);
+        if (!Id<UserEntity>.TryParse(id, out var routeUserId))
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        if (!Id<PlanEntity>.TryParse(form.Id ?? string.Empty, out var planId))
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planService.SetNewActivePlanAsync(user!, routeUserId, planId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
@@ -108,8 +168,13 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> CopyPlan([FromBody] CopyPlanDto dto)
     {
         var user = HttpContext.GetCurrentUser();
-        var copiedPlan = await _planService.CopyPlanAsync(user!, dto.ShareCode, HttpContext.RequestAborted);
-        var planDto = _mapper.Map<LgymApi.Domain.Entities.Plan, PlanDto>(copiedPlan);
+        var result = await _planService.CopyPlanAsync(user!, dto.ShareCode, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var planDto = _mapper.Map<PlanEntity, PlanDto>(result.Value);
         return StatusCode(StatusCodes.Status201Created, planDto);
     }
 
@@ -120,9 +185,18 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> GenerateShareCode([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = Id<PlanEntity>.TryParse(id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
-        var shareCode = await _planService.GenerateShareCodeAsync(user!, planId, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<string, ShareCodeResponseDto>(shareCode));
+        if (!Id<PlanEntity>.TryParse(id, out var planId))
+        {
+            return Result<string, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planService.GenerateShareCodeAsync(user!, planId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ShareCodeResponseDto>(result.Value));
     }
 
     [HttpPost("{id}/deletePlan")]
@@ -132,8 +206,17 @@ public sealed class PlanController : ControllerBase
     public async Task<IActionResult> DeletePlan([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = Id<PlanEntity>.TryParse(id, out var parsedPlanId) ? parsedPlanId : Id<PlanEntity>.Empty;
-        await _planService.DeletePlanAsync(user!, planId, HttpContext.RequestAborted);
+        if (!Id<PlanEntity>.TryParse(id, out var planId))
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planService.DeletePlanAsync(user!, planId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 }

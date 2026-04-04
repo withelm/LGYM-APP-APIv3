@@ -1,9 +1,11 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Tutorial.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Enums;
+using LgymApi.Resources;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LgymApi.Api.Features.Tutorial.Controllers;
@@ -27,7 +29,13 @@ public sealed class TutorialController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var result = await _tutorialService.GetActiveTutorialsAsync(user!.Id, HttpContext.RequestAborted);
-        var mapped = _mapper.MapList<Application.Features.Tutorial.Models.TutorialProgressResult, TutorialProgressDto>(result);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
+        var mapped = _mapper.MapList<Application.Features.Tutorial.Models.TutorialProgressResult, TutorialProgressDto>(result.Value);
         return Ok(mapped);
     }
 
@@ -38,12 +46,18 @@ public sealed class TutorialController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var result = await _tutorialService.GetTutorialProgressAsync(user!.Id, tutorialType, HttpContext.RequestAborted);
-        if (result == null)
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
+        if (result.Value == null)
         {
             return NotFound();
         }
 
-        var mapped = _mapper.Map<Application.Features.Tutorial.Models.TutorialProgressResult, TutorialProgressDto>(result);
+        var mapped = _mapper.Map<Application.Features.Tutorial.Models.TutorialProgressResult, TutorialProgressDto>(result.Value);
         return Ok(mapped);
     }
 
@@ -52,7 +66,13 @@ public sealed class TutorialController : ControllerBase
     public async Task<IActionResult> CompleteStep([FromBody] CompleteStepRequest request)
     {
         var user = HttpContext.GetCurrentUser();
-        await _tutorialService.CompleteStepAsync(user!.Id, request.TutorialType, request.Step, HttpContext.RequestAborted);
+        var result = await _tutorialService.CompleteStepAsync(user!.Id, request.TutorialType, request.Step, HttpContext.RequestAborted);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -61,7 +81,13 @@ public sealed class TutorialController : ControllerBase
     public async Task<IActionResult> CompleteTutorial([FromBody] CompleteTutorialRequest request)
     {
         var user = HttpContext.GetCurrentUser();
-        await _tutorialService.CompleteTutorialAsync(user!.Id, request.TutorialType, HttpContext.RequestAborted);
+        var result = await _tutorialService.CompleteTutorialAsync(user!.Id, request.TutorialType, HttpContext.RequestAborted);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

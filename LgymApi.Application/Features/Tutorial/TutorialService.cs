@@ -1,4 +1,5 @@
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Tutorial.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -23,11 +24,11 @@ public sealed class TutorialService : ITutorialService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task InitializeOnboardingTutorialAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> InitializeOnboardingTutorialAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidUserIdError(Messages.FieldRequired));
         }
 
         var existingProgress = await _tutorialProgressRepository.FindByUserIdAndTypeAsync(
@@ -37,7 +38,7 @@ public sealed class TutorialService : ITutorialService
 
         if (existingProgress != null)
         {
-            return;
+            return Result<Unit, AppError>.Success(Unit.Value);
         }
 
         var progress = new UserTutorialProgress
@@ -51,68 +52,70 @@ public sealed class TutorialService : ITutorialService
 
         await _tutorialProgressRepository.AddAsync(progress, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<List<TutorialProgressResult>> GetActiveTutorialsAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
+    public async Task<Result<List<TutorialProgressResult>, AppError>> GetActiveTutorialsAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<List<TutorialProgressResult>, AppError>.Failure(new InvalidUserIdError(Messages.FieldRequired));
         }
 
         var activeTutorials = await _tutorialProgressRepository.GetActiveByUserIdAsync(userId, cancellationToken);
-        return activeTutorials.Select(MapToResult).ToList();
+        return Result<List<TutorialProgressResult>, AppError>.Success(activeTutorials.Select(MapToResult).ToList());
     }
 
-    public async Task<TutorialProgressResult?> GetTutorialProgressAsync(Id<UserEntity> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+    public async Task<Result<TutorialProgressResult?, AppError>> GetTutorialProgressAsync(Id<UserEntity> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<TutorialProgressResult?, AppError>.Failure(new InvalidUserIdError(Messages.FieldRequired));
         }
 
         if (tutorialType == TutorialType.Unknown)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<TutorialProgressResult?, AppError>.Failure(new InvalidTutorialTypeError(Messages.FieldRequired));
         }
 
         var progress = await _tutorialProgressRepository.FindByUserIdAndTypeAsync(userId, tutorialType, cancellationToken);
-        return progress == null ? null : MapToResult(progress);
+        return Result<TutorialProgressResult?, AppError>.Success(progress == null ? null : MapToResult(progress));
     }
 
-    public async Task CompleteStepAsync(Id<UserEntity> userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> CompleteStepAsync(Id<UserEntity> userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidUserIdError(Messages.FieldRequired));
         }
 
         if (tutorialType == TutorialType.Unknown || step == TutorialStep.Unknown)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTutorialTypeError(Messages.FieldRequired));
         }
 
         var progress = await _tutorialProgressRepository.FindByUserIdAndTypeAsync(userId, tutorialType, cancellationToken);
         if (progress == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new TutorialProgressNotFoundError(Messages.DidntFind));
         }
 
         if (progress.IsCompleted)
         {
-            return;
+            return Result<Unit, AppError>.Success(Unit.Value);
         }
 
         var tutorialDefinition = TutorialDefinitions.GetByType(tutorialType);
         if (!tutorialDefinition.Steps.Contains(step))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTutorialStepError(Messages.FieldRequired));
         }
 
         var alreadyCompleted = progress.CompletedSteps.Any(s => s.TutorialStep == step);
         if (alreadyCompleted)
         {
-            return; // Idempotent - step already completed
+            return Result<Unit, AppError>.Success(Unit.Value); // Idempotent - step already completed
         }
 
         var stepProgress = new UserTutorialStepProgress
@@ -137,29 +140,31 @@ public sealed class TutorialService : ITutorialService
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task CompleteTutorialAsync(Id<UserEntity> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> CompleteTutorialAsync(Id<UserEntity> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidUserIdError(Messages.FieldRequired));
         }
 
         if (tutorialType == TutorialType.Unknown)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTutorialTypeError(Messages.FieldRequired));
         }
 
         var progress = await _tutorialProgressRepository.FindByUserIdAndTypeAsync(userId, tutorialType, cancellationToken);
         if (progress == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new TutorialProgressNotFoundError(Messages.DidntFind));
         }
 
         if (progress.IsCompleted)
         {
-            return; // Already completed
+            return Result<Unit, AppError>.Success(Unit.Value); // Already completed
         }
 
         progress.IsCompleted = true;
@@ -167,6 +172,8 @@ public sealed class TutorialService : ITutorialService
         await _tutorialProgressRepository.UpdateAsync(progress, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
     public Task<bool> HasActiveTutorialsAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)

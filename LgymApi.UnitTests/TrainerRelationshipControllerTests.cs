@@ -2,7 +2,8 @@ using LgymApi.Api;
 using LgymApi.Api.Features.ExerciseScores.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Controllers;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.EloRegistry.Models;
 using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Features.TrainerRelationships;
@@ -12,6 +13,7 @@ using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.UnitTests;
@@ -20,58 +22,58 @@ namespace LgymApi.UnitTests;
 public sealed class TrainerRelationshipControllerTests
 {
     [Test]
-    public void CreateInvitation_WithInvalidTraineeId_ThrowsBadRequest()
+    public async Task CreateInvitation_WithInvalidTraineeId_ReturnsBadRequest()
     {
         var controller = CreateController();
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await controller.CreateInvitation(new CreateTrainerInvitationRequest { TraineeId = "not-a-guid" }));
+        var result = await controller.CreateInvitation(new CreateTrainerInvitationRequest { TraineeId = "not-a-guid" });
 
-        Assert.That(exception!.StatusCode, Is.EqualTo(400));
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
     }
 
     [Test]
-    public void GetTraineeTrainingDates_WithInvalidTraineeId_ThrowsBadRequest()
+    public async Task GetTraineeTrainingDates_WithInvalidTraineeId_ReturnsBadRequest()
     {
         var controller = CreateController();
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await controller.GetTraineeTrainingDates("invalid-id"));
+        var result = await controller.GetTraineeTrainingDates("invalid-id");
 
-        Assert.That(exception!.StatusCode, Is.EqualTo(400));
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
     }
 
     [Test]
-    public void GetTraineeExerciseScoresChartData_WithInvalidTraineeId_ThrowsBadRequest()
+    public async Task GetTraineeExerciseScoresChartData_WithInvalidTraineeId_ReturnsBadRequest()
     {
         var controller = CreateController();
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await controller.GetTraineeExerciseScoresChartData("invalid-id", new ExerciseScoresChartRequestDto { ExerciseId = Id<Exercise>.New().ToString() }));
+        var result = await controller.GetTraineeExerciseScoresChartData("invalid-id", new ExerciseScoresChartRequestDto { ExerciseId = Id<Exercise>.New().ToString() });
 
-        Assert.That(exception!.StatusCode, Is.EqualTo(400));
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
     }
 
     [Test]
-    public void GetTraineeExerciseScoresChartData_WithInvalidExerciseId_ThrowsBadRequest()
+    public async Task GetTraineeExerciseScoresChartData_WithInvalidExerciseId_ReturnsBadRequest()
     {
         var controller = CreateController();
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await controller.GetTraineeExerciseScoresChartData(Id<User>.New().ToString(), new ExerciseScoresChartRequestDto { ExerciseId = "invalid-exercise" }));
+        var result = await controller.GetTraineeExerciseScoresChartData(Id<User>.New().ToString(), new ExerciseScoresChartRequestDto { ExerciseId = "invalid-exercise" });
 
-        Assert.That(exception!.StatusCode, Is.EqualTo(400));
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
     }
 
     [Test]
-    public void UpdateTraineePlan_WithInvalidPlanId_ThrowsBadRequest()
+    public async Task UpdateTraineePlan_WithInvalidPlanId_ReturnsBadRequest()
     {
         var controller = CreateController();
 
-        var exception = Assert.ThrowsAsync<AppException>(async () =>
-            await controller.UpdateTraineePlan(Id<User>.New().ToString(), "not-a-guid", new TrainerPlanFormRequest { Name = "Plan" }));
+        var result = await controller.UpdateTraineePlan(Id<User>.New().ToString(), "not-a-guid", new TrainerPlanFormRequest { Name = "Plan" });
 
-        Assert.That(exception!.StatusCode, Is.EqualTo(400));
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
     }
 
     private static TrainerRelationshipController CreateController()
@@ -85,24 +87,24 @@ public sealed class TrainerRelationshipControllerTests
 
     private sealed class StubTrainerRelationshipService : ITrainerRelationshipService
     {
-        public Task<TrainerInvitationResult> CreateInvitationAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<TrainerInvitationResult>> GetTrainerInvitationsAsync(User currentTrainer, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(User currentTrainer, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<DateTime>> GetTraineeTrainingDatesAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<TrainingByDateDetails>> GetTraineeTrainingByDateAsync(User currentTrainer, Id<User> traineeId, DateTime createdAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<ExerciseScoresChartData>> GetTraineeExerciseScoresChartDataAsync(User currentTrainer, Id<User> traineeId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<EloRegistryChartEntry>> GetTraineeEloChartAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<MainRecord>> GetTraineeMainRecordsHistoryAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<TrainerManagedPlanResult>> GetTraineePlansAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerManagedPlanResult> CreateTraineePlanAsync(User currentTrainer, Id<User> traineeId, string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerManagedPlanResult> UpdateTraineePlanAsync(User currentTrainer, Id<User> traineeId, Id<Plan> planId, string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task DeleteTraineePlanAsync(User currentTrainer, Id<User> traineeId, Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task AssignTraineePlanAsync(User currentTrainer, Id<User> traineeId, Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task UnassignTraineePlanAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerManagedPlanResult> GetActiveAssignedPlanAsync(User currentTrainee, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task AcceptInvitationAsync(User currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task RejectInvitationAsync(User currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task UnlinkTraineeAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task DetachFromTrainerAsync(User currentTrainee, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<TrainerInvitationResult, AppError>> CreateInvitationAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<List<TrainerInvitationResult>, AppError>> GetTrainerInvitationsAsync(User currentTrainer, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<TrainerDashboardTraineeListResult, AppError>> GetDashboardTraineesAsync(User currentTrainer, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<List<DateTime>, AppError>> GetTraineeTrainingDatesAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<List<TrainingByDateDetails>, AppError>> GetTraineeTrainingByDateAsync(User currentTrainer, Id<User> traineeId, DateTime createdAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<List<ExerciseScoresChartData>, AppError>> GetTraineeExerciseScoresChartDataAsync(User currentTrainer, Id<User> traineeId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<List<EloRegistryChartEntry>, AppError>> GetTraineeEloChartAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<List<MainRecord>, AppError>> GetTraineeMainRecordsHistoryAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<List<TrainerManagedPlanResult>, AppError>> GetTraineePlansAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<TrainerManagedPlanResult, AppError>> CreateTraineePlanAsync(User currentTrainer, Id<User> traineeId, string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<TrainerManagedPlanResult, AppError>> UpdateTraineePlanAsync(User currentTrainer, Id<User> traineeId, Id<Plan> planId, string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<Unit, AppError>> DeleteTraineePlanAsync(User currentTrainer, Id<User> traineeId, Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<Unit, AppError>> AssignTraineePlanAsync(User currentTrainer, Id<User> traineeId, Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<Unit, AppError>> UnassignTraineePlanAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<TrainerManagedPlanResult, AppError>> GetActiveAssignedPlanAsync(User currentTrainee, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<Unit, AppError>> AcceptInvitationAsync(User currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<Unit, AppError>> RejectInvitationAsync(User currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<Unit, AppError>> UnlinkTraineeAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<Unit, AppError>> DetachFromTrainerAsync(User currentTrainee, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }

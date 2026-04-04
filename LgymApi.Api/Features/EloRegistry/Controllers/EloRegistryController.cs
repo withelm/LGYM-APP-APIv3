@@ -1,4 +1,5 @@
 using System.Globalization;
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.EloRegistry.Contracts;
 using LgymApi.Api.Middleware;
@@ -31,7 +32,13 @@ public sealed class EloRegistryController : ControllerBase
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var result = await _eloRegistryService.GetChartAsync(userId, HttpContext.RequestAborted);
-        var mapped = _mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var mapped = _mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result.Value);
         return Ok(mapped);
     }
 }
