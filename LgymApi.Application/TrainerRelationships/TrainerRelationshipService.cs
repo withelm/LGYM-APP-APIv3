@@ -101,6 +101,11 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
 
         await _trainerRelationshipRepository.AddInvitationAsync(invitation, cancellationToken);
         await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = invitation.Id });
+        await _commandDispatcher.EnqueueAsync(new TrainerInvitationCreatedInAppNotificationCommand
+        {
+            TraineeId = traineeId,
+            TrainerId = currentTrainer.Id
+        });
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<TrainerInvitationResult, AppError>.Success(MapInvitation(invitation));
@@ -485,6 +490,12 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             throw;
         }
 
+        await _commandDispatcher.EnqueueAsync(new TrainerInvitationAcceptedInAppNotificationCommand
+        {
+            TrainerId = invitation.TrainerId,
+            TraineeId = currentTrainee.Id
+        });
+
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -517,6 +528,11 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         invitation.RespondedAt = DateTimeOffset.UtcNow;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _commandDispatcher.EnqueueAsync(new TrainerInvitationRejectedInAppNotificationCommand
+        {
+            TrainerId = invitation.TrainerId,
+            TraineeId = currentTrainee.Id
+        });
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 

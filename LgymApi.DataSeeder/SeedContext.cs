@@ -26,6 +26,7 @@ public sealed class SeedContext
     public List<RoleClaim> RoleClaims { get; } = new();
     public List<TrainerInvitation> TrainerInvitations { get; } = new();
     public List<TrainerTraineeLink> TrainerTraineeLinks { get; } = new();
+    public List<InAppNotification> InAppNotifications { get; } = new();
     public List<NotificationMessage> NotificationMessages { get; } = new();
     public List<EmailNotificationSubscription> EmailNotificationSubscriptions { get; } = new();
     public List<ReportTemplate> ReportTemplates { get; } = new();

@@ -9,6 +9,7 @@ using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.PasswordReset;
 using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.PlanDay;
+using LgymApi.Application.Notifications;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Supplementation;
@@ -36,6 +37,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMainRecordsServiceDependencies, MainRecordsServiceDependencies>();
         services.AddScoped<IMainRecordsService, MainRecordsService>();
         services.AddScoped<IMeasurementsService, MeasurementsService>();
+        services.AddScoped<IInAppNotificationServiceDependencies, InAppNotificationServiceDependencies>();
+        services.AddScoped<IInAppNotificationService, InAppNotificationService>();
         services.AddScoped<IPasswordResetServiceDependencies, PasswordResetServiceDependencies>();
         services.AddScoped<IPasswordResetTokenGenerationService, PasswordResetTokenGenerationService>();
         services.AddScoped<IPasswordResetService, PasswordResetService>();

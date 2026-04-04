@@ -8,6 +8,7 @@ using LgymApi.BackgroundWorker.Jobs;
 using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Infrastructure.Jobs;
 using LgymApi.Infrastructure.Services;
+using LgymApi.Application.Notifications;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.BackgroundWorker;
@@ -51,6 +52,7 @@ public static class ServiceProvider
         services.AddScoped<ActionMessageJob>();
 
         services.AddScoped<BackgroundActionOrchestratorService>();
+        services.AddNotificationsModule();
 
         // Register typed background action handlers
         services.AddBackgroundAction<UserRegisteredCommand, SendRegistrationEmailHandler>();
