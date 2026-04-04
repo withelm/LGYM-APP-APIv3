@@ -14,7 +14,7 @@ public sealed class NotificationHubTests
     [Test]
     public async Task OnConnectedAsync_ValidUser_AddsUserToGroup()
     {
-        var userId = Guid.NewGuid();
+        var userId = Id<User>.New().GetValue();
         var context = new TestHubCallerContext(userId.ToString());
         var sessionCache = new FakeUserSessionCache(true);
         var groups = new FakeGroupManager();
@@ -56,7 +56,7 @@ public sealed class NotificationHubTests
     [Test]
     public async Task OnConnectedAsync_UserNotInSessionCache_AbortsConnection()
     {
-        var userId = Guid.NewGuid();
+        var userId = Id<User>.New().GetValue();
         var context = new TestHubCallerContext(userId.ToString());
         var sessionCache = new FakeUserSessionCache(false);
         var groups = new FakeGroupManager();
