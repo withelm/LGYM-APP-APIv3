@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.BackgroundWorker.Co
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.TestUtils", "LgymApi.TestUtils\LgymApi.TestUtils.csproj", "{F84604FA-84B1-47D1-B0C0-614C2C8B48A9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LgymApi.Notifications", "LgymApi.Notifications\LgymApi.Notifications.csproj", "{34AC4178-7680-4A4A-BD86-03383ED67040}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -209,6 +211,18 @@ Global
 		{F84604FA-84B1-47D1-B0C0-614C2C8B48A9}.Release|x64.Build.0 = Release|Any CPU
 		{F84604FA-84B1-47D1-B0C0-614C2C8B48A9}.Release|x86.ActiveCfg = Release|Any CPU
 		{F84604FA-84B1-47D1-B0C0-614C2C8B48A9}.Release|x86.Build.0 = Release|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Debug|x64.Build.0 = Debug|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Debug|x86.Build.0 = Debug|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Release|x64.ActiveCfg = Release|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Release|x64.Build.0 = Release|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Release|x86.ActiveCfg = Release|Any CPU
+		{34AC4178-7680-4A4A-BD86-03383ED67040}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

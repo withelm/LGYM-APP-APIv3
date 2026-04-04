@@ -30,6 +30,7 @@
     <ProjectReference Include="..\LgymApi.Application\LgymApi.Application.csproj" />
     <ProjectReference Include="..\LgymApi.Api\LgymApi.Api.csproj" />
     <ProjectReference Include="..\LgymApi.Infrastructure\LgymApi.Infrastructure.csproj" />
+    <ProjectReference Include="..\LgymApi.Notifications\LgymApi.Notifications.csproj" />
     <ProjectReference Include="..\LgymApi.TestUtils\LgymApi.TestUtils.csproj" />
   </ItemGroup>
 
