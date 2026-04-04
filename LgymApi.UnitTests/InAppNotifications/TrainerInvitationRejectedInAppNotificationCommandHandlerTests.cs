@@ -1,3 +1,5 @@
+using LgymApi.Resources;
+using LgymApi.Resources;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Notifications;
@@ -27,7 +29,7 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandlerTest
         Assert.That(service.LastInput!.RecipientId, Is.EqualTo(command.TrainerId));
         Assert.That(service.LastInput.SenderUserId, Is.EqualTo(command.TraineeId));
         Assert.That(service.LastInput.IsSystemNotification, Is.False);
-        Assert.That(service.LastInput.Message, Is.EqualTo("Uczeń odrzucił Twoje zaproszenie."));
+        Assert.That(service.LastInput.Message, Is.EqualTo(Messages.TrainerInvitationRejected));
         Assert.That(service.LastInput.RedirectUrl, Is.EqualTo("/trainers/dashboard"));
         Assert.That(service.LastInput.Type, Is.EqualTo(InAppNotificationTypes.InvitationRejected));
     }

@@ -7,6 +7,8 @@ using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Resources;
+using LgymApi.Resources;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LgymApi.UnitTests.InAppNotifications;
@@ -27,7 +29,7 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandlerTest
         Assert.That(service.LastInput!.RecipientId, Is.EqualTo(command.TrainerId));
         Assert.That(service.LastInput.SenderUserId, Is.EqualTo(command.TraineeId));
         Assert.That(service.LastInput.IsSystemNotification, Is.False);
-        Assert.That(service.LastInput.Message, Is.EqualTo("Trener zaakceptował Twoje zaproszenie."));
+        Assert.That(service.LastInput.Message, Is.EqualTo(Messages.TrainerInvitationAccepted));
         Assert.That(service.LastInput.RedirectUrl, Is.EqualTo("/trainers/dashboard"));
         Assert.That(service.LastInput.Type, Is.EqualTo(InAppNotificationTypes.InvitationAccepted));
     }
