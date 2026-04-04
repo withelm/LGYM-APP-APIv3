@@ -1,6 +1,8 @@
 using LgymApi.Api;
 using LgymApi.Api.Features.Measurements.Controllers;
 using LgymApi.Api.Features.Measurements.Contracts;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Measurements.Models;
 using LgymApi.Application.Mapping;
@@ -77,44 +79,44 @@ public sealed class MeasurementsControllerTests
         public Id<Measurement> LastMeasurementId { get; private set; } = Id<Measurement>.Empty;
         public Id<User> LastRouteUserId { get; private set; } = Id<User>.Empty;
 
-        public Task AddMeasurementAsync(User currentUser, BodyParts bodyPart, HeightUnits unit, double value, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
+        public Task<Result<Unit, AppError>> AddMeasurementAsync(User currentUser, BodyParts bodyPart, HeightUnits unit, double value, CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
 
-        public Task<Measurement> GetMeasurementDetailAsync(User currentUser, Id<Measurement> measurementId, CancellationToken cancellationToken = default)
+        public Task<Result<Measurement, AppError>> GetMeasurementDetailAsync(User currentUser, Id<Measurement> measurementId, CancellationToken cancellationToken = default)
         {
             LastMeasurementId = measurementId;
-            return Task.FromResult(new Measurement
+            return Task.FromResult(Result<Measurement, AppError>.Success(new Measurement
             {
                 Id = Id<Measurement>.New(),
                 UserId = Id<User>.New(),
                 BodyPart = BodyParts.Chest,
                 Unit = HeightUnits.Centimeters.ToString(),
                 Value = 10
-            });
+            }));
         }
 
-        public Task<List<Measurement>> GetMeasurementsListAsync(User currentUser, Id<User> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
+        public Task<Result<List<Measurement>, AppError>> GetMeasurementsListAsync(User currentUser, Id<User> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
         {
             LastRouteUserId = routeUserId;
-            return Task.FromResult(new List<Measurement>());
+            return Task.FromResult(Result<List<Measurement>, AppError>.Success(new List<Measurement>()));
         }
 
-        public Task<List<Measurement>> GetMeasurementsHistoryAsync(User currentUser, Id<User> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
+        public Task<Result<List<Measurement>, AppError>> GetMeasurementsHistoryAsync(User currentUser, Id<User> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
         {
             LastRouteUserId = routeUserId;
-            return Task.FromResult(new List<Measurement>());
+            return Task.FromResult(Result<List<Measurement>, AppError>.Success(new List<Measurement>()));
         }
 
-        public Task<MeasurementTrendResult> GetMeasurementsTrendAsync(User currentUser, Id<User> routeUserId, BodyParts bodyPart, HeightUnits unit, CancellationToken cancellationToken = default)
+        public Task<Result<MeasurementTrendResult, AppError>> GetMeasurementsTrendAsync(User currentUser, Id<User> routeUserId, BodyParts bodyPart, HeightUnits unit, CancellationToken cancellationToken = default)
         {
             LastRouteUserId = routeUserId;
-            return Task.FromResult(new MeasurementTrendResult
+            return Task.FromResult(Result<MeasurementTrendResult, AppError>.Success(new MeasurementTrendResult
             {
                 BodyPart = bodyPart,
                 Unit = unit,
                 Direction = "flat",
                 Points = 0
-            });
+            }));
         }
     }
 }

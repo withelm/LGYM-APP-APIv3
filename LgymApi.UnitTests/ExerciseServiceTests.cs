@@ -31,13 +31,15 @@ public sealed class ExerciseServiceTests
 
         var input = new GetLastExerciseScoresInput(userId, userId, exerciseId, 100, null, "Bench press");
         var result = await service.GetLastExerciseScoresAsync(input);
+        Assert.That(result.IsSuccess, Is.True);
+        var value = result.Value;
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.SeriesScores, Has.Count.EqualTo(30));
-            Assert.That(result.SeriesScores[0].Score, Is.Not.Null);
-            Assert.That(result.SeriesScores[1].Score, Is.Not.Null);
-            Assert.That(result.SeriesScores[^1].Series, Is.EqualTo(30));
+            Assert.That(value.SeriesScores, Has.Count.EqualTo(30));
+            Assert.That(value.SeriesScores[0].Score, Is.Not.Null);
+            Assert.That(value.SeriesScores[1].Score, Is.Not.Null);
+            Assert.That(value.SeriesScores[^1].Series, Is.EqualTo(30));
         });
     }
 

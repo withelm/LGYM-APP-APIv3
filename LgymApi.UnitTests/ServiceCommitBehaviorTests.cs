@@ -1,3 +1,5 @@
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
@@ -110,13 +112,15 @@ public sealed class ServiceCommitBehaviorTests
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
 
-        await service.RegisterAsync(new RegisterUserInput(
+        var registerResult = await service.RegisterAsync(new RegisterUserInput(
             "newuser",
             "newuser@example.com",
             "password123",
             "password123",
             true,
             PreferredLanguage: null));
+
+        Assert.That(registerResult.IsSuccess, Is.True);
 
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "newuser");
         Assert.That(savedUser, Is.Not.Null);
@@ -168,13 +172,15 @@ public sealed class ServiceCommitBehaviorTests
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
 
-        await service.RegisterAsync(new RegisterUserInput(
+        var registerResult = await service.RegisterAsync(new RegisterUserInput(
             "lang-user",
             "lang-user@example.com",
             "password123",
             "password123",
             true,
             "pl-PL,pl;q=0.9"));
+
+        Assert.That(registerResult.IsSuccess, Is.True);
 
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "lang-user");
         Assert.That(savedUser, Is.Not.Null);
@@ -224,13 +230,15 @@ public sealed class ServiceCommitBehaviorTests
             defaults,
             new NoOpTutorialService()));
 
-        await service.RegisterAsync(new RegisterUserInput(
+        var registerResult = await service.RegisterAsync(new RegisterUserInput(
             "fallback-user",
             "fallback-user@example.com",
             "password123",
             "password123",
             true,
             "@@invalid-culture@@"));
+
+        Assert.That(registerResult.IsSuccess, Is.True);
 
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "fallback-user");
         Assert.That(savedUser, Is.Not.Null);
@@ -296,7 +304,8 @@ public sealed class ServiceCommitBehaviorTests
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
 
-        await service.UpdateTimeZoneAsync(user, "Europe/Paris");
+        var updateTimeZoneResult = await service.UpdateTimeZoneAsync(user, "Europe/Paris");
+        Assert.That(updateTimeZoneResult.IsSuccess, Is.True);
 
         var savedUser = await dbContext.Users.SingleAsync(u => u.Id == user.Id);
         Assert.That(savedUser.PreferredTimeZone, Is.EqualTo("Europe/Paris"));
@@ -360,7 +369,9 @@ public sealed class ServiceCommitBehaviorTests
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
 
-        Assert.ThrowsAsync<AppException>(async () => await service.UpdateTimeZoneAsync(user, "Not/ARealTimeZone"));
+        var updateTimeZoneResult = await service.UpdateTimeZoneAsync(user, "Not/ARealTimeZone");
+        Assert.That(updateTimeZoneResult.IsFailure, Is.True);
+        Assert.That(updateTimeZoneResult.Error, Is.TypeOf<InvalidUserError>());
     }
 
     [Test]
@@ -379,10 +390,12 @@ public sealed class ServiceCommitBehaviorTests
 
         var service = new RoleService(roleRepository, userRepository, unitOfWork);
 
-        var created = await service.CreateRoleAsync(
+        var result = await service.CreateRoleAsync(
             "Coach",
             "Role for coaching",
             [AuthConstants.Permissions.ManageGlobalExercises, AuthConstants.Permissions.ManageAppConfig]);
+        
+        var created = result.Value;
 
         var savedRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == (Id<Role>)created.Id);
         Assert.That(savedRole, Is.Not.Null);
@@ -538,9 +551,9 @@ public sealed class ServiceCommitBehaviorTests
 
     private sealed class NoOpTutorialService : ITutorialService
     {
-        public Task InitializeOnboardingTutorialAsync(Id<User> userId, CancellationToken cancellationToken = default)
+        public Task<Result<Unit, AppError>> InitializeOnboardingTutorialAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
-            return Task.CompletedTask;
+            return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
         }
 
         public Task<bool> HasActiveTutorialsAsync(Id<User> userId, CancellationToken cancellationToken = default)
@@ -548,24 +561,24 @@ public sealed class ServiceCommitBehaviorTests
             return Task.FromResult(false);
         }
 
-        public Task<List<TutorialProgressResult>> GetActiveTutorialsAsync(Id<User> userId, CancellationToken cancellationToken = default)
+        public Task<Result<List<TutorialProgressResult>, AppError>> GetActiveTutorialsAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new List<TutorialProgressResult>());
+            return Task.FromResult(Result<List<TutorialProgressResult>, AppError>.Success(new List<TutorialProgressResult>()));
         }
 
-        public Task<TutorialProgressResult?> GetTutorialProgressAsync(Id<User> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+        public Task<Result<TutorialProgressResult?, AppError>> GetTutorialProgressAsync(Id<User> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<TutorialProgressResult?>(null);
+            return Task.FromResult(Result<TutorialProgressResult?, AppError>.Success(null));
         }
 
-        public Task CompleteStepAsync(Id<User> userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default)
+        public Task<Result<Unit, AppError>> CompleteStepAsync(Id<User> userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default)
         {
-            return Task.CompletedTask;
+            return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
         }
 
-        public Task CompleteTutorialAsync(Id<User> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
+        public Task<Result<Unit, AppError>> CompleteTutorialAsync(Id<User> userId, TutorialType tutorialType, CancellationToken cancellationToken = default)
         {
-            return Task.CompletedTask;
+            return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
         }
     }
 }

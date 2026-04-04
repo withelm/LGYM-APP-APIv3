@@ -2,6 +2,8 @@ using LgymApi.Api;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Features.User.Controllers;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping;
@@ -73,23 +75,23 @@ public sealed class UserControllerTests
     {
         public string? LastPreferredLanguage { get; private set; }
 
-        public Task RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
+        public Task<Result<Unit, AppError>> RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
         {
             LastPreferredLanguage = input.PreferredLanguage;
-            return Task.CompletedTask;
+            return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
         }
 
-        public Task RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<LoginResult> LoginAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(new LoginResult());
-        public Task<LoginResult> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(new LoginResult());
+        public Task<Result<Unit, AppError>> RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        public Task<Result<LoginResult, AppError>> LoginAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(Result<LoginResult, AppError>.Success(new LoginResult()));
+        public Task<Result<LoginResult, AppError>> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(Result<LoginResult, AppError>.Success(new LoginResult()));
         public Task<bool> IsAdminAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<UserInfoResult> CheckTokenAsync(User currentUser, CancellationToken cancellationToken = default) => Task.FromResult(new UserInfoResult());
-        public Task<List<RankingEntry>> GetUsersRankingAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<RankingEntry>());
-        public Task<int> GetUserEloAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(0);
-        public Task LogoutAsync(User currentUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task DeleteAccountAsync(User currentUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task ChangeVisibilityInRankingAsync(User currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task UpdateTimeZoneAsync(User currentUser, string preferredTimeZone, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task UpdateUserRolesAsync(Id<User> targetUserId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<Result<UserInfoResult, AppError>> CheckTokenAsync(User? currentUser, CancellationToken cancellationToken = default) => Task.FromResult(Result<UserInfoResult, AppError>.Success(new UserInfoResult()));
+        public Task<Result<List<RankingEntry>, AppError>> GetUsersRankingAsync(CancellationToken cancellationToken = default) => Task.FromResult(Result<List<RankingEntry>, AppError>.Success(new List<RankingEntry>()));
+        public Task<Result<int, AppError>> GetUserEloAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(Result<int, AppError>.Success(0));
+        public Task<Result<Unit, AppError>> LogoutAsync(User? currentUser, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        public Task<Result<Unit, AppError>> DeleteAccountAsync(User? currentUser, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        public Task<Result<Unit, AppError>> ChangeVisibilityInRankingAsync(User? currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        public Task<Result<Unit, AppError>> UpdateTimeZoneAsync(User? currentUser, string preferredTimeZone, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        public Task<Result<Unit, AppError>> UpdateUserRolesAsync(Id<User> targetUserId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
     }
 }
