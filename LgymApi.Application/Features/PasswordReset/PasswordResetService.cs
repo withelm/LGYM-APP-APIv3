@@ -27,42 +27,35 @@ public sealed class PasswordResetService : IPasswordResetService
     private readonly IUserSessionCache _userSessionCache;
     private readonly IUnitOfWork _unitOfWork;
 
-    public PasswordResetService(
-        IUserRepository userRepository,
-        IPasswordResetTokenRepository passwordResetTokenRepository,
-        IPasswordResetTokenGenerationService tokenGenerationService,
-        ILegacyPasswordService legacyPasswordService,
-        IEmailScheduler<PasswordRecoveryEmailPayload> passwordRecoveryEmailScheduler,
-        IUserSessionCache userSessionCache,
-        IUnitOfWork unitOfWork)
+    public PasswordResetService(IPasswordResetServiceDependencies dependencies)
     {
-        _userRepository = userRepository;
-        _passwordResetTokenRepository = passwordResetTokenRepository;
-        _tokenGenerationService = tokenGenerationService;
-        _legacyPasswordService = legacyPasswordService;
-        _passwordRecoveryEmailScheduler = passwordRecoveryEmailScheduler;
-        _userSessionCache = userSessionCache;
-        _unitOfWork = unitOfWork;
+        _userRepository = dependencies.UserRepository;
+        _passwordResetTokenRepository = dependencies.PasswordResetTokenRepository;
+        _tokenGenerationService = dependencies.TokenGenerationService;
+        _legacyPasswordService = dependencies.LegacyPasswordService;
+        _passwordRecoveryEmailScheduler = dependencies.PasswordRecoveryEmailScheduler;
+        _userSessionCache = dependencies.UserSessionCache;
+        _unitOfWork = dependencies.UnitOfWork;
     }
 
-    public async Task<Result> RequestPasswordResetAsync(string email, string cultureName, CancellationToken ct)
+    public async Task<Result> RequestPasswordResetAsync(string email, string cultureName, CancellationToken cancellationToken)
     {
         var emailValueObject = new Email(email);
-        var user = await _userRepository.FindByEmailAsync(emailValueObject, ct);
+        var user = await _userRepository.FindByEmailAsync(emailValueObject, cancellationToken);
 
         if (user == null || user.IsDeleted)
         {
             return Result.Success(Unit.Value);
         }
 
-        var activeTokens = await _passwordResetTokenRepository.GetActiveForUserAsync(user.Id, ct);
+        var activeTokens = await _passwordResetTokenRepository.GetActiveForUserAsync(user.Id, cancellationToken);
         foreach (var activeToken in activeTokens)
         {
             activeToken.IsUsed = true;
-            await _passwordResetTokenRepository.UpdateAsync(activeToken, ct);
+            await _passwordResetTokenRepository.UpdateAsync(activeToken, cancellationToken);
         }
 
-        var generatedToken = await _tokenGenerationService.GenerateUniqueAsync(ct);
+        var generatedToken = await _tokenGenerationService.GenerateUniqueAsync(cancellationToken);
 
         var resetToken = new PasswordResetToken
         {
@@ -73,8 +66,8 @@ public sealed class PasswordResetService : IPasswordResetService
             IsUsed = false
         };
 
-        await _passwordResetTokenRepository.AddAsync(resetToken, ct);
-        await _unitOfWork.SaveChangesAsync(ct);
+        await _passwordResetTokenRepository.AddAsync(resetToken, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _passwordRecoveryEmailScheduler.ScheduleAsync(new PasswordRecoveryEmailPayload
         {
@@ -84,21 +77,21 @@ public sealed class PasswordResetService : IPasswordResetService
             RecipientEmail = user.Email.Value,
             ResetToken = generatedToken.PlainTextToken,
             CultureName = cultureName
-        }, ct);
+        }, cancellationToken);
 
         return Result.Success(Unit.Value);
     }
 
-    public async Task<Result> ResetPasswordAsync(string plainTextToken, string newPassword, CancellationToken ct)
+    public async Task<Result> ResetPasswordAsync(string plainTextToken, string newPassword, CancellationToken cancellationToken)
     {
         var tokenHash = ComputeSha256Hex(plainTextToken);
-        var resetToken = await _passwordResetTokenRepository.FindActiveByTokenHashAsync(tokenHash, ct);
+        var resetToken = await _passwordResetTokenRepository.FindActiveByTokenHashAsync(tokenHash, cancellationToken);
         if (resetToken == null)
         {
             return Result.Failure(new InvalidUserError(Messages.InvalidToken));
         }
 
-        var user = await _userRepository.FindByIdAsync(resetToken.UserId, ct);
+        var user = await _userRepository.FindByIdAsync(resetToken.UserId, cancellationToken);
         if (user == null || user.IsDeleted)
         {
             return Result.Failure(new InvalidUserError(Messages.InvalidToken));
@@ -113,9 +106,9 @@ public sealed class PasswordResetService : IPasswordResetService
 
         resetToken.IsUsed = true;
 
-        await _userRepository.UpdateAsync(user, ct);
-        await _passwordResetTokenRepository.UpdateAsync(resetToken, ct);
-        await _unitOfWork.SaveChangesAsync(ct);
+        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _passwordResetTokenRepository.UpdateAsync(resetToken, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _userSessionCache.Remove(user.Id);
 

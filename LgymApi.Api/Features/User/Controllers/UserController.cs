@@ -201,10 +201,7 @@ public sealed class UserController : ControllerBase
      {
          var preferences = HttpContext.GetCulturePreferences();
          await _passwordResetService.RequestPasswordResetAsync(request.Email, preferences.First(), HttpContext.RequestAborted);
-         return Ok(new ResponseMessageDto
-         {
-             Message = Messages.ForgotPasswordRequested
-         });
+         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.ForgotPasswordRequested));
      }
 
     [HttpPost("reset-password")]
@@ -216,15 +213,9 @@ public sealed class UserController : ControllerBase
         var result = await _passwordResetService.ResetPasswordAsync(request.Token, request.NewPassword, HttpContext.RequestAborted);
         if (result.IsFailure)
         {
-            return BadRequest(new ResponseMessageDto
-            {
-                Message = Messages.PasswordResetInvalidOrExpiredToken
-            });
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.PasswordResetInvalidOrExpiredToken));
         }
 
-        return Ok(new ResponseMessageDto
-        {
-            Message = Messages.PasswordResetSucceeded
-        });
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.PasswordResetSucceeded));
     }
 }

@@ -7,6 +7,6 @@ namespace LgymApi.Application.Features.PasswordReset;
 
 public interface IPasswordResetService
 {
-    Task<Result> RequestPasswordResetAsync(string email, string cultureName, CancellationToken ct);
-    Task<Result> ResetPasswordAsync(string plainTextToken, string newPassword, CancellationToken ct);
+    Task<Result> RequestPasswordResetAsync(string email, string cultureName, CancellationToken cancellationToken);
+    Task<Result> ResetPasswordAsync(string plainTextToken, string newPassword, CancellationToken cancellationToken);
 }

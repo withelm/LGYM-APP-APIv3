@@ -36,6 +36,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMainRecordsServiceDependencies, MainRecordsServiceDependencies>();
         services.AddScoped<IMainRecordsService, MainRecordsService>();
         services.AddScoped<IMeasurementsService, MeasurementsService>();
+        services.AddScoped<IPasswordResetServiceDependencies, PasswordResetServiceDependencies>();
         services.AddScoped<IPasswordResetTokenGenerationService, PasswordResetTokenGenerationService>();
         services.AddScoped<IPasswordResetService, PasswordResetService>();
         services.AddScoped<IPlanService, PlanService>();
