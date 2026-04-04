@@ -3,6 +3,7 @@ using LgymApi.Application.Models;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Options;
 using LgymApi.BackgroundWorker.Actions;
+using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -677,6 +678,14 @@ public sealed class SendInvitationEmailHandlerTests
         {
             ScheduledPayloads.Add(payload);
             ReceivedToken = cancellationToken;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class TestCommandDispatcher : ICommandDispatcher
+    {
+        public Task EnqueueAsync<TCommand>(TCommand command) where TCommand : class, IActionCommand
+        {
             return Task.CompletedTask;
         }
     }
