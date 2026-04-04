@@ -5,12 +5,14 @@ public static class EmailNotificationTypes
     public static readonly EmailNotificationType Welcome = EmailNotificationType.Define("user.registration.welcome");
     public static readonly EmailNotificationType TrainerInvitation = EmailNotificationType.Define("trainer.invitation.created");
     public static readonly EmailNotificationType TrainingCompleted = EmailNotificationType.Define("training.completed");
+    public static readonly EmailNotificationType PasswordRecovery = EmailNotificationType.Define("user.password.recovery");
 
     public static IReadOnlyCollection<EmailNotificationType> All { get; } =
     [
         Welcome,
         TrainerInvitation,
-        TrainingCompleted
+        TrainingCompleted,
+        PasswordRecovery
     ];
 
     public static bool TryFromValue(string? value, out EmailNotificationType notificationType)

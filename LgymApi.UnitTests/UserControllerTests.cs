@@ -4,6 +4,7 @@ using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Features.User.Controllers;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Features.PasswordReset;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping;
@@ -108,7 +109,17 @@ public sealed class UserControllerTests
         services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
         using var provider = services.BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
-        return new UserController(userService, mapper);
+        var stubPasswordResetService = new StubPasswordResetService();
+        return new UserController(userService, stubPasswordResetService, mapper);
+    }
+
+    private sealed class StubPasswordResetService : IPasswordResetService
+    {
+        public Task<Result<Unit, AppError>> RequestPasswordResetAsync(string email, string cultureName, CancellationToken ct) =>
+            Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+
+        public Task<Result<Unit, AppError>> ResetPasswordAsync(string plainTextToken, string newPassword, CancellationToken ct) =>
+            Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
     }
 
     private sealed class StubUserService : IUserService

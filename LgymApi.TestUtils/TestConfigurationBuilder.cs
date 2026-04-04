@@ -18,6 +18,7 @@ public static class TestConfigurationBuilder
             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test",
             ["Email:Enabled"] = "true",
             ["Email:InvitationBaseUrl"] = "https://example.com/invite",
+            ["Email:PasswordRecoveryBaseUrl"] = "https://example.com/reset",
             ["Email:TemplateRootPath"] = "EmailTemplates",
             ["Email:DefaultCulture"] = "en-US",
             ["Email:FromAddress"] = "coach@example.com",

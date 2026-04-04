@@ -33,6 +33,11 @@ public sealed class UserRepository : IUserRepository
         return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Name == name, cancellationToken);
     }
 
+    public Task<User?> FindByEmailAsync(Email email, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+    }
+
     public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default)
     {
         return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Name == name || u.Email == email, cancellationToken);

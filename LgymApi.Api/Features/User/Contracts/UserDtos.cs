@@ -36,6 +36,24 @@ public sealed class UpdateTimeZoneRequest : IDto
     public string PreferredTimeZone { get; set; } = string.Empty;
 }
 
+public sealed class ForgotPasswordRequest : IDto
+{
+    [JsonPropertyName("email")]
+    public string Email { get; set; } = string.Empty;
+}
+
+public sealed class ResetPasswordRequest : IDto
+{
+    [JsonPropertyName("token")]
+    public string Token { get; set; } = string.Empty;
+
+    [JsonPropertyName("newPassword")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [JsonPropertyName("confirmPassword")]
+    public string ConfirmPassword { get; set; } = string.Empty;
+}
+
 public sealed class RankDto : IResultDto
 {
     [JsonPropertyName("name")]

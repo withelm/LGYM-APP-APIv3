@@ -195,7 +195,16 @@
   <data name="DateRangeRequired" xml:space="preserve">
     <value>fromDate and toDate query parameters are required.</value>
   </data>
-  <data name="InvalidTimeZone" xml:space="preserve">
-    <value>Invalid time zone identifier.</value>
-  </data>
-</root>
+   <data name="InvalidTimeZone" xml:space="preserve">
+     <value>Invalid time zone identifier.</value>
+   </data>
+   <data name="ForgotPasswordRequested" xml:space="preserve">
+     <value>If an account with that email exists, a password reset link has been sent.</value>
+   </data>
+   <data name="PasswordResetSucceeded" xml:space="preserve">
+     <value>Password reset successfully.</value>
+   </data>
+   <data name="PasswordResetInvalidOrExpiredToken" xml:space="preserve">
+     <value>Invalid or expired reset token.</value>
+   </data>
+ </root>
