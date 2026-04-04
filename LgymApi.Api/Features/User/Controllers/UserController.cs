@@ -1,8 +1,10 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
@@ -44,7 +46,12 @@ public sealed class UserController : ControllerBase
             request.IsVisibleInRanking,
             preferredLanguage);
 
-        await _userService.RegisterAsync(input, HttpContext.RequestAborted);
+        var result = await _userService.RegisterAsync(input, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -54,7 +61,12 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await _userService.LoginAsync(request.Name, request.Password, HttpContext.RequestAborted);
-        var mapped = _mapper.Map<LoginResult, LoginResponseDto>(result);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var mapped = _mapper.Map<LoginResult, LoginResponseDto>(result.Value);
         return Ok(mapped);
     }
 
@@ -72,8 +84,13 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> CheckToken()
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.CheckTokenAsync(user!, HttpContext.RequestAborted);
-        var mapped = _mapper.Map<UserInfoResult, UserInfoDto>(result);
+        var result = await _userService.CheckTokenAsync(user, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var mapped = _mapper.Map<UserInfoResult, UserInfoDto>(result.Value);
         return Ok(mapped);
     }
 
@@ -82,7 +99,12 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> Logout()
     {
         var user = HttpContext.GetCurrentUser();
-        await _userService.LogoutAsync(user!, HttpContext.RequestAborted);
+        var result = await _userService.LogoutAsync(user, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -91,7 +113,12 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> GetUsersRanking()
     {
         var result = await _userService.GetUsersRankingAsync(HttpContext.RequestAborted);
-        var mapped = _mapper.MapList<RankingEntry, UserBaseInfoDto>(result);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var mapped = _mapper.MapList<RankingEntry, UserBaseInfoDto>(result.Value);
         return Ok(mapped);
     }
 
@@ -100,8 +127,13 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> GetUserElo([FromRoute] string id)
     {
         var userId = ParseUserId(id);
-        var elo = await _userService.GetUserEloAsync(userId, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<int, UserEloDto>(elo));
+        var result = await _userService.GetUserEloAsync(userId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<int, UserEloDto>(result.Value));
     }
 
     private static Id<UserEntity> ParseUserId(string value)
@@ -116,7 +148,12 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> DeleteAccount()
     {
         var user = HttpContext.GetCurrentUser();
-        await _userService.DeleteAccountAsync(user!, HttpContext.RequestAborted);
+        var result = await _userService.DeleteAccountAsync(user, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -126,11 +163,17 @@ public sealed class UserController : ControllerBase
     {
         if (!body.TryGetValue("isVisibleInRanking", out var isVisible))
         {
-            throw AppException.BadRequest(Messages.DidntFind);
+            var routeValidationFailure = Result<Unit, AppError>.Failure(new InvalidUserError(Messages.DidntFind));
+            return routeValidationFailure.ToActionResult();
         }
 
         var user = HttpContext.GetCurrentUser();
-        await _userService.ChangeVisibilityInRankingAsync(user!, isVisible, HttpContext.RequestAborted);
+        var result = await _userService.ChangeVisibilityInRankingAsync(user, isVisible, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -139,7 +182,12 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> UpdateTimeZone([FromBody] UpdateTimeZoneRequest request)
     {
         var user = HttpContext.GetCurrentUser();
-        await _userService.UpdateTimeZoneAsync(user!, request.PreferredTimeZone, HttpContext.RequestAborted);
+        var result = await _userService.UpdateTimeZoneAsync(user, request.PreferredTimeZone, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

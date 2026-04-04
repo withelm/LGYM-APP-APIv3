@@ -1,3 +1,4 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Role.Contracts;
 using LgymApi.Application.Features.Role;
@@ -29,8 +30,14 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> GetRoles()
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
-        var roles = await _roleService.GetRolesAsync(cancellationToken);
-        return Ok(_mapper.MapList<RoleResult, RoleDto>(roles));
+        var result = await _roleService.GetRolesAsync(cancellationToken);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
+        return Ok(_mapper.MapList<RoleResult, RoleDto>(result.Value));
     }
 
     [HttpGet("{id}")]
@@ -40,8 +47,14 @@ public sealed class RoleController : ControllerBase
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Id<Domain.Entities.Role>.TryParse(id, out var parsedRoleId) ? parsedRoleId : Id<Domain.Entities.Role>.Empty;
-        var role = await _roleService.GetRoleAsync(roleId, cancellationToken);
-        return Ok(_mapper.Map<RoleResult, RoleDto>(role));
+        var result = await _roleService.GetRoleAsync(roleId, cancellationToken);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
+        return Ok(_mapper.Map<RoleResult, RoleDto>(result.Value));
     }
 
     [HttpGet("permission-claims")]
@@ -58,8 +71,14 @@ public sealed class RoleController : ControllerBase
     public async Task<IActionResult> CreateRole([FromBody] UpsertRoleRequest request)
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
-        var role = await _roleService.CreateRoleAsync(request.Name, request.Description, request.PermissionClaims, cancellationToken);
-        return Ok(_mapper.Map<RoleResult, RoleDto>(role));
+        var result = await _roleService.CreateRoleAsync(request.Name, request.Description, request.PermissionClaims, cancellationToken);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
+        return Ok(_mapper.Map<RoleResult, RoleDto>(result.Value));
     }
 
     [HttpPost("{id}/update")]
@@ -70,7 +89,13 @@ public sealed class RoleController : ControllerBase
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Id<Domain.Entities.Role>.TryParse(id, out var parsedRoleId) ? parsedRoleId : Id<Domain.Entities.Role>.Empty;
-        await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims, cancellationToken);
+        var result = await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims, cancellationToken);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -81,7 +106,13 @@ public sealed class RoleController : ControllerBase
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Id<Domain.Entities.Role>.TryParse(id, out var parsedRoleId) ? parsedRoleId : Id<Domain.Entities.Role>.Empty;
-        await _roleService.DeleteRoleAsync(roleId, cancellationToken);
+        var result = await _roleService.DeleteRoleAsync(roleId, cancellationToken);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -93,7 +124,13 @@ public sealed class RoleController : ControllerBase
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var userId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
-        await _roleService.UpdateUserRolesAsync(userId, request.Roles, cancellationToken);
+        var result = await _roleService.UpdateUserRolesAsync(userId, request.Roles, cancellationToken);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 

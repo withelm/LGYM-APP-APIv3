@@ -1,4 +1,5 @@
 using System.Globalization;
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.ExerciseScores.Contracts;
 using LgymApi.Api.Middleware;
@@ -32,7 +33,13 @@ public sealed class ExerciseScoresController : ControllerBase
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         Id<LgymApi.Domain.Entities.Exercise>.TryParse(request.ExerciseId, out var parsedExerciseId);
         var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, parsedExerciseId, HttpContext.RequestAborted);
-        var mapped = _mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var mapped = _mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result.Value);
         return Ok(mapped);
     }
 }

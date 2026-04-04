@@ -1,7 +1,9 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
@@ -33,11 +35,16 @@ public sealed class TraineeRelationshipController : ControllerBase
     {
         if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.FieldRequired)).ToActionResult();
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.AcceptInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.AcceptInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -47,11 +54,16 @@ public sealed class TraineeRelationshipController : ControllerBase
     {
         if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.FieldRequired)).ToActionResult();
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.RejectInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.RejectInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -60,7 +72,12 @@ public sealed class TraineeRelationshipController : ControllerBase
     public async Task<IActionResult> DetachFromTrainer()
     {
         var trainee = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.DetachFromTrainerAsync(trainee!, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.DetachFromTrainerAsync(trainee!, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -69,7 +86,12 @@ public sealed class TraineeRelationshipController : ControllerBase
     public async Task<IActionResult> GetActiveAssignedPlan()
     {
         var trainee = HttpContext.GetCurrentUser();
-        var plan = await _trainerRelationshipService.GetActiveAssignedPlanAsync(trainee!, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(plan));
+        var result = await _trainerRelationshipService.GetActiveAssignedPlanAsync(trainee!, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(result.Value));
     }
 }

@@ -1,3 +1,4 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.EloRegistry.Contracts;
 using LgymApi.Api.Features.ExerciseScores.Contracts;
@@ -6,7 +7,8 @@ using LgymApi.Api.Features.Training.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.EloRegistry.Models;
 using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Features.Training.Models;
@@ -45,12 +47,17 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(request.TraineeId, out var traineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<TrainerInvitationResult, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var invitation = await _trainerRelationshipService.CreateInvitationAsync(trainer!, traineeId, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(invitation));
+        var result = await _trainerRelationshipService.CreateInvitationAsync(trainer!, traineeId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(result.Value));
     }
 
     [HttpGet("invitations")]
@@ -58,8 +65,13 @@ public sealed class TrainerRelationshipController : ControllerBase
     public async Task<IActionResult> GetInvitations()
     {
         var trainer = HttpContext.GetCurrentUser();
-        var invitations = await _trainerRelationshipService.GetTrainerInvitationsAsync(trainer!, HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(invitations));
+        var result = await _trainerRelationshipService.GetTrainerInvitationsAsync(trainer!, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(result.Value));
     }
 
     [HttpGet("trainees")]
@@ -77,12 +89,17 @@ public sealed class TrainerRelationshipController : ControllerBase
             PageSize = request.PageSize
         }, HttpContext.RequestAborted);
 
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(new TrainerDashboardTraineesResponse
         {
-            Page = result.Page,
-            PageSize = result.PageSize,
-            Total = result.Total,
-            Items = _mapper.MapList<TrainerDashboardTraineeResult, TrainerDashboardTraineeDto>(result.Items)
+            Page = result.Value.Page,
+            PageSize = result.Value.PageSize,
+            Total = result.Value.Total,
+            Items = _mapper.MapList<TrainerDashboardTraineeResult, TrainerDashboardTraineeDto>(result.Value.Items)
         });
     }
 
@@ -94,12 +111,17 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<List<DateTime>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var dates = await _trainerRelationshipService.GetTraineeTrainingDatesAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
-        return Ok(dates);
+        var result = await _trainerRelationshipService.GetTraineeTrainingDatesAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(result.Value);
     }
 
     [HttpPost("trainees/{traineeId}/trainings/by-date")]
@@ -110,12 +132,17 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<List<TrainingByDateDetails>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
         var result = await _trainerRelationshipService.GetTraineeTrainingByDateAsync(trainer!, parsedTraineeId, request.CreatedAt, HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/exercise-scores/chart")]
@@ -126,17 +153,22 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<List<ExerciseScoresChartData>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         if (!Id<ExerciseEntity>.TryParse(request.ExerciseId, out var parsedExerciseId))
         {
-            throw AppException.BadRequest(Messages.ExerciseIdRequired);
+            return Result<List<ExerciseScoresChartData>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.ExerciseIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
         var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, parsedTraineeId, parsedExerciseId, HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result.Value));
     }
 
     [HttpGet("trainees/{traineeId}/elo/chart")]
@@ -147,12 +179,17 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<List<EloRegistryChartEntry>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
         var result = await _trainerRelationshipService.GetTraineeEloChartAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result.Value));
     }
 
     [HttpGet("trainees/{traineeId}/main-records/history")]
@@ -163,12 +200,17 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<List<LgymApi.Domain.Entities.MainRecord>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var records = await _trainerRelationshipService.GetTraineeMainRecordsHistoryAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
-        var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(records);
+        var result = await _trainerRelationshipService.GetTraineeMainRecordsHistoryAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(result.Value);
         return Ok(mappedRecords);
     }
 
@@ -178,11 +220,16 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.UnlinkTraineeAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.UnlinkTraineeAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -192,12 +239,17 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<List<TrainerManagedPlanResult>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plans = await _trainerRelationshipService.GetTraineePlansAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<TrainerManagedPlanResult, TrainerManagedPlanDto>(plans));
+        var result = await _trainerRelationshipService.GetTraineePlansAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<TrainerManagedPlanResult, TrainerManagedPlanDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/plans")]
@@ -206,12 +258,17 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<TrainerManagedPlanResult, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _trainerRelationshipService.CreateTraineePlanAsync(trainer!, parsedTraineeId, request.Name, HttpContext.RequestAborted);
-        return StatusCode(StatusCodes.Status201Created, _mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(plan));
+        var result = await _trainerRelationshipService.CreateTraineePlanAsync(trainer!, parsedTraineeId, request.Name, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return StatusCode(StatusCodes.Status201Created, _mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/plans/{planId}/update")]
@@ -220,17 +277,22 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<TrainerManagedPlanResult, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         if (!Id<PlanEntity>.TryParse(planId, out var parsedPlanId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<TrainerManagedPlanResult, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.FieldRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var plan = await _trainerRelationshipService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, request.Name, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(plan));
+        var result = await _trainerRelationshipService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, request.Name, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<TrainerManagedPlanResult, TrainerManagedPlanDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/plans/{planId}/delete")]
@@ -239,16 +301,21 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         if (!Id<PlanEntity>.TryParse(planId, out var parsedPlanId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.FieldRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -258,16 +325,21 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         if (!Id<PlanEntity>.TryParse(planId, out var parsedPlanId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.FieldRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -277,11 +349,16 @@ public sealed class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _trainerRelationshipService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 }

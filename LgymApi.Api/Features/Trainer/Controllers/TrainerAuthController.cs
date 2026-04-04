@@ -1,3 +1,4 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Idempotency;
@@ -38,7 +39,12 @@ public sealed class TrainerAuthController : ControllerBase
             IsVisibleInRanking: null,
             PreferredLanguage: null);
 
-        await _userService.RegisterTrainerAsync(input, HttpContext.RequestAborted);
+        var result = await _userService.RegisterTrainerAsync(input, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -48,7 +54,12 @@ public sealed class TrainerAuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await _userService.LoginTrainerAsync(request.Name, request.Password, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.LoginResult, LoginResponseDto>(result));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.LoginResult, LoginResponseDto>(result.Value));
     }
 
     [HttpGet("checkToken")]
@@ -57,7 +68,12 @@ public sealed class TrainerAuthController : ControllerBase
     public async Task<IActionResult> CheckToken()
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.CheckTokenAsync(user!, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.UserInfoResult, UserInfoDto>(result));
+        var result = await _userService.CheckTokenAsync(user, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.UserInfoResult, UserInfoDto>(result.Value));
     }
 }

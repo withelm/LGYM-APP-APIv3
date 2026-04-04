@@ -1,7 +1,10 @@
 using LgymApi.Api.Features.Common.Contracts;
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.PlanDay.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Api.Mapping.Profiles;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.PlanDay;
 using LgymApi.Application.Features.PlanDay.Models;
 using LgymApi.Application.Mapping.Core;
@@ -35,7 +38,11 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> CreatePlanDay([FromRoute] string id, [FromBody] PlanDayFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = id.ToIdOrEmpty<PlanEntity>();
+        if (!Id<PlanEntity>.TryParse(id, out var planId))
+        {
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
         var exercises = form.Exercises
             .Select(exercise => new PlanDayExerciseInput
             {
@@ -44,7 +51,12 @@ public sealed class PlanDayController : ControllerBase
                 Reps = exercise.Reps
             })
             .ToList();
-        await _planDayService.CreatePlanDayAsync(user!, planId, form.Name, exercises, HttpContext.RequestAborted);
+        var result = await _planDayService.CreatePlanDayAsync(user!, planId, form.Name, exercises, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
@@ -56,6 +68,11 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> UpdatePlanDay([FromBody] PlanDayFormDto form)
     {
         var user = HttpContext.GetCurrentUser();
+        if (!Id<PlanDayEntity>.TryParse(form.Id ?? string.Empty, out var planDayId))
+        {
+            return Result<Unit, AppError>.Failure(new InvalidPlanDayError(Messages.DidntFind)).ToActionResult();
+        }
+
         var exercises = form.Exercises
             .Select(exercise => new PlanDayExerciseInput
             {
@@ -64,8 +81,12 @@ public sealed class PlanDayController : ControllerBase
                 Reps = exercise.Reps
             })
             .ToList();
-        var planDayId = form.Id.ToIdOrEmpty<PlanDayEntity>();
-        await _planDayService.UpdatePlanDayAsync(user!, planDayId, form.Name, exercises, HttpContext.RequestAborted);
+        var result = await _planDayService.UpdatePlanDayAsync(user!, planDayId, form.Name, exercises, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -76,9 +97,19 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> GetPlanDay([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planDayId = id.ToIdOrEmpty<PlanDayEntity>();
+        if (!Id<PlanDayEntity>.TryParse(id, out var planDayId))
+        {
+            return Result<PlanDayDetailsContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
         var cultures = HttpContext.GetCulturePreferences();
-        var context = await _planDayService.GetPlanDayAsync(user!, planDayId, cultures, HttpContext.RequestAborted);
+        var result = await _planDayService.GetPlanDayAsync(user!, planDayId, cultures, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var context = result.Value;
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.Exercises);
         mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
@@ -94,15 +125,25 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> GetPlanDays([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = id.ToIdOrEmpty<PlanEntity>();
+        if (!Id<PlanEntity>.TryParse(id, out var planId))
+        {
+            return Result<PlanDaysContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
         var cultures = HttpContext.GetCulturePreferences();
-        var context = await _planDayService.GetPlanDaysAsync(user!, planId, cultures, HttpContext.RequestAborted);
+        var result = await _planDayService.GetPlanDaysAsync(user!, planId, cultures, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var context = result.Value;
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
         mappingContext.Set(PlanDayProfile.Keys.ExerciseMap, context.ExerciseMap);
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
-        var result = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayVmDto>(context.PlanDays, mappingContext);
-        return Ok(result);
+        var planDays = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayVmDto>(context.PlanDays, mappingContext);
+        return Ok(planDays);
     }
 
     [HttpGet("planDay/{id}/getPlanDaysTypes")]
@@ -112,9 +153,18 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> GetPlanDaysTypes([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = id.ToIdOrEmpty<UserEntity>();
-        var planDays = await _planDayService.GetPlanDaysTypesAsync(user!, routeUserId, HttpContext.RequestAborted);
-        var planDayDtos = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayChooseDto>(planDays);
+        if (!Id<UserEntity>.TryParse(id, out var routeUserId))
+        {
+            return Result<List<LgymApi.Domain.Entities.PlanDay>, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planDayService.GetPlanDaysTypesAsync(user!, routeUserId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var planDayDtos = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayChooseDto>(result.Value);
         return Ok(planDayDtos);
     }
 
@@ -125,8 +175,17 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> DeletePlanDay([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planDayId = id.ToIdOrEmpty<PlanDayEntity>();
-        await _planDayService.DeletePlanDayAsync(user!, planDayId, HttpContext.RequestAborted);
+        if (!Id<PlanDayEntity>.TryParse(id, out var planDayId))
+        {
+            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planDayService.DeletePlanDayAsync(user!, planDayId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -137,13 +196,23 @@ public sealed class PlanDayController : ControllerBase
     public async Task<IActionResult> GetPlanDaysInfo([FromRoute] string id)
     {
         var user = HttpContext.GetCurrentUser();
-        var planId = id.ToIdOrEmpty<PlanEntity>();
-        var context = await _planDayService.GetPlanDaysInfoAsync(user!, planId, HttpContext.RequestAborted);
+        if (!Id<PlanEntity>.TryParse(id, out var planId))
+        {
+            return Result<PlanDaysInfoContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind)).ToActionResult();
+        }
+
+        var result = await _planDayService.GetPlanDaysInfoAsync(user!, planId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var context = result.Value;
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(PlanDayProfile.Keys.PlanDayExercises, context.PlanDayExercises);
         mappingContext.Set(PlanDayProfile.Keys.PlanDayLastTrainings, context.LastTrainingMap);
-        var result = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayBaseInfoDto>(context.PlanDays, mappingContext);
-        return Ok(result);
+        var planDaysInfo = _mapper.MapList<LgymApi.Domain.Entities.PlanDay, PlanDayBaseInfoDto>(context.PlanDays, mappingContext);
+        return Ok(planDaysInfo);
     }
 
 }

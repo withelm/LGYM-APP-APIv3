@@ -1,7 +1,7 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Mapping.Core;
@@ -33,14 +33,19 @@ public sealed class TrainerReportingController : ControllerBase
     public async Task<IActionResult> CreateTemplate([FromBody] UpsertReportTemplateRequest request)
     {
         var trainer = HttpContext.GetCurrentUser();
-        var template = await _reportingService.CreateTemplateAsync(trainer!, new CreateReportTemplateCommand
+        var result = await _reportingService.CreateTemplateAsync(trainer!, new CreateReportTemplateCommand
         {
             Name = request.Name,
             Description = request.Description,
             Fields = request.Fields.Select(MapField).ToList()
         }, HttpContext.RequestAborted);
 
-        return StatusCode(StatusCodes.Status201Created, _mapper.Map<ReportTemplateResult, ReportTemplateDto>(template));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return StatusCode(StatusCodes.Status201Created, _mapper.Map<ReportTemplateResult, ReportTemplateDto>(result.Value));
     }
 
     [HttpGet("report-templates")]
@@ -48,8 +53,14 @@ public sealed class TrainerReportingController : ControllerBase
     public async Task<IActionResult> GetTemplates()
     {
         var trainer = HttpContext.GetCurrentUser();
-        var templates = await _reportingService.GetTrainerTemplatesAsync(trainer!, HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<ReportTemplateResult, ReportTemplateDto>(templates));
+        var result = await _reportingService.GetTrainerTemplatesAsync(trainer!, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<ReportTemplateResult, ReportTemplateDto>(result.Value));
     }
 
     [HttpGet("report-templates/{templateId}")]
@@ -59,12 +70,18 @@ public sealed class TrainerReportingController : ControllerBase
     {
         if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var template = await _reportingService.GetTrainerTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
-        return Ok(_mapper.Map<ReportTemplateResult, ReportTemplateDto>(template));
+        var result = await _reportingService.GetTrainerTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<ReportTemplateResult, ReportTemplateDto>(result.Value));
     }
 
     [HttpPost("report-templates/{templateId}/update")]
@@ -74,18 +91,23 @@ public sealed class TrainerReportingController : ControllerBase
     {
         if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var template = await _reportingService.UpdateTemplateAsync(trainer!, parsedTemplateId, new CreateReportTemplateCommand
+        var result = await _reportingService.UpdateTemplateAsync(trainer!, parsedTemplateId, new CreateReportTemplateCommand
         {
             Name = request.Name,
             Description = request.Description,
             Fields = request.Fields.Select(MapField).ToList()
         }, HttpContext.RequestAborted);
 
-        return Ok(_mapper.Map<ReportTemplateResult, ReportTemplateDto>(template));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<ReportTemplateResult, ReportTemplateDto>(result.Value));
     }
 
     [HttpPost("report-templates/{templateId}/delete")]
@@ -95,11 +117,17 @@ public sealed class TrainerReportingController : ControllerBase
     {
         if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        await _reportingService.DeleteTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
+        var result = await _reportingService.DeleteTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -110,12 +138,12 @@ public sealed class TrainerReportingController : ControllerBase
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
         if (!Id<ReportTemplate>.TryParse(request.TemplateId, out var parsedTemplateId))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
@@ -126,7 +154,12 @@ public sealed class TrainerReportingController : ControllerBase
             Note = request.Note
         }, HttpContext.RequestAborted);
 
-        return StatusCode(StatusCodes.Status201Created, _mapper.Map<ReportRequestResult, ReportRequestDto>(result));
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return StatusCode(StatusCodes.Status201Created, _mapper.Map<ReportRequestResult, ReportRequestDto>(result.Value));
     }
 
     [HttpGet("trainees/{traineeId}/report-submissions")]
@@ -136,12 +169,18 @@ public sealed class TrainerReportingController : ControllerBase
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var submissions = await _reportingService.GetTraineeSubmissionsAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
-        return Ok(_mapper.MapList<ReportSubmissionResult, ReportSubmissionDto>(submissions));
+        var result = await _reportingService.GetTraineeSubmissionsAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
     }
 
     private static ReportTemplateFieldCommand MapField(ReportTemplateFieldRequest field)
