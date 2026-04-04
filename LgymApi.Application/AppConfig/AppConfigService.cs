@@ -1,5 +1,6 @@
 using AppConfigEntity = LgymApi.Domain.Entities.AppConfig;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
@@ -27,38 +28,38 @@ public sealed class AppConfigService : IAppConfigService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<AppConfigEntity> GetLatestByPlatformAsync(Platforms platform, CancellationToken cancellationToken = default)
+    public async Task<Result<AppConfigEntity, AppError>> GetLatestByPlatformAsync(Platforms platform, CancellationToken cancellationToken = default)
     {
         if (platform == Platforms.Unknown)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<AppConfigEntity, AppError>.Failure(new AppConfigNotFoundError(Messages.DidntFind));
         }
 
         AppConfigEntity? config = await _appConfigRepository.GetLatestByPlatformAsync(platform, cancellationToken);
         if (config == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<AppConfigEntity, AppError>.Failure(new AppConfigNotFoundError(Messages.DidntFind));
         }
 
-        return config;
+        return Result<AppConfigEntity, AppError>.Success(config);
     }
 
-    public async Task CreateNewAppVersionAsync(Id<LgymApi.Domain.Entities.User> userId, CreateAppVersionInput input, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> CreateNewAppVersionAsync(Id<LgymApi.Domain.Entities.User> userId, CreateAppVersionInput input, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new AppConfigForbiddenError(Messages.Forbidden));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null || !await _roleRepository.UserHasPermissionAsync(userId, AuthConstants.Permissions.ManageAppConfig, cancellationToken))
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new AppConfigForbiddenError(Messages.Forbidden));
         }
 
         if (input.Platform == Platforms.Unknown)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidAppConfigError(Messages.FieldRequired));
         }
 
         var config = new AppConfigEntity
@@ -74,5 +75,7 @@ public sealed class AppConfigService : IAppConfigService
 
         await _appConfigRepository.AddAsync(config, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 }

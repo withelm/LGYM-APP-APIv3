@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Globalization;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -31,10 +32,19 @@ public sealed class ReportingService : IReportingService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<ReportTemplateResult> CreateTemplateAsync(UserEntity currentTrainer, CreateReportTemplateCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result<ReportTemplateResult, AppError>> CreateTemplateAsync(UserEntity currentTrainer, CreateReportTemplateCommand command, CancellationToken cancellationToken = default)
     {
-        await EnsureTrainerAsync(currentTrainer, cancellationToken);
-        ValidateTemplateCommand(command);
+        var trainerCheck = await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        if (trainerCheck.IsFailure)
+        {
+            return Result<ReportTemplateResult, AppError>.Failure(trainerCheck.Error);
+        }
+
+        var validationCheck = ValidateTemplateCommand(command);
+        if (validationCheck.IsFailure)
+        {
+            return Result<ReportTemplateResult, AppError>.Failure(validationCheck.Error);
+        }
 
         var template = new ReportTemplate
         {
@@ -61,29 +71,59 @@ public sealed class ReportingService : IReportingService
         await _reportingRepository.AddTemplateAsync(template, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return MapTemplate(template);
+        return Result<ReportTemplateResult, AppError>.Success(MapTemplate(template));
     }
 
-    public async Task<List<ReportTemplateResult>> GetTrainerTemplatesAsync(UserEntity currentTrainer, CancellationToken cancellationToken = default)
+    public async Task<Result<List<ReportTemplateResult>, AppError>> GetTrainerTemplatesAsync(UserEntity currentTrainer, CancellationToken cancellationToken = default)
     {
-        await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        var trainerCheck = await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        if (trainerCheck.IsFailure)
+        {
+            return Result<List<ReportTemplateResult>, AppError>.Failure(trainerCheck.Error);
+        }
+
         var templates = await _reportingRepository.GetTemplatesByTrainerIdAsync(currentTrainer.Id, cancellationToken);
-        return templates.Select(MapTemplate).ToList();
+        return Result<List<ReportTemplateResult>, AppError>.Success(templates.Select(MapTemplate).ToList());
     }
 
-    public async Task<ReportTemplateResult> GetTrainerTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken = default)
+    public async Task<Result<ReportTemplateResult, AppError>> GetTrainerTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken = default)
     {
-        await EnsureTrainerAsync(currentTrainer, cancellationToken);
-        var template = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
-        return MapTemplate(template);
+        var trainerCheck = await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        if (trainerCheck.IsFailure)
+        {
+            return Result<ReportTemplateResult, AppError>.Failure(trainerCheck.Error);
+        }
+
+        var templateResult = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
+        if (templateResult.IsFailure)
+        {
+            return Result<ReportTemplateResult, AppError>.Failure(templateResult.Error);
+        }
+
+        return Result<ReportTemplateResult, AppError>.Success(MapTemplate(templateResult.Value));
     }
 
-    public async Task<ReportTemplateResult> UpdateTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CreateReportTemplateCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result<ReportTemplateResult, AppError>> UpdateTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CreateReportTemplateCommand command, CancellationToken cancellationToken = default)
     {
-        await EnsureTrainerAsync(currentTrainer, cancellationToken);
-        ValidateTemplateCommand(command);
+        var trainerCheck = await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        if (trainerCheck.IsFailure)
+        {
+            return Result<ReportTemplateResult, AppError>.Failure(trainerCheck.Error);
+        }
 
-        var template = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
+        var validationCheck = ValidateTemplateCommand(command);
+        if (validationCheck.IsFailure)
+        {
+            return Result<ReportTemplateResult, AppError>.Failure(validationCheck.Error);
+        }
+
+        var templateResult = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
+        if (templateResult.IsFailure)
+        {
+            return Result<ReportTemplateResult, AppError>.Failure(templateResult.Error);
+        }
+
+        var template = templateResult.Value;
         template.Name = command.Name.Trim();
         template.Description = string.IsNullOrWhiteSpace(command.Description) ? null : command.Description.Trim();
 
@@ -105,32 +145,53 @@ public sealed class ReportingService : IReportingService
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return MapTemplate(template);
+        return Result<ReportTemplateResult, AppError>.Success(MapTemplate(template));
     }
 
-    public async Task DeleteTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> DeleteTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken = default)
     {
-        await EnsureTrainerAsync(currentTrainer, cancellationToken);
-        var template = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
-        template.IsDeleted = true;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task<ReportRequestResult> CreateReportRequestAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CreateReportRequestCommand command, CancellationToken cancellationToken = default)
-    {
-        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
-        if (command.TemplateId.IsEmpty)
+        var trainerCheck = await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        if (trainerCheck.IsFailure)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(trainerCheck.Error);
         }
 
-        var template = await EnsureOwnedTemplateAsync(currentTrainer, command.TemplateId, cancellationToken);
+        var templateResult = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
+        if (templateResult.IsFailure)
+        {
+            return Result<Unit, AppError>.Failure(templateResult.Error);
+        }
+
+        templateResult.Value.IsDeleted = true;
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    public async Task<Result<ReportRequestResult, AppError>> CreateReportRequestAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CreateReportRequestCommand command, CancellationToken cancellationToken = default)
+    {
+        var ownershipCheck = await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
+        if (ownershipCheck.IsFailure)
+        {
+            return Result<ReportRequestResult, AppError>.Failure(ownershipCheck.Error);
+        }
+
+        if (command.TemplateId.IsEmpty)
+        {
+            return Result<ReportRequestResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
+        }
+
+        var templateResult = await EnsureOwnedTemplateAsync(currentTrainer, command.TemplateId, cancellationToken);
+        if (templateResult.IsFailure)
+        {
+            return Result<ReportRequestResult, AppError>.Failure(templateResult.Error);
+        }
+
         var request = new ReportRequest
         {
             Id = Id<ReportRequest>.New(),
             TrainerId = currentTrainer.Id,
             TraineeId = traineeId,
-            TemplateId = template.Id,
+            TemplateId = templateResult.Value.Id,
             Status = ReportRequestStatus.Pending,
             DueAt = command.DueAt,
             Note = string.IsNullOrWhiteSpace(command.Note) ? null : command.Note.Trim()
@@ -139,11 +200,11 @@ public sealed class ReportingService : IReportingService
         await _reportingRepository.AddRequestAsync(request, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        request.Template = template;
-        return MapRequest(request);
+        request.Template = templateResult.Value;
+        return Result<ReportRequestResult, AppError>.Success(MapRequest(request));
     }
 
-    public async Task<List<ReportRequestResult>> GetPendingRequestsForTraineeAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
+    public async Task<Result<List<ReportRequestResult>, AppError>> GetPendingRequestsForTraineeAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
     {
         var requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
@@ -164,36 +225,40 @@ public sealed class ReportingService : IReportingService
             requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
         }
 
-        return requests.Select(MapRequest).ToList();
+        return Result<List<ReportRequestResult>, AppError>.Success(requests.Select(MapRequest).ToList());
     }
 
-    public async Task<ReportSubmissionResult> SubmitReportRequestAsync(UserEntity currentTrainee, Id<ReportRequest> requestId, SubmitReportRequestCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result<ReportSubmissionResult, AppError>> SubmitReportRequestAsync(UserEntity currentTrainee, Id<ReportRequest> requestId, SubmitReportRequestCommand command, CancellationToken cancellationToken = default)
     {
         if (requestId.IsEmpty || command.Answers == null)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
         }
 
         var request = await _reportingRepository.FindRequestByIdAsync(requestId, cancellationToken);
         if (request == null || request.TraineeId != currentTrainee.Id)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
 
         if (request.Status != ReportRequestStatus.Pending)
         {
-            throw AppException.BadRequest(Messages.ReportRequestNotPending);
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportRequestNotPending));
         }
 
         if (request.DueAt.HasValue && request.DueAt.Value <= DateTimeOffset.UtcNow)
         {
             request.Status = ReportRequestStatus.Expired;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            throw AppException.BadRequest(Messages.ReportRequestExpired);
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportRequestExpired));
         }
 
         var normalizedAnswers = NormalizeAnswers(command.Answers);
-        ValidateAnswersAgainstTemplate(request.Template, normalizedAnswers);
+        var validationResult = ValidateAnswersAgainstTemplate(request.Template, normalizedAnswers);
+        if (validationResult.IsFailure)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(validationResult.Error);
+        }
 
         var submission = new ReportSubmission
         {
@@ -213,30 +278,35 @@ public sealed class ReportingService : IReportingService
         }
         catch (Exception exception) when (IsDuplicateSubmissionException(exception))
         {
-            throw AppException.BadRequest(Messages.ReportRequestNotPending);
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportRequestNotPending));
         }
 
         submission.ReportRequest = request;
-        return MapSubmission(submission);
+        return Result<ReportSubmissionResult, AppError>.Success(MapSubmission(submission));
     }
 
-    public async Task<List<ReportSubmissionResult>> GetTraineeSubmissionsAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
+    public async Task<Result<List<ReportSubmissionResult>, AppError>> GetTraineeSubmissionsAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default)
     {
-        await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
+        var ownershipCheck = await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
+        if (ownershipCheck.IsFailure)
+        {
+            return Result<List<ReportSubmissionResult>, AppError>.Failure(ownershipCheck.Error);
+        }
+
         var submissions = await _reportingRepository.GetSubmissionsByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
-        return submissions.Select(MapSubmission).ToList();
+        return Result<List<ReportSubmissionResult>, AppError>.Success(submissions.Select(MapSubmission).ToList());
     }
 
-    private static void ValidateTemplateCommand(CreateReportTemplateCommand command)
+    private static Result<Unit, AppError> ValidateTemplateCommand(CreateReportTemplateCommand command)
     {
         if (string.IsNullOrWhiteSpace(command.Name) || command.Fields.Count == 0)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
         }
 
         if (command.Fields.Any(field => string.IsNullOrWhiteSpace(field.Key) || string.IsNullOrWhiteSpace(field.Label)))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
         }
 
         var duplicateKey = command.Fields
@@ -245,12 +315,13 @@ public sealed class ReportingService : IReportingService
 
         if (duplicateKey != null)
         {
-            throw AppException.BadRequest(Messages.ReportFieldValidationFailed);
+            return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
         }
 
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    private static void ValidateAnswersAgainstTemplate(ReportTemplate template, Dictionary<string, JsonElement> answers)
+    private static Result<Unit, AppError> ValidateAnswersAgainstTemplate(ReportTemplate template, Dictionary<string, JsonElement> answers)
     {
         var expected = template.Fields.ToDictionary(x => x.Key, x => x, StringComparer.OrdinalIgnoreCase);
 
@@ -258,7 +329,7 @@ public sealed class ReportingService : IReportingService
         {
             if (field.IsRequired && !answers.ContainsKey(field.Key))
             {
-                throw AppException.BadRequest(Messages.ReportFieldValidationFailed);
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
             }
         }
 
@@ -266,14 +337,14 @@ public sealed class ReportingService : IReportingService
         {
             if (!expected.TryGetValue(answer.Key, out var field))
             {
-                throw AppException.BadRequest(Messages.ReportFieldValidationFailed);
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
             }
 
             if (answer.Value.ValueKind == JsonValueKind.Null)
             {
                 if (field.IsRequired)
                 {
-                    throw AppException.BadRequest(Messages.ReportFieldValidationFailed);
+                    return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
                 }
 
                 continue;
@@ -281,9 +352,11 @@ public sealed class ReportingService : IReportingService
 
             if (!IsValueValidForType(answer.Value, field.Type))
             {
-                throw AppException.BadRequest(Messages.ReportFieldValidationFailed);
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
             }
         }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
     private static Dictionary<string, JsonElement> NormalizeAnswers(IReadOnlyDictionary<string, JsonElement> answers)
@@ -324,45 +397,53 @@ public sealed class ReportingService : IReportingService
         };
     }
 
-    private async Task EnsureTrainerAsync(UserEntity currentTrainer, CancellationToken cancellationToken)
+    private async Task<Result<Unit, AppError>> EnsureTrainerAsync(UserEntity currentTrainer, CancellationToken cancellationToken)
     {
         var isTrainer = await _roleRepository.UserHasRoleAsync(currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
         if (!isTrainer)
         {
-            throw AppException.Forbidden(Messages.TrainerRoleRequired);
+            return Result<Unit, AppError>.Failure(new ReportingForbiddenError(Messages.TrainerRoleRequired));
         }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    private async Task EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
+    private async Task<Result<Unit, AppError>> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
     {
-        await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        var trainerCheck = await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        if (trainerCheck.IsFailure)
+        {
+            return Result<Unit, AppError>.Failure(trainerCheck.Error);
+        }
 
         if (traineeId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.UserIdRequired);
+            return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.UserIdRequired));
         }
 
         var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
         if (link == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    private async Task<ReportTemplate> EnsureOwnedTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken)
+    private async Task<Result<ReportTemplate, AppError>> EnsureOwnedTemplateAsync(UserEntity currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken)
     {
         if (templateId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<ReportTemplate, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
         }
 
         var template = await _reportingRepository.FindTemplateByIdAsync(templateId, cancellationToken);
         if (template == null || template.TrainerId != currentTrainer.Id || template.IsDeleted)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<ReportTemplate, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
 
-        return template;
+        return Result<ReportTemplate, AppError>.Success(template);
     }
 
     private static ReportTemplateResult MapTemplate(ReportTemplate template)

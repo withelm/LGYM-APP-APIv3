@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Options;
@@ -48,35 +50,35 @@ public sealed class UserService : IUserService
         _tutorialService = dependencies.TutorialService;
     }
 
-    public async Task RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
     {
-        await RegisterCoreAsync(
+        return await RegisterCoreAsync(
             input,
             [AuthConstants.Roles.User],
             cancellationToken);
     }
 
-    public async Task RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
     {
         var trainerInput = input with { IsVisibleInRanking = false, PreferredLanguage = null };
 
-        await RegisterCoreAsync(
+        return await RegisterCoreAsync(
             trainerInput,
             [AuthConstants.Roles.User, AuthConstants.Roles.Trainer],
             cancellationToken);
     }
 
-    public async Task<LoginResult> LoginAsync(string name, string password, CancellationToken cancellationToken = default)
+    public async Task<Result<LoginResult, AppError>> LoginAsync(string name, string password, CancellationToken cancellationToken = default)
     {
         return await LoginCoreAsync(name, password, requiredRole: null, cancellationToken);
     }
 
-    public async Task<LoginResult> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default)
+    public async Task<Result<LoginResult, AppError>> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default)
     {
         return await LoginCoreAsync(name, password, AuthConstants.Roles.Trainer, cancellationToken);
     }
 
-    private async Task RegisterCoreAsync(
+    private async Task<Result<Unit, AppError>> RegisterCoreAsync(
         RegisterUserInput input,
         IReadOnlyCollection<string> roleNames,
         CancellationToken cancellationToken)
@@ -88,23 +90,23 @@ public sealed class UserService : IUserService
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw AppException.NotFound(Messages.NameIsRequired);
+            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.NameIsRequired));
         }
 
         var normalizedEmail = email?.Trim().ToLowerInvariant();
         if (!new EmailAddressAttribute().IsValid(normalizedEmail))
         {
-            throw AppException.NotFound(Messages.EmailInvalid);
+            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.EmailInvalid));
         }
 
         if (password.Length < 6)
         {
-            throw AppException.NotFound(Messages.PasswordMin);
+            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.PasswordMin));
         }
 
         if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
         {
-            throw AppException.NotFound(Messages.SamePassword);
+            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.SamePassword));
         }
 
         var existingUser = await _userRepository.FindByNameOrEmailAsync(name, normalizedEmail!, cancellationToken);
@@ -112,10 +114,10 @@ public sealed class UserService : IUserService
         {
             if (string.Equals(existingUser.Name, name, StringComparison.Ordinal))
             {
-                throw AppException.NotFound(Messages.UserWithThatName);
+                return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.UserWithThatName));
             }
 
-            throw AppException.NotFound(Messages.UserWithThatEmail);
+            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.UserWithThatEmail));
         }
 
         var passwordData = _legacyPasswordService.Create(password);
@@ -168,20 +170,22 @@ public sealed class UserService : IUserService
                 "Failed to initialize onboarding tutorial for user {UserId}. Registration is still successful.",
                 user.Id);
         }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
 
-    private async Task<LoginResult> LoginCoreAsync(string name, string password, string? requiredRole, CancellationToken cancellationToken)
+    private async Task<Result<LoginResult, AppError>> LoginCoreAsync(string name, string password, string? requiredRole, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(password))
         {
-            throw AppException.Unauthorized(Messages.Unauthorized);
+            return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
         var user = await _userRepository.FindByNameAsync(name, cancellationToken);
         if (user == null || string.IsNullOrWhiteSpace(user.LegacyHash) || string.IsNullOrWhiteSpace(user.LegacySalt))
         {
-            throw AppException.Unauthorized(Messages.Unauthorized);
+            return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
         var valid = _legacyPasswordService.Verify(
@@ -194,14 +198,14 @@ public sealed class UserService : IUserService
 
         if (!valid)
         {
-            throw AppException.Unauthorized(Messages.Unauthorized);
+            return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
         var roles = await _roleRepository.GetRoleNamesByUserIdAsync(user.Id, cancellationToken);
         if (!string.IsNullOrWhiteSpace(requiredRole) &&
             !roles.Contains(requiredRole, StringComparer.Ordinal))
         {
-            throw AppException.Unauthorized(Messages.Unauthorized);
+            return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
         var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken);
@@ -212,7 +216,7 @@ public sealed class UserService : IUserService
 
         _userSessionCache.AddOrRefresh(user.Id);
 
-        return new LoginResult
+        return Result<LoginResult, AppError>.Success(new LoginResult
         {
             Token = token,
             PermissionClaims = permissionClaims,
@@ -234,7 +238,7 @@ public sealed class UserService : IUserService
                 PermissionClaims = permissionClaims,
                 HasActiveTutorials = hasActiveTutorials
             }
-        };
+        });
     }
 
     public async Task<bool> IsAdminAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
@@ -247,11 +251,11 @@ public sealed class UserService : IUserService
         return await _roleRepository.UserHasPermissionAsync(userId, AuthConstants.Permissions.AdminAccess, cancellationToken);
     }
 
-    public async Task<UserInfoResult> CheckTokenAsync(UserEntity currentUser, CancellationToken cancellationToken = default)
+    public async Task<Result<UserInfoResult, AppError>> CheckTokenAsync(UserEntity? currentUser, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<UserInfoResult, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
         }
 
         var nextRank = _rankService.GetNextRank(currentUser.ProfileRank);
@@ -260,7 +264,7 @@ public sealed class UserService : IUserService
         var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(currentUser.Id, cancellationToken);
         var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(currentUser.Id, cancellationToken);
 
-        return new UserInfoResult
+        return Result<UserInfoResult, AppError>.Success(new UserInfoResult
         {
             Name = currentUser.Name,
             Id = currentUser.Id,
@@ -277,47 +281,47 @@ public sealed class UserService : IUserService
             Roles = roles,
                 PermissionClaims = permissionClaims,
                 HasActiveTutorials = hasActiveTutorials
-        };
+        });
     }
 
-    public async Task<List<RankingEntry>> GetUsersRankingAsync(CancellationToken cancellationToken = default)
+    public async Task<Result<List<RankingEntry>, AppError>> GetUsersRankingAsync(CancellationToken cancellationToken = default)
     {
         var users = await _userRepository.GetRankingAsync(cancellationToken);
         if (users.Count == 0)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<RankingEntry>, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
         }
 
-        return users.Select(u => new RankingEntry
+        return Result<List<RankingEntry>, AppError>.Success(users.Select(u => new RankingEntry
         {
             Name = u.User.Name,
             Avatar = u.User.Avatar,
             Elo = u.Elo,
             ProfileRank = u.User.ProfileRank
-        }).ToList();
+        }).ToList());
     }
 
-    public async Task<int> GetUserEloAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
+    public async Task<Result<int, AppError>> GetUserEloAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<int, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
         }
 
         var result = await _eloRepository.GetLatestEloAsync(userId, cancellationToken);
         if (!result.HasValue)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<int, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
         }
 
-        return result.Value;
+        return Result<int, AppError>.Success(result.Value);
     }
 
-    public async Task DeleteAccountAsync(UserEntity currentUser, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> DeleteAccountAsync(UserEntity? currentUser, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
         }
 
         currentUser.Email = $"anonymized_{currentUser.Id}@example.com";
@@ -326,41 +330,43 @@ public sealed class UserService : IUserService
 
         await _userRepository.UpdateAsync(currentUser, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public Task LogoutAsync(UserEntity currentUser, CancellationToken cancellationToken = default)
+    public Task<Result<Unit, AppError>> LogoutAsync(UserEntity? currentUser, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Task.FromResult(Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.DidntFind)));
         }
 
         _userSessionCache.Remove(currentUser.Id);
-        return Task.CompletedTask;
+        return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
     }
 
-    public async Task ChangeVisibilityInRankingAsync(UserEntity currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> ChangeVisibilityInRankingAsync(UserEntity? currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.BadRequest(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.DidntFind));
         }
 
         currentUser.IsVisibleInRanking = isVisibleInRanking;
         await _userRepository.UpdateAsync(currentUser, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task UpdateTimeZoneAsync(UserEntity currentUser, string preferredTimeZone, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> UpdateTimeZoneAsync(UserEntity? currentUser, string preferredTimeZone, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.BadRequest(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.DidntFind));
         }
 
         if (string.IsNullOrWhiteSpace(preferredTimeZone))
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
         }
 
         var normalizedPreferredTimeZone = preferredTimeZone.Trim();
@@ -370,29 +376,30 @@ public sealed class UserService : IUserService
         }
         catch (TimeZoneNotFoundException)
         {
-            throw AppException.BadRequest(Messages.InvalidTimeZone);
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.InvalidTimeZone));
         }
         catch (InvalidTimeZoneException)
         {
-            throw AppException.BadRequest(Messages.InvalidTimeZone);
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.InvalidTimeZone));
         }
 
         currentUser.PreferredTimeZone = normalizedPreferredTimeZone;
         await _userRepository.UpdateAsync(currentUser, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task UpdateUserRolesAsync(Id<UserEntity> targetUserId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> UpdateUserRolesAsync(Id<UserEntity> targetUserId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default)
     {
         if (targetUserId.IsEmpty)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)targetUserId, cancellationToken);
         if (user == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
         }
 
         var normalizedRoleNames = roles
@@ -404,10 +411,11 @@ public sealed class UserService : IUserService
         var rolesToSet = await _roleRepository.GetByNamesAsync(normalizedRoleNames, cancellationToken);
         if (rolesToSet.Count != normalizedRoleNames.Count)
         {
-            throw AppException.BadRequest(Messages.InvalidRoleSelection);
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.InvalidRoleSelection));
         }
 
         await _roleRepository.ReplaceUserRolesAsync(targetUserId, rolesToSet.Select(r => r.Id).ToList(), cancellationToken);
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
     private string ResolvePreferredLanguage(string? preferredLanguageHeader)

@@ -1,5 +1,6 @@
 using System.Globalization;
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.ValueObjects;
@@ -18,17 +19,17 @@ public sealed class ExerciseScoresService : IExerciseScoresService
         _exerciseScoreRepository = exerciseScoreRepository;
     }
 
-    public async Task<List<ExerciseScoresChartData>> GetExerciseScoresChartDataAsync(Id<LgymApi.Domain.Entities.User> userId, Id<LgymApi.Domain.Entities.Exercise> exerciseId, CancellationToken cancellationToken = default)
+    public async Task<Result<List<ExerciseScoresChartData>, AppError>> GetExerciseScoresChartDataAsync(Id<LgymApi.Domain.Entities.User> userId, Id<LgymApi.Domain.Entities.Exercise> exerciseId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty || exerciseId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<ExerciseScoresChartData>, AppError>.Failure(new ExerciseScoreNotFoundError(Messages.DidntFind));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<ExerciseScoresChartData>, AppError>.Failure(new ExerciseScoreNotFoundError(Messages.DidntFind));
         }
 
         var scores = await _exerciseScoreRepository.GetByUserAndExerciseAsync(user.Id, exerciseId, cancellationToken);
@@ -59,7 +60,7 @@ public sealed class ExerciseScoresService : IExerciseScoresService
             }
         }
 
-        return bestSeries.Values.ToList();
+        return Result<List<ExerciseScoresChartData>, AppError>.Success(bestSeries.Values.ToList());
     }
 
     private static double CalculateOneRepMax(double reps, double weight)
@@ -77,3 +78,4 @@ public sealed class ExerciseScoresService : IExerciseScoresService
         return Math.Round(average, 0);
     }
 }
+

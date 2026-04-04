@@ -1,3 +1,5 @@
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -8,16 +10,16 @@ namespace LgymApi.Application.Features.Exercise;
 
 public interface IExerciseService
 {
-    Task AddExerciseAsync(string name, BodyParts bodyPart, string? description, string? image, CancellationToken cancellationToken = default);
-    Task AddUserExerciseAsync(AddUserExerciseInput input, CancellationToken cancellationToken = default);
-    Task DeleteExerciseAsync(Id<UserEntity> userId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default);
-    Task UpdateExerciseAsync(UpdateExerciseInput input, CancellationToken cancellationToken = default);
-    Task AddGlobalTranslationAsync(LgymApi.Domain.Entities.User currentUser, AddGlobalTranslationInput input, CancellationToken cancellationToken = default);
-    Task<ExercisesWithTranslations> GetAllExercisesAsync(Id<UserEntity> userId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
-    Task<ExercisesWithTranslations> GetAllUserExercisesAsync(Id<UserEntity> userId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
-    Task<ExercisesWithTranslations> GetAllGlobalExercisesAsync(IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
-    Task<ExercisesWithTranslations> GetExerciseByBodyPartAsync(Id<UserEntity> userId, BodyParts bodyPart, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
-    Task<ExerciseWithTranslations> GetExerciseAsync(Id<ExerciseEntity> exerciseId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
-    Task<LastExerciseScoresResult> GetLastExerciseScoresAsync(GetLastExerciseScoresInput input, CancellationToken cancellationToken = default);
-    Task<List<ExerciseTrainingHistoryItem>> GetExerciseScoresFromTrainingByExerciseAsync(Id<UserEntity> currentUserId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> AddExerciseAsync(string name, BodyParts bodyPart, string? description, string? image, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> AddUserExerciseAsync(AddUserExerciseInput input, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> DeleteExerciseAsync(Id<UserEntity> userId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> UpdateExerciseAsync(UpdateExerciseInput input, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> AddGlobalTranslationAsync(LgymApi.Domain.Entities.User currentUser, AddGlobalTranslationInput input, CancellationToken cancellationToken = default);
+    Task<Result<ExercisesWithTranslations, AppError>> GetAllExercisesAsync(Id<UserEntity> userId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
+    Task<Result<ExercisesWithTranslations, AppError>> GetAllUserExercisesAsync(Id<UserEntity> userId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
+    Task<Result<ExercisesWithTranslations, AppError>> GetAllGlobalExercisesAsync(IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
+    Task<Result<ExercisesWithTranslations, AppError>> GetExerciseByBodyPartAsync(Id<UserEntity> userId, BodyParts bodyPart, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
+    Task<Result<ExerciseWithTranslations, AppError>> GetExerciseAsync(Id<ExerciseEntity> exerciseId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
+    Task<Result<LastExerciseScoresResult, AppError>> GetLastExerciseScoresAsync(GetLastExerciseScoresInput input, CancellationToken cancellationToken = default);
+    Task<Result<List<ExerciseTrainingHistoryItem>, AppError>> GetExerciseScoresFromTrainingByExerciseAsync(Id<UserEntity> currentUserId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
-using LgymApi.Application.Exceptions;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Measurements.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
@@ -26,16 +27,16 @@ public sealed class MeasurementsService : IMeasurementsService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, HeightUnits unit, double value, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, HeightUnits unit, double value, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
         }
 
         if (bodyPart == BodyParts.Unknown || unit == HeightUnits.Unknown)
         {
-            throw AppException.BadRequest(Messages.FieldRequired);
+            return Result<Unit, AppError>.Failure(new InvalidMeasurementError(Messages.FieldRequired));
         }
 
         var measurement = new MeasurementEntity
@@ -49,67 +50,73 @@ public sealed class MeasurementsService : IMeasurementsService
 
         await _measurementRepository.AddAsync(measurement, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<MeasurementEntity> GetMeasurementDetailAsync(UserEntity currentUser, Id<MeasurementEntity> measurementId, CancellationToken cancellationToken = default)
+    public async Task<Result<MeasurementEntity, AppError>> GetMeasurementDetailAsync(UserEntity currentUser, Id<MeasurementEntity> measurementId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<MeasurementEntity, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
         }
 
         if (measurementId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<MeasurementEntity, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
         }
 
         var measurement = await _measurementRepository.FindByIdAsync(measurementId, cancellationToken);
         if (measurement == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<MeasurementEntity, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
         }
 
         if (measurement.UserId != currentUser.Id)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<MeasurementEntity, AppError>.Failure(new MeasurementForbiddenError(Messages.Forbidden));
         }
 
-        return measurement;
+        return Result<MeasurementEntity, AppError>.Success(measurement);
     }
 
-    public Task<List<MeasurementEntity>> GetMeasurementsListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
+    public Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
     {
         return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: false, cancellationToken);
     }
 
-    public Task<List<MeasurementEntity>> GetMeasurementsHistoryAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
+    public Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsHistoryAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default)
     {
         return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: true, cancellationToken);
     }
 
-    public async Task<MeasurementTrendResult> GetMeasurementsTrendAsync(
+    public async Task<Result<MeasurementTrendResult, AppError>> GetMeasurementsTrendAsync(
         UserEntity currentUser,
         Id<UserEntity> routeUserId,
         BodyParts bodyPart,
         HeightUnits unit,
         CancellationToken cancellationToken = default)
     {
-        ValidateAccess(currentUser, routeUserId);
+        var accessValidation = ValidateAccess(currentUser, routeUserId);
+        if (accessValidation.IsFailure)
+        {
+            return Result<MeasurementTrendResult, AppError>.Failure(accessValidation.Error);
+        }
 
         if (!System.Enum.IsDefined(bodyPart) || bodyPart == BodyParts.Unknown)
         {
-            throw AppException.BadRequest(Messages.BodyPartRequired);
+            return Result<MeasurementTrendResult, AppError>.Failure(new InvalidMeasurementError(Messages.BodyPartRequired));
         }
 
         if (!System.Enum.IsDefined(unit) || unit == HeightUnits.Unknown)
         {
-            throw AppException.BadRequest(Messages.UnitRequired);
+            return Result<MeasurementTrendResult, AppError>.Failure(new InvalidMeasurementError(Messages.UnitRequired));
         }
 
         var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart, cancellationToken);
         if (measurements.Count < 1)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<MeasurementTrendResult, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
         }
 
         var ordered = measurements.OrderBy(m => m.CreatedAt).ToList();
@@ -126,7 +133,7 @@ public sealed class MeasurementsService : IMeasurementsService
             ? 0d
             : (change / startValue) * 100d;
 
-        return new MeasurementTrendResult
+        return Result<MeasurementTrendResult, AppError>.Success(new MeasurementTrendResult
         {
             BodyPart = bodyPart,
             Unit = unit,
@@ -136,10 +143,10 @@ public sealed class MeasurementsService : IMeasurementsService
             ChangePercentage = Math.Round(changePercentage, 2),
             Direction = ResolveDirection(roundedChange),
             Points = ordered.Count
-        };
+        });
     }
 
-    private async Task<List<MeasurementEntity>> GetMeasurementsInternalAsync(
+    private async Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsInternalAsync(
         UserEntity currentUser,
         Id<UserEntity> routeUserId,
         BodyParts? bodyPart,
@@ -147,35 +154,45 @@ public sealed class MeasurementsService : IMeasurementsService
         bool orderAscending,
         CancellationToken cancellationToken)
     {
-        ValidateAccess(currentUser, routeUserId);
+        var accessValidation = ValidateAccess(currentUser, routeUserId);
+        if (accessValidation.IsFailure)
+        {
+            return Result<List<MeasurementEntity>, AppError>.Failure(accessValidation.Error);
+        }
 
         if (bodyPart.HasValue && (!System.Enum.IsDefined(bodyPart.Value) || bodyPart.Value == BodyParts.Unknown))
         {
-            throw AppException.BadRequest(Messages.BodyPartRequired);
+            return Result<List<MeasurementEntity>, AppError>.Failure(new InvalidMeasurementError(Messages.BodyPartRequired));
         }
 
         if (unit.HasValue && (!System.Enum.IsDefined(unit.Value) || unit.Value == HeightUnits.Unknown))
         {
-            throw AppException.BadRequest(Messages.UnitRequired);
+            return Result<List<MeasurementEntity>, AppError>.Failure(new InvalidMeasurementError(Messages.UnitRequired));
         }
 
         var measurements = await _measurementRepository.GetByUserAsync(currentUser.Id, bodyPart, cancellationToken);
         if (measurements.Count < 1)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<MeasurementEntity>, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
         }
 
         var ordered = orderAscending
             ? measurements.OrderBy(m => m.CreatedAt)
             : measurements.OrderByDescending(m => m.CreatedAt);
 
-        return ordered.Select(m =>
+        var result = new List<MeasurementEntity>();
+        foreach (var m in ordered)
         {
             var parsedUnit = ParseHeightUnit(m.Unit);
+            if (parsedUnit == HeightUnits.Unknown)
+            {
+                return Result<List<MeasurementEntity>, AppError>.Failure(new InvalidMeasurementError(Messages.UnitRequired));
+            }
+
             var targetUnit = unit ?? parsedUnit;
             var convertedValue = ConvertValue(m.Value, parsedUnit, targetUnit);
 
-            return new MeasurementEntity
+            result.Add(new MeasurementEntity
             {
                 Id = m.Id,
                 UserId = m.UserId,
@@ -184,21 +201,25 @@ public sealed class MeasurementsService : IMeasurementsService
                 Value = Math.Round(convertedValue, 2),
                 CreatedAt = m.CreatedAt,
                 UpdatedAt = m.UpdatedAt
-            };
-        }).ToList();
+            });
+        }
+
+        return Result<List<MeasurementEntity>, AppError>.Success(result);
     }
 
-    private static void ValidateAccess(UserEntity currentUser, Id<UserEntity> routeUserId)
+    private static Result<Unit, AppError> ValidateAccess(UserEntity currentUser, Id<UserEntity> routeUserId)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<Unit, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
         }
 
         if (currentUser.Id != routeUserId)
         {
-            throw AppException.Forbidden(Messages.Forbidden);
+            return Result<Unit, AppError>.Failure(new MeasurementForbiddenError(Messages.Forbidden));
         }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
     private static string ResolveDirection(double change)
@@ -224,7 +245,10 @@ public sealed class MeasurementsService : IMeasurementsService
             return parsed;
         }
 
-        throw AppException.BadRequest(Messages.UnitRequired);
+        // This is internal validation logic that should not happen with valid stored data
+        // In a Result pattern, we rely on earlier validation - this should never be reached
+        // but keeping defensive coding with a fallback to avoid runtime crashes
+        return HeightUnits.Unknown;
     }
 
     private double ConvertValue(double value, HeightUnits fromUnit, HeightUnits toUnit)

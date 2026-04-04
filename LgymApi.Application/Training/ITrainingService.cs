@@ -1,3 +1,5 @@
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Domain.ValueObjects;
 using TrainingEntity = LgymApi.Domain.Entities.Training;
@@ -7,8 +9,8 @@ namespace LgymApi.Application.Features.Training;
 
 public interface ITrainingService
 {
-    Task<TrainingSummaryResult> AddTrainingAsync(Id<UserEntity> userId, AddTrainingInput input, CancellationToken cancellationToken = default);
-    Task<TrainingEntity> GetLastTrainingAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);
-    Task<List<TrainingByDateDetails>> GetTrainingByDateAsync(Id<UserEntity> userId, DateTime createdAt, CancellationToken cancellationToken = default);
-    Task<List<DateTime>> GetTrainingDatesAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);
+    Task<Result<TrainingSummaryResult, AppError>> AddTrainingAsync(Id<UserEntity> userId, AddTrainingInput input, CancellationToken cancellationToken = default);
+    Task<Result<TrainingEntity, AppError>> GetLastTrainingAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);
+    Task<Result<List<TrainingByDateDetails>, AppError>> GetTrainingByDateAsync(Id<UserEntity> userId, DateTime createdAt, CancellationToken cancellationToken = default);
+    Task<Result<List<DateTime>, AppError>> GetTrainingDatesAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);
 }

@@ -1,3 +1,5 @@
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Repositories;
@@ -41,7 +43,7 @@ public sealed class TrainingService : ITrainingService
         _unitOfWork = dependencies.UnitOfWork;
     }
 
-    public async Task<TrainingSummaryResult> AddTrainingAsync(
+    public async Task<Result<TrainingSummaryResult, AppError>> AddTrainingAsync(
         Id<LgymApi.Domain.Entities.User> userId,
         AddTrainingInput input,
         CancellationToken cancellationToken = default)
@@ -51,19 +53,19 @@ public sealed class TrainingService : ITrainingService
         {
             if (userId.IsEmpty || gymId.IsEmpty || planDayId.IsEmpty)
             {
-                throw AppException.NotFound(Messages.DidntFind);
+                return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
             }
 
             var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
             if (user == null)
             {
-                throw AppException.NotFound(Messages.DidntFind);
+                return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
             }
 
             var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
             if (gym == null)
             {
-                throw AppException.NotFound(Messages.DidntFind);
+                return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
             }
 
             var uniqueExerciseIds = exercises
@@ -107,7 +109,7 @@ public sealed class TrainingService : ITrainingService
 
                     if (exercise.Unit == WeightUnits.Unknown)
                     {
-                        throw AppException.BadRequest(Messages.FieldRequired);
+                        return Result<TrainingSummaryResult, AppError>.Failure(new InvalidTrainingDataError(Messages.FieldRequired));
                     }
 
                     var scoreEntity = new ExerciseScore
@@ -179,7 +181,7 @@ public sealed class TrainingService : ITrainingService
                 var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
 
                 await transaction.CommitAsync(cancellationToken);
-                return new TrainingSummaryResult
+                return Result<TrainingSummaryResult, AppError>.Success(new TrainingSummaryResult
                 {
                     Comparison = comparison,
                     GainElo = totalElo,
@@ -187,7 +189,7 @@ public sealed class TrainingService : ITrainingService
                     ProfileRank = new Features.User.Models.RankInfo { Name = currentRank.Name, NeedElo = currentRank.NeedElo },
                     NextRank = nextRank == null ? null : new Features.User.Models.RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
                     Message = Messages.Created
-                };
+                });
             }
             catch
             {
@@ -207,39 +209,39 @@ public sealed class TrainingService : ITrainingService
 
 
 
-    public async Task<TrainingEntity> GetLastTrainingAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
+    public async Task<Result<TrainingEntity, AppError>> GetLastTrainingAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<TrainingEntity, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<TrainingEntity, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
 
         var training = await _trainingRepository.GetLastByUserIdAsync(user.Id, cancellationToken);
         if (training == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<TrainingEntity, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
 
-        return training;
+        return Result<TrainingEntity, AppError>.Success(training);
     }
 
-    public async Task<List<TrainingByDateDetails>> GetTrainingByDateAsync(Id<LgymApi.Domain.Entities.User> userId, DateTime createdAt, CancellationToken cancellationToken = default)
+    public async Task<Result<List<TrainingByDateDetails>, AppError>> GetTrainingByDateAsync(Id<LgymApi.Domain.Entities.User> userId, DateTime createdAt, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<TrainingByDateDetails>, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<TrainingByDateDetails>, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
 
         var startOfDay = new DateTimeOffset(DateTime.SpecifyKind(createdAt.Date, DateTimeKind.Utc));
@@ -248,7 +250,7 @@ public sealed class TrainingService : ITrainingService
         var trainings = await _trainingRepository.GetByUserIdAndDateAsync(user.Id, startOfDay, endOfDay, cancellationToken);
         if (trainings.Count == 0)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<TrainingByDateDetails>, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
 
         var trainingIds = trainings.Select(t => t.Id).ToList();
@@ -312,23 +314,23 @@ public sealed class TrainingService : ITrainingService
             });
         }
 
-        return result;
+        return Result<List<TrainingByDateDetails>, AppError>.Success(result);
     }
 
-    public async Task<List<DateTime>> GetTrainingDatesAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
+    public async Task<Result<List<DateTime>, AppError>> GetTrainingDatesAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<DateTime>, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
 
         var trainings = await _trainingRepository.GetDatesByUserIdAsync(userId, cancellationToken);
         if (trainings.Count == 0)
         {
-            throw AppException.NotFound(Messages.DidntFind);
+            return Result<List<DateTime>, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
 
-        return trainings.Select(t => t.UtcDateTime).ToList();
+        return Result<List<DateTime>, AppError>.Success(trainings.Select(t => t.UtcDateTime).ToList());
     }
 
     private static int CalculateEloPerExercise(ExerciseScore currentScore, ExerciseScore previousScore)

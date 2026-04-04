@@ -2,8 +2,11 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Reflection;
 using System.Resources;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Enum.Models;
 using LgymApi.Domain.Enums;
+using LgymApi.Resources;
 
 namespace LgymApi.Application.Features.Enum;
 
@@ -58,6 +61,19 @@ public sealed class EnumService : IEnumService
             EnumType = enumType.Name,
             Values = values
         };
+    }
+
+    public Task<Result<EnumLookupResponse, AppError>> GetLookupByNameAsync(string enumTypeName, CultureInfo? culture = null, CancellationToken ct = default)
+    {
+        var lookup = GetLookupByName(enumTypeName, culture);
+
+        if (lookup == null)
+        {
+            return Task.FromResult(Result<EnumLookupResponse, AppError>.Failure(
+                new NotFoundError(Messages.DidntFind)));
+        }
+
+        return Task.FromResult(Result<EnumLookupResponse, AppError>.Success(lookup));
     }
 
     public List<string> GetAvailableEnumTypes()

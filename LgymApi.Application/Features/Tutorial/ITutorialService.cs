@@ -1,3 +1,5 @@
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Tutorial.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -8,10 +10,10 @@ namespace LgymApi.Application.Features.Tutorial;
 
 public interface ITutorialService
 {
-    Task InitializeOnboardingTutorialAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);
-    Task<List<TutorialProgressResult>> GetActiveTutorialsAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);
-    Task<TutorialProgressResult?> GetTutorialProgressAsync(Id<UserEntity> userId, TutorialType tutorialType, CancellationToken cancellationToken = default);
-    Task CompleteStepAsync(Id<UserEntity> userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default);
-    Task CompleteTutorialAsync(Id<UserEntity> userId, TutorialType tutorialType, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> InitializeOnboardingTutorialAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);
+    Task<Result<List<TutorialProgressResult>, AppError>> GetActiveTutorialsAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);
+    Task<Result<TutorialProgressResult?, AppError>> GetTutorialProgressAsync(Id<UserEntity> userId, TutorialType tutorialType, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> CompleteStepAsync(Id<UserEntity> userId, TutorialType tutorialType, TutorialStep step, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> CompleteTutorialAsync(Id<UserEntity> userId, TutorialType tutorialType, CancellationToken cancellationToken = default);
     Task<bool> HasActiveTutorialsAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);
 }
