@@ -195,7 +195,16 @@
   <data name="DateRangeRequired" xml:space="preserve">
     <value>Parametry zapytania fromDate i toDate są wymagane.</value>
   </data>
-  <data name="InvalidTimeZone" xml:space="preserve">
-    <value>Nieprawidłowy identyfikator strefy czasowej.</value>
-  </data>
-</root>
+   <data name="InvalidTimeZone" xml:space="preserve">
+     <value>Nieprawidłowy identyfikator strefy czasowej.</value>
+   </data>
+   <data name="ForgotPasswordRequested" xml:space="preserve">
+     <value>Jeśli konto z tym adresem email istnieje, link do resetowania hasła został wysłany.</value>
+   </data>
+   <data name="PasswordResetSucceeded" xml:space="preserve">
+     <value>Hasło zostało zresetowane pomyślnie.</value>
+   </data>
+   <data name="PasswordResetInvalidOrExpiredToken" xml:space="preserve">
+     <value>Nieprawidłowy lub wygaśnięty token resetowania.</value>
+   </data>
+ </root>

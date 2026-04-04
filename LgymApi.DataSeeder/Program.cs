@@ -76,6 +76,7 @@ public static class Program
             optionsBuilder.UseNpgsql(connectionString));
         services.AddScoped<ILegacyPasswordService, LegacyPasswordService>();
         services.AddScoped<IEntitySeeder, UserSeeder>();
+        services.AddScoped<IEntitySeeder, PasswordResetTokenSeeder>();
         services.AddScoped<IEntitySeeder, EloRegistrySeeder>();
         services.AddScoped<IEntitySeeder, RoleSeeder>();
         services.AddScoped<IEntitySeeder, RoleClaimSeeder>();

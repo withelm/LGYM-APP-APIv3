@@ -252,6 +252,9 @@ public sealed class RoleServiceTests
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Name == name));
 
+        public Task<User?> FindByEmailAsync(Email email, CancellationToken cancellationToken = default)
+            => Task.FromResult(Users.FirstOrDefault(u => u.Email == email));
+
         public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Name == name || u.Email == email));
 

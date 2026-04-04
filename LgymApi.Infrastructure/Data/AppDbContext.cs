@@ -49,6 +49,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<ApiIdempotencyRecord> ApiIdempotencyRecords => Set<ApiIdempotencyRecord>();
     public DbSet<UserTutorialStepProgress> UserTutorialStepProgresses => Set<UserTutorialStepProgress>();
     public DbSet<UserTutorialProgress> UserTutorialProgresses => Set<UserTutorialProgress>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     public static readonly Id<Role> UserRoleSeedId = ParseSeedId<Role>("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Id<Role> AdminRoleSeedId = ParseSeedId<Role>("1754c6f8-c021-41aa-b610-17088f9476f9");
@@ -726,6 +727,19 @@ public sealed class AppDbContext : DbContext
             // Lookup index for replay/conflict checks
             entity.HasIndex(e => new { e.ScopeTuple, e.IdempotencyKey, e.RequestFingerprint })
                 .HasFilter("\"IsDeleted\" = FALSE");
+        });
+
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.ToTable("PasswordResetTokens");
+            entity.HasIndex(e => e.TokenHash)
+                .IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.IsUsed, e.ExpiresAt })
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
      }
 

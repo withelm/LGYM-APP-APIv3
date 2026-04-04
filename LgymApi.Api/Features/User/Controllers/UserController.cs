@@ -5,6 +5,7 @@ using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Features.PasswordReset;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
@@ -20,11 +21,13 @@ namespace LgymApi.Api.Features.User.Controllers;
 public sealed class UserController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IPasswordResetService _passwordResetService;
     private readonly IMapper _mapper;
 
-    public UserController(IUserService userService, IMapper mapper)
+    public UserController(IUserService userService, IPasswordResetService passwordResetService, IMapper mapper)
     {
         _userService = userService;
+        _passwordResetService = passwordResetService;
         _mapper = mapper;
     }
 
@@ -189,5 +192,30 @@ public sealed class UserController : ControllerBase
         }
 
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
+    }
+
+     [HttpPost("forgot-password")]
+     [AllowAnonymous]
+     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+     {
+         var preferences = HttpContext.GetCulturePreferences();
+         await _passwordResetService.RequestPasswordResetAsync(request.Email, preferences.First(), HttpContext.RequestAborted);
+         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.ForgotPasswordRequested));
+     }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var result = await _passwordResetService.ResetPasswordAsync(request.Token, request.NewPassword, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.PasswordResetInvalidOrExpiredToken));
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.PasswordResetSucceeded));
     }
 }

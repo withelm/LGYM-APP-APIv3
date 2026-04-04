@@ -22,6 +22,10 @@ using Hangfire;
 using LgymApi.Api.Serialization;
 using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.BackgroundWorker.Common.Jobs;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Notifications;
+using LgymApi.Infrastructure.Services;
 
 const string TestingEnvironment = "Testing";
 
@@ -74,6 +78,9 @@ builder.Services.AddInfrastructure(
     builder.Environment.IsEnvironment(TestingEnvironment),
     hostBackgroundServer: true);
 builder.Services.AddBackgroundWorkerServices(builder.Environment.IsEnvironment(TestingEnvironment));
+
+// Register password recovery email scheduler in Api layer (allowed scope per plan guardrail)
+builder.Services.AddScoped<IEmailScheduler<PasswordRecoveryEmailPayload>, EmailSchedulerService<PasswordRecoveryEmailPayload>>();
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
@@ -137,6 +144,22 @@ if (!builder.Environment.IsEnvironment(TestingEnvironment))
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         {
             var path = context.Request.Path.Value ?? string.Empty;
+            
+            // Stricter rate limit for password recovery endpoints
+            var isPasswordRecovery = path.Contains("/forgot-password", StringComparison.OrdinalIgnoreCase)
+                                     || path.Contains("/reset-password", StringComparison.OrdinalIgnoreCase);
+
+            if (isPasswordRecovery)
+            {
+                var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+                {
+                    // Intentional: stricter rate limit for sensitive password recovery endpoints.
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromMinutes(15)
+                });
+            }
+
             var isAuth = path.Contains("/login", StringComparison.OrdinalIgnoreCase)
                          || path.Contains("/register", StringComparison.OrdinalIgnoreCase);
 

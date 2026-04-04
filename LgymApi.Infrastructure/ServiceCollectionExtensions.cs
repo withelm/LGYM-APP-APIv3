@@ -29,22 +29,23 @@ public static class ServiceCollectionExtensions
     {
         var appDefaultsOptions = ResolveAppDefaults(configuration);
 
-        var emailOptions = new EmailOptions
-        {
-            Enabled = bool.TryParse(configuration["Email:Enabled"], out var enabled) && enabled,
-            DeliveryMode = ResolveEmailDeliveryMode(configuration["Email:DeliveryMode"]),
-            DummyOutputDirectory = configuration["Email:DummyOutputDirectory"] ?? "EmailOutbox",
-            FromAddress = configuration["Email:FromAddress"] ?? string.Empty,
-            FromName = configuration["Email:FromName"] ?? "LGYM Trainer",
-            SmtpHost = configuration["Email:SmtpHost"] ?? string.Empty,
-            SmtpPort = int.TryParse(configuration["Email:SmtpPort"], out var smtpPort) ? smtpPort : 587,
-            Username = configuration["Email:Username"] ?? string.Empty,
-            Password = configuration["Email:Password"] ?? string.Empty,
-            UseSsl = GetBooleanOrDefault(configuration["Email:UseSsl"], defaultValue: true),
-            InvitationBaseUrl = configuration["Email:InvitationBaseUrl"] ?? string.Empty,
-            TemplateRootPath = configuration["Email:TemplateRootPath"] ?? "EmailTemplates",
-            DefaultCulture = ResolveDefaultCulture(configuration["Email:DefaultCulture"], appDefaultsOptions.PreferredLanguage)
-        };
+         var emailOptions = new EmailOptions
+         {
+             Enabled = bool.TryParse(configuration["Email:Enabled"], out var enabled) && enabled,
+             DeliveryMode = ResolveEmailDeliveryMode(configuration["Email:DeliveryMode"]),
+             DummyOutputDirectory = configuration["Email:DummyOutputDirectory"] ?? "EmailOutbox",
+             FromAddress = configuration["Email:FromAddress"] ?? string.Empty,
+             FromName = configuration["Email:FromName"] ?? "LGYM Trainer",
+             SmtpHost = configuration["Email:SmtpHost"] ?? string.Empty,
+             SmtpPort = int.TryParse(configuration["Email:SmtpPort"], out var smtpPort) ? smtpPort : 587,
+             Username = configuration["Email:Username"] ?? string.Empty,
+             Password = configuration["Email:Password"] ?? string.Empty,
+             UseSsl = GetBooleanOrDefault(configuration["Email:UseSsl"], defaultValue: true),
+             InvitationBaseUrl = configuration["Email:InvitationBaseUrl"] ?? string.Empty,
+             PasswordRecoveryBaseUrl = configuration["Email:PasswordRecoveryBaseUrl"] ?? string.Empty,
+             TemplateRootPath = configuration["Email:TemplateRootPath"] ?? "EmailTemplates",
+             DefaultCulture = ResolveDefaultCulture(configuration["Email:DefaultCulture"], appDefaultsOptions.PreferredLanguage)
+         };
 
         services.AddSingleton(appDefaultsOptions);
         ValidateEmailOptions(emailOptions);
@@ -94,6 +95,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmailTemplateComposer, TrainerInvitationEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposer, TrainingCompletedEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposer, WelcomeEmailTemplateComposer>();
+        services.AddScoped<IEmailTemplateComposer, PasswordRecoveryEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposerFactory, EmailTemplateComposerFactory>();
         services.AddScoped<SmtpEmailSender>();
         services.AddScoped<DummyEmailSender>();
@@ -105,6 +107,7 @@ public static class ServiceCollectionExtensions
                 : sp.GetRequiredService<SmtpEmailSender>();
         });
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ITrainerRelationshipRepository, TrainerRelationshipRepository>();
         services.AddScoped<IReportingRepository, ReportingRepository>();
@@ -132,56 +135,66 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static void ValidateEmailOptions(EmailOptions options)
-    {
-        if (!options.Enabled)
-        {
-            return;
-        }
+     private static void ValidateEmailOptions(EmailOptions options)
+     {
+         if (!options.Enabled)
+         {
+             return;
+         }
 
-        if (string.IsNullOrWhiteSpace(options.InvitationBaseUrl))
-        {
-            throw new InvalidOperationException("Email:InvitationBaseUrl is required.");
-        }
+         if (string.IsNullOrWhiteSpace(options.InvitationBaseUrl))
+         {
+             throw new InvalidOperationException("Email:InvitationBaseUrl is required.");
+         }
 
-        if (!Uri.TryCreate(options.InvitationBaseUrl, UriKind.Absolute, out _))
-        {
-            throw new InvalidOperationException("Email:InvitationBaseUrl must be a valid absolute URL.");
-        }
+         if (!Uri.TryCreate(options.InvitationBaseUrl, UriKind.Absolute, out _))
+         {
+             throw new InvalidOperationException("Email:InvitationBaseUrl must be a valid absolute URL.");
+         }
 
-        if (string.IsNullOrWhiteSpace(options.TemplateRootPath))
-        {
-            throw new InvalidOperationException("Email:TemplateRootPath is required when email is enabled.");
-        }
+         if (string.IsNullOrWhiteSpace(options.PasswordRecoveryBaseUrl))
+         {
+             throw new InvalidOperationException("Email:PasswordRecoveryBaseUrl is required.");
+         }
 
-        if (options.DefaultCulture == null)
-        {
-            throw new InvalidOperationException("Email:DefaultCulture is required when email is enabled.");
-        }
+         if (!Uri.TryCreate(options.PasswordRecoveryBaseUrl, UriKind.Absolute, out _))
+         {
+             throw new InvalidOperationException("Email:PasswordRecoveryBaseUrl must be a valid absolute URL.");
+         }
 
-        if (string.IsNullOrWhiteSpace(options.FromAddress))
-        {
-            throw new InvalidOperationException("Email:FromAddress is required when email is enabled.");
-        }
+         if (string.IsNullOrWhiteSpace(options.TemplateRootPath))
+         {
+             throw new InvalidOperationException("Email:TemplateRootPath is required when email is enabled.");
+         }
 
-        try
-        {
-            _ = new MailAddress(options.FromAddress);
-        }
-        catch (FormatException)
-        {
-            throw new InvalidOperationException("Email:FromAddress must be a valid email address.");
-        }
+         if (options.DefaultCulture == null)
+         {
+             throw new InvalidOperationException("Email:DefaultCulture is required when email is enabled.");
+         }
 
-        if (options.DeliveryMode == EmailDeliveryMode.Dummy)
-        {
-            if (string.IsNullOrWhiteSpace(options.DummyOutputDirectory))
-            {
-                throw new InvalidOperationException("Email:DummyOutputDirectory is required when Email:DeliveryMode is Dummy.");
-            }
+         if (string.IsNullOrWhiteSpace(options.FromAddress))
+         {
+             throw new InvalidOperationException("Email:FromAddress is required when email is enabled.");
+         }
 
-            return;
-        }
+         try
+         {
+             _ = new MailAddress(options.FromAddress);
+         }
+         catch (FormatException)
+         {
+             throw new InvalidOperationException("Email:FromAddress must be a valid email address.");
+         }
+
+         if (options.DeliveryMode == EmailDeliveryMode.Dummy)
+         {
+             if (string.IsNullOrWhiteSpace(options.DummyOutputDirectory))
+             {
+                 throw new InvalidOperationException("Email:DummyOutputDirectory is required when Email:DeliveryMode is Dummy.");
+             }
+
+             return;
+         }
 
         if (string.IsNullOrWhiteSpace(options.SmtpHost))
         {

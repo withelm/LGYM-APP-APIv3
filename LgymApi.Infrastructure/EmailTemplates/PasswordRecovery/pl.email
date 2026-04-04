@@ -1,0 +1,14 @@
+Subject: Zresetuj hasło do konta LGYM
+---
+Cześć {{UserName}},
+
+Otrzymaliśmy prośbę o zresetowanie hasła do Twojego konta LGYM.
+
+Kliknij poniższy link, aby zresetować hasło:
+{{ResetUrl}}
+
+Ten link wygaśnie za {{ExpiryMinutes}} minut.
+
+Jeśli nie prosiłeś o zresetowanie hasła, zignoruj tę wiadomość. Twoje hasło pozostanie niezmienione.
+
+Zespół LGYM

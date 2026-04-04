@@ -15,6 +15,7 @@ public sealed class EmailOptions
     public string Password { get; set; } = string.Empty;
     public bool UseSsl { get; set; } = true;
     public string InvitationBaseUrl { get; set; } = string.Empty;
+    public string PasswordRecoveryBaseUrl { get; set; } = string.Empty;
     public string TemplateRootPath { get; set; } = "EmailTemplates";
     public CultureInfo DefaultCulture { get; set; } = CultureInfo.GetCultureInfo("en-US");
 }
