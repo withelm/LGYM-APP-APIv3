@@ -1,9 +1,11 @@
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Pagination;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -11,10 +13,25 @@ namespace LgymApi.Infrastructure.Repositories;
 public sealed class TrainerRelationshipRepository : ITrainerRelationshipRepository
 {
     private readonly AppDbContext _dbContext;
+    private readonly GridifyExecutionService _gridifyExecutionService;
+    private readonly IMapperRegistry _mapperRegistry;
 
-    public TrainerRelationshipRepository(AppDbContext dbContext)
+    private static readonly PaginationPolicy DashboardPaginationPolicy = new()
+    {
+        MaxPageSize = 100,
+        DefaultPageSize = 20,
+        DefaultSortField = "name",
+        TieBreakerField = "id"
+    };
+
+    public TrainerRelationshipRepository(
+        AppDbContext dbContext,
+        GridifyExecutionService gridifyExecutionService,
+        IMapperRegistry mapperRegistry)
     {
         _dbContext = dbContext;
+        _gridifyExecutionService = gridifyExecutionService;
+        _mapperRegistry = mapperRegistry;
     }
 
     public async Task AddInvitationAsync(TrainerInvitation invitation, CancellationToken cancellationToken = default)
@@ -67,42 +84,22 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
 
     public async Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
     {
-        var page = query.Page < 1 ? 1 : query.Page;
-        var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 100);
         var now = DateTimeOffset.UtcNow;
-        var sortBy = query.SortBy?.Trim().ToLowerInvariant();
-        var sortDescending = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
 
-        var baseQuery = BuildDashboardBaseQuery(trainerId);
+        var baseQuery = BuildDashboardBaseQuery(trainerId, now);
         baseQuery = ApplySearch(baseQuery, query.Search);
         baseQuery = ApplyStatusFilter(baseQuery, query.Status, now);
-        baseQuery = ApplySorting(baseQuery, sortBy, sortDescending);
 
-        var offset = CalculateOffset(page, pageSize);
-        var total = await baseQuery.CountAsync(cancellationToken);
-        List<DashboardTraineeProjection> projections;
+        var filterInput = BuildFilterInput(query);
 
-        if (sortBy == "status")
-        {
-            var allItems = await baseQuery.ToListAsync(cancellationToken);
-            var ordered = sortDescending
-                ? allItems.OrderByDescending(x => GetStatusSortOrder(x, now)).ThenBy(x => x.Name)
-                : allItems.OrderBy(x => GetStatusSortOrder(x, now)).ThenBy(x => x.Name);
+        var paginationResult = await _gridifyExecutionService.ExecuteAsync(
+            baseQuery,
+            filterInput,
+            _mapperRegistry,
+            DashboardPaginationPolicy,
+            cancellationToken);
 
-            projections = ordered
-                .Skip(offset)
-                .Take(pageSize)
-                .ToList();
-        }
-        else
-        {
-            projections = await baseQuery
-                .Skip(offset)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
-        }
-
-        var items = projections.Select(x => new TrainerDashboardTraineeResult
+        var items = paginationResult.Items.Select(x => new TrainerDashboardTraineeResult
             {
                 Id = x.Id,
                 Name = x.Name,
@@ -120,14 +117,41 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
 
         return new TrainerDashboardTraineeListResult
         {
-            Page = page,
-            PageSize = pageSize,
-            Total = total,
+            Page = paginationResult.Page,
+            PageSize = paginationResult.PageSize,
+            Total = paginationResult.TotalCount,
             Items = items
         };
     }
 
-    private IQueryable<DashboardTraineeProjection> BuildDashboardBaseQuery(Id<User> trainerId)
+    private static FilterInput BuildFilterInput(TrainerDashboardTraineeQuery query)
+    {
+        var sortDescriptors = new List<SortDescriptor>();
+
+        if (!string.IsNullOrWhiteSpace(query.SortBy))
+        {
+            var fieldName = query.SortBy.Trim().ToLowerInvariant() switch
+            {
+                "status" => "statusOrder",
+                var other => other
+            };
+
+            sortDescriptors.Add(new SortDescriptor
+            {
+                FieldName = fieldName,
+                Descending = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase)
+            });
+        }
+
+        return new FilterInput
+        {
+            Page = query.Page < 1 ? 1 : query.Page,
+            PageSize = query.PageSize <= 0 ? 20 : query.PageSize,
+            SortDescriptors = sortDescriptors
+        };
+    }
+
+    private IQueryable<DashboardTraineeProjection> BuildDashboardBaseQuery(Id<User> trainerId, DateTimeOffset now)
     {
 
         var trainerLinks = _dbContext.TrainerTraineeLinks
@@ -146,6 +170,22 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         return
             from user in _dbContext.Users.AsNoTracking()
             where !user.IsDeleted && ownedTraineeIds.Contains(user.Id)
+            let linkedAt = trainerLinks
+                .Where(l => l.TraineeId == user.Id)
+                .Select(l => (DateTimeOffset?)l.CreatedAt)
+                .FirstOrDefault()
+            let lastInvitationStatus = trainerInvitations
+                .Where(i => i.TraineeId == user.Id)
+                .OrderByDescending(i => i.CreatedAt)
+                .ThenByDescending(i => i.Id)
+                .Select(i => (TrainerInvitationStatus?)i.Status)
+                .FirstOrDefault()
+            let lastInvitationExpiresAt = trainerInvitations
+                .Where(i => i.TraineeId == user.Id)
+                .OrderByDescending(i => i.CreatedAt)
+                .ThenByDescending(i => i.Id)
+                .Select(i => (DateTimeOffset?)i.ExpiresAt)
+                .FirstOrDefault()
             select new DashboardTraineeProjection
             {
                 Id = user.Id,
@@ -153,28 +193,23 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
                 Email = user.Email,
                 Avatar = user.Avatar,
                 CreatedAt = user.CreatedAt,
-                LinkedAt = trainerLinks
-                    .Where(l => l.TraineeId == user.Id)
-                    .Select(l => (DateTimeOffset?)l.CreatedAt)
-                    .FirstOrDefault(),
-                LastInvitationStatus = trainerInvitations
-                    .Where(i => i.TraineeId == user.Id)
-                    .OrderByDescending(i => i.CreatedAt)
-                    .ThenByDescending(i => i.Id)
-                    .Select(i => (TrainerInvitationStatus?)i.Status)
-                    .FirstOrDefault(),
-                LastInvitationExpiresAt = trainerInvitations
-                    .Where(i => i.TraineeId == user.Id)
-                    .OrderByDescending(i => i.CreatedAt)
-                    .ThenByDescending(i => i.Id)
-                    .Select(i => (DateTimeOffset?)i.ExpiresAt)
-                    .FirstOrDefault(),
+                LinkedAt = linkedAt,
+                LastInvitationStatus = lastInvitationStatus,
+                LastInvitationExpiresAt = lastInvitationExpiresAt,
                 LastInvitationRespondedAt = trainerInvitations
                     .Where(i => i.TraineeId == user.Id)
                     .OrderByDescending(i => i.CreatedAt)
                     .ThenByDescending(i => i.Id)
                     .Select(i => i.RespondedAt)
-                    .FirstOrDefault()
+                    .FirstOrDefault(),
+                StatusOrder = linkedAt != null ? 0
+                    : lastInvitationStatus == TrainerInvitationStatus.Pending && lastInvitationExpiresAt > now ? 1
+                    : lastInvitationStatus == TrainerInvitationStatus.Pending ? 2
+                    : lastInvitationStatus == TrainerInvitationStatus.Expired ? 2
+                    : lastInvitationStatus == TrainerInvitationStatus.Rejected ? 3
+                    : lastInvitationStatus == TrainerInvitationStatus.Accepted ? 4
+                    : lastInvitationStatus == null ? 5
+                    : 6
             };
     }
 
@@ -227,54 +262,6 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         };
     }
 
-    private static IQueryable<DashboardTraineeProjection> ApplySorting(
-        IQueryable<DashboardTraineeProjection> baseQuery,
-        string? sortBy,
-        bool sortDescending)
-    {
-        return (sortBy, sortDescending) switch
-        {
-            ("createdat", true) => baseQuery.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Name),
-            ("createdat", false) => baseQuery.OrderBy(x => x.CreatedAt).ThenBy(x => x.Name),
-            (_, true) => baseQuery.OrderByDescending(x => x.Name),
-            _ => baseQuery.OrderBy(x => x.Name)
-        };
-    }
-
-    private static int GetStatusSortOrder(DashboardTraineeProjection projection, DateTimeOffset now)
-    {
-        if (projection.LinkedAt != null)
-        {
-            return 0;
-        }
-
-        return projection.LastInvitationStatus switch
-        {
-            TrainerInvitationStatus.Pending when projection.LastInvitationExpiresAt > now => 1,
-            TrainerInvitationStatus.Pending => 2,
-            TrainerInvitationStatus.Expired => 2,
-            TrainerInvitationStatus.Rejected => 3,
-            TrainerInvitationStatus.Accepted => 4,
-            null => 5,
-            _ => 6
-        };
-    }
-
-    private static int CalculateOffset(int page, int pageSize)
-    {
-        var offsetLong = ((long)page - 1L) * pageSize;
-        if (offsetLong < 0)
-        {
-            offsetLong = 0;
-        }
-        else if (offsetLong > int.MaxValue)
-        {
-            offsetLong = int.MaxValue;
-        }
-
-        return (int)offsetLong;
-    }
-
     private static bool HasPendingInvitation(DashboardTraineeProjection projection, DateTimeOffset now)
     {
         return projection.LinkedAt == null
@@ -324,7 +311,7 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         return Task.CompletedTask;
     }
 
-    private sealed class DashboardTraineeProjection
+    internal sealed class DashboardTraineeProjection
     {
         public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> Id { get; init; }
         public string Name { get; init; } = string.Empty;
@@ -335,5 +322,6 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         public TrainerInvitationStatus? LastInvitationStatus { get; init; }
         public DateTimeOffset? LastInvitationExpiresAt { get; init; }
         public DateTimeOffset? LastInvitationRespondedAt { get; init; }
+        public int StatusOrder { get; init; }
     }
 }

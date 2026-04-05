@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Interfaces;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 
 namespace LgymApi.Api.Features.Trainer.Contracts;
@@ -44,6 +45,12 @@ public sealed class TrainerDashboardTraineesRequest : IDto
 
     [JsonPropertyName("status")]
     public string? Status { get; set; }
+
+    [JsonPropertyName("defaultOperator")]
+    public FilterOperator? DefaultOperator { get; set; }
+
+    [JsonPropertyName("groupLogic")]
+    public GroupOperator? GroupLogic { get; set; }
 
     [JsonPropertyName("sortBy")]
     public string? SortBy { get; set; }
