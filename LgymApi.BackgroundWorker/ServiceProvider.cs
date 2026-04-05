@@ -36,6 +36,8 @@ public static class ServiceProvider
         }
 
         services.AddScoped<IEmailScheduler<InvitationEmailPayload>, EmailSchedulerService<InvitationEmailPayload>>();
+        services.AddScoped<IEmailScheduler<InvitationAcceptedEmailPayload>, EmailSchedulerService<InvitationAcceptedEmailPayload>>();
+        services.AddScoped<IEmailScheduler<InvitationRevokedEmailPayload>, EmailSchedulerService<InvitationRevokedEmailPayload>>();
         services.AddScoped<IEmailScheduler<TrainingCompletedEmailPayload>, EmailSchedulerService<TrainingCompletedEmailPayload>>();
         services.AddScoped<IEmailScheduler<WelcomeEmailPayload>, EmailSchedulerService<WelcomeEmailPayload>>();
         services.AddScoped<IEmailJobHandler, EmailJobHandlerService>();
@@ -59,6 +61,8 @@ public static class ServiceProvider
         services.AddBackgroundAction<InvitationCreatedCommand, SendInvitationEmailHandler>();
         services.AddBackgroundAction<TrainingCompletedCommand, TrainingCompletedEmailCommandHandler>();
         services.AddBackgroundAction<TrainingCompletedCommand, UpdateTrainingMainRecordsHandler>();
+        services.AddBackgroundAction<InvitationAcceptedCommand, InvitationAcceptedEmailHandler>();
+        services.AddBackgroundAction<InvitationRevokedCommand, InvitationRevokedEmailHandler>();
 
 
         return services;

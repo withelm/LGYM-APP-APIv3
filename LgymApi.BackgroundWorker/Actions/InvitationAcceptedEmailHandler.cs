@@ -10,21 +10,21 @@ using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
-public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCreatedCommand>
+public sealed class InvitationAcceptedEmailHandler : IBackgroundAction<InvitationAcceptedCommand>
 {
     private readonly ITrainerRelationshipRepository _invitationRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IEmailScheduler<InvitationEmailPayload> _emailScheduler;
-    private readonly ILogger<SendInvitationEmailHandler> _logger;
+    private readonly IEmailScheduler<InvitationAcceptedEmailPayload> _emailScheduler;
+    private readonly ILogger<InvitationAcceptedEmailHandler> _logger;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly AppDefaultsOptions _appDefaultsOptions;
 
-    public SendInvitationEmailHandler(
+    public InvitationAcceptedEmailHandler(
         ITrainerRelationshipRepository invitationRepository,
         IUserRepository userRepository,
-        IEmailScheduler<InvitationEmailPayload> emailScheduler,
+        IEmailScheduler<InvitationAcceptedEmailPayload> emailScheduler,
         IEmailNotificationsFeature emailNotificationsFeature,
-        ILogger<SendInvitationEmailHandler> logger,
+        ILogger<InvitationAcceptedEmailHandler> logger,
         AppDefaultsOptions appDefaultsOptions)
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
@@ -35,7 +35,7 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         _appDefaultsOptions = appDefaultsOptions ?? throw new ArgumentNullException(nameof(appDefaultsOptions));
     }
 
-    public async Task ExecuteAsync(InvitationCreatedCommand command, CancellationToken cancellationToken = default)
+    public async Task ExecuteAsync(InvitationAcceptedCommand command, CancellationToken cancellationToken = default)
     {
         if (!_emailNotificationsFeature.Enabled)
         {
@@ -45,57 +45,48 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         var invitation = await _invitationRepository.FindInvitationByIdAsync(command.InvitationId, cancellationToken);
         if (invitation == null)
         {
-            _logger.LogWarning("Invitation not found for Invitation {InvitationId}", command.InvitationId);
+            _logger.LogWarning("Invitation not found for InvitationAccepted {InvitationId}", command.InvitationId);
             return;
         }
 
         var trainer = await _userRepository.FindByIdAsync((Id<User>)invitation.TrainerId, cancellationToken);
         if (trainer == null)
         {
-            _logger.LogWarning("Trainer user not found for Invitation {InvitationId}, TrainerId {TrainerId}", command.InvitationId, invitation.TrainerId);
+            _logger.LogWarning("Trainer user not found for InvitationAccepted {InvitationId}, TrainerId {TrainerId}", command.InvitationId, invitation.TrainerId);
             return;
         }
 
-        string recipientEmail;
-        string preferredTimeZone;
-
-        if (invitation.TraineeId.HasValue)
+        if (!invitation.TraineeId.HasValue)
         {
-            var trainee = await _userRepository.FindByIdAsync(invitation.TraineeId.Value, cancellationToken);
-            if (trainee == null)
-            {
-                _logger.LogWarning("Trainee user not found for Invitation {InvitationId}, TraineeId {TraineeId}", command.InvitationId, invitation.TraineeId);
-                return;
-            }
-
-            recipientEmail = trainee.Email;
-            preferredTimeZone = string.IsNullOrWhiteSpace(trainee.PreferredTimeZone) ? _appDefaultsOptions.PreferredTimeZone : trainee.PreferredTimeZone;
-        }
-        else
-        {
-            recipientEmail = invitation.InviteeEmail;
-            preferredTimeZone = _appDefaultsOptions.PreferredTimeZone;
-        }
-
-        if (string.IsNullOrWhiteSpace(recipientEmail))
-        {
-            _logger.LogWarning("Invitation email skipped for Invitation {InvitationId} - no recipient email provided", command.InvitationId);
+            _logger.LogWarning("InvitationAccepted email skipped for Invitation {InvitationId} - TraineeId is null", command.InvitationId);
             return;
         }
 
-        var emailPayload = new InvitationEmailPayload
+        var trainee = await _userRepository.FindByIdAsync(invitation.TraineeId.Value, cancellationToken);
+        if (trainee == null)
+        {
+            _logger.LogWarning("Trainee user not found for InvitationAccepted {InvitationId}, TraineeId {TraineeId}", command.InvitationId, invitation.TraineeId);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(trainer.Email))
+        {
+            _logger.LogWarning("InvitationAccepted email skipped for Invitation {InvitationId} - no trainer email provided", command.InvitationId);
+            return;
+        }
+
+        var emailPayload = new InvitationAcceptedEmailPayload
         {
             InvitationId = command.InvitationId,
-            InvitationCode = invitation.Code,
-            ExpiresAt = invitation.ExpiresAt,
             TrainerName = trainer.Name,
-            RecipientEmail = recipientEmail,
+            TraineeName = trainee.Name,
+            RecipientEmail = trainer.Email,
             CultureName = string.IsNullOrWhiteSpace(trainer.PreferredLanguage) ? _appDefaultsOptions.PreferredLanguage : trainer.PreferredLanguage,
-            PreferredTimeZone = preferredTimeZone
+            PreferredTimeZone = string.IsNullOrWhiteSpace(trainer.PreferredTimeZone) ? _appDefaultsOptions.PreferredTimeZone : trainer.PreferredTimeZone
         };
 
         await _emailScheduler.ScheduleAsync(emailPayload, cancellationToken);
 
-        _logger.LogInformation("Invitation email scheduled for Invitation {InvitationId} to {Email}", command.InvitationId, recipientEmail);
+        _logger.LogInformation("InvitationAccepted email scheduled for Invitation {InvitationId} to {Email}", command.InvitationId, trainer.Email);
     }
 }
