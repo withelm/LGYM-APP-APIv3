@@ -13,7 +13,7 @@ public sealed class TrainerProfile : IMappingProfile
         {
             Id = source.Id.ToString(),
             TrainerId = source.TrainerId.ToString(),
-            TraineeId = source.TraineeId.ToString(),
+            TraineeId = source.TraineeId?.ToString() ?? string.Empty,
             Code = source.Code,
             Status = source.Status.ToString(),
             ExpiresAt = source.ExpiresAt,

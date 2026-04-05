@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
+using TrainerInvitationEntity = LgymApi.Domain.Entities.TrainerInvitation;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.Trainer.Controllers;
@@ -72,6 +73,40 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         return Ok(_mapper.MapList<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(result.Value));
+    }
+
+    [HttpPost("invitations/by-email")]
+    [ProducesResponseType(typeof(TrainerInvitationDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> CreateInvitationByEmail([FromBody] CreateTrainerInvitationByEmailRequest request)
+    {
+        var trainer = HttpContext.GetCurrentUser();
+        var result = await _trainerRelationshipService.CreateInvitationByEmailAsync(
+            trainer!, request.Email, request.PreferredLanguage, request.PreferredTimeZone, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(result.Value));
+    }
+
+    [HttpPost("invitations/{invitationId}/revoke")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> RevokeInvitation([FromRoute] string invitationId)
+    {
+        if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
+        {
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.FieldRequired)).ToActionResult();
+        }
+
+        var trainer = HttpContext.GetCurrentUser();
+        var result = await _trainerRelationshipService.RevokeInvitationAsync(trainer!, parsedInvitationId, HttpContext.RequestAborted);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
     [HttpGet("trainees")]
