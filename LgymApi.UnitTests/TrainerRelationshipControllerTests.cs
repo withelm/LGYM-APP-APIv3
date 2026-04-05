@@ -88,6 +88,7 @@ public sealed class TrainerRelationshipControllerTests
     private sealed class StubTrainerRelationshipService : ITrainerRelationshipService
     {
         public Task<Result<TrainerInvitationResult, AppError>> CreateInvitationAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<TrainerInvitationResult, AppError>> CreateInvitationByEmailAsync(User currentTrainer, string inviteeEmail, string preferredLanguage, string preferredTimeZone, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<List<TrainerInvitationResult>, AppError>> GetTrainerInvitationsAsync(User currentTrainer, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<TrainerDashboardTraineeListResult, AppError>> GetDashboardTraineesAsync(User currentTrainer, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<List<DateTime>, AppError>> GetTraineeTrainingDatesAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
@@ -104,6 +105,7 @@ public sealed class TrainerRelationshipControllerTests
         public Task<Result<TrainerManagedPlanResult, AppError>> GetActiveAssignedPlanAsync(User currentTrainee, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<Unit, AppError>> AcceptInvitationAsync(User currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<Unit, AppError>> RejectInvitationAsync(User currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<Unit, AppError>> RevokeInvitationAsync(User currentTrainer, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<Unit, AppError>> UnlinkTraineeAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<Unit, AppError>> DetachFromTrainerAsync(User currentTrainee, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }

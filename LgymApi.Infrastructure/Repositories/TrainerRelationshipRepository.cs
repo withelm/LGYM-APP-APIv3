@@ -55,6 +55,34 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public Task<TrainerInvitation?> FindPendingInvitationByEmailAsync(Id<User> trainerId, string inviteeEmail, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.TrainerInvitations
+            .AsNoTracking()
+            .Where(i => i.TrainerId == trainerId
+                && i.InviteeEmail == inviteeEmail
+                && i.Status == TrainerInvitationStatus.Pending)
+            .OrderByDescending(i => i.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public Task<bool> IsEmailAlreadyTraineeAsync(Id<User> trainerId, string inviteeEmail, CancellationToken cancellationToken = default)
+    {
+        return (
+            from link in _dbContext.TrainerTraineeLinks.AsNoTracking()
+            join user in _dbContext.Users.AsNoTracking() on link.TraineeId equals user.Id
+            where link.TrainerId == trainerId && user.Email == inviteeEmail
+            select link
+        ).AnyAsync(cancellationToken);
+    }
+
+    public Task<TrainerInvitation?> FindInvitationByIdWithCodeAsync(Id<TrainerInvitation> invitationId, string code, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.TrainerInvitations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Id == invitationId && i.Code == code, cancellationToken);
+    }
+
     public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerInvitations
@@ -164,7 +192,9 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
 
         var ownedTraineeIds = trainerLinks
             .Select(x => x.TraineeId)
-            .Union(trainerInvitations.Select(x => x.TraineeId))
+            .Union(trainerInvitations
+                .Where(x => x.TraineeId.HasValue)
+                .Select(x => x.TraineeId!.Value))
             .Distinct();
 
         return

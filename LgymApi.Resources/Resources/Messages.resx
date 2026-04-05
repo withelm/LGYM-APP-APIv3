@@ -159,6 +159,18 @@
   <data name="InvitationExpired" xml:space="preserve">
     <value>Invitation has expired.</value>
   </data>
+  <data name="InvitationPendingForEmail" xml:space="preserve">
+    <value>An active invitation for this email address already exists.</value>
+  </data>
+  <data name="EmailAlreadyYourTrainee" xml:space="preserve">
+    <value>A user with this email is already your trainee.</value>
+  </data>
+  <data name="InvitationRevokedByTrainer" xml:space="preserve">
+    <value>This invitation has been revoked by the trainer.</value>
+  </data>
+  <data name="InvitationInvalidCode" xml:space="preserve">
+    <value>Invalid invitation code.</value>
+  </data>
   <data name="DashboardPageMustBeGreaterThanZero" xml:space="preserve">
     <value>Page must be greater than 0.</value>
   </data>

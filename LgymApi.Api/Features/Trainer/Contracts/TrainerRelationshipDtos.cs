@@ -122,6 +122,18 @@ public sealed class TrainerPlanFormRequest : IDto
     public string Name { get; set; } = string.Empty;
 }
 
+public sealed class CreateTrainerInvitationByEmailRequest : IDto
+{
+    [JsonPropertyName("email")]
+    public string Email { get; set; } = string.Empty;
+
+    [JsonPropertyName("preferredLanguage")]
+    public string PreferredLanguage { get; set; } = string.Empty;
+
+    [JsonPropertyName("preferredTimeZone")]
+    public string PreferredTimeZone { get; set; } = string.Empty;
+}
+
 public sealed class TrainerManagedPlanDto : IResultDto
 {
     [JsonPropertyName("_id")]

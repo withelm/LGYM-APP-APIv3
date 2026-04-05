@@ -111,6 +111,56 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         return Result<TrainerInvitationResult, AppError>.Success(MapInvitation(invitation));
     }
 
+    public async Task<Result<TrainerInvitationResult, AppError>> CreateInvitationByEmailAsync(
+        UserEntity currentTrainer,
+        string inviteeEmail,
+        string preferredLanguage,
+        string preferredTimeZone,
+        CancellationToken cancellationToken = default)
+    {
+        var ensureTrainerResult = await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        if (ensureTrainerResult.IsFailure)
+        {
+            return Result<TrainerInvitationResult, AppError>.Failure(ensureTrainerResult.Error);
+        }
+
+        var normalizedInviteeEmail = new Email(inviteeEmail).Value;
+        if (string.Equals(currentTrainer.Email.Value, normalizedInviteeEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<TrainerInvitationResult, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.CannotInviteYourself));
+        }
+
+        var existingPending = await _trainerRelationshipRepository.FindPendingInvitationByEmailAsync(currentTrainer.Id, normalizedInviteeEmail, cancellationToken);
+        if (existingPending != null)
+        {
+            return Result<TrainerInvitationResult, AppError>.Failure(new TrainerRelationshipConflictError(Messages.InvitationPendingForEmail));
+        }
+
+        if (await _trainerRelationshipRepository.IsEmailAlreadyTraineeAsync(currentTrainer.Id, normalizedInviteeEmail, cancellationToken))
+        {
+            return Result<TrainerInvitationResult, AppError>.Failure(new TrainerRelationshipConflictError(Messages.EmailAlreadyYourTrainee));
+        }
+
+        var trainee = await _userRepository.FindByEmailAsync(normalizedInviteeEmail, cancellationToken);
+
+        var invitation = new TrainerInvitation
+        {
+            Id = Id<TrainerInvitation>.New(),
+            TrainerId = currentTrainer.Id,
+            InviteeEmail = normalizedInviteeEmail,
+            TraineeId = trainee?.Id,
+            Code = CreateInvitationCode(),
+            Status = TrainerInvitationStatus.Pending,
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7)
+        };
+
+        await _trainerRelationshipRepository.AddInvitationAsync(invitation, cancellationToken);
+        await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = invitation.Id });
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<TrainerInvitationResult, AppError>.Success(MapInvitation(invitation));
+    }
+
     private async Task<TrainerInvitationResult?> HandleExistingPendingInvitationAsync(TrainerInvitation? existingPending, CancellationToken cancellationToken)
     {
         if (existingPending == null)
@@ -490,6 +540,8 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             throw;
         }
 
+        await _commandDispatcher.EnqueueAsync(new InvitationAcceptedCommand { InvitationId = invitation.Id });
+
         await _commandDispatcher.EnqueueAsync(new TrainerInvitationAcceptedInAppNotificationCommand
         {
             TrainerId = invitation.TrainerId,
@@ -533,6 +585,39 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
             TrainerId = invitation.TrainerId,
             TraineeId = currentTrainee.Id
         });
+        return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    public async Task<Result<Unit, AppError>> RevokeInvitationAsync(UserEntity currentTrainer, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default)
+    {
+        var ensureTrainerResult = await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        if (ensureTrainerResult.IsFailure)
+        {
+            return Result<Unit, AppError>.Failure(ensureTrainerResult.Error);
+        }
+
+        if (invitationId.IsEmpty)
+        {
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.FieldRequired));
+        }
+
+        var invitation = await _trainerRelationshipRepository.FindInvitationByIdAsync(invitationId, cancellationToken);
+        if (invitation == null || invitation.TrainerId != currentTrainer.Id)
+        {
+            return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
+        }
+
+        if (invitation.Status != TrainerInvitationStatus.Pending)
+        {
+            return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.InvitationNoLongerPending));
+        }
+
+        invitation.Status = TrainerInvitationStatus.Revoked;
+        invitation.RespondedAt = DateTimeOffset.UtcNow;
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _commandDispatcher.EnqueueAsync(new InvitationRevokedCommand { InvitationId = invitation.Id });
+
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -598,7 +683,21 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
     private async Task<Result<TrainerInvitation, AppError>> GetInvitationForTraineeAsync(UserEntity currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken)
     {
         var invitation = await _trainerRelationshipRepository.FindInvitationByIdAsync(invitationId, cancellationToken);
-        if (invitation == null || invitation.TraineeId != currentTrainee.Id)
+        if (invitation == null)
+        {
+            return Result<TrainerInvitation, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
+        }
+
+        if (invitation.TraineeId == null)
+        {
+            if (!string.Equals(invitation.InviteeEmail, currentTrainee.Email.Value, StringComparison.OrdinalIgnoreCase))
+            {
+                return Result<TrainerInvitation, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
+            }
+
+            invitation.TraineeId = currentTrainee.Id;
+        }
+        else if (invitation.TraineeId != currentTrainee.Id)
         {
             return Result<TrainerInvitation, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }

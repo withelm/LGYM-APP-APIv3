@@ -29,6 +29,20 @@ public sealed class InvalidTrainerRelationshipError : BadRequestError
 }
 
 /// <summary>
+/// Error indicating a trainer relationship conflict (HTTP 409).
+/// </summary>
+public sealed class TrainerRelationshipConflictError : ConflictError
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TrainerRelationshipConflictError"/> class.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    public TrainerRelationshipConflictError(string message) : base(message)
+    {
+    }
+}
+
+/// <summary>
 /// Error indicating the user does not have permission for trainer relationship operations (HTTP 403).
 /// </summary>
 public sealed class TrainerRelationshipForbiddenError : ForbiddenError

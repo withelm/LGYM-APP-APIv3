@@ -4,6 +4,8 @@ public static class EmailNotificationTypes
 {
     public static readonly EmailNotificationType Welcome = EmailNotificationType.Define("user.registration.welcome");
     public static readonly EmailNotificationType TrainerInvitation = EmailNotificationType.Define("trainer.invitation.created");
+    public static readonly EmailNotificationType TrainerInvitationAccepted = EmailNotificationType.Define("trainer.invitation.accepted");
+    public static readonly EmailNotificationType TrainerInvitationRevoked = EmailNotificationType.Define("trainer.invitation.revoked");
     public static readonly EmailNotificationType TrainingCompleted = EmailNotificationType.Define("training.completed");
     public static readonly EmailNotificationType PasswordRecovery = EmailNotificationType.Define("user.password.recovery");
 
@@ -11,6 +13,8 @@ public static class EmailNotificationTypes
     [
         Welcome,
         TrainerInvitation,
+        TrainerInvitationAccepted,
+        TrainerInvitationRevoked,
         TrainingCompleted,
         PasswordRecovery
     ];

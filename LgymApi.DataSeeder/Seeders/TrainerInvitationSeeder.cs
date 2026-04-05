@@ -34,7 +34,7 @@ public sealed class TrainerInvitationSeeder : IEntitySeeder
             .Select(invite => new { invite.TrainerId, invite.TraineeId })
             .ToListAsync(cancellationToken);
 
-        var existingSet = new HashSet<(Id<User> TrainerId, Id<User> TraineeId)>(
+        var existingSet = new HashSet<(Id<User> TrainerId, Id<User>? TraineeId)>(
             existing.Select(entry => (entry.TrainerId, entry.TraineeId)));
 
          var invitation = new TrainerInvitation
