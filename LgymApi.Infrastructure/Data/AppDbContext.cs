@@ -453,7 +453,8 @@ public sealed class AppDbContext : DbContext
             entity.HasOne(e => e.Trainee)
                 .WithMany()
                 .HasForeignKey(e => e.TraineeId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<TrainerTraineeLink>(entity =>
