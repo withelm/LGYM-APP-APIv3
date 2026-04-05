@@ -4,11 +4,13 @@ using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Options;
+using LgymApi.Application.Pagination;
+using LgymApi.Infrastructure.Pagination;
+using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Options;
-using LgymApi.Infrastructure.Repositories;
 using LgymApi.Application.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +18,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Net.Mail;
+using GridifyExecutionServiceContract = LgymApi.Infrastructure.Pagination.IGridifyExecutionService;
+using QueryPaginationFacade = LgymApi.Infrastructure.Pagination.QueryPaginationService;
 
 namespace LgymApi.Infrastructure;
 
@@ -131,6 +135,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITutorialProgressRepository, TutorialProgressRepository>();
         services.AddScoped<IApiIdempotencyRecordRepository, ApiIdempotencyRecordRepository>();
         services.AddScoped<IInAppNotificationRepository, InAppNotificationRepository>();
+        services.AddScoped<GridifyExecutionService>();
+        services.AddScoped<GridifyExecutionServiceContract>(sp => sp.GetRequiredService<GridifyExecutionService>());
+        services.AddScoped<IQueryPaginationService, QueryPaginationFacade>();
+        services.AddSingleton<IMapperRegistry>(sp =>
+        {
+            var registry = new MapperRegistry();
+            RegisterDashboardTraineeMappings(registry);
+            return registry;
+        });
         services.AddScoped<ICommittedIntentDispatcher, CommittedIntentDispatcher>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
@@ -294,5 +307,17 @@ public static class ServiceCollectionExtensions
         }
 
         throw new InvalidOperationException("Email:DeliveryMode must be one of: Smtp, Dummy.");
+    }
+
+    private static void RegisterDashboardTraineeMappings(MapperRegistry registry)
+    {
+        registry.Register<TrainerRelationshipRepository.DashboardTraineeProjection>(
+        [
+            new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
+            new FieldMapping { FieldName = "name", MemberName = "Name", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "email", MemberName = "Email", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false },
+            new FieldMapping { FieldName = "statusOrder", MemberName = "StatusOrder", AllowSort = true, AllowFilter = false }
+        ]);
     }
 }

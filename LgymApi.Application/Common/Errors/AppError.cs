@@ -165,3 +165,30 @@ public class ConflictError : AppError
     /// </summary>
     public override int HttpStatusCode => 409;
 }
+
+/// <summary>
+/// Error indicating an unexpected server-side failure (HTTP 500).
+/// </summary>
+public class InternalServerError : AppError
+{
+    private readonly string _message;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InternalServerError"/> class.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    public InternalServerError(string message)
+    {
+        _message = message;
+    }
+
+    /// <summary>
+    /// Gets the error message.
+    /// </summary>
+    public override string Message => _message;
+
+    /// <summary>
+    /// Gets the HTTP status code (500 Internal Server Error).
+    /// </summary>
+    public override int HttpStatusCode => 500;
+}
