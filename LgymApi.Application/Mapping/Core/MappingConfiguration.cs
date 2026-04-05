@@ -16,7 +16,7 @@ public sealed class MappingConfiguration
             throw new InvalidOperationException($"Mapping from {key.Source.Name} to {key.Target.Name} is already registered.");
         }
 
-        _mappings[key] = (source, context) => map((TSource)source, context);
+        _mappings[key] = (source, context) => map((TSource)source, context)!;
     }
 
     public void AllowContextKey<T>(ContextKey<T> key)
