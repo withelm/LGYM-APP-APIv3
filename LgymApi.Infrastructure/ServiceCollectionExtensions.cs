@@ -349,7 +349,7 @@ public static class ServiceCollectionExtensions
             new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false }
         ]);
 
-        registry.Register<TrainerRelationshipRepository.InvitationProjection>(
+        registry.Register<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult>(
         [
             new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
             new FieldMapping { FieldName = "status", MemberName = "Status", AllowSort = true, AllowFilter = true },
