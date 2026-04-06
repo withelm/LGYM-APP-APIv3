@@ -145,28 +145,8 @@ public sealed class CreateTrainerInvitationByEmailRequest : IDto
 
 public sealed class PaginatedTrainerInvitationRequest : PaginatedRequest, IDto { }
 
-public sealed class PaginatedTrainerInvitationResult : IResultDto
+public sealed class PaginatedTrainerInvitationResult : PaginatedResponse<TrainerInvitationDto>
 {
-    [JsonPropertyName("items")]
-    public List<TrainerInvitationDto> Items { get; set; } = [];
-
-    [JsonPropertyName("page")]
-    public int Page { get; set; }
-
-    [JsonPropertyName("pageSize")]
-    public int PageSize { get; set; }
-
-    [JsonPropertyName("totalCount")]
-    public int TotalCount { get; set; }
-
-    [JsonPropertyName("totalPages")]
-    public int TotalPages { get; set; }
-
-    [JsonPropertyName("hasNextPage")]
-    public bool HasNextPage { get; set; }
-
-    [JsonPropertyName("hasPreviousPage")]
-    public bool HasPreviousPage { get; set; }
 }
 
 public sealed class TrainerManagedPlanDto : IResultDto
