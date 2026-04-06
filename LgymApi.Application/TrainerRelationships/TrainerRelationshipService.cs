@@ -8,6 +8,7 @@ using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Application.Repositories;
@@ -207,6 +208,18 @@ public sealed class TrainerRelationshipService : ITrainerRelationshipService
         }
 
         return Result<List<TrainerInvitationResult>, AppError>.Success(invitations.Select(MapInvitation).ToList());
+    }
+
+    public async Task<Result<Pagination<TrainerInvitationResult>, AppError>> GetInvitationsPaginatedAsync(UserEntity currentTrainer, FilterInput filterInput, CancellationToken cancellationToken = default)
+    {
+        var ensureTrainerResult = await EnsureTrainerAsync(currentTrainer, cancellationToken);
+        if (ensureTrainerResult.IsFailure)
+        {
+            return Result<Pagination<TrainerInvitationResult>, AppError>.Failure(ensureTrainerResult.Error);
+        }
+
+        return Result<Pagination<TrainerInvitationResult>, AppError>.Success(
+            await _trainerRelationshipRepository.GetInvitationsPaginatedAsync(currentTrainer.Id, filterInput, cancellationToken));
     }
 
     public async Task<Result<TrainerDashboardTraineeListResult, AppError>> GetDashboardTraineesAsync(UserEntity currentTrainer, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)

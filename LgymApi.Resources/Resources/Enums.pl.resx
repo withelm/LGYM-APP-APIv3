@@ -105,4 +105,22 @@
   <data name="TutorialStep_LastTreningResult" xml:space="preserve">
     <value>Ostatni wynik treningu</value>
   </data>
+  <data name="TrainerInvitationStatus_Pending" xml:space="preserve">
+    <value>Oczekujące</value>
+  </data>
+  <data name="TrainerInvitationStatus_Accepted" xml:space="preserve">
+    <value>Zaakceptowane</value>
+  </data>
+  <data name="TrainerInvitationStatus_Rejected" xml:space="preserve">
+    <value>Odrzucone</value>
+  </data>
+  <data name="TrainerInvitationStatus_Revoked" xml:space="preserve">
+    <value>Cofnięte</value>
+  </data>
+  <data name="TrainerInvitationStatus_Expired" xml:space="preserve">
+    <value>Wygasłe</value>
+  </data>
+  <data name="TrainerInvitationStatus_SortOrder" xml:space="preserve">
+    <value>Pending,Accepted,Rejected,Revoked,Expired</value>
+  </data>
 </root>

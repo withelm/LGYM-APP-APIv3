@@ -1,6 +1,6 @@
+using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
-using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -21,6 +21,14 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         MaxPageSize = 100,
         DefaultPageSize = 20,
         DefaultSortField = "name",
+        TieBreakerField = "id"
+    };
+
+    private static readonly PaginationPolicy InvitationPaginationPolicy = new()
+    {
+        MaxPageSize = 100,
+        DefaultPageSize = 20,
+        DefaultSortField = "createdAt",
         TieBreakerField = "id"
     };
 
@@ -108,6 +116,64 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
     {
         return _dbContext.TrainerTraineeLinks
             .FirstOrDefaultAsync(l => l.TraineeId == traineeId, cancellationToken);
+    }
+
+    public async Task<Pagination<TrainerInvitationResult>> GetInvitationsPaginatedAsync(Id<User> trainerId, FilterInput filterInput, CancellationToken cancellationToken = default)
+    {
+        var baseQuery = BuildInvitationBaseQuery(trainerId);
+        var pagination = await _gridifyExecutionService.ExecuteAsync(
+            baseQuery,
+            filterInput,
+            _mapperRegistry,
+            InvitationPaginationPolicy,
+            cancellationToken);
+
+        var items = pagination.Items.Select(x => new TrainerInvitationResult
+            {
+                Id = x.Id,
+                TrainerId = x.TrainerId,
+                TraineeId = x.TraineeId,
+                InviteeEmail = x.InviteeEmail,
+                Code = x.Code,
+                Status = x.Status,
+                ExpiresAt = x.ExpiresAt,
+                RespondedAt = x.RespondedAt,
+                CreatedAt = x.CreatedAt,
+                TraineeName = x.TraineeName,
+                TraineeEmail = x.TraineeEmail
+            })
+            .ToList();
+
+        return new Pagination<TrainerInvitationResult>
+        {
+            Items = items,
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = pagination.TotalCount
+        };
+    }
+
+    private IQueryable<InvitationProjection> BuildInvitationBaseQuery(Id<User> trainerId)
+    {
+        return
+            from invitation in _dbContext.TrainerInvitations.AsNoTracking()
+            where invitation.TrainerId == trainerId
+            join trainee in _dbContext.Users.AsNoTracking() on invitation.TraineeId equals trainee.Id into traineeGroup
+            from trainee in traineeGroup.DefaultIfEmpty()
+            select new InvitationProjection
+            {
+                Id = invitation.Id,
+                TrainerId = invitation.TrainerId,
+                TraineeId = invitation.TraineeId,
+                InviteeEmail = invitation.InviteeEmail,
+                Code = invitation.Code,
+                Status = invitation.Status,
+                ExpiresAt = invitation.ExpiresAt,
+                RespondedAt = invitation.RespondedAt,
+                CreatedAt = invitation.CreatedAt,
+                TraineeName = trainee.Name,
+                TraineeEmail = trainee.Email
+            };
     }
 
     public async Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
@@ -353,5 +419,20 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
         public DateTimeOffset? LastInvitationExpiresAt { get; init; }
         public DateTimeOffset? LastInvitationRespondedAt { get; init; }
         public int StatusOrder { get; init; }
+    }
+
+    internal sealed class InvitationProjection
+    {
+        public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation> Id { get; init; }
+        public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> TrainerId { get; init; }
+        public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>? TraineeId { get; init; }
+        public string InviteeEmail { get; init; } = string.Empty;
+        public string Code { get; init; } = string.Empty;
+        public TrainerInvitationStatus Status { get; init; }
+        public DateTimeOffset ExpiresAt { get; init; }
+        public DateTimeOffset? RespondedAt { get; init; }
+        public DateTimeOffset CreatedAt { get; init; }
+        public string? TraineeName { get; init; }
+        public string? TraineeEmail { get; init; }
     }
 }

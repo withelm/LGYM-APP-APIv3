@@ -11,6 +11,7 @@ using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Pagination;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
@@ -90,6 +91,7 @@ public sealed class TrainerRelationshipControllerTests
         public Task<Result<TrainerInvitationResult, AppError>> CreateInvitationAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<TrainerInvitationResult, AppError>> CreateInvitationByEmailAsync(User currentTrainer, string inviteeEmail, string preferredLanguage, string preferredTimeZone, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<List<TrainerInvitationResult>, AppError>> GetTrainerInvitationsAsync(User currentTrainer, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<Pagination<TrainerInvitationResult>, AppError>> GetInvitationsPaginatedAsync(User currentTrainer, FilterInput filterInput, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<TrainerDashboardTraineeListResult, AppError>> GetDashboardTraineesAsync(User currentTrainer, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<List<DateTime>, AppError>> GetTraineeTrainingDatesAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<List<TrainingByDateDetails>, AppError>> GetTraineeTrainingByDateAsync(User currentTrainer, Id<User> traineeId, DateTime createdAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();

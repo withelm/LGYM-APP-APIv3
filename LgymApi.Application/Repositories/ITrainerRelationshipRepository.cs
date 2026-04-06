@@ -1,6 +1,7 @@
+using LgymApi.Application.Features.TrainerRelationships.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Application.Features.TrainerRelationships.Models;
 
 namespace LgymApi.Application.Repositories;
 
@@ -17,6 +18,7 @@ public interface ITrainerRelationshipRepository
     Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default);
+    Task<Pagination<TrainerInvitationResult>> GetInvitationsPaginatedAsync(Id<User> trainerId, FilterInput filterInput, CancellationToken cancellationToken = default);
     Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default);
     Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default);
 }

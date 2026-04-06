@@ -22,6 +22,9 @@ public sealed class TrainerInvitationDto : IResultDto
     [JsonPropertyName("traineeId")]
     public string TraineeId { get; set; } = string.Empty;
 
+    [JsonPropertyName("inviteeEmail")]
+    public string InviteeEmail { get; set; } = string.Empty;
+
     [JsonPropertyName("code")]
     public string Code { get; set; } = string.Empty;
 
@@ -36,6 +39,12 @@ public sealed class TrainerInvitationDto : IResultDto
 
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; set; }
+
+    [JsonPropertyName("traineeName")]
+    public string? TraineeName { get; set; }
+
+    [JsonPropertyName("traineeEmail")]
+    public string? TraineeEmail { get; set; }
 }
 
 public sealed class TrainerDashboardTraineesRequest : IDto
@@ -132,6 +141,32 @@ public sealed class CreateTrainerInvitationByEmailRequest : IDto
 
     [JsonPropertyName("preferredTimeZone")]
     public string PreferredTimeZone { get; set; } = string.Empty;
+}
+
+public sealed class PaginatedTrainerInvitationRequest : PaginatedRequest, IDto { }
+
+public sealed class PaginatedTrainerInvitationResult : IResultDto
+{
+    [JsonPropertyName("items")]
+    public List<TrainerInvitationDto> Items { get; set; } = [];
+
+    [JsonPropertyName("page")]
+    public int Page { get; set; }
+
+    [JsonPropertyName("pageSize")]
+    public int PageSize { get; set; }
+
+    [JsonPropertyName("totalCount")]
+    public int TotalCount { get; set; }
+
+    [JsonPropertyName("totalPages")]
+    public int TotalPages { get; set; }
+
+    [JsonPropertyName("hasNextPage")]
+    public bool HasNextPage { get; set; }
+
+    [JsonPropertyName("hasPreviousPage")]
+    public bool HasPreviousPage { get; set; }
 }
 
 public sealed class TrainerManagedPlanDto : IResultDto

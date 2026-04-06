@@ -14,11 +14,14 @@ public sealed class TrainerProfile : IMappingProfile
             Id = source.Id.ToString(),
             TrainerId = source.TrainerId.ToString(),
             TraineeId = source.TraineeId?.ToString() ?? string.Empty,
+            InviteeEmail = source.InviteeEmail,
             Code = source.Code,
             Status = source.Status.ToString(),
             ExpiresAt = source.ExpiresAt,
             RespondedAt = source.RespondedAt,
-            CreatedAt = source.CreatedAt
+            CreatedAt = source.CreatedAt,
+            TraineeName = source.TraineeName,
+            TraineeEmail = source.TraineeEmail
         });
 
         configuration.CreateMap<TrainerDashboardTraineeResult, TrainerDashboardTraineeDto>((source, _) => new TrainerDashboardTraineeDto

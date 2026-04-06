@@ -15,6 +15,7 @@ using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Pagination;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
@@ -61,18 +62,38 @@ public sealed class TrainerRelationshipController : ControllerBase
         return Ok(_mapper.Map<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(result.Value));
     }
 
-    [HttpGet("invitations")]
-    [ProducesResponseType(typeof(List<TrainerInvitationDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetInvitations()
+    [HttpPost("invitations/paginated")]
+    [ProducesResponseType(typeof(PaginatedTrainerInvitationResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetInvitationsPaginated([FromBody] PaginatedTrainerInvitationRequest request)
     {
+        var cancellationToken = HttpContext.RequestAborted;
+        var filterInput = new FilterInput
+        {
+            Page = request.Page,
+            PageSize = request.PageSize,
+            FilterGroups = request.FilterGroups,
+            SortDescriptors = request.SortDescriptors
+        };
+
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTrainerInvitationsAsync(trainer!, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetInvitationsPaginatedAsync(trainer!, filterInput, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.MapList<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult, TrainerInvitationDto>(result.Value));
+        var pagination = result.Value;
+        var response = new PaginatedTrainerInvitationResult
+        {
+            Items = _mapper.MapList<TrainerInvitationResult, TrainerInvitationDto>(pagination.Items),
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = pagination.TotalCount,
+            TotalPages = pagination.TotalPages,
+            HasNextPage = pagination.HasNextPage,
+            HasPreviousPage = pagination.HasPreviousPage
+        };
+        return Ok(response);
     }
 
     [HttpPost("invitations/by-email")]
