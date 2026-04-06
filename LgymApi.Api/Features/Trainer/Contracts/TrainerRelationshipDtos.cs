@@ -145,7 +145,7 @@ public sealed class CreateTrainerInvitationByEmailRequest : IDto
 
 public sealed class PaginatedTrainerInvitationRequest : PaginatedRequest, IDto { }
 
-public sealed class PaginatedTrainerInvitationResult : PaginatedResponse<TrainerInvitationDto>
+public sealed class PaginatedTrainerInvitationResult : PaginatedResponse<TrainerInvitationDto>, IResultDto
 {
 }
 

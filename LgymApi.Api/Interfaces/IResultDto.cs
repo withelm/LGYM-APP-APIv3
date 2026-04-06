@@ -4,7 +4,7 @@ namespace LgymApi.Api.Interfaces
 {
     public interface IResultDto;
 
-    public abstract class PaginatedResponse<TItem> : IResultDto
+    public abstract class PaginatedResponse<TItem>
         where TItem : IResultDto
     {
         [JsonPropertyName("items")]
