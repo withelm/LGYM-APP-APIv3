@@ -1,5 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Models;
+using LgymApi.Application.Pagination;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Options;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
@@ -617,6 +619,9 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
 
         public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+
+        public Task<Pagination<AdminUserListItem>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+            => Task.FromResult(new Pagination<AdminUserListItem>());
     }
 
     private sealed class TestTrainingRepository : ITrainingRepository

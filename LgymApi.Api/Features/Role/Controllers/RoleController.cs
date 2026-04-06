@@ -4,6 +4,7 @@ using LgymApi.Api.Features.Role.Contracts;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Role.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Pagination;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
@@ -38,6 +39,33 @@ public sealed class RoleController : ControllerBase
         }
         
         return Ok(_mapper.MapList<RoleResult, RoleDto>(result.Value));
+    }
+
+    [HttpGet("paginated")]
+    [ProducesResponseType(typeof(PaginatedRoleResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRolesPaginated([FromQuery] FilterInput filterInput)
+    {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var result = await _roleService.GetRolesPaginatedAsync(filterInput, cancellationToken);
+        
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var pagination = result.Value;
+        var response = new PaginatedRoleResult
+        {
+            Items = _mapper.MapList<RoleResult, RoleDto>(pagination.Items),
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = pagination.TotalCount,
+            TotalPages = pagination.TotalPages,
+            HasNextPage = pagination.HasNextPage,
+            HasPreviousPage = pagination.HasPreviousPage
+        };
+        
+        return Ok(response);
     }
 
     [HttpGet("{id}")]

@@ -13,6 +13,7 @@ public sealed class User : EntityBase<User>
     public string ProfileRank { get; set; } = string.Empty;
     public string? Avatar { get; set; }
     public bool IsVisibleInRanking { get; set; } = true;
+    public bool IsBlocked { get; set; }
 
     public string? LegacyHash { get; set; }
     public string? LegacySalt { get; set; }

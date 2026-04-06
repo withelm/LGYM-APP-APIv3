@@ -1,3 +1,5 @@
+using LgymApi.Application.Features.AdminManagement;
+using LgymApi.Application.Features.AdminManagement;
 using LgymApi.Application.Features.AppConfig;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.Enum;
@@ -28,6 +30,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IAppConfigService, AppConfigService>();
         services.AddScoped<IEloRegistryService, EloRegistryService>();
         services.AddScoped<IEnumService, EnumService>();

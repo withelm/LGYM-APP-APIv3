@@ -1,6 +1,7 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Role.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -41,6 +42,27 @@ public sealed class RoleService : IRoleService
             .ToList();
         
         return Result<List<RoleResult>, AppError>.Success(result);
+    }
+
+    public async Task<Result<Pagination<RoleResult>, AppError>> GetRolesPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default)
+    {
+        var pagination = await _roleRepository.GetRolesPaginatedAsync(filterInput, cancellationToken);
+        var roleIds = pagination.Items.Select(r => r.Id).ToList();
+        var claimsByRole = await _roleRepository.GetPermissionClaimsByRoleIdsAsync(roleIds, cancellationToken);
+
+        var items = pagination.Items
+            .Select(role => MapRole(
+                role,
+                claimsByRole.TryGetValue(role.Id, out var claims) ? claims : new List<string>()))
+            .ToList();
+
+        return Result<Pagination<RoleResult>, AppError>.Success(new Pagination<RoleResult>
+        {
+            Items = items,
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = pagination.TotalCount
+        });
     }
 
     public async Task<Result<RoleResult, AppError>> GetRoleAsync(Id<Domain.Entities.Role> roleId, CancellationToken cancellationToken = default)
@@ -188,6 +210,7 @@ public sealed class RoleService : IRoleService
                     AuthConstants.Permissions.ManageUserRoles => Messages.PermissionManageUserRoles,
                     AuthConstants.Permissions.ManageAppConfig => Messages.PermissionManageAppConfig,
                     AuthConstants.Permissions.ManageGlobalExercises => Messages.PermissionManageGlobalExercises,
+                    AuthConstants.Permissions.TrainerAccess => Messages.PermissionTrainerAccess,
                     _ => claim
                 }
             })

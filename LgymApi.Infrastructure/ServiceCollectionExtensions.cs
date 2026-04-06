@@ -1,6 +1,7 @@
 using Hangfire;
 using Hangfire.PostgreSql;
 using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Options;
@@ -9,7 +10,7 @@ using LgymApi.Infrastructure.Pagination;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
-using LgymApi.Application.Repositories;
+using LgymApi.Domain.Entities;
 using LgymApi.Application.Options;
 using LgymApi.Application.Notifications;
 using Microsoft.EntityFrameworkCore;
@@ -320,6 +321,25 @@ public static class ServiceCollectionExtensions
             new FieldMapping { FieldName = "email", MemberName = "Email", AllowSort = true, AllowFilter = true },
             new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false },
             new FieldMapping { FieldName = "statusOrder", MemberName = "StatusOrder", AllowSort = true, AllowFilter = false }
+        ]);
+
+        registry.Register<UserRepository.AdminUserProjection>(
+        [
+            new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
+            new FieldMapping { FieldName = "name", MemberName = "Name", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "email", MemberName = "Email", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false },
+            new FieldMapping { FieldName = "profileRank", MemberName = "ProfileRank", AllowSort = true, AllowFilter = false },
+            new FieldMapping { FieldName = "isBlocked", MemberName = "IsBlocked", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "isDeleted", MemberName = "IsDeleted", AllowSort = false, AllowFilter = true }
+        ]);
+
+        registry.Register<Role>(
+        [
+            new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
+            new FieldMapping { FieldName = "name", MemberName = "Name", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "description", MemberName = "Description", AllowSort = false, AllowFilter = true },
+            new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false }
         ]);
     }
 }

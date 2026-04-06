@@ -60,6 +60,7 @@ public sealed class AppDbContext : DbContext
     public static readonly Id<RoleClaim> ManageUserRolesClaimSeedId = ParseSeedId<RoleClaim>("97f7ea56-0032-4f18-8703-ab2d1485ad45");
     public static readonly Id<RoleClaim> ManageAppConfigClaimSeedId = ParseSeedId<RoleClaim>("d12f9f84-48f4-4f4b-9614-843f31ea0f96");
     public static readonly Id<RoleClaim> ManageGlobalExercisesClaimSeedId = ParseSeedId<RoleClaim>("27965bf4-ff55-4261-8f98-218ccf00e537");
+    public static readonly Id<RoleClaim> TrainerAccessClaimSeedId = ParseSeedId<RoleClaim>("a3b7c9d1-4e5f-6a7b-8c9d-0e1f2a3b4c5d");
     private static readonly DateTimeOffset RoleSeedTimestamp = new(2026, 2, 15, 0, 0, 0, TimeSpan.Zero);
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -433,6 +434,15 @@ public sealed class AppDbContext : DbContext
                     RoleId = (Id<Role>)AdminRoleSeedId,
                     ClaimType = AuthConstants.PermissionClaimType,
                     ClaimValue = AuthConstants.Permissions.ManageGlobalExercises,
+                    CreatedAt = RoleSeedTimestamp,
+                    UpdatedAt = RoleSeedTimestamp
+                },
+                new RoleClaim
+                {
+                    Id = (Id<RoleClaim>)TrainerAccessClaimSeedId,
+                    RoleId = (Id<Role>)TrainerRoleSeedId,
+                    ClaimType = AuthConstants.PermissionClaimType,
+                    ClaimValue = AuthConstants.Permissions.TrainerAccess,
                     CreatedAt = RoleSeedTimestamp,
                     UpdatedAt = RoleSeedTimestamp
                 });

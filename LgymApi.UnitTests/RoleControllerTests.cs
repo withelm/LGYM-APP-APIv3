@@ -2,6 +2,7 @@ using System.Reflection;
 using LgymApi.Api;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Pagination;
 using LgymApi.Domain.Entities;
 using LgymApi.Api.Features.Role.Contracts;
 using LgymApi.Api.Features.Role.Controllers;
@@ -122,5 +123,8 @@ public sealed class RoleControllerTests
 
         public Task<Result<Unit, AppError>> UpdateUserRolesAsync(Id<Domain.Entities.User> userId, IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
             => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+
+        public Task<Result<Pagination<RoleResult>, AppError>> GetRolesPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<Pagination<RoleResult>, AppError>.Success(new Pagination<RoleResult>()));
     }
 }

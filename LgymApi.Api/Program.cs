@@ -145,6 +145,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services
     .AddAuthorizationBuilder()
+    .AddPolicy(AuthConstants.Policies.AdminAccess, policy =>
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.AdminAccess))
     .AddPolicy(AuthConstants.Policies.ManageUserRoles, policy =>
         policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageUserRoles))
     .AddPolicy(AuthConstants.Policies.ManageAppConfig, policy =>
@@ -152,7 +154,7 @@ builder.Services
     .AddPolicy(AuthConstants.Policies.ManageGlobalExercises, policy =>
         policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.ManageGlobalExercises))
     .AddPolicy(AuthConstants.Policies.TrainerAccess, policy =>
-        policy.RequireRole(AuthConstants.Roles.Trainer));
+        policy.RequireClaim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.TrainerAccess));
 
 if (!builder.Environment.IsEnvironment(TestingEnvironment))
 {

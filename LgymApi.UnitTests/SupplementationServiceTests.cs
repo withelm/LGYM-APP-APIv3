@@ -2,6 +2,8 @@ using System.Net;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Supplementation.Models;
+using LgymApi.Application.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
@@ -467,6 +469,8 @@ public sealed class SupplementationServiceTests
         public Task ReplaceRolePermissionClaimsAsync(Id<LgymApi.Domain.Entities.Role> roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task AddUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<LgymApi.Domain.Entities.Role>> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task ReplaceUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<LgymApi.Domain.Entities.Role>> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<Dictionary<Id<User>, List<string>>> GetRoleNamesByUserIdsAsync(IReadOnlyCollection<Id<User>> userIds, CancellationToken cancellationToken = default) => Task.FromResult(new Dictionary<Id<User>, List<string>>());
+        public Task<Pagination<LgymApi.Domain.Entities.Role>> GetRolesPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default) => Task.FromResult(new Pagination<LgymApi.Domain.Entities.Role>());
     }
 
     private sealed class FakeTrainerRelationshipRepository : ITrainerRelationshipRepository
