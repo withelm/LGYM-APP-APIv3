@@ -4,6 +4,7 @@ using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Features.EloRegistry.Models;
 using LgymApi.Application.Features.Training.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.Domain.ValueObjects;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using MainRecordEntity = LgymApi.Domain.Entities.MainRecord;
@@ -18,6 +19,7 @@ public interface ITrainerRelationshipService
     Task<Result<TrainerInvitationResult, AppError>> CreateInvitationAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default);
     Task<Result<TrainerInvitationResult, AppError>> CreateInvitationByEmailAsync(UserEntity currentTrainer, string inviteeEmail, string preferredLanguage, string preferredTimeZone, CancellationToken cancellationToken = default);
     Task<Result<List<TrainerInvitationResult>, AppError>> GetTrainerInvitationsAsync(UserEntity currentTrainer, CancellationToken cancellationToken = default);
+    Task<Result<Pagination<TrainerInvitationResult>, AppError>> GetInvitationsPaginatedAsync(UserEntity currentTrainer, FilterInput filterInput, CancellationToken cancellationToken = default);
     Task<Result<TrainerDashboardTraineeListResult, AppError>> GetDashboardTraineesAsync(UserEntity currentTrainer, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default);
     Task<Result<List<DateTime>, AppError>> GetTraineeTrainingDatesAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default);
     Task<Result<List<TrainingByDateDetails>, AppError>> GetTraineeTrainingByDateAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, DateTime createdAt, CancellationToken cancellationToken = default);

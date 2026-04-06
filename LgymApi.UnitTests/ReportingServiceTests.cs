@@ -482,6 +482,8 @@ public sealed class ReportingServiceTests
         public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerTraineeLink?>(null);
         public Task<LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default)
             => Task.FromResult(new LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeListResult());
+        public Task<LgymApi.Application.Pagination.Pagination<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult>> GetInvitationsPaginatedAsync(Id<User> trainerId, LgymApi.Application.Pagination.FilterInput filterInput, CancellationToken cancellationToken = default)
+            => Task.FromResult(new LgymApi.Application.Pagination.Pagination<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult>());
         public Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }

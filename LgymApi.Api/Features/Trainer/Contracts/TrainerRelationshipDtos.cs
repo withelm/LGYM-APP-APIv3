@@ -22,6 +22,9 @@ public sealed class TrainerInvitationDto : IResultDto
     [JsonPropertyName("traineeId")]
     public string TraineeId { get; set; } = string.Empty;
 
+    [JsonPropertyName("inviteeEmail")]
+    public string InviteeEmail { get; set; } = string.Empty;
+
     [JsonPropertyName("code")]
     public string Code { get; set; } = string.Empty;
 
@@ -36,6 +39,12 @@ public sealed class TrainerInvitationDto : IResultDto
 
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; set; }
+
+    [JsonPropertyName("traineeName")]
+    public string? TraineeName { get; set; }
+
+    [JsonPropertyName("traineeEmail")]
+    public string? TraineeEmail { get; set; }
 }
 
 public sealed class TrainerDashboardTraineesRequest : IDto
@@ -132,6 +141,12 @@ public sealed class CreateTrainerInvitationByEmailRequest : IDto
 
     [JsonPropertyName("preferredTimeZone")]
     public string PreferredTimeZone { get; set; } = string.Empty;
+}
+
+public sealed class PaginatedTrainerInvitationRequest : PaginatedRequest, IDto { }
+
+public sealed class PaginatedTrainerInvitationResult : PaginatedResponse<TrainerInvitationDto>, IResultDto
+{
 }
 
 public sealed class TrainerManagedPlanDto : IResultDto

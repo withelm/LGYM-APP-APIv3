@@ -348,5 +348,16 @@ public static class ServiceCollectionExtensions
             new FieldMapping { FieldName = "description", MemberName = "Description", AllowSort = false, AllowFilter = true },
             new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false }
         ]);
+
+        registry.Register<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult>(
+        [
+            new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
+            new FieldMapping { FieldName = "status", MemberName = "Status", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "expiresAt", MemberName = "ExpiresAt", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "inviteeEmail", MemberName = "InviteeEmail", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "traineeName", MemberName = "TraineeName", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "traineeEmail", MemberName = "TraineeEmail", AllowSort = true, AllowFilter = true }
+        ]);
     }
 }

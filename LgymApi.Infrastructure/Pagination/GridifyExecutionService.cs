@@ -41,7 +41,6 @@ public sealed class GridifyExecutionService : IGridifyExecutionService
             maxPageSize: paginationPolicy.MaxPageSize);
         var gridifyMapper = CreateGridifyMapper<TProjection>(mappings);
         var filter = gridifyAdapter.Adapt(normalizedInput);
-        var orderBy = BuildOrderBy(normalizedInput.SortDescriptors);
 
         var query = baseQuery.AsNoTracking();
 
@@ -52,9 +51,13 @@ public sealed class GridifyExecutionService : IGridifyExecutionService
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(orderBy))
+        var (queryWithEnumOrdering, remainingOrderBy) = ApplyEnumOrdering(
+            query, normalizedInput.SortDescriptors, mappings);
+        query = queryWithEnumOrdering;
+
+        if (!string.IsNullOrWhiteSpace(remainingOrderBy))
         {
-            query = query.ApplyOrdering(orderBy, gridifyMapper);
+            query = query.ApplyOrdering(remainingOrderBy, gridifyMapper);
         }
 
         query = query.ApplyPaging(normalizedInput.Page, normalizedInput.PageSize);
@@ -101,6 +104,83 @@ public sealed class GridifyExecutionService : IGridifyExecutionService
         }
 
         return sortDescriptors;
+    }
+
+    private static (IQueryable<TProjection> query, string remainingOrderBy) ApplyEnumOrdering<TProjection>(
+        IQueryable<TProjection> query,
+        IReadOnlyList<SortDescriptor> sortDescriptors,
+        IEnumerable<FieldMapping> mappings)
+        where TProjection : class
+    {
+        var enumSortFields = new List<SortDescriptor>();
+        var remainingSortFields = new List<SortDescriptor>();
+
+        foreach (var sort in sortDescriptors)
+        {
+            var mapping = mappings.FirstOrDefault(m =>
+                m.FieldName.Equals(sort.FieldName, StringComparison.OrdinalIgnoreCase));
+            if (mapping != null)
+            {
+                var memberType = ResolveMemberType(typeof(TProjection), mapping.MemberName);
+                var underlyingType = Nullable.GetUnderlyingType(memberType) ?? memberType;
+                if (underlyingType.IsEnum)
+                {
+                    enumSortFields.Add(sort);
+                }
+                else
+                {
+                    remainingSortFields.Add(sort);
+                }
+            }
+            else
+            {
+                remainingSortFields.Add(sort);
+            }
+        }
+
+        IOrderedQueryable<TProjection>? orderedQuery = null;
+
+        for (int i = 0; i < enumSortFields.Count; i++)
+        {
+            var sort = enumSortFields[i];
+            var mapping = mappings.First(m =>
+                m.FieldName.Equals(sort.FieldName, StringComparison.OrdinalIgnoreCase));
+            var expression = CreateEnumIntCastExpression<TProjection>(mapping.MemberName);
+
+            if (i == 0 && orderedQuery == null)
+            {
+                orderedQuery = sort.Descending
+                    ? query.OrderByDescending(expression)
+                    : query.OrderBy(expression);
+            }
+            else
+            {
+                orderedQuery = sort.Descending
+                    ? orderedQuery!.ThenByDescending(expression)
+                    : orderedQuery.ThenBy(expression);
+            }
+        }
+
+        query = orderedQuery ?? query;
+        var remainingOrderBy = BuildOrderBy(remainingSortFields);
+
+        return (query, remainingOrderBy);
+    }
+
+    private static Expression<Func<TProjection, int>> CreateEnumIntCastExpression<TProjection>(string memberName)
+        where TProjection : class
+    {
+        var parameter = Expression.Parameter(typeof(TProjection), "x");
+        Expression body = parameter;
+
+        foreach (var segment in memberName.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            body = Expression.PropertyOrField(body, segment);
+        }
+
+        body = Expression.Convert(body, typeof(int));
+
+        return Expression.Lambda<Func<TProjection, int>>(body, parameter);
     }
 
     private static string BuildOrderBy(IEnumerable<SortDescriptor> sortDescriptors)

@@ -652,6 +652,7 @@ public sealed class SendInvitationEmailHandlerTests
         public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Pagination<TrainerInvitationResult>> GetInvitationsPaginatedAsync(Id<User> trainerId, FilterInput filterInput, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
