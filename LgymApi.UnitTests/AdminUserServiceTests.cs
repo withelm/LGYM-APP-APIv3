@@ -180,6 +180,101 @@ public sealed class AdminUserServiceTests
         });
     }
 
+    [Test]
+    public async Task GetUsersAsync_ReturnsPaginatedResults()
+    {
+        _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)Id<User>.New(), Name = "User1", Email = new Email("u1@test.com") });
+        _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)Id<User>.New(), Name = "User2", Email = new Email("u2@test.com") });
+
+        var result = await _service.GetUsersAsync(new FilterInput { Page = 1, PageSize = 10 }, includeDeleted: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.Items, Has.Count.EqualTo(2));
+            Assert.That(result.Value.TotalCount, Is.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public async Task GetUsersAsync_WithIncludeDeleted_ReturnsDeletedUsers()
+    {
+        _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)Id<User>.New(), Name = "Active", Email = new Email("active@test.com"), IsDeleted = false });
+        _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)Id<User>.New(), Name = "Deleted", Email = new Email("deleted@test.com"), IsDeleted = true });
+
+        var resultWithDeleted = await _service.GetUsersAsync(new FilterInput { Page = 1, PageSize = 10 }, includeDeleted: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(resultWithDeleted.IsSuccess, Is.True);
+            Assert.That(resultWithDeleted.Value.Items, Has.Count.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public async Task GetUserAsync_ReturnsDeletedUser_WhenIncludeDeleted()
+    {
+        var userId = Id<User>.New();
+        _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "Deleted", Email = new Email("deleted@test.com"), IsDeleted = true });
+
+        var result = await _service.GetUserAsync(userId);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.IsDeleted, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task UpdateUserAsync_ReturnsNotFound_WhenUserNotFound()
+    {
+        var command = new UpdateUserCommand { Name = "Test", Email = "test@test.com" };
+        var result = await _service.UpdateUserAsync(Id<User>.New(), Id<User>.New(), command);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<NotFoundError>());
+        });
+    }
+
+    [Test]
+    public async Task DeleteUserAsync_ReturnsNotFound_WhenUserNotFound()
+    {
+        var result = await _service.DeleteUserAsync(Id<User>.New(), Id<User>.New());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<NotFoundError>());
+        });
+    }
+
+    [Test]
+    public async Task BlockUserAsync_ReturnsNotFound_WhenUserNotFound()
+    {
+        var result = await _service.BlockUserAsync(Id<User>.New(), Id<User>.New());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<NotFoundError>());
+        });
+    }
+
+    [Test]
+    public async Task UnblockUserAsync_ReturnsNotFound_WhenUserNotFound()
+    {
+        var result = await _service.UnblockUserAsync(Id<User>.New());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<NotFoundError>());
+        });
+    }
+
     private sealed class InMemoryAdminUserRepository : IUserRepository
     {
         public List<User> Users { get; } = new();
