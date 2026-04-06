@@ -328,7 +328,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetInvitations_AsTrainer_ReturnsCreatedInvitations()
+    public async Task GetInvitationsPaginated_AsTrainer_ReturnsCreatedInvitations()
     {
         var trainer = await SeedTrainerAsync("trainer-list", "trainer-list@example.com");
         var traineeA = await SeedUserAsync(name: "trainee-list-a", email: "trainee-list-a@example.com", password: "password123");
@@ -343,13 +343,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = traineeB.Id.ToString() });
         ClearIdempotencyKey();
 
-        var response = await Client.GetAsync("/api/trainer/invitations");
+        var response = await Client.PostAsJsonAsync("/api/trainer/invitations/paginated", new { page = 1, pageSize = 20 });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<List<TrainerInvitationResponse>>();
+        var body = await response.Content.ReadFromJsonAsync<PaginatedTrainerInvitationResponse>();
         body.Should().NotBeNull();
-        body!.Count.Should().Be(2);
-        body.Select(x => x.TraineeId).Should().BeEquivalentTo(new[] { traineeA.Id.ToString(), traineeB.Id.ToString() });
+        body!.Items.Count.Should().Be(2);
+        body.Items.Select(x => x.TraineeId).Should().BeEquivalentTo(new[] { traineeA.Id.ToString(), traineeB.Id.ToString() });
     }
 
     [Test]
@@ -1277,6 +1277,30 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
 
+    }
+
+    private sealed class PaginatedTrainerInvitationResponse
+    {
+        [JsonPropertyName("items")]
+        public List<TrainerInvitationResponse> Items { get; set; } = [];
+
+        [JsonPropertyName("page")]
+        public int Page { get; set; }
+
+        [JsonPropertyName("pageSize")]
+        public int PageSize { get; set; }
+
+        [JsonPropertyName("totalCount")]
+        public int TotalCount { get; set; }
+
+        [JsonPropertyName("totalPages")]
+        public int TotalPages { get; set; }
+
+        [JsonPropertyName("hasNextPage")]
+        public bool HasNextPage { get; set; }
+
+        [JsonPropertyName("hasPreviousPage")]
+        public bool HasPreviousPage { get; set; }
     }
 
     private sealed class TrainerDashboardTraineesResponse
