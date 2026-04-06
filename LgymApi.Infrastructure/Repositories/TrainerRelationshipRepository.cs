@@ -13,7 +13,7 @@ namespace LgymApi.Infrastructure.Repositories;
 public sealed class TrainerRelationshipRepository : ITrainerRelationshipRepository
 {
     private readonly AppDbContext _dbContext;
-    private readonly GridifyExecutionService _gridifyExecutionService;
+    private readonly IGridifyExecutionService _gridifyExecutionService;
     private readonly IMapperRegistry _mapperRegistry;
 
     private static readonly PaginationPolicy DashboardPaginationPolicy = new()
@@ -34,7 +34,7 @@ public sealed class TrainerRelationshipRepository : ITrainerRelationshipReposito
 
     public TrainerRelationshipRepository(
         AppDbContext dbContext,
-        GridifyExecutionService gridifyExecutionService,
+        IGridifyExecutionService gridifyExecutionService,
         IMapperRegistry mapperRegistry)
     {
         _dbContext = dbContext;

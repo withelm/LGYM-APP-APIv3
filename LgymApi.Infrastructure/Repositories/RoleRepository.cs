@@ -12,7 +12,7 @@ namespace LgymApi.Infrastructure.Repositories;
 public sealed class RoleRepository : IRoleRepository
 {
     private readonly AppDbContext _dbContext;
-    private readonly GridifyExecutionService _gridifyExecutionService;
+    private readonly IGridifyExecutionService _gridifyExecutionService;
     private readonly IMapperRegistry _mapperRegistry;
 
     private static readonly PaginationPolicy RolePaginationPolicy = new()
@@ -23,7 +23,7 @@ public sealed class RoleRepository : IRoleRepository
         TieBreakerField = "id"
     };
 
-    public RoleRepository(AppDbContext dbContext, GridifyExecutionService gridifyExecutionService, IMapperRegistry mapperRegistry)
+    public RoleRepository(AppDbContext dbContext, IGridifyExecutionService gridifyExecutionService, IMapperRegistry mapperRegistry)
     {
         _dbContext = dbContext;
         _gridifyExecutionService = gridifyExecutionService;
