@@ -1,3 +1,4 @@
+using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Models;
@@ -78,8 +79,8 @@ public sealed class ExerciseServiceTests
         public Task<List<LgymApi.Application.Models.UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAsync(User user, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task UpdateAsync(User user, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Pagination<AdminUserListItem>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
-            => Task.FromResult(new Pagination<AdminUserListItem>());
+        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+            => Task.FromResult(new Pagination<UserResult>());
     }
 
     private sealed class NoOpExerciseRepository : IExerciseRepository

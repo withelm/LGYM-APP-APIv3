@@ -1,3 +1,5 @@
+using LgymApi.Application.Features.AdminManagement.Models;
+using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Models;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
@@ -91,7 +93,7 @@ public sealed class UserRepository : IUserRepository
         return Task.CompletedTask;
     }
 
-    public async Task<Pagination<AdminUserListItem>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+    public async Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
     {
         var baseQuery = BuildAdminUserBaseQuery(includeDeleted);
 
@@ -102,9 +104,9 @@ public sealed class UserRepository : IUserRepository
             AdminUserPaginationPolicy,
             cancellationToken);
 
-        return new Pagination<AdminUserListItem>
+        return new Pagination<UserResult>
         {
-            Items = pagination.Items.Select(x => new AdminUserListItem
+            Items = pagination.Items.Select(x => new UserResult
             {
                 Id = x.Id,
                 Name = x.Name,

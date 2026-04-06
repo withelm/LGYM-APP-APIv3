@@ -42,7 +42,7 @@ public sealed class AdminUserController : ControllerBase
         var pagination = result.Value;
         var response = new PaginatedAdminUserResult
         {
-            Items = _mapper.MapList<UserListResult, AdminUserListDto>(pagination.Items),
+            Items = _mapper.MapList<UserResult, AdminUserDto>(pagination.Items),
             Page = pagination.Page,
             PageSize = pagination.PageSize,
             TotalCount = pagination.TotalCount,
@@ -55,7 +55,7 @@ public sealed class AdminUserController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(AdminUserDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AdminUserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetUser([FromRoute] string id)
     {
@@ -68,7 +68,7 @@ public sealed class AdminUserController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.Map<UserDetailResult, AdminUserDetailDto>(result.Value));
+        return Ok(_mapper.Map<UserResult, AdminUserDto>(result.Value));
     }
 
     [HttpPost("{id}/update")]

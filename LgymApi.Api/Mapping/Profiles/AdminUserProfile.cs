@@ -8,21 +8,7 @@ public sealed class AdminUserProfile : IMappingProfile
 {
     public void Configure(MappingConfiguration configuration)
     {
-        configuration.CreateMap<UserListResult, AdminUserListDto>((source, _) => new AdminUserListDto
-        {
-            Id = source.Id.ToString(),
-            Name = source.Name,
-            Email = source.Email,
-            Avatar = source.Avatar,
-            ProfileRank = source.ProfileRank,
-            IsVisibleInRanking = source.IsVisibleInRanking,
-            IsBlocked = source.IsBlocked,
-            IsDeleted = source.IsDeleted,
-            CreatedAt = source.CreatedAt,
-            Roles = source.Roles
-        });
-
-        configuration.CreateMap<UserDetailResult, AdminUserDetailDto>((source, _) => new AdminUserDetailDto
+        configuration.CreateMap<UserResult, AdminUserDto>((source, _) => new AdminUserDto
         {
             Id = source.Id.ToString(),
             Name = source.Name,

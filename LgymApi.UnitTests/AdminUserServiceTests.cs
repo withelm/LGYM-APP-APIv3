@@ -215,12 +215,12 @@ public sealed class AdminUserServiceTests
             return Task.CompletedTask;
         }
 
-        public Task<Pagination<AdminUserListItem>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
         {
             var query = Users.AsQueryable();
             if (!includeDeleted) query = query.Where(u => !u.IsDeleted);
 
-            var items = query.Select(u => new AdminUserListItem
+            var items = query.Select(u => new UserResult
             {
                 Id = u.Id,
                 Name = u.Name,
@@ -233,7 +233,7 @@ public sealed class AdminUserServiceTests
                 CreatedAt = u.CreatedAt
             }).ToList();
 
-            return Task.FromResult(new Pagination<AdminUserListItem>
+            return Task.FromResult(new Pagination<UserResult>
             {
                 Items = items,
                 Page = filterInput.Page,

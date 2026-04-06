@@ -1,3 +1,4 @@
+using LgymApi.Application.Features.AdminManagement.Models;
 using System.Net;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Role;
@@ -280,8 +281,8 @@ public sealed class RoleServiceTests
             return Task.CompletedTask;
         }
 
-        public Task<Pagination<AdminUserListItem>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
-            => Task.FromResult(new Pagination<AdminUserListItem>());
+        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+            => Task.FromResult(new Pagination<UserResult>());
     }
 
     private sealed class InMemoryRoleRepository : IRoleRepository

@@ -1,3 +1,4 @@
+using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Models;
 using LgymApi.Application.Pagination;
@@ -620,8 +621,8 @@ public sealed class TrainingCompletedEmailCommandHandlerTests
         public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<Pagination<AdminUserListItem>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
-            => Task.FromResult(new Pagination<AdminUserListItem>());
+        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+            => Task.FromResult(new Pagination<UserResult>());
     }
 
     private sealed class TestTrainingRepository : ITrainingRepository

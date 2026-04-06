@@ -2,7 +2,7 @@ using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Application.Features.AdminManagement.Models;
 
-public sealed class UserListResult
+public sealed class UserResult
 {
     public Id<Domain.Entities.User> Id { get; init; }
     public string Name { get; init; } = string.Empty;
@@ -13,5 +13,6 @@ public sealed class UserListResult
     public bool IsBlocked { get; init; }
     public bool IsDeleted { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
+    public DateTimeOffset? UpdatedAt { get; init; }
     public List<string> Roles { get; init; } = new();
 }

@@ -28,14 +28,14 @@ public sealed class AdminUserService : IAdminUserService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<Pagination<UserListResult>, AppError>> GetUsersAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+    public async Task<Result<Pagination<UserResult>, AppError>> GetUsersAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
     {
         var pagination = await _userRepository.GetUsersPaginatedAsync(filterInput, includeDeleted, cancellationToken);
 
         var userIds = pagination.Items.Select(x => x.Id).ToList();
         var rolesByUser = await _roleRepository.GetRoleNamesByUserIdsAsync(userIds, cancellationToken);
 
-        var items = pagination.Items.Select(x => new UserListResult
+        var items = pagination.Items.Select(x => new UserResult
         {
             Id = x.Id,
             Name = x.Name,
@@ -49,7 +49,7 @@ public sealed class AdminUserService : IAdminUserService
             Roles = rolesByUser.TryGetValue(x.Id, out var roles) ? roles : new List<string>()
         }).ToList();
 
-        return Result<Pagination<UserListResult>, AppError>.Success(new Pagination<UserListResult>
+        return Result<Pagination<UserResult>, AppError>.Success(new Pagination<UserResult>
         {
             Items = items,
             Page = pagination.Page,
@@ -58,22 +58,22 @@ public sealed class AdminUserService : IAdminUserService
         });
     }
 
-    public async Task<Result<UserDetailResult, AppError>> GetUserAsync(Id<global::LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
+    public async Task<Result<UserResult, AppError>> GetUserAsync(Id<global::LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
-            return Result<UserDetailResult, AppError>.Failure(new NotFoundError(Messages.DidntFind));
+            return Result<UserResult, AppError>.Failure(new NotFoundError(Messages.DidntFind));
         }
 
         var user = await _userRepository.FindByIdIncludingDeletedAsync(userId, cancellationToken);
         if (user == null)
         {
-            return Result<UserDetailResult, AppError>.Failure(new NotFoundError(Messages.DidntFind));
+            return Result<UserResult, AppError>.Failure(new NotFoundError(Messages.DidntFind));
         }
 
         var roles = await _roleRepository.GetRoleNamesByUserIdAsync(userId, cancellationToken);
 
-        return Result<UserDetailResult, AppError>.Success(new UserDetailResult
+        return Result<UserResult, AppError>.Success(new UserResult
         {
             Id = user.Id,
             Name = user.Name,

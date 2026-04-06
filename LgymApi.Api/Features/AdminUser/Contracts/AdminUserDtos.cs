@@ -3,40 +3,7 @@ using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.AdminManagement.Contracts;
 
-public sealed class AdminUserListDto : IResultDto
-{
-    [JsonPropertyName("id")]
-    public string Id { get; set; } = string.Empty;
-
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("email")]
-    public string Email { get; set; } = string.Empty;
-
-    [JsonPropertyName("avatar")]
-    public string? Avatar { get; set; }
-
-    [JsonPropertyName("profileRank")]
-    public string ProfileRank { get; set; } = string.Empty;
-
-    [JsonPropertyName("isVisibleInRanking")]
-    public bool IsVisibleInRanking { get; set; }
-
-    [JsonPropertyName("isBlocked")]
-    public bool IsBlocked { get; set; }
-
-    [JsonPropertyName("isDeleted")]
-    public bool IsDeleted { get; set; }
-
-    [JsonPropertyName("createdAt")]
-    public DateTimeOffset CreatedAt { get; set; }
-
-    [JsonPropertyName("roles")]
-    public List<string> Roles { get; set; } = new();
-}
-
-public sealed class AdminUserDetailDto : IResultDto
+public sealed class AdminUserDto : IResultDto
 {
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
@@ -93,7 +60,7 @@ public sealed class UpdateUserRequest : IDto
 public sealed class PaginatedAdminUserResult : IResultDto
 {
     [JsonPropertyName("items")]
-    public List<AdminUserListDto> Items { get; set; } = new();
+    public List<AdminUserDto> Items { get; set; } = new();
 
     [JsonPropertyName("page")]
     public int Page { get; set; }

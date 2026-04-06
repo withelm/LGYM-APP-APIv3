@@ -1,3 +1,4 @@
+using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Models;
 using LgymApi.Application.Pagination;
@@ -118,8 +119,8 @@ public sealed class UserContextMiddlewareBlockedTests
             if (index >= 0) Users[index] = user;
             return Task.CompletedTask;
         }
-        public Task<LgymApi.Application.Pagination.Pagination<LgymApi.Application.Repositories.AdminUserListItem>> GetUsersPaginatedAsync(LgymApi.Application.Pagination.FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
-            => Task.FromResult(new LgymApi.Application.Pagination.Pagination<LgymApi.Application.Repositories.AdminUserListItem>());
+        public Task<LgymApi.Application.Pagination.Pagination<LgymApi.Application.Features.AdminManagement.Models.UserResult>> GetUsersPaginatedAsync(LgymApi.Application.Pagination.FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+            => Task.FromResult(new LgymApi.Application.Pagination.Pagination<LgymApi.Application.Features.AdminManagement.Models.UserResult>());
     }
 
     private sealed class FakeBlockedSessionCache : IUserSessionCache

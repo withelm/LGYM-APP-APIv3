@@ -1,3 +1,4 @@
+using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.PasswordReset;
 using LgymApi.Application.Models;
@@ -420,8 +421,8 @@ public sealed class PasswordResetServiceTests
         public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<Pagination<AdminUserListItem>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
-            => Task.FromResult(new Pagination<AdminUserListItem>());
+        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+            => Task.FromResult(new Pagination<UserResult>());
     }
 
     private sealed class FakePasswordResetTokenRepository : IPasswordResetTokenRepository
