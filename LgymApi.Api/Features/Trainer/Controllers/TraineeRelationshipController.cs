@@ -31,7 +31,7 @@ public sealed class TraineeRelationshipController : ControllerBase
 
     [HttpPost("invitations/{invitationId}/accept")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> AcceptInvitation([FromRoute] string invitationId)
+    public async Task<IActionResult> AcceptInvitation([FromRoute] string invitationId, CancellationToken cancellationToken = default)
     {
         if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
         {
@@ -39,7 +39,7 @@ public sealed class TraineeRelationshipController : ControllerBase
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.AcceptInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.AcceptInvitationAsync(trainee!, parsedInvitationId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -50,7 +50,7 @@ public sealed class TraineeRelationshipController : ControllerBase
 
     [HttpPost("invitations/{invitationId}/reject")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> RejectInvitation([FromRoute] string invitationId)
+    public async Task<IActionResult> RejectInvitation([FromRoute] string invitationId, CancellationToken cancellationToken = default)
     {
         if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
         {
@@ -58,7 +58,7 @@ public sealed class TraineeRelationshipController : ControllerBase
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.RejectInvitationAsync(trainee!, parsedInvitationId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.RejectInvitationAsync(trainee!, parsedInvitationId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -69,10 +69,10 @@ public sealed class TraineeRelationshipController : ControllerBase
 
     [HttpPost("trainer/detach")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> DetachFromTrainer()
+    public async Task<IActionResult> DetachFromTrainer(CancellationToken cancellationToken = default)
     {
         var trainee = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.DetachFromTrainerAsync(trainee!, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.DetachFromTrainerAsync(trainee!, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -83,10 +83,10 @@ public sealed class TraineeRelationshipController : ControllerBase
 
     [HttpGet("plan/active")]
     [ProducesResponseType(typeof(TrainerManagedPlanDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetActiveAssignedPlan()
+    public async Task<IActionResult> GetActiveAssignedPlan(CancellationToken cancellationToken = default)
     {
         var trainee = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetActiveAssignedPlanAsync(trainee!, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetActiveAssignedPlanAsync(trainee!, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

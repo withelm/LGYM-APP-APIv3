@@ -31,11 +31,12 @@ public sealed class InAppNotificationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetNotifications(
         [FromRoute] string id,
-        [FromQuery] GetNotificationsQueryDto query)
+        [FromQuery] GetNotificationsQueryDto query,
+        CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var cursorQuery = _mapper.Map<GetNotificationsQueryDto, CursorPaginationQuery>(query);
-        var result = await _notificationService.GetForUserAsync(userId, cursorQuery, HttpContext.RequestAborted);
+        var result = await _notificationService.GetForUserAsync(userId, cursorQuery, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -51,11 +52,12 @@ public sealed class InAppNotificationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkAsRead(
         [FromRoute] string id,
-        [FromRoute] string notificationId)
+        [FromRoute] string notificationId,
+        CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var notifId = notificationId.ToIdOrEmpty<NotificationEntity>();
-        var result = await _notificationService.MarkAsReadAsync(notifId, userId, HttpContext.RequestAborted);
+        var result = await _notificationService.MarkAsReadAsync(notifId, userId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -69,10 +71,11 @@ public sealed class InAppNotificationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> MarkAllAsRead(
         [FromRoute] string id,
-        [FromQuery] DateTimeOffset? before)
+        [FromQuery] DateTimeOffset? before,
+        CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _notificationService.MarkAllAsReadAsync(userId, before, HttpContext.RequestAborted);
+        var result = await _notificationService.MarkAllAsReadAsync(userId, before, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -84,10 +87,10 @@ public sealed class InAppNotificationController : ControllerBase
     [HttpGet("{id}/notifications/unread-count")]
     [ProducesResponseType(typeof(UnreadCountDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetUnreadCount([FromRoute] string id)
+    public async Task<IActionResult> GetUnreadCount([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _notificationService.GetUnreadCountAsync(userId, HttpContext.RequestAborted);
+        var result = await _notificationService.GetUnreadCountAsync(userId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

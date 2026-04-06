@@ -31,7 +31,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CreatePlan([FromRoute] string id, [FromBody] PlanFormDto form)
+    public async Task<IActionResult> CreatePlan([FromRoute] string id, [FromBody] PlanFormDto form, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<UserEntity>.TryParse(id, out var routeUserId))
@@ -39,7 +39,7 @@ public sealed class PlanController : ControllerBase
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planService.CreatePlanAsync(user!, routeUserId, form.Name, HttpContext.RequestAborted);
+        var result = await _planService.CreatePlanAsync(user!, routeUserId, form.Name, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -53,7 +53,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdatePlan([FromRoute] string id, [FromBody] PlanFormDto form)
+    public async Task<IActionResult> UpdatePlan([FromRoute] string id, [FromBody] PlanFormDto form, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<UserEntity>.TryParse(id, out var routeUserId))
@@ -66,7 +66,7 @@ public sealed class PlanController : ControllerBase
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planService.UpdatePlanAsync(user!, routeUserId, planId, form.Name, HttpContext.RequestAborted);
+        var result = await _planService.UpdatePlanAsync(user!, routeUserId, planId, form.Name, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -79,7 +79,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(PlanFormDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPlanConfig([FromRoute] string id)
+    public async Task<IActionResult> GetPlanConfig([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<UserEntity>.TryParse(id, out var routeUserId))
@@ -87,7 +87,7 @@ public sealed class PlanController : ControllerBase
             return Result<PlanEntity, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planService.GetPlanConfigAsync(user!, routeUserId, HttpContext.RequestAborted);
+        var result = await _planService.GetPlanConfigAsync(user!, routeUserId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -100,11 +100,11 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(bool), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(bool), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CheckIsUserHavePlan([FromRoute] string id)
+    public async Task<IActionResult> CheckIsUserHavePlan([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var result = await _planService.CheckIsUserHavePlanAsync(user!, routeUserId, HttpContext.RequestAborted);
+        var result = await _planService.CheckIsUserHavePlanAsync(user!, routeUserId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -117,7 +117,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(List<PlanFormDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPlansList([FromRoute] string id)
+    public async Task<IActionResult> GetPlansList([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<UserEntity>.TryParse(id, out var routeUserId))
@@ -125,7 +125,7 @@ public sealed class PlanController : ControllerBase
             return Result<List<PlanEntity>, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planService.GetPlansListAsync(user!, routeUserId, HttpContext.RequestAborted);
+        var result = await _planService.GetPlansListAsync(user!, routeUserId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -139,7 +139,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SetNewActivePlan([FromRoute] string id, [FromBody] SetActivePlanDto form)
+    public async Task<IActionResult> SetNewActivePlan([FromRoute] string id, [FromBody] SetActivePlanDto form, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<UserEntity>.TryParse(id, out var routeUserId))
@@ -152,7 +152,7 @@ public sealed class PlanController : ControllerBase
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planService.SetNewActivePlanAsync(user!, routeUserId, planId, HttpContext.RequestAborted);
+        var result = await _planService.SetNewActivePlanAsync(user!, routeUserId, planId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -165,10 +165,10 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(PlanDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CopyPlan([FromBody] CopyPlanDto dto)
+    public async Task<IActionResult> CopyPlan([FromBody] CopyPlanDto dto, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _planService.CopyPlanAsync(user!, dto.ShareCode, HttpContext.RequestAborted);
+        var result = await _planService.CopyPlanAsync(user!, dto.ShareCode, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -182,7 +182,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ShareCodeResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GenerateShareCode([FromRoute] string id)
+    public async Task<IActionResult> GenerateShareCode([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<PlanEntity>.TryParse(id, out var planId))
@@ -190,7 +190,7 @@ public sealed class PlanController : ControllerBase
             return Result<string, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planService.GenerateShareCodeAsync(user!, planId, HttpContext.RequestAborted);
+        var result = await _planService.GenerateShareCodeAsync(user!, planId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -203,7 +203,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeletePlan([FromRoute] string id)
+    public async Task<IActionResult> DeletePlan([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<PlanEntity>.TryParse(id, out var planId))
@@ -211,7 +211,7 @@ public sealed class PlanController : ControllerBase
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planService.DeletePlanAsync(user!, planId, HttpContext.RequestAborted);
+        var result = await _planService.DeletePlanAsync(user!, planId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

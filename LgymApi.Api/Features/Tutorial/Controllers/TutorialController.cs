@@ -25,10 +25,10 @@ public sealed class TutorialController : ControllerBase
 
     [HttpGet("active")]
     [ProducesResponseType(typeof(List<TutorialProgressDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetActiveTutorials()
+    public async Task<IActionResult> GetActiveTutorials(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _tutorialService.GetActiveTutorialsAsync(user!.Id, HttpContext.RequestAborted);
+        var result = await _tutorialService.GetActiveTutorialsAsync(user!.Id, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -42,10 +42,10 @@ public sealed class TutorialController : ControllerBase
     [HttpGet("{tutorialType}")]
     [ProducesResponseType(typeof(TutorialProgressDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTutorialProgress([FromRoute] TutorialType tutorialType)
+    public async Task<IActionResult> GetTutorialProgress([FromRoute] TutorialType tutorialType, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _tutorialService.GetTutorialProgressAsync(user!.Id, tutorialType, HttpContext.RequestAborted);
+        var result = await _tutorialService.GetTutorialProgressAsync(user!.Id, tutorialType, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -63,10 +63,10 @@ public sealed class TutorialController : ControllerBase
 
     [HttpPost("completeStep")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CompleteStep([FromBody] CompleteStepRequest request)
+    public async Task<IActionResult> CompleteStep([FromBody] CompleteStepRequest request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _tutorialService.CompleteStepAsync(user!.Id, request.TutorialType, request.Step, HttpContext.RequestAborted);
+        var result = await _tutorialService.CompleteStepAsync(user!.Id, request.TutorialType, request.Step, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -78,10 +78,10 @@ public sealed class TutorialController : ControllerBase
 
     [HttpPost("complete")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CompleteTutorial([FromBody] CompleteTutorialRequest request)
+    public async Task<IActionResult> CompleteTutorial([FromBody] CompleteTutorialRequest request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _tutorialService.CompleteTutorialAsync(user!.Id, request.TutorialType, HttpContext.RequestAborted);
+        var result = await _tutorialService.CompleteTutorialAsync(user!.Id, request.TutorialType, cancellationToken);
         
         if (result.IsFailure)
         {

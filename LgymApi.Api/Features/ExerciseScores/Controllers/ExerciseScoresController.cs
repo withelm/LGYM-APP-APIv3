@@ -28,11 +28,11 @@ public sealed class ExerciseScoresController : ControllerBase
     [ProducesResponseType(typeof(List<ExerciseScoresChartDataDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetExerciseScoresChartData([FromRoute] string id, [FromBody] ExerciseScoresChartRequestDto request)
+    public async Task<IActionResult> GetExerciseScoresChartData([FromRoute] string id, [FromBody] ExerciseScoresChartRequestDto request, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         Id<LgymApi.Domain.Entities.Exercise>.TryParse(request.ExerciseId, out var parsedExerciseId);
-        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, parsedExerciseId, HttpContext.RequestAborted);
+        var result = await _exerciseScoresService.GetExerciseScoresChartDataAsync(userId, parsedExerciseId, cancellationToken);
         
         if (result.IsFailure)
         {

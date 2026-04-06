@@ -35,7 +35,7 @@ public sealed class UserController : ControllerBase
     [ApiIdempotency("/api/register", ApiIdempotencyScopeSource.NormalizedEmail)]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
+    public async Task<IActionResult> Register([FromBody] RegisterUserRequest request, CancellationToken cancellationToken = default)
     {
         var preferredLanguage = Request.Headers.TryGetValue("Accept-Language", out var langs)
             ? langs.ToString()
@@ -49,7 +49,7 @@ public sealed class UserController : ControllerBase
             request.IsVisibleInRanking,
             preferredLanguage);
 
-        var result = await _userService.RegisterAsync(input, HttpContext.RequestAborted);
+        var result = await _userService.RegisterAsync(input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -61,9 +61,9 @@ public sealed class UserController : ControllerBase
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await _userService.LoginAsync(request.Name, request.Password, HttpContext.RequestAborted);
+        var result = await _userService.LoginAsync(request.Name, request.Password, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -75,19 +75,19 @@ public sealed class UserController : ControllerBase
 
     [HttpGet("{id}/isAdmin")]
     [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
-    public async Task<IActionResult> IsAdmin([FromRoute] string id)
+    public async Task<IActionResult> IsAdmin([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = ParseUserId(id);
-        var result = await _userService.IsAdminAsync(userId, HttpContext.RequestAborted);
+        var result = await _userService.IsAdminAsync(userId, cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("checkToken")]
     [ProducesResponseType(typeof(UserInfoDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CheckToken()
+    public async Task<IActionResult> CheckToken(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.CheckTokenAsync(user, HttpContext.RequestAborted);
+        var result = await _userService.CheckTokenAsync(user, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -99,10 +99,10 @@ public sealed class UserController : ControllerBase
 
     [HttpPost("logout")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Logout()
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.LogoutAsync(user, HttpContext.RequestAborted);
+        var result = await _userService.LogoutAsync(user, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -113,9 +113,9 @@ public sealed class UserController : ControllerBase
 
     [HttpGet("getUsersRanking")]
     [ProducesResponseType(typeof(List<UserBaseInfoDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetUsersRanking()
+    public async Task<IActionResult> GetUsersRanking(CancellationToken cancellationToken = default)
     {
-        var result = await _userService.GetUsersRankingAsync(HttpContext.RequestAborted);
+        var result = await _userService.GetUsersRankingAsync(cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -127,10 +127,10 @@ public sealed class UserController : ControllerBase
 
     [HttpGet("userInfo/{id}/getUserEloPoints")]
     [ProducesResponseType(typeof(UserEloDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetUserElo([FromRoute] string id)
+    public async Task<IActionResult> GetUserElo([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = ParseUserId(id);
-        var result = await _userService.GetUserEloAsync(userId, HttpContext.RequestAborted);
+        var result = await _userService.GetUserEloAsync(userId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -148,10 +148,10 @@ public sealed class UserController : ControllerBase
 
     [HttpGet("deleteAccount")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> DeleteAccount()
+    public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.DeleteAccountAsync(user, HttpContext.RequestAborted);
+        var result = await _userService.DeleteAccountAsync(user, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -162,7 +162,7 @@ public sealed class UserController : ControllerBase
 
     [HttpPost("changeVisibilityInRanking")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ChangeVisibilityInRanking([FromBody] Dictionary<string, bool> body)
+    public async Task<IActionResult> ChangeVisibilityInRanking([FromBody] Dictionary<string, bool> body, CancellationToken cancellationToken = default)
     {
         if (!body.TryGetValue("isVisibleInRanking", out var isVisible))
         {
@@ -171,7 +171,7 @@ public sealed class UserController : ControllerBase
         }
 
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.ChangeVisibilityInRankingAsync(user, isVisible, HttpContext.RequestAborted);
+        var result = await _userService.ChangeVisibilityInRankingAsync(user, isVisible, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -182,10 +182,10 @@ public sealed class UserController : ControllerBase
 
     [HttpPost("updateTimeZone")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdateTimeZone([FromBody] UpdateTimeZoneRequest request)
+    public async Task<IActionResult> UpdateTimeZone([FromBody] UpdateTimeZoneRequest request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.UpdateTimeZoneAsync(user, request.PreferredTimeZone, HttpContext.RequestAborted);
+        var result = await _userService.UpdateTimeZoneAsync(user, request.PreferredTimeZone, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -197,10 +197,10 @@ public sealed class UserController : ControllerBase
      [HttpPost("forgot-password")]
      [AllowAnonymous]
      [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken = default)
      {
          var preferences = HttpContext.GetCulturePreferences();
-         await _passwordResetService.RequestPasswordResetAsync(request.Email, preferences.First(), HttpContext.RequestAborted);
+         await _passwordResetService.RequestPasswordResetAsync(request.Email, preferences.First(), cancellationToken);
          return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.ForgotPasswordRequested));
      }
 
@@ -208,9 +208,9 @@ public sealed class UserController : ControllerBase
     [AllowAnonymous]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await _passwordResetService.ResetPasswordAsync(request.Token, request.NewPassword, HttpContext.RequestAborted);
+        var result = await _passwordResetService.ResetPasswordAsync(request.Token, request.NewPassword, cancellationToken);
         if (result.IsFailure)
         {
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.PasswordResetInvalidOrExpiredToken));
