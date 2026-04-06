@@ -147,6 +147,13 @@ public static class ServiceCollectionExtensions
             RegisterDashboardTraineeMappings(registry);
             return registry;
         });
+        services.AddSingleton(new PaginationPolicy
+        {
+            MaxPageSize = 100,
+            DefaultPageSize = 20,
+            DefaultSortField = "id",
+            TieBreakerField = "id"
+        });
         services.AddScoped<ICommittedIntentDispatcher, CommittedIntentDispatcher>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 

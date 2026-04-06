@@ -3,7 +3,7 @@ using LgymApi.Application.Common.Results;
 
 namespace LgymApi.Application.Pagination;
 
-public interface IQueryPaginationService
+public interface IQueryPaginationService    
 {
     Task<Result<Pagination<TProjection>, AppError>> ExecuteAsync<TProjection>(
         Func<IQueryable<TProjection>> queryFactory,
