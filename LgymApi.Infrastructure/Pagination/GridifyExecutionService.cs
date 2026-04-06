@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Linq.Expressions;
-using System.Resources;
 using Gridify;
 using LgymApi.Application.Pagination;
 using Microsoft.EntityFrameworkCore;
@@ -9,9 +7,6 @@ namespace LgymApi.Infrastructure.Pagination;
 
 public sealed class GridifyExecutionService : IGridifyExecutionService
 {
-    private static readonly ResourceManager EnumResourceManager =
-        new("LgymApi.Resources.Resources.Enums", typeof(LgymApi.Resources.Enums).Assembly);
-
     public async Task<Pagination<TProjection>> ExecuteAsync<TProjection>(
         IQueryable<TProjection> baseQuery,
         FilterInput filterInput,
@@ -150,10 +145,7 @@ public sealed class GridifyExecutionService : IGridifyExecutionService
             var sort = enumSortFields[i];
             var mapping = mappings.First(m =>
                 m.FieldName.Equals(sort.FieldName, StringComparison.OrdinalIgnoreCase));
-            var memberType = ResolveMemberType(typeof(TProjection), mapping.MemberName);
-            var enumType = Nullable.GetUnderlyingType(memberType) ?? memberType;
-
-            var expression = CreateEnumCaseWhenExpression<TProjection>(enumType, mapping.MemberName);
+            var expression = CreateEnumIntCastExpression<TProjection>(mapping.MemberName);
 
             if (i == 0 && orderedQuery == null)
             {
@@ -175,45 +167,18 @@ public sealed class GridifyExecutionService : IGridifyExecutionService
         return (query, remainingOrderBy);
     }
 
-    private static Expression<Func<TProjection, int>> CreateEnumCaseWhenExpression<TProjection>(
-        Type enumType, string memberName)
+    private static Expression<Func<TProjection, int>> CreateEnumIntCastExpression<TProjection>(string memberName)
         where TProjection : class
     {
-        var culture = CultureInfo.CurrentUICulture;
-        var sortKey = $"{enumType.Name}_SortOrder";
-        var sortOrderString = EnumResourceManager.GetString(sortKey, culture);
-
-        string[] orderedNames;
-
-        if (!string.IsNullOrWhiteSpace(sortOrderString))
-        {
-            orderedNames = sortOrderString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        }
-        else
-        {
-            orderedNames = Enum.GetNames(enumType)
-                .OrderBy(n => (int)Enum.Parse(enumType, n))
-                .ToArray();
-        }
-
         var parameter = Expression.Parameter(typeof(TProjection), "x");
-        Expression access = parameter;
+        Expression body = parameter;
 
         foreach (var segment in memberName.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            access = Expression.PropertyOrField(access, segment);
+            body = Expression.PropertyOrField(body, segment);
         }
 
-        Expression body = Expression.Constant(orderedNames.Length);
-
-        for (int i = orderedNames.Length - 1; i >= 0; i--)
-        {
-            var enumValue = Enum.Parse(enumType, orderedNames[i], ignoreCase: true);
-            var enumConstant = Expression.Constant(enumValue, enumType);
-            var equality = Expression.Equal(access, enumConstant);
-            var indexConstant = Expression.Constant(i);
-            body = Expression.Condition(equality, indexConstant, body);
-        }
+        body = Expression.Convert(body, typeof(int));
 
         return Expression.Lambda<Func<TProjection, int>>(body, parameter);
     }

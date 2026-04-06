@@ -120,7 +120,4 @@
   <data name="TrainerInvitationStatus_Expired" xml:space="preserve">
     <value>Expired</value>
   </data>
-  <data name="TrainerInvitationStatus_SortOrder" xml:space="preserve">
-    <value>Pending,Accepted,Rejected,Revoked,Expired</value>
-  </data>
 </root>
