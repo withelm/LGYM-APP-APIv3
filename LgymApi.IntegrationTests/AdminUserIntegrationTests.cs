@@ -19,7 +19,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "regular-user", email: "regular@example.com", password: "pass1234");
         await AuthenticateAsync(user.Name, "pass1234");
 
-        var response = await Client.GetAsync("/api/admin/users");
+        var response = await Client.PostAsJsonAsync("/api/admin/users/paginated", new { page = 1, pageSize = 10 });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -31,7 +31,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
         await SeedUserAsync(name: "user-one", email: "user-one@example.com", password: "pass1234");
         await SeedUserAsync(name: "user-two", email: "user-two@example.com", password: "pass1234");
 
-        var response = await Client.GetAsync("/api/admin/users?page=1&pageSize=10");
+        var response = await Client.PostAsJsonAsync("/api/admin/users/paginated", new { page = 1, pageSize = 10 });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PaginatedAdminUserResponse>();
@@ -47,7 +47,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
 
-        var response = await Client.GetAsync("/api/admin/users?includeDeleted=true");
+        var response = await Client.PostAsJsonAsync("/api/admin/users/paginated", new { page = 1, pageSize = 10, includeDeleted = true });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PaginatedAdminUserResponse>();

@@ -41,11 +41,18 @@ public sealed class RoleController : ControllerBase
         return Ok(_mapper.MapList<RoleResult, RoleDto>(result.Value));
     }
 
-    [HttpGet("paginated")]
+    [HttpPost("paginated")]
     [ProducesResponseType(typeof(PaginatedRoleResult), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRolesPaginated([FromQuery] FilterInput filterInput)
+    public async Task<IActionResult> GetRolesPaginated([FromBody] PaginatedRoleRequest request)
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var filterInput = new FilterInput
+        {
+            Page = request.Page,
+            PageSize = request.PageSize,
+            FilterGroups = request.FilterGroups,
+            SortDescriptors = request.SortDescriptors
+        };
         var result = await _roleService.GetRolesPaginatedAsync(filterInput, cancellationToken);
         
         if (result.IsFailure)

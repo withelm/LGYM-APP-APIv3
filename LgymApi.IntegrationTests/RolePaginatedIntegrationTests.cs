@@ -14,7 +14,7 @@ public sealed class RolePaginatedIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
 
-        var response = await Client.GetAsync("/api/roles/paginated?page=1&pageSize=10&sort=name");
+        var response = await Client.PostAsJsonAsync("/api/roles/paginated", new { page = 1, pageSize = 10 });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PaginatedRoleResponse>();
@@ -30,7 +30,12 @@ public sealed class RolePaginatedIntegrationTests : IntegrationTestBase
     {
         await AuthenticateAsAdminAsync();
 
-        var response = await Client.GetAsync("/api/roles/paginated?page=1&pageSize=10&sortDescriptors[0].fieldName=name&sortDescriptors[0].descending=false");
+        var response = await Client.PostAsJsonAsync("/api/roles/paginated", new
+        {
+            page = 1,
+            pageSize = 10,
+            sortDescriptors = new[] { new { fieldName = "name", descending = false } }
+        });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PaginatedRoleResponse>();

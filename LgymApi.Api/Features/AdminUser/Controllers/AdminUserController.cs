@@ -27,12 +27,19 @@ public sealed class AdminUserController : ControllerBase
         _mapper = mapper;
     }
 
-    [HttpGet]
+    [HttpPost("paginated")]
     [ProducesResponseType(typeof(PaginatedAdminUserResult), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetUsers([FromQuery] FilterInput filterInput, [FromQuery] bool includeDeleted = false)
+    public async Task<IActionResult> GetUsersPaginated([FromBody] PaginatedUserRequest request)
     {
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
-        var result = await _adminUserService.GetUsersAsync(filterInput, includeDeleted, cancellationToken);
+        var filterInput = new FilterInput
+        {
+            Page = request.Page,
+            PageSize = request.PageSize,
+            FilterGroups = request.FilterGroups,
+            SortDescriptors = request.SortDescriptors
+        };
+        var result = await _adminUserService.GetUsersAsync(filterInput, request.IncludeDeleted, cancellationToken);
 
         if (result.IsFailure)
         {

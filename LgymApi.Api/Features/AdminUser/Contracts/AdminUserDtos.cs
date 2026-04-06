@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Interfaces;
+using LgymApi.Application.Pagination;
 
 namespace LgymApi.Api.Features.AdminManagement.Contracts;
 
@@ -55,6 +56,11 @@ public sealed class UpdateUserRequest : IDto
 
     [JsonPropertyName("avatar")]
     public string? Avatar { get; set; }
+}
+
+public sealed class PaginatedUserRequest : PaginatedRequest, IDto
+{
+    public bool IncludeDeleted { get; init; }
 }
 
 public sealed class PaginatedAdminUserResult : IResultDto
