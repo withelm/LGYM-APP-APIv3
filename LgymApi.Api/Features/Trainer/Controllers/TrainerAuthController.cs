@@ -29,7 +29,7 @@ public sealed class TrainerAuthController : ControllerBase
     [ApiIdempotency("/api/trainer/register", ApiIdempotencyScopeSource.NormalizedEmail)]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
+    public async Task<IActionResult> Register([FromBody] RegisterUserRequest request, CancellationToken cancellationToken = default)
     {
         var input = new RegisterUserInput(
             request.Name,
@@ -39,7 +39,7 @@ public sealed class TrainerAuthController : ControllerBase
             IsVisibleInRanking: null,
             PreferredLanguage: null);
 
-        var result = await _userService.RegisterTrainerAsync(input, HttpContext.RequestAborted);
+        var result = await _userService.RegisterTrainerAsync(input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -51,9 +51,9 @@ public sealed class TrainerAuthController : ControllerBase
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await _userService.LoginTrainerAsync(request.Name, request.Password, HttpContext.RequestAborted);
+        var result = await _userService.LoginTrainerAsync(request.Name, request.Password, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -65,10 +65,10 @@ public sealed class TrainerAuthController : ControllerBase
     [HttpGet("checkToken")]
     [Authorize(Policy = AuthConstants.Policies.TrainerAccess)]
     [ProducesResponseType(typeof(UserInfoDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CheckToken()
+    public async Task<IActionResult> CheckToken(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.CheckTokenAsync(user, HttpContext.RequestAborted);
+        var result = await _userService.CheckTokenAsync(user, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

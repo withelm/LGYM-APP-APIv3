@@ -27,7 +27,7 @@ public sealed class PublicInvitationController : ControllerBase
     [HttpGet("{invitationId}")]
     [ProducesResponseType(typeof(PublicInvitationStatusDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetInvitationStatus([FromRoute] string invitationId, [FromQuery] string? code)
+    public async Task<IActionResult> GetInvitationStatus([FromRoute] string invitationId, [FromQuery] string? code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
@@ -39,7 +39,7 @@ public sealed class PublicInvitationController : ControllerBase
             return NotFound();
         }
 
-        var invitation = await _trainerRelationshipRepository.FindInvitationByIdWithCodeAsync(parsedId, code, HttpContext.RequestAborted);
+        var invitation = await _trainerRelationshipRepository.FindInvitationByIdWithCodeAsync(parsedId, code, cancellationToken);
         if (invitation == null)
         {
             return NotFound();
@@ -48,7 +48,7 @@ public sealed class PublicInvitationController : ControllerBase
         bool userExists = invitation.TraineeId != null;
         if (!userExists && !string.IsNullOrWhiteSpace(invitation.InviteeEmail))
         {
-            userExists = await _userRepository.FindByEmailAsync(invitation.InviteeEmail, HttpContext.RequestAborted) != null;
+            userExists = await _userRepository.FindByEmailAsync(invitation.InviteeEmail, cancellationToken) != null;
         }
 
         return Ok(_mapper.Map<(string Status, bool UserExists), PublicInvitationStatusDto>((invitation.Status.ToString(), userExists)));

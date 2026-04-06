@@ -28,12 +28,12 @@ public sealed class MainRecordsController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddNewRecord([FromRoute] string id, [FromBody] MainRecordsFormDto form)
+    public async Task<IActionResult> AddNewRecord([FromRoute] string id, [FromBody] MainRecordsFormDto form, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var exerciseId = form.ExerciseId.ToIdOrEmpty<Domain.Entities.Exercise>();
         var input = new AddMainRecordInput(userId, exerciseId, form.Weight, form.Unit, form.Date);
-        var result = await _mainRecordsService.AddNewRecordAsync(input, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.AddNewRecordAsync(input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -46,10 +46,10 @@ public sealed class MainRecordsController : ControllerBase
     [ProducesResponseType(typeof(List<MainRecordResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetMainRecordsHistory([FromRoute] string id)
+    public async Task<IActionResult> GetMainRecordsHistory([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _mainRecordsService.GetMainRecordsHistoryAsync(userId, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.GetMainRecordsHistoryAsync(userId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -64,10 +64,10 @@ public sealed class MainRecordsController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     // Route name is legacy; payload contains best (max) record per exercise.
-    public async Task<IActionResult> GetLastMainRecords([FromRoute] string id)
+    public async Task<IActionResult> GetLastMainRecords([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _mainRecordsService.GetLastMainRecordsAsync(userId, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.GetLastMainRecordsAsync(userId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -84,11 +84,11 @@ public sealed class MainRecordsController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteMainRecord([FromRoute] string id)
+    public async Task<IActionResult> DeleteMainRecord([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var currentUserId = HttpContext.GetCurrentUserId();
         var recordId = id.ToIdOrEmpty<Domain.Entities.MainRecord>();
-        var result = await _mainRecordsService.DeleteMainRecordAsync(currentUserId, recordId, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.DeleteMainRecordAsync(currentUserId, recordId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -101,13 +101,13 @@ public sealed class MainRecordsController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateMainRecords([FromRoute] string id, [FromBody] MainRecordsFormDto form)
+    public async Task<IActionResult> UpdateMainRecords([FromRoute] string id, [FromBody] MainRecordsFormDto form, CancellationToken cancellationToken = default)
     {
         var routeUserId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var recordId = form.Id.ToIdOrEmpty<Domain.Entities.MainRecord>();
         var exerciseId = form.ExerciseId.ToIdOrEmpty<Domain.Entities.Exercise>();
         var input = new UpdateMainRecordInput(routeUserId, routeUserId, recordId, exerciseId, form.Weight, form.Unit, form.Date);
-        var result = await _mainRecordsService.UpdateMainRecordAsync(input, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.UpdateMainRecordAsync(input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -119,11 +119,11 @@ public sealed class MainRecordsController : ControllerBase
     [HttpPost("mainRecords/getRecordOrPossibleRecordInExercise")]
     [ProducesResponseType(typeof(PossibleRecordForExerciseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetRecordOrPossibleRecordInExercise([FromBody] RecordOrPossibleRequestDto request)
+    public async Task<IActionResult> GetRecordOrPossibleRecordInExercise([FromBody] RecordOrPossibleRequestDto request, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.GetCurrentUserId();
         var exerciseId = request.ExerciseId.ToIdOrEmpty<Domain.Entities.Exercise>();
-        var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, exerciseId, HttpContext.RequestAborted);
+        var result = await _mainRecordsService.GetRecordOrPossibleRecordInExerciseAsync(userId, exerciseId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

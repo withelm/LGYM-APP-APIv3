@@ -29,9 +29,9 @@ public sealed class AppConfigController : ControllerBase
     [ProducesResponseType(typeof(AppConfigInfoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request)
+    public async Task<IActionResult> GetAppVersion([FromBody] AppConfigVersionRequestDto request, CancellationToken cancellationToken = default)
     {
-        var result = await _appConfigService.GetLatestByPlatformAsync(request.Platform, HttpContext.RequestAborted);
+        var result = await _appConfigService.GetLatestByPlatformAsync(request.Platform, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -44,7 +44,7 @@ public sealed class AppConfigController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> CreateNewAppVersion([FromRoute] string id, [FromBody] AppConfigInfoWithPlatformDto form)
+    public async Task<IActionResult> CreateNewAppVersion([FromRoute] string id, [FromBody] AppConfigInfoWithPlatformDto form, CancellationToken cancellationToken = default)
     {
         var guidUserId = HttpContext.ParseRouteUserIdForCurrentAdmin(id);
         var userId = guidUserId;
@@ -55,7 +55,7 @@ public sealed class AppConfigController : ControllerBase
             form.ForceUpdate,
             form.UpdateUrl,
             form.ReleaseNotes);
-        var result = await _appConfigService.CreateNewAppVersionAsync(userId, input, HttpContext.RequestAborted);
+        var result = await _appConfigService.CreateNewAppVersionAsync(userId, input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

@@ -28,9 +28,8 @@ public sealed class RoleController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(List<RoleDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRoles()
+    public async Task<IActionResult> GetRoles(CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var result = await _roleService.GetRolesAsync(cancellationToken);
         
         if (result.IsFailure)
@@ -43,9 +42,8 @@ public sealed class RoleController : ControllerBase
 
     [HttpPost("paginated")]
     [ProducesResponseType(typeof(PaginatedRoleResult), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRolesPaginated([FromBody] PaginatedRoleRequest request)
+    public async Task<IActionResult> GetRolesPaginated([FromBody] PaginatedRoleRequest request, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var filterInput = new FilterInput
         {
             Page = request.Page,
@@ -78,9 +76,8 @@ public sealed class RoleController : ControllerBase
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(RoleDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetRole([FromRoute] string id)
+    public async Task<IActionResult> GetRole([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Id<Domain.Entities.Role>.TryParse(id, out var parsedRoleId) ? parsedRoleId : Id<Domain.Entities.Role>.Empty;
         var result = await _roleService.GetRoleAsync(roleId, cancellationToken);
         
@@ -103,9 +100,8 @@ public sealed class RoleController : ControllerBase
     [HttpPost]
     [ProducesResponseType(typeof(RoleDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> CreateRole([FromBody] UpsertRoleRequest request)
+    public async Task<IActionResult> CreateRole([FromBody] UpsertRoleRequest request, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var result = await _roleService.CreateRoleAsync(request.Name, request.Description, request.PermissionClaims, cancellationToken);
         
         if (result.IsFailure)
@@ -120,9 +116,8 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateRole([FromRoute] string id, [FromBody] UpsertRoleRequest request)
+    public async Task<IActionResult> UpdateRole([FromRoute] string id, [FromBody] UpsertRoleRequest request, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Id<Domain.Entities.Role>.TryParse(id, out var parsedRoleId) ? parsedRoleId : Id<Domain.Entities.Role>.Empty;
         var result = await _roleService.UpdateRoleAsync(roleId, request.Name, request.Description, request.PermissionClaims, cancellationToken);
         
@@ -137,9 +132,8 @@ public sealed class RoleController : ControllerBase
     [HttpPost("{id}/delete")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteRole([FromRoute] string id)
+    public async Task<IActionResult> DeleteRole([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var roleId = Id<Domain.Entities.Role>.TryParse(id, out var parsedRoleId) ? parsedRoleId : Id<Domain.Entities.Role>.Empty;
         var result = await _roleService.DeleteRoleAsync(roleId, cancellationToken);
         
@@ -155,9 +149,8 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateUserRoles([FromRoute] string id, [FromBody] UpdateUserRolesRequest request)
+    public async Task<IActionResult> UpdateUserRoles([FromRoute] string id, [FromBody] UpdateUserRolesRequest request, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var userId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
         var result = await _roleService.UpdateUserRolesAsync(userId, request.Roles, cancellationToken);
         

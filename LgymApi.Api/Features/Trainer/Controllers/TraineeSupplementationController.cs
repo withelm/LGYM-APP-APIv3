@@ -29,10 +29,10 @@ public sealed class TraineeSupplementationController : ControllerBase
 
     [HttpGet("supplements/schedule")]
     [ProducesResponseType(typeof(List<SupplementScheduleEntryDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetSchedule([FromQuery] DateOnly? date)
+    public async Task<IActionResult> GetSchedule([FromQuery] DateOnly? date, CancellationToken cancellationToken = default)
     {
         var trainee = HttpContext.GetCurrentUser();
-        var result = await _supplementationService.GetActiveScheduleForDateAsync(trainee!, date ?? DateOnly.FromDateTime(DateTime.UtcNow), HttpContext.RequestAborted);
+        var result = await _supplementationService.GetActiveScheduleForDateAsync(trainee!, date ?? DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken);
 
         if (result.IsFailure)
         {
@@ -45,7 +45,7 @@ public sealed class TraineeSupplementationController : ControllerBase
     [HttpPost("supplements/intakes/check-off")]
     [ProducesResponseType(typeof(SupplementScheduleEntryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> CheckOffIntake([FromBody] CheckOffSupplementIntakeRequest request)
+    public async Task<IActionResult> CheckOffIntake([FromBody] CheckOffSupplementIntakeRequest request, CancellationToken cancellationToken = default)
     {
         Id<LgymApi.Domain.Entities.SupplementPlanItem>.TryParse(request.PlanItemId, out var parsedPlanItemId);
         
@@ -55,7 +55,7 @@ public sealed class TraineeSupplementationController : ControllerBase
             PlanItemId = parsedPlanItemId,
             IntakeDate = request.IntakeDate,
             TakenAt = request.TakenAt
-        }, HttpContext.RequestAborted);
+        }, cancellationToken);
 
         if (result.IsFailure)
         {

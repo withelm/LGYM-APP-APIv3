@@ -29,9 +29,8 @@ public sealed class AdminUserController : ControllerBase
 
     [HttpPost("paginated")]
     [ProducesResponseType(typeof(PaginatedAdminUserResult), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetUsersPaginated([FromBody] PaginatedUserRequest request)
+    public async Task<IActionResult> GetUsersPaginated([FromBody] PaginatedUserRequest request, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var filterInput = new FilterInput
         {
             Page = request.Page,
@@ -64,9 +63,8 @@ public sealed class AdminUserController : ControllerBase
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(AdminUserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetUser([FromRoute] string id)
+    public async Task<IActionResult> GetUser([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var userId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
         var result = await _adminUserService.GetUserAsync(userId, cancellationToken);
 
@@ -82,9 +80,8 @@ public sealed class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request)
+    public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
         var adminUserId = GetAdminUserId();
         var command = new UpdateUserCommand
@@ -110,9 +107,8 @@ public sealed class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteUser([FromRoute] string id)
+    public async Task<IActionResult> DeleteUser([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
         var adminUserId = GetAdminUserId();
         var result = await _adminUserService.DeleteUserAsync(targetUserId, adminUserId, cancellationToken);
@@ -129,9 +125,8 @@ public sealed class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> BlockUser([FromRoute] string id)
+    public async Task<IActionResult> BlockUser([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
         var adminUserId = GetAdminUserId();
         var result = await _adminUserService.BlockUserAsync(targetUserId, adminUserId, cancellationToken);
@@ -147,9 +142,8 @@ public sealed class AdminUserController : ControllerBase
     [HttpPost("{id}/unblock")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UnblockUser([FromRoute] string id)
+    public async Task<IActionResult> UnblockUser([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
         var result = await _adminUserService.UnblockUserAsync(targetUserId, cancellationToken);
 

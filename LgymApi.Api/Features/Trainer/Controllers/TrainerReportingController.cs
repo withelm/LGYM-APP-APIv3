@@ -30,7 +30,7 @@ public sealed class TrainerReportingController : ControllerBase
 
     [HttpPost("report-templates")]
     [ProducesResponseType(typeof(ReportTemplateDto), StatusCodes.Status201Created)]
-    public async Task<IActionResult> CreateTemplate([FromBody] UpsertReportTemplateRequest request)
+    public async Task<IActionResult> CreateTemplate([FromBody] UpsertReportTemplateRequest request, CancellationToken cancellationToken = default)
     {
         var trainer = HttpContext.GetCurrentUser();
         var result = await _reportingService.CreateTemplateAsync(trainer!, new CreateReportTemplateCommand
@@ -38,7 +38,7 @@ public sealed class TrainerReportingController : ControllerBase
             Name = request.Name,
             Description = request.Description,
             Fields = request.Fields.Select(MapField).ToList()
-        }, HttpContext.RequestAborted);
+        }, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -50,10 +50,10 @@ public sealed class TrainerReportingController : ControllerBase
 
     [HttpGet("report-templates")]
     [ProducesResponseType(typeof(List<ReportTemplateDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetTemplates()
+    public async Task<IActionResult> GetTemplates(CancellationToken cancellationToken = default)
     {
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _reportingService.GetTrainerTemplatesAsync(trainer!, HttpContext.RequestAborted);
+        var result = await _reportingService.GetTrainerTemplatesAsync(trainer!, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -66,7 +66,7 @@ public sealed class TrainerReportingController : ControllerBase
     [HttpGet("report-templates/{templateId}")]
     [ProducesResponseType(typeof(ReportTemplateDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetTemplate([FromRoute] string templateId)
+    public async Task<IActionResult> GetTemplate([FromRoute] string templateId, CancellationToken cancellationToken = default)
     {
         if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
@@ -74,7 +74,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _reportingService.GetTrainerTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
+        var result = await _reportingService.GetTrainerTemplateAsync(trainer!, parsedTemplateId, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -87,7 +87,7 @@ public sealed class TrainerReportingController : ControllerBase
     [HttpPost("report-templates/{templateId}/update")]
     [ProducesResponseType(typeof(ReportTemplateDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UpdateTemplate([FromRoute] string templateId, [FromBody] UpsertReportTemplateRequest request)
+    public async Task<IActionResult> UpdateTemplate([FromRoute] string templateId, [FromBody] UpsertReportTemplateRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
@@ -100,7 +100,7 @@ public sealed class TrainerReportingController : ControllerBase
             Name = request.Name,
             Description = request.Description,
             Fields = request.Fields.Select(MapField).ToList()
-        }, HttpContext.RequestAborted);
+        }, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -113,7 +113,7 @@ public sealed class TrainerReportingController : ControllerBase
     [HttpPost("report-templates/{templateId}/delete")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> DeleteTemplate([FromRoute] string templateId)
+    public async Task<IActionResult> DeleteTemplate([FromRoute] string templateId, CancellationToken cancellationToken = default)
     {
         if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
@@ -121,7 +121,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _reportingService.DeleteTemplateAsync(trainer!, parsedTemplateId, HttpContext.RequestAborted);
+        var result = await _reportingService.DeleteTemplateAsync(trainer!, parsedTemplateId, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -134,7 +134,7 @@ public sealed class TrainerReportingController : ControllerBase
     [HttpPost("trainees/{traineeId}/report-requests")]
     [ProducesResponseType(typeof(ReportRequestDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> CreateReportRequest([FromRoute] string traineeId, [FromBody] CreateReportRequestRequest request)
+    public async Task<IActionResult> CreateReportRequest([FromRoute] string traineeId, [FromBody] CreateReportRequestRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -152,7 +152,7 @@ public sealed class TrainerReportingController : ControllerBase
             TemplateId = parsedTemplateId,
             DueAt = request.DueAt,
             Note = request.Note
-        }, HttpContext.RequestAborted);
+        }, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -165,7 +165,7 @@ public sealed class TrainerReportingController : ControllerBase
     [HttpGet("trainees/{traineeId}/report-submissions")]
     [ProducesResponseType(typeof(List<ReportSubmissionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetTraineeSubmissions([FromRoute] string traineeId)
+    public async Task<IActionResult> GetTraineeSubmissions([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -173,7 +173,7 @@ public sealed class TrainerReportingController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _reportingService.GetTraineeSubmissionsAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _reportingService.GetTraineeSubmissionsAsync(trainer!, parsedTraineeId, cancellationToken);
 
         if (result.IsFailure)
         {

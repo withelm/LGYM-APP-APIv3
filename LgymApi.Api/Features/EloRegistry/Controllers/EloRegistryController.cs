@@ -28,10 +28,10 @@ public sealed class EloRegistryController : ControllerBase
     [ProducesResponseType(typeof(List<EloRegistryBaseChartDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetEloRegistryChart([FromRoute] string id)
+    public async Task<IActionResult> GetEloRegistryChart([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _eloRegistryService.GetChartAsync(userId, HttpContext.RequestAborted);
+        var result = await _eloRegistryService.GetChartAsync(userId, cancellationToken);
         
         if (result.IsFailure)
         {

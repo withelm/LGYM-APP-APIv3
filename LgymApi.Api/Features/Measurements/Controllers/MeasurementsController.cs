@@ -28,10 +28,10 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     [HttpPost("measurements/add")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddMeasurement([FromBody] MeasurementFormDto form)
+    public async Task<IActionResult> AddMeasurement([FromBody] MeasurementFormDto form, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _measurementsService.AddMeasurementAsync(user!, form.BodyPart, form.Unit, form.Value, HttpContext.RequestAborted);
+        var result = await _measurementsService.AddMeasurementAsync(user!, form.BodyPart, form.Unit, form.Value, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -45,11 +45,11 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     [ProducesResponseType(typeof(MeasurementResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetMeasurementDetail([FromRoute] string id)
+    public async Task<IActionResult> GetMeasurementDetail([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         var measurementId = Id<Measurement>.TryParse(id, out var parsedId) ? parsedId : Id<Measurement>.Empty;
-        var result = await _measurementsService.GetMeasurementDetailAsync(user!, measurementId, HttpContext.RequestAborted);
+        var result = await _measurementsService.GetMeasurementDetailAsync(user!, measurementId, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -64,11 +64,11 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetMeasurementsHistory([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request)
+    public async Task<IActionResult> GetMeasurementsHistory([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var result = await _measurementsService.GetMeasurementsHistoryAsync(user!, routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
+        var result = await _measurementsService.GetMeasurementsHistoryAsync(user!, routeUserId, request?.BodyPart, request?.Unit, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -84,11 +84,11 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetMeasurementsList([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request)
+    public async Task<IActionResult> GetMeasurementsList([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var result = await _measurementsService.GetMeasurementsListAsync(user!, routeUserId, request?.BodyPart, request?.Unit, HttpContext.RequestAborted);
+        var result = await _measurementsService.GetMeasurementsListAsync(user!, routeUserId, request?.BodyPart, request?.Unit, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -104,11 +104,11 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetMeasurementsTrend([FromRoute] string id, [FromQuery] MeasurementTrendRequestDto request)
+    public async Task<IActionResult> GetMeasurementsTrend([FromRoute] string id, [FromQuery] MeasurementTrendRequestDto request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var result = await _measurementsService.GetMeasurementsTrendAsync(user!, routeUserId, request.BodyPart, request.Unit, HttpContext.RequestAborted);
+        var result = await _measurementsService.GetMeasurementsTrendAsync(user!, routeUserId, request.BodyPart, request.Unit, cancellationToken);
         
         if (result.IsFailure)
         {

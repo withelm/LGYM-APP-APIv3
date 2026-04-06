@@ -29,10 +29,10 @@ public sealed class TraineeReportingController : ControllerBase
 
     [HttpGet("report-requests")]
     [ProducesResponseType(typeof(List<ReportRequestDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPendingRequests()
+    public async Task<IActionResult> GetPendingRequests(CancellationToken cancellationToken = default)
     {
         var trainee = HttpContext.GetCurrentUser();
-        var result = await _reportingService.GetPendingRequestsForTraineeAsync(trainee!, HttpContext.RequestAborted);
+        var result = await _reportingService.GetPendingRequestsForTraineeAsync(trainee!, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -45,7 +45,7 @@ public sealed class TraineeReportingController : ControllerBase
     [HttpPost("report-requests/{requestId}/submit")]
     [ProducesResponseType(typeof(ReportSubmissionDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> SubmitRequest([FromRoute] string requestId, [FromBody] SubmitReportRequestRequest request)
+    public async Task<IActionResult> SubmitRequest([FromRoute] string requestId, [FromBody] SubmitReportRequestRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<ReportRequest>.TryParse(requestId, out var parsedRequestId))
         {
@@ -56,7 +56,7 @@ public sealed class TraineeReportingController : ControllerBase
         var result = await _reportingService.SubmitReportRequestAsync(trainee!, parsedRequestId, new SubmitReportRequestCommand
         {
             Answers = new Dictionary<string, System.Text.Json.JsonElement>(request.Answers, StringComparer.OrdinalIgnoreCase)
-        }, HttpContext.RequestAborted);
+        }, cancellationToken);
 
         if (result.IsFailure)
         {

@@ -31,12 +31,12 @@ public sealed class TrainerSupplementationController : ControllerBase
 
     [HttpGet("trainees/{traineeId}/supplement-plans")]
     [ProducesResponseType(typeof(List<SupplementPlanDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetTraineePlans([FromRoute] string traineeId)
+    public async Task<IActionResult> GetTraineePlans([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId);
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _supplementationService.GetTraineePlansAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _supplementationService.GetTraineePlansAsync(trainer!, parsedTraineeId, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -48,12 +48,12 @@ public sealed class TrainerSupplementationController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/supplement-plans")]
     [ProducesResponseType(typeof(SupplementPlanDto), StatusCodes.Status201Created)]
-    public async Task<IActionResult> CreateTraineePlan([FromRoute] string traineeId, [FromBody] UpsertSupplementPlanRequest request)
+    public async Task<IActionResult> CreateTraineePlan([FromRoute] string traineeId, [FromBody] UpsertSupplementPlanRequest request, CancellationToken cancellationToken = default)
     {
         Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId);
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _supplementationService.CreateTraineePlanAsync(trainer!, parsedTraineeId, MapPlanCommand(request), HttpContext.RequestAborted);
+        var result = await _supplementationService.CreateTraineePlanAsync(trainer!, parsedTraineeId, MapPlanCommand(request), cancellationToken);
 
         if (result.IsFailure)
         {
@@ -65,7 +65,7 @@ public sealed class TrainerSupplementationController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/supplement-plans/{planId}/update")]
     [ProducesResponseType(typeof(SupplementPlanDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdateTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, [FromBody] UpsertSupplementPlanRequest request)
+    public async Task<IActionResult> UpdateTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, [FromBody] UpsertSupplementPlanRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -78,7 +78,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _supplementationService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, MapPlanCommand(request), HttpContext.RequestAborted);
+        var result = await _supplementationService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, MapPlanCommand(request), cancellationToken);
 
         if (result.IsFailure)
         {
@@ -90,7 +90,7 @@ public sealed class TrainerSupplementationController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/supplement-plans/{planId}/delete")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> DeleteTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
+    public async Task<IActionResult> DeleteTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, CancellationToken cancellationToken = default)
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -103,7 +103,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _supplementationService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        var result = await _supplementationService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -115,7 +115,7 @@ public sealed class TrainerSupplementationController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/supplement-plans/{planId}/assign")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> AssignTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
+    public async Task<IActionResult> AssignTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, CancellationToken cancellationToken = default)
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -128,7 +128,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _supplementationService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        var result = await _supplementationService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -140,7 +140,7 @@ public sealed class TrainerSupplementationController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/supplement-plans/unassign")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UnassignTraineePlan([FromRoute] string traineeId)
+    public async Task<IActionResult> UnassignTraineePlan([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -148,7 +148,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _supplementationService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _supplementationService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -160,7 +160,7 @@ public sealed class TrainerSupplementationController : ControllerBase
 
     [HttpGet("trainees/{traineeId}/supplements/compliance")]
     [ProducesResponseType(typeof(SupplementComplianceSummaryDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetComplianceSummary([FromRoute] string traineeId, [FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate)
+    public async Task<IActionResult> GetComplianceSummary([FromRoute] string traineeId, [FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate, CancellationToken cancellationToken = default)
     {
         if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -173,7 +173,7 @@ public sealed class TrainerSupplementationController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _supplementationService.GetComplianceSummaryAsync(trainer!, parsedTraineeId, fromDate.Value, toDate.Value, HttpContext.RequestAborted);
+        var result = await _supplementationService.GetComplianceSummaryAsync(trainer!, parsedTraineeId, fromDate.Value, toDate.Value, cancellationToken);
 
         if (result.IsFailure)
         {

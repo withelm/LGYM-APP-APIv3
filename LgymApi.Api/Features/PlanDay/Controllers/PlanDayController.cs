@@ -35,7 +35,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CreatePlanDay([FromRoute] string id, [FromBody] PlanDayFormDto form)
+    public async Task<IActionResult> CreatePlanDay([FromRoute] string id, [FromBody] PlanDayFormDto form, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<PlanEntity>.TryParse(id, out var planId))
@@ -51,7 +51,7 @@ public sealed class PlanDayController : ControllerBase
                 Reps = exercise.Reps
             })
             .ToList();
-        var result = await _planDayService.CreatePlanDayAsync(user!, planId, form.Name, exercises, HttpContext.RequestAborted);
+        var result = await _planDayService.CreatePlanDayAsync(user!, planId, form.Name, exercises, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -65,7 +65,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdatePlanDay([FromBody] PlanDayFormDto form)
+    public async Task<IActionResult> UpdatePlanDay([FromBody] PlanDayFormDto form, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<PlanDayEntity>.TryParse(form.Id ?? string.Empty, out var planDayId))
@@ -81,7 +81,7 @@ public sealed class PlanDayController : ControllerBase
                 Reps = exercise.Reps
             })
             .ToList();
-        var result = await _planDayService.UpdatePlanDayAsync(user!, planDayId, form.Name, exercises, HttpContext.RequestAborted);
+        var result = await _planDayService.UpdatePlanDayAsync(user!, planDayId, form.Name, exercises, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -94,7 +94,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(PlanDayVmDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPlanDay([FromRoute] string id)
+    public async Task<IActionResult> GetPlanDay([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<PlanDayEntity>.TryParse(id, out var planDayId))
@@ -103,7 +103,7 @@ public sealed class PlanDayController : ControllerBase
         }
 
         var cultures = HttpContext.GetCulturePreferences();
-        var result = await _planDayService.GetPlanDayAsync(user!, planDayId, cultures, HttpContext.RequestAborted);
+        var result = await _planDayService.GetPlanDayAsync(user!, planDayId, cultures, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -122,7 +122,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(List<PlanDayVmDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPlanDays([FromRoute] string id)
+    public async Task<IActionResult> GetPlanDays([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<PlanEntity>.TryParse(id, out var planId))
@@ -131,7 +131,7 @@ public sealed class PlanDayController : ControllerBase
         }
 
         var cultures = HttpContext.GetCulturePreferences();
-        var result = await _planDayService.GetPlanDaysAsync(user!, planId, cultures, HttpContext.RequestAborted);
+        var result = await _planDayService.GetPlanDaysAsync(user!, planId, cultures, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -150,7 +150,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(List<PlanDayChooseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPlanDaysTypes([FromRoute] string id)
+    public async Task<IActionResult> GetPlanDaysTypes([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<UserEntity>.TryParse(id, out var routeUserId))
@@ -158,7 +158,7 @@ public sealed class PlanDayController : ControllerBase
             return Result<List<LgymApi.Domain.Entities.PlanDay>, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planDayService.GetPlanDaysTypesAsync(user!, routeUserId, HttpContext.RequestAborted);
+        var result = await _planDayService.GetPlanDaysTypesAsync(user!, routeUserId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -172,7 +172,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeletePlanDay([FromRoute] string id)
+    public async Task<IActionResult> DeletePlanDay([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<PlanDayEntity>.TryParse(id, out var planDayId))
@@ -180,7 +180,7 @@ public sealed class PlanDayController : ControllerBase
             return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planDayService.DeletePlanDayAsync(user!, planDayId, HttpContext.RequestAborted);
+        var result = await _planDayService.DeletePlanDayAsync(user!, planDayId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -193,7 +193,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(List<PlanDayBaseInfoDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPlanDaysInfo([FromRoute] string id)
+    public async Task<IActionResult> GetPlanDaysInfo([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
         if (!Id<PlanEntity>.TryParse(id, out var planId))
@@ -201,7 +201,7 @@ public sealed class PlanDayController : ControllerBase
             return Result<PlanDaysInfoContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind)).ToActionResult();
         }
 
-        var result = await _planDayService.GetPlanDaysInfoAsync(user!, planId, HttpContext.RequestAborted);
+        var result = await _planDayService.GetPlanDaysInfoAsync(user!, planId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

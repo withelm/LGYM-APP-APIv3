@@ -33,9 +33,9 @@ public sealed class ExerciseController : ControllerBase
     [HttpPost("exercise/addExercise")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> AddExercise([FromBody] ExerciseFormDto form)
+    public async Task<IActionResult> AddExercise([FromBody] ExerciseFormDto form, CancellationToken cancellationToken = default)
     {
-        var result = await _exerciseService.AddExerciseAsync(form.Name, form.BodyPart, form.Description, form.Image, HttpContext.RequestAborted);
+        var result = await _exerciseService.AddExerciseAsync(form.Name, form.BodyPart, form.Description, form.Image, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -48,11 +48,11 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddUserExercise([FromRoute] string id, [FromBody] ExerciseFormDto form)
+    public async Task<IActionResult> AddUserExercise([FromRoute] string id, [FromBody] ExerciseFormDto form, CancellationToken cancellationToken = default)
     {
         var userId = id.ToIdOrEmpty<UserEntity>();
         var input = new AddUserExerciseInput(userId, form.Name, form.BodyPart, form.Description, form.Image);
-        var result = await _exerciseService.AddUserExerciseAsync(input, HttpContext.RequestAborted);
+        var result = await _exerciseService.AddUserExerciseAsync(input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -66,7 +66,7 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteExercise([FromRoute] string id, [FromBody] Dictionary<string, string> body)
+    public async Task<IActionResult> DeleteExercise([FromRoute] string id, [FromBody] Dictionary<string, string> body, CancellationToken cancellationToken = default)
     {
         if (!body.TryGetValue("id", out var exerciseIdString))
         {
@@ -75,7 +75,7 @@ public sealed class ExerciseController : ControllerBase
 
         var userId = id.ToIdOrEmpty<UserEntity>();
         var exerciseId = exerciseIdString.ToIdOrEmpty<ExerciseEntity>();
-        var result = await _exerciseService.DeleteExerciseAsync(userId, exerciseId, HttpContext.RequestAborted);
+        var result = await _exerciseService.DeleteExerciseAsync(userId, exerciseId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -88,11 +88,11 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateExercise([FromBody] ExerciseFormDto form)
+    public async Task<IActionResult> UpdateExercise([FromBody] ExerciseFormDto form, CancellationToken cancellationToken = default)
     {
         var exerciseId = form.Id.ToIdOrEmpty<ExerciseEntity>();
         var input = new UpdateExerciseInput(exerciseId, form.Name, form.BodyPart, form.Description, form.Image);
-        var result = await _exerciseService.UpdateExerciseAsync(input, HttpContext.RequestAborted);
+        var result = await _exerciseService.UpdateExerciseAsync(input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -106,13 +106,13 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddGlobalTranslation([FromRoute] string id, [FromBody] ExerciseTranslationDto form)
+    public async Task<IActionResult> AddGlobalTranslation([FromRoute] string id, [FromBody] ExerciseTranslationDto form, CancellationToken cancellationToken = default)
     {
         var currentUser = HttpContext.GetCurrentUser();
         var routeUserId = id.ToIdOrEmpty<UserEntity>();
         var exerciseId = form.ExerciseId.ToIdOrEmpty<ExerciseEntity>();
         var input = new AddGlobalTranslationInput(routeUserId, exerciseId, form.Culture, form.Name);
-        var result = await _exerciseService.AddGlobalTranslationAsync(currentUser!, input, HttpContext.RequestAborted);
+        var result = await _exerciseService.AddGlobalTranslationAsync(currentUser!, input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -124,11 +124,11 @@ public sealed class ExerciseController : ControllerBase
     [HttpGet("exercise/{id}/getAllExercises")]
     [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetAllExercises([FromRoute] string id)
+    public async Task<IActionResult> GetAllExercises([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = id.ToIdOrEmpty<UserEntity>();
         var cultures = HttpContext.GetCulturePreferences();
-        var result = await _exerciseService.GetAllExercisesAsync(userId, cultures, HttpContext.RequestAborted);
+        var result = await _exerciseService.GetAllExercisesAsync(userId, cultures, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -144,11 +144,11 @@ public sealed class ExerciseController : ControllerBase
     [HttpGet("exercise/{id}/getAllUserExercises")]
     [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetAllUserExercises([FromRoute] string id)
+    public async Task<IActionResult> GetAllUserExercises([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = id.ToIdOrEmpty<UserEntity>();
         var cultures = HttpContext.GetCulturePreferences();
-        var result = await _exerciseService.GetAllUserExercisesAsync(userId, cultures, HttpContext.RequestAborted);
+        var result = await _exerciseService.GetAllUserExercisesAsync(userId, cultures, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -164,10 +164,10 @@ public sealed class ExerciseController : ControllerBase
     [HttpGet("exercise/getAllGlobalExercises")]
     [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetAllGlobalExercises()
+    public async Task<IActionResult> GetAllGlobalExercises(CancellationToken cancellationToken = default)
     {
         var cultures = HttpContext.GetCulturePreferences();
-        var result = await _exerciseService.GetAllGlobalExercisesAsync(cultures, HttpContext.RequestAborted);
+        var result = await _exerciseService.GetAllGlobalExercisesAsync(cultures, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -184,11 +184,11 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(List<ExerciseResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetExerciseByBodyPart([FromRoute] string id, [FromBody] ExerciseByBodyPartRequestDto request)
+    public async Task<IActionResult> GetExerciseByBodyPart([FromRoute] string id, [FromBody] ExerciseByBodyPartRequestDto request, CancellationToken cancellationToken = default)
     {
         var userId = id.ToIdOrEmpty<UserEntity>();
         var cultures = HttpContext.GetCulturePreferences();
-        var result = await _exerciseService.GetExerciseByBodyPartAsync(userId, request.BodyPart, cultures, HttpContext.RequestAborted);
+        var result = await _exerciseService.GetExerciseByBodyPartAsync(userId, request.BodyPart, cultures, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -204,11 +204,11 @@ public sealed class ExerciseController : ControllerBase
     [HttpGet("exercise/{id}/getExercise")]
     [ProducesResponseType(typeof(ExerciseResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetExercise([FromRoute] string id)
+    public async Task<IActionResult> GetExercise([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var exerciseId = id.ToIdOrEmpty<ExerciseEntity>();
         var cultures = HttpContext.GetCulturePreferences();
-        var result = await _exerciseService.GetExerciseAsync(exerciseId, cultures, HttpContext.RequestAborted);
+        var result = await _exerciseService.GetExerciseAsync(exerciseId, cultures, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -223,7 +223,7 @@ public sealed class ExerciseController : ControllerBase
     [HttpPost("exercise/{id}/getLastExerciseScores")]
     [ProducesResponseType(typeof(LastExerciseScoresResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetLastExerciseScores([FromRoute] string id, [FromBody] LastExerciseScoresRequestDto request)
+    public async Task<IActionResult> GetLastExerciseScores([FromRoute] string id, [FromBody] LastExerciseScoresRequestDto request, CancellationToken cancellationToken = default)
     {
         var routeUserId = id.ToIdOrEmpty<UserEntity>();
         var currentUserId = HttpContext.GetCurrentUserId();
@@ -231,7 +231,7 @@ public sealed class ExerciseController : ControllerBase
         var gymId = request.GymId.ToNullableId<LgymApi.Domain.Entities.Gym>();
 
         var input = new GetLastExerciseScoresInput(routeUserId, currentUserId, exerciseId, request.Series, gymId, request.ExerciseName);
-        var result = await _exerciseService.GetLastExerciseScoresAsync(input, HttpContext.RequestAborted);
+        var result = await _exerciseService.GetLastExerciseScoresAsync(input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -244,11 +244,11 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(List<ExerciseTrainingHistoryItemDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetExerciseScoresFromTrainingByExercise([FromBody] RecordOrPossibleRequestDto request)
+    public async Task<IActionResult> GetExerciseScoresFromTrainingByExercise([FromBody] RecordOrPossibleRequestDto request, CancellationToken cancellationToken = default)
     {
         var currentUserId = HttpContext.GetCurrentUserId();
         var exerciseId = request.ExerciseId.ToIdOrEmpty<ExerciseEntity>();
-        var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync(currentUserId, exerciseId, HttpContext.RequestAborted);
+        var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync(currentUserId, exerciseId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

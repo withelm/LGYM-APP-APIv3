@@ -45,7 +45,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [HttpPost("invitations")]
     [ApiIdempotency("/api/trainer/invitations", ApiIdempotencyScopeSource.AuthenticatedUser)]
     [ProducesResponseType(typeof(TrainerInvitationDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CreateInvitation([FromBody] CreateTrainerInvitationRequest request)
+    public async Task<IActionResult> CreateInvitation([FromBody] CreateTrainerInvitationRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(request.TraineeId, out var traineeId))
         {
@@ -53,7 +53,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.CreateInvitationAsync(trainer!, traineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.CreateInvitationAsync(trainer!, traineeId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -64,9 +64,8 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("invitations/paginated")]
     [ProducesResponseType(typeof(PaginatedTrainerInvitationResult), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetInvitationsPaginated([FromBody] PaginatedTrainerInvitationRequest request)
+    public async Task<IActionResult> GetInvitationsPaginated([FromBody] PaginatedTrainerInvitationRequest request, CancellationToken cancellationToken = default)
     {
-        var cancellationToken = HttpContext.RequestAborted;
         var filterInput = new FilterInput
         {
             Page = request.Page,
@@ -98,11 +97,11 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("invitations/by-email")]
     [ProducesResponseType(typeof(TrainerInvitationDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CreateInvitationByEmail([FromBody] CreateTrainerInvitationByEmailRequest request)
+    public async Task<IActionResult> CreateInvitationByEmail([FromBody] CreateTrainerInvitationByEmailRequest request, CancellationToken cancellationToken = default)
     {
         var trainer = HttpContext.GetCurrentUser();
         var result = await _trainerRelationshipService.CreateInvitationByEmailAsync(
-            trainer!, request.Email, request.PreferredLanguage, request.PreferredTimeZone, HttpContext.RequestAborted);
+            trainer!, request.Email, request.PreferredLanguage, request.PreferredTimeZone, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -113,7 +112,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("invitations/{invitationId}/revoke")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> RevokeInvitation([FromRoute] string invitationId)
+    public async Task<IActionResult> RevokeInvitation([FromRoute] string invitationId, CancellationToken cancellationToken = default)
     {
         if (!Id<TrainerInvitationEntity>.TryParse(invitationId, out var parsedInvitationId))
         {
@@ -121,7 +120,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.RevokeInvitationAsync(trainer!, parsedInvitationId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.RevokeInvitationAsync(trainer!, parsedInvitationId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -132,7 +131,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpGet("trainees")]
     [ProducesResponseType(typeof(TrainerDashboardTraineesResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetDashboardTrainees([FromQuery] TrainerDashboardTraineesRequest request)
+    public async Task<IActionResult> GetDashboardTrainees([FromQuery] TrainerDashboardTraineesRequest request, CancellationToken cancellationToken = default)
     {
         var trainer = HttpContext.GetCurrentUser();
         var result = await _trainerRelationshipService.GetDashboardTraineesAsync(trainer!, new TrainerDashboardTraineeQuery
@@ -143,7 +142,7 @@ public sealed class TrainerRelationshipController : ControllerBase
             SortDirection = request.SortDirection,
             Page = request.Page,
             PageSize = request.PageSize
-        }, HttpContext.RequestAborted);
+        }, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -163,7 +162,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(List<DateTime>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTraineeTrainingDates([FromRoute] string traineeId)
+    public async Task<IActionResult> GetTraineeTrainingDates([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -171,7 +170,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeTrainingDatesAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetTraineeTrainingDatesAsync(trainer!, parsedTraineeId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -184,7 +183,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(List<TrainingByDateDetailsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTraineeTrainingByDate([FromRoute] string traineeId, [FromBody] TrainingByDateRequestDto request)
+    public async Task<IActionResult> GetTraineeTrainingByDate([FromRoute] string traineeId, [FromBody] TrainingByDateRequestDto request, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -192,7 +191,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeTrainingByDateAsync(trainer!, parsedTraineeId, request.CreatedAt, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetTraineeTrainingByDateAsync(trainer!, parsedTraineeId, request.CreatedAt, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -205,7 +204,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(List<ExerciseScoresChartDataDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTraineeExerciseScoresChartData([FromRoute] string traineeId, [FromBody] ExerciseScoresChartRequestDto request)
+    public async Task<IActionResult> GetTraineeExerciseScoresChartData([FromRoute] string traineeId, [FromBody] ExerciseScoresChartRequestDto request, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -218,7 +217,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, parsedTraineeId, parsedExerciseId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, parsedTraineeId, parsedExerciseId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -231,7 +230,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(List<EloRegistryBaseChartDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTraineeEloChart([FromRoute] string traineeId)
+    public async Task<IActionResult> GetTraineeEloChart([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -239,7 +238,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeEloChartAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetTraineeEloChartAsync(trainer!, parsedTraineeId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -252,7 +251,7 @@ public sealed class TrainerRelationshipController : ControllerBase
     [ProducesResponseType(typeof(List<MainRecordResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTraineeMainRecordsHistory([FromRoute] string traineeId)
+    public async Task<IActionResult> GetTraineeMainRecordsHistory([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -260,7 +259,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeMainRecordsHistoryAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetTraineeMainRecordsHistoryAsync(trainer!, parsedTraineeId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -272,7 +271,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/unlink")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UnlinkTrainee([FromRoute] string traineeId)
+    public async Task<IActionResult> UnlinkTrainee([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -280,7 +279,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.UnlinkTraineeAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.UnlinkTraineeAsync(trainer!, parsedTraineeId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -291,7 +290,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpGet("trainees/{traineeId}/plans")]
     [ProducesResponseType(typeof(List<TrainerManagedPlanDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetTraineePlans([FromRoute] string traineeId)
+    public async Task<IActionResult> GetTraineePlans([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -299,7 +298,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineePlansAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.GetTraineePlansAsync(trainer!, parsedTraineeId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -310,7 +309,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/plans")]
     [ProducesResponseType(typeof(TrainerManagedPlanDto), StatusCodes.Status201Created)]
-    public async Task<IActionResult> CreateTraineePlan([FromRoute] string traineeId, [FromBody] TrainerPlanFormRequest request)
+    public async Task<IActionResult> CreateTraineePlan([FromRoute] string traineeId, [FromBody] TrainerPlanFormRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -318,7 +317,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.CreateTraineePlanAsync(trainer!, parsedTraineeId, request.Name, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.CreateTraineePlanAsync(trainer!, parsedTraineeId, request.Name, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -329,7 +328,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/plans/{planId}/update")]
     [ProducesResponseType(typeof(TrainerManagedPlanDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdateTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, [FromBody] TrainerPlanFormRequest request)
+    public async Task<IActionResult> UpdateTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, [FromBody] TrainerPlanFormRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -342,7 +341,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, request.Name, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, request.Name, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -353,7 +352,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/plans/{planId}/delete")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> DeleteTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
+    public async Task<IActionResult> DeleteTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -366,7 +365,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.DeleteTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -377,7 +376,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/plans/{planId}/assign")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> AssignTraineePlan([FromRoute] string traineeId, [FromRoute] string planId)
+    public async Task<IActionResult> AssignTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -390,7 +389,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.AssignTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -401,7 +400,7 @@ public sealed class TrainerRelationshipController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/plans/unassign")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UnassignTraineePlan([FromRoute] string traineeId)
+    public async Task<IActionResult> UnassignTraineePlan([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
@@ -409,7 +408,7 @@ public sealed class TrainerRelationshipController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, HttpContext.RequestAborted);
+        var result = await _trainerRelationshipService.UnassignTraineePlanAsync(trainer!, parsedTraineeId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

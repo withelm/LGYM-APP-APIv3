@@ -32,7 +32,7 @@ public sealed class TrainingController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> AddTraining([FromRoute] string id, [FromBody] TrainingFormDto form)
+    public async Task<IActionResult> AddTraining([FromRoute] string id, [FromBody] TrainingFormDto form, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
         var gymId = form.GymId.ToIdOrEmpty<LgymApi.Domain.Entities.Gym>();
@@ -47,7 +47,7 @@ public sealed class TrainingController : ControllerBase
             }).ToList();
 
         var input = new AddTrainingInput(gymId, planDayId, form.CreatedAt, exercises);
-        var result = await _trainingService.AddTrainingAsync(userId, input, HttpContext.RequestAborted);
+        var result = await _trainingService.AddTrainingAsync(userId, input, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -62,10 +62,10 @@ public sealed class TrainingController : ControllerBase
     [ProducesResponseType(typeof(LastTrainingInfoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetLastTraining([FromRoute] string id)
+    public async Task<IActionResult> GetLastTraining([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _trainingService.GetLastTrainingAsync(userId, HttpContext.RequestAborted);
+        var result = await _trainingService.GetLastTrainingAsync(userId, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -79,10 +79,10 @@ public sealed class TrainingController : ControllerBase
     [ProducesResponseType(typeof(List<TrainingByDateDetailsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTrainingByDate([FromRoute] string id, [FromBody] TrainingByDateRequestDto request)
+    public async Task<IActionResult> GetTrainingByDate([FromRoute] string id, [FromBody] TrainingByDateRequestDto request, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _trainingService.GetTrainingByDateAsync(userId, request.CreatedAt, HttpContext.RequestAborted);
+        var result = await _trainingService.GetTrainingByDateAsync(userId, request.CreatedAt, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -97,10 +97,10 @@ public sealed class TrainingController : ControllerBase
     [ProducesResponseType(typeof(List<DateTime>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTrainingDates([FromRoute] string id)
+    public async Task<IActionResult> GetTrainingDates([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = HttpContext.ParseRouteUserIdForCurrentUser(id);
-        var result = await _trainingService.GetTrainingDatesAsync(userId, HttpContext.RequestAborted);
+        var result = await _trainingService.GetTrainingDatesAsync(userId, cancellationToken);
         
         if (result.IsFailure)
         {
