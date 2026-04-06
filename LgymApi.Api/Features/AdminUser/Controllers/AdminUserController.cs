@@ -18,6 +18,8 @@ namespace LgymApi.Api.Features.AdminManagement.Controllers;
 [Authorize(Policy = AuthConstants.Policies.AdminAccess)]
 public sealed class AdminUserController : ControllerBase
 {
+    private const string InvalidUserIdMessage = "Invalid user id.";
+
     private readonly IAdminUserService _adminUserService;
     private readonly IMapper _mapper;
 
@@ -65,7 +67,11 @@ public sealed class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetUser([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var userId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        if (!TryParseUserId(id, out var userId, out var errorResult))
+        {
+            return errorResult;
+        }
+
         var result = await _adminUserService.GetUserAsync(userId, cancellationToken);
 
         if (result.IsFailure)
@@ -82,7 +88,11 @@ public sealed class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request, CancellationToken cancellationToken = default)
     {
-        var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        if (!TryParseUserId(id, out var targetUserId, out var errorResult))
+        {
+            return errorResult;
+        }
+
         var adminUserId = GetAdminUserId();
         var command = new UpdateUserCommand
         {
@@ -109,7 +119,11 @@ public sealed class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteUser([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        if (!TryParseUserId(id, out var targetUserId, out var errorResult))
+        {
+            return errorResult;
+        }
+
         var adminUserId = GetAdminUserId();
         var result = await _adminUserService.DeleteUserAsync(targetUserId, adminUserId, cancellationToken);
 
@@ -127,7 +141,11 @@ public sealed class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> BlockUser([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        if (!TryParseUserId(id, out var targetUserId, out var errorResult))
+        {
+            return errorResult;
+        }
+
         var adminUserId = GetAdminUserId();
         var result = await _adminUserService.BlockUserAsync(targetUserId, adminUserId, cancellationToken);
 
@@ -144,7 +162,11 @@ public sealed class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UnblockUser([FromRoute] string id, CancellationToken cancellationToken = default)
     {
-        var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        if (!TryParseUserId(id, out var targetUserId, out var errorResult))
+        {
+            return errorResult;
+        }
+
         var result = await _adminUserService.UnblockUserAsync(targetUserId, cancellationToken);
 
         if (result.IsFailure)
@@ -159,5 +181,17 @@ public sealed class AdminUserController : ControllerBase
     {
         var userIdClaim = HttpContext.User.FindFirst("userId")?.Value;
         return Id<Domain.Entities.User>.TryParse(userIdClaim, out var userId) ? userId : Id<Domain.Entities.User>.Empty;
+    }
+
+    private bool TryParseUserId(string id, out Id<Domain.Entities.User> userId, out IActionResult errorResult)
+    {
+        if (Id<Domain.Entities.User>.TryParse(id, out userId))
+        {
+            errorResult = null!;
+            return true;
+        }
+
+        errorResult = BadRequest(_mapper.Map<string, ResponseMessageDto>(InvalidUserIdMessage));
+        return false;
     }
 }
