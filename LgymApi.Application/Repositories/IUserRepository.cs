@@ -1,4 +1,7 @@
+using LgymApi.Application.Features.AdminManagement.Models;
+using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 
@@ -14,4 +17,5 @@ public interface IUserRepository
     Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default);
     Task AddAsync(User user, CancellationToken cancellationToken = default);
     Task UpdateAsync(User user, CancellationToken cancellationToken = default);
+    Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default);
 }

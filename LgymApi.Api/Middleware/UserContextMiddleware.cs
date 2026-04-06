@@ -47,6 +47,13 @@ public sealed class UserContextMiddleware
             return;
         }
 
+        if (user.IsBlocked)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new { message = Messages.AccountBlocked });
+            return;
+        }
+
         if (!userSessionCache.Contains(userId))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;

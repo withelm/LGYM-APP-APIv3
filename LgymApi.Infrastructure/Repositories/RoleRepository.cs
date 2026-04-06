@@ -1,8 +1,10 @@
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Pagination;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -10,10 +12,22 @@ namespace LgymApi.Infrastructure.Repositories;
 public sealed class RoleRepository : IRoleRepository
 {
     private readonly AppDbContext _dbContext;
+    private readonly GridifyExecutionService _gridifyExecutionService;
+    private readonly IMapperRegistry _mapperRegistry;
 
-    public RoleRepository(AppDbContext dbContext)
+    private static readonly PaginationPolicy RolePaginationPolicy = new()
+    {
+        MaxPageSize = 100,
+        DefaultPageSize = 20,
+        DefaultSortField = "name",
+        TieBreakerField = "id"
+    };
+
+    public RoleRepository(AppDbContext dbContext, GridifyExecutionService gridifyExecutionService, IMapperRegistry mapperRegistry)
     {
         _dbContext = dbContext;
+        _gridifyExecutionService = gridifyExecutionService;
+        _mapperRegistry = mapperRegistry;
     }
 
     public Task<List<Role>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -82,6 +96,29 @@ public sealed class RoleRepository : IRoleRepository
             .Distinct()
             .OrderBy(name => name)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Dictionary<Id<User>, List<string>>> GetRoleNamesByUserIdsAsync(IReadOnlyCollection<Id<User>> userIds, CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0)
+        {
+            return new Dictionary<Id<User>, List<string>>();
+        }
+
+        var items = await _dbContext.UserRoles
+            .AsNoTracking()
+            .Where(ur => userIds.Contains(ur.UserId))
+            .Select(ur => new { ur.UserId, RoleName = ur.Role.Name })
+            .ToListAsync(cancellationToken);
+
+        return items
+            .GroupBy(i => i.UserId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(i => i.RoleName)
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(v => v, StringComparer.Ordinal)
+                    .ToList());
     }
 
     public Task<List<string>> GetPermissionClaimsByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
@@ -241,5 +278,19 @@ public sealed class RoleRepository : IRoleRepository
             });
             await _dbContext.UserRoles.AddRangeAsync(items, cancellationToken);
         }
+    }
+
+    public async Task<Pagination<Role>> GetRolesPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default)
+    {
+        var baseQuery = _dbContext.Roles
+            .AsNoTracking()
+            .AsQueryable();
+
+        return await _gridifyExecutionService.ExecuteAsync(
+            baseQuery,
+            filterInput,
+            _mapperRegistry,
+            RolePaginationPolicy,
+            cancellationToken);
     }
 }

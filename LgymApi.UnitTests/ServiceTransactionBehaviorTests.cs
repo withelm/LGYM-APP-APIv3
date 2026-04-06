@@ -1,7 +1,9 @@
+using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.PlanDay;
 using LgymApi.Application.Features.PlanDay.Models;
 using LgymApi.Application.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -319,6 +321,7 @@ public sealed class ServiceTransactionBehaviorTests
         public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAsync(User user, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default) => Task.FromResult(new Pagination<UserResult>());
     }
 
     private sealed class ExerciseRepositoryStub : IExerciseRepository

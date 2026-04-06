@@ -8,6 +8,7 @@ using LgymApi.Application.Features.Tutorial.Models;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Options;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.BackgroundWorker.Common.Notifications;
@@ -18,6 +19,7 @@ using LgymApi.Domain.Security;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Pagination;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
@@ -54,7 +56,7 @@ public sealed class ServiceCommitBehaviorTests
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
-        IUserRepository userRepository = new UserRepository(dbContext);
+        IUserRepository userRepository = CreateUserRepository(dbContext);
         IPlanRepository planRepository = new PlanRepository(dbContext);
         IPlanDayRepository planDayRepository = new PlanDayRepository(dbContext);
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
@@ -88,8 +90,8 @@ public sealed class ServiceCommitBehaviorTests
         });
         await dbContext.SaveChangesAsync();
 
-        IUserRepository userRepository = new UserRepository(dbContext);
-        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IUserRepository userRepository = CreateUserRepository(dbContext);
+        IRoleRepository roleRepository = CreateRoleRepository(dbContext);
         IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
@@ -148,8 +150,8 @@ public sealed class ServiceCommitBehaviorTests
         });
         await dbContext.SaveChangesAsync();
 
-        IUserRepository userRepository = new UserRepository(dbContext);
-        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IUserRepository userRepository = CreateUserRepository(dbContext);
+        IRoleRepository roleRepository = CreateRoleRepository(dbContext);
         IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
@@ -205,8 +207,8 @@ public sealed class ServiceCommitBehaviorTests
         });
         await dbContext.SaveChangesAsync();
 
-        IUserRepository userRepository = new UserRepository(dbContext);
-        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IUserRepository userRepository = CreateUserRepository(dbContext);
+        IRoleRepository roleRepository = CreateRoleRepository(dbContext);
         IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
@@ -280,8 +282,8 @@ public sealed class ServiceCommitBehaviorTests
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
-        IUserRepository userRepository = new UserRepository(dbContext);
-        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IUserRepository userRepository = CreateUserRepository(dbContext);
+        IRoleRepository roleRepository = CreateRoleRepository(dbContext);
         IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
@@ -345,8 +347,8 @@ public sealed class ServiceCommitBehaviorTests
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
-        IUserRepository userRepository = new UserRepository(dbContext);
-        IRoleRepository roleRepository = new RoleRepository(dbContext);
+        IUserRepository userRepository = CreateUserRepository(dbContext);
+        IRoleRepository roleRepository = CreateRoleRepository(dbContext);
         IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
@@ -384,8 +386,8 @@ public sealed class ServiceCommitBehaviorTests
 
         await using var dbContext = new AppDbContext(options);
 
-        IRoleRepository roleRepository = new RoleRepository(dbContext);
-        IUserRepository userRepository = new UserRepository(dbContext);
+        IRoleRepository roleRepository = CreateRoleRepository(dbContext);
+        IUserRepository userRepository = CreateUserRepository(dbContext);
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
 
         var service = new RoleService(roleRepository, userRepository, unitOfWork);
@@ -441,8 +443,8 @@ public sealed class ServiceCommitBehaviorTests
         dbContext.Roles.Add(new Role { Id = Id<Role>.New(), Name = "Coach", Description = "Custom" });
         await dbContext.SaveChangesAsync();
 
-        IRoleRepository roleRepository = new RoleRepository(dbContext);
-        IUserRepository userRepository = new UserRepository(dbContext);
+        IRoleRepository roleRepository = CreateRoleRepository(dbContext);
+        IUserRepository userRepository = CreateUserRepository(dbContext);
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
 
         var service = new RoleService(roleRepository, userRepository, unitOfWork);
@@ -457,6 +459,12 @@ public sealed class ServiceCommitBehaviorTests
 
         Assert.That(assignedRoleNames, Is.EquivalentTo(new[] { "Coach", AuthConstants.Roles.User }));
     }
+
+    private static UserRepository CreateUserRepository(AppDbContext db) =>
+        new(db, null!, new MapperRegistry());
+
+    private static RoleRepository CreateRoleRepository(AppDbContext db) =>
+        new(db, null!, new MapperRegistry());
 
     private sealed class UserServiceDependenciesStub : IUserServiceDependencies
     {

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Interfaces;
+using LgymApi.Application.Pagination;
 
 namespace LgymApi.Api.Features.Role.Contracts;
 
@@ -46,4 +47,32 @@ public sealed class UpdateUserRolesRequest : IDto
 {
     [JsonPropertyName("roles")]
     public List<string> Roles { get; set; } = new();
+}
+
+public sealed class PaginatedRoleRequest : PaginatedRequest, IDto
+{
+}
+
+public sealed class PaginatedRoleResult : IResultDto
+{
+    [JsonPropertyName("items")]
+    public List<RoleDto> Items { get; set; } = new();
+
+    [JsonPropertyName("page")]
+    public int Page { get; set; }
+
+    [JsonPropertyName("pageSize")]
+    public int PageSize { get; set; }
+
+    [JsonPropertyName("totalCount")]
+    public int TotalCount { get; set; }
+
+    [JsonPropertyName("totalPages")]
+    public int TotalPages { get; set; }
+
+    [JsonPropertyName("hasNextPage")]
+    public bool HasNextPage { get; set; }
+
+    [JsonPropertyName("hasPreviousPage")]
+    public bool HasPreviousPage { get; set; }
 }

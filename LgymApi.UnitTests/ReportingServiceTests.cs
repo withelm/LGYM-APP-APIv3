@@ -3,6 +3,8 @@ using System.Text.Json;
 using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.Application.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -458,6 +460,8 @@ public sealed class ReportingServiceTests
         public Task ReplaceRolePermissionClaimsAsync(Id<Role> roleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task AddUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task ReplaceUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<Dictionary<Id<User>, List<string>>> GetRoleNamesByUserIdsAsync(IReadOnlyCollection<Id<User>> userIds, CancellationToken cancellationToken = default) => Task.FromResult(new Dictionary<Id<User>, List<string>>());
+        public Task<Pagination<Role>> GetRolesPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default) => Task.FromResult(new Pagination<Role>());
     }
 
      private sealed class FakeTrainerRelationshipRepository : ITrainerRelationshipRepository

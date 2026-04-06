@@ -3,7 +3,9 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Pagination;
 using LgymApi.Infrastructure.Repositories;
+using LgymApi.Application.Pagination;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.UnitTests;
@@ -19,7 +21,7 @@ public sealed class RoleRepositoryTests
         db.Roles.Add(adminRole);
         await db.SaveChangesAsync();
 
-        var repository = new RoleRepository(db);
+        var repository = CreateRoleRepository(db);
 
         var exists = await repository.ExistsByNameAsync(" admin ");
         var existsExcludingSame = await repository.ExistsByNameAsync("ADMIN", adminRole.Id);
@@ -35,7 +37,7 @@ public sealed class RoleRepositoryTests
     public async Task GetByNamesAsync_WhenEmptyInput_ReturnsEmptyList()
     {
         await using var db = CreateDbContext("role-repo-empty");
-        var repository = new RoleRepository(db);
+        var repository = CreateRoleRepository(db);
 
         var roles = await repository.GetByNamesAsync([]);
 
@@ -55,7 +57,7 @@ public sealed class RoleRepositoryTests
         db.UserRoles.Add(new UserRole { UserId = userId, RoleId = existingRole.Id });
         await db.SaveChangesAsync();
 
-        var repository = new RoleRepository(db);
+        var repository = CreateRoleRepository(db);
 
         await repository.AddUserRolesAsync(userId, [existingRole.Id, missingRole.Id]);
         await db.SaveChangesAsync();
@@ -79,7 +81,7 @@ public sealed class RoleRepositoryTests
         });
         await db.SaveChangesAsync();
 
-        var repository = new RoleRepository(db);
+        var repository = CreateRoleRepository(db);
         await repository.ReplaceRolePermissionClaimsAsync(roleId, [" users.roles.manage ", "users.roles.manage", "app.config.manage", " "]);
         await db.SaveChangesAsync();
 
@@ -91,6 +93,9 @@ public sealed class RoleRepositoryTests
 
         claims.Should().Equal("app.config.manage", "users.roles.manage");
     }
+
+    private static RoleRepository CreateRoleRepository(AppDbContext db) =>
+        new(db, null!, new MapperRegistry());
 
     private static AppDbContext CreateDbContext(string name)
     {

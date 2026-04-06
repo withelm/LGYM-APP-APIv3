@@ -1,6 +1,9 @@
+using LgymApi.Application.Features.AdminManagement.Models;
 using System.Net;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Role;
+using LgymApi.Application.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
@@ -277,6 +280,9 @@ public sealed class RoleServiceTests
 
             return Task.CompletedTask;
         }
+
+        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+            => Task.FromResult(new Pagination<UserResult>());
     }
 
     private sealed class InMemoryRoleRepository : IRoleRepository
@@ -439,8 +445,14 @@ public sealed class RoleServiceTests
          public Task ReplaceUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default)
          {
              UserRoleAssignments[userId] = roleIds.Distinct().ToList();
-             return Task.CompletedTask;
+            return Task.CompletedTask;
         }
+
+        public Task<Dictionary<Id<User>, List<string>>> GetRoleNamesByUserIdsAsync(IReadOnlyCollection<Id<User>> userIds, CancellationToken cancellationToken = default)
+            => Task.FromResult(new Dictionary<Id<User>, List<string>>());
+
+        public Task<Pagination<Role>> GetRolesPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default)
+            => Task.FromResult(new Pagination<Role>());
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

@@ -132,6 +132,12 @@
   <data name="PermissionManageGlobalExercises" xml:space="preserve">
     <value>Manage global exercises</value>
   </data>
+  <data name="PermissionTrainerAccess" xml:space="preserve">
+    <value>Trainer access</value>
+  </data>
+  <data name="PermissionTrainerAccess" xml:space="preserve">
+    <value>Trainer access</value>
+  </data>
   <data name="RoleWithThatName" xml:space="preserve">
     <value>A role with that name already exists.</value>
   </data>
@@ -245,5 +251,14 @@
   </data>
   <data name="TrainerInvitationRejected" xml:space="preserve">
     <value>A trainee has rejected your invitation.</value>
+  </data>
+  <data name="AccountBlocked" xml:space="preserve">
+    <value>Your account has been blocked.</value>
+  </data>
+  <data name="CannotBlockSelf" xml:space="preserve">
+    <value>You cannot block yourself.</value>
+  </data>
+  <data name="CannotDeleteSelf" xml:space="preserve">
+    <value>You cannot delete yourself.</value>
   </data>
 </root>

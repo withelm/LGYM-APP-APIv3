@@ -1,0 +1,169 @@
+using LgymApi.Api.Extensions;
+using LgymApi.Api.Features.AdminManagement.Contracts;
+using LgymApi.Api.Features.Common.Contracts;
+using LgymApi.Application.Features.AdminManagement;
+using LgymApi.Application.Features.AdminManagement.Models;
+using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Pagination;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace LgymApi.Api.Features.AdminManagement.Controllers;
+
+[ApiController]
+[Route("api/admin/users")]
+[Authorize(Policy = AuthConstants.Policies.AdminAccess)]
+public sealed class AdminUserController : ControllerBase
+{
+    private readonly IAdminUserService _adminUserService;
+    private readonly IMapper _mapper;
+
+    public AdminUserController(IAdminUserService adminUserService, IMapper mapper)
+    {
+        _adminUserService = adminUserService;
+        _mapper = mapper;
+    }
+
+    [HttpPost("paginated")]
+    [ProducesResponseType(typeof(PaginatedAdminUserResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUsersPaginated([FromBody] PaginatedUserRequest request)
+    {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var filterInput = new FilterInput
+        {
+            Page = request.Page,
+            PageSize = request.PageSize,
+            FilterGroups = request.FilterGroups,
+            SortDescriptors = request.SortDescriptors
+        };
+        var result = await _adminUserService.GetUsersAsync(filterInput, request.IncludeDeleted, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var pagination = result.Value;
+        var response = new PaginatedAdminUserResult
+        {
+            Items = _mapper.MapList<UserResult, AdminUserDto>(pagination.Items),
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = pagination.TotalCount,
+            TotalPages = pagination.TotalPages,
+            HasNextPage = pagination.HasNextPage,
+            HasPreviousPage = pagination.HasPreviousPage
+        };
+
+        return Ok(response);
+    }
+
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(AdminUserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetUser([FromRoute] string id)
+    {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var userId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        var result = await _adminUserService.GetUserAsync(userId, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<UserResult, AdminUserDto>(result.Value));
+    }
+
+    [HttpPost("{id}/update")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request)
+    {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        var adminUserId = GetAdminUserId();
+        var command = new UpdateUserCommand
+        {
+            Name = request.Name,
+            Email = request.Email,
+            ProfileRank = request.ProfileRank,
+            IsVisibleInRanking = request.IsVisibleInRanking,
+            Avatar = request.Avatar
+        };
+
+        var result = await _adminUserService.UpdateUserAsync(targetUserId, adminUserId, command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
+    }
+
+    [HttpPost("{id}/delete")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteUser([FromRoute] string id)
+    {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        var adminUserId = GetAdminUserId();
+        var result = await _adminUserService.DeleteUserAsync(targetUserId, adminUserId, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
+    }
+
+    [HttpPost("{id}/block")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> BlockUser([FromRoute] string id)
+    {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        var adminUserId = GetAdminUserId();
+        var result = await _adminUserService.BlockUserAsync(targetUserId, adminUserId, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
+    }
+
+    [HttpPost("{id}/unblock")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UnblockUser([FromRoute] string id)
+    {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var targetUserId = Id<Domain.Entities.User>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<Domain.Entities.User>.Empty;
+        var result = await _adminUserService.UnblockUserAsync(targetUserId, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
+    }
+
+    private Id<Domain.Entities.User> GetAdminUserId()
+    {
+        var userIdClaim = HttpContext.User.FindFirst("userId")?.Value;
+        return Id<Domain.Entities.User>.TryParse(userIdClaim, out var userId) ? userId : Id<Domain.Entities.User>.Empty;
+    }
+}

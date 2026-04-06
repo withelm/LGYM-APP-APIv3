@@ -1,5 +1,8 @@
+using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Models;
+using LgymApi.Application.Pagination;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Options;
 using LgymApi.BackgroundWorker.Actions;
@@ -670,6 +673,7 @@ public sealed class SendInvitationEmailHandlerTests
         public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAsync(User user, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task UpdateAsync(User user, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default) => Task.FromResult(new Pagination<UserResult>());
      }
 
     private sealed class TestEmailScheduler : IEmailScheduler<InvitationEmailPayload>

@@ -1,8 +1,12 @@
+using LgymApi.Application.Features.AdminManagement.Models;
+using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Models;
+using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Pagination;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -10,10 +14,22 @@ namespace LgymApi.Infrastructure.Repositories;
 public sealed class UserRepository : IUserRepository
 {
     private readonly AppDbContext _dbContext;
+    private readonly GridifyExecutionService _gridifyExecutionService;
+    private readonly IMapperRegistry _mapperRegistry;
 
-    public UserRepository(AppDbContext dbContext)
+    private static readonly PaginationPolicy AdminUserPaginationPolicy = new()
+    {
+        MaxPageSize = 100,
+        DefaultPageSize = 20,
+        DefaultSortField = "name",
+        TieBreakerField = "id"
+    };
+
+    public UserRepository(AppDbContext dbContext, GridifyExecutionService gridifyExecutionService, IMapperRegistry mapperRegistry)
     {
         _dbContext = dbContext;
+        _gridifyExecutionService = gridifyExecutionService;
+        _mapperRegistry = mapperRegistry;
     }
 
     public Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default)
@@ -75,5 +91,71 @@ public sealed class UserRepository : IUserRepository
     {
         _dbContext.Users.Update(user);
         return Task.CompletedTask;
+    }
+
+    public async Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
+    {
+        var baseQuery = BuildAdminUserBaseQuery(includeDeleted);
+
+        var pagination = await _gridifyExecutionService.ExecuteAsync(
+            baseQuery,
+            filterInput,
+            _mapperRegistry,
+            AdminUserPaginationPolicy,
+            cancellationToken);
+
+        return new Pagination<UserResult>
+        {
+            Items = pagination.Items.Select(x => new UserResult
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Email = x.Email,
+                Avatar = x.Avatar,
+                ProfileRank = x.ProfileRank,
+                IsVisibleInRanking = x.IsVisibleInRanking,
+                IsBlocked = x.IsBlocked,
+                IsDeleted = x.IsDeleted,
+                CreatedAt = x.CreatedAt
+            }).ToList(),
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = pagination.TotalCount
+        };
+    }
+
+    private IQueryable<AdminUserProjection> BuildAdminUserBaseQuery(bool includeDeleted)
+    {
+        var query = _dbContext.Users.AsNoTracking();
+        if (!includeDeleted)
+        {
+            query = query.Where(u => !u.IsDeleted);
+        }
+
+        return query.Select(u => new AdminUserProjection
+        {
+            Id = u.Id,
+            Name = u.Name,
+            Email = u.Email,
+            Avatar = u.Avatar,
+            ProfileRank = u.ProfileRank,
+            IsVisibleInRanking = u.IsVisibleInRanking,
+            IsBlocked = u.IsBlocked,
+            IsDeleted = u.IsDeleted,
+            CreatedAt = u.CreatedAt
+        });
+    }
+
+    internal sealed class AdminUserProjection
+    {
+        public Id<User> Id { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string Email { get; init; } = string.Empty;
+        public string? Avatar { get; init; }
+        public string ProfileRank { get; init; } = string.Empty;
+        public bool IsVisibleInRanking { get; init; }
+        public bool IsBlocked { get; init; }
+        public bool IsDeleted { get; init; }
+        public DateTimeOffset CreatedAt { get; init; }
     }
 }
