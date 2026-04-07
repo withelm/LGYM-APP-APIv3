@@ -7,11 +7,29 @@ namespace LgymApi.Application.Features.PasswordReset;
 
 public sealed class PasswordResetServiceDependencies
 {
-    public required IUserRepository UserRepository { get; init; }
-    public required IPasswordResetTokenRepository PasswordResetTokenRepository { get; init; }
-    public required IPasswordResetTokenGenerationService TokenGenerationService { get; init; }
-    public required ILegacyPasswordService LegacyPasswordService { get; init; }
-    public required IEmailScheduler<PasswordRecoveryEmailPayload> PasswordRecoveryEmailScheduler { get; init; }
-    public required IUserSessionCache UserSessionCache { get; init; }
-    public required IUnitOfWork UnitOfWork { get; init; }
+    public PasswordResetServiceDependencies(
+        IUserRepository userRepository,
+        IPasswordResetTokenRepository passwordResetTokenRepository,
+        IPasswordResetTokenGenerationService tokenGenerationService,
+        ILegacyPasswordService legacyPasswordService,
+        IEmailScheduler<PasswordRecoveryEmailPayload> passwordRecoveryEmailScheduler,
+        IUserSessionCache userSessionCache,
+        IUnitOfWork unitOfWork)
+    {
+        UserRepository = userRepository;
+        PasswordResetTokenRepository = passwordResetTokenRepository;
+        TokenGenerationService = tokenGenerationService;
+        LegacyPasswordService = legacyPasswordService;
+        PasswordRecoveryEmailScheduler = passwordRecoveryEmailScheduler;
+        UserSessionCache = userSessionCache;
+        UnitOfWork = unitOfWork;
+    }
+
+    public IUserRepository UserRepository { get; }
+    public IPasswordResetTokenRepository PasswordResetTokenRepository { get; }
+    public IPasswordResetTokenGenerationService TokenGenerationService { get; }
+    public ILegacyPasswordService LegacyPasswordService { get; }
+    public IEmailScheduler<PasswordRecoveryEmailPayload> PasswordRecoveryEmailScheduler { get; }
+    public IUserSessionCache UserSessionCache { get; }
+    public IUnitOfWork UnitOfWork { get; }
 }
