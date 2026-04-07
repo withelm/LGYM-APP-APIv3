@@ -3,6 +3,7 @@ using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Api.Hubs;
 
@@ -10,10 +11,12 @@ namespace LgymApi.Api.Hubs;
 public sealed class NotificationHub : Hub
 {
     private readonly IUserSessionCache _userSessionCache;
+    private readonly ILogger<NotificationHub> _logger;
 
-    public NotificationHub(IUserSessionCache userSessionCache)
+    public NotificationHub(IUserSessionCache userSessionCache, ILogger<NotificationHub> logger)
     {
         _userSessionCache = userSessionCache;
+        _logger = logger;
     }
 
     public override async Task OnConnectedAsync()
@@ -34,6 +37,16 @@ public sealed class NotificationHub : Hub
 
         await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
         await base.OnConnectedAsync();
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        _logger.LogInformation(
+            exception,
+            "Notification hub disconnected for connection {ConnectionId}",
+            Context.ConnectionId);
+
+        await base.OnDisconnectedAsync(exception);
     }
 
     // Push-only hub — no client-to-server methods

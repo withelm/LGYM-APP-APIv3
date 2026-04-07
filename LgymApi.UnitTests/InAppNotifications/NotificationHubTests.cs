@@ -4,6 +4,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Security.Claims;
 
 namespace LgymApi.UnitTests.InAppNotifications;
@@ -19,7 +20,7 @@ public sealed class NotificationHubTests
         var sessionCache = new FakeUserSessionCache(true);
         var groups = new FakeGroupManager();
 
-        var hub = new NotificationHub(sessionCache)
+        var hub = new NotificationHub(sessionCache, NullLogger<NotificationHub>.Instance)
         {
             Context = context,
             Groups = groups
@@ -40,7 +41,7 @@ public sealed class NotificationHubTests
         var sessionCache = new FakeUserSessionCache(true);
         var groups = new FakeGroupManager();
 
-        var hub = new NotificationHub(sessionCache)
+        var hub = new NotificationHub(sessionCache, NullLogger<NotificationHub>.Instance)
         {
             Context = context,
             Groups = groups
@@ -61,7 +62,7 @@ public sealed class NotificationHubTests
         var sessionCache = new FakeUserSessionCache(false);
         var groups = new FakeGroupManager();
 
-        var hub = new NotificationHub(sessionCache)
+        var hub = new NotificationHub(sessionCache, NullLogger<NotificationHub>.Instance)
         {
             Context = context,
             Groups = groups

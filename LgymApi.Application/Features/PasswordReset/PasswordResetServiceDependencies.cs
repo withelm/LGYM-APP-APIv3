@@ -1,23 +1,11 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
-using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 
 namespace LgymApi.Application.Features.PasswordReset;
 
-public interface IPasswordResetServiceDependencies
-{
-    IUserRepository UserRepository { get; }
-    IPasswordResetTokenRepository PasswordResetTokenRepository { get; }
-    IPasswordResetTokenGenerationService TokenGenerationService { get; }
-    ILegacyPasswordService LegacyPasswordService { get; }
-    IEmailScheduler<PasswordRecoveryEmailPayload> PasswordRecoveryEmailScheduler { get; }
-    IUserSessionCache UserSessionCache { get; }
-    IUnitOfWork UnitOfWork { get; }
-}
-
-internal sealed class PasswordResetServiceDependencies : IPasswordResetServiceDependencies
+public sealed class PasswordResetServiceDependencies
 {
     public PasswordResetServiceDependencies(
         IUserRepository userRepository,

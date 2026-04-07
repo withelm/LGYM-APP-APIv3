@@ -341,7 +341,8 @@ public sealed class PasswordResetServiceTests
          FakeUserSessionCache? sessionCache = null)
      {
          var actualTokenRepository = tokenRepository ?? new FakePasswordResetTokenRepository();
-         var dependencies = new FakePasswordResetServiceDependencies(
+
+         var dependencies = new PasswordResetServiceDependencies(
              userRepository ?? new FakeUserRepository(),
              actualTokenRepository,
              new PasswordResetTokenGenerationService(actualTokenRepository),
@@ -352,35 +353,6 @@ public sealed class PasswordResetServiceTests
 
          return new PasswordResetService(dependencies);
      }
-
-    private sealed class FakePasswordResetServiceDependencies : IPasswordResetServiceDependencies
-    {
-        public FakePasswordResetServiceDependencies(
-            IUserRepository userRepository,
-            IPasswordResetTokenRepository passwordResetTokenRepository,
-            IPasswordResetTokenGenerationService tokenGenerationService,
-            ILegacyPasswordService legacyPasswordService,
-            IEmailScheduler<PasswordRecoveryEmailPayload> passwordRecoveryEmailScheduler,
-            IUserSessionCache userSessionCache,
-            IUnitOfWork unitOfWork)
-        {
-            UserRepository = userRepository;
-            PasswordResetTokenRepository = passwordResetTokenRepository;
-            TokenGenerationService = tokenGenerationService;
-            LegacyPasswordService = legacyPasswordService;
-            PasswordRecoveryEmailScheduler = passwordRecoveryEmailScheduler;
-            UserSessionCache = userSessionCache;
-            UnitOfWork = unitOfWork;
-        }
-
-        public IUserRepository UserRepository { get; }
-        public IPasswordResetTokenRepository PasswordResetTokenRepository { get; }
-        public IPasswordResetTokenGenerationService TokenGenerationService { get; }
-        public ILegacyPasswordService LegacyPasswordService { get; }
-        public IEmailScheduler<PasswordRecoveryEmailPayload> PasswordRecoveryEmailScheduler { get; }
-        public IUserSessionCache UserSessionCache { get; }
-        public IUnitOfWork UnitOfWork { get; }
-    }
 
     private sealed class FakeUserRepository : IUserRepository
     {

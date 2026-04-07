@@ -14,7 +14,7 @@ namespace LgymApi.Infrastructure.Repositories;
 public sealed class UserRepository : IUserRepository
 {
     private readonly AppDbContext _dbContext;
-    private readonly GridifyExecutionService _gridifyExecutionService;
+    private readonly IGridifyExecutionService _gridifyExecutionService;
     private readonly IMapperRegistry _mapperRegistry;
 
     private static readonly PaginationPolicy AdminUserPaginationPolicy = new()
@@ -25,7 +25,7 @@ public sealed class UserRepository : IUserRepository
         TieBreakerField = "id"
     };
 
-    public UserRepository(AppDbContext dbContext, GridifyExecutionService gridifyExecutionService, IMapperRegistry mapperRegistry)
+    public UserRepository(AppDbContext dbContext, IGridifyExecutionService gridifyExecutionService, IMapperRegistry mapperRegistry)
     {
         _dbContext = dbContext;
         _gridifyExecutionService = gridifyExecutionService;

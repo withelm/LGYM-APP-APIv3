@@ -27,7 +27,7 @@ public sealed class PasswordResetService : IPasswordResetService
     private readonly IUserSessionCache _userSessionCache;
     private readonly IUnitOfWork _unitOfWork;
 
-    public PasswordResetService(IPasswordResetServiceDependencies dependencies)
+    public PasswordResetService(PasswordResetServiceDependencies dependencies)
     {
         _userRepository = dependencies.UserRepository;
         _passwordResetTokenRepository = dependencies.PasswordResetTokenRepository;

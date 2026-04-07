@@ -1,5 +1,6 @@
 using System.Reflection;
 using FluentAssertions;
+using LgymApi.Infrastructure.Pagination;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests.Pagination;
@@ -9,6 +10,9 @@ public sealed class PaginationArchitectureGuardTests
 {
     private static readonly Assembly ApplicationAssembly =
         typeof(LgymApi.Application.Pagination.Pagination<>).Assembly;
+
+    private static readonly Assembly InfrastructureAssembly =
+        typeof(GridifyExecutionService).Assembly;
 
     private static readonly string RepositorySourcePath = ResolveSourcePath(
         "LgymApi.Infrastructure", "Repositories", "TrainerRelationshipRepository.cs");
@@ -94,6 +98,41 @@ public sealed class PaginationArchitectureGuardTests
 
         beforeGridify.Should().NotContain("ToArrayAsync",
             "must not materialize query to array before passing to GridifyExecutionService");
+    }
+
+    [Test]
+    public void Repositories_MustDependOnIGridifyExecutionServiceInterface_NotConcreteClass()
+    {
+        var repositoryTypes = InfrastructureAssembly.GetTypes()
+            .Where(t => t.Name.EndsWith("Repository", StringComparison.Ordinal)
+                        && !t.IsAbstract
+                        && !t.IsInterface)
+            .ToList();
+
+        repositoryTypes.Should().NotBeEmpty("the Infrastructure assembly should contain repository types");
+
+        var violations = new List<string>();
+        var concreteGridifyType = typeof(GridifyExecutionService);
+
+        foreach (var repoType in repositoryTypes)
+        {
+            foreach (var ctor in repoType.GetConstructors(BindingFlags.Public | BindingFlags.Instance))
+            {
+                foreach (var param in ctor.GetParameters())
+                {
+                    if (param.ParameterType == concreteGridifyType)
+                    {
+                        violations.Add(
+                            $"  {repoType.FullName}: constructor parameter '{param.Name}' uses concrete type '{concreteGridifyType.Name}' instead of '{nameof(IGridifyExecutionService)}'");
+                    }
+                }
+            }
+        }
+
+        violations.Should().BeEmpty(
+            "repositories must depend on IGridifyExecutionService (interface), not GridifyExecutionService (concrete class). " +
+            "This enforces Dependency Inversion Principle and allows test substitution. " +
+            $"Violations:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
     }
 
     private static void CheckTypeForForbiddenReferences(Type type, List<string> violations)
