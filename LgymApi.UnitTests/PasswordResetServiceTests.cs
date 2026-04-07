@@ -342,14 +342,18 @@ public sealed class PasswordResetServiceTests
      {
          var actualTokenRepository = tokenRepository ?? new FakePasswordResetTokenRepository();
 
-         return new PasswordResetService(
-             userRepository ?? new FakeUserRepository(),
-             actualTokenRepository,
-             new PasswordResetTokenGenerationService(actualTokenRepository),
-             new LegacyPasswordService(),
-             emailScheduler ?? new FakePasswordRecoveryEmailScheduler(),
-             sessionCache ?? new FakeUserSessionCache(),
-             unitOfWork ?? new FakeUnitOfWork());
+         var dependencies = new PasswordResetServiceDependencies
+         {
+             UserRepository = userRepository ?? new FakeUserRepository(),
+             PasswordResetTokenRepository = actualTokenRepository,
+             TokenGenerationService = new PasswordResetTokenGenerationService(actualTokenRepository),
+             LegacyPasswordService = new LegacyPasswordService(),
+             PasswordRecoveryEmailScheduler = emailScheduler ?? new FakePasswordRecoveryEmailScheduler(),
+             UserSessionCache = sessionCache ?? new FakeUserSessionCache(),
+             UnitOfWork = unitOfWork ?? new FakeUnitOfWork()
+         };
+
+         return new PasswordResetService(dependencies);
      }
 
     private sealed class FakeUserRepository : IUserRepository
