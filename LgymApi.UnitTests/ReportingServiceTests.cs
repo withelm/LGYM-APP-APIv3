@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Models;

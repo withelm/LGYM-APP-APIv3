@@ -6,7 +6,6 @@ using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Features.Tutorial.Models;
 using LgymApi.Application.Features.User.Models;
-using LgymApi.Application.Exceptions;
 using LgymApi.Application.Options;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
