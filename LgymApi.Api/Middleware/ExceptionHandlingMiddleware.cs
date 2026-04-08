@@ -20,6 +20,16 @@ public sealed class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
+
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new ResponseMessageDto { Message = ex.Message });
+        }
         catch (Exception ex)
         {
             if (context.Response.HasStarted)

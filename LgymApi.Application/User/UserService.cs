@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
-using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
@@ -142,7 +141,7 @@ public sealed class UserService : IUserService
         var rolesToAssign = await _roleRepository.GetByNamesAsync(roleNames, cancellationToken);
         if (rolesToAssign.Count != roleNames.Count)
         {
-            throw AppException.Internal(Messages.DefaultRoleMissing);
+            return Result<Unit, AppError>.Failure(new InternalServerError(Messages.DefaultRoleMissing));
         }
 
         await _roleRepository.AddUserRolesAsync(user.Id, rolesToAssign.Select(r => r.Id).ToList(), cancellationToken);
