@@ -1,5 +1,4 @@
 using LgymApi.Api.Features.Common.Contracts;
-using LgymApi.Application.Exceptions;
 using LgymApi.Resources;
 
 namespace LgymApi.Api.Middleware;
@@ -26,16 +25,6 @@ public sealed class ExceptionHandlingMiddleware
             if (context.Response.HasStarted)
             {
                 throw;
-            }
-
-            // Handle AppException (from excluded infrastructure components like RouteUserAccessGuard)
-            if (ex is AppException appEx)
-            {
-                _logger.LogError(ex, "Application exception");
-                context.Response.StatusCode = appEx.StatusCode;
-                var response = appEx.Payload ?? new ResponseMessageDto { Message = appEx.Message };
-                await context.Response.WriteAsJsonAsync(response);
-                return;
             }
 
             // Handle all other exceptions as 500 Internal Server Error
