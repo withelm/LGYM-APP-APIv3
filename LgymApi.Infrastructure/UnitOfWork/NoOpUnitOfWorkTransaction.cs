@@ -1,13 +1,15 @@
 using LgymApi.Application.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.UnitOfWork;
 
 internal sealed class NoOpUnitOfWorkTransaction : IUnitOfWorkTransaction
 {
-    public static NoOpUnitOfWorkTransaction Instance { get; } = new();
+    private readonly DbContext _dbContext;
 
-    private NoOpUnitOfWorkTransaction()
+    public NoOpUnitOfWorkTransaction(DbContext dbContext)
     {
+        _dbContext = dbContext;
     }
 
     public Task CommitAsync(CancellationToken cancellationToken = default)
@@ -17,6 +19,7 @@ internal sealed class NoOpUnitOfWorkTransaction : IUnitOfWorkTransaction
 
     public Task RollbackAsync(CancellationToken cancellationToken = default)
     {
+        _dbContext.ChangeTracker.Clear();
         return Task.CompletedTask;
     }
 

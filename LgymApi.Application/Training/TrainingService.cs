@@ -106,6 +106,7 @@ public sealed class TrainingService : ITrainingService
 
                 if (exercise.Unit == WeightUnits.Unknown)
                 {
+                    await transaction.RollbackAsync(CancellationToken.None);
                     return Result<TrainingSummaryResult, AppError>.Failure(new InvalidTrainingDataError(Messages.FieldRequired));
                 }
 
@@ -154,6 +155,7 @@ public sealed class TrainingService : ITrainingService
             var eloEntry = await _eloRepository.GetLatestEntryAsync(user.Id, cancellationToken);
             if (eloEntry == null)
             {
+                await transaction.RollbackAsync(CancellationToken.None);
                 return Result<TrainingSummaryResult, AppError>.Failure(new InternalServerError(Messages.TryAgain));
             }
 

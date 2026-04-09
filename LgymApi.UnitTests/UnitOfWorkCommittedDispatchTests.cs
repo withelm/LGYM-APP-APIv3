@@ -43,7 +43,11 @@ public sealed class UnitOfWorkCommittedDispatchTests
     {
         var dbTransaction = new FakeDbContextTransaction();
         var dispatcher = new ThrowingCommittedIntentDispatcher();
-        var transaction = new EfUnitOfWorkTransaction(dbTransaction, dispatcher, NullLogger<EfUnitOfWork>.Instance);
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"uow-commit-dispatch-{Id<UnitOfWorkCommittedDispatchTests>.New()}")
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+        var transaction = new EfUnitOfWorkTransaction(dbTransaction, dbContext, dispatcher, NullLogger<EfUnitOfWork>.Instance);
 
         Assert.DoesNotThrowAsync(async () => await transaction.CommitAsync());
         Assert.Multiple(() =>

@@ -37,11 +37,11 @@ public sealed class EfUnitOfWork : IUnitOfWork
     {
         if (_dbContext.Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
         {
-            return NoOpUnitOfWorkTransaction.Instance;
+            return new NoOpUnitOfWorkTransaction(_dbContext);
         }
 
         var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        return new EfUnitOfWorkTransaction(transaction, _committedIntentDispatcher, _logger);
+        return new EfUnitOfWorkTransaction(transaction, _dbContext, _committedIntentDispatcher, _logger);
     }
 
     public void DetachEntity<TEntity>(TEntity entity) where TEntity : class
