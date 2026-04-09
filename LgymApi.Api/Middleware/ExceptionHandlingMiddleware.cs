@@ -1,5 +1,4 @@
 using LgymApi.Api.Features.Common.Contracts;
-using LgymApi.Application.Exceptions;
 using LgymApi.Resources;
 
 namespace LgymApi.Api.Middleware;
@@ -21,21 +20,21 @@ public sealed class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
-        catch (Exception ex)
+        catch (UnauthorizedAccessException ex)
         {
             if (context.Response.HasStarted)
             {
                 throw;
             }
 
-            // Handle AppException (from excluded infrastructure components like RouteUserAccessGuard)
-            if (ex is AppException appEx)
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new ResponseMessageDto { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            if (context.Response.HasStarted)
             {
-                _logger.LogError(ex, "Application exception");
-                context.Response.StatusCode = appEx.StatusCode;
-                var response = appEx.Payload ?? new ResponseMessageDto { Message = appEx.Message };
-                await context.Response.WriteAsJsonAsync(response);
-                return;
+                throw;
             }
 
             // Handle all other exceptions as 500 Internal Server Error

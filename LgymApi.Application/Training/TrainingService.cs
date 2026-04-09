@@ -1,6 +1,5 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
-using LgymApi.Application.Exceptions;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
@@ -49,161 +48,151 @@ public sealed class TrainingService : ITrainingService
         CancellationToken cancellationToken = default)
     {
         var (gymId, planDayId, createdAt, exercises) = input;
+        if (userId.IsEmpty || gymId.IsEmpty || planDayId.IsEmpty)
+        {
+            return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
+        }
+
+        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
+        if (user == null)
+        {
+            return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
+        }
+
+        var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
+        if (gym == null)
+        {
+            return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
+        }
+
+        var uniqueExerciseIds = exercises
+            .Select(e => e.ExerciseId)
+            .Where(id => !id.IsEmpty)
+            .Distinct()
+            .ToList();
+
+        var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds, cancellationToken);
+        var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
+
+        var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds, cancellationToken);
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
-            if (userId.IsEmpty || gymId.IsEmpty || planDayId.IsEmpty)
+            var createdAtUtc = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
+            var training = new TrainingEntity
             {
-                return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
-            }
+                Id = Id<LgymApi.Domain.Entities.Training>.New(),
+                UserId = user.Id,
+                TypePlanDayId = planDayId,
+                CreatedAt = new DateTimeOffset(createdAtUtc),
+                GymId = gym.Id
+            };
 
-            var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
-            if (user == null)
+            await _trainingRepository.AddAsync(training, cancellationToken);
+
+            var savedScoreIds = new List<Id<ExerciseScore>>();
+            var totalElo = 0;
+            var scoresToAdd = new List<ExerciseScore>();
+            var index = 0;
+            foreach (var exercise in exercises)
             {
-                return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
-            }
-
-            var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
-            if (gym == null)
-            {
-                return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
-            }
-
-            var uniqueExerciseIds = exercises
-                .Select(e => e.ExerciseId)
-                .Where(id => !id.IsEmpty)
-                .Distinct()
-                .ToList();
-
-            var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds, cancellationToken);
-            var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
-
-            var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds, cancellationToken);
-
-            await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
-            try
-            {
-                var createdAtUtc = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
-                var training = new TrainingEntity
+                if (exercise.ExerciseId.IsEmpty)
                 {
-                    Id = Id<LgymApi.Domain.Entities.Training>.New(),
+                    continue;
+                }
+
+                var exerciseId = exercise.ExerciseId;
+
+                if (exercise.Unit == WeightUnits.Unknown)
+                {
+                    await transaction.RollbackAsync(CancellationToken.None);
+                    return Result<TrainingSummaryResult, AppError>.Failure(new InvalidTrainingDataError(Messages.FieldRequired));
+                }
+
+                var scoreEntity = new ExerciseScore
+                {
+                    Id = Id<ExerciseScore>.New(),
+                    ExerciseId = exerciseId,
                     UserId = user.Id,
-                    TypePlanDayId = planDayId,
-                    CreatedAt = new DateTimeOffset(createdAtUtc),
-                    GymId = gym.Id
+                    Reps = exercise.Reps,
+                    Series = exercise.Series,
+                    Weight = new Weight(exercise.Weight, exercise.Unit),
+                    TrainingId = training.Id,
+                    Order = index
                 };
 
-                await _trainingRepository.AddAsync(training, cancellationToken);
+                scoresToAdd.Add(scoreEntity);
+                savedScoreIds.Add(scoreEntity.Id);
+                index++;
 
-                var savedScoreIds = new List<Id<ExerciseScore>>();
-                var totalElo = 0;
-                var scoresToAdd = new List<ExerciseScore>();
-                var index = 0;
-                foreach (var exercise in exercises)
+                var key = $"{exerciseId}-{exercise.Series}";
+                if (previousScoresMap.TryGetValue(key, out var previousScore))
                 {
-                    if (exercise.ExerciseId.IsEmpty)
-                    {
-                        continue;
-                    }
-
-                    var exerciseId = exercise.ExerciseId;
-
-                    if (exercise.Unit == WeightUnits.Unknown)
-                    {
-                        return Result<TrainingSummaryResult, AppError>.Failure(new InvalidTrainingDataError(Messages.FieldRequired));
-                    }
-
-                    var scoreEntity = new ExerciseScore
-                    {
-                        Id = Id<ExerciseScore>.New(),
-                        ExerciseId = exerciseId,
-                        UserId = user.Id,
-                        Reps = exercise.Reps,
-                        Series = exercise.Series,
-                        Weight = new Weight(exercise.Weight, exercise.Unit),
-                        TrainingId = training.Id,
-                        Order = index
-                    };
-
-                    scoresToAdd.Add(scoreEntity);
-                    savedScoreIds.Add(scoreEntity.Id);
-                    index++;
-
-                    var key = $"{exerciseId}-{exercise.Series}";
-                    if (previousScoresMap.TryGetValue(key, out var previousScore))
-                    {
-                        var eloGain = CalculateEloPerExercise(scoreEntity, previousScore);
-                        totalElo += eloGain;
-                    }
+                    var eloGain = CalculateEloPerExercise(scoreEntity, previousScore);
+                    totalElo += eloGain;
                 }
-
-                if (scoresToAdd.Count > 0)
-                {
-                    await _exerciseScoreRepository.AddRangeAsync(scoresToAdd, cancellationToken);
-                }
-
-                var trainingScores = savedScoreIds.Select((scoreId, index) => new TrainingExerciseScore
-                {
-                    Id = Id<TrainingExerciseScore>.New(),
-                    TrainingId = training.Id,
-                    ExerciseScoreId = scoreId,
-                    Order = index
-                }).ToList();
-
-                if (trainingScores.Count > 0)
-                {
-                    await _trainingExerciseScoreRepository.AddRangeAsync(trainingScores, cancellationToken);
-                }
-
-
-                var eloEntry = await _eloRepository.GetLatestEntryAsync(user.Id, cancellationToken);
-                if (eloEntry == null)
-                {
-                    throw AppException.Internal(Messages.TryAgain);
-                }
-
-                var newElo = totalElo + eloEntry.Elo;
-                var currentRank = _rankService.GetCurrentRank(newElo);
-                var nextRank = _rankService.GetNextRank(currentRank.Name);
-
-                user.ProfileRank = currentRank.Name;
-                await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
-                {
-                    Id = Id<LgymApi.Domain.Entities.EloRegistry>.New(),
-                    UserId = user.Id,
-                    Date = DateTimeOffset.UtcNow,
-                    Elo = newElo,
-                    TrainingId = training.Id
-                }, cancellationToken);
-                await _userRepository.UpdateAsync(user, cancellationToken);
-                await _commandDispatcher.EnqueueAsync(new TrainingCompletedCommand { UserId = user.Id, TrainingId = training.Id });
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
-
-                await transaction.CommitAsync(cancellationToken);
-                return Result<TrainingSummaryResult, AppError>.Success(new TrainingSummaryResult
-                {
-                    Comparison = comparison,
-                    GainElo = totalElo,
-                    UserOldElo = eloEntry.Elo,
-                    ProfileRank = new Features.User.Models.RankInfo { Name = currentRank.Name, NeedElo = currentRank.NeedElo },
-                    NextRank = nextRank == null ? null : new Features.User.Models.RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
-                    Message = Messages.Created
-                });
             }
-            catch
+
+            if (scoresToAdd.Count > 0)
+            {
+                await _exerciseScoreRepository.AddRangeAsync(scoresToAdd, cancellationToken);
+            }
+
+            var trainingScores = savedScoreIds.Select((scoreId, index) => new TrainingExerciseScore
+            {
+                Id = Id<TrainingExerciseScore>.New(),
+                TrainingId = training.Id,
+                ExerciseScoreId = scoreId,
+                Order = index
+            }).ToList();
+
+            if (trainingScores.Count > 0)
+            {
+                await _trainingExerciseScoreRepository.AddRangeAsync(trainingScores, cancellationToken);
+            }
+
+            var eloEntry = await _eloRepository.GetLatestEntryAsync(user.Id, cancellationToken);
+            if (eloEntry == null)
             {
                 await transaction.RollbackAsync(CancellationToken.None);
-                throw;
+                return Result<TrainingSummaryResult, AppError>.Failure(new InternalServerError(Messages.TryAgain));
             }
+
+            var newElo = totalElo + eloEntry.Elo;
+            var currentRank = _rankService.GetCurrentRank(newElo);
+            var nextRank = _rankService.GetNextRank(currentRank.Name);
+
+            user.ProfileRank = currentRank.Name;
+            await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
+            {
+                Id = Id<LgymApi.Domain.Entities.EloRegistry>.New(),
+                UserId = user.Id,
+                Date = DateTimeOffset.UtcNow,
+                Elo = newElo,
+                TrainingId = training.Id
+            }, cancellationToken);
+            await _userRepository.UpdateAsync(user, cancellationToken);
+            await _commandDispatcher.EnqueueAsync(new TrainingCompletedCommand { UserId = user.Id, TrainingId = training.Id });
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var comparison = BuildComparisonReport(exercises, previousScoresMap, exerciseDetailsMap);
+
+            await transaction.CommitAsync(cancellationToken);
+            return Result<TrainingSummaryResult, AppError>.Success(new TrainingSummaryResult
+            {
+                Comparison = comparison,
+                GainElo = totalElo,
+                UserOldElo = eloEntry.Elo,
+                ProfileRank = new Features.User.Models.RankInfo { Name = currentRank.Name, NeedElo = currentRank.NeedElo },
+                NextRank = nextRank == null ? null : new Features.User.Models.RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
+                Message = Messages.Created
+            });
         }
-        catch (AppException)
+        catch
         {
+            await transaction.RollbackAsync(CancellationToken.None);
             throw;
-        }
-        catch (Exception exception) when (exception is not AppException)
-        {
-            throw AppException.Internal(Messages.TryAgain);
         }
     }
 

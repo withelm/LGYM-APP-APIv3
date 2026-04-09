@@ -7,11 +7,10 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ResultPatternMigrationGuardTests
 {
-    // Baseline established from current codebase state (2026-04-03).
-    // This is the known count of forbidden AppException throws (excluding AppException.Internal).
-    // The guard prevents NEW violations from being introduced during Result pattern migration.
-    // As services are converted, this baseline should DECREASE toward zero.
-    private const int BaselineViolationCount = 204;
+    // Migration complete (2026-04-08). All AppException throws have been replaced with Result pattern.
+    // This guard prevents re-introduction of AppException throws in service files.
+    // Baseline is 0 — any new violation will fail this test.
+    private const int BaselineViolationCount = 0;
 
     [Test]
     public void Application_Services_Should_Not_Introduce_New_AppException_Throws()
@@ -42,7 +41,7 @@ public sealed class ResultPatternMigrationGuardTests
             {
                 if (throwStatement.Expression is InvocationExpressionSyntax invocation)
                 {
-                    if (IsAppExceptionThrow(invocation) && !IsExcludedAppException(invocation))
+                    if (IsAppExceptionThrow(invocation))
                     {
                         violations.Add(CreateViolation(repoRoot, tree, throwStatement));
                     }
@@ -78,18 +77,6 @@ public sealed class ResultPatternMigrationGuardTests
             {
                 return true;
             }
-        }
-
-        return false;
-    }
-
-    private static bool IsExcludedAppException(InvocationExpressionSyntax invocation)
-    {
-        // Allow AppException.Internal (transitional exception, being phased out)
-        if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
-        {
-            var methodName = memberAccess.Name.Identifier.ValueText;
-            return methodName == "Internal";
         }
 
         return false;
