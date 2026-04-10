@@ -216,9 +216,12 @@
    <data name="InvalidTimeZone" xml:space="preserve">
      <value>Invalid time zone identifier.</value>
    </data>
+   <data name="InvalidId" xml:space="preserve">
+      <value>ID is invalid.</value>
+    </data>
    <data name="ForgotPasswordRequested" xml:space="preserve">
-     <value>If an account with that email exists, a password reset link has been sent.</value>
-   </data>
+      <value>If an account with that email exists, a password reset link has been sent.</value>
+    </data>
     <data name="PasswordResetSucceeded" xml:space="preserve">
       <value>Password reset successfully.</value>
     </data>
