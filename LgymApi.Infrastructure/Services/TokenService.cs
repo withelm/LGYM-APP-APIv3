@@ -19,7 +19,7 @@ public sealed class TokenService : ITokenService
         _configuration = configuration;
     }
 
-    public string CreateToken(Id<User> userId, Id<UserSession> sessionId, Guid jti, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
+    public string CreateToken(Id<User> userId, Id<UserSession> sessionId, string jti, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
     {
         var signingKey = _configuration["Jwt:SigningKey"];
         if (string.IsNullOrWhiteSpace(signingKey) || signingKey.Length < 32)
@@ -36,7 +36,7 @@ public sealed class TokenService : ITokenService
             new(JwtRegisteredClaimNames.Sub, userIdString),
             new("userId", userIdString),
             new("sid", sessionId.ToString()),
-            new(JwtRegisteredClaimNames.Jti, jti.ToString())
+            new(JwtRegisteredClaimNames.Jti, jti)
         };
 
         foreach (var role in roles.Distinct(StringComparer.Ordinal))

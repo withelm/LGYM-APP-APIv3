@@ -17,7 +17,7 @@ public sealed class TokenServiceTests
         var service = new TokenService(configuration);
 
         Assert.Throws<InvalidOperationException>(() =>
-            service.CreateToken(Id<User>.New(), Id<UserSession>.New(), Id<UserSession>.New().GetValue(), Array.Empty<string>(), Array.Empty<string>()));
+            service.CreateToken(Id<User>.New(), Id<UserSession>.New(), Id<UserSession>.New().ToString(), Array.Empty<string>(), Array.Empty<string>()));
     }
 
     [Test]
@@ -32,7 +32,7 @@ public sealed class TokenServiceTests
 
         var userId = Id<User>.New();
         var sessionId = Id<UserSession>.New();
-        var jti = Id<UserSession>.New().GetValue();
+        var jti = Id<UserSession>.New().ToString();
         var token = service.CreateToken(userId, sessionId, jti, ["User"], ["admin:access"]);
 
         Assert.That(token, Is.Not.Null.And.Not.Empty);
@@ -44,7 +44,7 @@ public sealed class TokenServiceTests
             Assert.That(jwt.Claims.Any(c => c.Type == "sub" && c.Value == userId.ToString()), Is.True, "Missing 'sub' claim");
             Assert.That(jwt.Claims.Any(c => c.Type == "userId" && c.Value == userId.ToString()), Is.True, "Missing 'userId' claim");
             Assert.That(jwt.Claims.Any(c => c.Type == "sid" && c.Value == sessionId.ToString()), Is.True, "Missing 'sid' claim");
-            Assert.That(jwt.Claims.Any(c => c.Type == JwtRegisteredClaimNames.Jti && c.Value == jti.ToString()), Is.True, "Missing 'jti' claim");
+            Assert.That(jwt.Claims.Any(c => c.Type == JwtRegisteredClaimNames.Jti && c.Value == jti), Is.True, "Missing 'jti' claim");
             Assert.That(jwt.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "User"), Is.True, "Missing 'User' role claim");
             Assert.That(jwt.Claims.Any(c => c.Type == "permission" && c.Value == "admin:access"), Is.True, "Missing 'admin:access' permission claim");
         });

@@ -22,7 +22,7 @@ public sealed class UserSessionStore : IUserSessionStore
         {
             Id = Id<UserSession>.New(),
             UserId = userId,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = expiresAtUtc
         };
 

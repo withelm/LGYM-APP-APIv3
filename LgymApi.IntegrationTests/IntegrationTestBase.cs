@@ -92,7 +92,7 @@ public abstract class IntegrationTestBase : IDisposable
         return user;
     }
 
-    protected string GenerateJwt(Id<User> userId, Id<UserSession> sessionId, Guid jti)
+    protected string GenerateJwt(Id<User> userId, Id<UserSession> sessionId, string jti)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -119,7 +119,7 @@ public abstract class IntegrationTestBase : IDisposable
             new System.Security.Claims.Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new System.Security.Claims.Claim("userId", userId.ToString()),
             new System.Security.Claims.Claim("sid", sessionId.ToString()),
-            new System.Security.Claims.Claim(JwtRegisteredClaimNames.Jti, jti.ToString())
+            new System.Security.Claims.Claim(JwtRegisteredClaimNames.Jti, jti)
         };
 
         foreach (var role in roles)
@@ -145,7 +145,7 @@ public abstract class IntegrationTestBase : IDisposable
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var jti = Id<UserSession>.New().GetValue();
+        var jti = Id<UserSession>.New().ToString();
         var session = new UserSession
         {
             Id = Id<UserSession>.New(),

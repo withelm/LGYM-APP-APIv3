@@ -16,7 +16,7 @@ public sealed class FakeUserSessionStore : IUserSessionStore
         {
             Id = Id<UserSession>.New(),
             UserId = userId,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = expiresAtUtc,
             RevokedAtUtc = null
         };

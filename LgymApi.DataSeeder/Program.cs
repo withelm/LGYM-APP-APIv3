@@ -107,6 +107,7 @@ public static class Program
         services.AddScoped<IEntitySeeder, SupplementIntakeLogSeeder>();
         services.AddScoped<IEntitySeeder, UserTutorialProgressSeeder>();
         services.AddScoped<IEntitySeeder, UserTutorialStepProgressSeeder>();
+        services.AddScoped<IEntitySeeder, UserSessionSeeder>();
         services.AddScoped<SeedOrchestrator>();
         return services.BuildServiceProvider();
     }

@@ -512,7 +512,7 @@ public sealed class ServiceCommitBehaviorTests
 
     private sealed class NoOpTokenService : ITokenService
     {
-        public string CreateToken(Id<User> userId, Id<UserSession> sessionId, Guid jti, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
+        public string CreateToken(Id<User> userId, Id<UserSession> sessionId, string jti, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
         {
             return userId.ToString();
         }

@@ -201,7 +201,7 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
     private async Task<SessionClaims> CreatePersistedSessionAsync(Id<User> userId, DateTimeOffset? expiresAtUtc = null)
     {
         var sessionId = Id<UserSession>.New();
-        var jti = Id<UserSession>.New().GetValue();
+        var jti = Id<UserSession>.New().ToString();
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -225,7 +225,7 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
     {
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         var sid = jwt.Claims.Single(c => c.Type == "sid").Value;
-        var jti = Guid.Parse(jwt.Claims.Single(c => c.Type == JwtRegisteredClaimNames.Jti).Value);
+        var jti = jwt.Claims.Single(c => c.Type == JwtRegisteredClaimNames.Jti).Value;
         Id<UserSession>.TryParse(sid, out var sessionId).Should().BeTrue();
 
         return new SessionClaims(
@@ -256,7 +256,7 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
 
     private sealed record SessionClaims(
         LgymApi.Domain.ValueObjects.Id<UserSession> SessionId,
-        Guid Jti,
+        string Jti,
         string Token);
 
     private sealed class LoginResponse

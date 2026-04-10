@@ -55,7 +55,7 @@ public sealed class UserSessionStoreTests
         {
             Assert.That(session.UserId, Is.EqualTo(userId));
             Assert.That(session.ExpiresAtUtc, Is.EqualTo(expiresAt));
-            Assert.That(session.Jti, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(session.Jti, Is.Not.Empty);
             Assert.That(session.RevokedAtUtc, Is.Null);
         });
 
@@ -76,7 +76,7 @@ public sealed class UserSessionStoreTests
         {
             Id = Id<UserSession>.New(),
             UserId = userId,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(30),
             RevokedAtUtc = null
         };
@@ -102,7 +102,7 @@ public sealed class UserSessionStoreTests
         {
             Id = Id<UserSession>.New(),
             UserId = userId,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(30),
             RevokedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-5)
         };
@@ -128,7 +128,7 @@ public sealed class UserSessionStoreTests
         {
             Id = Id<UserSession>.New(),
             UserId = userId,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(-5),
             RevokedAtUtc = null
         };
@@ -168,7 +168,7 @@ public sealed class UserSessionStoreTests
         {
             Id = Id<UserSession>.New(),
             UserId = userId,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(30),
             RevokedAtUtc = null
         };
@@ -199,7 +199,7 @@ public sealed class UserSessionStoreTests
         {
             Id = Id<UserSession>.New(),
             UserId = userId,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(30),
             RevokedAtUtc = null
         };
@@ -207,7 +207,7 @@ public sealed class UserSessionStoreTests
         {
             Id = Id<UserSession>.New(),
             UserId = userId,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(30),
             RevokedAtUtc = null
         };
@@ -215,7 +215,7 @@ public sealed class UserSessionStoreTests
         {
             Id = Id<UserSession>.New(),
             UserId = userId,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(30),
             RevokedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-10)
         };
@@ -264,7 +264,7 @@ public sealed class UserSessionStoreTests
         {
             Id = Id<UserSession>.New(),
             UserId = user1Id,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(30),
             RevokedAtUtc = null
         };
@@ -272,7 +272,7 @@ public sealed class UserSessionStoreTests
         {
             Id = Id<UserSession>.New(),
             UserId = user2Id,
-            Jti = Id<UserSession>.New().GetValue(),
+            Jti = Id<UserSession>.New().ToString(),
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(30),
             RevokedAtUtc = null
         };
