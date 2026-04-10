@@ -13,3 +13,17 @@ public sealed class EloRegistryNotFoundError : NotFoundError
     {
     }
 }
+
+/// <summary>
+/// Error indicating invalid ELO registry data was provided (HTTP 400).
+/// </summary>
+public sealed class InvalidEloRegistryError : BadRequestError
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvalidEloRegistryError"/> class.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    public InvalidEloRegistryError(string message) : base(message)
+    {
+    }
+}

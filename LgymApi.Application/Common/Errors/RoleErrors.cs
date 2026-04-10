@@ -43,9 +43,9 @@ public sealed class InvalidRoleError : BadRequestError
 }
 
 /// <summary>
-/// Error indicating a role with that name already exists (HTTP 400).
+/// Error indicating a role with that name already exists (HTTP 409).
 /// </summary>
-public sealed class RoleAlreadyExistsError : BadRequestError
+public sealed class RoleAlreadyExistsError : ConflictError
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RoleAlreadyExistsError"/> class.
