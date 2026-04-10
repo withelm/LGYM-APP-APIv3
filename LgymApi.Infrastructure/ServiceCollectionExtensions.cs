@@ -97,7 +97,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<ILegacyPasswordService, LegacyPasswordService>();
-        services.AddSingleton<IUserSessionCache, UserSessionCache>();
+        services.AddScoped<IUserSessionStore, UserSessionStore>();
         services.AddScoped<IEmailTemplateComposer, TrainerInvitationEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposer, TrainerInvitationAcceptedEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposer, TrainerInvitationRevokedEmailTemplateComposer>();

@@ -12,7 +12,7 @@ namespace LgymApi.IntegrationTests;
 
 public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
-    public string DatabaseName { get; } = $"LgymTests_{Id<CustomWebApplicationFactory>.New():N}";
+    public string DatabaseName { get; } = $"lgymtests_{Id<CustomWebApplicationFactory>.New():N}";
     public TestEmailSender EmailSender { get; } = new();
 
     public const string TestJwtSigningKey = "IntegrationTestSigningKey_MustBeAtLeast32Characters!";
@@ -60,5 +60,4 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Email:TemplateRootPath", Path.Combine(AppContext.BaseDirectory, "EmailTemplates"));
         builder.UseSetting("Email:DefaultCulture", "en-US");
     }
-
 }

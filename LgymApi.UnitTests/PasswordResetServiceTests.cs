@@ -11,6 +11,7 @@ using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Services;
+using LgymApi.UnitTests.Fakes;
 
 namespace LgymApi.UnitTests;
 
@@ -170,8 +171,8 @@ public sealed class PasswordResetServiceTests
         var userRepository = new FakeUserRepository { ExistingById = user };
         var tokenRepository = new FakePasswordResetTokenRepository { ExistingByTokenHash = resetToken };
         var unitOfWork = new FakeUnitOfWork();
-        var sessionCache = new FakeUserSessionCache();
-        var service = CreateService(userRepository, tokenRepository, unitOfWork: unitOfWork, sessionCache: sessionCache);
+        var sessionStore = new FakeUserSessionStore();
+        var service = CreateService(userRepository, tokenRepository, unitOfWork: unitOfWork, sessionStore: sessionStore);
 
         var result = await service.ResetPasswordAsync(plainTextToken, "newPassword123", CancellationToken.None);
 
@@ -290,7 +291,7 @@ public sealed class PasswordResetServiceTests
     }
 
     [Test]
-    public async Task ResetPassword_OnSuccess_InvalidatesUserSessionCache()
+    public async Task ResetPassword_OnSuccess_RevokesAllUserSessions()
     {
         var user = CreateTestUser("test@example.com");
         var plainTextToken = "ABC123DEF456";
@@ -306,12 +307,12 @@ public sealed class PasswordResetServiceTests
         var userRepository = new FakeUserRepository { ExistingById = user };
         var tokenRepository = new FakePasswordResetTokenRepository { ExistingByTokenHash = resetToken };
         var unitOfWork = new FakeUnitOfWork();
-        var sessionCache = new FakeUserSessionCache();
-        var service = CreateService(userRepository, tokenRepository, unitOfWork: unitOfWork, sessionCache: sessionCache);
+        var sessionStore = new FakeUserSessionStore();
+        var service = CreateService(userRepository, tokenRepository, unitOfWork: unitOfWork, sessionStore: sessionStore);
 
         await service.ResetPasswordAsync(plainTextToken, "newPassword123", CancellationToken.None);
 
-        Assert.That(sessionCache.RemovedUserIds, Contains.Item(user.Id));
+        Assert.That(sessionStore.RevokedAllUserIds, Contains.Item(user.Id));
     }
 
     private static User CreateTestUser(string email)
@@ -338,7 +339,7 @@ public sealed class PasswordResetServiceTests
          FakePasswordResetTokenRepository? tokenRepository = null,
          FakePasswordRecoveryEmailScheduler? emailScheduler = null,
          FakeUnitOfWork? unitOfWork = null,
-         FakeUserSessionCache? sessionCache = null)
+         FakeUserSessionStore? sessionStore = null)
      {
          var actualTokenRepository = tokenRepository ?? new FakePasswordResetTokenRepository();
 
@@ -348,7 +349,7 @@ public sealed class PasswordResetServiceTests
              new PasswordResetTokenGenerationService(actualTokenRepository),
              new LegacyPasswordService(),
              emailScheduler ?? new FakePasswordRecoveryEmailScheduler(),
-             sessionCache ?? new FakeUserSessionCache(),
+             sessionStore ?? new FakeUserSessionStore(),
              unitOfWork ?? new FakeUnitOfWork());
 
          return new PasswordResetService(dependencies);
@@ -457,24 +458,6 @@ public sealed class PasswordResetServiceTests
             => throw new NotSupportedException();
 
         public void DetachEntity<TEntity>(TEntity entity) where TEntity : class
-            => throw new NotSupportedException();
-    }
-
-    private sealed class FakeUserSessionCache : IUserSessionCache
-    {
-        public List<Id<User>> RemovedUserIds { get; } = new();
-        public int Count => 0;
-
-        public bool Remove(Id<User> userId)
-        {
-            RemovedUserIds.Add(userId);
-            return true;
-        }
-
-        public void AddOrRefresh(Id<User> userId)
-            => throw new NotSupportedException();
-
-        public bool Contains(Id<User> userId)
             => throw new NotSupportedException();
     }
 }

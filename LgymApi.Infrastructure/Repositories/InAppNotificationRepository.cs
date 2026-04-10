@@ -42,8 +42,8 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
         if (cursorCreatedAt.HasValue && cursorId.HasValue)
         {
             var cursorTs = cursorCreatedAt.Value;
-            var cursorIdText = cursorId.Value.ToString();
-            query = query.Where(x => x.CreatedAt < cursorTs || (x.CreatedAt == cursorTs && string.CompareOrdinal(x.Id.ToString(), cursorIdText) < 0));
+            var cursorIdString = cursorId.Value.ToString();
+            query = query.Where(x => x.CreatedAt < cursorTs || (x.CreatedAt == cursorTs && string.CompareOrdinal(x.Id.ToString(), cursorIdString) < 0));
         }
 
         var results = await query

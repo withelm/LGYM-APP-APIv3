@@ -13,7 +13,7 @@ public sealed class PasswordResetServiceDependencies
         IPasswordResetTokenGenerationService tokenGenerationService,
         ILegacyPasswordService legacyPasswordService,
         IEmailScheduler<PasswordRecoveryEmailPayload> passwordRecoveryEmailScheduler,
-        IUserSessionCache userSessionCache,
+        IUserSessionStore userSessionStore,
         IUnitOfWork unitOfWork)
     {
         UserRepository = userRepository;
@@ -21,7 +21,7 @@ public sealed class PasswordResetServiceDependencies
         TokenGenerationService = tokenGenerationService;
         LegacyPasswordService = legacyPasswordService;
         PasswordRecoveryEmailScheduler = passwordRecoveryEmailScheduler;
-        UserSessionCache = userSessionCache;
+        UserSessionStore = userSessionStore;
         UnitOfWork = unitOfWork;
     }
 
@@ -30,6 +30,6 @@ public sealed class PasswordResetServiceDependencies
     public IPasswordResetTokenGenerationService TokenGenerationService { get; }
     public ILegacyPasswordService LegacyPasswordService { get; }
     public IEmailScheduler<PasswordRecoveryEmailPayload> PasswordRecoveryEmailScheduler { get; }
-    public IUserSessionCache UserSessionCache { get; }
+    public IUserSessionStore UserSessionStore { get; }
     public IUnitOfWork UnitOfWork { get; }
 }

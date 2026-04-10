@@ -15,12 +15,27 @@ public sealed class UserContextMiddleware
         _next = next;
     }
 
-    public async Task InvokeAsync(HttpContext context, IUserRepository userRepository, IUserSessionCache userSessionCache)
+    public async Task InvokeAsync(HttpContext context, IUserRepository userRepository, IUserSessionStore userSessionStore)
     {
         var endpoint = context.GetEndpoint();
         if (endpoint?.Metadata.GetMetadata<IAllowAnonymous>() != null)
         {
             await _next(context);
+            return;
+        }
+
+        var sidClaim = context.User.FindFirst("sid")?.Value;
+        if (string.IsNullOrWhiteSpace(sidClaim) || !Id<UserSession>.TryParse(sidClaim, out var sessionId))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
+            return;
+        }
+
+        if (!await userSessionStore.ValidateSessionAsync(sessionId, context.RequestAborted))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(new { message = Messages.Unauthorized });
             return;
         }
 
@@ -51,13 +66,6 @@ public sealed class UserContextMiddleware
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             await context.Response.WriteAsJsonAsync(new { message = Messages.AccountBlocked });
-            return;
-        }
-
-        if (!userSessionCache.Contains(userId))
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = Messages.Unauthorized });
             return;
         }
 

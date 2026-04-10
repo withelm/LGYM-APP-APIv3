@@ -15,7 +15,7 @@ public interface IUserServiceDependencies
     ITokenService TokenService { get; }
     ILegacyPasswordService LegacyPasswordService { get; }
     IRankService RankService { get; }
-    IUserSessionCache UserSessionCache { get; }
+    IUserSessionStore UserSessionStore { get; }
     ICommandDispatcher CommandDispatcher { get; }
     IUnitOfWork UnitOfWork { get; }
     ILogger<UserService> Logger { get; }
@@ -32,7 +32,7 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
         ITokenService tokenService,
         ILegacyPasswordService legacyPasswordService,
         IRankService rankService,
-        IUserSessionCache userSessionCache,
+        IUserSessionStore userSessionStore,
         ICommandDispatcher commandDispatcher,
         IUnitOfWork unitOfWork,
         ILogger<UserService> logger,
@@ -45,7 +45,7 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
         TokenService = tokenService;
         LegacyPasswordService = legacyPasswordService;
         RankService = rankService;
-        UserSessionCache = userSessionCache;
+        UserSessionStore = userSessionStore;
         CommandDispatcher = commandDispatcher;
         UnitOfWork = unitOfWork;
         Logger = logger;
@@ -59,7 +59,7 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
     public ITokenService TokenService { get; }
     public ILegacyPasswordService LegacyPasswordService { get; }
     public IRankService RankService { get; }
-    public IUserSessionCache UserSessionCache { get; }
+    public IUserSessionStore UserSessionStore { get; }
     public ICommandDispatcher CommandDispatcher { get; }
     public IUnitOfWork UnitOfWork { get; }
     public ILogger<UserService> Logger { get; }

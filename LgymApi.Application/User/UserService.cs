@@ -26,7 +26,7 @@ public sealed class UserService : IUserService
     private readonly ITokenService _tokenService;
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
-    private readonly IUserSessionCache _userSessionCache;
+    private readonly IUserSessionStore _userSessionStore;
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserService> _logger;
@@ -41,7 +41,7 @@ public sealed class UserService : IUserService
         _tokenService = dependencies.TokenService;
         _legacyPasswordService = dependencies.LegacyPasswordService;
         _rankService = dependencies.RankService;
-        _userSessionCache = dependencies.UserSessionCache;
+        _userSessionStore = dependencies.UserSessionStore;
         _commandDispatcher = dependencies.CommandDispatcher;
         _unitOfWork = dependencies.UnitOfWork;
         _logger = dependencies.Logger;
@@ -208,12 +208,13 @@ public sealed class UserService : IUserService
         }
 
         var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken);
-        var token = _tokenService.CreateToken(user.Id, roles, permissionClaims);
+        var session = await _userSessionStore.CreateSessionAsync(user.Id, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var token = _tokenService.CreateToken(user.Id, session.Id, session.Jti, roles, permissionClaims);
         var elo = await _eloRepository.GetLatestEloAsync(user.Id, cancellationToken) ?? 1000;
         var nextRank = _rankService.GetNextRank(user.ProfileRank);
         var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(user.Id, cancellationToken);
-
-        _userSessionCache.AddOrRefresh(user.Id);
 
         return Result<LoginResult, AppError>.Success(new LoginResult
         {
@@ -332,15 +333,20 @@ public sealed class UserService : IUserService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public Task<Result<Unit, AppError>> LogoutAsync(UserEntity? currentUser, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> LogoutAsync(UserEntity? currentUser, Id<UserSession>? sessionId, CancellationToken cancellationToken = default)
     {
         if (currentUser == null)
         {
-            return Task.FromResult(Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.DidntFind)));
+            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
         }
 
-        _userSessionCache.Remove(currentUser.Id);
-        return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        if (sessionId.HasValue)
+        {
+            await _userSessionStore.RevokeSessionAsync(sessionId.Value, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
     public async Task<Result<Unit, AppError>> ChangeVisibilityInRankingAsync(UserEntity? currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default)

@@ -92,7 +92,7 @@ public abstract class IntegrationTestBase : IDisposable
         return user;
     }
 
-    protected string GenerateJwt(Id<User> userId)
+    protected string GenerateJwt(Id<User> userId, Id<UserSession> sessionId, Guid jti)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -117,7 +117,9 @@ public abstract class IntegrationTestBase : IDisposable
         var claims = new List<System.Security.Claims.Claim>
         {
             new System.Security.Claims.Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new System.Security.Claims.Claim("userId", userId.ToString())
+            new System.Security.Claims.Claim("userId", userId.ToString()),
+            new System.Security.Claims.Claim("sid", sessionId.ToString()),
+            new System.Security.Claims.Claim(JwtRegisteredClaimNames.Jti, jti.ToString())
         };
 
         foreach (var role in roles)
@@ -141,10 +143,22 @@ public abstract class IntegrationTestBase : IDisposable
     protected void SetAuthorizationHeader(Id<User> userId)
     {
         using var scope = Factory.Services.CreateScope();
-        var userSessionCache = scope.ServiceProvider.GetRequiredService<IUserSessionCache>();
-        userSessionCache.AddOrRefresh(userId);
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var token = GenerateJwt(userId);
+        var jti = Id<UserSession>.New().GetValue();
+        var session = new UserSession
+        {
+            Id = Id<UserSession>.New(),
+            UserId = userId,
+            Jti = jti,
+            ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(1),
+            RevokedAtUtc = null
+        };
+
+        db.UserSessions.Add(session);
+        db.SaveChanges();
+
+        var token = GenerateJwt(userId, session.Id, session.Jti);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 

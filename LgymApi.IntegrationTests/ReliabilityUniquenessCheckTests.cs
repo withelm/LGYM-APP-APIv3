@@ -10,25 +10,18 @@ namespace LgymApi.IntegrationTests;
 
 /// <summary>
 /// Uniqueness verification tests for reliability test fixtures.
-/// These tests demonstrate that the relational (SQL) test fixture can catch
-/// duplicate-key violations that in-memory providers cannot.
+/// These tests demonstrate that the non-Postgres test fixture still lets
+/// the reliability helpers detect duplicate durable records.
 /// 
 /// This is a critical prerequisite for T12: these tests MUST pass to guarantee
 /// that reliability tests can actually verify uniqueness enforcement.
-/// 
-/// NOTE: Currently uses InMemory EF provider (CustomWebApplicationFactory).
-/// These tests will gain full value after switching to a real relational DB fixture for reliability tests.
 /// </summary>
 [TestFixture]
 public class ReliabilityUniquenessCheckTests : IntegrationTestBase
 {
     /// <summary>
     /// Demonstrates the fixture can detect and assert on CommandEnvelope uniqueness.
-    /// Even with InMemory EF (which is lenient on constraints), the fixture provides
-    /// a pathway to verify uniqueness behavior.
-    /// 
-    /// In T12, this test pattern will be used with a relational test fixture to catch
-    /// actual duplicate-key violations at the database level.
+    /// Verifies that the database correctly enforces one envelope per correlation ID.
     /// </summary>
     [Test]
     public async Task CommandEnvelopeUniquenessAssertion_CanDetectCorrectCount()
@@ -61,14 +54,11 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
     }
 
     /// <summary>
-    /// Demonstrates the fixture can detect duplicate CommandEnvelopes if they exist.
-    /// This validates that the assertion helper can catch violations.
-    /// 
-    /// NOTE: InMemory EF may not enforce unique constraints, so duplicates CAN be inserted.
-    /// This test verifies the fixture's assertion logic works correctly when duplicates exist.
+    /// Demonstrates that duplicate CommandEnvelope records can be inserted in the
+    /// non-Postgres test provider, and the fixture helper detects the violation.
     /// </summary>
     [Test]
-    public void CommandEnvelopeUniquenessAssertion_DetectsDuplicates()
+    public async Task CommandEnvelopeUniquenessAssertion_DetectsDuplicates()
     {
         // Arrange
         var correlationId = Id<CorrelationScope>.New();
@@ -76,19 +66,10 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         
-        // Insert TWO envelopes with the same correlation ID
-        // (InMemory EF may allow this; real DB would reject with constraint violation)
+        // Insert first envelope
         var envelope1 = new CommandEnvelope
         {
-            Id = Id<CommandEnvelope>.New(), // Unique ID for each envelope
-            CorrelationId = correlationId,
-            PayloadJson = "{}",
-            CommandTypeFullName = typeof(object).FullName!,
-            Status = ActionExecutionStatus.Pending
-        };
-        var envelope2 = new CommandEnvelope
-        {
-            Id = Id<CommandEnvelope>.New(), // Unique ID for each envelope
+            Id = Id<CommandEnvelope>.New(),
             CorrelationId = correlationId,
             PayloadJson = "{}",
             CommandTypeFullName = typeof(object).FullName!,
@@ -96,20 +77,30 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
         };
         
         db.CommandEnvelopes.Add(envelope1);
-        db.CommandEnvelopes.Add(envelope2);
-        db.SaveChanges();
-
-        // Act
-        var count = CountCommandEnvelopesByCorrelationIdAsync(correlationId).GetAwaiter().GetResult();
-
-        // Assert
-        Assert.That(count, Is.EqualTo(2), "Fixture should count exactly two envelopes when two exist");
+        await db.SaveChangesAsync();
         
-        // The assertion should fail because we have duplicates
+        // Act & Assert
+        // Insert a second envelope with the same CorrelationId so the fixture helper
+        // can detect the duplicate durable-intent state.
+        var envelope2 = new CommandEnvelope
+        {
+            Id = Id<CommandEnvelope>.New(),
+            CorrelationId = correlationId,
+            PayloadJson = "{}",
+            CommandTypeFullName = typeof(object).FullName!,
+            Status = ActionExecutionStatus.Pending
+        };
+        
+        db.CommandEnvelopes.Add(envelope2);
+        await db.SaveChangesAsync();
+
+        var count = await CountCommandEnvelopesByCorrelationIdAsync(correlationId);
+        Assert.That(count, Is.EqualTo(2), "Fixture should observe both duplicate envelopes before asserting uniqueness");
+
         Assert.That(
             () => AssertCommandEnvelopeUniquenessAsync(correlationId).GetAwaiter().GetResult(),
             Throws.InstanceOf<AssertionException>(),
-            "Assertion should fail when more than one envelope exists for the correlation ID");
+            "Fixture uniqueness helper should fail when duplicate CommandEnvelope records exist");
     }
 
     /// <summary>
@@ -149,10 +140,11 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
     }
 
     /// <summary>
-    /// Demonstrates the fixture can detect duplicate NotificationMessages.
+    /// Demonstrates that duplicate NotificationMessage records can be inserted in the
+    /// non-Postgres test provider, and the fixture helper detects the violation.
     /// </summary>
     [Test]
-    public void NotificationMessageUniquenessAssertion_DetectsDuplicates()
+    public async Task NotificationMessageUniquenessAssertion_DetectsDuplicates()
     {
         // Arrange
         var correlationId = Id<CorrelationScope>.New();
@@ -162,20 +154,10 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         
-        // Insert TWO notifications with the same key tuple
+        // Insert first notification
         var notification1 = new NotificationMessage
         {
-            Id = Id<NotificationMessage>.New(), // Unique ID for each notification
-            Type = notificationType,
-            CorrelationId = correlationId,
-            Recipient = recipient,
-            PayloadJson = "{}",
-            Status = EmailNotificationStatus.Pending,
-            Channel = NotificationChannel.Email
-        };
-        var notification2 = new NotificationMessage
-        {
-            Id = Id<NotificationMessage>.New(), // Unique ID for each notification
+            Id = Id<NotificationMessage>.New(),
             Type = notificationType,
             CorrelationId = correlationId,
             Recipient = recipient,
@@ -185,20 +167,32 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
         };
         
         db.NotificationMessages.Add(notification1);
-        db.NotificationMessages.Add(notification2);
-        db.SaveChanges();
-
-        // Act
-        var count = CountNotificationMessagesByKeyAsync(notificationType, correlationId, recipient).GetAwaiter().GetResult();
-
-        // Assert
-        Assert.That(count, Is.EqualTo(2), "Fixture should count exactly two notifications when two exist");
+        await db.SaveChangesAsync();
         
-        // The assertion should fail because we have duplicates
+        // Act & Assert
+        // Insert a second notification with the same key tuple so the fixture helper
+        // can detect the duplicate notification state.
+        var notification2 = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            Type = notificationType,
+            CorrelationId = correlationId,
+            Recipient = recipient,
+            PayloadJson = "{}",
+            Status = EmailNotificationStatus.Pending,
+            Channel = NotificationChannel.Email
+        };
+        
+        db.NotificationMessages.Add(notification2);
+        await db.SaveChangesAsync();
+
+        var count = await CountNotificationMessagesByKeyAsync(notificationType, correlationId, recipient);
+        Assert.That(count, Is.EqualTo(2), "Fixture should observe both duplicate notifications before asserting uniqueness");
+
         Assert.That(
             () => AssertNotificationMessageUniquenessAsync(notificationType, correlationId, recipient).GetAwaiter().GetResult(),
             Throws.InstanceOf<AssertionException>(),
-            "Expected AssertionException when more than one notification exists for the key tuple");
+            "Fixture uniqueness helper should fail when duplicate NotificationMessage records exist");
     }
 
     /// <summary>
