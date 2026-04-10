@@ -56,13 +56,13 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetUser_WithInvalidId_ReturnsNotFound()
+    public async Task GetUser_WithInvalidId_ReturnsBadRequest()
     {
         await AuthenticateAsAdminAsync();
 
         var response = await Client.GetAsync("/api/admin/users/00000000-0000-0000-0000-000000000000");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -127,13 +127,13 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task DeleteUser_WithInvalidId_ReturnsNotFound()
+    public async Task DeleteUser_WithInvalidId_ReturnsBadRequest()
     {
         await AuthenticateAsAdminAsync();
 
         var response = await Client.PostAsync("/api/admin/users/00000000-0000-0000-0000-000000000000/delete", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -154,13 +154,13 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task BlockUser_WithInvalidId_ReturnsNotFound()
+    public async Task BlockUser_WithInvalidId_ReturnsBadRequest()
     {
         await AuthenticateAsAdminAsync();
 
         var response = await Client.PostAsync("/api/admin/users/00000000-0000-0000-0000-000000000000/block", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -191,13 +191,13 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task UnblockUser_WithInvalidId_ReturnsNotFound()
+    public async Task UnblockUser_WithInvalidId_ReturnsBadRequest()
     {
         await AuthenticateAsAdminAsync();
 
         var response = await Client.PostAsync("/api/admin/users/00000000-0000-0000-0000-000000000000/unblock", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     private async Task AuthenticateAsAdminAsync()
