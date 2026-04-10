@@ -58,12 +58,12 @@ public sealed class AdminUserService : IAdminUserService
         });
     }
 
-    public async Task<Result<UserResult, AppError>> GetUserAsync(Id<global::LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
-    {
-        if (userId.IsEmpty)
-        {
-            return Result<UserResult, AppError>.Failure(new NotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<UserResult, AppError>> GetUserAsync(Id<global::LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
+     {
+         if (userId.IsEmpty)
+         {
+             return Result<UserResult, AppError>.Failure(new InvalidAdminUserError(Messages.DidntFind));
+         }
 
         var user = await _userRepository.FindByIdIncludingDeletedAsync(userId, cancellationToken);
         if (user == null)
@@ -89,12 +89,12 @@ public sealed class AdminUserService : IAdminUserService
         });
     }
 
-    public async Task<Result<Unit, AppError>> UpdateUserAsync(Id<global::LgymApi.Domain.Entities.User> targetUserId, Id<global::LgymApi.Domain.Entities.User> adminUserId, UpdateUserCommand command, CancellationToken cancellationToken = default)
-    {
-        if (targetUserId.IsEmpty)
-        {
-            return Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<Unit, AppError>> UpdateUserAsync(Id<global::LgymApi.Domain.Entities.User> targetUserId, Id<global::LgymApi.Domain.Entities.User> adminUserId, UpdateUserCommand command, CancellationToken cancellationToken = default)
+     {
+         if (targetUserId.IsEmpty)
+         {
+             return Result<Unit, AppError>.Failure(new InvalidAdminUserError(Messages.DidntFind));
+         }
 
         var user = await _userRepository.FindByIdIncludingDeletedAsync(targetUserId, cancellationToken);
         if (user == null)
@@ -121,12 +121,12 @@ public sealed class AdminUserService : IAdminUserService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<Result<Unit, AppError>> DeleteUserAsync(Id<global::LgymApi.Domain.Entities.User> targetUserId, Id<global::LgymApi.Domain.Entities.User> adminUserId, CancellationToken cancellationToken = default)
-    {
-        if (targetUserId.IsEmpty)
-        {
-            return Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<Unit, AppError>> DeleteUserAsync(Id<global::LgymApi.Domain.Entities.User> targetUserId, Id<global::LgymApi.Domain.Entities.User> adminUserId, CancellationToken cancellationToken = default)
+     {
+         if (targetUserId.IsEmpty)
+         {
+             return Result<Unit, AppError>.Failure(new InvalidAdminUserError(Messages.DidntFind));
+         }
 
         if (targetUserId == adminUserId)
         {
@@ -147,12 +147,12 @@ public sealed class AdminUserService : IAdminUserService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<Result<Unit, AppError>> BlockUserAsync(Id<global::LgymApi.Domain.Entities.User> targetUserId, Id<global::LgymApi.Domain.Entities.User> adminUserId, CancellationToken cancellationToken = default)
-    {
-        if (targetUserId.IsEmpty)
-        {
-            return Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<Unit, AppError>> BlockUserAsync(Id<global::LgymApi.Domain.Entities.User> targetUserId, Id<global::LgymApi.Domain.Entities.User> adminUserId, CancellationToken cancellationToken = default)
+     {
+         if (targetUserId.IsEmpty)
+         {
+             return Result<Unit, AppError>.Failure(new InvalidAdminUserError(Messages.DidntFind));
+         }
 
         if (targetUserId == adminUserId)
         {
@@ -173,12 +173,12 @@ public sealed class AdminUserService : IAdminUserService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<Result<Unit, AppError>> UnblockUserAsync(Id<global::LgymApi.Domain.Entities.User> targetUserId, CancellationToken cancellationToken = default)
-    {
-        if (targetUserId.IsEmpty)
-        {
-            return Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<Unit, AppError>> UnblockUserAsync(Id<global::LgymApi.Domain.Entities.User> targetUserId, CancellationToken cancellationToken = default)
+     {
+         if (targetUserId.IsEmpty)
+         {
+             return Result<Unit, AppError>.Failure(new InvalidAdminUserError(Messages.DidntFind));
+         }
 
         var user = await _userRepository.FindByIdAsync(targetUserId, cancellationToken);
         if (user == null)
