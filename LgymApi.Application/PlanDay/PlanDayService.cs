@@ -33,7 +33,7 @@ public sealed class PlanDayService : IPlanDayService
     {
         if (currentUser == null || planId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidPlanDayError(Messages.InvalidId));
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
@@ -173,7 +173,7 @@ public sealed class PlanDayService : IPlanDayService
     {
         if (currentUser == null || planDayId.IsEmpty)
         {
-            return Result<PlanDayDetailsContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
+            return Result<PlanDayDetailsContext, AppError>.Failure(new InvalidPlanDayError(Messages.InvalidId));
         }
 
         var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
@@ -216,7 +216,7 @@ public sealed class PlanDayService : IPlanDayService
     {
         if (currentUser == null || planId.IsEmpty)
         {
-            return Result<PlanDaysContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
+            return Result<PlanDaysContext, AppError>.Failure(new InvalidPlanDayError(Messages.InvalidId));
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
@@ -261,7 +261,7 @@ public sealed class PlanDayService : IPlanDayService
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            return Result<List<PlanDayEntity>, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
+            return Result<List<PlanDayEntity>, AppError>.Failure(new InvalidPlanDayError(Messages.InvalidId));
         }
 
         if (currentUser.Id != routeUserId)
@@ -283,7 +283,7 @@ public sealed class PlanDayService : IPlanDayService
     {
         if (currentUser == null || planDayId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidPlanDayError(Messages.InvalidId));
         }
 
         var planDay = await _planDayRepository.FindByIdAsync(planDayId, cancellationToken);
@@ -312,7 +312,7 @@ public sealed class PlanDayService : IPlanDayService
     {
         if (currentUser == null || planId.IsEmpty)
         {
-            return Result<PlanDaysInfoContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
+            return Result<PlanDaysInfoContext, AppError>.Failure(new InvalidPlanDayError(Messages.InvalidId));
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);

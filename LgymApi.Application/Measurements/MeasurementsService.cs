@@ -31,7 +31,7 @@ public sealed class MeasurementsService : IMeasurementsService
     {
         if (currentUser == null)
         {
-            return Result<Unit, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidMeasurementError(Messages.InvalidId));
         }
 
         if (bodyPart == BodyParts.Unknown || unit == HeightUnits.Unknown)
@@ -63,7 +63,7 @@ public sealed class MeasurementsService : IMeasurementsService
 
         if (measurementId.IsEmpty)
         {
-            return Result<MeasurementEntity, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
+            return Result<MeasurementEntity, AppError>.Failure(new InvalidMeasurementError(Messages.InvalidId));
         }
 
         var measurement = await _measurementRepository.FindByIdAsync(measurementId, cancellationToken);
@@ -211,7 +211,7 @@ public sealed class MeasurementsService : IMeasurementsService
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidMeasurementError(Messages.InvalidId));
         }
 
         if (currentUser.Id != routeUserId)

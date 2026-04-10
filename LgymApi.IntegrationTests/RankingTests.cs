@@ -180,14 +180,14 @@ public sealed class RankingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetUserEloPoints_WithInvalidGuidFormat_ReturnsNotFound()
+    public async Task GetUserEloPoints_WithInvalidGuidFormat_ReturnsBadRequest()
     {
         var user = await SeedUserAsync(name: "authuser", email: "auth@example.com");
         SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync("/api/userInfo/invalid-guid/getUserEloPoints");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
         body.Should().NotBeNull();

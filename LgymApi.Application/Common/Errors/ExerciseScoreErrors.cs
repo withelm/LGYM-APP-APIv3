@@ -13,3 +13,17 @@ public sealed class ExerciseScoreNotFoundError : NotFoundError
     {
     }
 }
+
+/// <summary>
+/// Error indicating invalid exercise score data was provided (HTTP 400).
+/// </summary>
+public sealed class InvalidExerciseScoreError : BadRequestError
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvalidExerciseScoreError"/> class.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    public InvalidExerciseScoreError(string message) : base(message)
+    {
+    }
+}

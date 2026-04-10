@@ -23,12 +23,12 @@ public sealed class PlanService : IPlanService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<Unit, AppError>> CreatePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, string name, CancellationToken cancellationToken = default)
-    {
-        if (currentUser == null || routeUserId.IsEmpty)
-        {
-            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<Unit, AppError>> CreatePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, string name, CancellationToken cancellationToken = default)
+     {
+         if (currentUser == null || routeUserId.IsEmpty)
+         {
+              return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+         }
 
         if (currentUser.Id != routeUserId)
         {
@@ -52,12 +52,12 @@ public sealed class PlanService : IPlanService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<Result<Unit, AppError>> UpdatePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, Id<PlanEntity> planId, string name, CancellationToken cancellationToken = default)
-    {
-        if (currentUser == null || routeUserId.IsEmpty)
-        {
-            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<Unit, AppError>> UpdatePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, Id<PlanEntity> planId, string name, CancellationToken cancellationToken = default)
+     {
+         if (currentUser == null || routeUserId.IsEmpty)
+         {
+             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+         }
 
         if (currentUser.Id != routeUserId)
         {
@@ -69,10 +69,10 @@ public sealed class PlanService : IPlanService
             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.FieldRequired));
         }
 
-        if (planId.IsEmpty)
-        {
-            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
-        }
+         if (planId.IsEmpty)
+         {
+             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
         if (plan == null)
@@ -87,12 +87,12 @@ public sealed class PlanService : IPlanService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<Result<PlanEntity, AppError>> GetPlanConfigAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
-    {
-        if (currentUser == null || routeUserId.IsEmpty)
-        {
-            return Result<PlanEntity, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<PlanEntity, AppError>> GetPlanConfigAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
+     {
+         if (currentUser == null || routeUserId.IsEmpty)
+         {
+             return Result<PlanEntity, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+         }
 
         if (currentUser.Id != routeUserId)
         {
@@ -110,10 +110,10 @@ public sealed class PlanService : IPlanService
 
     public async Task<Result<bool, AppError>> CheckIsUserHavePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || routeUserId.IsEmpty)
-        {
-            return Result<bool, AppError>.Failure(new PlanFlagNotFoundError(Messages.DidntFind, false));
-        }
+          if (currentUser == null || routeUserId.IsEmpty)
+          {
+              return Result<bool, AppError>.Failure(new PlanFlagBadRequestError(Messages.InvalidId, false));
+          }
 
         if (currentUser.Id != routeUserId)
         {
@@ -130,12 +130,12 @@ public sealed class PlanService : IPlanService
         return Result<bool, AppError>.Success(planDayExists);
     }
 
-    public async Task<Result<List<PlanEntity>, AppError>> GetPlansListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
-    {
-        if (currentUser == null || routeUserId.IsEmpty)
-        {
-            return Result<List<PlanEntity>, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<List<PlanEntity>, AppError>> GetPlansListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default)
+     {
+         if (currentUser == null || routeUserId.IsEmpty)
+         {
+             return Result<List<PlanEntity>, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+         }
 
         if (currentUser.Id != routeUserId)
         {
@@ -151,12 +151,12 @@ public sealed class PlanService : IPlanService
         return Result<List<PlanEntity>, AppError>.Success(plans);
     }
 
-    public async Task<Result<Unit, AppError>> SetNewActivePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
-    {
-        if (currentUser == null || routeUserId.IsEmpty || planId.IsEmpty)
-        {
-            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<Unit, AppError>> SetNewActivePlanAsync(UserEntity currentUser, Id<UserEntity> routeUserId, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
+     {
+         if (currentUser == null || routeUserId.IsEmpty || planId.IsEmpty)
+         {
+             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+         }
 
         if (currentUser.Id != routeUserId)
         {
@@ -191,12 +191,12 @@ public sealed class PlanService : IPlanService
         }
     }
 
-    public async Task<Result<Unit, AppError>> DeletePlanAsync(UserEntity currentUser, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
-    {
-        if (currentUser == null || planId.IsEmpty)
-        {
-            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<Unit, AppError>> DeletePlanAsync(UserEntity currentUser, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
+     {
+         if (currentUser == null || planId.IsEmpty)
+         {
+             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
         if (plan == null)
@@ -271,12 +271,12 @@ public sealed class PlanService : IPlanService
         }
     }
 
-    public async Task<Result<string, AppError>> GenerateShareCodeAsync(UserEntity currentUser, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
-    {
-        if (currentUser == null || planId.IsEmpty)
-        {
-            return Result<string, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
-        }
+     public async Task<Result<string, AppError>> GenerateShareCodeAsync(UserEntity currentUser, Id<PlanEntity> planId, CancellationToken cancellationToken = default)
+     {
+         if (currentUser == null || planId.IsEmpty)
+         {
+             return Result<string, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+         }
 
         try
         {
@@ -298,11 +298,11 @@ public sealed class PlanService : IPlanService
         }
     }
 
-    private sealed class PlanFlagNotFoundError : NotFoundError
+    private sealed class PlanFlagBadRequestError : BadRequestError
     {
         private readonly object? _payload;
 
-        public PlanFlagNotFoundError(string message, object? payload)
+        public PlanFlagBadRequestError(string message, object? payload)
             : base(message)
         {
             _payload = payload;

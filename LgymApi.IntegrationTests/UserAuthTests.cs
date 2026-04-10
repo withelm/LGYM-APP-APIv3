@@ -194,14 +194,14 @@ public sealed class UserAuthTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Register_WithExistingName_ReturnsError()
+    public async Task Register_WithExistingName_ReturnsConflict()
     {
         await SeedUserAsync(name: "existinguser", email: "existing@example.com");
 
         var request = new
         {
             name = "existinguser",
-            email = "newemail@example.com",
+            email = "new@example.com",
             password = "password123",
             cpassword = "password123"
         };
@@ -210,7 +210,7 @@ public sealed class UserAuthTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/register", request);
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
         body.Should().NotBeNull();
@@ -218,7 +218,7 @@ public sealed class UserAuthTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Register_WithExistingEmail_ReturnsError()
+    public async Task Register_WithExistingEmail_ReturnsConflict()
     {
         await SeedUserAsync(name: "existinguser", email: "existing@example.com");
 
@@ -234,7 +234,7 @@ public sealed class UserAuthTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/register", request);
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
         body.Should().NotBeNull();

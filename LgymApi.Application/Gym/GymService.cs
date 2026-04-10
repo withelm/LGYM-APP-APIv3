@@ -27,7 +27,7 @@ public sealed class GymService : IGymService
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidGymError(Messages.InvalidId));
         }
 
         if (currentUser.Id != routeUserId)
@@ -65,7 +65,7 @@ public sealed class GymService : IGymService
     {
         if (currentUser == null)
         {
-            return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidGymError(Messages.InvalidId));
         }
 
         if (gymId.IsEmpty)
@@ -95,7 +95,7 @@ public sealed class GymService : IGymService
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            return Result<GymListContext, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
+            return Result<GymListContext, AppError>.Failure(new InvalidGymError(Messages.InvalidId));
         }
 
         if (currentUser.Id != routeUserId)
@@ -123,7 +123,7 @@ public sealed class GymService : IGymService
     {
         if (currentUser == null)
         {
-            return Result<GymEntity, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
+            return Result<GymEntity, AppError>.Failure(new InvalidGymError(Messages.InvalidId));
         }
 
         if (gymId.IsEmpty)
@@ -149,7 +149,7 @@ public sealed class GymService : IGymService
     {
         if (currentUser == null)
         {
-            return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidGymError(Messages.InvalidId));
         }
 
         if (gymId.IsEmpty)

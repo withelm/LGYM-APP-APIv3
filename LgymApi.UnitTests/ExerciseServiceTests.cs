@@ -1,3 +1,4 @@
+using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.Features.Exercise.Models;
@@ -13,6 +14,124 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class ExerciseServiceTests
 {
+    [Test]
+    public async Task AddExerciseAsync_WithBlankName_ReturnsInvalidExerciseError()
+    {
+        var service = new ExerciseService(
+            new NoOpUserRepository(),
+            new NoOpRoleRepository(),
+            new NoOpExerciseRepository(),
+            new NoOpExerciseScoreRepository(),
+            new NoOpUnitOfWork());
+
+        var result = await service.AddExerciseAsync("   ", BodyParts.Chest, null, null);
+        
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
+        });
+    }
+
+    [Test]
+    public async Task AddExerciseAsync_WithUnknownBodyPart_ReturnsInvalidExerciseError()
+    {
+        var service = new ExerciseService(
+            new NoOpUserRepository(),
+            new NoOpRoleRepository(),
+            new NoOpExerciseRepository(),
+            new NoOpExerciseScoreRepository(),
+            new NoOpUnitOfWork());
+
+        var result = await service.AddExerciseAsync("Bench Press", BodyParts.Unknown, null, null);
+        
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
+        });
+    }
+
+    [Test]
+    public async Task AddUserExerciseAsync_WithEmptyUserId_ReturnsInvalidExerciseError()
+    {
+        var service = new ExerciseService(
+            new NoOpUserRepository(),
+            new NoOpRoleRepository(),
+            new NoOpExerciseRepository(),
+            new NoOpExerciseScoreRepository(),
+            new NoOpUnitOfWork());
+
+        var input = new AddUserExerciseInput(Id<User>.Empty, "Bench Press", BodyParts.Chest, null, null);
+        var result = await service.AddUserExerciseAsync(input);
+        
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
+        });
+    }
+
+    [Test]
+    public async Task DeleteExerciseAsync_WithEmptyUserId_ReturnsInvalidExerciseError()
+    {
+        var exerciseId = Id<Exercise>.New();
+        var service = new ExerciseService(
+            new NoOpUserRepository(),
+            new NoOpRoleRepository(),
+            new NoOpExerciseRepository(),
+            new NoOpExerciseScoreRepository(),
+            new NoOpUnitOfWork());
+
+        var result = await service.DeleteExerciseAsync(Id<User>.Empty, exerciseId);
+        
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
+        });
+    }
+
+    [Test]
+    public async Task DeleteExerciseAsync_WithEmptyExerciseId_ReturnsInvalidExerciseError()
+    {
+        var userId = Id<User>.New();
+        var service = new ExerciseService(
+            new NoOpUserRepository(),
+            new NoOpRoleRepository(),
+            new NoOpExerciseRepository(),
+            new NoOpExerciseScoreRepository(),
+            new NoOpUnitOfWork());
+
+        var result = await service.DeleteExerciseAsync(userId, Id<Exercise>.Empty);
+        
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
+        });
+    }
+
+    [Test]
+    public async Task UpdateExerciseAsync_WithEmptyExerciseId_ReturnsInvalidExerciseError()
+    {
+        var service = new ExerciseService(
+            new NoOpUserRepository(),
+            new NoOpRoleRepository(),
+            new NoOpExerciseRepository(),
+            new NoOpExerciseScoreRepository(),
+            new NoOpUnitOfWork());
+
+        var input = new UpdateExerciseInput(Id<Exercise>.Empty, "Bench Press", BodyParts.Chest, null, null);
+        var result = await service.UpdateExerciseAsync(input);
+        
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
+        });
+    }
+
     [Test]
     public async Task GetLastExerciseScoresAsync_WithSeriesAboveLimit_ClampsToThirty()
     {
@@ -44,6 +163,18 @@ public sealed class ExerciseServiceTests
             Assert.That(value.SeriesScores[1].Score, Is.Not.Null);
             Assert.That(value.SeriesScores[^1].Series, Is.EqualTo(30));
         });
+    }
+
+    private sealed class NoOpExerciseScoreRepository : IExerciseScoreRepository
+    {
+        public Task<List<ExerciseScore>> GetLatestByUserExerciseSeriesAsync(Id<User> userId, Id<Exercise> exerciseId, Id<Gym>? gymId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task AddRangeAsync(IEnumerable<ExerciseScore> scores, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<ExerciseScore>> GetByIdsAsync(List<Id<ExerciseScore>> ids, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<ExerciseScore>> GetByUserAndExerciseAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<ExerciseScore>> GetByUserAndExerciseAndGymAsync(Id<User> userId, Id<Exercise> exerciseId, Id<Gym>? gymId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<ExerciseScore>> GetByUserAndExercisesAsync(Id<User> userId, List<Id<Exercise>> exerciseIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ExerciseScore?> GetLatestByUserExerciseSeriesAsync(Id<User> userId, Id<Exercise> exerciseId, int series, Id<Gym>? gymId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ExerciseScore?> GetBestScoreAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class StubExerciseScoreRepository : IExerciseScoreRepository

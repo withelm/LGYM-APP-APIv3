@@ -67,7 +67,7 @@ public sealed class ExerciseService : IExerciseService
 
         if (userId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
@@ -96,7 +96,7 @@ public sealed class ExerciseService : IExerciseService
     {
         if (userId.IsEmpty || exerciseId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
@@ -230,10 +230,10 @@ public sealed class ExerciseService : IExerciseService
 
     public async Task<Result<ExercisesWithTranslations, AppError>> GetAllExercisesAsync(Id<UserEntity> userId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
-        if (userId.IsEmpty)
-        {
-            return Result<ExercisesWithTranslations, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
-        }
+         if (userId.IsEmpty)
+         {
+             return Result<ExercisesWithTranslations, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
+         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
@@ -257,10 +257,10 @@ public sealed class ExerciseService : IExerciseService
 
     public async Task<Result<ExercisesWithTranslations, AppError>> GetAllUserExercisesAsync(Id<UserEntity> userId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
-        if (userId.IsEmpty)
-        {
-            return Result<ExercisesWithTranslations, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
-        }
+         if (userId.IsEmpty)
+         {
+             return Result<ExercisesWithTranslations, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
+         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
@@ -300,15 +300,15 @@ public sealed class ExerciseService : IExerciseService
 
     public async Task<Result<ExercisesWithTranslations, AppError>> GetExerciseByBodyPartAsync(Id<UserEntity> userId, BodyParts bodyPart, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
-        if (userId.IsEmpty)
-        {
-            return Result<ExercisesWithTranslations, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
-        }
+         if (userId.IsEmpty)
+         {
+             return Result<ExercisesWithTranslations, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
+         }
 
-        if (bodyPart == BodyParts.Unknown)
-        {
-            return Result<ExercisesWithTranslations, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
-        }
+         if (bodyPart == BodyParts.Unknown)
+         {
+             return Result<ExercisesWithTranslations, AppError>.Failure(new InvalidExerciseError(Messages.FieldRequired));
+         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
         if (user == null)
@@ -332,18 +332,18 @@ public sealed class ExerciseService : IExerciseService
 
     public async Task<Result<ExerciseWithTranslations, AppError>> GetExerciseAsync(Id<Domain.Entities.Exercise> exerciseId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
     {
-        if (exerciseId.IsEmpty)
-        {
-            return Result<ExerciseWithTranslations, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
-        }
+         if (exerciseId.IsEmpty)
+         {
+             return Result<ExerciseWithTranslations, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
+         }
 
-        var exercise = await _exerciseRepository.FindByIdAsync(exerciseId, cancellationToken);
-        if (exercise == null)
-        {
-            return Result<ExerciseWithTranslations, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
-        }
+         var exercise = await _exerciseRepository.FindByIdAsync(exerciseId, cancellationToken);
+         if (exercise == null)
+         {
+             return Result<ExerciseWithTranslations, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
+         }
 
-        var translations = await GetTranslationsForExercisesAsync(new List<Domain.Entities.Exercise> { exercise }, cultures, cancellationToken);
+         var translations = await GetTranslationsForExercisesAsync(new List<Domain.Entities.Exercise> { exercise }, cultures, cancellationToken);
         return Result<ExerciseWithTranslations, AppError>.Success(new ExerciseWithTranslations
         {
             Exercise = exercise,
@@ -355,10 +355,10 @@ public sealed class ExerciseService : IExerciseService
     {
         var (routeUserId, currentUserId, exerciseId, series, gymId, exerciseName) = input;
 
-        if (routeUserId.IsEmpty || currentUserId.IsEmpty || exerciseId.IsEmpty)
-        {
-            return Result<LastExerciseScoresResult, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
-        }
+         if (routeUserId.IsEmpty || currentUserId.IsEmpty || exerciseId.IsEmpty)
+         {
+             return Result<LastExerciseScoresResult, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
+         }
 
         var latestScores = await _exerciseScoreRepository.GetLatestByUserExerciseSeriesAsync(
             currentUserId,

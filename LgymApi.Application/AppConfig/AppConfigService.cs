@@ -32,7 +32,7 @@ public sealed class AppConfigService : IAppConfigService
     {
         if (platform == Platforms.Unknown)
         {
-            return Result<AppConfigEntity, AppError>.Failure(new AppConfigNotFoundError(Messages.DidntFind));
+            return Result<AppConfigEntity, AppError>.Failure(new InvalidAppConfigError(Messages.FieldRequired));
         }
 
         AppConfigEntity? config = await _appConfigRepository.GetLatestByPlatformAsync(platform, cancellationToken);

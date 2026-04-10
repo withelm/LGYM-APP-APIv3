@@ -89,23 +89,23 @@ public sealed class UserService : IUserService
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.NameIsRequired));
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.NameIsRequired));
         }
 
         var normalizedEmail = email?.Trim().ToLowerInvariant();
         if (!new EmailAddressAttribute().IsValid(normalizedEmail))
         {
-            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.EmailInvalid));
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.EmailInvalid));
         }
 
         if (password.Length < 6)
         {
-            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.PasswordMin));
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.PasswordMin));
         }
 
         if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
         {
-            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.SamePassword));
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.SamePassword));
         }
 
         var existingUser = await _userRepository.FindByNameOrEmailAsync(name, normalizedEmail!, cancellationToken);
@@ -113,10 +113,10 @@ public sealed class UserService : IUserService
         {
             if (string.Equals(existingUser.Name, name, StringComparison.Ordinal))
             {
-                return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.UserWithThatName));
+                return Result<Unit, AppError>.Failure(new ConflictError(Messages.UserWithThatName));
             }
 
-            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.UserWithThatEmail));
+            return Result<Unit, AppError>.Failure(new ConflictError(Messages.UserWithThatEmail));
         }
 
         var passwordData = _legacyPasswordService.Create(password);
@@ -305,7 +305,7 @@ public sealed class UserService : IUserService
     {
         if (userId.IsEmpty)
         {
-            return Result<int, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
+            return Result<int, AppError>.Failure(new InvalidUserError(Messages.DidntFind));
         }
 
         var result = await _eloRepository.GetLatestEloAsync(userId, cancellationToken);

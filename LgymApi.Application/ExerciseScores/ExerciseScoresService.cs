@@ -23,7 +23,7 @@ public sealed class ExerciseScoresService : IExerciseScoresService
     {
         if (userId.IsEmpty || exerciseId.IsEmpty)
         {
-            return Result<List<ExerciseScoresChartData>, AppError>.Failure(new ExerciseScoreNotFoundError(Messages.DidntFind));
+            return Result<List<ExerciseScoresChartData>, AppError>.Failure(new InvalidExerciseScoreError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);

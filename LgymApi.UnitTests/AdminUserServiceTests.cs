@@ -276,6 +276,19 @@ public sealed class AdminUserServiceTests
         });
     }
 
+    [Test]
+    public async Task UpdateUserAsync_ReturnsInvalidAdminUserError_WhenTargetUserIdIsEmpty()
+    {
+        var command = new UpdateUserCommand { Name = "Test", Email = "test@test.com" };
+        var result = await _service.UpdateUserAsync(Id<User>.Empty, Id<User>.New(), command);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<InvalidAdminUserError>());
+        });
+    }
+
     private sealed class InMemoryAdminUserRepository : IUserRepository
     {
         public List<User> Users { get; } = new();

@@ -339,7 +339,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task DeleteMainRecord_WithNonGuidRouteId_ReturnsNotFound()
+    public async Task DeleteMainRecord_WithNonGuidRouteId_ReturnsBadRequest()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "deleteuser3",
@@ -362,7 +362,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/mainRecords/not-a-guid/deleteMainRecord");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
