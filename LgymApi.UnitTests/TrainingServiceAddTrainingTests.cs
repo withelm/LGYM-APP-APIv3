@@ -129,4 +129,120 @@ public sealed class TrainingServiceAddTrainingTests
             () => _service.AddTrainingAsync(userId, input));
         Assert.That(ex!.Message, Is.EqualTo("Database connection failed"));
     }
+
+    [Test]
+    public async Task AddTrainingAsync_WhenUserIdIsEmpty_ReturnsInvalidTrainingDataError()
+    {
+        // Arrange
+        var emptyUserId = Id<User>.Empty;
+        var gymId = Id<Gym>.New();
+        var planDayId = Id<PlanDay>.New();
+
+        var input = new AddTrainingInput(gymId, planDayId, DateTime.UtcNow, new List<TrainingExerciseInput>());
+
+        // Act
+        var result = await _service.AddTrainingAsync(emptyUserId, input);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<InvalidTrainingDataError>());
+        });
+    }
+
+    [Test]
+    public async Task AddTrainingAsync_WhenGymIdIsEmpty_ReturnsInvalidTrainingDataError()
+    {
+        // Arrange
+        var userId = Id<User>.New();
+        var emptyGymId = Id<Gym>.Empty;
+        var planDayId = Id<PlanDay>.New();
+
+        var input = new AddTrainingInput(emptyGymId, planDayId, DateTime.UtcNow, new List<TrainingExerciseInput>());
+
+        // Act
+        var result = await _service.AddTrainingAsync(userId, input);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<InvalidTrainingDataError>());
+        });
+    }
+
+    [Test]
+    public async Task AddTrainingAsync_WhenPlanDayIdIsEmpty_ReturnsInvalidTrainingDataError()
+    {
+        // Arrange
+        var userId = Id<User>.New();
+        var gymId = Id<Gym>.New();
+        var emptyPlanDayId = Id<PlanDay>.Empty;
+
+        var input = new AddTrainingInput(gymId, emptyPlanDayId, DateTime.UtcNow, new List<TrainingExerciseInput>());
+
+        // Act
+        var result = await _service.AddTrainingAsync(userId, input);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<InvalidTrainingDataError>());
+        });
+    }
+
+    [Test]
+    public async Task AddTrainingAsync_WhenExerciseHasUnknownUnit_ReturnsInvalidTrainingDataError()
+    {
+        // Arrange
+        var userId = Id<User>.New();
+        var gymId = Id<Gym>.New();
+        var planDayId = Id<PlanDay>.New();
+        var exerciseId = Id<Exercise>.New();
+
+        var user = new User
+        {
+            Id = userId,
+            Name = "TestUser",
+            Email = "test@example.com",
+            ProfileRank = "Junior 1"
+        };
+
+        var gym = new Gym { Id = gymId, UserId = userId, Name = "TestGym" };
+
+        var exercises = new List<TrainingExerciseInput>
+        {
+            new() { ExerciseId = exerciseId, Series = 1, Reps = 10, Weight = 80, Unit = WeightUnits.Unknown }
+        };
+
+        var input = new AddTrainingInput(gymId, planDayId, DateTime.UtcNow, exercises);
+
+        _userRepository.FindByIdAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns(user);
+        _gymRepository.FindByIdAsync(Arg.Any<Id<Gym>>(), Arg.Any<CancellationToken>())
+            .Returns(gym);
+        _exerciseRepository.GetByIdsAsync(Arg.Any<List<Id<Exercise>>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<Exercise> { new() { Id = exerciseId, Name = "Bench Press" } });
+        _exerciseScoreRepository.GetByUserAndExercisesAsync(Arg.Any<Id<User>>(), Arg.Any<List<Id<Exercise>>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ExerciseScore>());
+
+        var transaction = Substitute.For<IUnitOfWorkTransaction>();
+        _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
+            .Returns(transaction);
+
+        // Act
+        var result = await _service.AddTrainingAsync(userId, input);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.InstanceOf<InvalidTrainingDataError>());
+        });
+
+        // Verify transaction was rolled back
+        await transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+    }
 }
