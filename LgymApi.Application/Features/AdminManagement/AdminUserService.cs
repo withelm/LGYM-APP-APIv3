@@ -13,18 +13,18 @@ public sealed class AdminUserService : IAdminUserService
 {
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
-    private readonly IUserSessionCache _userSessionCache;
+    private readonly IUserSessionStore _userSessionStore;
     private readonly IUnitOfWork _unitOfWork;
 
     public AdminUserService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
-        IUserSessionCache userSessionCache,
+        IUserSessionStore userSessionStore,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
-        _userSessionCache = userSessionCache;
+        _userSessionStore = userSessionStore;
         _unitOfWork = unitOfWork;
     }
 
@@ -141,7 +141,7 @@ public sealed class AdminUserService : IAdminUserService
 
         user.IsDeleted = true;
         await _userRepository.UpdateAsync(user, cancellationToken);
-        _userSessionCache.Remove(targetUserId);
+        await _userSessionStore.RevokeAllUserSessionsAsync(targetUserId, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<Unit, AppError>.Success(Unit.Value);
@@ -167,7 +167,7 @@ public sealed class AdminUserService : IAdminUserService
 
         user.IsBlocked = true;
         await _userRepository.UpdateAsync(user, cancellationToken);
-        _userSessionCache.Remove(targetUserId);
+        await _userSessionStore.RevokeAllUserSessionsAsync(targetUserId, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<Unit, AppError>.Success(Unit.Value);

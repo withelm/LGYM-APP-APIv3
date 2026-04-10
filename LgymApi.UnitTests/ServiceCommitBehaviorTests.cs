@@ -22,6 +22,7 @@ using LgymApi.Infrastructure.Pagination;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
+using LgymApi.UnitTests.Fakes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -95,7 +96,7 @@ public sealed class ServiceCommitBehaviorTests
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
-        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
+        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
@@ -106,7 +107,7 @@ public sealed class ServiceCommitBehaviorTests
             tokenService,
             legacyPasswordService,
             rankService,
-            userSessionCache,
+            userSessionStore,
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
@@ -155,7 +156,7 @@ public sealed class ServiceCommitBehaviorTests
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
-        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
+        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
@@ -166,7 +167,7 @@ public sealed class ServiceCommitBehaviorTests
             tokenService,
             legacyPasswordService,
             rankService,
-            userSessionCache,
+            userSessionStore,
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
@@ -212,7 +213,7 @@ public sealed class ServiceCommitBehaviorTests
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
-        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
+        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
         var defaults = new AppDefaultsOptions { PreferredLanguage = "de-DE", PreferredTimeZone = "UTC" };
@@ -224,7 +225,7 @@ public sealed class ServiceCommitBehaviorTests
             tokenService,
             legacyPasswordService,
             rankService,
-            userSessionCache,
+            userSessionStore,
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
@@ -287,7 +288,7 @@ public sealed class ServiceCommitBehaviorTests
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
-        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
+        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
@@ -298,7 +299,7 @@ public sealed class ServiceCommitBehaviorTests
             tokenService,
             legacyPasswordService,
             rankService,
-            userSessionCache,
+            userSessionStore,
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
@@ -352,7 +353,7 @@ public sealed class ServiceCommitBehaviorTests
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
-        IUserSessionCache userSessionCache = new NoOpUserSessionCache();
+        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
@@ -363,7 +364,7 @@ public sealed class ServiceCommitBehaviorTests
             tokenService,
             legacyPasswordService,
             rankService,
-            userSessionCache,
+            userSessionStore,
             commandDispatcher,
             unitOfWork,
             NullLogger<UserService>.Instance,
@@ -474,7 +475,7 @@ public sealed class ServiceCommitBehaviorTests
             ITokenService tokenService,
             ILegacyPasswordService legacyPasswordService,
             IRankService rankService,
-            IUserSessionCache userSessionCache,
+            IUserSessionStore userSessionStore,
             ICommandDispatcher commandDispatcher,
             IUnitOfWork unitOfWork,
             ILogger<UserService> logger,
@@ -487,7 +488,7 @@ public sealed class ServiceCommitBehaviorTests
             TokenService = tokenService;
             LegacyPasswordService = legacyPasswordService;
             RankService = rankService;
-            UserSessionCache = userSessionCache;
+            UserSessionStore = userSessionStore;
             CommandDispatcher = commandDispatcher;
             UnitOfWork = unitOfWork;
             Logger = logger;
@@ -501,7 +502,7 @@ public sealed class ServiceCommitBehaviorTests
         public ITokenService TokenService { get; }
         public ILegacyPasswordService LegacyPasswordService { get; }
         public IRankService RankService { get; }
-        public IUserSessionCache UserSessionCache { get; }
+        public IUserSessionStore UserSessionStore { get; }
         public ICommandDispatcher CommandDispatcher { get; }
         public IUnitOfWork UnitOfWork { get; }
         public ILogger<UserService> Logger { get; }
@@ -511,28 +512,9 @@ public sealed class ServiceCommitBehaviorTests
 
     private sealed class NoOpTokenService : ITokenService
     {
-        public string CreateToken(Id<User> userId, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
+        public string CreateToken(Id<User> userId, Id<UserSession> sessionId, string jti, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
         {
             return userId.ToString();
-        }
-    }
-
-    private sealed class NoOpUserSessionCache : IUserSessionCache
-    {
-        public int Count => 0;
-
-        public void AddOrRefresh(Id<User> userId)
-        {
-        }
-
-        public bool Remove(Id<User> userId)
-        {
-            return true;
-        }
-
-        public bool Contains(Id<User> userId)
-        {
-            return false;
         }
     }
 

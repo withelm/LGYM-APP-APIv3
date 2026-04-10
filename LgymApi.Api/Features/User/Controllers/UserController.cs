@@ -12,6 +12,7 @@ using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UserSessionEntity = LgymApi.Domain.Entities.UserSession;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.User.Controllers;
@@ -102,7 +103,12 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> Logout(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.LogoutAsync(user, cancellationToken);
+        var rawSessionId = HttpContext.User.FindFirst("sid")?.Value;
+        var sessionId = Id<UserSessionEntity>.TryParse(rawSessionId, out var parsedSessionId)
+            ? parsedSessionId
+            : (Id<UserSessionEntity>?)null;
+
+        var result = await _userService.LogoutAsync(user, sessionId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

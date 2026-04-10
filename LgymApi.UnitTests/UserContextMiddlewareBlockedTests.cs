@@ -6,6 +6,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.UnitTests.Fakes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using System.Security.Claims;
@@ -16,14 +17,14 @@ namespace LgymApi.UnitTests;
 public sealed class UserContextMiddlewareBlockedTests
 {
     private InMemoryBlockedUserRepository _userRepository = null!;
-    private FakeBlockedSessionCache _sessionCache = null!;
+    private FakeUserSessionStore _sessionStore = null!;
     private UserContextMiddleware _middleware = null!;
 
     [SetUp]
     public void SetUp()
     {
         _userRepository = new InMemoryBlockedUserRepository();
-        _sessionCache = new FakeBlockedSessionCache();
+        _sessionStore = new FakeUserSessionStore();
         _middleware = new UserContextMiddleware(context => Task.CompletedTask);
     }
 
@@ -39,11 +40,11 @@ public sealed class UserContextMiddlewareBlockedTests
             IsBlocked = true
         };
         _userRepository.Users.Add(user);
-        _sessionCache.AddOrRefresh(userId);
+        var session = await _sessionStore.CreateSessionAsync(userId, DateTimeOffset.UtcNow.AddDays(30), CancellationToken.None);
 
-        var context = CreateHttpContext(userId);
+        var context = CreateHttpContext(userId, session.Id);
 
-        await _middleware.InvokeAsync(context, _userRepository, _sessionCache);
+        await _middleware.InvokeAsync(context, _userRepository, _sessionStore);
 
         Assert.Multiple(() =>
         {
@@ -63,13 +64,13 @@ public sealed class UserContextMiddlewareBlockedTests
             IsBlocked = false
         };
         _userRepository.Users.Add(user);
-        _sessionCache.AddOrRefresh(userId);
+        var session = await _sessionStore.CreateSessionAsync(userId, DateTimeOffset.UtcNow.AddDays(30), CancellationToken.None);
 
         var nextCalled = false;
         var middleware = new UserContextMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
-        var context = CreateHttpContext(userId);
+        var context = CreateHttpContext(userId, session.Id);
 
-        await middleware.InvokeAsync(context, _userRepository, _sessionCache);
+        await middleware.InvokeAsync(context, _userRepository, _sessionStore);
 
         Assert.Multiple(() =>
         {
@@ -78,12 +79,13 @@ public sealed class UserContextMiddlewareBlockedTests
         });
     }
 
-    private static DefaultHttpContext CreateHttpContext(Id<User> userId)
+    private static DefaultHttpContext CreateHttpContext(Id<User> userId, Id<UserSession> sessionId)
     {
         var context = new DefaultHttpContext();
         context.User = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
-            new Claim("userId", userId.ToString())
+            new Claim("userId", userId.ToString()),
+            new Claim("sid", sessionId.ToString())
         }));
         context.Response.Body = new System.IO.MemoryStream();
         context.SetEndpoint(new Endpoint(
@@ -121,14 +123,5 @@ public sealed class UserContextMiddlewareBlockedTests
         }
         public Task<LgymApi.Application.Pagination.Pagination<LgymApi.Application.Features.AdminManagement.Models.UserResult>> GetUsersPaginatedAsync(LgymApi.Application.Pagination.FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
             => Task.FromResult(new LgymApi.Application.Pagination.Pagination<LgymApi.Application.Features.AdminManagement.Models.UserResult>());
-    }
-
-    private sealed class FakeBlockedSessionCache : IUserSessionCache
-    {
-        private readonly HashSet<Id<User>> _users = new();
-        public void AddOrRefresh(Id<User> userId) => _users.Add(userId);
-        public bool Remove(Id<User> userId) => _users.Remove(userId);
-        public bool Contains(Id<User> userId) => _users.Contains(userId);
-        public int Count => _users.Count;
     }
 }

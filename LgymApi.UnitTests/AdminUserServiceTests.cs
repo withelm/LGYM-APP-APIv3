@@ -8,6 +8,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.UnitTests.Fakes;
 
 namespace LgymApi.UnitTests;
 
@@ -17,7 +18,7 @@ public sealed class AdminUserServiceTests
     private AdminUserService _service = null!;
     private InMemoryAdminUserRepository _userRepository = null!;
     private InMemoryAdminRoleRepository _roleRepository = null!;
-    private FakeSessionCache _sessionCache = null!;
+    private FakeUserSessionStore _sessionStore = null!;
     private FakeUnitOfWork _unitOfWork = null!;
 
     [SetUp]
@@ -25,9 +26,9 @@ public sealed class AdminUserServiceTests
     {
         _userRepository = new InMemoryAdminUserRepository();
         _roleRepository = new InMemoryAdminRoleRepository();
-        _sessionCache = new FakeSessionCache();
+        _sessionStore = new FakeUserSessionStore();
         _unitOfWork = new FakeUnitOfWork();
-        _service = new AdminUserService(_userRepository, _roleRepository, _sessionCache, _unitOfWork);
+        _service = new AdminUserService(_userRepository, _roleRepository, _sessionStore, _unitOfWork);
     }
 
     [Test]
@@ -63,12 +64,12 @@ public sealed class AdminUserServiceTests
     }
 
     [Test]
-    public async Task BlockUserAsync_BlocksUserAndRemovesFromSession()
+    public async Task BlockUserAsync_BlocksUserAndRevokesAllSessions()
     {
         var userId = Id<User>.New();
         var adminId = Id<User>.New();
         _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "Test", Email = new Email("test@test.com") });
-        _sessionCache.AddOrRefresh(userId);
+        await _sessionStore.CreateSessionAsync(userId, DateTimeOffset.UtcNow.AddDays(30), CancellationToken.None);
 
         var result = await _service.BlockUserAsync(userId, adminId);
 
@@ -76,7 +77,7 @@ public sealed class AdminUserServiceTests
         {
             Assert.That(result.IsSuccess, Is.True);
             Assert.That(_userRepository.Users.First(u => u.Id == userId).IsBlocked, Is.True);
-            Assert.That(_sessionCache.Contains(userId), Is.False);
+            Assert.That(_sessionStore.RevokedAllUserIds, Contains.Item(userId));
             Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
         });
     }
@@ -112,12 +113,12 @@ public sealed class AdminUserServiceTests
     }
 
     [Test]
-    public async Task DeleteUserAsync_SoftDeletesUserAndRemovesFromSession()
+    public async Task DeleteUserAsync_SoftDeletesUserAndRevokesAllSessions()
     {
         var userId = Id<User>.New();
         var adminId = Id<User>.New();
         _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "Test", Email = new Email("test@test.com") });
-        _sessionCache.AddOrRefresh(userId);
+        await _sessionStore.CreateSessionAsync(userId, DateTimeOffset.UtcNow.AddDays(30), CancellationToken.None);
 
         var result = await _service.DeleteUserAsync(userId, adminId);
 
@@ -125,7 +126,7 @@ public sealed class AdminUserServiceTests
         {
             Assert.That(result.IsSuccess, Is.True);
             Assert.That(_userRepository.Users.First(u => u.Id == userId).IsDeleted, Is.True);
-            Assert.That(_sessionCache.Contains(userId), Is.False);
+            Assert.That(_sessionStore.RevokedAllUserIds, Contains.Item(userId));
         });
     }
 
@@ -434,15 +435,6 @@ public sealed class AdminUserServiceTests
                 PageSize = filterInput.PageSize,
                 TotalCount = Roles.Count
             });
-    }
-
-    private sealed class FakeSessionCache : IUserSessionCache
-    {
-        private readonly HashSet<Id<User>> _users = new();
-        public void AddOrRefresh(Id<User> userId) => _users.Add(userId);
-        public bool Remove(Id<User> userId) => _users.Remove(userId);
-        public bool Contains(Id<User> userId) => _users.Contains(userId);
-        public int Count => _users.Count;
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

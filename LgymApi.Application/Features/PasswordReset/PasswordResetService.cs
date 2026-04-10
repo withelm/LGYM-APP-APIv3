@@ -24,7 +24,7 @@ public sealed class PasswordResetService : IPasswordResetService
     private readonly IPasswordResetTokenGenerationService _tokenGenerationService;
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IEmailScheduler<PasswordRecoveryEmailPayload> _passwordRecoveryEmailScheduler;
-    private readonly IUserSessionCache _userSessionCache;
+    private readonly IUserSessionStore _userSessionStore;
     private readonly IUnitOfWork _unitOfWork;
 
     public PasswordResetService(PasswordResetServiceDependencies dependencies)
@@ -34,7 +34,7 @@ public sealed class PasswordResetService : IPasswordResetService
         _tokenGenerationService = dependencies.TokenGenerationService;
         _legacyPasswordService = dependencies.LegacyPasswordService;
         _passwordRecoveryEmailScheduler = dependencies.PasswordRecoveryEmailScheduler;
-        _userSessionCache = dependencies.UserSessionCache;
+        _userSessionStore = dependencies.UserSessionStore;
         _unitOfWork = dependencies.UnitOfWork;
     }
 
@@ -108,9 +108,8 @@ public sealed class PasswordResetService : IPasswordResetService
 
         await _userRepository.UpdateAsync(user, cancellationToken);
         await _passwordResetTokenRepository.UpdateAsync(resetToken, cancellationToken);
+        await _userSessionStore.RevokeAllUserSessionsAsync(user.Id, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        _userSessionCache.Remove(user.Id);
 
         return Result.Success(Unit.Value);
     }

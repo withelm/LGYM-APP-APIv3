@@ -51,6 +51,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<UserTutorialProgress> UserTutorialProgresses => Set<UserTutorialProgress>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
 
     public static readonly Id<Role> UserRoleSeedId = ParseSeedId<Role>("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
     public static readonly Id<Role> AdminRoleSeedId = ParseSeedId<Role>("1754c6f8-c021-41aa-b610-17088f9476f9");
@@ -764,6 +765,19 @@ public sealed class AppDbContext : DbContext
                     value => InAppNotificationType.Parse(value))
                 .IsRequired();
             entity.HasIndex(e => new { e.RecipientId, e.CreatedAt, e.Id });
+        });
+
+        modelBuilder.Entity<UserSession>(entity =>
+        {
+            entity.ToTable("UserSessions");
+            entity.Property(e => e.ExpiresAtUtc).IsRequired();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.Jti)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(e => e.UserId);
         });
      }
 
