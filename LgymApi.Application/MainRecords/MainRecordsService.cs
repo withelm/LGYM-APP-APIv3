@@ -34,7 +34,7 @@ public sealed class MainRecordsService : IMainRecordsService
     {
         if (input.UserId.IsEmpty || input.ExerciseId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)input.UserId, cancellationToken);
@@ -73,7 +73,7 @@ public sealed class MainRecordsService : IMainRecordsService
     {
         if (userId.IsEmpty)
         {
-            return Result<List<MainRecordEntity>, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+            return Result<List<MainRecordEntity>, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
@@ -97,7 +97,7 @@ public sealed class MainRecordsService : IMainRecordsService
     {
         if (userId.IsEmpty)
         {
-            return Result<MainRecordsLastContext, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+            return Result<MainRecordsLastContext, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
@@ -138,7 +138,7 @@ public sealed class MainRecordsService : IMainRecordsService
     {
         if (currentUserId.IsEmpty || recordId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         }
 
         var record = await _mainRecordRepository.FindByIdAsync(recordId, cancellationToken);
@@ -162,7 +162,7 @@ public sealed class MainRecordsService : IMainRecordsService
     {
         if (input.RouteUserId.IsEmpty || input.CurrentUserId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         }
 
         if (input.RouteUserId != input.CurrentUserId)
@@ -172,7 +172,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         if (input.RecordId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         }
 
         var existingRecord = await _mainRecordRepository.FindByIdAsync(input.RecordId, cancellationToken);
@@ -188,7 +188,7 @@ public sealed class MainRecordsService : IMainRecordsService
 
         if (input.ExerciseId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+            return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         }
 
         var exercise = await _exerciseRepository.FindByIdAsync(input.ExerciseId, cancellationToken);
@@ -216,7 +216,7 @@ public sealed class MainRecordsService : IMainRecordsService
     {
         if (userId.IsEmpty || exerciseId.IsEmpty)
         {
-            return Result<PossibleRecordResult, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+            return Result<PossibleRecordResult, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         }
 
         var records = await _mainRecordRepository.GetBestByUserGroupedByExerciseAndUnitAsync(userId, [exerciseId], cancellationToken);

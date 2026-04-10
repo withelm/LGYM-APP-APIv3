@@ -50,7 +50,7 @@ public sealed class TrainingService : ITrainingService
         var (gymId, planDayId, createdAt, exercises) = input;
         if (userId.IsEmpty || gymId.IsEmpty || planDayId.IsEmpty)
         {
-            return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
+            return Result<TrainingSummaryResult, AppError>.Failure(new InvalidTrainingDataError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
@@ -202,7 +202,7 @@ public sealed class TrainingService : ITrainingService
     {
         if (userId.IsEmpty)
         {
-            return Result<TrainingEntity, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
+            return Result<TrainingEntity, AppError>.Failure(new InvalidTrainingDataError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
@@ -224,7 +224,7 @@ public sealed class TrainingService : ITrainingService
     {
         if (userId.IsEmpty)
         {
-            return Result<List<TrainingByDateDetails>, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
+            return Result<List<TrainingByDateDetails>, AppError>.Failure(new InvalidTrainingDataError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
@@ -310,7 +310,7 @@ public sealed class TrainingService : ITrainingService
     {
         if (userId.IsEmpty)
         {
-            return Result<List<DateTime>, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
+            return Result<List<DateTime>, AppError>.Failure(new InvalidTrainingDataError(Messages.InvalidId));
         }
 
         var trainings = await _trainingRepository.GetDatesByUserIdAsync(userId, cancellationToken);

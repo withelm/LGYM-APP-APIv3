@@ -23,7 +23,7 @@ public sealed class EloRegistryService : IEloRegistryService
     {
         if (userId.IsEmpty)
         {
-            return Result<List<EloRegistryChartEntry>, AppError>.Failure(new EloRegistryNotFoundError(Messages.DidntFind));
+            return Result<List<EloRegistryChartEntry>, AppError>.Failure(new InvalidEloRegistryError(Messages.InvalidId));
         }
 
         var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);

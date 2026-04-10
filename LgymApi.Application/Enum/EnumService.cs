@@ -70,7 +70,7 @@ public sealed class EnumService : IEnumService
         if (lookup == null)
         {
             return Task.FromResult(Result<EnumLookupResponse, AppError>.Failure(
-                new NotFoundError(Messages.DidntFind)));
+                new InvalidEnumError(Messages.FieldRequired)));
         }
 
         return Task.FromResult(Result<EnumLookupResponse, AppError>.Success(lookup));
