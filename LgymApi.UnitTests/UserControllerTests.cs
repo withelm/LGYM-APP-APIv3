@@ -91,18 +91,6 @@ public sealed class UserControllerTests
         Assert.That(((ResponseMessageDto)objectResult.Value!).Message, Is.EqualTo(message));
     }
 
-    [Test]
-    public async Task ChangeVisibilityInRanking_WhenFlagMissing_ReturnsBadRequest()
-    {
-        var controller = CreateController(new StubUserService());
-        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
-
-        var action = await controller.ChangeVisibilityInRanking(new Dictionary<string, bool>());
-
-        Assert.That(action, Is.TypeOf<ObjectResult>());
-        Assert.That(((ObjectResult)action).StatusCode, Is.EqualTo(400));
-    }
-
     private static UserController CreateController(IUserService userService)
     {
         var services = new ServiceCollection();

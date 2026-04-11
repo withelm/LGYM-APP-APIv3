@@ -11,6 +11,7 @@ using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Pagination;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -94,7 +95,7 @@ public sealed class AdminUserControllerTests
                 {
                     User = new ClaimsPrincipal(new ClaimsIdentity(
                     [
-                        new Claim("userId", Id<User>.New().ToString())
+                        new Claim(AuthConstants.ClaimNames.UserId, Id<User>.New().ToString())
                     ],
                     "TestAuth"))
                 }

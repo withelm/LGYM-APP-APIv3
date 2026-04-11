@@ -179,7 +179,7 @@ public sealed class AdminUserController : ControllerBase
 
     private Id<Domain.Entities.User> GetAdminUserId()
     {
-        var userIdClaim = HttpContext.User.FindFirst("userId")?.Value;
+        var userIdClaim = HttpContext.User.FindFirst(AuthConstants.ClaimNames.UserId)?.Value;
         return Id<Domain.Entities.User>.TryParse(userIdClaim, out var userId) ? userId : Id<Domain.Entities.User>.Empty;
     }
 

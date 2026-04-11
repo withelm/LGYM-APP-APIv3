@@ -21,11 +21,24 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace LgymApi.IntegrationTests;
 
+/// <summary>
+/// Base class for integration tests providing web application factory, HTTP client, and common test helpers.
+/// </summary>
 public abstract class IntegrationTestBase : IDisposable
 {
+    /// <summary>
+    /// Gets the web application factory for hosting the API during tests.
+    /// </summary>
     protected CustomWebApplicationFactory Factory { get; private set; } = null!;
+    
+    /// <summary>
+    /// Gets the HTTP client for sending requests to the test API.
+    /// </summary>
     protected HttpClient Client { get; private set; } = null!;
 
+    /// <summary>
+    /// Initializes the test environment before each test by creating a fresh factory and client.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -57,6 +70,9 @@ public abstract class IntegrationTestBase : IDisposable
     protected const string AdminEmail = TestDataFactory.DefaultAdminEmail;
     protected const string AdminPassword = TestDataFactory.DefaultAdminSecret;
 
+    /// <summary>
+    /// Seeds a default admin user into the test database and returns the created user entity.
+    /// </summary>
     protected async Task<User> SeedAdminAsync()
     {
         using var scope = Factory.Services.CreateScope();
@@ -66,6 +82,9 @@ public abstract class IntegrationTestBase : IDisposable
         return user;
     }
 
+    /// <summary>
+    /// Seeds a user with specified properties into the test database and returns the created user entity.
+    /// </summary>
     protected async Task<User> SeedUserAsync(
         string name = "testuser",
         string email = "test@example.com",
@@ -92,6 +111,9 @@ public abstract class IntegrationTestBase : IDisposable
         return user;
     }
 
+    /// <summary>
+    /// Generates a JWT token for the specified user with roles and permissions loaded from the database.
+    /// </summary>
     protected string GenerateJwt(Id<User> userId, Id<UserSession> sessionId, string jti)
     {
         using var scope = Factory.Services.CreateScope();
@@ -140,6 +162,9 @@ public abstract class IntegrationTestBase : IDisposable
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /// <summary>
+    /// Creates a user session, generates a JWT token, and sets the Authorization header for subsequent requests.
+    /// </summary>
     protected void SetAuthorizationHeader(Id<User> userId)
     {
         using var scope = Factory.Services.CreateScope();
@@ -162,17 +187,26 @@ public abstract class IntegrationTestBase : IDisposable
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 
+    /// <summary>
+    /// Clears the Authorization header from the HTTP client.
+    /// </summary>
     protected void ClearAuthorizationHeader()
     {
         Client.DefaultRequestHeaders.Authorization = null;
     }
 
+    /// <summary>
+    /// Returns a scoped database context for manual queries and assertions.
+    /// </summary>
     protected AppDbContext GetDbContext()
     {
         var scope = Factory.Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<AppDbContext>();
     }
 
+    /// <summary>
+    /// Posts JSON content with API serialization options (enum-as-string, camelCase, ignore nulls) and auto-generates Idempotency-Key if not present.
+    /// </summary>
     protected async Task<HttpResponseMessage> PostAsJsonWithApiOptionsAsync<T>(string requestUri, T value)
     {
         // Auto-set idempotency key if not already present (for idempotent mutating endpoints)
@@ -209,6 +243,9 @@ public abstract class IntegrationTestBase : IDisposable
         return response;
     }
 
+    /// <summary>
+    /// Registers a new user via the registration endpoint and returns the user ID and authentication token.
+    /// </summary>
     protected async Task<(Id<User> UserId, string Token)> RegisterUserViaEndpointAsync(
         string name = "testuser",
         string email = "test@example.com",
@@ -252,6 +289,9 @@ public abstract class IntegrationTestBase : IDisposable
         return (userId, loginBody.Token!);
     }
 
+    /// <summary>
+    /// Creates a gym via the endpoint and returns the created gym ID.
+    /// </summary>
     protected async Task<Id<Gym>> CreateGymViaEndpointAsync(Id<User> userId, string name = "Test Gym")
     {
         SetAuthorizationHeader(userId);
@@ -269,6 +309,9 @@ public abstract class IntegrationTestBase : IDisposable
         return gymId;
     }
 
+    /// <summary>
+    /// Creates a training plan via the endpoint and returns the created plan ID.
+    /// </summary>
     protected async Task<Id<Plan>> CreatePlanViaEndpointAsync(Id<User> userId, string name = "Test Plan")
     {
         SetAuthorizationHeader(userId);
@@ -286,6 +329,9 @@ public abstract class IntegrationTestBase : IDisposable
         return planId;
     }
 
+    /// <summary>
+    /// Creates a user-specific exercise via the endpoint and returns the created exercise ID.
+    /// </summary>
     protected async Task<Id<Exercise>> CreateExerciseViaEndpointAsync(Id<User> userId, string name = "Test Exercise", BodyParts bodyPart = BodyParts.Chest)
     {
         SetAuthorizationHeader(userId);
@@ -303,6 +349,9 @@ public abstract class IntegrationTestBase : IDisposable
         return exerciseId;
     }
 
+    /// <summary>
+    /// Creates a global exercise via the endpoint (requires admin authorization) and returns the created exercise ID.
+    /// </summary>
     protected async Task<Id<Exercise>> CreateGlobalExerciseViaEndpointAsync(Id<User> userId, string name = "Global Exercise", BodyParts bodyPart = BodyParts.Chest)
     {
         SetAuthorizationHeader(userId);
@@ -320,6 +369,9 @@ public abstract class IntegrationTestBase : IDisposable
         return exerciseId;
     }
 
+    /// <summary>
+    /// Creates a plan day with exercises via the endpoint and returns the created plan day ID.
+    /// </summary>
     protected async Task<Id<PlanDay>> CreatePlanDayViaEndpointAsync(Id<User> userId, Id<Plan> planId, string name, List<PlanDayExerciseInput> exercises)
     {
         SetAuthorizationHeader(userId);
@@ -339,6 +391,9 @@ public abstract class IntegrationTestBase : IDisposable
         return planDayId;
     }
 
+    /// <summary>
+    /// Response DTO for login endpoint containing JWT token and user information.
+    /// </summary>
     protected sealed class LoginResult
     {
         [System.Text.Json.Serialization.JsonPropertyName("token")]
@@ -348,6 +403,9 @@ public abstract class IntegrationTestBase : IDisposable
         public UserResult? User { get; set; }
     }
 
+    /// <summary>
+    /// Response DTO representing a user with ID and name.
+    /// </summary>
     protected sealed class UserResult
     {
         [System.Text.Json.Serialization.JsonPropertyName("_id")]
@@ -357,6 +415,9 @@ public abstract class IntegrationTestBase : IDisposable
         public string? Name { get; set; }
     }
 
+    /// <summary>
+    /// Response DTO representing a gym with ID and name.
+    /// </summary>
     protected sealed class GymResult
     {
         [System.Text.Json.Serialization.JsonPropertyName("_id")]
@@ -366,6 +427,9 @@ public abstract class IntegrationTestBase : IDisposable
         public string? Name { get; set; }
     }
 
+    /// <summary>
+    /// Response DTO representing a training plan with ID and name.
+    /// </summary>
     protected sealed class PlanResult
     {
         [System.Text.Json.Serialization.JsonPropertyName("_id")]
@@ -375,6 +439,9 @@ public abstract class IntegrationTestBase : IDisposable
         public string? Name { get; set; }
     }
 
+    /// <summary>
+    /// Response DTO representing an exercise with ID and name.
+    /// </summary>
     protected sealed class ExerciseResult
     {
         [System.Text.Json.Serialization.JsonPropertyName("_id")]
@@ -384,6 +451,9 @@ public abstract class IntegrationTestBase : IDisposable
         public string? Name { get; set; }
     }
 
+    /// <summary>
+    /// Response DTO representing a plan day with ID and name.
+    /// </summary>
     protected sealed class PlanDayResult
     {
         [System.Text.Json.Serialization.JsonPropertyName("_id")]
@@ -393,6 +463,9 @@ public abstract class IntegrationTestBase : IDisposable
         public string? Name { get; set; }
     }
 
+    /// <summary>
+    /// Input model for creating plan day exercises with exercise ID, series count, and reps specification.
+    /// </summary>
     protected sealed class PlanDayExerciseInput
     {
         [System.Text.Json.Serialization.JsonPropertyName("exercise")]
@@ -405,6 +478,9 @@ public abstract class IntegrationTestBase : IDisposable
         public string Reps { get; set; } = string.Empty;
     }
 
+    /// <summary>
+    /// Runs background command orchestration passes to process pending commands, with exception suppression and max-pass limit.
+    /// </summary>
     protected async Task ProcessPendingCommandsAsync()
     {
         const int maxPasses = 5;

@@ -24,7 +24,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WhenSubscribed_SchedulesTrainingCompletedEmailWithNames()
+    public async Task Should_ScheduleTrainingCompletedEmailWithNames_When_SubscribedToEmail()
     {
         const string userEmail = "training-email-subscribed@example.com";
 
@@ -115,7 +115,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WhenNotSubscribed_DoesNotScheduleTrainingCompletedEmail()
+    public async Task Should_NotScheduleTrainingCompletedEmail_When_NotSubscribedToEmail()
     {
         const string userEmail = "training-email-unsubscribed@example.com";
 
@@ -161,7 +161,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithValidData_CreatesTrainingAndReturnsComparison()
+    public async Task Should_CreateTrainingAndReturnComparison_When_DataIsValid()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "traininguser",
@@ -204,7 +204,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithMismatchedRouteUserId_ReturnsForbidden()
+    public async Task Should_ReturnForbidden_When_RouteUserIdMismatched()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "traininguser2",
@@ -244,7 +244,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithInvalidGymId_ReturnsNotFound()
+    public async Task Should_ReturnNotFound_When_GymIdIsInvalid()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "traininguser3",
@@ -279,7 +279,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_UpdatesEloAndRank()
+    public async Task Should_UpdateEloAndRank_When_Called()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "elouser",
@@ -320,7 +320,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetLastTraining_WithNoTrainings_ReturnsNotFound()
+    public async Task Should_ReturnNotFound_When_NoTrainingsExist()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "lastuser",
@@ -336,7 +336,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetLastTraining_WithTraining_ReturnsLastTraining()
+    public async Task Should_ReturnLastTraining_When_TrainingExists()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "lastuser2",
@@ -379,7 +379,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetLastTraining_WithMismatchedRouteUserId_ReturnsForbidden()
+    public async Task Should_ReturnForbidden_When_GetLastTrainingRouteUserIdMismatched()
     {
         var (_, userAToken) = await RegisterUserViaEndpointAsync(
             name: "lastmismatch-a",
@@ -400,7 +400,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetTrainingByDate_WithNoTrainings_ReturnsNotFound()
+    public async Task Should_ReturnNotFound_When_GetTrainingByDateNoTrainingsExist()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "bydateuser",
@@ -417,7 +417,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetTrainingByDate_WithTraining_ReturnsTrainingDetails()
+    public async Task Should_ReturnTrainingDetails_When_TrainingExists()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "bydateuser2",
@@ -462,7 +462,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetTrainingByDate_WithMismatchedRouteUserId_ReturnsForbidden()
+    public async Task Should_ReturnForbidden_When_GetTrainingByDateRouteUserIdMismatched()
     {
         var (_, userAToken) = await RegisterUserViaEndpointAsync(
             name: "bydatemismatch-a",
@@ -484,7 +484,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetTrainingDates_WithNoTrainings_ReturnsNotFound()
+    public async Task Should_ReturnNotFound_When_GetTrainingDatesNoTrainingsExist()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "datesuser",
@@ -500,7 +500,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetTrainingDates_WithTrainings_ReturnsDates()
+    public async Task Should_ReturnDates_When_TrainingsExist()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "datesuser2",
@@ -540,7 +540,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetTrainingDates_WithMismatchedRouteUserId_ReturnsForbidden()
+    public async Task Should_ReturnForbidden_When_GetTrainingDatesRouteUserIdMismatched()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "datesuser3",
@@ -561,7 +561,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithMultipleExercises_TracksAllScores()
+    public async Task Should_TrackAllScores_When_MultipleExercisesExist()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "multiuser",
@@ -604,7 +604,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithAliasUnit_ReturnsBadRequest()
+    public async Task Should_ReturnBadRequest_When_UnitIsAlias()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "trainingstrict",
@@ -638,7 +638,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_CreatesMainRecordFromBestWeightInPayload()
+    public async Task Should_CreateMainRecordFromBestWeightInPayload_When_Called()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "maxcreateuser",
@@ -684,7 +684,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithBetterResultInDifferentUnit_UpdatesMainRecordAndKeepsSourceUnit()
+    public async Task Should_UpdateMainRecordAndKeepSourceUnit_When_BetterResultInDifferentUnit()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "maxupdateuser",
@@ -739,7 +739,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithEqualResultAcrossUnits_DoesNotChangeMainRecords()
+    public async Task Should_NotChangeMainRecords_When_EqualResultAcrossUnits()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "maxequaluser",
@@ -794,7 +794,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithWorseResultAcrossUnits_DoesNotUpdateMainRecord()
+    public async Task Should_NotUpdateMainRecord_When_WorseResultAcrossUnits()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "maxworseuser",
@@ -847,7 +847,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithMultipleSeriesForExercise_AddsOnlyBestMainRecordFromPayload()
+    public async Task Should_AddOnlyBestMainRecordFromPayload_When_MultipleSeriesForExercise()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "maxseriesuser",
@@ -928,7 +928,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WhenLatestEloEntryMissing_DoesNotPersistPartialData()
+    public async Task Should_NotPersistPartialData_When_LatestEloEntryMissing()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "rollbackuser",
@@ -1116,7 +1116,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithMultipleExercises_PreservesExerciseOrder()
+    public async Task Should_PreserveExerciseOrder_When_MultipleExercises()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "orderuser",
@@ -1195,7 +1195,7 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task AddTraining_WithMultipleSeries_ReturnsSeriesInOrder()
+    public async Task Should_ReturnSeriesInOrder_When_MultipleSeries()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "seriesorderuser",

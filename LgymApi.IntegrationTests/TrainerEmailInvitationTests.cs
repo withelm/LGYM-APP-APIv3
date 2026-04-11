@@ -7,6 +7,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Data.SeedData;
 using LgymApi.Resources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -319,10 +320,10 @@ public sealed class TrainerEmailInvitationTests : IntegrationTestBase
         var trainer = await SeedUserAsync(name: name, email: email, password: "password123");
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == trainer.Id && ur.RoleId == AppDbContext.TrainerRoleSeedId);
+        var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == trainer.Id && ur.RoleId == RoleSeedDataConfiguration.TrainerRoleSeedId);
         if (!alreadyLinked)
         {
-            db.UserRoles.Add(new UserRole { UserId = trainer.Id, RoleId = AppDbContext.TrainerRoleSeedId });
+            db.UserRoles.Add(new UserRole { UserId = trainer.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId });
         }
 
         var trainerToUpdate = await db.Users.FirstAsync(u => u.Id == trainer.Id);

@@ -15,13 +15,20 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class UserServiceTests
 {
-    [Test]
-    public async Task GetUserEloAsync_ReturnsInvalidUserError_WhenUserIdIsEmpty()
-    {
-        var mockDeps = Substitute.For<IUserServiceDependencies>();
-        var service = new UserService(mockDeps);
+    private IUserServiceDependencies _deps = null!;
+    private UserService _service = null!;
 
-        var result = await service.GetUserEloAsync(Id<User>.Empty);
+    [SetUp]
+    public void SetUp()
+    {
+        _deps = Substitute.For<IUserServiceDependencies>();
+        _service = new UserService(_deps);
+    }
+
+    [Test]
+    public async Task Should_ReturnInvalidUserError_When_UserIdIsEmpty()
+    {
+        var result = await _service.GetUserEloAsync(Id<User>.Empty);
 
         Assert.Multiple(() =>
         {

@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -21,7 +22,7 @@ public sealed class NotificationHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var sidClaim = Context.User?.FindFirst("sid")?.Value;
+        var sidClaim = Context.User?.FindFirst(AuthConstants.ClaimNames.SessionId)?.Value;
         if (sidClaim == null || !Id<UserSession>.TryParse(sidClaim, out var sessionId))
         {
             Context.Abort();
@@ -34,7 +35,7 @@ public sealed class NotificationHub : Hub
             return;
         }
 
-        var userId = Context.User?.FindFirst("userId")?.Value;
+        var userId = Context.User?.FindFirst(AuthConstants.ClaimNames.UserId)?.Value;
         if (userId == null || !Id<User>.TryParse(userId, out var userIdParsed))
         {
             Context.Abort();

@@ -136,3 +136,5 @@ deploy.sh
 # Sisyphus orchestration artifacts
 .sisyphus/
 **/.sisyphus/
+.evidence/
+**/.evidence/

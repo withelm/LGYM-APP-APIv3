@@ -21,10 +21,10 @@ public sealed class TokenService : ITokenService
 
     public string CreateToken(Id<User> userId, Id<UserSession> sessionId, string jti, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
     {
-        var signingKey = _configuration["Jwt:SigningKey"];
+        var signingKey = _configuration[AuthConstants.ConfigKeys.JwtSigningKey];
         if (string.IsNullOrWhiteSpace(signingKey) || signingKey.Length < 32)
         {
-            throw new InvalidOperationException("Jwt:SigningKey is not configured or is too short. Set a strong key value.");
+            throw new InvalidOperationException($"{AuthConstants.ConfigKeys.JwtSigningKey} is not configured or is too short. Set a strong key value.");
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
@@ -34,8 +34,8 @@ public sealed class TokenService : ITokenService
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, userIdString),
-            new("userId", userIdString),
-            new("sid", sessionId.ToString()),
+            new(AuthConstants.ClaimNames.UserId, userIdString),
+            new(AuthConstants.ClaimNames.SessionId, sessionId.ToString()),
             new(JwtRegisteredClaimNames.Jti, jti)
         };
 

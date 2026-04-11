@@ -14,7 +14,7 @@ namespace LgymApi.IntegrationTests;
 public sealed class AdminUserIntegrationTests : IntegrationTestBase
 {
     [Test]
-    public async Task GetUsers_AsNonAdmin_ReturnsForbidden()
+    public async Task Should_ReturnForbidden_When_CalledAsNonAdmin()
     {
         var user = await SeedUserAsync(name: "regular-user", email: "regular@example.com", password: "pass1234");
         await AuthenticateAsync(user.Name, "pass1234");
@@ -25,7 +25,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetUsers_AsAdmin_ReturnsPaginatedResults()
+    public async Task Should_ReturnPaginatedResults_When_CalledAsAdmin()
     {
         await AuthenticateAsAdminAsync();
         await SeedUserAsync(name: "user-one", email: "user-one@example.com", password: "pass1234");
@@ -43,7 +43,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetUsers_WithIncludeDeleted_AcceptsParameter()
+    public async Task Should_AcceptIncludeDeletedParameter_When_Provided()
     {
         await AuthenticateAsAdminAsync();
 
@@ -56,7 +56,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetUser_WithInvalidId_ReturnsBadRequest()
+    public async Task Should_ReturnBadRequest_When_GetUserIdIsInvalid()
     {
         await AuthenticateAsAdminAsync();
 
@@ -66,7 +66,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task UpdateUser_AsAdmin_UpdatesFields()
+    public async Task Should_UpdateFields_When_CalledAsAdmin()
     {
         await AuthenticateAsAdminAsync();
         var user = await SeedUserAsync(name: "update-user", email: "update@example.com", password: "pass1234");
@@ -91,7 +91,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task UpdateUser_WithDuplicateEmail_ReturnsConflict()
+    public async Task Should_ReturnConflict_When_EmailIsDuplicate()
     {
         await AuthenticateAsAdminAsync();
         var user1 = await SeedUserAsync(name: "user-one", email: "one@example.com", password: "pass1234");
@@ -110,7 +110,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task DeleteUser_AsAdmin_SoftDeletesUser()
+    public async Task Should_SoftDeleteUser_When_CalledAsAdmin()
     {
         await AuthenticateAsAdminAsync();
         var user = await SeedUserAsync(name: "delete-user", email: "delete@example.com", password: "pass1234");
@@ -127,7 +127,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task DeleteUser_WithInvalidId_ReturnsBadRequest()
+    public async Task Should_ReturnBadRequest_When_DeleteUserIdIsInvalid()
     {
         await AuthenticateAsAdminAsync();
 
@@ -137,7 +137,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task BlockUser_AsAdmin_BlocksUser()
+    public async Task Should_BlockUser_When_CalledAsAdmin()
     {
         await AuthenticateAsAdminAsync();
         var user = await SeedUserAsync(name: "block-user", email: "block@example.com", password: "pass1234");
@@ -154,7 +154,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task BlockUser_WithInvalidId_ReturnsBadRequest()
+    public async Task Should_ReturnBadRequest_When_BlockUserIdIsInvalid()
     {
         await AuthenticateAsAdminAsync();
 
@@ -164,7 +164,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task UnblockUser_AsAdmin_UnblocksUser()
+    public async Task Should_UnblockUser_When_CalledAsAdmin()
     {
         await AuthenticateAsAdminAsync();
         var user = await SeedUserAsync(name: "unblock-user", email: "unblock@example.com", password: "pass1234");
@@ -191,7 +191,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task UnblockUser_WithInvalidId_ReturnsBadRequest()
+    public async Task Should_ReturnBadRequest_When_UnblockUserIdIsInvalid()
     {
         await AuthenticateAsAdminAsync();
 

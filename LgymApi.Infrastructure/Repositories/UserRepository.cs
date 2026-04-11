@@ -1,11 +1,11 @@
 using LgymApi.Application.Features.AdminManagement.Models;
-using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Models;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Data.SeedData;
 using LgymApi.Infrastructure.Pagination;
 using Microsoft.EntityFrameworkCore;
 
@@ -64,7 +64,7 @@ public sealed class UserRepository : IUserRepository
         var rankedUsers = await _dbContext.Users
             .AsNoTracking()
             .Where(u => !u.IsDeleted && u.IsVisibleInRanking)
-            .Where(u => !u.UserRoles.Any(ur => ur.RoleId == AppDbContext.TesterRoleSeedId))
+            .Where(u => !u.UserRoles.Any(ur => ur.RoleId == RoleSeedDataConfiguration.TesterRoleSeedId))
             .Select(u => new
             {
                 User = u,

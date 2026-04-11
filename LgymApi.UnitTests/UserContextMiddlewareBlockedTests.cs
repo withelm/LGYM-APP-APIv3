@@ -5,6 +5,7 @@ using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.UnitTests.Fakes;
 using Microsoft.AspNetCore.Http;
@@ -84,8 +85,8 @@ public sealed class UserContextMiddlewareBlockedTests
         var context = new DefaultHttpContext();
         context.User = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
-            new Claim("userId", userId.ToString()),
-            new Claim("sid", sessionId.ToString())
+            new Claim(AuthConstants.ClaimNames.UserId, userId.ToString()),
+            new Claim(AuthConstants.ClaimNames.SessionId, sessionId.ToString())
         }));
         context.Response.Body = new System.IO.MemoryStream();
         context.SetEndpoint(new Endpoint(

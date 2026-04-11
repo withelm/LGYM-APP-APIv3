@@ -9,6 +9,7 @@ using LgymApi.Application.Features.PasswordReset;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -103,7 +104,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> Logout(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var rawSessionId = HttpContext.User.FindFirst("sid")?.Value;
+        var rawSessionId = HttpContext.User.FindFirst(AuthConstants.ClaimNames.SessionId)?.Value;
         var sessionId = Id<UserSessionEntity>.TryParse(rawSessionId, out var parsedSessionId)
             ? parsedSessionId
             : (Id<UserSessionEntity>?)null;
@@ -168,16 +169,10 @@ public sealed class UserController : ControllerBase
 
     [HttpPost("changeVisibilityInRanking")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ChangeVisibilityInRanking([FromBody] Dictionary<string, bool> body, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> ChangeVisibilityInRanking([FromBody] ChangeVisibilityInRankingRequest request, CancellationToken cancellationToken = default)
     {
-        if (!body.TryGetValue("isVisibleInRanking", out var isVisible))
-        {
-            var routeValidationFailure = Result<Unit, AppError>.Failure(new InvalidUserError(Messages.DidntFind));
-            return routeValidationFailure.ToActionResult();
-        }
-
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.ChangeVisibilityInRankingAsync(user, isVisible, cancellationToken);
+        var result = await _userService.ChangeVisibilityInRankingAsync(user, request.IsVisibleInRanking.Value, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
