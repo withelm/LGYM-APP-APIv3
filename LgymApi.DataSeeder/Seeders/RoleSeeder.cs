@@ -1,6 +1,7 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Data.SeedData;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.DataSeeder.Seeders;
@@ -27,25 +28,25 @@ public sealed class RoleSeeder : IEntitySeeder
         {
             new()
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.UserRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Role>)RoleSeedDataConfiguration.UserRoleSeedId,
                 Name = AuthConstants.Roles.User,
                 Description = "Default role for all users"
             },
             new()
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.AdminRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Role>)RoleSeedDataConfiguration.AdminRoleSeedId,
                 Name = AuthConstants.Roles.Admin,
                 Description = "Administrative privileges"
             },
             new()
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.TesterRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Role>)RoleSeedDataConfiguration.TesterRoleSeedId,
                 Name = AuthConstants.Roles.Tester,
                 Description = "Excluded from ranking"
             },
             new()
             {
-                Id = (LgymApi.Domain.ValueObjects.Id<Role>)AppDbContext.TrainerRoleSeedId,
+                Id = (LgymApi.Domain.ValueObjects.Id<Role>)RoleSeedDataConfiguration.TrainerRoleSeedId,
                 Name = AuthConstants.Roles.Trainer,
                 Description = "Trainer role for coach-facing APIs"
             }

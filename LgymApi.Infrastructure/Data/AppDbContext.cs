@@ -3,6 +3,8 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Infrastructure.Data.Conventions;
+using LgymApi.Infrastructure.Data.SeedData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System.Linq.Expressions;
@@ -53,133 +55,20 @@ public sealed class AppDbContext : DbContext
     public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
 
-    public static readonly Id<Role> UserRoleSeedId = ParseSeedId<Role>("f124fe5f-9bf2-45df-bfd2-d5d6be920016");
-    public static readonly Id<Role> AdminRoleSeedId = ParseSeedId<Role>("1754c6f8-c021-41aa-b610-17088f9476f9");
-    public static readonly Id<Role> TesterRoleSeedId = ParseSeedId<Role>("f93f03af-ae11-4fd8-a60e-f970f89df6fb");
-    public static readonly Id<Role> TrainerRoleSeedId = ParseSeedId<Role>("8c1a3db8-72a3-47cc-b3de-f5347c6ae501");
-    public static readonly Id<RoleClaim> AdminAccessClaimSeedId = ParseSeedId<RoleClaim>("9dbfd057-cf88-4597-b668-2fdf16a2def6");
-    public static readonly Id<RoleClaim> ManageUserRolesClaimSeedId = ParseSeedId<RoleClaim>("97f7ea56-0032-4f18-8703-ab2d1485ad45");
-    public static readonly Id<RoleClaim> ManageAppConfigClaimSeedId = ParseSeedId<RoleClaim>("d12f9f84-48f4-4f4b-9614-843f31ea0f96");
-    public static readonly Id<RoleClaim> ManageGlobalExercisesClaimSeedId = ParseSeedId<RoleClaim>("27965bf4-ff55-4261-8f98-218ccf00e537");
-    public static readonly Id<RoleClaim> TrainerAccessClaimSeedId = ParseSeedId<RoleClaim>("a3b7c9d1-4e5f-6a7b-8c9d-0e1f2a3b4c5d");
-    private static readonly DateTimeOffset RoleSeedTimestamp = new(2026, 2, 15, 0, 0, 0, TimeSpan.Zero);
-
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
 
-        // T5: Register typed-ID value converters for all entity types.
-        // These converters enable Id<TEntity> and Id<TEntity>? to map to/from GUID columns
-        // in the database without changing schema (GUID columns remain GUID-backed).
-        
-        // Discover all entity types that inherit from EntityBase<T>
-        // Load types from Domain assembly where entities are defined
-        var domainAssembly = typeof(EntityBase<>).Assembly;
-        var entityTypes = domainAssembly
-            .GetTypes()
-            .Where(t => t.Namespace == "LgymApi.Domain.Entities" && !t.IsAbstract && t.IsClass)
-            .Where(t =>
-            {
-                var baseType = t.BaseType;
-                while (baseType != null)
-                {
-                    // Check if this is EntityBase<T> by looking at generic type definition
-                    if (baseType.IsGenericType && 
-                        baseType.GetGenericTypeDefinition().Name == "EntityBase`1")
-                    {
-                        return true;
-                    }
-                    baseType = baseType.BaseType;
-                }
-                return false;
-            })
-            .ToList();
-
-        // Register converters for each entity type
-        foreach (var entityType in entityTypes)
-        {
-            var idType = typeof(Id<>).MakeGenericType(entityType);
-            var nullableIdType = typeof(Nullable<>).MakeGenericType(idType);
-            
-            var converterType = typeof(TypedIdValueConverter<>).MakeGenericType(entityType);
-            var nullableConverterType = typeof(NullableTypedIdValueConverter<>).MakeGenericType(entityType);
-
-            // Register conversion for Id<TEntity> properties
-            configurationBuilder.Properties(idType).HaveConversion(converterType);
-            
-            // Register conversion for nullable Id<TEntity>? properties
-            configurationBuilder.Properties(nullableIdType).HaveConversion(nullableConverterType);
-        }
-
-        configurationBuilder.Properties<Id<CorrelationScope>>().HaveConversion<TypedIdValueConverter<CorrelationScope>>();
-        configurationBuilder.Properties<Id<CorrelationScope>?>().HaveConversion<NullableTypedIdValueConverter<CorrelationScope>>();
-
+        TypedIdConventionApplier.ApplyConventions(configurationBuilder);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // T5: Explicitly configure typed-ID converters with comparers to enable key validation
-        // Register each entity type that has a typed ID property
-        var entityTypesWithTypedIds = typeof(AppDbContext).Assembly
-            .GetTypes()
-            .Where(t => t.Namespace == "LgymApi.Domain.Entities" && !t.IsAbstract && t.IsClass)
-            .Where(t =>
-            {
-                var baseType = t.BaseType;
-                while (baseType != null)
-                {
-                    if (baseType.IsGenericType && 
-                        baseType.GetGenericTypeDefinition().Name == "EntityBase`1")
-                    {
-                        return true;
-                    }
-                    baseType = baseType.BaseType;
-                }
-                return false;
-            })
-            .ToList();
+        TypedIdConventionApplier.ApplyModelBuilderConverters(modelBuilder);
 
-        foreach (var entityType in entityTypesWithTypedIds)
-        {
-            var converterType = typeof(TypedIdValueConverter<>).MakeGenericType(entityType);
-            var nullableConverterType = typeof(NullableTypedIdValueConverter<>).MakeGenericType(entityType);
-            
-            var converterInstance = (dynamic)Activator.CreateInstance(converterType)!;
-            var nullableConverterInstance = (dynamic)Activator.CreateInstance(nullableConverterType)!;
-
-            // Use reflection to call Entity<T>().Property(...).HasConversion(converter)
-            var entityMethod = typeof(ModelBuilder)
-                .GetMethod("Entity", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
-                ?.MakeGenericMethod(entityType);
-            
-            if (entityMethod == null)
-                continue;
-
-            dynamic entityBuilder = entityMethod.Invoke(modelBuilder, null)!;
-            
-            // Configure Id property
-            var propertyMethod = entityBuilder.GetType()
-                .GetMethod("Property", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
-                ?.MakeGenericMethod(typeof(Id<>).MakeGenericType(entityType));
-            
-            if (propertyMethod == null)
-                continue;
-
-            var idParam = System.Linq.Expressions.Expression.Parameter(entityType, "e");
-            var idProp = System.Linq.Expressions.Expression.Property(idParam, "Id");
-            var idLambda = System.Linq.Expressions.Expression.Lambda(idProp, idParam);
-            
-            dynamic propBuilder = propertyMethod.Invoke(entityBuilder, new object[] { idLambda })!;
-            var hasConversionMethod = propBuilder.GetType()
-                .GetMethod("HasConversion", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
-                ?.MakeGenericMethod(converterInstance.GetType().GetProperty("ModelClrType")!.GetValue(converterInstance));
-            
-            hasConversionMethod?.Invoke(propBuilder, new object?[] { converterInstance });
-        }
-
-        ApplySoftDeleteQueryFilters(modelBuilder);
+        SoftDeleteFilterApplier.Apply(modelBuilder);
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -340,39 +229,6 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(e => e.Name)
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
-            entity.HasData(
-                new Role
-                {
-                    Id = (Id<Role>)UserRoleSeedId,
-                    Name = AuthConstants.Roles.User,
-                    Description = "Default role for all users",
-                    CreatedAt = RoleSeedTimestamp,
-                    UpdatedAt = RoleSeedTimestamp
-                },
-                new Role
-                {
-                    Id = (Id<Role>)AdminRoleSeedId,
-                    Name = AuthConstants.Roles.Admin,
-                    Description = "Administrative privileges",
-                    CreatedAt = RoleSeedTimestamp,
-                    UpdatedAt = RoleSeedTimestamp
-                },
-                new Role
-                {
-                    Id = (Id<Role>)TesterRoleSeedId,
-                    Name = AuthConstants.Roles.Tester,
-                    Description = "Excluded from ranking",
-                    CreatedAt = RoleSeedTimestamp,
-                    UpdatedAt = RoleSeedTimestamp
-                },
-                new Role
-                {
-                    Id = (Id<Role>)TrainerRoleSeedId,
-                    Name = AuthConstants.Roles.Trainer,
-                    Description = "Trainer role for coach-facing APIs",
-                    CreatedAt = RoleSeedTimestamp,
-                    UpdatedAt = RoleSeedTimestamp
-                });
         });
 
         modelBuilder.Entity<UserRole>(entity =>
@@ -401,52 +257,6 @@ public sealed class AppDbContext : DbContext
                 .WithMany(r => r.RoleClaims)
                 .HasForeignKey(e => e.RoleId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasData(
-                new RoleClaim
-                {
-                    Id = (Id<RoleClaim>)AdminAccessClaimSeedId,
-                    RoleId = (Id<Role>)AdminRoleSeedId,
-                    ClaimType = AuthConstants.PermissionClaimType,
-                    ClaimValue = AuthConstants.Permissions.AdminAccess,
-                    CreatedAt = RoleSeedTimestamp,
-                    UpdatedAt = RoleSeedTimestamp
-                },
-                new RoleClaim
-                {
-                    Id = (Id<RoleClaim>)ManageUserRolesClaimSeedId,
-                    RoleId = (Id<Role>)AdminRoleSeedId,
-                    ClaimType = AuthConstants.PermissionClaimType,
-                    ClaimValue = AuthConstants.Permissions.ManageUserRoles,
-                    CreatedAt = RoleSeedTimestamp,
-                    UpdatedAt = RoleSeedTimestamp
-                },
-                new RoleClaim
-                {
-                    Id = (Id<RoleClaim>)ManageAppConfigClaimSeedId,
-                    RoleId = (Id<Role>)AdminRoleSeedId,
-                    ClaimType = AuthConstants.PermissionClaimType,
-                    ClaimValue = AuthConstants.Permissions.ManageAppConfig,
-                    CreatedAt = RoleSeedTimestamp,
-                    UpdatedAt = RoleSeedTimestamp
-                },
-                new RoleClaim
-                {
-                    Id = (Id<RoleClaim>)ManageGlobalExercisesClaimSeedId,
-                    RoleId = (Id<Role>)AdminRoleSeedId,
-                    ClaimType = AuthConstants.PermissionClaimType,
-                    ClaimValue = AuthConstants.Permissions.ManageGlobalExercises,
-                    CreatedAt = RoleSeedTimestamp,
-                    UpdatedAt = RoleSeedTimestamp
-                },
-                new RoleClaim
-                {
-                    Id = (Id<RoleClaim>)TrainerAccessClaimSeedId,
-                    RoleId = (Id<Role>)TrainerRoleSeedId,
-                    ClaimType = AuthConstants.PermissionClaimType,
-                    ClaimValue = AuthConstants.Permissions.TrainerAccess,
-                    CreatedAt = RoleSeedTimestamp,
-                    UpdatedAt = RoleSeedTimestamp
-                });
         });
 
         modelBuilder.Entity<TrainerInvitation>(entity =>
@@ -779,38 +589,11 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UserId);
         });
+
+        RoleSeedDataConfiguration.Apply(modelBuilder);
      }
 
-     private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)
-    {
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-        {
-            if (entityType.IsOwned())
-            {
-                continue;
-            }
-
-            var clrType = entityType.ClrType;
-            if (!IsEntityBase(clrType))
-            {
-                continue;
-            }
-
-            var parameter = Expression.Parameter(clrType, "entity");
-            var isDeletedProperty = Expression.Call(
-                typeof(EF),
-                nameof(EF.Property),
-                new[] { typeof(bool) },
-                parameter,
-                Expression.Constant("IsDeleted"));
-            var compareExpression = Expression.Equal(isDeletedProperty, Expression.Constant(false));
-            var lambda = Expression.Lambda(compareExpression, parameter);
-
-            modelBuilder.Entity(clrType).HasQueryFilter(lambda);
-        }
-    }
-
-    private static bool IsEntityBase(Type type)
+     private static bool IsEntityBase(Type type)
     {
         var baseType = type.BaseType;
         while (baseType != null)
@@ -861,14 +644,5 @@ public sealed class AppDbContext : DbContext
                 entry.Property("UpdatedAt").CurrentValue = utcNow;
             }
         }
-    }
-
-    private static Id<TEntity> ParseSeedId<TEntity>(string idString)
-    {
-        if (!Id<TEntity>.TryParse(idString, out var id))
-        {
-            throw new InvalidOperationException($"Failed to parse seed ID: {idString}");
-        }
-        return id;
     }
 }
