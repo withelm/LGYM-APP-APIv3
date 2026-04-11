@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -224,7 +225,7 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
     private SessionClaims ReadSessionClaims(string token)
     {
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-        var sid = jwt.Claims.Single(c => c.Type == "sid").Value;
+        var sid = jwt.Claims.Single(c => c.Type == AuthConstants.ClaimNames.SessionId).Value;
         var jti = jwt.Claims.Single(c => c.Type == JwtRegisteredClaimNames.Jti).Value;
         Id<UserSession>.TryParse(sid, out var sessionId).Should().BeTrue();
 

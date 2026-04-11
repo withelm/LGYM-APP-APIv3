@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
@@ -25,7 +26,7 @@ public sealed class TokenServiceTests
     {
         var settings = new Dictionary<string, string?>
         {
-            ["Jwt:SigningKey"] = "unit-test-signing-key-at-least-32-chars"
+            [AuthConstants.ConfigKeys.JwtSigningKey] = "unit-test-signing-key-at-least-32-chars"
         };
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var service = new TokenService(configuration);
@@ -42,8 +43,8 @@ public sealed class TokenServiceTests
         Assert.Multiple(() =>
         {
             Assert.That(jwt.Claims.Any(c => c.Type == "sub" && c.Value == userId.ToString()), Is.True, "Missing 'sub' claim");
-            Assert.That(jwt.Claims.Any(c => c.Type == "userId" && c.Value == userId.ToString()), Is.True, "Missing 'userId' claim");
-            Assert.That(jwt.Claims.Any(c => c.Type == "sid" && c.Value == sessionId.ToString()), Is.True, "Missing 'sid' claim");
+            Assert.That(jwt.Claims.Any(c => c.Type == AuthConstants.ClaimNames.UserId && c.Value == userId.ToString()), Is.True, "Missing 'userId' claim");
+            Assert.That(jwt.Claims.Any(c => c.Type == AuthConstants.ClaimNames.SessionId && c.Value == sessionId.ToString()), Is.True, "Missing 'sid' claim");
             Assert.That(jwt.Claims.Any(c => c.Type == JwtRegisteredClaimNames.Jti && c.Value == jti), Is.True, "Missing 'jti' claim");
             Assert.That(jwt.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "User"), Is.True, "Missing 'User' role claim");
             Assert.That(jwt.Claims.Any(c => c.Type == "permission" && c.Value == "admin:access"), Is.True, "Missing 'admin:access' permission claim");
