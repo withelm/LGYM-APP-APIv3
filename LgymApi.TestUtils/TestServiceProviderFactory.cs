@@ -5,8 +5,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.TestUtils;
 
+/// <summary>
+/// Builds pre-configured ServiceProvider instances for infrastructure and background worker testing.
+/// </summary>
 public static class TestServiceProviderFactory
 {
+    /// <summary>
+    /// Creates a ServiceProvider with Infrastructure services and optional BackgroundWorker registration.
+    /// </summary>
     public static Microsoft.Extensions.DependencyInjection.ServiceProvider CreateInfrastructureProvider(
         IConfiguration configuration,
         bool isTesting,

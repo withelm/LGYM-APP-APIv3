@@ -10,13 +10,28 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LgymApi.IntegrationTests;
 
+/// <summary>
+/// Configure the web application host for integration testing with in-memory database and test email sender.
+/// </summary>
 public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
+    /// <summary>
+    /// Gets a unique database name for this test instance.
+    /// </summary>
     public string DatabaseName { get; } = $"lgymtests_{Id<CustomWebApplicationFactory>.New():N}";
+    /// <summary>
+    /// Gets the test email sender instance for capturing outbound emails during tests.
+    /// </summary>
     public TestEmailSender EmailSender { get; } = new();
 
+    /// <summary>
+    /// The JWT signing key used for generating test tokens during integration tests.
+    /// </summary>
     public const string TestJwtSigningKey = "IntegrationTestSigningKey_MustBeAtLeast32Characters!";
 
+    /// <summary>
+    /// Configure the test web host with in-memory database, JWT settings, email configuration, and CORS policies.
+    /// </summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");

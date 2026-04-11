@@ -8,13 +8,34 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.TestUtils;
 
+/// <summary>
+/// Provides factory methods for seeding test data including users, roles, and permissions.
+/// </summary>
 public static class TestDataFactory
 {
+    /// <summary>
+    /// Default username for admin test accounts.
+    /// </summary>
     public const string DefaultAdminName = "testadmin";
+    
+    /// <summary>
+    /// Default email address for admin test accounts.
+    /// </summary>
     public const string DefaultAdminEmail = "testadmin@example.com";
+    
+    /// <summary>
+    /// Default password for admin test accounts.
+    /// </summary>
     public const string DefaultAdminSecret = "AdminSecret123!";
+    
+    /// <summary>
+    /// Default password for standard user test accounts.
+    /// </summary>
     public const string DefaultUserSecret = "UserSecret123!";
 
+    /// <summary>
+    /// Seeds default roles (User, Admin, Tester, Trainer) and associated permissions into the database.
+    /// </summary>
     public static async Task SeedDefaultRolesAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
     {
         if (await dbContext.Roles.AnyAsync(cancellationToken))
@@ -98,6 +119,9 @@ public static class TestDataFactory
 
     }
 
+    /// <summary>
+    /// Seeds an admin user with default credentials and admin role assignment.
+    /// </summary>
     public static Task<User> SeedAdminAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
     {
         return SeedUserAsync(
@@ -109,6 +133,9 @@ public static class TestDataFactory
             cancellationToken: cancellationToken);
     }
 
+    /// <summary>
+    /// Seeds a customizable user with optional admin, tester, and visibility settings plus initial ELO rating.
+    /// </summary>
     public static Task<User> SeedUserAsync(
         AppDbContext dbContext,
         string name = "testuser",
