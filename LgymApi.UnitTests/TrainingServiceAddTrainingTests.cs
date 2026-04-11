@@ -16,6 +16,7 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class TrainingServiceAddTrainingTests
 {
+    private ITrainingServiceDependencies _deps = null!;
     private IUserRepository _userRepository = null!;
     private IGymRepository _gymRepository = null!;
     private ITrainingRepository _trainingRepository = null!;
@@ -42,23 +43,23 @@ public sealed class TrainingServiceAddTrainingTests
         _rankService = Substitute.For<IRankService>();
         _unitOfWork = Substitute.For<IUnitOfWork>();
 
-        var deps = Substitute.For<ITrainingServiceDependencies>();
-        deps.UserRepository.Returns(_userRepository);
-        deps.GymRepository.Returns(_gymRepository);
-        deps.TrainingRepository.Returns(_trainingRepository);
-        deps.ExerciseRepository.Returns(_exerciseRepository);
-        deps.ExerciseScoreRepository.Returns(_exerciseScoreRepository);
-        deps.TrainingExerciseScoreRepository.Returns(_trainingExerciseScoreRepository);
-        deps.CommandDispatcher.Returns(_commandDispatcher);
-        deps.EloRepository.Returns(_eloRepository);
-        deps.RankService.Returns(_rankService);
-        deps.UnitOfWork.Returns(_unitOfWork);
+        _deps = Substitute.For<ITrainingServiceDependencies>();
+        _deps.UserRepository.Returns(_userRepository);
+        _deps.GymRepository.Returns(_gymRepository);
+        _deps.TrainingRepository.Returns(_trainingRepository);
+        _deps.ExerciseRepository.Returns(_exerciseRepository);
+        _deps.ExerciseScoreRepository.Returns(_exerciseScoreRepository);
+        _deps.TrainingExerciseScoreRepository.Returns(_trainingExerciseScoreRepository);
+        _deps.CommandDispatcher.Returns(_commandDispatcher);
+        _deps.EloRepository.Returns(_eloRepository);
+        _deps.RankService.Returns(_rankService);
+        _deps.UnitOfWork.Returns(_unitOfWork);
 
-        _service = new TrainingService(deps);
+        _service = new TrainingService(_deps);
     }
 
     [Test]
-    public async Task AddTrainingAsync_WhenEloEntryIsNull_ReturnsInternalServerError()
+    public async Task Should_ReturnInternalServerError_When_EloEntryIsNull()
     {
         // Arrange
         var userId = Id<User>.New();
@@ -112,7 +113,7 @@ public sealed class TrainingServiceAddTrainingTests
     }
 
     [Test]
-    public void AddTrainingAsync_WhenRepositoryThrowsException_PropagatesException()
+    public void Should_PropagateException_When_RepositoryThrowsException()
     {
         // Arrange
         var userId = Id<User>.New();
@@ -131,7 +132,7 @@ public sealed class TrainingServiceAddTrainingTests
     }
 
     [Test]
-    public async Task AddTrainingAsync_WhenUserIdIsEmpty_ReturnsInvalidTrainingDataError()
+    public async Task Should_ReturnInvalidTrainingDataError_When_UserIdIsEmpty()
     {
         // Arrange
         var emptyUserId = Id<User>.Empty;
@@ -152,7 +153,7 @@ public sealed class TrainingServiceAddTrainingTests
     }
 
     [Test]
-    public async Task AddTrainingAsync_WhenGymIdIsEmpty_ReturnsInvalidTrainingDataError()
+    public async Task Should_ReturnInvalidTrainingDataError_When_GymIdIsEmpty()
     {
         // Arrange
         var userId = Id<User>.New();
@@ -173,7 +174,7 @@ public sealed class TrainingServiceAddTrainingTests
     }
 
     [Test]
-    public async Task AddTrainingAsync_WhenPlanDayIdIsEmpty_ReturnsInvalidTrainingDataError()
+    public async Task Should_ReturnInvalidTrainingDataError_When_PlanDayIdIsEmpty()
     {
         // Arrange
         var userId = Id<User>.New();
@@ -194,7 +195,7 @@ public sealed class TrainingServiceAddTrainingTests
     }
 
     [Test]
-    public async Task AddTrainingAsync_WhenExerciseHasUnknownUnit_ReturnsInvalidTrainingDataError()
+    public async Task Should_ReturnInvalidTrainingDataError_When_ExerciseHasUnknownUnit()
     {
         // Arrange
         var userId = Id<User>.New();

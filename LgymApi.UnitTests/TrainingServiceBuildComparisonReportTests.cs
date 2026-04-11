@@ -18,7 +18,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
     }
 
     [Test]
-    public void BuildComparisonReport_ReturnsExercisesInCurrentExercisesOrder()
+    public void Should_ReturnExercisesInCurrentExercisesOrder_When_Called()
     {
         // Arrange
         var exerciseA = Id<Exercise>.New();
@@ -56,7 +56,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
     }
 
     [Test]
-    public void BuildComparisonReport_WithMultipleSeriesPerExercise_PreservesExerciseOrder()
+    public void Should_PreserveExerciseOrder_When_MultipleSeriesPerExercise()
     {
         // Arrange
         var exerciseA = Id<Exercise>.New();
@@ -94,7 +94,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
     }
 
     [Test]
-    public void BuildComparisonReport_WithPreviousScores_IncludesPreviousResult()
+    public void Should_IncludePreviousResult_When_PreviousScoresExist()
     {
         // Arrange
         var exerciseId = Id<Exercise>.New();
