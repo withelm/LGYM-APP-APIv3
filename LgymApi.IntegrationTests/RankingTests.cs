@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 
@@ -102,7 +103,7 @@ public sealed class RankingTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "visibilityuser", email: "vis@example.com", isVisibleInRanking: true);
         SetAuthorizationHeader(user.Id);
 
-        var request = new Dictionary<string, bool> { { "isVisibleInRanking", false } };
+        var request = new ChangeVisibilityInRankingRequest { IsVisibleInRanking = false };
         var response = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -121,7 +122,7 @@ public sealed class RankingTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "hiddenuser", email: "hid@example.com", isVisibleInRanking: false);
         SetAuthorizationHeader(user.Id);
 
-        var request = new Dictionary<string, bool> { { "isVisibleInRanking", true } };
+        var request = new ChangeVisibilityInRankingRequest { IsVisibleInRanking = true };
         var response = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -143,7 +144,7 @@ public sealed class RankingTests : IntegrationTestBase
         var user = await SeedUserAsync(name: "badrequest", email: "bad@example.com");
         SetAuthorizationHeader(user.Id);
 
-        var request = new Dictionary<string, string> { { "wrongField", "value" } };
+        var request = new ChangeVisibilityInRankingRequest { IsVisibleInRanking = null };
         var response = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

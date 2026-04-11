@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 
@@ -24,7 +25,7 @@ public sealed class UserContextMiddleware
             return;
         }
 
-        var sidClaim = context.User.FindFirst("sid")?.Value;
+        var sidClaim = context.User.FindFirst(AuthConstants.ClaimNames.SessionId)?.Value;
         if (string.IsNullOrWhiteSpace(sidClaim) || !Id<UserSession>.TryParse(sidClaim, out var sessionId))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -39,7 +40,7 @@ public sealed class UserContextMiddleware
             return;
         }
 
-        var userIdClaim = context.User.FindFirst("userId")?.Value;
+        var userIdClaim = context.User.FindFirst(AuthConstants.ClaimNames.UserId)?.Value;
         if (string.IsNullOrWhiteSpace(userIdClaim) || !Id<User>.TryParse(userIdClaim, out var userId))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;

@@ -18,6 +18,7 @@ using LgymApi.Api.Configuration;
 using Microsoft.AspNetCore.Localization;
 using LgymApi.Api.Middleware;
 using LgymApi.Domain.Security;
+using LgymApi.Api.Constants;
 using Hangfire;
 using LgymApi.Api.Serialization;
 using LgymApi.BackgroundWorker.Common.Serialization;
@@ -54,7 +55,7 @@ builder.Services.AddSwaggerGen(options =>
     options.UseInlineDefinitionsForEnums();
     options.SchemaFilter<EnumAsStringSchemaFilter>();
 });
-var configuredCorsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var configuredCorsOrigins = builder.Configuration.GetSection(ConfigKeys.CorsAllowedOrigins).Get<string[]>();
 var corsAllowedOrigins = CorsOriginResolver.ResolveAllowedOrigins(configuredCorsOrigins, builder.Environment.IsDevelopment());
 
 builder.Services.AddCors(options =>
@@ -67,7 +68,7 @@ builder.Services.AddCors(options =>
             return;
         }
 
-        throw new InvalidOperationException("No CORS allowed origins are configured. Configure 'Cors:AllowedOrigins' or disable CORS explicitly.");
+         throw new InvalidOperationException($"No CORS allowed origins are configured. Configure '{ConfigKeys.CorsAllowedOrigins}' or disable CORS explicitly.");
     });
 });
 builder.Services.AddHttpContextAccessor();
@@ -90,10 +91,10 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<IUserIdProvider, LgymApi.Api.Hubs.NotificationHubUserIdProvider>();
 builder.Services.AddScoped<IInAppNotificationPushPublisher, LgymApi.Api.Features.InAppNotification.SignalRNotificationPushPublisher>();
 
-var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
+var jwtSigningKey = builder.Configuration[ConfigKeys.JwtSigningKey];
 if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
 {
-    throw new InvalidOperationException("Jwt:SigningKey is not configured or is too short. Set a strong key value.");
+    throw new InvalidOperationException($"{ConfigKeys.JwtSigningKey} is not configured or is too short. Set a strong key value.");
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -194,7 +195,7 @@ if (!builder.Environment.IsEnvironment(TestingEnvironment))
                 });
             }
 
-            var userId = context.User.FindFirst("userId")?.Value;
+            var userId = context.User.FindFirst(AuthConstants.ClaimNames.UserId)?.Value;
             var key = string.IsNullOrWhiteSpace(userId)
                 ? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"
                 : userId;
