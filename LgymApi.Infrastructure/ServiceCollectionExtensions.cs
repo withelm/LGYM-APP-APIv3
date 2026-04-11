@@ -17,8 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
-using System.Net.Mail;
+using LgymApi.Infrastructure.Configuration;
 using GridifyExecutionServiceContract = LgymApi.Infrastructure.Pagination.IGridifyExecutionService;
 using QueryPaginationFacade = LgymApi.Infrastructure.Pagination.QueryPaginationService;
 
@@ -33,28 +32,12 @@ public static class ServiceCollectionExtensions
         bool isTesting = false,
         bool hostBackgroundServer = false)
     {
-        var appDefaultsOptions = ResolveAppDefaults(configuration);
+        var appDefaultsOptions = AppDefaultsOptionsFactory.Resolve(configuration);
 
-        var emailOptions = new EmailOptions
-        {
-            Enabled = bool.TryParse(configuration["Email:Enabled"], out var enabled) && enabled,
-            DeliveryMode = ResolveEmailDeliveryMode(configuration["Email:DeliveryMode"]),
-            DummyOutputDirectory = configuration["Email:DummyOutputDirectory"] ?? "EmailOutbox",
-            FromAddress = configuration["Email:FromAddress"] ?? string.Empty,
-            FromName = configuration["Email:FromName"] ?? "LGYM Trainer",
-            SmtpHost = configuration["Email:SmtpHost"] ?? string.Empty,
-            SmtpPort = int.TryParse(configuration["Email:SmtpPort"], out var smtpPort) ? smtpPort : 587,
-            Username = configuration["Email:Username"] ?? string.Empty,
-            Password = configuration["Email:Password"] ?? string.Empty,
-            UseSsl = GetBooleanOrDefault(configuration["Email:UseSsl"], defaultValue: true),
-            InvitationBaseUrl = configuration["Email:InvitationBaseUrl"] ?? string.Empty,
-            PasswordRecoveryBaseUrl = configuration["Email:PasswordRecoveryBaseUrl"] ?? string.Empty,
-            TemplateRootPath = configuration["Email:TemplateRootPath"] ?? "EmailTemplates",
-            DefaultCulture = ResolveDefaultCulture(configuration["Email:DefaultCulture"], appDefaultsOptions.PreferredLanguage)
-        };
+        var emailOptions = EmailOptionsFactory.Create(configuration, appDefaultsOptions);
 
         services.AddSingleton(appDefaultsOptions);
-        ValidateEmailOptions(emailOptions);
+        EmailOptionsFactory.Validate(emailOptions);
         services.AddSingleton(emailOptions);
         services.AddSingleton<IEmailNotificationsFeature, EmailNotificationsFeature>();
         services.AddSingleton<IEmailMetrics, EmailMetrics>();
@@ -144,7 +127,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMapperRegistry>(sp =>
         {
             var registry = new MapperRegistry();
-            RegisterDashboardTraineeMappings(registry);
+            InfrastructureMappingRegistration.RegisterAll(registry);
             return registry;
         });
         services.AddSingleton(new PaginationPolicy
@@ -158,206 +141,5 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         return services;
-    }
-
-    private static void ValidateEmailOptions(EmailOptions options)
-    {
-        if (!options.Enabled)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(options.InvitationBaseUrl))
-        {
-            throw new InvalidOperationException("Email:InvitationBaseUrl is required.");
-        }
-
-        if (!Uri.TryCreate(options.InvitationBaseUrl, UriKind.Absolute, out _))
-        {
-            throw new InvalidOperationException("Email:InvitationBaseUrl must be a valid absolute URL.");
-        }
-
-        if (string.IsNullOrWhiteSpace(options.PasswordRecoveryBaseUrl))
-        {
-            throw new InvalidOperationException("Email:PasswordRecoveryBaseUrl is required.");
-        }
-
-        if (!Uri.TryCreate(options.PasswordRecoveryBaseUrl, UriKind.Absolute, out _))
-        {
-            throw new InvalidOperationException("Email:PasswordRecoveryBaseUrl must be a valid absolute URL.");
-        }
-
-        if (string.IsNullOrWhiteSpace(options.TemplateRootPath))
-        {
-            throw new InvalidOperationException("Email:TemplateRootPath is required when email is enabled.");
-        }
-
-        if (options.DefaultCulture == null)
-        {
-            throw new InvalidOperationException("Email:DefaultCulture is required when email is enabled.");
-        }
-
-        if (string.IsNullOrWhiteSpace(options.FromAddress))
-        {
-            throw new InvalidOperationException("Email:FromAddress is required when email is enabled.");
-        }
-
-        try
-        {
-            _ = new MailAddress(options.FromAddress);
-        }
-        catch (FormatException)
-        {
-            throw new InvalidOperationException("Email:FromAddress must be a valid email address.");
-        }
-
-        if (options.DeliveryMode == EmailDeliveryMode.Dummy)
-        {
-            if (string.IsNullOrWhiteSpace(options.DummyOutputDirectory))
-            {
-                throw new InvalidOperationException("Email:DummyOutputDirectory is required when Email:DeliveryMode is Dummy.");
-            }
-
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(options.SmtpHost))
-        {
-            throw new InvalidOperationException("Email:SmtpHost is required when email is enabled.");
-        }
-
-        if (options.SmtpPort <= 0)
-        {
-            throw new InvalidOperationException("Email:SmtpPort must be greater than 0 when email is enabled.");
-        }
-    }
-
-    private static AppDefaultsOptions ResolveAppDefaults(IConfiguration configuration)
-    {
-        var preferredLanguage = ResolvePreferredLanguage(configuration["AppDefaults:PreferredLanguage"]);
-        var preferredTimeZone = ResolvePreferredTimeZone(configuration["AppDefaults:PreferredTimeZone"]);
-
-        return new AppDefaultsOptions
-        {
-            PreferredLanguage = preferredLanguage,
-            PreferredTimeZone = preferredTimeZone
-        };
-    }
-
-    private static string ResolvePreferredLanguage(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "en-US";
-        }
-
-        try
-        {
-            return CultureInfo.GetCultureInfo(value).Name;
-        }
-        catch (CultureNotFoundException)
-        {
-            return "en-US";
-        }
-    }
-
-    private static string ResolvePreferredTimeZone(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "Europe/Warsaw";
-        }
-
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(value).Id;
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            return "Europe/Warsaw";
-        }
-        catch (InvalidTimeZoneException)
-        {
-            return "Europe/Warsaw";
-        }
-    }
-
-    private static CultureInfo ResolveDefaultCulture(string? value, string preferredLanguageFallback)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return CultureInfo.GetCultureInfo(preferredLanguageFallback);
-        }
-
-        try
-        {
-            return CultureInfo.GetCultureInfo(value);
-        }
-        catch (CultureNotFoundException)
-        {
-            return CultureInfo.GetCultureInfo(preferredLanguageFallback);
-        }
-    }
-
-    private static bool GetBooleanOrDefault(string? value, bool defaultValue)
-    {
-        return bool.TryParse(value, out var parsed) ? parsed : defaultValue;
-    }
-
-    private static EmailDeliveryMode ResolveEmailDeliveryMode(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return EmailDeliveryMode.Smtp;
-        }
-
-        if (Enum.TryParse<EmailDeliveryMode>(value, ignoreCase: true, out var mode))
-        {
-            return mode;
-        }
-
-        throw new InvalidOperationException("Email:DeliveryMode must be one of: Smtp, Dummy.");
-    }
-
-    private static void RegisterDashboardTraineeMappings(MapperRegistry registry)
-    {
-        registry.Register<TrainerRelationshipRepository.DashboardTraineeProjection>(
-        [
-            new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
-            new FieldMapping { FieldName = "name", MemberName = "Name", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "email", MemberName = "Email", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false },
-            new FieldMapping { FieldName = "statusOrder", MemberName = "StatusOrder", AllowSort = true, AllowFilter = false }
-        ]);
-
-        registry.Register<UserRepository.AdminUserProjection>(
-        [
-            new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
-            new FieldMapping { FieldName = "name", MemberName = "Name", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "email", MemberName = "Email", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false },
-            new FieldMapping { FieldName = "profileRank", MemberName = "ProfileRank", AllowSort = true, AllowFilter = false },
-            new FieldMapping { FieldName = "isBlocked", MemberName = "IsBlocked", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "isDeleted", MemberName = "IsDeleted", AllowSort = false, AllowFilter = true }
-        ]);
-
-        registry.Register<Role>(
-        [
-            new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
-            new FieldMapping { FieldName = "name", MemberName = "Name", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "description", MemberName = "Description", AllowSort = false, AllowFilter = true },
-            new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false }
-        ]);
-
-        registry.Register<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult>(
-        [
-            new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
-            new FieldMapping { FieldName = "status", MemberName = "Status", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "expiresAt", MemberName = "ExpiresAt", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "inviteeEmail", MemberName = "InviteeEmail", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "traineeName", MemberName = "TraineeName", AllowSort = true, AllowFilter = true },
-            new FieldMapping { FieldName = "traineeEmail", MemberName = "TraineeEmail", AllowSort = true, AllowFilter = true }
-        ]);
     }
 }
