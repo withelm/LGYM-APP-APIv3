@@ -38,4 +38,15 @@ public static class AuthConstants
         public const string ManageGlobalExercises = "policy.exercises.global.manage";
         public const string TrainerAccess = "policy.trainer.access";
     }
+
+    public static class ClaimNames
+    {
+        public const string UserId = "userId";
+        public const string SessionId = "sid";
+    }
+
+    public static class ConfigKeys
+    {
+        public const string JwtSigningKey = "Jwt:SigningKey";
+    }
 }
