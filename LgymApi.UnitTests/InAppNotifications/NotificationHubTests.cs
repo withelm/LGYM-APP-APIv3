@@ -1,6 +1,7 @@
 using LgymApi.Api.Hubs;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.UnitTests.Fakes;
 using Microsoft.AspNetCore.Http.Features;
@@ -99,12 +100,12 @@ public sealed class NotificationHubTests
 
             if (userId != null)
             {
-                claims.Add(new Claim("userId", userId));
+                claims.Add(new Claim(AuthConstants.ClaimNames.UserId, userId));
             }
 
             if (sessionId != null)
             {
-                claims.Add(new Claim("sid", sessionId));
+                claims.Add(new Claim(AuthConstants.ClaimNames.SessionId, sessionId));
             }
 
             User = claims.Count > 0

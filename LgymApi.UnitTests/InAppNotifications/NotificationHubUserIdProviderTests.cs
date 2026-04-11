@@ -1,4 +1,5 @@
 using LgymApi.Api.Hubs;
+using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -12,7 +13,7 @@ public sealed class NotificationHubUserIdProviderTests
     [Test]
     public void GetUserId_WithUserIdClaim_ReturnsClaimValue()
     {
-        var connection = CreateConnection(new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim("userId", "user-123") }, "Test")));
+        var connection = CreateConnection(new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(AuthConstants.ClaimNames.UserId, "user-123") }, "Test")));
 
         var result = new NotificationHubUserIdProvider().GetUserId(connection);
 
