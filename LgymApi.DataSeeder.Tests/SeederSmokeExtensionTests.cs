@@ -4,6 +4,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Data.SeedData;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.DataSeeder.Tests;
@@ -46,7 +47,7 @@ public sealed class SeederSmokeExtensionTests
         await context.SaveChangesAsync();
 
         var adminClaims = await context.RoleClaims
-            .Where(claim => claim.RoleId == (Id<Role>)AppDbContext.AdminRoleSeedId)
+            .Where(claim => claim.RoleId == (Id<Role>)RoleSeedDataConfiguration.AdminRoleSeedId)
             .Select(claim => claim.ClaimValue)
             .ToListAsync();
 
