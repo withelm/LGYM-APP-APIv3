@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Repositories;
@@ -29,9 +30,9 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.CreateAsync(input);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.Message, Is.EqualTo("Test message"));
-        Assert.That(result.Value.Type, Is.EqualTo(InAppNotificationTypes.InvitationSent));
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Message.Should().Be("Test message");
+        result.Value.Type.Should().Be(InAppNotificationTypes.InvitationSent);
     }
 
     [Test]
@@ -45,10 +46,10 @@ public sealed class InAppNotificationServiceTests
 
         await service.CreateAsync(input);
 
-        Assert.That(repo.Added, Has.Count.EqualTo(1));
-        Assert.That(repo.Added[0].Message, Is.EqualTo("Persisted"));
-        Assert.That(repo.Added[0].RecipientId, Is.EqualTo(userId));
-        Assert.That(repo.Added[0].IsRead, Is.False);
+        repo.Added.Should().HaveCount(1);
+        repo.Added[0].Message.Should().Be("Persisted");
+        repo.Added[0].RecipientId.Should().Be(userId);
+        repo.Added[0].IsRead.Should().BeFalse();
     }
 
     [Test]
@@ -61,8 +62,8 @@ public sealed class InAppNotificationServiceTests
 
         await service.CreateAsync(input);
 
-        Assert.That(push.PushCalls, Is.EqualTo(1));
-        Assert.That(push.LastPushed!.Message, Is.EqualTo("Push me"));
+        push.PushCalls.Should().Be(1);
+        push.LastPushed!.Message.Should().Be("Push me");
     }
 
     [Test]
@@ -75,8 +76,8 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.CreateAsync(input);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.Message, Is.EqualTo("Still ok"));
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Message.Should().Be("Still ok");
     }
 
     [Test]
@@ -88,9 +89,9 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.GetForUserAsync(userId, query);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.Items, Is.Empty);
-        Assert.That(result.Value.HasNextPage, Is.False);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().BeEmpty();
+        result.Value.HasNextPage.Should().BeFalse();
     }
 
     [Test]
@@ -106,9 +107,9 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.GetForUserAsync(userId, query);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.Items, Has.Count.EqualTo(2));
-        Assert.That(result.Value.HasNextPage, Is.False);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.HasNextPage.Should().BeFalse();
     }
 
     [Test]
@@ -129,11 +130,11 @@ public sealed class InAppNotificationServiceTests
         var query = new CursorPaginationQuery(Limit: 2);
         var result = await service.GetForUserAsync(userId, query);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.Items, Has.Count.EqualTo(2));
-        Assert.That(result.Value.HasNextPage, Is.True);
-        Assert.That(result.Value.NextCursorCreatedAt, Is.Not.Null);
-        Assert.That(result.Value.NextCursorId, Is.Not.Null);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.HasNextPage.Should().BeTrue();
+        result.Value.NextCursorCreatedAt.Should().NotBeNull();
+        result.Value.NextCursorId.Should().NotBeNull();
     }
 
     [Test]
@@ -147,7 +148,7 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAsReadAsync(notification.Id, userId);
 
-        Assert.That(result.IsSuccess, Is.True);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Test]
@@ -162,8 +163,8 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAsReadAsync(notification.Id, otherUserId);
 
-        Assert.That(result.IsFailure, Is.True);
-        Assert.That(result.Error, Is.TypeOf<InAppNotificationForbiddenError>());
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InAppNotificationForbiddenError>();
     }
 
     [Test]
@@ -174,23 +175,23 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAsReadAsync(nonExistentId, Id<User>.New());
 
-        Assert.That(result.IsFailure, Is.True);
-        Assert.That(result.Error, Is.TypeOf<InAppNotificationNotFoundError>());
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InAppNotificationNotFoundError>();
     }
 
-    [Test]
-    public async Task MarkAsReadAsync_AlreadyRead_ReturnsSuccessIdempotent()
-    {
-        var repo = new FakeInAppNotificationRepository();
-        var userId = Id<User>.New();
-        var notification = AddNotification(repo, userId, "Already read");
-        notification.IsRead = true;
+     [Test]
+     public async Task MarkAsReadAsync_AlreadyRead_ReturnsSuccessIdempotent()
+     {
+         var repo = new FakeInAppNotificationRepository();
+         var userId = Id<User>.New();
+         var notification = AddNotification(repo, userId, "Already read");
+         notification.IsRead = true;
 
-        var service = CreateService(repository: repo);
+         var service = CreateService(repository: repo);
 
-        var result = await service.MarkAsReadAsync(notification.Id, userId);
+         var result = await service.MarkAsReadAsync(notification.Id, userId);
 
-        Assert.That(result.IsSuccess, Is.True);
+         result.IsSuccess.Should().BeTrue();
     }
 
     [Test]
@@ -205,10 +206,10 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAllAsReadAsync(userId, before: null);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(repo.MarkAllAsReadCalls, Is.EqualTo(1));
-        Assert.That(repo.LastMarkAllAsReadUserId, Is.EqualTo(userId));
-        Assert.That(repo.LastMarkAllAsReadBefore, Is.Null);
+        result.IsSuccess.Should().BeTrue();
+        repo.MarkAllAsReadCalls.Should().Be(1);
+        repo.LastMarkAllAsReadUserId.Should().Be(userId);
+        repo.LastMarkAllAsReadBefore.Should().BeNull();
     }
 
     [Test]
@@ -222,9 +223,9 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAllAsReadAsync(userId, before);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(repo.MarkAllAsReadCalls, Is.EqualTo(1));
-        Assert.That(repo.LastMarkAllAsReadBefore, Is.EqualTo(before));
+        result.IsSuccess.Should().BeTrue();
+        repo.MarkAllAsReadCalls.Should().Be(1);
+        repo.LastMarkAllAsReadBefore.Should().Be(before);
     }
 
     [Test]
@@ -241,8 +242,8 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.GetUnreadCountAsync(userId);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.EqualTo(2));
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(2);
     }
 
     #region Helpers

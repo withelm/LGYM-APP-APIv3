@@ -1,5 +1,7 @@
+using FluentAssertions;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -13,7 +15,7 @@ public sealed class WeightValueObjectTests
 
         var converted = weight.ConvertTo(WeightUnits.Kilograms, (_, _, _) => throw new InvalidOperationException());
 
-        Assert.That(converted, Is.EqualTo(weight));
+        converted.Should().Be(weight);
     }
 
     [Test]
@@ -23,7 +25,7 @@ public sealed class WeightValueObjectTests
 
         var converted = weight.ConvertTo(WeightUnits.Pounds, (value, _, _) => value * 2.20462);
 
-        Assert.That(converted.Unit, Is.EqualTo(WeightUnits.Pounds));
-        Assert.That(converted.Value, Is.EqualTo(220.462).Within(0.001));
+        converted.Unit.Should().Be(WeightUnits.Pounds);
+        converted.Value.Should().BeApproximately(220.462, 0.001);
     }
 }

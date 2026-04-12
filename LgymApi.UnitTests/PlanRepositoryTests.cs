@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
@@ -35,7 +36,7 @@ public sealed class PlanRepositoryTests
 
         var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
 
-        Assert.That(result, Is.EqualTo("EXISTING01"));
+        result.Should().Be("EXISTING01");
     }
 
     [Test]
@@ -71,7 +72,7 @@ public sealed class PlanRepositoryTests
 
         var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
 
-        Assert.That(result, Is.EqualTo("UNIQUE0001"));
+        result.Should().Be("UNIQUE0001");
     }
 
     [Test]
@@ -106,7 +107,7 @@ public sealed class PlanRepositoryTests
 
         var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
 
-        Assert.That(result, Is.EqualTo("UNIQUE0001"));
+        result.Should().Be("UNIQUE0001");
     }
 
     [Test]
@@ -133,7 +134,7 @@ public sealed class PlanRepositoryTests
 
         var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
 
-        Assert.That(result, Is.EqualTo("UNIQUE0001"));
+        result.Should().Be("UNIQUE0001");
     }
 
     [Test]
@@ -172,10 +173,18 @@ public sealed class PlanRepositoryTests
                 return "COLLIDE001";
             });
 
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None));
+        var exceptionThrown = false;
+        try
+        {
+            await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
+        }
+        catch (InvalidOperationException ex)
+        {
+            exceptionThrown = true;
+            ex.Message.Should().Be("Unable to generate unique share code");
+        }
 
-        Assert.That(exception!.Message, Is.EqualTo("Unable to generate unique share code"));
-        Assert.That(generationCount, Is.EqualTo(ExpectedShareCodeGenerationAttempts));
+        exceptionThrown.Should().BeTrue();
+        generationCount.Should().Be(ExpectedShareCodeGenerationAttempts);
     }
 }

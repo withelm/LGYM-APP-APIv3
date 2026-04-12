@@ -1,4 +1,5 @@
 using LgymApi.Application.Common.Errors;
+using FluentAssertions;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.AppConfig;
 using LgymApi.Application.Models;
@@ -24,11 +25,8 @@ public sealed class AppConfigServiceTests
 
         var result = await service.GetLatestByPlatformAsync(Platforms.Unknown);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidAppConfigError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidAppConfigError>();
     }
 
     private sealed class NoOpUserRepository : IUserRepository

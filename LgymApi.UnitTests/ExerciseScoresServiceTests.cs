@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.ExerciseScores;
@@ -6,6 +7,7 @@ using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -22,11 +24,8 @@ public sealed class ExerciseScoresServiceTests
         var exerciseId = Id<Exercise>.New();
         var result = await service.GetExerciseScoresChartDataAsync(Id<User>.Empty, exerciseId);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidExerciseScoreError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidExerciseScoreError>();
     }
 
     [Test]
@@ -39,11 +38,8 @@ public sealed class ExerciseScoresServiceTests
         var userId = Id<User>.New();
         var result = await service.GetExerciseScoresChartDataAsync(userId, Id<Exercise>.Empty);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidExerciseScoreError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidExerciseScoreError>();
     }
 
     private sealed class NoOpUserRepository : IUserRepository

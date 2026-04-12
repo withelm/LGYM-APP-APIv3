@@ -1,4 +1,4 @@
-using LgymApi.Resources;
+using FluentAssertions;
 using LgymApi.Resources;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
@@ -25,13 +25,13 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandlerTest
 
         await handler.ExecuteAsync(command);
 
-        Assert.That(service.Calls, Is.EqualTo(1));
-        Assert.That(service.LastInput!.RecipientId, Is.EqualTo(command.TrainerId));
-        Assert.That(service.LastInput.SenderUserId, Is.EqualTo(command.TraineeId));
-        Assert.That(service.LastInput.IsSystemNotification, Is.False);
-        Assert.That(service.LastInput.Message, Is.EqualTo(Messages.TrainerInvitationRejected));
-        Assert.That(service.LastInput.RedirectUrl, Is.EqualTo("/trainers/dashboard"));
-        Assert.That(service.LastInput.Type, Is.EqualTo(InAppNotificationTypes.InvitationRejected));
+        service.Calls.Should().Be(1);
+        service.LastInput!.RecipientId.Should().Be(command.TrainerId);
+        service.LastInput.SenderUserId.Should().Be(command.TraineeId);
+        service.LastInput.IsSystemNotification.Should().BeFalse();
+        service.LastInput.Message.Should().Be(Messages.TrainerInvitationRejected);
+        service.LastInput.RedirectUrl.Should().Be("/trainers/dashboard");
+        service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationRejected);
     }
 
     [Test]
@@ -42,7 +42,7 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandlerTest
 
         await handler.ExecuteAsync(new TrainerInvitationRejectedInAppNotificationCommand { TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
 
-        Assert.That(service.Calls, Is.EqualTo(1));
+        service.Calls.Should().Be(1);
     }
 
     private static InAppNotificationResult CreateResult()

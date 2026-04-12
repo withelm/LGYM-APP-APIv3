@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
@@ -33,9 +34,9 @@ public sealed class ExerciseRepositoryTests
         });
         await dbContext.SaveChangesAsync();
 
-        var repository = new ExerciseRepository(dbContext);
-        var result = await repository.GetTranslationsAsync([exerciseId], ["   ", ""], CancellationToken.None);
+         var repository = new ExerciseRepository(dbContext);
+         var result = await repository.GetTranslationsAsync([exerciseId], ["   ", ""], CancellationToken.None);
 
-        Assert.That(result, Is.Empty);
-    }
+         result.Should().BeEmpty();
+     }
 }

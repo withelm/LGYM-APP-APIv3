@@ -1,8 +1,10 @@
+using FluentAssertions;
 using System.Reflection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using LgymApi.Api;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -43,10 +45,7 @@ public sealed class EndpointResponseTypeTests
             }
         }
 
-        Assert.That(
-            invalid,
-            Is.Empty,
-            "Endpoints must use only HttpGet or HttpPost: " + string.Join(", ", invalid));
+        invalid.Should().BeEmpty("Endpoints must use only HttpGet or HttpPost: " + string.Join(", ", invalid));
     }
 
     [Test]
@@ -83,10 +82,7 @@ public sealed class EndpointResponseTypeTests
             }
         }
 
-        Assert.That(
-            missing,
-            Is.Empty,
-            "Endpoints missing ProducesResponseType(StatusCodes.Status200OK or StatusCodes.Status201Created): " +
+        missing.Should().BeEmpty("Endpoints missing ProducesResponseType(StatusCodes.Status200OK or StatusCodes.Status201Created): " +
             string.Join(", ", missing));
     }
 

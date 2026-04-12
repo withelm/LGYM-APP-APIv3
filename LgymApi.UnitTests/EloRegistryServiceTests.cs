@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.EloRegistry;
@@ -6,6 +7,7 @@ using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -21,11 +23,8 @@ public sealed class EloRegistryServiceTests
 
         var result = await service.GetChartAsync(Id<User>.Empty);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidEloRegistryError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidEloRegistryError>();
     }
 
     private sealed class NoOpUserRepository : IUserRepository

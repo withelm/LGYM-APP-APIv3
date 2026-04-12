@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -8,6 +9,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
+using NUnit.Framework;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
 using EmailNotificationTypes = LgymApi.Domain.Notifications.EmailNotificationTypes;
 
@@ -37,16 +39,13 @@ public sealed class WelcomeEmailServicesTests
             UserName = "Alex",
             RecipientEmail = "alex@example.com",
             CultureName = "en-US"
-        });
+         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(repository.Added, Has.Count.EqualTo(1));
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
-            Assert.That(metrics.Enqueued, Is.EqualTo(1));
-            Assert.That(metrics.Retried, Is.EqualTo(0));
-        });
+         repository.Added.Should().HaveCount(1);
+         unitOfWork.SaveChangesCalls.Should().Be(1);
+         scheduler.EnqueuedNotificationIds.Should().BeEmpty();
+         metrics.Enqueued.Should().Be(1);
+         metrics.Retried.Should().Be(0);
     }
 
     [Test]
@@ -81,15 +80,12 @@ public sealed class WelcomeEmailServicesTests
             UserName = "Alex",
             RecipientEmail = existing.Recipient,
             CultureName = "en-US"
-        });
+         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
-            Assert.That(repository.Added, Is.Empty);
-            Assert.That(metrics.Enqueued, Is.EqualTo(0));
-            Assert.That(metrics.Retried, Is.EqualTo(0));
-        });
+         scheduler.EnqueuedNotificationIds.Should().BeEmpty();
+         repository.Added.Should().BeEmpty();
+         metrics.Enqueued.Should().Be(0);
+         metrics.Retried.Should().Be(0);
     }
 
     [Test]
@@ -113,16 +109,13 @@ public sealed class WelcomeEmailServicesTests
             UserName = "Alex",
             RecipientEmail = "alex@example.com",
             CultureName = "en-US"
-        });
+         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(repository.Added, Is.Empty);
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
-            Assert.That(metrics.Enqueued, Is.EqualTo(0));
-            Assert.That(metrics.Retried, Is.EqualTo(0));
-        });
+         repository.Added.Should().BeEmpty();
+         unitOfWork.SaveChangesCalls.Should().Be(0);
+         scheduler.EnqueuedNotificationIds.Should().BeEmpty();
+         metrics.Enqueued.Should().Be(0);
+         metrics.Retried.Should().Be(0);
     }
 
     [Test]
@@ -161,12 +154,9 @@ public sealed class WelcomeEmailServicesTests
             CultureName = "en-US"
         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
-            Assert.That(metrics.Enqueued, Is.EqualTo(1));
-            Assert.That(metrics.Retried, Is.EqualTo(0));
-        });
+         scheduler.EnqueuedNotificationIds.Should().BeEmpty();
+         metrics.Enqueued.Should().Be(1);
+         metrics.Retried.Should().Be(0);
     }
 
     [Test]
@@ -192,16 +182,13 @@ public sealed class WelcomeEmailServicesTests
             new FakeEmailSender(),
             unitOfWork,
             metrics,
-            NullLogger<EmailJobHandlerService>.Instance);
+             NullLogger<EmailJobHandlerService>.Instance);
 
-        Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notification.Id));
-        Assert.Multiple(() =>
-        {
-            Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
-            Assert.That(notification.LastError, Does.StartWith("InvalidOperationException"));
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        Assert.That(metrics.Failed, Is.EqualTo(1));
-        });
+         await FluentActions.Invoking(() => handler.ProcessAsync(notification.Id)).Should().ThrowAsync<InvalidOperationException>();
+         notification.Status.Should().Be(EmailNotificationStatus.Failed);
+         notification.LastError.Should().StartWith("InvalidOperationException");
+         unitOfWork.SaveChangesCalls.Should().Be(1);
+         metrics.Failed.Should().Be(1);
     }
 
     [Test]
@@ -230,17 +217,14 @@ public sealed class WelcomeEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        await handler.ProcessAsync(notification.Id);
+         await handler.ProcessAsync(notification.Id);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-            Assert.That(sender.SendCalls, Is.EqualTo(0));
-            Assert.That(notification.Attempts, Is.EqualTo(2));
-            Assert.That(metrics.Sent, Is.EqualTo(0));
-            Assert.That(metrics.Failed, Is.EqualTo(0));
-            Assert.That(metrics.Retried, Is.EqualTo(0));
-        });
+         unitOfWork.SaveChangesCalls.Should().Be(0);
+         sender.SendCalls.Should().Be(0);
+         notification.Attempts.Should().Be(2);
+         metrics.Sent.Should().Be(0);
+         metrics.Failed.Should().Be(0);
+         metrics.Retried.Should().Be(0);
     }
 
     private sealed class FakeNotificationRepository : IEmailNotificationLogRepository

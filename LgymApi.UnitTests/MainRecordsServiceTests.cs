@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.MainRecords;
@@ -9,6 +10,7 @@ using LgymApi.Application.Units;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -23,11 +25,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.AddNewRecordAsync(input);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidMainRecordsError>();
     }
 
     [Test]
@@ -37,11 +36,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.GetMainRecordsHistoryAsync(Id<User>.Empty);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidMainRecordsError>();
     }
 
     [Test]
@@ -51,11 +47,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.GetLastMainRecordsAsync(Id<User>.Empty);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidMainRecordsError>();
     }
 
     [Test]
@@ -65,11 +58,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.DeleteMainRecordAsync(Id<User>.Empty, Id<MainRecord>.New());
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidMainRecordsError>();
     }
 
     [Test]
@@ -80,11 +70,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.UpdateMainRecordAsync(input);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidMainRecordsError>();
     }
 
     [Test]
@@ -94,11 +81,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.GetRecordOrPossibleRecordInExerciseAsync(Id<User>.Empty, Id<Exercise>.New());
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidMainRecordsError>();
     }
 
     private static MainRecordsService CreateService()

@@ -1,6 +1,6 @@
+using FluentAssertions;
 using LgymApi.BackgroundWorker.Common;
-
-namespace LgymApi.UnitTests;
+using NUnit.Framework;
 
 [TestFixture]
 public sealed class BackgroundActionContractTests
@@ -10,9 +10,9 @@ public sealed class BackgroundActionContractTests
     {
         // Verify IActionCommand is defined and can be implemented
         var type = typeof(IActionCommand);
-        Assert.That(type.IsInterface, Is.True);
-        Assert.That(type.GetProperties(), Is.Empty);
-        Assert.That(type.GetMethods(), Has.Length.EqualTo(0));
+        type.IsInterface.Should().BeTrue();
+        type.GetProperties().Should().BeEmpty();
+        type.GetMethods().Should().HaveCount(0);
     }
 
     [Test]
@@ -22,9 +22,9 @@ public sealed class BackgroundActionContractTests
         var type = typeof(IBackgroundAction<>);
         var typeParams = type.GetGenericArguments();
         
-        Assert.That(typeParams, Has.Length.EqualTo(1));
+        typeParams.Should().HaveCount(1);
         var constraint = typeParams[0].GetGenericParameterConstraints();
-        Assert.That(constraint, Does.Contain(typeof(IActionCommand)));
+        constraint.Should().Contain(typeof(IActionCommand));
     }
 
     [Test]
@@ -34,14 +34,14 @@ public sealed class BackgroundActionContractTests
         var type = typeof(IBackgroundAction<>);
         var method = type.GetMethod("ExecuteAsync");
         
-        Assert.That(method, Is.Not.Null);
-        Assert.That(method.ReturnType, Is.EqualTo(typeof(Task)));
+        method.Should().NotBeNull();
+        method.ReturnType.Should().Be(typeof(Task));
         
         var parameters = method.GetParameters();
-        Assert.That(parameters, Has.Length.EqualTo(2));
-        Assert.That(parameters[0].Name, Is.EqualTo("command"));
-        Assert.That(parameters[1].Name, Is.EqualTo("cancellationToken"));
-        Assert.That(parameters[1].ParameterType, Is.EqualTo(typeof(CancellationToken)));
+        parameters.Should().HaveCount(2);
+        parameters[0].Name.Should().Be("command");
+        parameters[1].Name.Should().Be("cancellationToken");
+        parameters[1].ParameterType.Should().Be(typeof(CancellationToken));
     }
 
     [Test]
@@ -51,7 +51,7 @@ public sealed class BackgroundActionContractTests
         var command = new TestCommand();
         
         // Assert
-        Assert.That(command, Is.InstanceOf<IActionCommand>());
+        command.Should().BeAssignableTo<IActionCommand>();
     }
 
     [Test]
@@ -61,7 +61,7 @@ public sealed class BackgroundActionContractTests
         var handler = new TestActionHandler();
         
         // Assert
-        Assert.That(handler, Is.InstanceOf<IBackgroundAction<TestCommand>>());
+        handler.Should().BeAssignableTo<IBackgroundAction<TestCommand>>();
     }
 
     [Test]
@@ -76,8 +76,8 @@ public sealed class BackgroundActionContractTests
         await handler.ExecuteAsync(command, cts.Token);
 
         // Assert
-        Assert.That(handler.WasExecuted, Is.True);
-        Assert.That(handler.ReceivedCommand, Is.SameAs(command));
+        handler.WasExecuted.Should().BeTrue();
+        handler.ReceivedCommand.Should().BeSameAs(command);
     }
 
     [Test]
@@ -91,7 +91,7 @@ public sealed class BackgroundActionContractTests
         await handler.ExecuteAsync(command);
 
         // Assert
-        Assert.That(handler.WasExecuted, Is.True);
+        handler.WasExecuted.Should().BeTrue();
     }
 
     [Test]
@@ -101,8 +101,8 @@ public sealed class BackgroundActionContractTests
         var testHandler = new TestActionHandler();
         var anotherHandler = new AnotherTestActionHandler();
         
-        Assert.That(testHandler, Is.InstanceOf<IBackgroundAction<TestCommand>>());
-        Assert.That(anotherHandler, Is.InstanceOf<IBackgroundAction<AnotherTestCommand>>());
+        testHandler.Should().BeAssignableTo<IBackgroundAction<TestCommand>>();
+        anotherHandler.Should().BeAssignableTo<IBackgroundAction<AnotherTestCommand>>();
     }
 
     [Test]
@@ -113,7 +113,7 @@ public sealed class BackgroundActionContractTests
         var type = typeof(IBackgroundAction<>);
         var constraint = type.GetGenericArguments()[0].GetGenericParameterConstraints();
         
-        Assert.That(constraint, Does.Contain(typeof(IActionCommand)));
+        constraint.Should().Contain(typeof(IActionCommand));
     }
 
     // Test implementations

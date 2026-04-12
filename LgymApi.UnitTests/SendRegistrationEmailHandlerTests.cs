@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Repositories;
@@ -52,13 +53,13 @@ public sealed class SendRegistrationEmailHandlerTests
          // Act
          await _handler.ExecuteAsync(command);
 
-         // Assert
-         Assert.That(_testScheduler.ScheduledPayloads, Has.Count.EqualTo(1));
-         var payload = _testScheduler.ScheduledPayloads[0];
-         Assert.That(payload.UserId, Is.EqualTo(userId));
-        Assert.That(payload.UserName, Is.EqualTo("JohnDoe"));
-        Assert.That(payload.RecipientEmail, Is.EqualTo("john.doe@example.com"));
-        Assert.That(payload.CultureName, Is.EqualTo("en-US"));
+          // Assert
+          _testScheduler.ScheduledPayloads.Should().HaveCount(1);
+          var payload = _testScheduler.ScheduledPayloads[0];
+          payload.UserId.Should().Be(userId);
+         payload.UserName.Should().Be("JohnDoe");
+         payload.RecipientEmail.Should().Be("john.doe@example.com");
+         payload.CultureName.Should().Be("en-US");
     }
 
      [Test]
@@ -82,10 +83,10 @@ public sealed class SendRegistrationEmailHandlerTests
         // Act
         await _handler.ExecuteAsync(command);
 
-        // Assert
-        Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
-        Assert.That(_testLogger.WarningMessages, Has.Count.EqualTo(1));
-        Assert.That(_testLogger.WarningMessages[0], Does.Contain("no recipient email"));
+         // Assert
+         _testScheduler.ScheduledPayloads.Should().BeEmpty();
+         _testLogger.WarningMessages.Should().HaveCount(1);
+         _testLogger.WarningMessages[0].Should().Contain("no recipient email");
     }
 
      [Test]
@@ -106,13 +107,13 @@ public sealed class SendRegistrationEmailHandlerTests
              UserId = userId
          };
 
-        // Act
-        await _handler.ExecuteAsync(command);
+         // Act
+         await _handler.ExecuteAsync(command);
 
-        // Assert
-        Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
-        Assert.That(_testLogger.WarningMessages, Has.Count.EqualTo(1));
-    }
+         // Assert
+         _testScheduler.ScheduledPayloads.Should().BeEmpty();
+         _testLogger.WarningMessages.Should().HaveCount(1);
+     }
 
      [Test]
      public async Task ExecuteAsync_MapsAllUserFieldsToPayload()
@@ -135,12 +136,12 @@ public sealed class SendRegistrationEmailHandlerTests
          // Act
          await _handler.ExecuteAsync(command);
 
-         // Assert
-         var payload = _testScheduler.ScheduledPayloads[0];
-         Assert.That(payload.UserId, Is.EqualTo(userId));
-        Assert.That(payload.UserName, Is.EqualTo("MariaGarcia"));
-        Assert.That(payload.RecipientEmail, Is.EqualTo("maria.garcia@example.com"));
-        Assert.That(payload.CultureName, Is.EqualTo("es-ES"));
+          // Assert
+          var payload = _testScheduler.ScheduledPayloads[0];
+          payload.UserId.Should().Be(userId);
+         payload.UserName.Should().Be("MariaGarcia");
+         payload.RecipientEmail.Should().Be("maria.garcia@example.com");
+         payload.CultureName.Should().Be("es-ES");
     }
 
      [Test]
@@ -166,8 +167,8 @@ public sealed class SendRegistrationEmailHandlerTests
         // Act
         await _handler.ExecuteAsync(command, cts.Token);
 
-        // Assert
-        Assert.That(_testScheduler.ReceivedToken, Is.EqualTo(cts.Token));
+         // Assert
+         _testScheduler.ReceivedToken.Should().Be(cts.Token);
     }
 
      [Test]
@@ -191,36 +192,36 @@ public sealed class SendRegistrationEmailHandlerTests
         // Act
         await _handler.ExecuteAsync(command);
 
-        // Assert
-        Assert.That(_testLogger.InformationMessages, Has.Count.EqualTo(1));
-        Assert.That(_testLogger.InformationMessages[0], Does.Contain("Welcome email scheduled"));
+         // Assert
+         _testLogger.InformationMessages.Should().HaveCount(1);
+         _testLogger.InformationMessages[0].Should().Contain("Welcome email scheduled");
     }
 
     [Test]
     public void Constructor_WithNullUserRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(null!, _testScheduler, _testLogger, new AppDefaultsOptions()));
-        Assert.That(ex.ParamName, Is.EqualTo("userRepository"));
+        var action = () => new SendRegistrationEmailHandler(null!, _testScheduler, _testLogger, new AppDefaultsOptions());
+        var ex = action.Should().Throw<ArgumentNullException>().Which;
+        ex.ParamName.Should().Be("userRepository");
     }
 
     [Test]
     public void Constructor_WithNullEmailScheduler_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(_testUserRepository, null!, _testLogger, new AppDefaultsOptions()));
-        Assert.That(ex.ParamName, Is.EqualTo("emailScheduler"));
+        var action = () => new SendRegistrationEmailHandler(_testUserRepository, null!, _testLogger, new AppDefaultsOptions());
+        var ex = action.Should().Throw<ArgumentNullException>().Which;
+        ex.ParamName.Should().Be("emailScheduler");
     }
 
     [Test]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, null!, new AppDefaultsOptions()));
-        Assert.That(ex.ParamName, Is.EqualTo("logger"));
+        var action = () => new SendRegistrationEmailHandler(_testUserRepository, _testScheduler, null!, new AppDefaultsOptions());
+        var ex = action.Should().Throw<ArgumentNullException>().Which;
+        ex.ParamName.Should().Be("logger");
     }
 
      [Test]
@@ -244,9 +245,9 @@ public sealed class SendRegistrationEmailHandlerTests
         // Act
         await _handler.ExecuteAsync(command);
 
-        // Assert
-        var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.CultureName, Is.EqualTo("fr-FR"));
+         // Assert
+         var payload = _testScheduler.ScheduledPayloads[0];
+         payload.CultureName.Should().Be("fr-FR");
     }
 
     [Test]
@@ -263,10 +264,10 @@ public sealed class SendRegistrationEmailHandlerTests
         // Act
         await _handler.ExecuteAsync(command);
 
-        // Assert
-        Assert.That(_testScheduler.ScheduledPayloads, Is.Empty);
-        Assert.That(_testLogger.WarningMessages, Has.Count.EqualTo(1));
-        Assert.That(_testLogger.WarningMessages[0], Does.Contain("user not found"));
+         // Assert
+         _testScheduler.ScheduledPayloads.Should().BeEmpty();
+         _testLogger.WarningMessages.Should().HaveCount(1);
+         _testLogger.WarningMessages[0].Should().Contain("user not found");
     }
 
      [Test]
@@ -290,9 +291,9 @@ public sealed class SendRegistrationEmailHandlerTests
         // Act
         await _handler.ExecuteAsync(command);
 
-        // Assert
-        var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.CultureName, Is.EqualTo("en-US"));
+         // Assert
+         var payload = _testScheduler.ScheduledPayloads[0];
+         payload.CultureName.Should().Be("en-US");
     }
 
      [Test]
@@ -317,8 +318,8 @@ public sealed class SendRegistrationEmailHandlerTests
 
         await handler.ExecuteAsync(command);
 
-        var payload = _testScheduler.ScheduledPayloads[0];
-        Assert.That(payload.CultureName, Is.EqualTo("pl-PL"));
+         var payload = _testScheduler.ScheduledPayloads[0];
+         payload.CultureName.Should().Be("pl-PL");
     }
 
     // Test doubles

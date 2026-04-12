@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using FluentAssertions;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.Common;
@@ -24,7 +25,7 @@ public sealed class HangfireDashboardAuthorizationFilterTests
 
         var result = filter.Authorize(context);
 
-        Assert.That(result, Is.False);
+        result.Should().BeFalse();
     }
 
     [Test]
@@ -36,7 +37,7 @@ public sealed class HangfireDashboardAuthorizationFilterTests
 
         var result = filter.Authorize(context);
 
-        Assert.That(result, Is.True);
+        result.Should().BeTrue();
     }
 
     [Test]
@@ -48,7 +49,7 @@ public sealed class HangfireDashboardAuthorizationFilterTests
 
         var result = filter.Authorize(context);
 
-        Assert.That(result, Is.True);
+        result.Should().BeTrue();
     }
 
     [Test]
@@ -60,7 +61,7 @@ public sealed class HangfireDashboardAuthorizationFilterTests
 
         var result = filter.Authorize(context);
 
-        Assert.That(result, Is.False);
+        result.Should().BeFalse();
     }
 
     private static ClaimsIdentity CreateIdentity(params Claim[] claims)

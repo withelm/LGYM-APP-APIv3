@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -14,7 +15,8 @@ public sealed class NoOpBackgroundActionSchedulerTests
         var scheduler = new NoOpActionMessageScheduler();
         var actionMessageId = Id<CommandEnvelope>.New();
 
-        Assert.DoesNotThrow(() => scheduler.Enqueue(actionMessageId));
+        var act = new Action(() => scheduler.Enqueue(actionMessageId));
+        act.Should().NotThrow();
     }
 
     [Test]
@@ -22,11 +24,12 @@ public sealed class NoOpBackgroundActionSchedulerTests
     {
         var scheduler = new NoOpActionMessageScheduler();
 
-        Assert.DoesNotThrow(() =>
+        var act = new Action(() =>
         {
             scheduler.Enqueue(Id<CommandEnvelope>.New());
             scheduler.Enqueue(Id<CommandEnvelope>.New());
             scheduler.Enqueue(Id<CommandEnvelope>.New());
         });
+        act.Should().NotThrow();
     }
 }

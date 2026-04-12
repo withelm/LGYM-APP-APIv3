@@ -1,9 +1,11 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Extensions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -55,12 +57,9 @@ public sealed class ExecuteUpdateExtensionsTests
             .AsNoTracking()
             .SingleAsync(p => p.Id == plan.Id);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(affectedRows, Is.EqualTo(1));
-            Assert.That(updatedPlan.IsActive, Is.False);
-            Assert.That(updatedPlan.UpdatedAt, Is.GreaterThan(previousUpdatedAt));
-        });
+        affectedRows.Should().Be(1);
+        updatedPlan.IsActive.Should().BeFalse();
+        (updatedPlan.UpdatedAt > previousUpdatedAt).Should().BeTrue();
     }
 
     [Test]
@@ -106,10 +105,7 @@ public sealed class ExecuteUpdateExtensionsTests
             .AsNoTracking()
             .SingleAsync(p => p.Id == plan.Id);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(affectedRows, Is.EqualTo(1));
-            Assert.That(updatedPlan.UpdatedAt, Is.EqualTo(customUpdatedAt));
-        });
+        affectedRows.Should().Be(1);
+        updatedPlan.UpdatedAt.Should().Be(customUpdatedAt);
     }
 }

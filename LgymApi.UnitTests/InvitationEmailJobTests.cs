@@ -1,7 +1,9 @@
+using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Jobs;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -17,11 +19,8 @@ public sealed class InvitationEmailJobTests
 
         await job.ExecuteAsync(notificationId);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(handler.Calls, Is.EqualTo(1));
-            Assert.That(handler.LastNotificationId, Is.EqualTo(notificationId));
-        });
+        handler.Calls.Should().Be(1);
+        handler.LastNotificationId.Should().Be(notificationId);
     }
 
     private sealed class FakeEmailJobHandler : IEmailJobHandler

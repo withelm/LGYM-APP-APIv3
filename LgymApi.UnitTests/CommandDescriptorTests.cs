@@ -1,4 +1,6 @@
+using FluentAssertions;
 using LgymApi.BackgroundWorker.Common;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -9,28 +11,28 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class CommandDescriptorTests
 {
-    [Test]
-    public void Constructor_WithValidType_StoresTypeFullName()
-    {
-        // Arrange
-        var testType = typeof(string);
+     [Test]
+     public void Constructor_WithValidType_StoresTypeFullName()
+     {
+         // Arrange
+         var testType = typeof(string);
 
-        // Act
-        var descriptor = new CommandDescriptor(testType);
+         // Act
+         var descriptor = new CommandDescriptor(testType);
 
-        // Assert
-        Assert.That(descriptor.TypeFullName, Is.EqualTo(testType.FullName));
-        Assert.That(descriptor.CommandType, Is.EqualTo(testType));
-    }
+         // Assert
+         descriptor.TypeFullName.Should().Be(testType.FullName);
+         descriptor.CommandType.Should().Be(testType);
+     }
 
-    [Test]
-    public void Constructor_WithNullType_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() => new CommandDescriptor(null!));
-        Assert.That(ex.ParamName, Is.EqualTo("commandType"));
-    }
-
+     [Test]
+     public void Constructor_WithNullType_ThrowsArgumentNullException()
+     {
+         // Act & Assert
+         var action = () => new CommandDescriptor(null!);
+         var ex = action.Should().Throw<ArgumentNullException>().Which;
+         ex.ParamName.Should().Be("commandType");
+     }
 
 
     [Test]
@@ -43,16 +45,20 @@ public sealed class CommandDescriptorTests
         var descriptor = CommandDescriptor.FromPersistedType(typeFullName);
 
         // Assert
-        Assert.That(descriptor.TypeFullName, Is.EqualTo(typeFullName));
+        descriptor.TypeFullName.Should().Be(typeFullName);
     }
 
     [Test]
     public void FromPersistedType_WithNullOrEmpty_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => CommandDescriptor.FromPersistedType(null!));
-        Assert.Throws<ArgumentException>(() => CommandDescriptor.FromPersistedType(""));
-        Assert.Throws<ArgumentException>(() => CommandDescriptor.FromPersistedType("   "));
+        var action1 = () => CommandDescriptor.FromPersistedType(null!);
+        var action2 = () => CommandDescriptor.FromPersistedType("");
+        var action3 = () => CommandDescriptor.FromPersistedType("   ");
+        
+        action1.Should().Throw<ArgumentException>();
+        action2.Should().Throw<ArgumentException>();
+        action3.Should().Throw<ArgumentException>();
     }
 
     [Test]
@@ -66,7 +72,7 @@ public sealed class CommandDescriptorTests
         var result = descriptor1.IsExactTypeMatch(descriptor2);
 
         // Assert
-        Assert.That(result, Is.True);
+        result.Should().BeTrue();
     }
 
     [Test]
@@ -80,7 +86,7 @@ public sealed class CommandDescriptorTests
         var result = descriptor1.IsExactTypeMatch(descriptor2);
 
         // Assert
-        Assert.That(result, Is.False);
+        result.Should().BeFalse();
     }
 
     [Test]
@@ -93,7 +99,7 @@ public sealed class CommandDescriptorTests
         var result = descriptor.IsExactTypeMatch(null!);
 
         // Assert
-        Assert.That(result, Is.False);
+        result.Should().BeFalse();
     }
 
     [Test]
@@ -107,7 +113,7 @@ public sealed class CommandDescriptorTests
         var result = baseDescriptor.IsExactTypeMatch(derivedDescriptor);
 
         // Assert - Ensure no polymorphic matching (no IsAssignableFrom behavior)
-        Assert.That(result, Is.False);
+        result.Should().BeFalse();
     }
 
     [Test]
@@ -120,7 +126,7 @@ public sealed class CommandDescriptorTests
         var resolvedType = CommandDescriptor.ResolveCommandType(typeFullName);
 
         // Assert
-        Assert.That(resolvedType, Is.EqualTo(typeof(string)));
+        resolvedType.Should().Be(typeof(string));
     }
 
     [Test]
@@ -130,19 +136,23 @@ public sealed class CommandDescriptorTests
         var invalidTypeFullName = "NonExistent.Type.That.Does.Not.Exist";
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => CommandDescriptor.ResolveCommandType(invalidTypeFullName));
-        Assert.That(ex.Message, Contains.Substring("Cannot resolve command type"));
-        Assert.That(ex.Message, Contains.Substring(invalidTypeFullName));
+        var action = () => CommandDescriptor.ResolveCommandType(invalidTypeFullName);
+        var ex = action.Should().Throw<InvalidOperationException>().Which;
+        ex.Message.Should().Contain("Cannot resolve command type");
+        ex.Message.Should().Contain(invalidTypeFullName);
     }
 
     [Test]
     public void ResolveCommandType_WithNullOrEmpty_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => CommandDescriptor.ResolveCommandType(null!));
-        Assert.Throws<ArgumentException>(() => CommandDescriptor.ResolveCommandType(""));
-        Assert.Throws<ArgumentException>(() => CommandDescriptor.ResolveCommandType("   "));
+        var action1 = () => CommandDescriptor.ResolveCommandType(null!);
+        var action2 = () => CommandDescriptor.ResolveCommandType("");
+        var action3 = () => CommandDescriptor.ResolveCommandType("   ");
+        
+        action1.Should().Throw<ArgumentException>();
+        action2.Should().Throw<ArgumentException>();
+        action3.Should().Throw<ArgumentException>();
     }
 
     [Test]
@@ -158,8 +168,8 @@ public sealed class CommandDescriptorTests
         var resolvedType = CommandDescriptor.ResolveCommandType(restoredDescriptor.TypeFullName);
 
         // Assert
-        Assert.That(resolvedType, Is.EqualTo(originalType));
-        Assert.That(restoredDescriptor.IsExactTypeMatch(originalDescriptor), Is.True);
+        resolvedType.Should().Be(originalType);
+        restoredDescriptor.IsExactTypeMatch(originalDescriptor).Should().BeTrue();
     }
 
     [Test]
@@ -170,8 +180,8 @@ public sealed class CommandDescriptorTests
         var descriptor2 = new CommandDescriptor(typeof(string));
 
         // Act & Assert
-        Assert.That(descriptor1.Equals(descriptor2), Is.True);
-        Assert.That(descriptor1 == descriptor2, Is.False); // No operator overload, so reference equality
+        descriptor1.Equals(descriptor2).Should().BeTrue();
+        (descriptor1 == descriptor2).Should().BeFalse(); // No operator overload, so reference equality
     }
 
     [Test]
@@ -182,7 +192,7 @@ public sealed class CommandDescriptorTests
         var descriptor2 = new CommandDescriptor(typeof(int));
 
         // Act & Assert
-        Assert.That(descriptor1.Equals(descriptor2), Is.False);
+        descriptor1.Equals(descriptor2).Should().BeFalse();
     }
 
     [Test]
@@ -193,7 +203,7 @@ public sealed class CommandDescriptorTests
         var descriptor2 = new CommandDescriptor(typeof(string));
 
         // Act & Assert
-        Assert.That(descriptor1.GetHashCode(), Is.EqualTo(descriptor2.GetHashCode()));
+        descriptor1.GetHashCode().Should().Be(descriptor2.GetHashCode());
     }
 
     [Test]
@@ -206,7 +216,7 @@ public sealed class CommandDescriptorTests
         var result = descriptor.ToString();
 
         // Assert
-        Assert.That(result, Is.EqualTo(typeof(string).FullName));
+        result.Should().Be(typeof(string).FullName);
     }
 
     [Test]
@@ -223,11 +233,9 @@ public sealed class CommandDescriptorTests
         var result = baseDescriptor.IsExactTypeMatch(derivedDescriptor);
 
         // Assert - Confirm exact-type-only matching
-        Assert.That(result, Is.False,
-            "Descriptor matching must enforce exact-type equality, not polymorphic matching");
+        result.Should().BeFalse();
 
         // Verify that base class assignment would normally work
-        Assert.That(typeof(ArgumentException).IsAssignableFrom(typeof(ArgumentNullException)), Is.True,
-            "Sanity check: ArgumentNullException IS assignable to ArgumentException");
+        typeof(ArgumentException).IsAssignableFrom(typeof(ArgumentNullException)).Should().BeTrue();
     }
 }

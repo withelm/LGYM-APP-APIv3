@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Validation;
 
@@ -26,11 +27,8 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsValid, Is.False);
-            Assert.That(result.Errors.Any(e => e.PropertyName.Contains("Order", StringComparison.Ordinal)), Is.True);
-        });
+        result.IsValid.Should().BeFalse();
+        result.Errors.Any(e => e.PropertyName.Contains("Order", StringComparison.Ordinal)).Should().BeTrue();
     }
 
     [Test]
@@ -44,6 +42,6 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.True);
+        result.IsValid.Should().BeTrue();
     }
 }

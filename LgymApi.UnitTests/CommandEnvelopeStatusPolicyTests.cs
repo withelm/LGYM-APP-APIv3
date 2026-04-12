@@ -363,15 +363,16 @@ public class CommandEnvelopeStatusPolicyTests
     [Test]
     public void RecordAttemptFailure_OnDeadLetteredEnvelope_ThrowsInvalidOperation()
     {
-        // Arrange
-        _envelope.MarkDeadLettered();
+         // Arrange
+         _envelope.MarkDeadLettered();
 
-         // Act & Assert
-         var ex = Assert.Throws<InvalidOperationException>(() =>
-             _envelope.RecordAttemptFailure("Should fail"));
+          // Act & Assert
+          var act = new Action(() =>
+              _envelope.RecordAttemptFailure("Should fail"));
 
-         ex!.Message.Should().Contain("dead-lettered");
-    }
+          var ex = act.Should().Throw<InvalidOperationException>().And;
+          ex.Message.Should().Contain("dead-lettered");
+     }
 
     [Test]
     public void MarkCompleted_OnDeadLetteredEnvelope_Idempotent()

@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.AdminManagement.Models;
@@ -10,6 +11,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -36,275 +38,264 @@ public sealed class ServiceTransactionBehaviorTests
 
           await service.SetNewActivePlanAsync(currentUser, userId, planId, CancellationToken.None);
 
-         Assert.Multiple(() =>
-         {
-             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-             Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(1));
-             Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(0));
-             Assert.That(currentUser.PlanId, Is.EqualTo(planId));
-             Assert.That(planRepository.SetActiveCalls, Is.EqualTo(1));
-         });
-     }
-
-      [Test]
-      public void SetNewActivePlanAsync_WhenSetActiveFails_RollsBackTransaction()
-      {
-          var userId = Id<User>.New();
-          var planId = Id<Plan>.New();
-          var currentUser = new User { Id = userId };
-          var unitOfWork = new RecordingUnitOfWork();
-          var planRepository = new PlanRepositoryStub
-          {
-              PlanToReturn = new Plan { Id = planId, UserId = userId },
-              SetActiveException = new InvalidOperationException("boom")
-          };
-
-         var service = new PlanService(
-             new UserRepositoryStub(),
-             planRepository,
-             new PlanDayRepositoryStub(),
-             unitOfWork);
-
-         Assert.ThrowsAsync<InvalidOperationException>(async () =>
-             await service.SetNewActivePlanAsync(currentUser, userId, planId, CancellationToken.None));
-
-         Assert.Multiple(() =>
-         {
-             Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
-             Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
-         });
-     }
-
-      [Test]
-      public async Task UpdatePlanDayAsync_WhenSuccessful_CommitsTransaction()
-      {
-          var userId = Id<User>.New();
-          var planId = Id<Plan>.New();
-          var planDayId = Id<PlanDay>.New();
-          var unitOfWork = new RecordingUnitOfWork();
-          var exercisesRepository = new PlanDayExerciseRepositoryStub();
-
-         var planRepository = new PlanRepositoryStub
-         {
-             PlanToReturn = new Plan { Id = planId, UserId = userId }
-         };
-
-         var planDayRepository = new PlanDayRepositoryStub
-         {
-             PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
-         };
-
-         var service = new PlanDayService(new PlanDayServiceDependenciesStub(
-             planRepository,
-             planDayRepository,
-             exercisesRepository,
-             new ExerciseRepositoryStub(),
-             new TrainingRepositoryStub(),
-             unitOfWork));
-
-         await service.UpdatePlanDayAsync(
-             new User { Id = userId },
-             planDayId,
-             "new",
-             [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New(), Series = 3, Reps = "8" }],
-             CancellationToken.None);
-
-         Assert.Multiple(() =>
-         {
-             Assert.That(planDayRepository.UpdateCalls, Is.EqualTo(1));
-             Assert.That(exercisesRepository.RemoveCalls, Is.EqualTo(1));
-             Assert.That(exercisesRepository.AddRangeCalls, Is.EqualTo(1));
-             Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-             Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(1));
-             Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(0));
-         });
-     }
+         unitOfWork.SaveChangesCalls.Should().Be(1);
+         unitOfWork.Transaction.CommitCalls.Should().Be(1);
+         unitOfWork.Transaction.RollbackCalls.Should().Be(0);
+         currentUser.PlanId.Should().Be(planId);
+         planRepository.SetActiveCalls.Should().Be(1);
+      }
 
        [Test]
-       public void UpdatePlanDayAsync_WhenRemoveFails_RollsBackTransaction()
+       public void SetNewActivePlanAsync_WhenSetActiveFails_RollsBackTransaction()
+       {
+           var userId = Id<User>.New();
+           var planId = Id<Plan>.New();
+           var currentUser = new User { Id = userId };
+           var unitOfWork = new RecordingUnitOfWork();
+           var planRepository = new PlanRepositoryStub
+           {
+               PlanToReturn = new Plan { Id = planId, UserId = userId },
+               SetActiveException = new InvalidOperationException("boom")
+           };
+
+          var service = new PlanService(
+              new UserRepositoryStub(),
+              planRepository,
+              new PlanDayRepositoryStub(),
+              unitOfWork);
+
+          Func<Task> action = async () =>
+              await service.SetNewActivePlanAsync(currentUser, userId, planId, CancellationToken.None);
+          
+          action.Should().ThrowAsync<InvalidOperationException>();
+
+          unitOfWork.Transaction.CommitCalls.Should().Be(0);
+          unitOfWork.Transaction.RollbackCalls.Should().Be(1);
+      }
+
+       [Test]
+       public async Task UpdatePlanDayAsync_WhenSuccessful_CommitsTransaction()
        {
            var userId = Id<User>.New();
            var planId = Id<Plan>.New();
            var planDayId = Id<PlanDay>.New();
            var unitOfWork = new RecordingUnitOfWork();
-           var exercisesRepository = new PlanDayExerciseRepositoryStub
-           {
-               RemoveException = new InvalidOperationException("remove failed")
-           };
+           var exercisesRepository = new PlanDayExerciseRepositoryStub();
+
+          var planRepository = new PlanRepositoryStub
+          {
+              PlanToReturn = new Plan { Id = planId, UserId = userId }
+          };
+
+          var planDayRepository = new PlanDayRepositoryStub
+          {
+              PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
+          };
 
           var service = new PlanDayService(new PlanDayServiceDependenciesStub(
-              new PlanRepositoryStub
-              {
-                  PlanToReturn = new Plan { Id = planId, UserId = userId }
-              },
-              new PlanDayRepositoryStub
-              {
-                  PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
-              },
+              planRepository,
+              planDayRepository,
               exercisesRepository,
               new ExerciseRepositoryStub(),
               new TrainingRepositoryStub(),
               unitOfWork));
 
-          Assert.ThrowsAsync<InvalidOperationException>(async () =>
-              await service.UpdatePlanDayAsync(
-                  new User { Id = userId },
-                  planDayId,
-                  "new",
-                  [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New(), Series = 3, Reps = "8" }],
-                  CancellationToken.None));
-
-          Assert.Multiple(() =>
-          {
-              Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
-              Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
-          });
-      }
-
-      // ===== VALIDATION BRANCH TESTS (Wave 3, Batch A) =====
-
-      [Test]
-      public async Task CreatePlanAsync_WhenCurrentUserNull_ReturnsInvalidPlanError()
-      {
-          var userId = Id<User>.New();
-          var service = new PlanService(
-              new UserRepositoryStub(),
-              new PlanRepositoryStub(),
-              new PlanDayRepositoryStub(),
-              new RecordingUnitOfWork());
-
-          var result = await service.CreatePlanAsync(null, userId, "Test Plan", CancellationToken.None);
-
-          Assert.That(result.IsFailure, Is.True);
-          Assert.That(result.Error, Is.InstanceOf<InvalidPlanError>());
-      }
-
-      [Test]
-      public async Task CreatePlanAsync_WhenRouteUserIdEmpty_ReturnsInvalidPlanError()
-      {
-          var currentUser = new User { Id = Id<User>.New() };
-          var service = new PlanService(
-              new UserRepositoryStub(),
-              new PlanRepositoryStub(),
-              new PlanDayRepositoryStub(),
-              new RecordingUnitOfWork());
-
-          var result = await service.CreatePlanAsync(currentUser, Id<User>.Empty, "Test Plan", CancellationToken.None);
-
-          Assert.That(result.IsFailure, Is.True);
-          Assert.That(result.Error, Is.InstanceOf<InvalidPlanError>());
-      }
-
-      [Test]
-      public async Task UpdatePlanAsync_WhenRouteUserIdEmpty_ReturnsInvalidPlanError()
-      {
-          var currentUser = new User { Id = Id<User>.New() };
-          var planId = Id<Plan>.New();
-          var service = new PlanService(
-              new UserRepositoryStub(),
-              new PlanRepositoryStub(),
-              new PlanDayRepositoryStub(),
-              new RecordingUnitOfWork());
-
-          var result = await service.UpdatePlanAsync(currentUser, Id<User>.Empty, planId, "Updated", CancellationToken.None);
-
-          Assert.That(result.IsFailure, Is.True);
-          Assert.That(result.Error, Is.InstanceOf<InvalidPlanError>());
-      }
-
-      [Test]
-      public async Task UpdatePlanAsync_WhenPlanIdEmpty_ReturnsInvalidPlanError()
-      {
-          var userId = Id<User>.New();
-          var currentUser = new User { Id = userId };
-          var service = new PlanService(
-              new UserRepositoryStub(),
-              new PlanRepositoryStub(),
-              new PlanDayRepositoryStub(),
-              new RecordingUnitOfWork());
-
-          var result = await service.UpdatePlanAsync(currentUser, userId, Id<Plan>.Empty, "Updated", CancellationToken.None);
-
-          Assert.That(result.IsFailure, Is.True);
-          Assert.That(result.Error, Is.InstanceOf<InvalidPlanError>());
-      }
-
-      [Test]
-      public async Task GetPlanConfigAsync_WhenRouteUserIdEmpty_ReturnsInvalidPlanError()
-      {
-          var currentUser = new User { Id = Id<User>.New() };
-          var service = new PlanService(
-              new UserRepositoryStub(),
-              new PlanRepositoryStub(),
-              new PlanDayRepositoryStub(),
-              new RecordingUnitOfWork());
-
-          var result = await service.GetPlanConfigAsync(currentUser, Id<User>.Empty, CancellationToken.None);
-
-          Assert.That(result.IsFailure, Is.True);
-          Assert.That(result.Error, Is.InstanceOf<InvalidPlanError>());
-      }
-
-      [Test]
-      public async Task CheckIsUserHavePlanAsync_WhenRouteUserIdEmpty_ReturnsPlanFlagBadRequestErrorWithFalsePayload()
-      {
-          var currentUser = new User { Id = Id<User>.New() };
-          var service = new PlanService(
-              new UserRepositoryStub(),
-              new PlanRepositoryStub(),
-              new PlanDayRepositoryStub(),
-              new RecordingUnitOfWork());
-
-          var result = await service.CheckIsUserHavePlanAsync(currentUser, Id<User>.Empty, CancellationToken.None);
-
-          Assert.Multiple(() =>
-          {
-              Assert.That(result.IsFailure, Is.True);
-              Assert.That(result.Error, Is.InstanceOf<BadRequestError>());
-              Assert.That(result.Error.GetPayload(), Is.EqualTo(false));
-          });
-      }
-
-      [Test]
-      public async Task CreatePlanDayAsync_WhenPlanIdEmpty_ReturnsInvalidPlanDayError()
-      {
-          var currentUser = new User { Id = Id<User>.New() };
-          var service = new PlanDayService(new PlanDayServiceDependenciesStub(
-              new PlanRepositoryStub(),
-              new PlanDayRepositoryStub(),
-              new PlanDayExerciseRepositoryStub(),
-              new ExerciseRepositoryStub(),
-              new TrainingRepositoryStub(),
-              new RecordingUnitOfWork()));
-
-          var result = await service.CreatePlanDayAsync(
-              currentUser,
-              Id<Plan>.Empty,
-              "Test PlanDay",
+          await service.UpdatePlanDayAsync(
+              new User { Id = userId },
+              planDayId,
+              "new",
               [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New(), Series = 3, Reps = "8" }],
               CancellationToken.None);
 
-          Assert.That(result.IsFailure, Is.True);
-          Assert.That(result.Error, Is.InstanceOf<InvalidPlanDayError>());
+          planDayRepository.UpdateCalls.Should().Be(1);
+          exercisesRepository.RemoveCalls.Should().Be(1);
+          exercisesRepository.AddRangeCalls.Should().Be(1);
+          unitOfWork.SaveChangesCalls.Should().Be(1);
+          unitOfWork.Transaction.CommitCalls.Should().Be(1);
+          unitOfWork.Transaction.RollbackCalls.Should().Be(0);
       }
 
-      [Test]
-      public async Task GetPlanDayAsync_WhenPlanDayIdEmpty_ReturnsInvalidPlanDayError()
-      {
-          var currentUser = new User { Id = Id<User>.New() };
-          var service = new PlanDayService(new PlanDayServiceDependenciesStub(
-              new PlanRepositoryStub(),
-              new PlanDayRepositoryStub(),
-              new PlanDayExerciseRepositoryStub(),
-              new ExerciseRepositoryStub(),
-              new TrainingRepositoryStub(),
-              new RecordingUnitOfWork()));
+        [Test]
+        public void UpdatePlanDayAsync_WhenRemoveFails_RollsBackTransaction()
+        {
+            var userId = Id<User>.New();
+            var planId = Id<Plan>.New();
+            var planDayId = Id<PlanDay>.New();
+            var unitOfWork = new RecordingUnitOfWork();
+            var exercisesRepository = new PlanDayExerciseRepositoryStub
+            {
+                RemoveException = new InvalidOperationException("remove failed")
+            };
 
-          var result = await service.GetPlanDayAsync(currentUser, Id<PlanDay>.Empty, ["en"], CancellationToken.None);
+           var service = new PlanDayService(new PlanDayServiceDependenciesStub(
+               new PlanRepositoryStub
+               {
+                   PlanToReturn = new Plan { Id = planId, UserId = userId }
+               },
+               new PlanDayRepositoryStub
+               {
+                   PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
+               },
+               exercisesRepository,
+               new ExerciseRepositoryStub(),
+               new TrainingRepositoryStub(),
+               unitOfWork));
 
-          Assert.That(result.IsFailure, Is.True);
-          Assert.That(result.Error, Is.InstanceOf<InvalidPlanDayError>());
-      }
+           Func<Task> action = async () =>
+               await service.UpdatePlanDayAsync(
+                   new User { Id = userId },
+                   planDayId,
+                   "new",
+                   [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New(), Series = 3, Reps = "8" }],
+                   CancellationToken.None);
+
+           action.Should().ThrowAsync<InvalidOperationException>();
+
+           unitOfWork.Transaction.CommitCalls.Should().Be(0);
+           unitOfWork.Transaction.RollbackCalls.Should().Be(1);
+       }
+
+      // ===== VALIDATION BRANCH TESTS (Wave 3, Batch A) =====
+
+       [Test]
+       public async Task CreatePlanAsync_WhenCurrentUserNull_ReturnsInvalidPlanError()
+       {
+           var userId = Id<User>.New();
+           var service = new PlanService(
+               new UserRepositoryStub(),
+               new PlanRepositoryStub(),
+               new PlanDayRepositoryStub(),
+               new RecordingUnitOfWork());
+
+           var result = await service.CreatePlanAsync(null, userId, "Test Plan", CancellationToken.None);
+
+           result.IsFailure.Should().BeTrue();
+           result.Error.Should().BeOfType<InvalidPlanError>();
+       }
+
+       [Test]
+       public async Task CreatePlanAsync_WhenRouteUserIdEmpty_ReturnsInvalidPlanError()
+       {
+           var currentUser = new User { Id = Id<User>.New() };
+           var service = new PlanService(
+               new UserRepositoryStub(),
+               new PlanRepositoryStub(),
+               new PlanDayRepositoryStub(),
+               new RecordingUnitOfWork());
+
+           var result = await service.CreatePlanAsync(currentUser, Id<User>.Empty, "Test Plan", CancellationToken.None);
+
+           result.IsFailure.Should().BeTrue();
+           result.Error.Should().BeOfType<InvalidPlanError>();
+       }
+
+       [Test]
+       public async Task UpdatePlanAsync_WhenRouteUserIdEmpty_ReturnsInvalidPlanError()
+       {
+           var currentUser = new User { Id = Id<User>.New() };
+           var planId = Id<Plan>.New();
+           var service = new PlanService(
+               new UserRepositoryStub(),
+               new PlanRepositoryStub(),
+               new PlanDayRepositoryStub(),
+               new RecordingUnitOfWork());
+
+           var result = await service.UpdatePlanAsync(currentUser, Id<User>.Empty, planId, "Updated", CancellationToken.None);
+
+           result.IsFailure.Should().BeTrue();
+           result.Error.Should().BeOfType<InvalidPlanError>();
+       }
+
+       [Test]
+       public async Task UpdatePlanAsync_WhenPlanIdEmpty_ReturnsInvalidPlanError()
+       {
+           var userId = Id<User>.New();
+           var currentUser = new User { Id = userId };
+           var service = new PlanService(
+               new UserRepositoryStub(),
+               new PlanRepositoryStub(),
+               new PlanDayRepositoryStub(),
+               new RecordingUnitOfWork());
+
+           var result = await service.UpdatePlanAsync(currentUser, userId, Id<Plan>.Empty, "Updated", CancellationToken.None);
+
+           result.IsFailure.Should().BeTrue();
+           result.Error.Should().BeOfType<InvalidPlanError>();
+       }
+
+       [Test]
+       public async Task GetPlanConfigAsync_WhenRouteUserIdEmpty_ReturnsInvalidPlanError()
+       {
+           var currentUser = new User { Id = Id<User>.New() };
+           var service = new PlanService(
+               new UserRepositoryStub(),
+               new PlanRepositoryStub(),
+               new PlanDayRepositoryStub(),
+               new RecordingUnitOfWork());
+
+           var result = await service.GetPlanConfigAsync(currentUser, Id<User>.Empty, CancellationToken.None);
+
+           result.IsFailure.Should().BeTrue();
+           result.Error.Should().BeOfType<InvalidPlanError>();
+       }
+
+       [Test]
+       public async Task CheckIsUserHavePlanAsync_WhenRouteUserIdEmpty_ReturnsPlanFlagBadRequestErrorWithFalsePayload()
+       {
+           var currentUser = new User { Id = Id<User>.New() };
+           var service = new PlanService(
+               new UserRepositoryStub(),
+               new PlanRepositoryStub(),
+               new PlanDayRepositoryStub(),
+               new RecordingUnitOfWork());
+
+           var result = await service.CheckIsUserHavePlanAsync(currentUser, Id<User>.Empty, CancellationToken.None);
+
+            result.IsFailure.Should().BeTrue();
+            result.Error.Should().BeAssignableTo<BadRequestError>();
+            result.Error.GetPayload().Should().Be(false);
+       }
+
+       [Test]
+       public async Task CreatePlanDayAsync_WhenPlanIdEmpty_ReturnsInvalidPlanDayError()
+       {
+           var currentUser = new User { Id = Id<User>.New() };
+           var service = new PlanDayService(new PlanDayServiceDependenciesStub(
+               new PlanRepositoryStub(),
+               new PlanDayRepositoryStub(),
+               new PlanDayExerciseRepositoryStub(),
+               new ExerciseRepositoryStub(),
+               new TrainingRepositoryStub(),
+               new RecordingUnitOfWork()));
+
+           var result = await service.CreatePlanDayAsync(
+               currentUser,
+               Id<Plan>.Empty,
+               "Test PlanDay",
+               [new PlanDayExerciseInput { ExerciseId = Id<Exercise>.New(), Series = 3, Reps = "8" }],
+               CancellationToken.None);
+
+           result.IsFailure.Should().BeTrue();
+           result.Error.Should().BeOfType<InvalidPlanDayError>();
+       }
+
+       [Test]
+       public async Task GetPlanDayAsync_WhenPlanDayIdEmpty_ReturnsInvalidPlanDayError()
+       {
+           var currentUser = new User { Id = Id<User>.New() };
+           var service = new PlanDayService(new PlanDayServiceDependenciesStub(
+               new PlanRepositoryStub(),
+               new PlanDayRepositoryStub(),
+               new PlanDayExerciseRepositoryStub(),
+               new ExerciseRepositoryStub(),
+               new TrainingRepositoryStub(),
+               new RecordingUnitOfWork()));
+
+           var result = await service.GetPlanDayAsync(currentUser, Id<PlanDay>.Empty, ["en"], CancellationToken.None);
+
+           result.IsFailure.Should().BeTrue();
+           result.Error.Should().BeOfType<InvalidPlanDayError>();
+       }
 
     private sealed class PlanDayServiceDependenciesStub : IPlanDayServiceDependencies
     {

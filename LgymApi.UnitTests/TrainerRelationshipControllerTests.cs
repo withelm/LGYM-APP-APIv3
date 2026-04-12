@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.ExerciseScores.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
@@ -29,8 +30,8 @@ public sealed class TrainerRelationshipControllerTests
 
         var result = await controller.CreateInvitation(new CreateTrainerInvitationRequest { TraineeId = "not-a-guid" });
 
-        Assert.That(result, Is.InstanceOf<ObjectResult>());
-        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
+        result.Should().BeOfType<ObjectResult>();
+        ((ObjectResult)result).StatusCode.Should().Be(400);
     }
 
     [Test]
@@ -40,8 +41,8 @@ public sealed class TrainerRelationshipControllerTests
 
         var result = await controller.GetTraineeTrainingDates("invalid-id");
 
-        Assert.That(result, Is.InstanceOf<ObjectResult>());
-        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
+        result.Should().BeOfType<ObjectResult>();
+        ((ObjectResult)result).StatusCode.Should().Be(400);
     }
 
     [Test]
@@ -51,8 +52,8 @@ public sealed class TrainerRelationshipControllerTests
 
         var result = await controller.GetTraineeExerciseScoresChartData("invalid-id", new ExerciseScoresChartRequestDto { ExerciseId = Id<Exercise>.New().ToString() });
 
-        Assert.That(result, Is.InstanceOf<ObjectResult>());
-        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
+        result.Should().BeOfType<ObjectResult>();
+        ((ObjectResult)result).StatusCode.Should().Be(400);
     }
 
     [Test]
@@ -62,8 +63,8 @@ public sealed class TrainerRelationshipControllerTests
 
         var result = await controller.GetTraineeExerciseScoresChartData(Id<User>.New().ToString(), new ExerciseScoresChartRequestDto { ExerciseId = "invalid-exercise" });
 
-        Assert.That(result, Is.InstanceOf<ObjectResult>());
-        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
+        result.Should().BeOfType<ObjectResult>();
+        ((ObjectResult)result).StatusCode.Should().Be(400);
     }
 
     [Test]
@@ -73,8 +74,8 @@ public sealed class TrainerRelationshipControllerTests
 
         var result = await controller.UpdateTraineePlan(Id<User>.New().ToString(), "not-a-guid", new TrainerPlanFormRequest { Name = "Plan" });
 
-        Assert.That(result, Is.InstanceOf<ObjectResult>());
-        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(400));
+        result.Should().BeOfType<ObjectResult>();
+        ((ObjectResult)result).StatusCode.Should().Be(400);
     }
 
     private static TrainerRelationshipController CreateController()

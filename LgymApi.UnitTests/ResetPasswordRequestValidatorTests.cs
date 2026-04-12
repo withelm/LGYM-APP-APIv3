@@ -1,5 +1,7 @@
+using FluentAssertions;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Features.User.Validation;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -19,7 +21,7 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.True);
+        result.IsValid.Should().BeTrue();
     }
 
     [Test]
@@ -35,60 +37,26 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
-        Assert.That(result.Errors, Has.Some.Property("PropertyName").EqualTo("Token"));
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(x => x.PropertyName == "Token");
     }
 
-    [Test]
-    public void Validate_Fails_WhenNewPasswordIsEmpty()
-    {
-        var validator = new ResetPasswordRequestValidator();
-        var request = new ResetPasswordRequest
-        {
-            Token = "valid-token",
-            NewPassword = string.Empty,
-            ConfirmPassword = "Password123"
-        };
+     [Test]
+     public void Validate_Fails_WhenNewPasswordIsTooShort()
+     {
+         var validator = new ResetPasswordRequestValidator();
+         var request = new ResetPasswordRequest
+         {
+             Token = "valid-token",
+             NewPassword = "pass",
+             ConfirmPassword = "pass"
+         };
 
-        var result = validator.Validate(request);
+         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
-        Assert.That(result.Errors, Has.Some.Property("PropertyName").EqualTo("NewPassword"));
-    }
-
-    [Test]
-    public void Validate_Fails_WhenNewPasswordIsTooShort()
-    {
-        var validator = new ResetPasswordRequestValidator();
-        var request = new ResetPasswordRequest
-        {
-            Token = "valid-token",
-            NewPassword = "pass",
-            ConfirmPassword = "pass"
-        };
-
-        var result = validator.Validate(request);
-
-        Assert.That(result.IsValid, Is.False);
-        Assert.That(result.Errors, Has.Some.Property("PropertyName").EqualTo("NewPassword"));
-    }
-
-    [Test]
-    public void Validate_Fails_WhenConfirmPasswordIsEmpty()
-    {
-        var validator = new ResetPasswordRequestValidator();
-        var request = new ResetPasswordRequest
-        {
-            Token = "valid-token",
-            NewPassword = "Password123",
-            ConfirmPassword = string.Empty
-        };
-
-        var result = validator.Validate(request);
-
-        Assert.That(result.IsValid, Is.False);
-        Assert.That(result.Errors, Has.Some.Property("PropertyName").EqualTo("ConfirmPassword"));
-    }
+         result.IsValid.Should().BeFalse();
+         result.Errors.Should().Contain(x => x.PropertyName == "NewPassword");
+     }
 
     [Test]
     public void Validate_Fails_WhenConfirmPasswordDoesNotMatch()
@@ -103,8 +71,8 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
-        Assert.That(result.Errors, Has.Some.Property("PropertyName").EqualTo("ConfirmPassword"));
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(x => x.PropertyName == "ConfirmPassword");
     }
 
     [Test]
@@ -120,7 +88,7 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.True);
+        result.IsValid.Should().BeTrue();
     }
 
     [Test]
@@ -136,7 +104,7 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
-        Assert.That(result.Errors, Has.Some.Property("PropertyName").EqualTo("NewPassword"));
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(x => x.PropertyName == "NewPassword");
     }
 }

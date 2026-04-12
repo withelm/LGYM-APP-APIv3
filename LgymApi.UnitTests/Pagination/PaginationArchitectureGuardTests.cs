@@ -73,8 +73,7 @@ public sealed class PaginationArchitectureGuardTests
     [Test]
     public void TrainerDashboardGridifyPagination_DoesNotMaterializeBeforePaging()
     {
-        Assert.That(File.Exists(RepositorySourcePath), Is.True,
-            $"TrainerRelationshipRepository source not found at '{RepositorySourcePath}'.");
+        File.Exists(RepositorySourcePath).Should().BeTrue($"TrainerRelationshipRepository source not found at '{RepositorySourcePath}'.");
 
         var sourceCode = File.ReadAllText(RepositorySourcePath);
 

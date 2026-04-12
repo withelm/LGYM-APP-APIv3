@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
@@ -30,10 +31,7 @@ public sealed class UserServiceTests
     {
         var result = await _service.GetUserEloAsync(Id<User>.Empty);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InvalidUserError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidUserError>();
     }
 }

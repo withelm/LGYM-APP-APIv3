@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
@@ -19,13 +20,14 @@ public sealed class IdempotencyKeyPolicyTests
         var id = Id<CorrelationScope>.New();
         var k1 = IdempotencyKeyPolicy.CalculateKey(id);
         var k2 = IdempotencyKeyPolicy.CalculateKey(id);
-        Assert.That(k1, Is.EqualTo(k2));
+        k1.Should().Be(k2);
     }
 
     [Test]
     public void CalculateKey_WithEmptyCorrelationId_Throws()
     {
-        Assert.Throws<ArgumentException>(() => IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.Empty));
+        var action = () => IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.Empty);
+        action.Should().Throw<ArgumentException>();
     }
 
     [Test]
@@ -33,7 +35,7 @@ public sealed class IdempotencyKeyPolicyTests
     {
         var k1 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
         var k2 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
-        Assert.That(k1, Is.Not.EqualTo(k2));
+        k1.Should().NotBe(k2);
     }
 
     [Test]
@@ -42,7 +44,7 @@ public sealed class IdempotencyKeyPolicyTests
         var id = Id<CorrelationScope>.New();
         var k1 = IdempotencyKeyPolicy.CalculateKey(id);
         var k2 = IdempotencyKeyPolicy.CalculateKey(id);
-        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(k1, k2), Is.True);
+        IdempotencyKeyPolicy.AreKeysEqual(k1, k2).Should().BeTrue();
     }
 
     [Test]
@@ -50,21 +52,21 @@ public sealed class IdempotencyKeyPolicyTests
     {
         var k1 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
         var k2 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
-        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(k1, k2), Is.False);
+        IdempotencyKeyPolicy.AreKeysEqual(k1, k2).Should().BeFalse();
     }
 
     [Test]
     public void AreKeysEqual_NullKeys_True()
     {
-        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(null, null), Is.True);
+        IdempotencyKeyPolicy.AreKeysEqual(null, null).Should().BeTrue();
     }
 
     [Test]
     public void AreKeysEqual_OneNullKey_False()
     {
         var k1 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New());
-        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(k1, null), Is.False);
-        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(null, k1), Is.False);
+        IdempotencyKeyPolicy.AreKeysEqual(k1, null).Should().BeFalse();
+        IdempotencyKeyPolicy.AreKeysEqual(null, k1).Should().BeFalse();
     }
 
     [Test]
@@ -72,7 +74,7 @@ public sealed class IdempotencyKeyPolicyTests
     {
         var id = Id<CorrelationScope>.New();
         var key = IdempotencyKeyPolicy.CalculateKey(id);
-        Assert.That(IdempotencyKeyPolicy.IsKeyForCorrelation(key, id), Is.True);
+        IdempotencyKeyPolicy.IsKeyForCorrelation(key, id).Should().BeTrue();
     }
 
     [Test]
@@ -81,51 +83,51 @@ public sealed class IdempotencyKeyPolicyTests
         var id1 = Id<CorrelationScope>.New();
         var id2 = Id<CorrelationScope>.New();
         var key = IdempotencyKeyPolicy.CalculateKey(id1);
-        Assert.That(IdempotencyKeyPolicy.IsKeyForCorrelation(key, id2), Is.False);
+        IdempotencyKeyPolicy.IsKeyForCorrelation(key, id2).Should().BeFalse();
     }
 
     [Test]
     public void IsKeyForCorrelation_WithNullKey_ReturnsFalse()
     {
         var id = Id<CorrelationScope>.New();
-        Assert.That(IdempotencyKeyPolicy.IsKeyForCorrelation(null, id), Is.False);
+        IdempotencyKeyPolicy.IsKeyForCorrelation(null, id).Should().BeFalse();
     }
 
     [Test]
     public async Task Persistence_FirstEnqueueCreatesOneRecord()
     {
         var cid = Id<CorrelationScope>.New();
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: $"T1_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
-            .Options;
+         var opts = new DbContextOptionsBuilder<AppDbContext>()
+             .UseInMemoryDatabase(databaseName: $"T1_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
+             .Options;
 
-        using var ctx = new AppDbContext(opts);
-        await ctx.Database.EnsureCreatedAsync();
-        var r = new CommandEnvelopeRepository(ctx);
-        var e = new CommandEnvelope { CorrelationId = cid, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
-        await r.AddAsync(e);
-        await ctx.SaveChangesAsync();
-        var f = await r.FindByCorrelationIdAsync(cid);
-        Assert.That(f, Is.Not.Null);
-    }
+         using var ctx = new AppDbContext(opts);
+         await ctx.Database.EnsureCreatedAsync();
+         var r = new CommandEnvelopeRepository(ctx);
+         var e = new CommandEnvelope { CorrelationId = cid, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
+         await r.AddAsync(e);
+         await ctx.SaveChangesAsync();
+         var f = await r.FindByCorrelationIdAsync(cid);
+         f.Should().NotBeNull();
+     }
 
     [Test]
     public async Task Persistence_DuplicateEnqueueDetectedByRepository()
     {
         var cid = Id<CorrelationScope>.New();
          var opts = new DbContextOptionsBuilder<AppDbContext>()
-             .UseInMemoryDatabase(databaseName: $"T2_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
-             .Options;
+              .UseInMemoryDatabase(databaseName: $"T2_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
+              .Options;
 
-        using var ctx = new AppDbContext(opts);
-        await ctx.Database.EnsureCreatedAsync();
-        var r = new CommandEnvelopeRepository(ctx);
-        var e = new CommandEnvelope { CorrelationId = cid, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
-        await r.AddAsync(e);
-        await ctx.SaveChangesAsync();
-        var f = await r.FindByCorrelationIdAsync(cid);
-        Assert.That(f, Is.Not.Null);
-    }
+         using var ctx = new AppDbContext(opts);
+         await ctx.Database.EnsureCreatedAsync();
+         var r = new CommandEnvelopeRepository(ctx);
+         var e = new CommandEnvelope { CorrelationId = cid, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
+         await r.AddAsync(e);
+         await ctx.SaveChangesAsync();
+         var f = await r.FindByCorrelationIdAsync(cid);
+         f.Should().NotBeNull();
+     }
 
     [Test]
     public async Task Persistence_AddOrGetExistingAsync_ReturnsDuplicateNotNewRecord()
@@ -143,9 +145,9 @@ public sealed class IdempotencyKeyPolicyTests
         await ctx.SaveChangesAsync();
         var e2 = new CommandEnvelope { CorrelationId = cid, PayloadJson = "{\"b\": 2}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
         var res = await r.AddOrGetExistingAsync(e2);
-        Assert.That(res.PayloadJson, Is.EqualTo("{\"a\": 1}"));
+        res.PayloadJson.Should().Be("{\"a\": 1}");
         var all = await ctx.CommandEnvelopes.ToListAsync();
-        Assert.That(all.Count, Is.EqualTo(1));
+        all.Count.Should().Be(1);
     }
 
     [Test]
@@ -179,15 +181,15 @@ public sealed class IdempotencyKeyPolicyTests
         });
 
         var ress = await Task.WhenAll(t1, t2);
-        Assert.That(ress[0].CorrelationId, Is.EqualTo(cid));
-        Assert.That(ress[1].CorrelationId, Is.EqualTo(cid));
+        ress[0].CorrelationId.Should().Be(cid);
+        ress[1].CorrelationId.Should().Be(cid);
 
         var opts_final = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: dbName)
             .Options;
         using var ctx_final = new AppDbContext(opts_final);
         var all = await ctx_final.CommandEnvelopes.ToListAsync();
-        Assert.That(all.Count, Is.EqualTo(1));
+        all.Count.Should().Be(1);
     }
 
      [Test]
@@ -199,15 +201,15 @@ public sealed class IdempotencyKeyPolicyTests
               .UseInMemoryDatabase(databaseName: $"T5_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
               .Options;
 
-         using var ctx = new AppDbContext(opts);
-         await ctx.Database.EnsureCreatedAsync();
-         var r = new CommandEnvelopeRepository(ctx);
-         var e1 = new CommandEnvelope { Id = Id<CommandEnvelope>.New(), CorrelationId = cid1, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
-         var e2 = new CommandEnvelope { Id = Id<CommandEnvelope>.New(), CorrelationId = cid2, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
-         await r.AddAsync(e1);
-         await r.AddAsync(e2);
-         await ctx.SaveChangesAsync();
-         var all = await ctx.CommandEnvelopes.ToListAsync();
-         Assert.That(all.Count, Is.EqualTo(2));
+          using var ctx = new AppDbContext(opts);
+          await ctx.Database.EnsureCreatedAsync();
+          var r = new CommandEnvelopeRepository(ctx);
+          var e1 = new CommandEnvelope { Id = Id<CommandEnvelope>.New(), CorrelationId = cid1, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
+          var e2 = new CommandEnvelope { Id = Id<CommandEnvelope>.New(), CorrelationId = cid2, PayloadJson = "{}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
+          await r.AddAsync(e1);
+          await r.AddAsync(e2);
+          await ctx.SaveChangesAsync();
+          var all = await ctx.CommandEnvelopes.ToListAsync();
+          all.Count.Should().Be(2);
      }
 }

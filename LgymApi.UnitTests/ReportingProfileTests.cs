@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using System.Reflection;
@@ -30,20 +31,20 @@ public sealed class ReportingProfileTests
         };
 
         var templateDto = mapper.Map<ReportTemplateResult, ReportTemplateDto>(templateResult);
-        Assert.That(templateDto.Fields, Has.Count.EqualTo(1));
+        templateDto.Fields.Should().HaveCount(1);
 
         var requestResult = new ReportRequestResult
         {
              Id = Id<LgymApi.Domain.Entities.ReportRequest>.New(),
-             TrainerId = Id<LgymApi.Domain.Entities.User>.New(),
-             TraineeId = Id<LgymApi.Domain.Entities.User>.New(),
-             TemplateId = Id<LgymApi.Domain.Entities.ReportTemplate>.New(),
-            Status = ReportRequestStatus.Pending,
-            Template = templateResult
-        };
+              TrainerId = Id<LgymApi.Domain.Entities.User>.New(),
+              TraineeId = Id<LgymApi.Domain.Entities.User>.New(),
+              TemplateId = Id<LgymApi.Domain.Entities.ReportTemplate>.New(),
+             Status = ReportRequestStatus.Pending,
+             Template = templateResult
+         };
 
         var requestDto = mapper.Map<ReportRequestResult, ReportRequestDto>(requestResult);
-        Assert.That(requestDto.Template, Is.Not.Null);
+        requestDto.Template.Should().NotBeNull();
 
         var submissionResult = new ReportSubmissionResult
         {
@@ -55,11 +56,8 @@ public sealed class ReportingProfileTests
         };
 
         var submissionDto = mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(submissionResult);
-        Assert.Multiple(() =>
-        {
-            Assert.That(submissionDto.Answers, Is.Empty);
-            Assert.That(submissionDto.Request, Is.Not.Null);
-        });
+        submissionDto.Answers.Should().BeEmpty();
+        submissionDto.Request.Should().NotBeNull();
     }
 
     [Test]
@@ -88,7 +86,7 @@ public sealed class ReportingProfileTests
         };
 
         var dto = mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(submissionResult);
-        Assert.That(dto.Answers.ContainsKey("Weight"), Is.True);
+        dto.Answers.ContainsKey("Weight").Should().BeTrue();
     }
 
     private static IMapper CreateMapper(params IMappingProfile[] profiles)

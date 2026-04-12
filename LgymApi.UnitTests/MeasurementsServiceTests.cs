@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Repositories;
@@ -5,6 +6,7 @@ using LgymApi.Application.Units;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -30,12 +32,9 @@ public sealed class MeasurementsServiceTests
 
         var result = await service.GetMeasurementDetailAsync(currentUser, measurementId);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<MeasurementForbiddenError>());
-            Assert.That(result.Error.HttpStatusCode, Is.EqualTo(403));
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<MeasurementForbiddenError>();
+        result.Error.HttpStatusCode.Should().Be(403);
     }
 
     [Test]
@@ -61,157 +60,133 @@ public sealed class MeasurementsServiceTests
 
         var result = await service.GetMeasurementsListAsync(currentUser, userId, BodyParts.Chest, HeightUnits.Centimeters);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InvalidMeasurementError>());
-            Assert.That(result.Error.HttpStatusCode, Is.EqualTo(400));
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidMeasurementError>();
+        result.Error.HttpStatusCode.Should().Be(400);
     }
 
-     [Test]
-     public async Task GetMeasurementsTrendAsync_WhenStartValueIsNearZero_ReturnsZeroPercentageAndFlatDirection()
-     {
-         var userId = Id<User>.New();
-         var currentUser = new User { Id = userId, Name = "user", Email = "trend-zero@example.com", ProfileRank = "Rookie" };
-         var createdAt = DateTimeOffset.UtcNow;
+      [Test]
+      public async Task GetMeasurementsTrendAsync_WhenStartValueIsNearZero_ReturnsZeroPercentageAndFlatDirection()
+      {
+          var userId = Id<User>.New();
+          var currentUser = new User { Id = userId, Name = "user", Email = "trend-zero@example.com", ProfileRank = "Rookie" };
+          var createdAt = DateTimeOffset.UtcNow;
 
-         var measurements = new List<Measurement>
-         {
-             new()
-             {
-                 Id = Id<Measurement>.New(),
-                 UserId = userId,
-                 BodyPart = BodyParts.Chest,
-                 Unit = HeightUnits.Centimeters.ToString(),
-                 Value = 0,
-                 CreatedAt = createdAt
-             },
-             new()
-             {
-                 Id = Id<Measurement>.New(),
-                 UserId = userId,
-                 BodyPart = BodyParts.Chest,
-                 Unit = HeightUnits.Centimeters.ToString(),
-                 Value = 0,
-                 CreatedAt = createdAt.AddMinutes(5)
-             }
-         };
+          var measurements = new List<Measurement>
+          {
+              new()
+              {
+                  Id = Id<Measurement>.New(),
+                  UserId = userId,
+                  BodyPart = BodyParts.Chest,
+                  Unit = HeightUnits.Centimeters.ToString(),
+                  Value = 0,
+                  CreatedAt = createdAt
+              },
+              new()
+              {
+                  Id = Id<Measurement>.New(),
+                  UserId = userId,
+                  BodyPart = BodyParts.Chest,
+                  Unit = HeightUnits.Centimeters.ToString(),
+                  Value = 0,
+                  CreatedAt = createdAt.AddMinutes(5)
+              }
+          };
 
-         var service = CreateService(getByUser: (_, _, _) => Task.FromResult(measurements));
+          var service = CreateService(getByUser: (_, _, _) => Task.FromResult(measurements));
 
-         var result = await service.GetMeasurementsTrendAsync(currentUser, userId, BodyParts.Chest, HeightUnits.Centimeters);
+          var result = await service.GetMeasurementsTrendAsync(currentUser, userId, BodyParts.Chest, HeightUnits.Centimeters);
 
-         Assert.Multiple(() =>
-         {
-             Assert.That(result.IsSuccess, Is.True);
-             Assert.That(result.Value.ChangePercentage, Is.EqualTo(0));
-             Assert.That(result.Value.Direction, Is.EqualTo("flat"));
-             Assert.That(result.Value.Points, Is.EqualTo(2));
-         });
-     }
+          result.IsSuccess.Should().BeTrue();
+          result.Value.ChangePercentage.Should().Be(0);
+          result.Value.Direction.Should().Be("flat");
+          result.Value.Points.Should().Be(2);
+      }
 
-     [Test]
-     public async Task AddMeasurementAsync_WhenCurrentUserIsNull_ReturnsInvalidMeasurementError()
-     {
-         var service = CreateService();
+      [Test]
+      public async Task AddMeasurementAsync_WhenCurrentUserIsNull_ReturnsInvalidMeasurementError()
+      {
+          var service = CreateService();
 
-         var result = await service.AddMeasurementAsync(null, BodyParts.Chest, HeightUnits.Centimeters, 100);
+          var result = await service.AddMeasurementAsync(null, BodyParts.Chest, HeightUnits.Centimeters, 100);
 
-         Assert.Multiple(() =>
-         {
-             Assert.That(result.IsFailure, Is.True);
-             Assert.That(result.Error, Is.InstanceOf<InvalidMeasurementError>());
-             Assert.That(result.Error.HttpStatusCode, Is.EqualTo(400));
-         });
-     }
+          result.IsFailure.Should().BeTrue();
+          result.Error.Should().BeOfType<InvalidMeasurementError>();
+          result.Error.HttpStatusCode.Should().Be(400);
+      }
 
-     [Test]
-     public async Task AddMeasurementAsync_WhenBodyPartIsUnknown_ReturnsInvalidMeasurementError()
-     {
-         var currentUser = new User { Id = Id<User>.New(), Name = "user", Email = "unknown-part@example.com", ProfileRank = "Rookie" };
-         var service = CreateService();
+      [Test]
+      public async Task AddMeasurementAsync_WhenBodyPartIsUnknown_ReturnsInvalidMeasurementError()
+      {
+          var currentUser = new User { Id = Id<User>.New(), Name = "user", Email = "unknown-part@example.com", ProfileRank = "Rookie" };
+          var service = CreateService();
 
-         var result = await service.AddMeasurementAsync(currentUser, BodyParts.Unknown, HeightUnits.Centimeters, 100);
+          var result = await service.AddMeasurementAsync(currentUser, BodyParts.Unknown, HeightUnits.Centimeters, 100);
 
-         Assert.Multiple(() =>
-         {
-             Assert.That(result.IsFailure, Is.True);
-             Assert.That(result.Error, Is.InstanceOf<InvalidMeasurementError>());
-             Assert.That(result.Error.HttpStatusCode, Is.EqualTo(400));
-         });
-     }
+          result.IsFailure.Should().BeTrue();
+          result.Error.Should().BeOfType<InvalidMeasurementError>();
+          result.Error.HttpStatusCode.Should().Be(400);
+      }
 
-     [Test]
-     public async Task AddMeasurementAsync_WhenUnitIsUnknown_ReturnsInvalidMeasurementError()
-     {
-         var currentUser = new User { Id = Id<User>.New(), Name = "user", Email = "unknown-unit@example.com", ProfileRank = "Rookie" };
-         var service = CreateService();
+      [Test]
+      public async Task AddMeasurementAsync_WhenUnitIsUnknown_ReturnsInvalidMeasurementError()
+      {
+          var currentUser = new User { Id = Id<User>.New(), Name = "user", Email = "unknown-unit@example.com", ProfileRank = "Rookie" };
+          var service = CreateService();
 
-         var result = await service.AddMeasurementAsync(currentUser, BodyParts.Chest, HeightUnits.Unknown, 100);
+          var result = await service.AddMeasurementAsync(currentUser, BodyParts.Chest, HeightUnits.Unknown, 100);
 
-         Assert.Multiple(() =>
-         {
-             Assert.That(result.IsFailure, Is.True);
-             Assert.That(result.Error, Is.InstanceOf<InvalidMeasurementError>());
-             Assert.That(result.Error.HttpStatusCode, Is.EqualTo(400));
-         });
-     }
+          result.IsFailure.Should().BeTrue();
+          result.Error.Should().BeOfType<InvalidMeasurementError>();
+          result.Error.HttpStatusCode.Should().Be(400);
+      }
 
-     [Test]
-     public async Task GetMeasurementDetailAsync_WhenMeasurementIdIsEmpty_ReturnsInvalidMeasurementError()
-     {
-         var userId = Id<User>.New();
-         var currentUser = new User { Id = userId, Name = "user", Email = "empty-id@example.com", ProfileRank = "Rookie" };
+      [Test]
+      public async Task GetMeasurementDetailAsync_WhenMeasurementIdIsEmpty_ReturnsInvalidMeasurementError()
+      {
+          var userId = Id<User>.New();
+          var currentUser = new User { Id = userId, Name = "user", Email = "empty-id@example.com", ProfileRank = "Rookie" };
 
-         var service = CreateService();
+          var service = CreateService();
 
-         var result = await service.GetMeasurementDetailAsync(currentUser, Id<Measurement>.Empty);
+          var result = await service.GetMeasurementDetailAsync(currentUser, Id<Measurement>.Empty);
 
-         Assert.Multiple(() =>
-         {
-             Assert.That(result.IsFailure, Is.True);
-             Assert.That(result.Error, Is.InstanceOf<InvalidMeasurementError>());
-             Assert.That(result.Error.HttpStatusCode, Is.EqualTo(400));
-         });
-     }
+          result.IsFailure.Should().BeTrue();
+          result.Error.Should().BeOfType<InvalidMeasurementError>();
+          result.Error.HttpStatusCode.Should().Be(400);
+      }
 
-     [Test]
-     public async Task GetMeasurementDetailAsync_WhenMeasurementNotFound_ReturnsMeasurementNotFoundError()
-     {
-         var userId = Id<User>.New();
-         var currentUser = new User { Id = userId, Name = "user", Email = "not-found@example.com", ProfileRank = "Rookie" };
-         var measurementId = Id<Measurement>.New();
+      [Test]
+      public async Task GetMeasurementDetailAsync_WhenMeasurementNotFound_ReturnsMeasurementNotFoundError()
+      {
+          var userId = Id<User>.New();
+          var currentUser = new User { Id = userId, Name = "user", Email = "not-found@example.com", ProfileRank = "Rookie" };
+          var measurementId = Id<Measurement>.New();
 
-         var service = CreateService(findById: (_, _) => Task.FromResult<Measurement?>(null));
+          var service = CreateService(findById: (_, _) => Task.FromResult<Measurement?>(null));
 
-         var result = await service.GetMeasurementDetailAsync(currentUser, measurementId);
+          var result = await service.GetMeasurementDetailAsync(currentUser, measurementId);
 
-         Assert.Multiple(() =>
-         {
-             Assert.That(result.IsFailure, Is.True);
-             Assert.That(result.Error, Is.InstanceOf<MeasurementNotFoundError>());
-             Assert.That(result.Error.HttpStatusCode, Is.EqualTo(404));
-         });
-     }
+          result.IsFailure.Should().BeTrue();
+          result.Error.Should().BeOfType<MeasurementNotFoundError>();
+          result.Error.HttpStatusCode.Should().Be(404);
+      }
 
-     [Test]
-     public async Task GetMeasurementsTrendAsync_WhenRouteUserIdIsEmpty_ReturnsInvalidMeasurementError()
-     {
-         var userId = Id<User>.New();
-         var currentUser = new User { Id = userId, Name = "user", Email = "trend-empty-route@example.com", ProfileRank = "Rookie" };
+      [Test]
+      public async Task GetMeasurementsTrendAsync_WhenRouteUserIdIsEmpty_ReturnsInvalidMeasurementError()
+      {
+          var userId = Id<User>.New();
+          var currentUser = new User { Id = userId, Name = "user", Email = "trend-empty-route@example.com", ProfileRank = "Rookie" };
 
-         var service = CreateService();
+          var service = CreateService();
 
-         var result = await service.GetMeasurementsTrendAsync(currentUser, Id<User>.Empty, BodyParts.Chest, HeightUnits.Centimeters);
+          var result = await service.GetMeasurementsTrendAsync(currentUser, Id<User>.Empty, BodyParts.Chest, HeightUnits.Centimeters);
 
-         Assert.Multiple(() =>
-         {
-             Assert.That(result.IsFailure, Is.True);
-             Assert.That(result.Error, Is.InstanceOf<InvalidMeasurementError>());
-             Assert.That(result.Error.HttpStatusCode, Is.EqualTo(400));
-         });
-     }
+          result.IsFailure.Should().BeTrue();
+          result.Error.Should().BeOfType<InvalidMeasurementError>();
+          result.Error.HttpStatusCode.Should().Be(400);
+      }
 
     private static MeasurementsService CreateService(
         Func<Id<Measurement>, CancellationToken, Task<Measurement?>>? findById = null,

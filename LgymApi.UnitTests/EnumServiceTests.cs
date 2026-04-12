@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Enum;
 
@@ -13,10 +14,7 @@ public sealed class EnumServiceTests
 
         var result = await service.GetLookupByNameAsync("NonExistentEnum");
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidEnumError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidEnumError>();
     }
 }
