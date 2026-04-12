@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Features.AdminManagement.Models;
 using System.Net;
 using LgymApi.Application.Common.Errors;
@@ -8,6 +9,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -44,26 +46,20 @@ public sealed class RoleServiceTests
         var result = await _service.GetRolesAsync();
         var roles = result.Value;
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(roles, Has.Count.EqualTo(1));
-            Assert.That(roles[0].Name, Is.EqualTo("Coach"));
-            Assert.That(roles[0].PermissionClaims, Is.EquivalentTo(_roleRepository.RoleClaims[_roleRepository.Roles.First().Id]));
-        });
+        roles.Should().HaveCount(1);
+        roles[0].Name.Should().Be("Coach");
+        roles[0].PermissionClaims.Should().BeEquivalentTo(_roleRepository.RoleClaims[_roleRepository.Roles.First().Id]);
     }
 
      [Test]
      public async Task GetRoleAsync_ReturnsFailure_WhenRoleIdEmpty()
      {
          var emptyId = default(Id<Role>);
-        var result = await _service.GetRoleAsync(emptyId);
+         var result = await _service.GetRoleAsync(emptyId);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InvalidRoleError>());
-            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-        });
+         result.IsFailure.Should().BeTrue();
+         result.Error.Should().BeOfType<InvalidRoleError>();
+         result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -78,33 +74,27 @@ public sealed class RoleServiceTests
                 AuthConstants.Permissions.ManageAppConfig
             ]);
         
-        var result = roleResult.Value;
+         var result = roleResult.Value;
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Name, Is.EqualTo("Coach"));
-            Assert.That(result.Description, Is.EqualTo("Training tools"));
-            Assert.That(result.PermissionClaims, Is.EqualTo(new[]
-            {
-                AuthConstants.Permissions.ManageAppConfig,
-                AuthConstants.Permissions.ManageUserRoles
-            }));
-            Assert.That(_roleRepository.Roles.Any(r => r.Id == result.Id), Is.True);
-            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        });
+         result.Name.Should().Be("Coach");
+         result.Description.Should().Be("Training tools");
+         result.PermissionClaims.Should().Equal(new[]
+         {
+             AuthConstants.Permissions.ManageAppConfig,
+             AuthConstants.Permissions.ManageUserRoles
+         });
+         _roleRepository.Roles.Any(r => r.Id == result.Id).Should().BeTrue();
+         _unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
     [Test]
     public async Task CreateRoleAsync_ReturnsFailure_WhenClaimInvalid()
     {
-        var result = await _service.CreateRoleAsync("Coach", null, ["invalid.claim"]);
+         var result = await _service.CreateRoleAsync("Coach", null, ["invalid.claim"]);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InvalidRoleError>());
-            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-        });
+         result.IsFailure.Should().BeTrue();
+         result.Error.Should().BeOfType<InvalidRoleError>();
+         result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -113,18 +103,15 @@ public sealed class RoleServiceTests
         var adminRole = new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.Admin };
         _roleRepository.Roles.Add(adminRole);
 
-        var result = await _service.UpdateRoleAsync(
-            adminRole.Id,
-            "AdminUpdated",
-            null,
-            [AuthConstants.Permissions.ManageUserRoles]);
+         var result = await _service.UpdateRoleAsync(
+             adminRole.Id,
+             "AdminUpdated",
+             null,
+             [AuthConstants.Permissions.ManageUserRoles]);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<RoleForbiddenError>());
-            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
-        });
+         result.IsFailure.Should().BeTrue();
+         result.Error.Should().BeOfType<RoleForbiddenError>();
+         result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.Forbidden);
     }
 
     [Test]
@@ -139,14 +126,11 @@ public sealed class RoleServiceTests
             "  New desc  ",
             ManageGlobalExercisesClaim);
 
-        var updated = _roleRepository.Roles.Single(r => r.Id == roleId);
-        Assert.Multiple(() =>
-        {
-            Assert.That(updated.Name, Is.EqualTo("Senior Coach"));
-            Assert.That(updated.Description, Is.EqualTo("New desc"));
-            Assert.That(_roleRepository.RoleClaims[updated.Id], Is.EqualTo(ManageGlobalExercisesClaim));
-            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        });
+         var updated = _roleRepository.Roles.Single(r => r.Id == roleId);
+         updated.Name.Should().Be("Senior Coach");
+         updated.Description.Should().Be("New desc");
+         _roleRepository.RoleClaims[updated.Id].Should().Equal(ManageGlobalExercisesClaim);
+         _unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
     [Test]
@@ -155,14 +139,11 @@ public sealed class RoleServiceTests
         var userRole = new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.User };
         _roleRepository.Roles.Add(userRole);
 
-        var result = await _service.DeleteRoleAsync(userRole.Id);
+         var result = await _service.DeleteRoleAsync(userRole.Id);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<RoleForbiddenError>());
-            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
-        });
+         result.IsFailure.Should().BeTrue();
+         result.Error.Should().BeOfType<RoleForbiddenError>();
+         result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.Forbidden);
     }
 
     [Test]
@@ -171,13 +152,10 @@ public sealed class RoleServiceTests
         var role = new Role { Id = Id<Role>.New(), Name = "Coach" };
         _roleRepository.Roles.Add(role);
 
-        await _service.DeleteRoleAsync(role.Id);
+         await _service.DeleteRoleAsync(role.Id);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(_roleRepository.Roles.Any(r => r.Id == role.Id), Is.False);
-            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        });
+         _roleRepository.Roles.Any(r => r.Id == role.Id).Should().BeFalse();
+         _unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
     [Test]
@@ -190,27 +168,21 @@ public sealed class RoleServiceTests
         var analyst = new Role { Id = Id<Role>.New(), Name = "Analyst" };
         _roleRepository.Roles.AddRange([coach, analyst]);
 
-        await _service.UpdateUserRolesAsync((Id<User>)userId, [" coach ", "ANALYST", "coach"]);
+         await _service.UpdateUserRolesAsync((Id<User>)userId, [" coach ", "ANALYST", "coach"]);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(_roleRepository.UserRoleAssignments.TryGetValue(userId, out var roles), Is.True);
-            Assert.That(roles!, Is.EquivalentTo(new[] { coach.Id, analyst.Id }));
-            Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        });
+         _roleRepository.UserRoleAssignments.TryGetValue(userId, out var roles).Should().BeTrue();
+         roles!.Should().BeEquivalentTo(new[] { coach.Id, analyst.Id });
+         _unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
     [Test]
     public async Task UpdateUserRolesAsync_ReturnsFailure_WhenUserMissing()
     {
-        var result = await _service.UpdateUserRolesAsync(Id<User>.New(), ["Coach"]);
+         var result = await _service.UpdateUserRolesAsync(Id<User>.New(), ["Coach"]);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<RoleNotFoundError>());
-            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
-        });
+         result.IsFailure.Should().BeTrue();
+         result.Error.Should().BeOfType<RoleNotFoundError>();
+         result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.NotFound);
     }
 
     [Test]
@@ -219,27 +191,21 @@ public sealed class RoleServiceTests
         var userId = Id<User>.New();
         _userRepository.Users.Add(new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "u", Email = "u@x.com" });
 
-        var result = await _service.UpdateUserRolesAsync((Id<User>)userId, ["UnknownRole"]);
+         var result = await _service.UpdateUserRolesAsync((Id<User>)userId, ["UnknownRole"]);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InvalidRoleError>());
-            Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
-        });
+         result.IsFailure.Should().BeTrue();
+         result.Error.Should().BeOfType<InvalidRoleError>();
+         result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.BadRequest);
     }
 
     [Test]
     public void GetAvailablePermissionClaims_ReturnsLocalizedCatalog()
     {
-        var claims = _service.GetAvailablePermissionClaims();
+         var claims = _service.GetAvailablePermissionClaims();
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(claims.Select(c => c.ClaimValue), Is.EqualTo(AuthConstants.Permissions.All.OrderBy(c => c, StringComparer.Ordinal).ToList()));
-            Assert.That(claims.All(c => c.ClaimType == AuthConstants.PermissionClaimType), Is.True);
-            Assert.That(claims.All(c => !string.IsNullOrWhiteSpace(c.DisplayName)), Is.True);
-        });
+         claims.Select(c => c.ClaimValue).Should().Equal(AuthConstants.Permissions.All.OrderBy(c => c, StringComparer.Ordinal).ToList());
+         claims.All(c => c.ClaimType == AuthConstants.PermissionClaimType).Should().BeTrue();
+         claims.All(c => !string.IsNullOrWhiteSpace(c.DisplayName)).Should().BeTrue();
     }
 
     private sealed class InMemoryUserRepository : IUserRepository
