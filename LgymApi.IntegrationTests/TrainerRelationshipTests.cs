@@ -219,7 +219,8 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
-            Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notificationId));
+            var act = async () => await handler.ProcessAsync(notificationId);
+            await act.Should().ThrowAsync<InvalidOperationException>();
         }
 
         using (var verifyScope = Factory.Services.CreateScope())
@@ -270,7 +271,8 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
-            Assert.ThrowsAsync<InvalidOperationException>(() => handler.ProcessAsync(notificationId));
+            var act = async () => await handler.ProcessAsync(notificationId);
+            await act.Should().ThrowAsync<InvalidOperationException>();
             await handler.ProcessAsync(notificationId);
         }
 

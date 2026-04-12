@@ -1,6 +1,5 @@
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
-using NUnit.Framework;
 
 namespace LgymApi.IntegrationTests;
 
@@ -32,12 +31,12 @@ public class ReliabilityFixtureSmokeTests : IntegrationTestBase
         var headerValue = Client.DefaultRequestHeaders.FirstOrDefault(h => h.Key == "Idempotency-Key").Value?.FirstOrDefault();
 
         // Assert
-        Assert.That(headerValue, Is.EqualTo(idempotencyKey), "Idempotency-Key header must be set correctly");
+        headerValue.Should().Be(idempotencyKey, "Idempotency-Key header must be set correctly");
 
         // Clean up
         ClearIdempotencyKey();
         var clearedValue = Client.DefaultRequestHeaders.FirstOrDefault(h => h.Key == "Idempotency-Key").Value?.FirstOrDefault();
-        Assert.That(clearedValue, Is.Null, "Idempotency-Key header must be clearable");
+        clearedValue.Should().BeNull("Idempotency-Key header must be clearable");
     }
 
     /// <summary>
@@ -56,8 +55,8 @@ public class ReliabilityFixtureSmokeTests : IntegrationTestBase
         var (firstResponse, secondResponse) = await SendRepeatedRequestAsync("/api/register", payload, idempotencyKey);
 
         // Assert
-        Assert.That(firstResponse, Is.Not.Null, "First request must succeed");
-        Assert.That(secondResponse, Is.Not.Null, "Second request must succeed");
+        firstResponse.Should().NotBeNull("First request must succeed");
+        secondResponse.Should().NotBeNull("Second request must succeed");
         // Both should complete without throwing (status code may differ per endpoint idempotency handling)
     }
 
@@ -74,10 +73,8 @@ public class ReliabilityFixtureSmokeTests : IntegrationTestBase
         // Act & Assert
         // When no record exists, count will be 0, and assertion should fail
         // The helper is called and should throw AssertionException
-        Assert.That(
-            () => AssertCommandEnvelopeUniquenessAsync(correlationId).GetAwaiter().GetResult(),
-            Throws.InstanceOf<AssertionException>(),
-            "Expected AssertionException when no CommandEnvelope exists for the correlation ID");
+        var act = () => AssertCommandEnvelopeUniquenessAsync(correlationId).GetAwaiter().GetResult();
+        act.Should().Throw<AssertionException>("Expected AssertionException when no CommandEnvelope exists for the correlation ID");
     }
 
     /// <summary>
@@ -91,7 +88,7 @@ public class ReliabilityFixtureSmokeTests : IntegrationTestBase
         var count = await CountAllCommandEnvelopesAsync();
 
         // Assert
-        Assert.That(count, Is.GreaterThanOrEqualTo(0), "CommandEnvelope count must be non-negative");
+        count.Should().BeGreaterThanOrEqualTo(0, "CommandEnvelope count must be non-negative");
     }
 
     /// <summary>
@@ -105,7 +102,7 @@ public class ReliabilityFixtureSmokeTests : IntegrationTestBase
         var count = await CountAllNotificationMessagesAsync();
 
         // Assert
-        Assert.That(count, Is.GreaterThanOrEqualTo(0), "NotificationMessage count must be non-negative");
+        count.Should().BeGreaterThanOrEqualTo(0, "NotificationMessage count must be non-negative");
     }
 
     /// <summary>
@@ -122,7 +119,7 @@ public class ReliabilityFixtureSmokeTests : IntegrationTestBase
         var count = await CountCommandEnvelopesByCorrelationIdAsync(correlationId);
 
         // Assert
-        Assert.That(count, Is.EqualTo(0), "Count must be zero for non-existent correlation ID");
+        count.Should().Be(0, "Count must be zero for non-existent correlation ID");
     }
 
     /// <summary>
@@ -139,7 +136,7 @@ public class ReliabilityFixtureSmokeTests : IntegrationTestBase
         var statuses = await GetCommandEnvelopeStatusesAsync(correlationId);
 
         // Assert
-        Assert.That(statuses, Is.Empty, "Status list must be empty for non-existent correlation ID");
+        statuses.Should().BeEmpty("Status list must be empty for non-existent correlation ID");
     }
 
     /// <summary>
@@ -150,9 +147,7 @@ public class ReliabilityFixtureSmokeTests : IntegrationTestBase
     public async Task ProcessPendingCommandsAsync_WithNoPendingCommands_CompletesSuccessfully()
     {
         // Act & Assert
-        Assert.DoesNotThrowAsync(async () =>
-        {
-            await ProcessPendingCommandsAsync();
-        }, "ProcessPendingCommandsAsync must be idempotent and safe even with no pending commands");
+        var act = async () => await ProcessPendingCommandsAsync();
+        await act.Should().NotThrowAsync("ProcessPendingCommandsAsync must be idempotent and safe even with no pending commands");
     }
 }

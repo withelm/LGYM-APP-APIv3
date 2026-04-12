@@ -611,16 +611,14 @@ public abstract class IntegrationTestBase : IDisposable
     }
 
     /// <summary>
-    /// Asserts that exactly one CommandEnvelope exists for the given CorrelationId.
+    /// Asserts that exactly one CommandEnvelope exists for the given correlation ID.
     /// Useful for verifying duplicate protection at the durable-intent layer.
     /// </summary>
     protected async Task AssertCommandEnvelopeUniquenessAsync(Id<CorrelationScope> correlationId, string? message = null)
     {
         var count = await CountCommandEnvelopesByCorrelationIdAsync(correlationId);
 
-        Assert.That(
-            count,
-            Is.EqualTo(1),
+        count.Should().Be(1, 
             message ?? $"Expected exactly one CommandEnvelope for CorrelationId {correlationId}, but found {count}");
     }
 
@@ -655,9 +653,7 @@ public abstract class IntegrationTestBase : IDisposable
     {
         var count = await CountNotificationMessagesByKeyAsync(notificationType, correlationId, recipient);
 
-        Assert.That(
-            count,
-            Is.EqualTo(1),
+        count.Should().Be(1,
             message ?? $"Expected exactly one NotificationMessage for Type={notificationType}, CorrelationId={correlationId}, Recipient={recipient}, but found {count}");
     }
 

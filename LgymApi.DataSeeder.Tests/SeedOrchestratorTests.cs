@@ -38,8 +38,8 @@ public sealed class SeedOrchestratorTests
 
         await orchestrator.RunAsync(context, seedContext, seedOptions, CancellationToken.None);
 
-        Assert.That(await context.Exercises.CountAsync(), Is.EqualTo(0));
-        Assert.That(seedContext.Exercises, Is.Empty);
+        (await context.Exercises.CountAsync()).Should().Be(0);
+        seedContext.Exercises.Should().BeEmpty();
     }
 
     [Test]
@@ -73,8 +73,8 @@ public sealed class SeedOrchestratorTests
 
         await orchestrator.RunAsync(context, seedContext, seedOptions, CancellationToken.None);
 
-        Assert.That(seedContext.AdminUser?.Name, Is.EqualTo("Admin"));
-        Assert.That(seedContext.TesterUser?.Name, Is.EqualTo("Tester"));
+        seedContext.AdminUser?.Name.Should().Be("Admin");
+        seedContext.TesterUser?.Name.Should().Be("Tester");
     }
 
     private sealed class FakeLegacyPasswordService : ILegacyPasswordService

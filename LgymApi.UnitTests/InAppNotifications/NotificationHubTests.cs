@@ -3,11 +3,12 @@ using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.UnitTests.Fakes;
+using LgymApi.TestUtils.Fakes;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Security.Claims;
+using FluentAssertions;
 
 namespace LgymApi.UnitTests.InAppNotifications;
 
@@ -31,9 +32,9 @@ public sealed class NotificationHubTests
 
         await hub.OnConnectedAsync();
 
-        Assert.That(context.AbortCalled, Is.False);
-        Assert.That(groups.AddCalls, Is.EqualTo(1));
-        Assert.That(groups.LastGroupName, Is.EqualTo($"user-{userId}"));
+        context.AbortCalled.Should().BeFalse();
+        groups.AddCalls.Should().Be(1);
+        groups.LastGroupName.Should().Be($"user-{userId}");
     }
 
     [Test]
@@ -51,8 +52,8 @@ public sealed class NotificationHubTests
 
         await hub.OnConnectedAsync();
 
-        Assert.That(context.AbortCalled, Is.True);
-        Assert.That(groups.AddCalls, Is.EqualTo(0));
+        context.AbortCalled.Should().BeTrue();
+        groups.AddCalls.Should().Be(0);
     }
 
     [Test]
@@ -72,8 +73,8 @@ public sealed class NotificationHubTests
 
         await hub.OnConnectedAsync();
 
-        Assert.That(context.AbortCalled, Is.True);
-        Assert.That(groups.AddCalls, Is.EqualTo(0));
+        context.AbortCalled.Should().BeTrue();
+        groups.AddCalls.Should().Be(0);
     }
 
     private sealed class FakeGroupManager : IGroupManager

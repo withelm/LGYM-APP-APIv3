@@ -22,7 +22,7 @@ using LgymApi.Infrastructure.Pagination;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
-using LgymApi.UnitTests.Fakes;
+using LgymApi.TestUtils.Fakes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

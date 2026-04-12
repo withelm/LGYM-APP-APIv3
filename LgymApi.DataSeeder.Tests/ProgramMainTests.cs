@@ -24,7 +24,7 @@ public sealed class ProgramMainTests
 
             var code = await Program.Main(Array.Empty<string>());
 
-            Assert.That(code, Is.EqualTo(1));
+            code.Should().Be(1);
         }
         finally
         {
@@ -55,7 +55,7 @@ public sealed class ProgramMainTests
 
             var code = await Program.Main(Array.Empty<string>());
 
-            Assert.That(code, Is.EqualTo(0));
+            code.Should().Be(0);
         }
         finally
         {

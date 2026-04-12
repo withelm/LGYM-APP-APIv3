@@ -24,9 +24,9 @@ public sealed class UserSeederTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        Assert.That(await context.Users.CountAsync(), Is.EqualTo(2));
-        Assert.That(seedContext.AdminUser, Is.Not.Null);
-        Assert.That(seedContext.TesterUser, Is.Not.Null);
+        (await context.Users.CountAsync()).Should().Be(2);
+        seedContext.AdminUser.Should().NotBeNull();
+        seedContext.TesterUser.Should().NotBeNull();
     }
 
     [Test]
@@ -43,7 +43,7 @@ public sealed class UserSeederTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        Assert.That(seedContext.DemoUsers.Count, Is.EqualTo(2));
+        seedContext.DemoUsers.Count.Should().Be(2);
     }
 
     private sealed class FakeLegacyPasswordService : ILegacyPasswordService

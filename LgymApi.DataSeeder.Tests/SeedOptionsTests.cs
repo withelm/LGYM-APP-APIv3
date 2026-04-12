@@ -13,11 +13,8 @@ public sealed class SeedOptionsTests
             SeedDemoData = true
         };
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(options.DropDatabase, Is.True);
-            Assert.That(options.UseMigrations, Is.False);
-            Assert.That(options.SeedDemoData, Is.True);
-        });
+        options.DropDatabase.Should().BeTrue();
+        options.UseMigrations.Should().BeFalse();
+        options.SeedDemoData.Should().BeTrue();
     }
 }
