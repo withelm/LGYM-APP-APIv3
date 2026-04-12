@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -19,7 +20,7 @@ public sealed class ValidationMessageResourceGuardTests
         var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
         var apiRoot = Path.Combine(repoRoot, "LgymApi.Api");
 
-        Assert.That(Directory.Exists(apiRoot), Is.True, $"LgymApi.Api root '{apiRoot}' not found.");
+        Directory.Exists(apiRoot).Should().BeTrue($"LgymApi.Api root '{apiRoot}' not found.");
 
         var validatorFiles = Directory
             .EnumerateFiles(apiRoot, "*Validator.cs", SearchOption.AllDirectories)
@@ -27,7 +28,7 @@ public sealed class ValidationMessageResourceGuardTests
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
 
-        Assert.That(validatorFiles, Is.Not.Empty, "No validator files found for validation message resource guard test.");
+        validatorFiles.Should().NotBeEmpty("No validator files found for validation message resource guard test.");
 
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
         var violations = new List<Violation>();
@@ -57,12 +58,12 @@ public sealed class ValidationMessageResourceGuardTests
             return fileCompare != 0 ? fileCompare : a.Line.CompareTo(b.Line);
         });
 
-        Assert.That(
-            violations.Count,
-            Is.EqualTo(0),
-            $"Validators must use Messages resource keys, not hardcoded strings. " +
-            $"Found {violations.Count} violations:\n" +
-            string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
+        violations
+            .Should()
+            .BeEmpty(
+                $"Validators must use Messages resource keys, not hardcoded strings. " +
+                $"Found {violations.Count} violations:\n" +
+                string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
     }
 
     /// <summary>

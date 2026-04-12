@@ -47,6 +47,12 @@ return Ok(_mapper.Map<EDto>(res));
 - **Integration**: `dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj`
 - **DataSeeder**: `dotnet test LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj`
 
+## Testing Conventions
+- **Frameworks**: Use **NUnit** for test structure and **FluentAssertions** for all assertions.
+- **Mocking**: Prefer **NSubstitute** for defining behavior and verifying calls. Use hand-written fakes only for complex stateful behavior (e.g., `FakeUnitOfWork`), and centralize them in `LgymApi.TestUtils`.
+- **Architecture Guards**: New features must be covered by Roslyn-based architecture tests in `LgymApi.ArchitectureTests`. These enforce structural rules without running the full application.
+- **Deduplication**: Avoid duplicate fakes across test files. If a mock or fake is needed in multiple places, move it to the `Fakes` directory in `LgymApi.TestUtils`.
+
 ## Architecture Test Constraints
 - `ServiceRegistrationGuardTests`: Local registration in `ServiceCollectionExtensions`.
 - `ApiContractTypedIdGuardTests` & `ApplicationInputModelStringIdGuardTests`: ID type boundaries.
@@ -54,4 +60,8 @@ return Ok(_mapper.Map<EDto>(res));
 - `FeatureFolderStructureGuardTests` & `FeatureLocationExclusivityGuardTests`: Folder structure.
 - `ServiceMethodParameterGuardTests`: Validates allowed service parameter types.
 - `ControllerActionCancellationTokenGuardTests`: Enforces CancellationToken propagation.
+- `ValidationMessageResourceGuardTests`: Ensures FluentValidation uses resource-backed messages.
+- `EnumEvolutionGuardTests`: Prevents breaking changes to existing enums.
+- `LegacyContractShapeGuardTests`: Enforces `_id` and legacy field requirements in API contracts.
+- `ServiceTransactionHeuristicGuardTests`: Detects missing transactions in multi-repository services.
 - Details in [Architecture Guide](docs/ARCHITECTURE.md).
