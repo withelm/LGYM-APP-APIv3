@@ -1,9 +1,11 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using System.Globalization;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -46,14 +48,11 @@ public sealed class WelcomeEmailTemplateComposerTests
             CultureName = "pl-PL"
         };
 
-        var message = composer.ComposeWelcome(payload);
+         var message = composer.ComposeWelcome(payload);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(message.To, Is.EqualTo("alicja@example.com"));
-            Assert.That(message.Subject, Is.EqualTo("Witaj Alicja"));
-            Assert.That(message.Body, Is.EqualTo("Cześć Alicja!"));
-        });
+         message.To.Should().Be("alicja@example.com");
+         message.Subject.Should().Be("Witaj Alicja");
+         message.Body.Should().Be("Cześć Alicja!");
     }
 
     [Test]
@@ -68,13 +67,10 @@ public sealed class WelcomeEmailTemplateComposerTests
             CultureName = "de-DE"
         };
 
-        var message = composer.ComposeWelcome(payload);
+         var message = composer.ComposeWelcome(payload);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(message.Subject, Is.EqualTo("Welcome Alex"));
-            Assert.That(message.Body, Is.EqualTo("Hi Alex!"));
-        });
+         message.Subject.Should().Be("Welcome Alex");
+         message.Body.Should().Be("Hi Alex!");
     }
 
     private WelcomeEmailTemplateComposer CreateComposer()

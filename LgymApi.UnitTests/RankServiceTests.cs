@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Services;
 
@@ -13,12 +14,12 @@ public sealed class RankServiceTests
     {
         var ranks = _service.GetRanks();
 
-        Assert.That(ranks, Is.SameAs(RankDefinitions.All));
-        Assert.That(ranks, Has.Count.EqualTo(10));
-        Assert.That(ranks[0].Name, Is.EqualTo("Junior 1"));
-        Assert.That(ranks[0].NeedElo.Value, Is.EqualTo(0));
-        Assert.That(ranks[^1].Name, Is.EqualTo("Champ"));
-        Assert.That(ranks[^1].NeedElo.Value, Is.EqualTo(30000));
+        ranks.Should().BeSameAs(RankDefinitions.All);
+        ranks.Should().HaveCount(10);
+        ranks[0].Name.Should().Be("Junior 1");
+        ranks[0].NeedElo.Value.Should().Be(0);
+        ranks[^1].Name.Should().Be("Champ");
+        ranks[^1].NeedElo.Value.Should().Be(30000);
     }
 
     [TestCase(0, "Junior 1")]
@@ -33,7 +34,7 @@ public sealed class RankServiceTests
     {
         var rank = _service.GetCurrentRank(elo);
 
-        Assert.That(rank.Name, Is.EqualTo(expectedName));
+        rank.Name.Should().Be(expectedName);
     }
 
     [Test]
@@ -41,8 +42,8 @@ public sealed class RankServiceTests
     {
         var next = _service.GetNextRank("Mid 1");
 
-        Assert.That(next, Is.Not.Null);
-        Assert.That(next!.Name, Is.EqualTo("Mid 2"));
+        next.Should().NotBeNull();
+        next!.Name.Should().Be("Mid 2");
     }
 
     [Test]
@@ -50,7 +51,7 @@ public sealed class RankServiceTests
     {
         var next = _service.GetNextRank("Champ");
 
-        Assert.That(next, Is.Null);
+        next.Should().BeNull();
     }
 
     [Test]
@@ -58,6 +59,6 @@ public sealed class RankServiceTests
     {
         var next = _service.GetNextRank("Unknown");
 
-        Assert.That(next, Is.Null);
+        next.Should().BeNull();
     }
 }

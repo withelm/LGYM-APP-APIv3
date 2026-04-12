@@ -1,4 +1,5 @@
 using System.Reflection;
+using FluentAssertions;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Mapping.Extensions;
 
@@ -30,11 +31,8 @@ public sealed class MapperNestedCompositionTests
 
         var result = mapper.Map<ParentSource, ParentTarget>(source, context);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Child?.Name, Is.EqualTo("bench!"));
-            Assert.That(result.Children.Select(c => c.Name), Is.EqualTo(new[] { "squat!", "deadlift!" }));
-        });
+        result.Child?.Name.Should().Be("bench!");
+        result.Children.Select(c => c.Name).Should().Equal(["squat!", "deadlift!"]);
     }
 
     [Test]
@@ -51,11 +49,8 @@ public sealed class MapperNestedCompositionTests
 
         var result = mapper.Map<ParentSource, ParentTarget>(source, context);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Child?.Name, Is.EqualTo("press!"));
-            Assert.That(result.Children, Is.Empty);
-        });
+        result.Child?.Name.Should().Be("press!");
+        result.Children.Should().BeEmpty();
     }
 
     [Test]
@@ -76,11 +71,8 @@ public sealed class MapperNestedCompositionTests
 
         var result = mapper.Map<ParentSource, ParentTarget>(source, context);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Child, Is.Null);
-            Assert.That(result.Children.Select(c => c.Name), Is.EqualTo(new[] { "row!", "curl!" }));
-        });
+        result.Child.Should().BeNull();
+        result.Children.Select(c => c.Name).Should().Equal(["row!", "curl!"]);
     }
 
     [Test]
@@ -101,11 +93,8 @@ public sealed class MapperNestedCompositionTests
 
         var result = mapper.Map<ParentTarget>(source, context);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Child?.Name, Is.EqualTo("pull!"));
-            Assert.That(result.Children.Select(c => c.Name), Is.EqualTo(ExpectedSinglePushResult));
-        });
+        result.Child?.Name.Should().Be("pull!");
+        result.Children.Select(c => c.Name).Should().Equal(ExpectedSinglePushResult);
     }
 
     [Test]
@@ -116,7 +105,7 @@ public sealed class MapperNestedCompositionTests
 
         var result = mapper.Map<PolymorphicTarget>(source);
 
-        Assert.That(result.Marker, Is.EqualTo("derived"));
+        result.Marker.Should().Be("derived");
     }
 
     [Test]
@@ -125,9 +114,10 @@ public sealed class MapperNestedCompositionTests
         var mapper = CreateMapper(new MissingNestedMappingProfile());
         object source = new MissingChildSource();
 
-        var ex = Assert.Throws<InvalidOperationException>(() => mapper.Map<MissingChildTarget>(source));
+        var act = new Action(() => mapper.Map<MissingChildTarget>(source));
+        var ex = act.Should().Throw<InvalidOperationException>().And;
 
-        Assert.That(ex!.Message, Does.Contain("Mapping from MissingChildSource to MissingChildTarget is not registered."));
+        ex.Message.Should().Contain("Mapping from MissingChildSource to MissingChildTarget is not registered.");
     }
 
     [Test]
@@ -145,7 +135,7 @@ public sealed class MapperNestedCompositionTests
 
         var result = mapper.MapList<ChildTarget>(source, context);
 
-        Assert.That(result.Select(x => x.Name), Is.EqualTo(ExpectedPullPressResults));
+        result.Select(x => x.Name).Should().Equal(ExpectedPullPressResults);
     }
 
     [Test]
@@ -160,7 +150,7 @@ public sealed class MapperNestedCompositionTests
 
         var result = mapper.MapList<PolymorphicTarget>(source);
 
-        Assert.That(result.Select(x => x.Marker), Is.EqualTo(ExpectedBaseDerivedMarkers));
+        result.Select(x => x.Marker).Should().Equal(ExpectedBaseDerivedMarkers);
     }
 
     [Test]
@@ -171,7 +161,7 @@ public sealed class MapperNestedCompositionTests
 
         var result = source.MapTo<PolymorphicTarget>(mapper);
 
-        Assert.That(result.Marker, Is.EqualTo("derived"));
+        result.Marker.Should().Be("derived");
     }
 
     [Test]
@@ -186,7 +176,7 @@ public sealed class MapperNestedCompositionTests
 
         var result = source.MapToList<PolymorphicTarget>(mapper);
 
-        Assert.That(result.Select(x => x.Marker), Is.EqualTo(ExpectedBaseDerivedMarkers));
+        result.Select(x => x.Marker).Should().Equal(ExpectedBaseDerivedMarkers);
     }
 
     [Test]
@@ -195,9 +185,10 @@ public sealed class MapperNestedCompositionTests
         var mapper = CreateMapper(new MissingNestedMappingProfile());
         var source = new MissingParentSource { Child = new MissingChildSource() };
 
-        var ex = Assert.Throws<InvalidOperationException>(() => mapper.Map<MissingParentSource, MissingParentTarget>(source));
+        var act = new Action(() => mapper.Map<MissingParentSource, MissingParentTarget>(source));
+        var ex = act.Should().Throw<InvalidOperationException>().And;
 
-        Assert.That(ex!.Message, Does.Contain("Mapping from MissingChildSource to MissingChildTarget is not registered."));
+        ex.Message.Should().Contain("Mapping from MissingChildSource to MissingChildTarget is not registered.");
     }
 
     [Test]
@@ -206,9 +197,10 @@ public sealed class MapperNestedCompositionTests
         var mapper = CreateMapper(new CyclicNestedMappingProfile());
         var source = new CyclicSource { TriggerCycle = true };
 
-        var ex = Assert.Throws<InvalidOperationException>(() => mapper.Map<CyclicSource, CyclicTarget>(source));
+        var act = new Action(() => mapper.Map<CyclicSource, CyclicTarget>(source));
+        var ex = act.Should().Throw<InvalidOperationException>().And;
 
-        Assert.That(ex!.Message, Does.Contain("Cyclic nested mapping detected."));
+        ex.Message.Should().Contain("Cyclic nested mapping detected.");
     }
 
     [Test]
@@ -216,9 +208,10 @@ public sealed class MapperNestedCompositionTests
     {
         var mapper = CreateMapper(new CyclicValueTypeMappingProfile());
 
-        var ex = Assert.Throws<InvalidOperationException>(() => mapper.Map<int, int>(1));
+        var act = new Action(() => mapper.Map<int, int>(1));
+        var ex = act.Should().Throw<InvalidOperationException>().And;
 
-        Assert.That(ex!.Message, Does.Contain("Cyclic nested mapping detected."));
+        ex.Message.Should().Contain("Cyclic nested mapping detected.");
     }
 
     [Test]
@@ -228,10 +221,11 @@ public sealed class MapperNestedCompositionTests
         var secondMapper = CreateMapper(new NestedCompositionProfile());
         var context = firstMapper.CreateContext();
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
+        var act = new Action(() =>
             secondMapper.Map<ParentSource, ParentTarget>(new ParentSource(), context));
+        var ex = act.Should().Throw<InvalidOperationException>().And;
 
-        Assert.That(ex!.Message, Does.Contain("already bound to a different mapper"));
+        ex.Message.Should().Contain("already bound to a different mapper");
     }
 
     [Test]
@@ -245,7 +239,7 @@ public sealed class MapperNestedCompositionTests
 
         var results = await Task.WhenAll(first, second);
 
-        Assert.That(results, Is.EqualTo(new[] { 1, 1 }));
+        results.Should().Equal([1, 1]);
     }
 
     [Test]
@@ -260,12 +254,9 @@ public sealed class MapperNestedCompositionTests
 
         var results = await Task.WhenAll(firstTask, secondTask);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(results.Count(r => r.Success), Is.EqualTo(1));
-            Assert.That(results.Count(r => !r.Success), Is.EqualTo(1));
-            Assert.That(results.Single(r => !r.Success).Exception, Is.TypeOf<InvalidOperationException>());
-        });
+        results.Count(r => r.Success).Should().Be(1);
+        results.Count(r => !r.Success).Should().Be(1);
+        results.Single(r => !r.Success).Exception.Should().BeOfType<InvalidOperationException>();
     }
 
     private static IMapper CreateMapper(params IMappingProfile[] profiles)

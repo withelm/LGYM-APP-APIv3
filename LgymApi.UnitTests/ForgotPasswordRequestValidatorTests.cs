@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Features.User.Validation;
 
@@ -14,7 +15,7 @@ public sealed class ForgotPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.True);
+        result.IsValid.Should().BeTrue();
     }
 
     [Test]
@@ -25,8 +26,8 @@ public sealed class ForgotPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
-        Assert.That(result.Errors, Has.Some.Property("PropertyName").EqualTo("Email"));
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Email");
     }
 
     [Test]
@@ -37,8 +38,8 @@ public sealed class ForgotPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
-        Assert.That(result.Errors, Has.Some.Property("PropertyName").EqualTo("Email"));
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Email");
     }
 
     [Test]
@@ -49,7 +50,7 @@ public sealed class ForgotPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.True);
+        result.IsValid.Should().BeTrue();
     }
 
     [Test]
@@ -60,6 +61,6 @@ public sealed class ForgotPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
+        result.IsValid.Should().BeFalse();
     }
 }

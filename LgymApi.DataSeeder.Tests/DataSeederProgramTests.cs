@@ -11,10 +11,10 @@ public sealed class DataSeederProgramTests
     {
         var masked = DataSeederProgram.MaskConnectionString("Host=localhost;Password=secret;Username=user");
 
-        Assert.That(masked, Does.Contain("Host=localhost"));
-        Assert.That(masked, Does.Contain("Username=user"));
-        Assert.That(masked, Does.Contain("Password=***"));
-        Assert.That(masked, Does.Not.Contain("secret"));
+        masked.Should().Contain("Host=localhost");
+        masked.Should().Contain("Username=user");
+        masked.Should().Contain("Password=***");
+        masked.Should().NotContain("secret");
     }
 
     [Test]
@@ -22,7 +22,7 @@ public sealed class DataSeederProgramTests
     {
         var masked = DataSeederProgram.MaskConnectionString(" ");
 
-        Assert.That(masked, Is.EqualTo("<empty>"));
+        masked.Should().Be("<empty>");
     }
 
     [Test]
@@ -33,8 +33,8 @@ public sealed class DataSeederProgramTests
         {
             var config = DataSeederProgram.BuildConfiguration(repoRoot);
 
-            Assert.That(config.GetConnectionString("Postgres"), Is.EqualTo("Host=localhost"));
-            Assert.That(config["FeatureFlag"], Is.EqualTo("true"));
+            config.GetConnectionString("Postgres").Should().Be("Host=localhost");
+            config["FeatureFlag"].Should().Be("true");
         }
         finally
         {

@@ -36,7 +36,7 @@ public sealed class ConsolePromptTests
 
         var result = ConsolePrompt.Confirm("Continue?", defaultValue: true);
 
-        Assert.That(result, Is.True);
+        result.Should().BeTrue();
     }
 
     [Test]
@@ -47,7 +47,7 @@ public sealed class ConsolePromptTests
 
         var result = ConsolePrompt.Confirm("Continue?", defaultValue: false);
 
-        Assert.That(result, Is.True);
+        result.Should().BeTrue();
     }
 
     [Test]
@@ -58,7 +58,7 @@ public sealed class ConsolePromptTests
 
         var result = ConsolePrompt.Choose("Pick", new[] { "Migrate", "EnsureCreated" }, "Migrate");
 
-        Assert.That(result, Is.EqualTo("Migrate"));
+        result.Should().Be("Migrate");
     }
 
     [Test]
@@ -69,6 +69,6 @@ public sealed class ConsolePromptTests
 
         var result = ConsolePrompt.Choose("Pick", new[] { "Migrate", "EnsureCreated" }, "Migrate");
 
-        Assert.That(result, Is.EqualTo("EnsureCreated"));
+        result.Should().Be("EnsureCreated");
     }
 }

@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
@@ -24,13 +25,13 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandlerTests
 
         await handler.ExecuteAsync(command);
 
-        Assert.That(service.Calls, Is.EqualTo(1));
-        Assert.That(service.LastInput!.RecipientId, Is.EqualTo(command.TraineeId));
-        Assert.That(service.LastInput.SenderUserId, Is.EqualTo(command.TrainerId));
-        Assert.That(service.LastInput.IsSystemNotification, Is.False);
-        Assert.That(service.LastInput.Message, Is.EqualTo(Messages.TrainerInvitationSent));
-        Assert.That(service.LastInput.RedirectUrl, Is.EqualTo("/trainers/invitations"));
-        Assert.That(service.LastInput.Type, Is.EqualTo(InAppNotificationTypes.InvitationSent));
+        service.Calls.Should().Be(1);
+        service.LastInput!.RecipientId.Should().Be(command.TraineeId);
+        service.LastInput.SenderUserId.Should().Be(command.TrainerId);
+        service.LastInput.IsSystemNotification.Should().BeFalse();
+        service.LastInput.Message.Should().Be(Messages.TrainerInvitationSent);
+        service.LastInput.RedirectUrl.Should().Be("/trainers/invitations");
+        service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationSent);
     }
 
     [Test]
@@ -41,7 +42,7 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandlerTests
 
         await handler.ExecuteAsync(new TrainerInvitationCreatedInAppNotificationCommand { TraineeId = Id<User>.New(), TrainerId = Id<User>.New() });
 
-        Assert.That(service.Calls, Is.EqualTo(1));
+        service.Calls.Should().Be(1);
     }
 
     private static InAppNotificationResult CreateResult()

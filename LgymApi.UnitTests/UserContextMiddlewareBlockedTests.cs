@@ -7,10 +7,11 @@ using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.UnitTests.Fakes;
+using LgymApi.TestUtils.Fakes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using System.Security.Claims;
+using FluentAssertions;
 
 namespace LgymApi.UnitTests;
 
@@ -47,10 +48,7 @@ public sealed class UserContextMiddlewareBlockedTests
 
         await _middleware.InvokeAsync(context, _userRepository, _sessionStore);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status403Forbidden));
-        });
+        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
     }
 
     [Test]
@@ -73,11 +71,8 @@ public sealed class UserContextMiddlewareBlockedTests
 
         await middleware.InvokeAsync(context, _userRepository, _sessionStore);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(nextCalled, Is.True);
-            Assert.That(context.Response.StatusCode, Is.EqualTo(200));
-        });
+        nextCalled.Should().BeTrue();
+        context.Response.StatusCode.Should().Be(200);
     }
 
     private static DefaultHttpContext CreateHttpContext(Id<User> userId, Id<UserSession> sessionId)

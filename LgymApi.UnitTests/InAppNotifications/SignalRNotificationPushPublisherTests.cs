@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Api.Features.InAppNotification;
 using LgymApi.Api.Hubs;
 using LgymApi.Application.Notifications.Models;
@@ -7,6 +8,7 @@ using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests.InAppNotifications;
 
@@ -19,12 +21,12 @@ public sealed class SignalRNotificationPushPublisherTests
         var (publisher, clientProxy, logger) = CreatePublisher(throwOnSend: false);
         var notification = CreateNotification();
 
-        await InvokePushAsync(publisher, notification);
+         await InvokePushAsync(publisher, notification);
 
-        Assert.That(clientProxy.SendCalls, Is.EqualTo(1));
-        Assert.That(clientProxy.LastMethod, Is.EqualTo("ReceiveNotification"));
-        Assert.That(ReferenceEquals(clientProxy.LastArgs![0], notification), Is.True);
-        Assert.That(logger.WarningCalls, Is.EqualTo(0));
+         clientProxy.SendCalls.Should().Be(1);
+         clientProxy.LastMethod.Should().Be("ReceiveNotification");
+         ReferenceEquals(clientProxy.LastArgs![0], notification).Should().BeTrue();
+         logger.WarningCalls.Should().Be(0);
     }
 
     [Test]
@@ -33,9 +35,9 @@ public sealed class SignalRNotificationPushPublisherTests
         var (publisher, _, logger) = CreatePublisher(throwOnSend: true);
         var notification = CreateNotification();
 
-        await InvokePushAsync(publisher, notification);
+         await InvokePushAsync(publisher, notification);
 
-        Assert.That(logger.WarningCalls, Is.EqualTo(1));
+         logger.WarningCalls.Should().Be(1);
     }
 
     private static (object Publisher, FakeClientProxy ClientProxy, FakeLogger Logger) CreatePublisher(bool throwOnSend)

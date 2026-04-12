@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
@@ -21,15 +22,12 @@ public sealed class HangfireEmailBackgroundSchedulerTests
 
         scheduler.Enqueue(notificationId);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(client.CreatedJobs, Has.Count.EqualTo(1));
-            var created = client.CreatedJobs[0];
-            Assert.That(created.Job.Type, Is.EqualTo(typeof(IEmailJob)));
-            Assert.That(created.Job.Method.Name, Is.EqualTo("ExecuteAsync"));
-            Assert.That(created.Job.Args[0], Is.EqualTo(notificationId));
-            Assert.That(created.State, Is.TypeOf<EnqueuedState>());
-        });
+        client.CreatedJobs.Should().HaveCount(1);
+        var created = client.CreatedJobs[0];
+        created.Job.Type.Should().Be(typeof(IEmailJob));
+        created.Job.Method.Name.Should().Be("ExecuteAsync");
+        created.Job.Args[0].Should().Be(notificationId);
+        created.State.Should().BeOfType<EnqueuedState>();
     }
 
     private sealed class FakeBackgroundJobClient : IBackgroundJobClient

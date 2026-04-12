@@ -38,6 +38,6 @@ public sealed class ExerciseTranslationSeederTests
         var translation = await context.ExerciseTranslations
             .SingleAsync(t => t.ExerciseId == exercise.Id && t.Culture == "pl");
 
-        Assert.That(translation.Name, Is.EqualTo("Wyciskanie leżąc"));
+        translation.Name.Should().Be("Wyciskanie leżąc");
     }
 }

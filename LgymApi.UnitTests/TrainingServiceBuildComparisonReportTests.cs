@@ -1,8 +1,10 @@
+using FluentAssertions;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -46,13 +48,10 @@ public sealed class TrainingServiceBuildComparisonReportTests
         var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
 
         // Assert
-         Assert.Multiple(() =>
-         {
-             Assert.That(result, Has.Count.EqualTo(3));
-             Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseC));
-             Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseA));
-             Assert.That(result[2].ExerciseId, Is.EqualTo(exerciseB));
-         });
+         result.Should().HaveCount(3);
+         result[0].ExerciseId.Should().Be(exerciseC);
+         result[1].ExerciseId.Should().Be(exerciseA);
+         result[2].ExerciseId.Should().Be(exerciseB);
     }
 
     [Test]
@@ -83,14 +82,11 @@ public sealed class TrainingServiceBuildComparisonReportTests
         var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
 
          // Assert
-         Assert.Multiple(() =>
-         {
-             Assert.That(result, Has.Count.EqualTo(2));
-             Assert.That(result[0].ExerciseId, Is.EqualTo(exerciseB));
-             Assert.That(result[0].SeriesComparisons, Has.Count.EqualTo(2));
-             Assert.That(result[1].ExerciseId, Is.EqualTo(exerciseA));
-             Assert.That(result[1].SeriesComparisons, Has.Count.EqualTo(2));
-         });
+         result.Should().HaveCount(2);
+         result[0].ExerciseId.Should().Be(exerciseB);
+         result[0].SeriesComparisons.Should().HaveCount(2);
+         result[1].ExerciseId.Should().Be(exerciseA);
+         result[1].SeriesComparisons.Should().HaveCount(2);
     }
 
     [Test]
@@ -125,16 +121,13 @@ public sealed class TrainingServiceBuildComparisonReportTests
         var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
 
         // Assert
-        Assert.Multiple(() =>
-        {
-            Assert.That(result, Has.Count.EqualTo(1));
-            var comparison = result[0].SeriesComparisons[0];
-            Assert.That(comparison.CurrentResult.Weight, Is.EqualTo(80));
-            Assert.That(comparison.CurrentResult.Reps, Is.EqualTo(10));
-            Assert.That(comparison.PreviousResult, Is.Not.Null);
-            Assert.That(comparison.PreviousResult!.Weight, Is.EqualTo(75));
-            Assert.That(comparison.PreviousResult.Reps, Is.EqualTo(8));
-        });
+        result.Should().HaveCount(1);
+        var comparison = result[0].SeriesComparisons[0];
+        comparison.CurrentResult.Weight.Should().Be(80);
+        comparison.CurrentResult.Reps.Should().Be(10);
+        comparison.PreviousResult.Should().NotBeNull();
+        comparison.PreviousResult!.Weight.Should().Be(75);
+        comparison.PreviousResult.Reps.Should().Be(8);
     }
 
     // Test double — BuildComparisonReport does not use any dependencies

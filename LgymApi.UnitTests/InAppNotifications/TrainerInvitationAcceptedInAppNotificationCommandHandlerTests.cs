@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Notifications;
@@ -10,6 +11,7 @@ using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using LgymApi.Resources;
 using Microsoft.Extensions.Logging.Abstractions;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests.InAppNotifications;
 
@@ -23,15 +25,15 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandlerTest
         var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>.Instance);
         var command = new TrainerInvitationAcceptedInAppNotificationCommand { TrainerId = Id<User>.New(), TraineeId = Id<User>.New() };
 
-        await handler.ExecuteAsync(command);
+         await handler.ExecuteAsync(command);
 
-        Assert.That(service.Calls, Is.EqualTo(1));
-        Assert.That(service.LastInput!.RecipientId, Is.EqualTo(command.TrainerId));
-        Assert.That(service.LastInput.SenderUserId, Is.EqualTo(command.TraineeId));
-        Assert.That(service.LastInput.IsSystemNotification, Is.False);
-        Assert.That(service.LastInput.Message, Is.EqualTo(Messages.TrainerInvitationAccepted));
-        Assert.That(service.LastInput.RedirectUrl, Is.EqualTo("/trainers/dashboard"));
-        Assert.That(service.LastInput.Type, Is.EqualTo(InAppNotificationTypes.InvitationAccepted));
+         service.Calls.Should().Be(1);
+         service.LastInput!.RecipientId.Should().Be(command.TrainerId);
+         service.LastInput.SenderUserId.Should().Be(command.TraineeId);
+         service.LastInput.IsSystemNotification.Should().BeFalse();
+         service.LastInput.Message.Should().Be(Messages.TrainerInvitationAccepted);
+         service.LastInput.RedirectUrl.Should().Be("/trainers/dashboard");
+         service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationAccepted);
     }
 
     [Test]
@@ -40,9 +42,9 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandlerTest
         var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Failure(new BadRequestError("boom")));
         var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>.Instance);
 
-        await handler.ExecuteAsync(new TrainerInvitationAcceptedInAppNotificationCommand { TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
+         await handler.ExecuteAsync(new TrainerInvitationAcceptedInAppNotificationCommand { TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
 
-        Assert.That(service.Calls, Is.EqualTo(1));
+         service.Calls.Should().Be(1);
     }
 
     private static InAppNotificationResult CreateResult()

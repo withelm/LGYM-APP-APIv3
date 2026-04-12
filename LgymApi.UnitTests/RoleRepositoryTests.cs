@@ -7,6 +7,7 @@ using LgymApi.Infrastructure.Pagination;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Application.Pagination;
 using Microsoft.EntityFrameworkCore;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -26,11 +27,8 @@ public sealed class RoleRepositoryTests
         var exists = await repository.ExistsByNameAsync(" admin ");
         var existsExcludingSame = await repository.ExistsByNameAsync("ADMIN", adminRole.Id);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(exists, Is.True);
-            Assert.That(existsExcludingSame, Is.False);
-        });
+        exists.Should().BeTrue();
+        existsExcludingSame.Should().BeFalse();
     }
 
     [Test]

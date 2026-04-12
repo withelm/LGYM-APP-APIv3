@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -42,9 +43,9 @@ public sealed class BackgroundActionMessageRepositoryTests
 
         // Assert
         var saved = await dbContext.CommandEnvelopes.FindAsync(envelope.Id);
-        Assert.That(saved, Is.Not.Null);
-        Assert.That(saved.CommandTypeFullName, Is.EqualTo("TestNamespace.TestCommand, TestAssembly"));
-        Assert.That(saved.Status, Is.EqualTo(ActionExecutionStatus.Pending));
+        saved.Should().NotBeNull();
+        saved.CommandTypeFullName.Should().Be("TestNamespace.TestCommand, TestAssembly");
+        saved.Status.Should().Be(ActionExecutionStatus.Pending);
     }
 
     [Test]
@@ -75,8 +76,8 @@ public sealed class BackgroundActionMessageRepositoryTests
         var found = await repository.FindByIdAsync(envelope.Id);
 
         // Assert
-        Assert.That(found, Is.Not.Null);
-        Assert.That(found.Id, Is.EqualTo(envelope.Id));
+        found.Should().NotBeNull();
+        found.Id.Should().Be(envelope.Id);
     }
 
     [Test]
@@ -90,11 +91,11 @@ public sealed class BackgroundActionMessageRepositoryTests
         await using var dbContext = new AppDbContext(options);
         var repository = new CommandEnvelopeRepository(dbContext);
 
-        // Act
-        var found = await repository.FindByIdAsync(Id<CommandEnvelope>.New());
+         // Act
+         var found = await repository.FindByIdAsync(Id<CommandEnvelope>.New());
 
-        // Assert
-        Assert.That(found, Is.Null);
+         // Assert
+         found.Should().BeNull();
     }
 
     [Test]
@@ -125,9 +126,9 @@ public sealed class BackgroundActionMessageRepositoryTests
         // Act
         var found = await repository.FindByCorrelationIdAsync(correlationId);
 
-        // Assert
-        Assert.That(found, Is.Not.Null);
-        Assert.That(found.CorrelationId, Is.EqualTo(correlationId));
+         // Assert
+         found.Should().NotBeNull();
+         found.CorrelationId.Should().Be(correlationId);
     }
 
     [Test]
@@ -141,11 +142,11 @@ public sealed class BackgroundActionMessageRepositoryTests
         await using var dbContext = new AppDbContext(options);
         var repository = new CommandEnvelopeRepository(dbContext);
 
-        // Act
-        var found = await repository.FindByCorrelationIdAsync(Id<CorrelationScope>.New());
+         // Act
+         var found = await repository.FindByCorrelationIdAsync(Id<CorrelationScope>.New());
 
-        // Assert
-        Assert.That(found, Is.Null);
+         // Assert
+         found.Should().BeNull();
     }
 
       [Test]
@@ -203,9 +204,9 @@ public sealed class BackgroundActionMessageRepositoryTests
         // Act
         var pending = await repository.GetPendingRetriesAsync();
 
-        // Assert
-        Assert.That(pending, Has.Count.EqualTo(1));
-        Assert.That(pending.First().Id, Is.EqualTo(readyForRetry.Id));
+         // Assert
+         pending.Should().HaveCount(1);
+         pending.First().Id.Should().Be(readyForRetry.Id);
     }
 
     [Test]
@@ -240,11 +241,11 @@ public sealed class BackgroundActionMessageRepositoryTests
         await repository.UpdateAsync(envelope);
         await dbContext.SaveChangesAsync();
 
-        // Assert
-        var updated = await dbContext.CommandEnvelopes.FindAsync(envelope.Id);
-        Assert.That(updated, Is.Not.Null);
-        Assert.That(updated.Status, Is.EqualTo(ActionExecutionStatus.Completed));
-        Assert.That(updated.CompletedAt, Is.Not.Null);
+         // Assert
+         var updated = await dbContext.CommandEnvelopes.FindAsync(envelope.Id);
+         updated.Should().NotBeNull();
+         updated.Status.Should().Be(ActionExecutionStatus.Completed);
+         updated.CompletedAt.Should().NotBeNull();
     }
 
     }

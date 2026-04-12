@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
@@ -19,7 +20,7 @@ public sealed class SmtpEmailSenderTests
 
         var result = await sender.SendAsync(message, CancellationToken.None);
 
-        Assert.That(result, Is.False);
+        result.Should().BeFalse();
     }
 
     [Test]
@@ -30,10 +31,11 @@ public sealed class SmtpEmailSenderTests
 
         var message = new EmailMessage { To = "invalid-address", Subject = "Subject", Body = "Body" };
 
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var act = new Func<Task>(async () =>
             await sender.SendAsync(message, CancellationToken.None));
+        var exception = act.Should().ThrowAsync<InvalidOperationException>().GetAwaiter().GetResult().And;
 
-        Assert.That(exception?.InnerException, Is.InstanceOf<FormatException>());
+        exception.InnerException.Should().BeOfType<FormatException>();
     }
 
     [Test]
@@ -44,8 +46,9 @@ public sealed class SmtpEmailSenderTests
 
         var message = new EmailMessage { To = "user@lgym.app", Subject = "Subject", Body = "Body" };
 
-        Assert.ThrowsAsync<SocketException>(async () =>
-            await sender.SendAsync(message, CancellationToken.None));
+        var act = new Func<Task>(() =>
+            sender.SendAsync(message, CancellationToken.None));
+        await act.Should().ThrowAsync<SocketException>();
     }
 
     private static EmailOptions CreateOptions(

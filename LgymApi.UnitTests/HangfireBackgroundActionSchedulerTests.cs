@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
@@ -21,15 +22,12 @@ public sealed class HangfireBackgroundActionSchedulerTests
 
         scheduler.Enqueue(actionMessageId);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(client.CreatedJobs, Has.Count.EqualTo(1));
-            var created = client.CreatedJobs[0];
-            Assert.That(created.Job.Type, Is.EqualTo(typeof(IActionMessageJob)));
-            Assert.That(created.Job.Method.Name, Is.EqualTo("ExecuteAsync"));
-            Assert.That(created.Job.Args[0], Is.EqualTo(actionMessageId));
-            Assert.That(created.State, Is.TypeOf<EnqueuedState>());
-        });
+        client.CreatedJobs.Should().HaveCount(1);
+        var created = client.CreatedJobs[0];
+        created.Job.Type.Should().Be(typeof(IActionMessageJob));
+        created.Job.Method.Name.Should().Be("ExecuteAsync");
+        created.Job.Args[0].Should().Be(actionMessageId);
+        created.State.Should().BeOfType<EnqueuedState>();
     }
 
     [Test]
@@ -42,11 +40,8 @@ public sealed class HangfireBackgroundActionSchedulerTests
         scheduler.Enqueue(actionMessageId);
 
         var created = client.CreatedJobs[0];
-        Assert.Multiple(() =>
-        {
-            Assert.That(created.Job.Args, Has.Count.EqualTo(1));
-            Assert.That(created.Job.Args[0], Is.TypeOf<Id<CommandEnvelope>>());
-        });
+        created.Job.Args.Should().HaveCount(1);
+        created.Job.Args[0].Should().BeOfType<Id<CommandEnvelope>>();
     }
 
     private sealed class FakeBackgroundJobClient : IBackgroundJobClient

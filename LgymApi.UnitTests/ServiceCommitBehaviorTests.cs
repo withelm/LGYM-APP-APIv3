@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Plan;
@@ -22,10 +23,11 @@ using LgymApi.Infrastructure.Pagination;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
-using LgymApi.UnitTests.Fakes;
+using LgymApi.TestUtils.Fakes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -66,10 +68,10 @@ public sealed class ServiceCommitBehaviorTests
         await service.CreatePlanAsync(user, user.Id, "UoW Plan");
 
         var savedPlan = await dbContext.Plans.FirstOrDefaultAsync(p => p.UserId == user.Id && p.Name == "UoW Plan");
-        Assert.That(savedPlan, Is.Not.Null);
+        savedPlan.Should().NotBeNull();
 
         var savedUser = await dbContext.Users.FirstAsync(u => u.Id == user.Id);
-        Assert.That(savedUser.PlanId, Is.EqualTo(savedPlan!.Id));
+        savedUser.PlanId.Should().Be(savedPlan!.Id);
     }
 
     [Test]
@@ -122,14 +124,14 @@ public sealed class ServiceCommitBehaviorTests
             true,
             PreferredLanguage: null));
 
-        Assert.That(registerResult.IsSuccess, Is.True);
+        registerResult.IsSuccess.Should().BeTrue();
 
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "newuser");
-        Assert.That(savedUser, Is.Not.Null);
+        savedUser.Should().NotBeNull();
 
         var savedElo = await dbContext.EloRegistries.FirstOrDefaultAsync(e => e.UserId == savedUser!.Id);
-        Assert.That(savedElo, Is.Not.Null);
-        Assert.That(savedElo!.Elo.Value, Is.EqualTo(1000));
+        savedElo.Should().NotBeNull();
+        savedElo!.Elo.Value.Should().Be(1000);
     }
 
     [Test]
@@ -182,11 +184,11 @@ public sealed class ServiceCommitBehaviorTests
             true,
             "pl-PL,pl;q=0.9"));
 
-        Assert.That(registerResult.IsSuccess, Is.True);
+        registerResult.IsSuccess.Should().BeTrue();
 
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "lang-user");
-        Assert.That(savedUser, Is.Not.Null);
-        Assert.That(savedUser!.PreferredLanguage, Is.EqualTo("pl-PL"));
+        savedUser.Should().NotBeNull();
+        savedUser!.PreferredLanguage.Should().Be("pl-PL");
     }
 
     [Test]
@@ -240,12 +242,12 @@ public sealed class ServiceCommitBehaviorTests
             true,
             "@@invalid-culture@@"));
 
-        Assert.That(registerResult.IsSuccess, Is.True);
+        registerResult.IsSuccess.Should().BeTrue();
 
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Name == "fallback-user");
-        Assert.That(savedUser, Is.Not.Null);
-        Assert.That(savedUser!.PreferredLanguage, Is.EqualTo("de-DE"));
-        Assert.That(savedUser.PreferredTimeZone, Is.EqualTo("UTC"));
+        savedUser.Should().NotBeNull();
+        savedUser!.PreferredLanguage.Should().Be("de-DE");
+        savedUser.PreferredTimeZone.Should().Be("UTC");
     }
 
     [Test]
@@ -307,10 +309,10 @@ public sealed class ServiceCommitBehaviorTests
             new NoOpTutorialService()));
 
         var updateTimeZoneResult = await service.UpdateTimeZoneAsync(user, "Europe/Paris");
-        Assert.That(updateTimeZoneResult.IsSuccess, Is.True);
+        updateTimeZoneResult.IsSuccess.Should().BeTrue();
 
         var savedUser = await dbContext.Users.SingleAsync(u => u.Id == user.Id);
-        Assert.That(savedUser.PreferredTimeZone, Is.EqualTo("Europe/Paris"));
+        savedUser.PreferredTimeZone.Should().Be("Europe/Paris");
     }
 
     [Test]
@@ -372,8 +374,8 @@ public sealed class ServiceCommitBehaviorTests
             new NoOpTutorialService()));
 
         var updateTimeZoneResult = await service.UpdateTimeZoneAsync(user, "Not/ARealTimeZone");
-        Assert.That(updateTimeZoneResult.IsFailure, Is.True);
-        Assert.That(updateTimeZoneResult.Error, Is.TypeOf<InvalidUserError>());
+        updateTimeZoneResult.IsFailure.Should().BeTrue();
+        updateTimeZoneResult.Error.Should().BeOfType<InvalidUserError>();
     }
 
     [Test]
@@ -400,7 +402,7 @@ public sealed class ServiceCommitBehaviorTests
         var created = result.Value;
 
         var savedRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == (Id<Role>)created.Id);
-        Assert.That(savedRole, Is.Not.Null);
+        savedRole.Should().NotBeNull();
 
         var savedClaims = await dbContext.RoleClaims
             .Where(rc => rc.RoleId == (Id<Role>)created.Id)
@@ -408,11 +410,11 @@ public sealed class ServiceCommitBehaviorTests
             .OrderBy(v => v)
             .ToListAsync();
 
-        Assert.That(savedClaims, Is.EquivalentTo(new[]
+        savedClaims.Should().BeEquivalentTo(new[]
         {
             AuthConstants.Permissions.ManageAppConfig,
             AuthConstants.Permissions.ManageGlobalExercises
-        }));
+        });
     }
 
     [Test]
@@ -457,7 +459,7 @@ public sealed class ServiceCommitBehaviorTests
             .OrderBy(name => name)
             .ToListAsync();
 
-        Assert.That(assignedRoleNames, Is.EquivalentTo(new[] { "Coach", AuthConstants.Roles.User }));
+        assignedRoleNames.Should().BeEquivalentTo(new[] { "Coach", AuthConstants.Roles.User });
     }
 
     private static UserRepository CreateUserRepository(AppDbContext db) =>

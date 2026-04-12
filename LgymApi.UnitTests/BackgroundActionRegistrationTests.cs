@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,9 +20,9 @@ public sealed class BackgroundActionRegistrationTests
 
         // Assert
         var handlers = provider.GetServices<IBackgroundAction<TestCommand>>();
-        Assert.That(handlers, Is.Not.Null);
-        Assert.That(handlers.Count(), Is.EqualTo(1));
-        Assert.That(handlers.First(), Is.TypeOf<TestAction>());
+        handlers.Should().NotBeNull();
+        handlers.Count().Should().Be(1);
+        handlers.First().Should().BeOfType<TestAction>();
     }
 
     [Test]
@@ -37,9 +38,9 @@ public sealed class BackgroundActionRegistrationTests
 
         // Assert
         var handlers = provider.GetServices<IBackgroundAction<TestCommand>>().ToList();
-        Assert.That(handlers, Has.Count.EqualTo(2));
-        Assert.That(handlers.Any(h => h is TestAction), Is.True, "TestAction should be registered");
-        Assert.That(handlers.Any(h => h is SecondTestAction), Is.True, "SecondTestAction should be registered");
+        handlers.Should().HaveCount(2);
+        handlers.Any(h => h is TestAction).Should().BeTrue("TestAction should be registered");
+        handlers.Any(h => h is SecondTestAction).Should().BeTrue("SecondTestAction should be registered");
     }
 
     [Test]
@@ -54,12 +55,12 @@ public sealed class BackgroundActionRegistrationTests
 
         // Assert - base command type has no handlers
         var baseHandlers = provider.GetServices<IBackgroundAction<TestCommand>>().ToList();
-        Assert.That(baseHandlers, Is.Empty, "Base command type should not resolve derived handlers");
+        baseHandlers.Should().BeEmpty("Base command type should not resolve derived handlers");
 
         // Assert - derived command type has exact handler
         var derivedHandlers = provider.GetServices<IBackgroundAction<DerivedCommand>>().ToList();
-        Assert.That(derivedHandlers, Has.Count.EqualTo(1));
-        Assert.That(derivedHandlers.First(), Is.TypeOf<DerivedCommandAction>());
+        derivedHandlers.Should().HaveCount(1);
+        derivedHandlers.First().Should().BeOfType<DerivedCommandAction>();
     }
 
     [Test]
@@ -74,8 +75,8 @@ public sealed class BackgroundActionRegistrationTests
 
         // Assert - concrete implementation is resolvable
         var concreteAction = provider.GetService<TestAction>();
-        Assert.That(concreteAction, Is.Not.Null);
-        Assert.That(concreteAction, Is.TypeOf<TestAction>());
+        concreteAction.Should().NotBeNull();
+        concreteAction.Should().BeOfType<TestAction>();
     }
 
     [Test]
@@ -90,10 +91,10 @@ public sealed class BackgroundActionRegistrationTests
             .AddBackgroundAction<AnotherCommand, AnotherCommandAction>();
 
         // Assert
-        Assert.That(result, Is.SameAs(services), "Should return same IServiceCollection for chaining");
+        result.Should().BeSameAs(services, "Should return same IServiceCollection for chaining");
         var provider = services.BuildServiceProvider();
-        Assert.That(provider.GetServices<IBackgroundAction<TestCommand>>().Count(), Is.EqualTo(1));
-        Assert.That(provider.GetServices<IBackgroundAction<AnotherCommand>>().Count(), Is.EqualTo(1));
+        provider.GetServices<IBackgroundAction<TestCommand>>().Count().Should().Be(1);
+        provider.GetServices<IBackgroundAction<AnotherCommand>>().Count().Should().Be(1);
     }
 
     [Test]
@@ -112,13 +113,12 @@ public sealed class BackgroundActionRegistrationTests
 
         // Assert
         var handlers = provider.GetServices<IBackgroundAction<TestCommand>>().ToList();
-        Assert.That(handlers, Has.Count.EqualTo(3));
-        Assert.That(handlers.Select(h => h.GetType()), Is.EquivalentTo(new[]
-        {
+        handlers.Should().HaveCount(3);
+        handlers.Select(h => h.GetType()).Should().BeEquivalentTo([
             typeof(TestAction),
             typeof(SecondTestAction),
             typeof(ThirdTestAction)
-        }));
+        ]);
     }
 
     [Test]
@@ -145,13 +145,13 @@ public sealed class BackgroundActionRegistrationTests
             .ToList();
 
         // Assert - TrainingCompletedCommand has exactly 2 handlers
-        Assert.That(trainingDescriptors, Has.Count.EqualTo(2), "TrainingCompletedCommand must have exactly 2 handlers");
-        Assert.That(trainingDescriptors.Any(d => d.ImplementationType == typeof(LgymApi.BackgroundWorker.Actions.TrainingCompletedEmailCommandHandler)), Is.True, "Email handler must be registered");
-        Assert.That(trainingDescriptors.Any(d => d.ImplementationType == typeof(LgymApi.BackgroundWorker.Actions.UpdateTrainingMainRecordsHandler)), Is.True, "Main record handler must be registered");
+        trainingDescriptors.Should().HaveCount(2, "TrainingCompletedCommand must have exactly 2 handlers");
+        trainingDescriptors.Any(d => d.ImplementationType == typeof(LgymApi.BackgroundWorker.Actions.TrainingCompletedEmailCommandHandler)).Should().BeTrue("Email handler must be registered");
+        trainingDescriptors.Any(d => d.ImplementationType == typeof(LgymApi.BackgroundWorker.Actions.UpdateTrainingMainRecordsHandler)).Should().BeTrue("Main record handler must be registered");
 
         // Assert - Other commands have exactly 1 handler each
-        Assert.That(userDescriptors, Has.Count.EqualTo(1), "UserRegisteredCommand must have exactly 1 handler");
-        Assert.That(invitationDescriptors, Has.Count.EqualTo(1), "InvitationCreatedCommand must have exactly 1 handler");
+        userDescriptors.Should().HaveCount(1, "UserRegisteredCommand must have exactly 1 handler");
+        invitationDescriptors.Should().HaveCount(1, "InvitationCreatedCommand must have exactly 1 handler");
     }
 
     [Test]
@@ -177,7 +177,7 @@ public sealed class BackgroundActionRegistrationTests
         }
 
         // Assert - different instances per scope
-        Assert.That(handler1, Is.Not.SameAs(handler2), "Scoped services should be different instances across scopes");
+        handler1.Should().NotBeSameAs(handler2, "Scoped services should be different instances across scopes");
     }
 
     [Test]
@@ -193,7 +193,7 @@ public sealed class BackgroundActionRegistrationTests
         services.AddBackgroundAction<TestCommand, TestAction>();
 
         // Assert - if we reach here, the generic constraint is correctly enforced
-        Assert.Pass("Generic constraint correctly requires IActionCommand");
+        // Test passed (no assertion needed as type system enforces the constraint)
     }
 
     [Test]
@@ -209,9 +209,9 @@ public sealed class BackgroundActionRegistrationTests
 
         // Assert - verify both handlers are registered
         var handlers = provider.GetServices<IBackgroundAction<TrainingCompletedCommand>>().ToList();
-        Assert.That(handlers, Has.Count.EqualTo(2));
-        Assert.That(handlers.Any(h => h is MockEmailCommandHandler), Is.True, "MockEmailCommandHandler should be registered");
-        Assert.That(handlers.Any(h => h is MockMainRecordsCommandHandler), Is.True, "MockMainRecordsCommandHandler should be registered");
+        handlers.Should().HaveCount(2);
+        handlers.Any(h => h is MockEmailCommandHandler).Should().BeTrue("MockEmailCommandHandler should be registered");
+        handlers.Any(h => h is MockMainRecordsCommandHandler).Should().BeTrue("MockMainRecordsCommandHandler should be registered");
     }
 
     #region Test Fixtures

@@ -1,7 +1,9 @@
+using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -25,59 +27,53 @@ public sealed class DummyEmailSenderTests
         }
     }
 
-    [Test]
-    public async Task SendAsync_WritesEmailToConfiguredDirectory()
-    {
-        var sender = new DummyEmailSender(new EmailOptions
-        {
-            Enabled = true,
-            DeliveryMode = EmailDeliveryMode.Dummy,
-            DummyOutputDirectory = _tempDirectory,
-            FromAddress = "coach@example.com",
-            FromName = "Coach"
-        });
+     [Test]
+     public async Task SendAsync_WritesEmailToConfiguredDirectory()
+     {
+         var sender = new DummyEmailSender(new EmailOptions
+         {
+             Enabled = true,
+             DeliveryMode = EmailDeliveryMode.Dummy,
+             DummyOutputDirectory = _tempDirectory,
+             FromAddress = "coach@example.com",
+             FromName = "Coach"
+         });
 
-        var result = await sender.SendAsync(new EmailMessage
-        {
-            To = "trainee@example.com",
-            Subject = "Invitation",
-            Body = "Body content"
-        });
+         var result = await sender.SendAsync(new EmailMessage
+         {
+             To = "trainee@example.com",
+             Subject = "Invitation",
+             Body = "Body content"
+         });
 
-        Assert.That(result, Is.True);
-        var files = Directory.GetFiles(_tempDirectory, "*.email.txt");
-        Assert.That(files, Has.Length.EqualTo(1));
+         result.Should().BeTrue();
+         var files = Directory.GetFiles(_tempDirectory, "*.email.txt");
+         files.Length.Should().Be(1);
 
-        var content = await File.ReadAllTextAsync(files[0]);
-        Assert.Multiple(() =>
-        {
-            Assert.That(content, Does.Contain("To: trainee@example.com"));
-            Assert.That(content, Does.Contain("Subject: Invitation"));
-            Assert.That(content, Does.Contain("Body content"));
-        });
-    }
+         var content = await File.ReadAllTextAsync(files[0]);
+         content.Should().Contain("To: trainee@example.com");
+         content.Should().Contain("Subject: Invitation");
+         content.Should().Contain("Body content");
+     }
 
-    [Test]
-    public async Task SendAsync_ReturnsFalse_WhenEmailFeatureDisabled()
-    {
-        var sender = new DummyEmailSender(new EmailOptions
-        {
-            Enabled = false,
-            DeliveryMode = EmailDeliveryMode.Dummy,
-            DummyOutputDirectory = _tempDirectory
-        });
+     [Test]
+     public async Task SendAsync_ReturnsFalse_WhenEmailFeatureDisabled()
+     {
+         var sender = new DummyEmailSender(new EmailOptions
+         {
+             Enabled = false,
+             DeliveryMode = EmailDeliveryMode.Dummy,
+             DummyOutputDirectory = _tempDirectory
+         });
 
-        var result = await sender.SendAsync(new EmailMessage
-        {
-            To = "trainee@example.com",
-            Subject = "x",
-            Body = "y"
-        });
+         var result = await sender.SendAsync(new EmailMessage
+         {
+             To = "trainee@example.com",
+             Subject = "x",
+             Body = "y"
+         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result, Is.False);
-            Assert.That(Directory.Exists(_tempDirectory), Is.False);
-        });
-    }
+         result.Should().BeFalse();
+         Directory.Exists(_tempDirectory).Should().BeFalse();
+     }
 }

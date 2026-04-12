@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.Exercise;
@@ -26,11 +27,8 @@ public sealed class ExerciseServiceTests
 
         var result = await service.AddExerciseAsync("   ", BodyParts.Chest, null, null);
         
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidExerciseError>();
     }
 
     [Test]
@@ -45,11 +43,8 @@ public sealed class ExerciseServiceTests
 
         var result = await service.AddExerciseAsync("Bench Press", BodyParts.Unknown, null, null);
         
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidExerciseError>();
     }
 
     [Test]
@@ -65,11 +60,8 @@ public sealed class ExerciseServiceTests
         var input = new AddUserExerciseInput(Id<User>.Empty, "Bench Press", BodyParts.Chest, null, null);
         var result = await service.AddUserExerciseAsync(input);
         
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidExerciseError>();
     }
 
     [Test]
@@ -85,11 +77,8 @@ public sealed class ExerciseServiceTests
 
         var result = await service.DeleteExerciseAsync(Id<User>.Empty, exerciseId);
         
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidExerciseError>();
     }
 
     [Test]
@@ -105,11 +94,8 @@ public sealed class ExerciseServiceTests
 
         var result = await service.DeleteExerciseAsync(userId, Id<Exercise>.Empty);
         
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidExerciseError>();
     }
 
     [Test]
@@ -125,11 +111,8 @@ public sealed class ExerciseServiceTests
         var input = new UpdateExerciseInput(Id<Exercise>.Empty, "Bench Press", BodyParts.Chest, null, null);
         var result = await service.UpdateExerciseAsync(input);
         
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.TypeOf<InvalidExerciseError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidExerciseError>();
     }
 
     [Test]
@@ -153,16 +136,13 @@ public sealed class ExerciseServiceTests
 
         var input = new GetLastExerciseScoresInput(userId, userId, exerciseId, 100, null, "Bench press");
         var result = await service.GetLastExerciseScoresAsync(input);
-        Assert.That(result.IsSuccess, Is.True);
+        result.IsSuccess.Should().BeTrue();
         var value = result.Value;
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(value.SeriesScores, Has.Count.EqualTo(30));
-            Assert.That(value.SeriesScores[0].Score, Is.Not.Null);
-            Assert.That(value.SeriesScores[1].Score, Is.Not.Null);
-            Assert.That(value.SeriesScores[^1].Series, Is.EqualTo(30));
-        });
+        value.SeriesScores.Should().HaveCount(30);
+        value.SeriesScores[0].Score.Should().NotBeNull();
+        value.SeriesScores[1].Score.Should().NotBeNull();
+        value.SeriesScores[^1].Series.Should().Be(30);
     }
 
     private sealed class NoOpExerciseScoreRepository : IExerciseScoreRepository

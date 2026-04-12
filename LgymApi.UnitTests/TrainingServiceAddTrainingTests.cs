@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
@@ -10,6 +11,7 @@ using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -104,32 +106,29 @@ public sealed class TrainingServiceAddTrainingTests
         var result = await _service.AddTrainingAsync(userId, input);
 
         // Assert
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InternalServerError>());
-            Assert.That(result.Error.Message, Is.EqualTo(Messages.TryAgain));
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InternalServerError>();
+        result.Error.Message.Should().Be(Messages.TryAgain);
     }
 
-    [Test]
-    public void Should_PropagateException_When_RepositoryThrowsException()
-    {
-        // Arrange
-        var userId = Id<User>.New();
-        var gymId = Id<Gym>.New();
-        var planDayId = Id<PlanDay>.New();
+     [Test]
+     public async Task Should_PropagateException_When_RepositoryThrowsException()
+     {
+         // Arrange
+         var userId = Id<User>.New();
+         var gymId = Id<Gym>.New();
+         var planDayId = Id<PlanDay>.New();
 
-        var input = new AddTrainingInput(gymId, planDayId, DateTime.UtcNow, new List<TrainingExerciseInput>());
+         var input = new AddTrainingInput(gymId, planDayId, DateTime.UtcNow, new List<TrainingExerciseInput>());
 
-        _userRepository.FindByIdAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
-            .Throws(new InvalidOperationException("Database connection failed"));
+         _userRepository.FindByIdAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+             .Throws(new InvalidOperationException("Database connection failed"));
 
-        // Act & Assert
-        var ex = Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.AddTrainingAsync(userId, input));
-        Assert.That(ex!.Message, Is.EqualTo("Database connection failed"));
-    }
+         // Act & Assert
+         var action = () => _service.AddTrainingAsync(userId, input);
+         var ex = await action.Should().ThrowAsync<InvalidOperationException>();
+         ex.And.Message.Should().Be("Database connection failed");
+     }
 
     [Test]
     public async Task Should_ReturnInvalidTrainingDataError_When_UserIdIsEmpty()
@@ -145,11 +144,8 @@ public sealed class TrainingServiceAddTrainingTests
         var result = await _service.AddTrainingAsync(emptyUserId, input);
 
         // Assert
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InvalidTrainingDataError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidTrainingDataError>();
     }
 
     [Test]
@@ -166,11 +162,8 @@ public sealed class TrainingServiceAddTrainingTests
         var result = await _service.AddTrainingAsync(userId, input);
 
         // Assert
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InvalidTrainingDataError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidTrainingDataError>();
     }
 
     [Test]
@@ -187,11 +180,8 @@ public sealed class TrainingServiceAddTrainingTests
         var result = await _service.AddTrainingAsync(userId, input);
 
         // Assert
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InvalidTrainingDataError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidTrainingDataError>();
     }
 
     [Test]
@@ -237,11 +227,8 @@ public sealed class TrainingServiceAddTrainingTests
         var result = await _service.AddTrainingAsync(userId, input);
 
         // Assert
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result.Error, Is.InstanceOf<InvalidTrainingDataError>());
-        });
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidTrainingDataError>();
 
         // Verify transaction was rolled back
         await transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());

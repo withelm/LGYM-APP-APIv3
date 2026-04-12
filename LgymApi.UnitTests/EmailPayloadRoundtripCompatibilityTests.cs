@@ -4,6 +4,7 @@ using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Enums;
 using NUnit.Framework;
+using FluentAssertions;
 
 namespace LgymApi.UnitTests;
 
@@ -48,11 +49,11 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<WelcomeEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That(deserialized.UserName, Is.EqualTo("John Doe"));
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("john@example.com"));
-        Assert.That(deserialized.CultureName, Is.EqualTo("en-US"));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(userId);
+        deserialized.UserName.Should().Be("John Doe");
+        deserialized.RecipientEmail.Should().Be("john@example.com");
+        deserialized.CultureName.Should().Be("en-US");
     }
 
     [Test]
@@ -71,12 +72,12 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var json = JsonSerializer.Serialize(originalPayload, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(json, Does.Contain("userId"));
-        Assert.That(json, Does.Contain("userName"));
-        Assert.That(json, Does.Contain("recipientEmail"));
-        Assert.That(json, Does.Contain("cultureName"));
-        Assert.That(json, Does.Not.Contain("UserId"));
-        Assert.That(json, Does.Not.Contain("UserName"));
+        json.Should().Contain("userId");
+        json.Should().Contain("userName");
+        json.Should().Contain("recipientEmail");
+        json.Should().Contain("cultureName");
+        json.Should().NotContain("UserId");
+        json.Should().NotContain("UserName");
     }
 
     [Test]
@@ -93,11 +94,11 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<WelcomeEmailPayload>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId)));
-        Assert.That(deserialized.UserName, Is.EqualTo("Legacy User"));
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("legacy@example.com"));
-        Assert.That(deserialized.CultureName, Is.EqualTo("de-DE"));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId));
+        deserialized.UserName.Should().Be("Legacy User");
+        deserialized.RecipientEmail.Should().Be("legacy@example.com");
+        deserialized.CultureName.Should().Be("de-DE");
     }
 
     [Test]
@@ -118,11 +119,11 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<WelcomeEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert - each field must match exactly
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
-        Assert.That(deserialized.UserName, Is.EqualTo("Test User"), "UserName not preserved");
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("test@example.com"), "RecipientEmail not preserved");
-        Assert.That(deserialized.CultureName, Is.EqualTo("es-ES"), "CultureName not preserved");
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(userId, "UserId not preserved");
+        deserialized.UserName.Should().Be("Test User", "UserName not preserved");
+        deserialized.RecipientEmail.Should().Be("test@example.com", "RecipientEmail not preserved");
+        deserialized.CultureName.Should().Be("es-ES", "CultureName not preserved");
     }
 
     [Test]
@@ -143,8 +144,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<WelcomeEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.CorrelationId.GetValue(), Is.EqualTo(userId.GetValue()));
+        deserialized.Should().NotBeNull();
+        deserialized!.CorrelationId.GetValue().Should().Be(userId.GetValue());
     }
 
     #endregion
@@ -173,14 +174,14 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<InvitationEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(invitationId));
-        Assert.That(deserialized.InvitationCode, Is.EqualTo("INV12345"));
-        Assert.That(deserialized.ExpiresAt, Is.EqualTo(expiresAt));
-        Assert.That(deserialized.TrainerName, Is.EqualTo("Coach Mike"));
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("client@example.com"));
-        Assert.That(deserialized.CultureName, Is.EqualTo("en-US"));
-        Assert.That(deserialized.PreferredTimeZone, Is.EqualTo("America/New_York"));
+        deserialized.Should().NotBeNull();
+        deserialized!.InvitationId.Should().Be(invitationId);
+        deserialized.InvitationCode.Should().Be("INV12345");
+        deserialized.ExpiresAt.Should().Be(expiresAt);
+        deserialized.TrainerName.Should().Be("Coach Mike");
+        deserialized.RecipientEmail.Should().Be("client@example.com");
+        deserialized.CultureName.Should().Be("en-US");
+        deserialized.PreferredTimeZone.Should().Be("America/New_York");
     }
 
     [Test]
@@ -202,15 +203,15 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var json = JsonSerializer.Serialize(originalPayload, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(json, Does.Contain("invitationId"));
-        Assert.That(json, Does.Contain("invitationCode"));
-        Assert.That(json, Does.Contain("expiresAt"));
-        Assert.That(json, Does.Contain("trainerName"));
-        Assert.That(json, Does.Contain("recipientEmail"));
-        Assert.That(json, Does.Contain("cultureName"));
-        Assert.That(json, Does.Contain("preferredTimeZone"));
-        Assert.That(json, Does.Not.Contain("InvitationId"));
-        Assert.That(json, Does.Not.Contain("ExpiresAt"));
+        json.Should().Contain("invitationId");
+        json.Should().Contain("invitationCode");
+        json.Should().Contain("expiresAt");
+        json.Should().Contain("trainerName");
+        json.Should().Contain("recipientEmail");
+        json.Should().Contain("cultureName");
+        json.Should().Contain("preferredTimeZone");
+        json.Should().NotContain("InvitationId");
+        json.Should().NotContain("ExpiresAt");
     }
 
     [Test]
@@ -231,11 +232,11 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<InvitationEmailPayload>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.TrainerInvitation>(legacyInvitationId)));
-        Assert.That(deserialized.InvitationCode, Is.EqualTo("LEGACY123"));
-        Assert.That(deserialized.TrainerName, Is.EqualTo("Old Trainer"));
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("oldclient@example.com"));
+        deserialized.Should().NotBeNull();
+        deserialized!.InvitationId.Should().Be(ParseTestId<LgymApi.Domain.Entities.TrainerInvitation>(legacyInvitationId));
+        deserialized.InvitationCode.Should().Be("LEGACY123");
+        deserialized.TrainerName.Should().Be("Old Trainer");
+        deserialized.RecipientEmail.Should().Be("oldclient@example.com");
     }
 
     [Test]
@@ -260,14 +261,14 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<InvitationEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert - each field must match exactly
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(invitationId), "InvitationId not preserved");
-        Assert.That(deserialized.InvitationCode, Is.EqualTo("FULL123"), "InvitationCode not preserved");
-        Assert.That(deserialized.ExpiresAt, Is.EqualTo(expiresAt), "ExpiresAt not preserved");
-        Assert.That(deserialized.TrainerName, Is.EqualTo("Full Trainer"), "TrainerName not preserved");
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("fullclient@example.com"), "RecipientEmail not preserved");
-        Assert.That(deserialized.CultureName, Is.EqualTo("fr-FR"), "CultureName not preserved");
-        Assert.That(deserialized.PreferredTimeZone, Is.EqualTo("Europe/Paris"), "PreferredTimeZone not preserved");
+        deserialized.Should().NotBeNull();
+        deserialized!.InvitationId.Should().Be(invitationId, "InvitationId not preserved");
+        deserialized.InvitationCode.Should().Be("FULL123", "InvitationCode not preserved");
+        deserialized.ExpiresAt.Should().Be(expiresAt, "ExpiresAt not preserved");
+        deserialized.TrainerName.Should().Be("Full Trainer", "TrainerName not preserved");
+        deserialized.RecipientEmail.Should().Be("fullclient@example.com", "RecipientEmail not preserved");
+        deserialized.CultureName.Should().Be("fr-FR", "CultureName not preserved");
+        deserialized.PreferredTimeZone.Should().Be("Europe/Paris", "PreferredTimeZone not preserved");
     }
 
     [Test]
@@ -291,8 +292,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<InvitationEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.CorrelationId.GetValue(), Is.EqualTo(invitationId.GetValue()));
+        deserialized.Should().NotBeNull();
+        deserialized!.CorrelationId.GetValue().Should().Be(invitationId.GetValue());
     }
 
     #endregion
@@ -334,14 +335,14 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId));
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("athlete@example.com"));
-        Assert.That(deserialized.CultureName, Is.EqualTo("en-US"));
-        Assert.That(deserialized.PreferredTimeZone, Is.EqualTo("America/Los_Angeles"));
-        Assert.That(deserialized.PlanDayName, Is.EqualTo("Upper Body A"));
-        Assert.That(deserialized.TrainingDate, Is.EqualTo(trainingDate));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(userId);
+        deserialized.TrainingId.Should().Be(trainingId);
+        deserialized.RecipientEmail.Should().Be("athlete@example.com");
+        deserialized.CultureName.Should().Be("en-US");
+        deserialized.PreferredTimeZone.Should().Be("America/Los_Angeles");
+        deserialized.PlanDayName.Should().Be("Upper Body A");
+        deserialized.TrainingDate.Should().Be(trainingDate);
     }
 
     [Test]
@@ -387,33 +388,27 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.Exercises, Is.Not.Null);
-        Assert.That(deserialized.Exercises.Count, Is.EqualTo(2));
+        deserialized.Should().NotBeNull();
+        deserialized!.Exercises.Should().NotBeNull();
+        deserialized.Exercises.Count.Should().Be(2);
 
-        // Verify first exercise
-        var firstExercise = deserialized.Exercises.First();
-        Assert.Multiple(() =>
-        {
-            Assert.That(firstExercise.ExerciseId, Is.EqualTo("ex1"));
-            Assert.That(firstExercise.ExerciseName, Is.EqualTo("Bench Press"));
-            Assert.That(firstExercise.Series, Is.EqualTo(1));
-            Assert.That(firstExercise.Reps, Is.EqualTo(8));
-            Assert.That(firstExercise.Weight, Is.EqualTo(80));
-            Assert.That(firstExercise.Unit, Is.EqualTo(WeightUnits.Kilograms));
-        });
+         // Verify first exercise
+         var firstExercise = deserialized.Exercises.First();
+         firstExercise.ExerciseId.Should().Be("ex1");
+         firstExercise.ExerciseName.Should().Be("Bench Press");
+         firstExercise.Series.Should().Be(1);
+         firstExercise.Reps.Should().Be(8);
+         firstExercise.Weight.Should().Be(80);
+         firstExercise.Unit.Should().Be(WeightUnits.Kilograms);
 
-        // Verify second exercise
-        var secondExercise = deserialized.Exercises.Skip(1).First();
-        Assert.Multiple(() =>
-        {
-            Assert.That(secondExercise.ExerciseId, Is.EqualTo("ex2"));
-            Assert.That(secondExercise.ExerciseName, Is.EqualTo("Squat"));
-            Assert.That(secondExercise.Series, Is.EqualTo(2));
-            Assert.That(secondExercise.Reps, Is.EqualTo(6));
-            Assert.That(secondExercise.Weight, Is.EqualTo(120));
-            Assert.That(secondExercise.Unit, Is.EqualTo(WeightUnits.Kilograms));
-        });
+         // Verify second exercise
+         var secondExercise = deserialized.Exercises.Skip(1).First();
+         secondExercise.ExerciseId.Should().Be("ex2");
+         secondExercise.ExerciseName.Should().Be("Squat");
+         secondExercise.Series.Should().Be(2);
+         secondExercise.Reps.Should().Be(6);
+         secondExercise.Weight.Should().Be(120);
+         secondExercise.Unit.Should().Be(WeightUnits.Kilograms);
     }
 
     [Test]
@@ -436,16 +431,16 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var json = JsonSerializer.Serialize(originalPayload, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(json, Does.Contain("userId"));
-        Assert.That(json, Does.Contain("trainingId"));
-        Assert.That(json, Does.Contain("recipientEmail"));
-        Assert.That(json, Does.Contain("cultureName"));
-        Assert.That(json, Does.Contain("preferredTimeZone"));
-        Assert.That(json, Does.Contain("planDayName"));
-        Assert.That(json, Does.Contain("trainingDate"));
-        Assert.That(json, Does.Contain("exercises"));
-        Assert.That(json, Does.Not.Contain("UserId"));
-        Assert.That(json, Does.Not.Contain("Exercises"));
+        json.Should().Contain("userId");
+        json.Should().Contain("trainingId");
+        json.Should().Contain("recipientEmail");
+        json.Should().Contain("cultureName");
+        json.Should().Contain("preferredTimeZone");
+        json.Should().Contain("planDayName");
+        json.Should().Contain("trainingDate");
+        json.Should().Contain("exercises");
+        json.Should().NotContain("UserId");
+        json.Should().NotContain("Exercises");
     }
 
     [Test]
@@ -479,14 +474,14 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var json = JsonSerializer.Serialize(payload, SharedSerializationOptions.Current);
 
         // Assert - verify nested properties use camelCase
-        Assert.That(json, Does.Contain("exerciseId"));
-        Assert.That(json, Does.Contain("exerciseName"));
-        Assert.That(json, Does.Contain("series"));
-        Assert.That(json, Does.Contain("reps"));
-        Assert.That(json, Does.Contain("weight"));
-        Assert.That(json, Does.Contain("unit"));
-        Assert.That(json, Does.Not.Contain("ExerciseId"));
-        Assert.That(json, Does.Not.Contain("ExerciseName"));
+        json.Should().Contain("exerciseId");
+        json.Should().Contain("exerciseName");
+        json.Should().Contain("series");
+        json.Should().Contain("reps");
+        json.Should().Contain("weight");
+        json.Should().Contain("unit");
+        json.Should().NotContain("ExerciseId");
+        json.Should().NotContain("ExerciseName");
     }
 
     [Test]
@@ -514,12 +509,12 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId)));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId)));
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("legacy@example.com"));
-        Assert.That(deserialized.Exercises.Count, Is.EqualTo(1));
-        Assert.That(deserialized.Exercises.First().ExerciseName, Is.EqualTo("Legacy Exercise"));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId));
+        deserialized.TrainingId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId));
+        deserialized.RecipientEmail.Should().Be("legacy@example.com");
+        deserialized.Exercises.Count.Should().Be(1);
+        deserialized.Exercises.First().ExerciseName.Should().Be("Legacy Exercise");
     }
 
     [Test]
@@ -548,14 +543,14 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId)));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId)));
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("ancient@example.com"));
-        Assert.That(deserialized.Exercises.Count, Is.EqualTo(1));
-        Assert.That(deserialized.Exercises.First().ExerciseName, Is.EqualTo("Ancient Exercise"));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId));
+        deserialized.TrainingId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId));
+        deserialized.RecipientEmail.Should().Be("ancient@example.com");
+        deserialized.Exercises.Count.Should().Be(1);
+        deserialized.Exercises.First().ExerciseName.Should().Be("Ancient Exercise");
         // Verify the enum was properly deserialized from integer value
-        Assert.That(deserialized.Exercises.First().Unit, Is.EqualTo(WeightUnits.Kilograms));
+        deserialized.Exercises.First().Unit.Should().Be(WeightUnits.Kilograms);
     }
 
     [Test]
@@ -593,15 +588,15 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert - each field must match exactly
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId), "TrainingId not preserved");
-        Assert.That(deserialized.RecipientEmail, Is.EqualTo("full@example.com"), "RecipientEmail not preserved");
-        Assert.That(deserialized.CultureName, Is.EqualTo("es-ES"), "CultureName not preserved");
-        Assert.That(deserialized.PreferredTimeZone, Is.EqualTo("Europe/Madrid"), "PreferredTimeZone not preserved");
-        Assert.That(deserialized.PlanDayName, Is.EqualTo("Full Upper"), "PlanDayName not preserved");
-        Assert.That(deserialized.TrainingDate, Is.EqualTo(trainingDate), "TrainingDate not preserved");
-        Assert.That(deserialized.Exercises.Count, Is.EqualTo(1), "Exercises count not preserved");
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(userId, "UserId not preserved");
+        deserialized.TrainingId.Should().Be(trainingId, "TrainingId not preserved");
+        deserialized.RecipientEmail.Should().Be("full@example.com", "RecipientEmail not preserved");
+        deserialized.CultureName.Should().Be("es-ES", "CultureName not preserved");
+        deserialized.PreferredTimeZone.Should().Be("Europe/Madrid", "PreferredTimeZone not preserved");
+        deserialized.PlanDayName.Should().Be("Full Upper", "PlanDayName not preserved");
+        deserialized.TrainingDate.Should().Be(trainingDate, "TrainingDate not preserved");
+        deserialized.Exercises.Count.Should().Be(1, "Exercises count not preserved");
     }
 
     [Test]
@@ -626,8 +621,8 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.CorrelationId.GetValue(), Is.EqualTo(trainingId.GetValue()));
+        deserialized.Should().NotBeNull();
+        deserialized!.CorrelationId.GetValue().Should().Be(trainingId.GetValue());
     }
 
     #endregion
@@ -653,9 +648,9 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserializedPayload = JsonSerializer.Deserialize<WelcomeEmailPayload>(storedJson, SharedSerializationOptions.Current);
 
         // Assert - composer can consume the payload without error
-        Assert.That(deserializedPayload, Is.Not.Null);
-        Assert.That(deserializedPayload!.UserName, Is.EqualTo("Composer Test"));
-        Assert.That(deserializedPayload.RecipientEmail, Is.EqualTo("composer@example.com"));
+        deserializedPayload.Should().NotBeNull();
+        deserializedPayload!.UserName.Should().Be("Composer Test");
+        deserializedPayload.RecipientEmail.Should().Be("composer@example.com");
     }
 
     [Test]
@@ -681,10 +676,10 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserializedPayload = JsonSerializer.Deserialize<InvitationEmailPayload>(storedJson, SharedSerializationOptions.Current);
 
         // Assert - composer can consume the payload without error
-        Assert.That(deserializedPayload, Is.Not.Null);
-        Assert.That(deserializedPayload!.InvitationCode, Is.EqualTo("COMP123"));
-        Assert.That(deserializedPayload.TrainerName, Is.EqualTo("Composer Trainer"));
-        Assert.That(deserializedPayload.ExpiresAt, Is.EqualTo(expiresAt));
+        deserializedPayload.Should().NotBeNull();
+        deserializedPayload!.InvitationCode.Should().Be("COMP123");
+        deserializedPayload.TrainerName.Should().Be("Composer Trainer");
+        deserializedPayload.ExpiresAt.Should().Be(expiresAt);
     }
 
     [Test]
@@ -723,11 +718,14 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         var deserializedPayload = JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(storedJson, SharedSerializationOptions.Current);
 
         // Assert - composer can consume the payload without error, including nested exercises
-        Assert.That(deserializedPayload, Is.Not.Null);
-        Assert.That(deserializedPayload!.PlanDayName, Is.EqualTo("Composer Training"));
-        Assert.That(deserializedPayload.Exercises.Count, Is.EqualTo(1));
-        Assert.That(deserializedPayload.Exercises.First().ExerciseName, Is.EqualTo("Composer Exercise"));
+        deserializedPayload.Should().NotBeNull();
+        deserializedPayload!.PlanDayName.Should().Be("Composer Training");
+        deserializedPayload.Exercises.Count.Should().Be(1);
+        deserializedPayload.Exercises.First().ExerciseName.Should().Be("Composer Exercise");
     }
 
     #endregion
 }
+
+
+

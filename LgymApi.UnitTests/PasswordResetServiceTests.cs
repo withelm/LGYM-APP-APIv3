@@ -11,7 +11,8 @@ using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Services;
-using LgymApi.UnitTests.Fakes;
+using LgymApi.TestUtils.Fakes;
+using FluentAssertions;
 
 namespace LgymApi.UnitTests;
 
@@ -30,18 +31,16 @@ public sealed class PasswordResetServiceTests
 
         var result = await service.RequestPasswordResetAsync("test@example.com", "en", CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(tokenRepository.Added, Has.Count.EqualTo(1));
-            Assert.That(tokenRepository.Added[0].UserId, Is.EqualTo(user.Id));
-            Assert.That(tokenRepository.Added[0].IsUsed, Is.False);
-            Assert.That(tokenRepository.Added[0].ExpiresAt, Is.GreaterThan(DateTimeOffset.UtcNow).And.LessThan(DateTimeOffset.UtcNow.AddMinutes(31)));
-            Assert.That(emailScheduler.ScheduledPayloads, Has.Count.EqualTo(1));
-            Assert.That(emailScheduler.ScheduledPayloads[0].UserId, Is.EqualTo(user.Id));
-            Assert.That(emailScheduler.ScheduledPayloads[0].RecipientEmail, Is.EqualTo("test@example.com"));
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        });
+        result.IsSuccess.Should().BeTrue();
+        tokenRepository.Added.Should().HaveCount(1);
+        tokenRepository.Added[0].UserId.Should().Be(user.Id);
+        tokenRepository.Added[0].IsUsed.Should().BeFalse();
+        (tokenRepository.Added[0].ExpiresAt > DateTimeOffset.UtcNow).Should().BeTrue();
+        (tokenRepository.Added[0].ExpiresAt <= DateTimeOffset.UtcNow.AddMinutes(31)).Should().BeTrue();
+        emailScheduler.ScheduledPayloads.Should().HaveCount(1);
+        emailScheduler.ScheduledPayloads[0].UserId.Should().Be(user.Id);
+        emailScheduler.ScheduledPayloads[0].RecipientEmail.Should().Be("test@example.com");
+        unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
     [Test]
@@ -55,13 +54,10 @@ public sealed class PasswordResetServiceTests
 
         var result = await service.RequestPasswordResetAsync("nonexistent@example.com", "en", CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(tokenRepository.Added, Is.Empty);
-            Assert.That(emailScheduler.ScheduledPayloads, Is.Empty);
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-        });
+        result.IsSuccess.Should().BeTrue();
+        tokenRepository.Added.Should().BeEmpty();
+        emailScheduler.ScheduledPayloads.Should().BeEmpty();
+        unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
     [Test]
@@ -77,13 +73,10 @@ public sealed class PasswordResetServiceTests
 
         var result = await service.RequestPasswordResetAsync("deleted@example.com", "en", CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(tokenRepository.Added, Is.Empty);
-            Assert.That(emailScheduler.ScheduledPayloads, Is.Empty);
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-        });
+        result.IsSuccess.Should().BeTrue();
+        tokenRepository.Added.Should().BeEmpty();
+        emailScheduler.ScheduledPayloads.Should().BeEmpty();
+        unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
     [Test]
@@ -106,14 +99,11 @@ public sealed class PasswordResetServiceTests
 
         var result = await service.RequestPasswordResetAsync("test@example.com", "en", CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(oldToken.IsUsed, Is.True);
-            Assert.That(tokenRepository.Updated, Contains.Item(oldToken));
-            Assert.That(tokenRepository.Added, Has.Count.EqualTo(1));
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        });
+        result.IsSuccess.Should().BeTrue();
+        oldToken.IsUsed.Should().BeTrue();
+        tokenRepository.Updated.Should().Contain(oldToken);
+        tokenRepository.Added.Should().HaveCount(1);
+        unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
     [Test]
@@ -128,7 +118,7 @@ public sealed class PasswordResetServiceTests
 
         await service.RequestPasswordResetAsync("  TEST@EXAMPLE.COM  ", "en", CancellationToken.None);
 
-        Assert.That(userRepository.LastEmailLookup, Is.EqualTo("test@example.com"));
+        userRepository.LastEmailLookup.Should().Be("test@example.com");
     }
 
     [Test]
@@ -146,12 +136,9 @@ public sealed class PasswordResetServiceTests
         var addedToken = tokenRepository.Added[0];
         var scheduledPayload = emailScheduler.ScheduledPayloads[0];
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(addedToken.TokenHash, Is.Not.EqualTo(scheduledPayload.ResetToken));
-            Assert.That(addedToken.TokenHash, Has.Length.EqualTo(64)); // SHA-256 hex output
-            Assert.That(scheduledPayload.ResetToken, Has.Length.EqualTo(64)); // 32 bytes as hex
-        });
+        addedToken.TokenHash.Should().NotBe(scheduledPayload.ResetToken);
+        addedToken.TokenHash.Should().HaveLength(64); // SHA-256 hex output
+        scheduledPayload.ResetToken.Should().HaveLength(64); // 32 bytes as hex
     }
 
     [Test]
@@ -176,16 +163,13 @@ public sealed class PasswordResetServiceTests
 
         var result = await service.ResetPasswordAsync(plainTextToken, "newPassword123", CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(user.LegacyHash, Is.Not.Empty);
-            Assert.That(user.LegacySalt, Is.Not.Empty);
-            Assert.That(resetToken.IsUsed, Is.True);
-            Assert.That(tokenRepository.Updated, Contains.Item(resetToken));
-            Assert.That(userRepository.Updated, Contains.Item(user));
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
-        });
+        result.IsSuccess.Should().BeTrue();
+        user.LegacyHash.Should().NotBeEmpty();
+        user.LegacySalt.Should().NotBeEmpty();
+        resetToken.IsUsed.Should().BeTrue();
+        tokenRepository.Updated.Should().Contain(resetToken);
+        userRepository.Updated.Should().Contain(user);
+        unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
     [Test]
@@ -198,11 +182,8 @@ public sealed class PasswordResetServiceTests
 
         var result = await service.ResetPasswordAsync("invalidtoken", "newPassword123", CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-        });
+        result.IsSuccess.Should().BeFalse();
+        unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
     [Test]
@@ -226,11 +207,8 @@ public sealed class PasswordResetServiceTests
 
         var result = await service.ResetPasswordAsync(plainTextToken, "newPassword123", CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-        });
+        result.IsSuccess.Should().BeFalse();
+        unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
     [Test]
@@ -254,11 +232,8 @@ public sealed class PasswordResetServiceTests
 
         var result = await service.ResetPasswordAsync(plainTextToken, "newPassword123", CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-        });
+        result.IsSuccess.Should().BeFalse();
+        unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
     [Test]
@@ -283,11 +258,8 @@ public sealed class PasswordResetServiceTests
 
         var result = await service.ResetPasswordAsync(plainTextToken, "newPassword123", CancellationToken.None);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
-        });
+        result.IsSuccess.Should().BeFalse();
+        unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
     [Test]
@@ -312,7 +284,7 @@ public sealed class PasswordResetServiceTests
 
         await service.ResetPasswordAsync(plainTextToken, "newPassword123", CancellationToken.None);
 
-        Assert.That(sessionStore.RevokedAllUserIds, Contains.Item(user.Id));
+        sessionStore.RevokedAllUserIds.Should().Contain(user.Id);
     }
 
     private static User CreateTestUser(string email)
@@ -334,26 +306,26 @@ public sealed class PasswordResetServiceTests
         return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value)));
     }
 
-     private static PasswordResetService CreateService(
-         FakeUserRepository? userRepository = null,
-         FakePasswordResetTokenRepository? tokenRepository = null,
-         FakePasswordRecoveryEmailScheduler? emailScheduler = null,
-         FakeUnitOfWork? unitOfWork = null,
-         FakeUserSessionStore? sessionStore = null)
-     {
-         var actualTokenRepository = tokenRepository ?? new FakePasswordResetTokenRepository();
+    private static PasswordResetService CreateService(
+        FakeUserRepository? userRepository = null,
+        FakePasswordResetTokenRepository? tokenRepository = null,
+        FakePasswordRecoveryEmailScheduler? emailScheduler = null,
+        FakeUnitOfWork? unitOfWork = null,
+        FakeUserSessionStore? sessionStore = null)
+    {
+        var actualTokenRepository = tokenRepository ?? new FakePasswordResetTokenRepository();
 
-         var dependencies = new PasswordResetServiceDependencies(
-             userRepository ?? new FakeUserRepository(),
-             actualTokenRepository,
-             new PasswordResetTokenGenerationService(actualTokenRepository),
-             new LegacyPasswordService(),
-             emailScheduler ?? new FakePasswordRecoveryEmailScheduler(),
-             sessionStore ?? new FakeUserSessionStore(),
-             unitOfWork ?? new FakeUnitOfWork());
+        var dependencies = new PasswordResetServiceDependencies(
+            userRepository ?? new FakeUserRepository(),
+            actualTokenRepository,
+            new PasswordResetTokenGenerationService(actualTokenRepository),
+            new LegacyPasswordService(),
+            emailScheduler ?? new FakePasswordRecoveryEmailScheduler(),
+            sessionStore ?? new FakeUserSessionStore(),
+            unitOfWork ?? new FakeUnitOfWork());
 
-         return new PasswordResetService(dependencies);
-     }
+        return new PasswordResetService(dependencies);
+    }
 
     private sealed class FakeUserRepository : IUserRepository
     {

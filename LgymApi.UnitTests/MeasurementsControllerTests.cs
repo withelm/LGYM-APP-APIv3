@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Measurements.Controllers;
 using LgymApi.Api.Features.Measurements.Contracts;
@@ -13,6 +14,7 @@ using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -27,7 +29,7 @@ public sealed class MeasurementsControllerTests
 
         await controller.GetMeasurementDetail("not-a-guid");
 
-        Assert.That(service.LastMeasurementId, Is.EqualTo(Id<Measurement>.Empty));
+        service.LastMeasurementId.Should().Be(Id<Measurement>.Empty);
     }
 
     [Test]
@@ -42,7 +44,7 @@ public sealed class MeasurementsControllerTests
             Unit = HeightUnits.Centimeters
         });
 
-        Assert.That(service.LastRouteUserId, Is.EqualTo(Id<User>.Empty));
+        service.LastRouteUserId.Should().Be(Id<User>.Empty);
     }
 
     [Test]
@@ -57,7 +59,7 @@ public sealed class MeasurementsControllerTests
             Unit = HeightUnits.Centimeters
         });
 
-        Assert.That(service.LastRouteUserId, Is.EqualTo(Id<User>.Empty));
+        service.LastRouteUserId.Should().Be(Id<User>.Empty);
     }
 
     private static MeasurementsController CreateController(StubMeasurementsService service)

@@ -60,35 +60,32 @@ public sealed class SeedStatisticsPrinterTests
         }
 
         var output = writer.ToString();
-        Assert.Multiple(() =>
-        {
-            Assert.That(output, Does.Contain("Users: 3"));
-            Assert.That(output, Does.Contain("Exercises: 1"));
-            Assert.That(output, Does.Contain("Exercise translations: 1"));
-            Assert.That(output, Does.Contain("Addresses: 1"));
-            Assert.That(output, Does.Contain("Gyms: 1"));
-            Assert.That(output, Does.Contain("Plans: 1"));
-            Assert.That(output, Does.Contain("Plan days: 1"));
-            Assert.That(output, Does.Contain("Plan day exercises: 1"));
-            Assert.That(output, Does.Contain("Trainings: 1"));
-            Assert.That(output, Does.Contain("Exercise scores: 1"));
-            Assert.That(output, Does.Contain("Training exercise scores: 1"));
-            Assert.That(output, Does.Contain("Measurements: 1"));
-            Assert.That(output, Does.Contain("Main records: 1"));
-            Assert.That(output, Does.Contain("Elo entries: 1"));
-            Assert.That(output, Does.Contain("App configs: 1"));
-            Assert.That(output, Does.Contain("Roles: 1"));
-            Assert.That(output, Does.Contain("Role claims: 1"));
-            Assert.That(output, Does.Contain("Trainer invitations: 1"));
-            Assert.That(output, Does.Contain("Trainer trainee links: 1"));
-            Assert.That(output, Does.Contain("Notification messages: 1"));
-            Assert.That(output, Does.Contain("Report templates: 1"));
-            Assert.That(output, Does.Contain("Report template fields: 1"));
-            Assert.That(output, Does.Contain("Report requests: 1"));
-            Assert.That(output, Does.Contain("Report submissions: 1"));
-            Assert.That(output, Does.Contain("Supplement plans: 1"));
-            Assert.That(output, Does.Contain("Supplement plan items: 1"));
-            Assert.That(output, Does.Contain("Supplement intake logs: 1"));
-        });
+        output.Should().Contain("Users: 3");
+        output.Should().Contain("Exercises: 1");
+        output.Should().Contain("Exercise translations: 1");
+        output.Should().Contain("Addresses: 1");
+        output.Should().Contain("Gyms: 1");
+        output.Should().Contain("Plans: 1");
+        output.Should().Contain("Plan days: 1");
+        output.Should().Contain("Plan day exercises: 1");
+        output.Should().Contain("Trainings: 1");
+        output.Should().Contain("Exercise scores: 1");
+        output.Should().Contain("Training exercise scores: 1");
+        output.Should().Contain("Measurements: 1");
+        output.Should().Contain("Main records: 1");
+        output.Should().Contain("Elo entries: 1");
+        output.Should().Contain("App configs: 1");
+        output.Should().Contain("Roles: 1");
+        output.Should().Contain("Role claims: 1");
+        output.Should().Contain("Trainer invitations: 1");
+        output.Should().Contain("Trainer trainee links: 1");
+        output.Should().Contain("Notification messages: 1");
+        output.Should().Contain("Report templates: 1");
+        output.Should().Contain("Report template fields: 1");
+        output.Should().Contain("Report requests: 1");
+        output.Should().Contain("Report submissions: 1");
+        output.Should().Contain("Supplement plans: 1");
+        output.Should().Contain("Supplement plan items: 1");
+        output.Should().Contain("Supplement intake logs: 1");
     }
 }

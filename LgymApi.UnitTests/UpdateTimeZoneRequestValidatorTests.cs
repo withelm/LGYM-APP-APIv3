@@ -1,5 +1,7 @@
+using FluentAssertions;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Features.User.Validation;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -14,7 +16,7 @@ public sealed class UpdateTimeZoneRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
+        result.IsValid.Should().BeFalse();
     }
 
     [Test]
@@ -25,7 +27,7 @@ public sealed class UpdateTimeZoneRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.False);
+        result.IsValid.Should().BeFalse();
     }
 
     [Test]
@@ -36,6 +38,6 @@ public sealed class UpdateTimeZoneRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        Assert.That(result.IsValid, Is.True);
+        result.IsValid.Should().BeTrue();
     }
 }

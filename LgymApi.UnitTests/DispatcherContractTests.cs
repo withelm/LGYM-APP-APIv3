@@ -1,4 +1,7 @@
+using FluentAssertions;
 using LgymApi.BackgroundWorker.Common;
+using NUnit.Framework;
+
 namespace LgymApi.UnitTests;
 
 [TestFixture]
@@ -15,26 +18,23 @@ public sealed class DispatcherContractTests
         dispatcher.EnqueueAsync(command);
 
         // Assert
-        Assert.Multiple(() =>
-        {
-            Assert.That(dispatcher.EnqueuedCommands, Has.Count.EqualTo(1));
-            Assert.That(dispatcher.EnqueuedCommands[0], Is.InstanceOf<TestCommand>());
-            Assert.That(((TestCommand)dispatcher.EnqueuedCommands[0]).Value, Is.EqualTo(42));
-        });
+        dispatcher.EnqueuedCommands.Should().HaveCount(1);
+        dispatcher.EnqueuedCommands[0].Should().BeOfType<TestCommand>();
+        ((TestCommand)dispatcher.EnqueuedCommands[0]).Value.Should().Be(42);
     }
 
     [Test]
     public void ICommandDispatcher_GenericConstraint_EnforcesCommandInterface()
     {
-        // This test validates compile-time contract via type system.
-        // If ICommandDispatcher.Enqueue<TCommand> where TCommand : ICommand
-        // is correctly defined, this will compile. Otherwise it won't.
-        var dispatcher = new FakeCommandDispatcher();
-        var command = new TestCommand { Value = 99 };
+         // This test validates compile-time contract via type system.
+         // If ICommandDispatcher.Enqueue<TCommand> where TCommand : ICommand
+         // is correctly defined, this will compile. Otherwise it won't.
+         var dispatcher = new FakeCommandDispatcher();
+         var command = new TestCommand { Value = 99 };
 
-        // Act & Assert: compiler enforces ICommand constraint
-        dispatcher.EnqueueAsync(command);
-        Assert.Pass("Generic constraint enforces ICommand at compile time");
+         // Act & Assert: compiler enforces ICommand constraint
+         dispatcher.EnqueueAsync(command);
+         // Test passed (compiler enforces ICommand constraint at compile time)
     }
 
     [Test]
@@ -46,8 +46,8 @@ public sealed class DispatcherContractTests
         var dispatcher = new FakeCommandDispatcher();
 
         // Assert: only typed API available
-        Assert.That(dispatcher, Is.Not.Null);
-        Assert.Pass("No string-based routing overloads present");
+        dispatcher.Should().NotBeNull();
+        // Pass indicates no string-based routing overloads present
     }
 
     private sealed record TestCommand : IActionCommand

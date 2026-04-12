@@ -1,7 +1,7 @@
+using FluentAssertions;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Commands;
-
-namespace LgymApi.UnitTests;
+using NUnit.Framework;
 
 [TestFixture]
 public sealed class CommandTypeDiscriminatorPolicyTests
@@ -11,7 +11,7 @@ public sealed class CommandTypeDiscriminatorPolicyTests
     {
         var discriminator = CommandTypeDiscriminatorPolicy.GetDiscriminator(typeof(List<string>));
 
-        Assert.That(discriminator, Is.EqualTo(typeof(List<string>).FullName));
+        discriminator.Should().Be(typeof(List<string>).FullName);
     }
 
     [Test]
@@ -20,8 +20,8 @@ public sealed class CommandTypeDiscriminatorPolicyTests
         var baseDiscriminator = CommandTypeDiscriminatorPolicy.GetDiscriminator(typeof(ArgumentException));
         var derivedDiscriminator = CommandTypeDiscriminatorPolicy.GetDiscriminator(typeof(ArgumentNullException));
 
-        Assert.That(CommandTypeDiscriminatorPolicy.IsExactMatch(baseDiscriminator, derivedDiscriminator), Is.False);
-        Assert.That(typeof(ArgumentException).IsAssignableFrom(typeof(ArgumentNullException)), Is.True);
+        CommandTypeDiscriminatorPolicy.IsExactMatch(baseDiscriminator, derivedDiscriminator).Should().BeFalse();
+        typeof(ArgumentException).IsAssignableFrom(typeof(ArgumentNullException)).Should().BeTrue();
     }
 
     [Test]
@@ -31,21 +31,21 @@ public sealed class CommandTypeDiscriminatorPolicyTests
 
         var resolvedType = CommandTypeDiscriminatorPolicy.ResolveType(discriminator);
 
-        Assert.That(resolvedType, Is.EqualTo(typeof(Dictionary<string, int>)));
+        resolvedType.Should().Be(typeof(Dictionary<string, int>));
     }
 
     [Test]
     public void ResolveType_Throws_ForUnknownDiscriminator()
     {
-        Assert.Throws<InvalidOperationException>(() =>
-            CommandTypeDiscriminatorPolicy.ResolveType("Fake.Namespace.UnknownCommand"));
+        var action = () => CommandTypeDiscriminatorPolicy.ResolveType("Fake.Namespace.UnknownCommand");
+        action.Should().Throw<InvalidOperationException>();
     }
 
     [Test]
     public void IsExactMatch_ReturnsFalse_ForNullOrWhitespace()
     {
-        Assert.That(CommandTypeDiscriminatorPolicy.IsExactMatch("System.String", ""), Is.False);
-        Assert.That(CommandTypeDiscriminatorPolicy.IsExactMatch("", "System.String"), Is.False);
+        CommandTypeDiscriminatorPolicy.IsExactMatch("System.String", "").Should().BeFalse();
+        CommandTypeDiscriminatorPolicy.IsExactMatch("", "System.String").Should().BeFalse();
     }
 
     #region Known Command Type Resolution Tests
@@ -61,8 +61,8 @@ public sealed class CommandTypeDiscriminatorPolicyTests
         var resolvedType = CommandTypeDiscriminatorPolicy.ResolveType(discriminator);
 
         // Assert - exact type equality
-        Assert.That(resolvedType, Is.EqualTo(commandType));
-        Assert.That(resolvedType.FullName, Is.EqualTo("LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand"));
+        resolvedType.Should().Be(commandType);
+        resolvedType.FullName.Should().Be("LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand");
     }
 
     [Test]
@@ -76,8 +76,8 @@ public sealed class CommandTypeDiscriminatorPolicyTests
         var resolvedType = CommandTypeDiscriminatorPolicy.ResolveType(discriminator);
 
         // Assert - exact type equality
-        Assert.That(resolvedType, Is.EqualTo(commandType));
-        Assert.That(resolvedType.FullName, Is.EqualTo("LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand"));
+        resolvedType.Should().Be(commandType);
+        resolvedType.FullName.Should().Be("LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand");
     }
 
     [Test]
@@ -91,8 +91,8 @@ public sealed class CommandTypeDiscriminatorPolicyTests
         var resolvedType = CommandTypeDiscriminatorPolicy.ResolveType(discriminator);
 
         // Assert - exact type equality
-        Assert.That(resolvedType, Is.EqualTo(commandType));
-        Assert.That(resolvedType.FullName, Is.EqualTo("LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand"));
+        resolvedType.Should().Be(commandType);
+        resolvedType.FullName.Should().Be("LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand");
     }
 
     [Test]
@@ -117,8 +117,7 @@ public sealed class CommandTypeDiscriminatorPolicyTests
         for (int i = 0; i < persistedDiscriminators.Length; i++)
         {
             var resolvedType = CommandTypeDiscriminatorPolicy.ResolveType(persistedDiscriminators[i]);
-            Assert.That(resolvedType, Is.EqualTo(expectedTypes[i]),
-                $"Failed to resolve persisted discriminator: {persistedDiscriminators[i]}");
+            resolvedType.Should().Be(expectedTypes[i], $"Failed to resolve persisted discriminator: {persistedDiscriminators[i]}");
         }
     }
 
@@ -138,9 +137,8 @@ public sealed class CommandTypeDiscriminatorPolicyTests
         var secondPassDiscriminators = commandTypes.Select(t => CommandTypeDiscriminatorPolicy.GetDiscriminator(t)).ToList();
 
         // Assert - discriminators are stable and consistent
-        Assert.That(secondPassDiscriminators, Is.EqualTo(firstPassDiscriminators));
-        Assert.That(firstPassDiscriminators.Distinct().Count(), Is.EqualTo(commandTypes.Length),
-            "All command discriminators must be unique");
+        secondPassDiscriminators.Should().Equal(firstPassDiscriminators);
+        firstPassDiscriminators.Distinct().Count().Should().Be(commandTypes.Length, "All command discriminators must be unique");
     }
 
     #endregion

@@ -1,9 +1,11 @@
 using System.Globalization;
+using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -24,21 +26,18 @@ public sealed class PasswordRecoveryEmailTemplateComposerTests
             CultureName = "en-US"
         };
 
-        var message = composer.ComposePasswordRecovery(payload);
+         var message = composer.ComposePasswordRecovery(payload);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(message.To, Is.EqualTo("alex@example.com"));
-            Assert.That(message.Subject, Is.EqualTo("Reset your LGYM password"));
-            Assert.That(message.Body, Does.Contain("Hi Alex,"));
-            Assert.That(message.Body, Does.Contain("Click the link below to reset your password:"));
-            Assert.That(message.Body, Does.Contain("ABC123DEF456"));
-            Assert.That(message.Body, Does.Contain("This link will expire in 30 minutes."));
-            Assert.That(message.Body, Does.Not.Contain("{{UserName}}"));
-            Assert.That(message.Body, Does.Not.Contain("{{ResetToken}}"));
-            Assert.That(message.Body, Does.Not.Contain("{{ResetUrl}}"));
-            Assert.That(message.Body, Does.Not.Contain("{{ExpiryMinutes}}"));
-        });
+         message.To.Should().Be("alex@example.com");
+         message.Subject.Should().Be("Reset your LGYM password");
+         message.Body.Should().Contain("Hi Alex,");
+         message.Body.Should().Contain("Click the link below to reset your password:");
+         message.Body.Should().Contain("ABC123DEF456");
+         message.Body.Should().Contain("This link will expire in 30 minutes.");
+         message.Body.Should().NotContain("{{UserName}}");
+         message.Body.Should().NotContain("{{ResetToken}}");
+         message.Body.Should().NotContain("{{ResetUrl}}");
+         message.Body.Should().NotContain("{{ExpiryMinutes}}");
     }
 
     [Test]
@@ -55,21 +54,18 @@ public sealed class PasswordRecoveryEmailTemplateComposerTests
             CultureName = "pl-PL"
         };
 
-        var message = composer.ComposePasswordRecovery(payload);
+         var message = composer.ComposePasswordRecovery(payload);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(message.To, Is.EqualTo("piotr@example.pl"));
-            Assert.That(message.Subject, Is.EqualTo("Zresetuj hasło do konta LGYM"));
-            Assert.That(message.Body, Does.Contain("Cześć Piotr,"));
-            Assert.That(message.Body, Does.Contain("Kliknij poniższy link, aby zresetować hasło:"));
-            Assert.That(message.Body, Does.Contain("XYZ789GHI012"));
-            Assert.That(message.Body, Does.Contain("Ten link wygaśnie za 30 minut."));
-            Assert.That(message.Body, Does.Not.Contain("{{UserName}}"));
-            Assert.That(message.Body, Does.Not.Contain("{{ResetToken}}"));
-            Assert.That(message.Body, Does.Not.Contain("{{ResetUrl}}"));
-            Assert.That(message.Body, Does.Not.Contain("{{ExpiryMinutes}}"));
-        });
+         message.To.Should().Be("piotr@example.pl");
+         message.Subject.Should().Be("Zresetuj hasło do konta LGYM");
+         message.Body.Should().Contain("Cześć Piotr,");
+         message.Body.Should().Contain("Kliknij poniższy link, aby zresetować hasło:");
+         message.Body.Should().Contain("XYZ789GHI012");
+         message.Body.Should().Contain("Ten link wygaśnie za 30 minut.");
+         message.Body.Should().NotContain("{{UserName}}");
+         message.Body.Should().NotContain("{{ResetToken}}");
+         message.Body.Should().NotContain("{{ResetUrl}}");
+         message.Body.Should().NotContain("{{ExpiryMinutes}}");
     }
 
     [Test]
@@ -87,36 +83,33 @@ public sealed class PasswordRecoveryEmailTemplateComposerTests
             }
             """;
 
-        var message = composer.Compose(payloadJson);
+         var message = composer.Compose(payloadJson);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(message.To, Is.EqualTo("test@example.com"));
-            Assert.That(message.Subject, Is.EqualTo("Reset your LGYM password"));
-            Assert.That(message.Body, Does.Contain("Hi TestUser,"));
-            Assert.That(message.Body, Does.Contain("Click the link below to reset your password:"));
-            Assert.That(message.Body, Does.Contain("TOKEN123456"));
-        });
+         message.To.Should().Be("test@example.com");
+         message.Subject.Should().Be("Reset your LGYM password");
+         message.Body.Should().Contain("Hi TestUser,");
+         message.Body.Should().Contain("Click the link below to reset your password:");
+         message.Body.Should().Contain("TOKEN123456");
     }
 
     [Test]
     public void Compose_WithInvalidJson_ThrowsInvalidOperationException()
     {
         var composer = CreateComposer();
-        var invalidJson = "{ invalid json ";
+         var invalidJson = "{ invalid json ";
 
-        var ex = Assert.Throws<InvalidOperationException>(() => composer.Compose(invalidJson));
-        Assert.That(ex!.Message, Does.Contain("Failed to deserialize password recovery email payload"));
+         var ex = FluentActions.Invoking(() => composer.Compose(invalidJson)).Should().Throw<InvalidOperationException>().Which;
+         ex.Message.Should().Contain("Failed to deserialize password recovery email payload");
     }
 
     [Test]
     public void Compose_WithNullPayload_ThrowsInvalidOperationException()
     {
         var composer = CreateComposer();
-        var nullPayloadJson = "null";
+         var nullPayloadJson = "null";
 
-        var ex = Assert.Throws<InvalidOperationException>(() => composer.Compose(nullPayloadJson));
-        Assert.That(ex!.Message, Does.Contain("Failed to deserialize password recovery email payload"));
+         var ex = FluentActions.Invoking(() => composer.Compose(nullPayloadJson)).Should().Throw<InvalidOperationException>().Which;
+         ex.Message.Should().Contain("Failed to deserialize password recovery email payload");
     }
 
     [Test]
@@ -133,13 +126,10 @@ public sealed class PasswordRecoveryEmailTemplateComposerTests
             CultureName = "en-US"
         };
 
-        var message = composer.ComposePasswordRecovery(payload);
+         var message = composer.ComposePasswordRecovery(payload);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(message.Body, Does.Contain("O'Connor"));
-            Assert.That(message.Body, Is.Not.Empty);
-        });
+         message.Body.Should().Contain("O'Connor");
+         message.Body.Should().NotBeEmpty();
     }
 
     [Test]
@@ -156,22 +146,19 @@ public sealed class PasswordRecoveryEmailTemplateComposerTests
             CultureName = "fr-FR" // French culture, but only en/pl templates exist
         };
 
-        // Should fall back to en-US default culture based on EmailOptions.DefaultCulture
-        var message = composer.ComposePasswordRecovery(payload);
+         // Should fall back to en-US default culture based on EmailOptions.DefaultCulture
+         var message = composer.ComposePasswordRecovery(payload);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(message.Subject, Does.Contain("Reset your LGYM password").Or.Contain("Zresetuj hasło"));
-            Assert.That(message.Body, Is.Not.Empty);
-        });
+         (message.Subject.Contains("Reset your LGYM password") || message.Subject.Contains("Zresetuj hasło")).Should().BeTrue();
+         message.Body.Should().NotBeEmpty();
     }
 
     [Test]
     public void NotificationType_ReturnsPasswordRecoveryType()
     {
-        var composer = CreateComposer();
-        
-        Assert.That(composer.NotificationType.Value, Is.EqualTo("user.password.recovery"));
+         var composer = CreateComposer();
+         
+         composer.NotificationType.Value.Should().Be("user.password.recovery");
     }
 
     [Test]
@@ -188,14 +175,11 @@ public sealed class PasswordRecoveryEmailTemplateComposerTests
             CultureName = "en-US"
         };
 
-        var message = composer.ComposePasswordRecovery(payload);
+         var message = composer.ComposePasswordRecovery(payload);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(message.To, Is.EqualTo("test@example.com"));
-            Assert.That(message.Subject, Is.Not.Empty);
-            Assert.That(message.Body, Is.Not.Empty);
-        });
+         message.To.Should().Be("test@example.com");
+         message.Subject.Should().NotBeEmpty();
+         message.Body.Should().NotBeEmpty();
     }
 
     private static PasswordRecoveryEmailTemplateComposer CreateComposer()

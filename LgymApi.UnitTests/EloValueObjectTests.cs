@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.UnitTests;
@@ -10,13 +11,14 @@ public sealed class EloValueObjectTests
     {
         var elo = new Elo(1234);
 
-        Assert.That(elo.Value, Is.EqualTo(1234));
+        elo.Value.Should().Be(1234);
     }
 
     [Test]
     public void Constructor_Throws_WhenNegative()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new Elo(-1));
+        var act = new Action(() => _ = new Elo(-1));
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Test]
@@ -25,6 +27,6 @@ public sealed class EloValueObjectTests
         Elo elo = 1400;
         int value = elo;
 
-        Assert.That(value, Is.EqualTo(1400));
+        value.Should().Be(1400);
     }
 }

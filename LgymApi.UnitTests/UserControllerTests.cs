@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
@@ -14,6 +15,7 @@ using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -37,10 +39,10 @@ public sealed class UserControllerTests
             IsVisibleInRanking = true
         });
 
-        Assert.That(userService.LastPreferredLanguage, Is.EqualTo("pl-PL,pl;q=0.9"));
-        Assert.That(action, Is.TypeOf<OkObjectResult>());
+        userService.LastPreferredLanguage.Should().Be("pl-PL,pl;q=0.9");
+        action.Should().BeOfType<OkObjectResult>();
         var dto = ((OkObjectResult)action).Value as ResponseMessageDto;
-        Assert.That(dto, Is.Not.Null);
+        dto.Should().NotBeNull();
     }
 
     [Test]
@@ -59,8 +61,8 @@ public sealed class UserControllerTests
             IsVisibleInRanking = true
         });
 
-        Assert.That(userService.LastPreferredLanguage, Is.Null);
-        Assert.That(action, Is.TypeOf<OkObjectResult>());
+        userService.LastPreferredLanguage.Should().BeNull();
+        action.Should().BeOfType<OkObjectResult>();
     }
 
     [Test]
@@ -84,11 +86,11 @@ public sealed class UserControllerTests
             IsVisibleInRanking = true
         });
 
-        Assert.That(action, Is.TypeOf<ObjectResult>());
+        action.Should().BeOfType<ObjectResult>();
         var objectResult = (ObjectResult)action;
-        Assert.That(objectResult.StatusCode, Is.EqualTo(400));
-        Assert.That(objectResult.Value, Is.TypeOf<ResponseMessageDto>());
-        Assert.That(((ResponseMessageDto)objectResult.Value!).Message, Is.EqualTo(message));
+        objectResult.StatusCode.Should().Be(400);
+        objectResult.Value.Should().BeOfType<ResponseMessageDto>();
+        ((ResponseMessageDto)objectResult.Value!).Message.Should().Be(message);
     }
 
     private static UserController CreateController(IUserService userService)

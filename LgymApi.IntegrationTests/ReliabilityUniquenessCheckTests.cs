@@ -4,7 +4,6 @@ using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.Extensions.DependencyInjection;
-using NUnit.Framework;
 
 namespace LgymApi.IntegrationTests;
 
@@ -47,7 +46,7 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
         // Act & Assert
         // The fixture should correctly count and assert uniqueness
         var count = await CountCommandEnvelopesByCorrelationIdAsync(correlationId);
-        Assert.That(count, Is.EqualTo(1), "Fixture should count exactly one envelope for the correlation ID");
+        count.Should().Be(1, "Fixture should count exactly one envelope for the correlation ID");
         
         // This should succeed without throwing
         await AssertCommandEnvelopeUniquenessAsync(correlationId);
@@ -95,12 +94,10 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
         await db.SaveChangesAsync();
 
         var count = await CountCommandEnvelopesByCorrelationIdAsync(correlationId);
-        Assert.That(count, Is.EqualTo(2), "Fixture should observe both duplicate envelopes before asserting uniqueness");
+        count.Should().Be(2, "Fixture should observe both duplicate envelopes before asserting uniqueness");
 
-        Assert.That(
-            () => AssertCommandEnvelopeUniquenessAsync(correlationId).GetAwaiter().GetResult(),
-            Throws.InstanceOf<AssertionException>(),
-            "Fixture uniqueness helper should fail when duplicate CommandEnvelope records exist");
+        var act = () => AssertCommandEnvelopeUniquenessAsync(correlationId).GetAwaiter().GetResult();
+        act.Should().Throw<AssertionException>("Fixture uniqueness helper should fail when duplicate CommandEnvelope records exist");
     }
 
     /// <summary>
@@ -133,7 +130,7 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
 
         // Act & Assert
         var count = await CountNotificationMessagesByKeyAsync(notificationType, correlationId, recipient);
-        Assert.That(count, Is.EqualTo(1), "Fixture should count exactly one notification for the key tuple");
+        count.Should().Be(1, "Fixture should count exactly one notification for the key tuple");
         
         // This should succeed without throwing
         await AssertNotificationMessageUniquenessAsync(notificationType, correlationId, recipient);
@@ -187,12 +184,10 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
         await db.SaveChangesAsync();
 
         var count = await CountNotificationMessagesByKeyAsync(notificationType, correlationId, recipient);
-        Assert.That(count, Is.EqualTo(2), "Fixture should observe both duplicate notifications before asserting uniqueness");
+        count.Should().Be(2, "Fixture should observe both duplicate notifications before asserting uniqueness");
 
-        Assert.That(
-            () => AssertNotificationMessageUniquenessAsync(notificationType, correlationId, recipient).GetAwaiter().GetResult(),
-            Throws.InstanceOf<AssertionException>(),
-            "Fixture uniqueness helper should fail when duplicate NotificationMessage records exist");
+        var act = () => AssertNotificationMessageUniquenessAsync(notificationType, correlationId, recipient).GetAwaiter().GetResult();
+        act.Should().Throw<AssertionException>("Fixture uniqueness helper should fail when duplicate NotificationMessage records exist");
     }
 
     /// <summary>
@@ -223,11 +218,11 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
 
         // Assert
         var afterEnvelopes = await CountAllCommandEnvelopesAsync();
-        Assert.That(afterEnvelopes, Is.EqualTo(baselineEnvelopes + 1), "Envelope count should increment by 1");
+        afterEnvelopes.Should().Be(baselineEnvelopes + 1, "Envelope count should increment by 1");
         
         // Notification count should remain unchanged
         var afterNotifications = await CountAllNotificationMessagesAsync();
-        Assert.That(afterNotifications, Is.EqualTo(baselineNotifications), "Notification count should remain unchanged");
+        afterNotifications.Should().Be(baselineNotifications, "Notification count should remain unchanged");
     }
 
     /// <summary>
@@ -257,7 +252,7 @@ public class ReliabilityUniquenessCheckTests : IntegrationTestBase
         var statuses = await GetCommandEnvelopeStatusesAsync(correlationId);
 
         // Assert
-        Assert.That(statuses.Count, Is.EqualTo(1), "Should retrieve exactly one status record");
-        Assert.That(statuses[0].Item2, Is.EqualTo(ActionExecutionStatus.Pending), "Status should be Pending");
+        statuses.Should().HaveCount(1, "Should retrieve exactly one status record");
+        statuses[0].Item2.Should().Be(ActionExecutionStatus.Pending, "Status should be Pending");
     }
 }

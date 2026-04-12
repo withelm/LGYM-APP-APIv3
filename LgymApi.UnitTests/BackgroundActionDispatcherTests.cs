@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
@@ -64,12 +65,12 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(command);
 
         // Assert
-        Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should persist exactly one envelope");
+        _repository.Envelopes.Count.Should().Be(1, "Should persist exactly one envelope");
 
         var envelope = _repository.Envelopes.First();
-        Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
-        Assert.That(envelope.CommandTypeFullName, Is.EqualTo(typeof(TestCommand).FullName));
-        Assert.That(envelope.PayloadJson, Does.Contain("test-single"));
+        envelope.Status.Should().Be(ActionExecutionStatus.Pending);
+        envelope.CommandTypeFullName.Should().Be(typeof(TestCommand).FullName);
+        envelope.PayloadJson.Should().Contain("test-single");
     }
 
     [Test]
@@ -90,7 +91,7 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(command);
 
         // Assert
-        Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should persist exactly one envelope despite multiple handlers");
+        _repository.Envelopes.Count.Should().Be(1, "Should persist exactly one envelope despite multiple handlers");
     }
 
     [Test]
@@ -108,7 +109,7 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(command);
 
         // Assert - Zero-handler path: safe no-op, no failure, no enqueue
-        Assert.That(_repository.Envelopes.Count, Is.EqualTo(0), "Should not persist envelope when no handlers registered");
+        _repository.Envelopes.Count.Should().Be(0, "Should not persist envelope when no handlers registered");
     }
 
     [Test]
@@ -130,7 +131,7 @@ public sealed class BackgroundActionDispatcherTests
         // Assert - Deterministic correlation ID should deduplicate second dispatch
 
         // Assert - Idempotency check: duplicate envelope should not enqueue
-        Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should not create duplicate envelope for identical command");
+        _repository.Envelopes.Count.Should().Be(1, "Should not create duplicate envelope for identical command");
     }
 
     [Test]
@@ -144,7 +145,8 @@ public sealed class BackgroundActionDispatcherTests
         var dispatcher = CreateDispatcher();
 
         // Act & Assert
-        Assert.ThrowsAsync<ArgumentNullException>(async () => await dispatcher.EnqueueAsync<TestCommand>(null!));
+        var action = async () => await dispatcher.EnqueueAsync<TestCommand>(null!);
+        await action.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Test]
@@ -163,7 +165,7 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(derivedCommand);
 
         // Assert - Zero-handler path because exact-type matching only
-        Assert.That(_repository.Envelopes.Count, Is.EqualTo(0), "Should not persist envelope for derived command when only base handler exists");
+        _repository.Envelopes.Count.Should().Be(0, "Should not persist envelope for derived command when only base handler exists");
     }
 
     [Test]
@@ -182,7 +184,7 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(command);
 
         // Assert - Envelope must be persisted before enqueue
-        Assert.That(_repository.Envelopes.Count, Is.EqualTo(1));
+        _repository.Envelopes.Count.Should().Be(1);
     }
 
     private CommandDispatcher CreateDispatcher()

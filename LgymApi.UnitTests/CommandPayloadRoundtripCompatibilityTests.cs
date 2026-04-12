@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common;
@@ -40,8 +41,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<UserRegisteredCommand>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(originalCommand.UserId));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(originalCommand.UserId);
     }
 
     [Test]
@@ -54,8 +55,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(json, Does.Contain("userId"));
-        Assert.That(json, Does.Not.Contain("UserId"));
+        json.Should().Contain("userId");
+        json.Should().NotContain("UserId");
     }
 
     [Test]
@@ -69,8 +70,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<UserRegisteredCommand>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert - PropertyNameCaseInsensitive=true allows reading PascalCase
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId)));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId));
     }
 
     [Test]
@@ -90,8 +91,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
             var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
             var deserialized = JsonSerializer.Deserialize<UserRegisteredCommand>(json, SharedSerializationOptions.Current);
             
-            Assert.That(deserialized, Is.Not.Null);
-            Assert.That(deserialized!.UserId, Is.EqualTo(command.UserId));
+            deserialized.Should().NotBeNull();
+            deserialized!.UserId.Should().Be(command.UserId);
         }
     }
 
@@ -116,9 +117,9 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedCommand>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(userId);
+        deserialized.TrainingId.Should().Be(trainingId);
     }
 
     [Test]
@@ -135,10 +136,10 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(json, Does.Contain("userId"));
-        Assert.That(json, Does.Contain("trainingId"));
-        Assert.That(json, Does.Not.Contain("UserId"));
-        Assert.That(json, Does.Not.Contain("TrainingId"));
+        json.Should().Contain("userId");
+        json.Should().Contain("trainingId");
+        json.Should().NotContain("UserId");
+        json.Should().NotContain("TrainingId");
     }
 
     [Test]
@@ -153,9 +154,9 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedCommand>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId)));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId)));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId));
+        deserialized.TrainingId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId));
     }
 
     [Test]
@@ -170,9 +171,9 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedCommand>(mixedJson, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId)));
-        Assert.That(deserialized.TrainingId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId)));
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId));
+        deserialized.TrainingId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId));
     }
 
     [Test]
@@ -192,9 +193,9 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<TrainingCompletedCommand>(json, SharedSerializationOptions.Current);
 
         // Assert - each field must match exactly
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.UserId, Is.EqualTo(userId), "UserId not preserved");
-        Assert.That(deserialized.TrainingId, Is.EqualTo(trainingId), "TrainingId not preserved");
+        deserialized.Should().NotBeNull();
+        deserialized!.UserId.Should().Be(userId, "UserId not preserved");
+        deserialized.TrainingId.Should().Be(trainingId, "TrainingId not preserved");
     }
 
     #endregion
@@ -213,8 +214,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<InvitationCreatedCommand>(json, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(invitationId));
+        deserialized.Should().NotBeNull();
+        deserialized!.InvitationId.Should().Be(invitationId);
     }
 
     [Test]
@@ -227,8 +228,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(json, Does.Contain("invitationId"));
-        Assert.That(json, Does.Not.Contain("InvitationId"));
+        json.Should().Contain("invitationId");
+        json.Should().NotContain("InvitationId");
     }
 
     [Test]
@@ -242,8 +243,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var deserialized = JsonSerializer.Deserialize<InvitationCreatedCommand>(legacyJson, SharedSerializationOptions.Current);
 
         // Assert
-        Assert.That(deserialized, Is.Not.Null);
-        Assert.That(deserialized!.InvitationId, Is.EqualTo(ParseTestId<LgymApi.Domain.Entities.TrainerInvitation>(legacyInvitationId)));
+        deserialized.Should().NotBeNull();
+        deserialized!.InvitationId.Should().Be(ParseTestId<LgymApi.Domain.Entities.TrainerInvitation>(legacyInvitationId));
     }
 
     [Test]
@@ -264,8 +265,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
             var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
             var deserialized = JsonSerializer.Deserialize<InvitationCreatedCommand>(json, SharedSerializationOptions.Current);
             
-            Assert.That(deserialized, Is.Not.Null);
-            Assert.That(deserialized!.InvitationId, Is.EqualTo(id));
+            deserialized.Should().NotBeNull();
+            deserialized!.InvitationId.Should().Be(id);
         }
     }
 
@@ -288,8 +289,8 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         foreach (var command in commands)
         {
             var json = JsonSerializer.Serialize(command, SharedSerializationOptions.Current);
-            Assert.That(json, Is.Not.Null);
-            Assert.That(json, Is.Not.Empty);
+            json.Should().NotBeNull();
+            json.Should().NotBeEmpty();
         }
     }
 
@@ -300,10 +301,10 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
         var options = SharedSerializationOptions.Current;
 
         // Assert - options object should be immutable after creation
-        Assert.That(options, Is.Not.Null);
-        Assert.That(options.PropertyNamingPolicy, Is.EqualTo(JsonNamingPolicy.CamelCase));
-        Assert.That(options.DictionaryKeyPolicy, Is.EqualTo(JsonNamingPolicy.CamelCase));
-        Assert.That(options.PropertyNameCaseInsensitive, Is.True);
+        options.Should().NotBeNull();
+        options.PropertyNamingPolicy.Should().Be(JsonNamingPolicy.CamelCase);
+        options.DictionaryKeyPolicy.Should().Be(JsonNamingPolicy.CamelCase);
+        options.PropertyNameCaseInsensitive.Should().BeTrue();
     }
 
     #endregion

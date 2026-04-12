@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -35,7 +36,7 @@ public sealed class UnitOfWorkCommittedDispatchTests
 
         await unitOfWork.SaveChangesAsync();
 
-        Assert.That(dispatcher.CallCount, Is.EqualTo(1));
+        dispatcher.CallCount.Should().Be(1);
     }
 
     [Test]
@@ -49,12 +50,11 @@ public sealed class UnitOfWorkCommittedDispatchTests
         await using var dbContext = new AppDbContext(options);
         var transaction = new EfUnitOfWorkTransaction(dbTransaction, dbContext, dispatcher, NullLogger<EfUnitOfWork>.Instance);
 
-        Assert.DoesNotThrowAsync(async () => await transaction.CommitAsync());
-        Assert.Multiple(() =>
-        {
-            Assert.That(dbTransaction.CommitCalls, Is.EqualTo(1));
-            Assert.That(dispatcher.CallCount, Is.EqualTo(1));
-        });
+        var action = async () => await transaction.CommitAsync();
+        await action.Should().NotThrowAsync();
+        
+        dbTransaction.CommitCalls.Should().Be(1);
+        dispatcher.CallCount.Should().Be(1);
     }
 
     private sealed class RecordingCommittedIntentDispatcher : ICommittedIntentDispatcher

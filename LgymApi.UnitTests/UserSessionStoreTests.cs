@@ -1,8 +1,10 @@
+using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
@@ -51,16 +53,13 @@ public sealed class UserSessionStoreTests
         var session = await store.CreateSessionAsync(userId, expiresAt, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(session.UserId, Is.EqualTo(userId));
-            Assert.That(session.ExpiresAtUtc, Is.EqualTo(expiresAt));
-            Assert.That(session.Jti, Is.Not.Empty);
-            Assert.That(session.RevokedAtUtc, Is.Null);
-        });
+        session.UserId.Should().Be(userId);
+        session.ExpiresAtUtc.Should().Be(expiresAt);
+        session.Jti.Should().NotBeEmpty();
+        session.RevokedAtUtc.Should().BeNull();
 
         var retrieved = await dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
-        Assert.That(retrieved, Is.Not.Null);
+        retrieved.Should().NotBeNull();
     }
 
     [Test]
@@ -86,7 +85,7 @@ public sealed class UserSessionStoreTests
         var store = new UserSessionStore(dbContext);
         var isValid = await store.ValidateSessionAsync(session.Id, CancellationToken.None);
 
-        Assert.That(isValid, Is.True);
+        isValid.Should().BeTrue();
     }
 
     [Test]
@@ -112,7 +111,7 @@ public sealed class UserSessionStoreTests
         var store = new UserSessionStore(dbContext);
         var isValid = await store.ValidateSessionAsync(session.Id, CancellationToken.None);
 
-        Assert.That(isValid, Is.False);
+        isValid.Should().BeFalse();
     }
 
     [Test]
@@ -138,7 +137,7 @@ public sealed class UserSessionStoreTests
         var store = new UserSessionStore(dbContext);
         var isValid = await store.ValidateSessionAsync(session.Id, CancellationToken.None);
 
-        Assert.That(isValid, Is.False);
+        isValid.Should().BeFalse();
     }
 
     [Test]
@@ -152,7 +151,7 @@ public sealed class UserSessionStoreTests
 
         var isValid = await store.ValidateSessionAsync(nonExistentSessionId, CancellationToken.None);
 
-        Assert.That(isValid, Is.False);
+        isValid.Should().BeFalse();
     }
 
     [Test]
@@ -180,7 +179,7 @@ public sealed class UserSessionStoreTests
         await dbContext.SaveChangesAsync();
 
         var retrieved = await dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
-        Assert.That(retrieved!.RevokedAtUtc, Is.Not.Null);
+        retrieved!.RevokedAtUtc.Should().NotBeNull();
     }
 
     [Test]
@@ -237,12 +236,9 @@ public sealed class UserSessionStoreTests
         var activeRevoked = allSessions.Where(s => s.Id == session1Id || s.Id == session2Id).ToList();
         var stillRevoked = allSessions.FirstOrDefault(s => s.Id == alreadyRevokedId);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(activeRevoked, Has.Count.EqualTo(2));
-            Assert.That(activeRevoked.All(s => s.RevokedAtUtc != null), Is.True);
-            Assert.That(stillRevoked!.RevokedAtUtc, Is.Not.Null);
-        });
+        activeRevoked.Should().HaveCount(2);
+        activeRevoked.All(s => s.RevokedAtUtc != null).Should().BeTrue();
+        stillRevoked!.RevokedAtUtc.Should().NotBeNull();
     }
 
     [Test]
@@ -292,10 +288,7 @@ public sealed class UserSessionStoreTests
         var user1Retrieved = await verifyContext.UserSessions.FirstOrDefaultAsync(s => s.Id == user1SessionId);
         var user2Retrieved = await verifyContext.UserSessions.FirstOrDefaultAsync(s => s.Id == user2SessionId);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(user1Retrieved!.RevokedAtUtc, Is.Not.Null);
-            Assert.That(user2Retrieved!.RevokedAtUtc, Is.Null);
-        });
+        user1Retrieved!.RevokedAtUtc.Should().NotBeNull();
+        user2Retrieved!.RevokedAtUtc.Should().BeNull();
     }
 }

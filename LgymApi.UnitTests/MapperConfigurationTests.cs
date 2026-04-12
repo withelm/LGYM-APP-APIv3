@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Mapping;
@@ -18,16 +19,14 @@ public sealed class MapperConfigurationTests
         using var provider = services.BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(mapper, Is.Not.Null);
+        mapper.Should().NotBeNull();
 
-            var concrete = mapper as Mapper;
-            Assert.That(concrete, Is.Not.Null, "Mapper should be concrete implementation for validation");
+        var concrete = mapper as Mapper;
+        concrete.Should().NotBeNull("Mapper should be concrete implementation for validation");
 
-            Assert.That(concrete!.RegisteredMappings.Count, Is.GreaterThan(0), "No mappings registered");
-            Assert.DoesNotThrow(concrete.ValidateMappings, "Mapping validation failed");
-        });
+        concrete!.RegisteredMappings.Count.Should().BeGreaterThan(0, "No mappings registered");
+        var action = () => concrete.ValidateMappings();
+        action.Should().NotThrow("Mapping validation failed");
     }
 
     [Test]
@@ -41,7 +40,8 @@ public sealed class MapperConfigurationTests
 
         var context = mapper.CreateContext();
 
-        Assert.Throws<InvalidOperationException>(() => context.Set(new ContextKey<string>("Unknown.Key"), "value"));
+        var action = () => context.Set(new ContextKey<string>("Unknown.Key"), "value");
+        action.Should().Throw<InvalidOperationException>();
     }
 
     [Test]
@@ -52,6 +52,7 @@ public sealed class MapperConfigurationTests
 
         configuration.AllowContextKey(key);
 
-        Assert.Throws<InvalidOperationException>(() => configuration.AllowContextKey(key));
+        var action = () => configuration.AllowContextKey(key);
+        action.Should().Throw<InvalidOperationException>();
     }
 }
