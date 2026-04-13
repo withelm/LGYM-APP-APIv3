@@ -342,7 +342,7 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
 
     private sealed class MiddlewareErrorResponse
     {
-        [JsonPropertyName("message")]
+        [JsonPropertyName("msg")]
         public string Message { get; set; } = string.Empty;
     }
 

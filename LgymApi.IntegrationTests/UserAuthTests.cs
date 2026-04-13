@@ -439,11 +439,11 @@ public sealed class UserAuthTests : IntegrationTestBase
     }
 
     /// <summary>
-    /// Used for middleware error responses which use { "message": "..." } format
+    /// Used for middleware error responses which use { "msg": "..." } format
     /// </summary>
     private sealed class MiddlewareErrorResponse
     {
-        [JsonPropertyName("message")]
+        [JsonPropertyName("msg")]
         public string Message { get; set; } = string.Empty;
     }
 
