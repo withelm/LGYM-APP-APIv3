@@ -37,6 +37,16 @@ internal static class InfrastructureMappingRegistration
             new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false }
         ]);
 
+        registry.Register<AppConfig>(
+        [
+            new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },
+            new FieldMapping { FieldName = "platform", MemberName = "Platform", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "minRequiredVersion", MemberName = "MinRequiredVersion", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "latestVersion", MemberName = "LatestVersion", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "forceUpdate", MemberName = "ForceUpdate", AllowSort = true, AllowFilter = true },
+            new FieldMapping { FieldName = "createdAt", MemberName = "CreatedAt", AllowSort = true, AllowFilter = false }
+        ]);
+
         registry.Register<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult>(
         [
             new FieldMapping { FieldName = "id", MemberName = "Id", AllowSort = true, AllowFilter = false },

@@ -72,6 +72,10 @@ public sealed class AppConfigServiceTests
     {
         public Task<AppConfig?> GetLatestByPlatformAsync(Platforms platform, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAsync(AppConfig config, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<AppConfig?> FindByIdAsync(Id<AppConfig> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Pagination<AppConfig>> GetPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public void Update(AppConfig config) => throw new NotSupportedException();
+        public void Delete(AppConfig config) => throw new NotSupportedException();
     }
 
     private sealed class NoOpUnitOfWork : IUnitOfWork
