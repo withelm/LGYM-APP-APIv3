@@ -16,5 +16,18 @@ public sealed class AppConfigProfile : IMappingProfile
             UpdateUrl = source.UpdateUrl,
             ReleaseNotes = source.ReleaseNotes
         });
+
+        configuration.CreateMap<AppConfig, AppConfigDetailDto>((source, _) => new AppConfigDetailDto
+        {
+            Id = source.Id.ToString(),
+            Platform = source.Platform,
+            MinRequiredVersion = source.MinRequiredVersion,
+            LatestVersion = source.LatestVersion,
+            ForceUpdate = source.ForceUpdate,
+            UpdateUrl = source.UpdateUrl,
+            ReleaseNotes = source.ReleaseNotes,
+            CreatedAt = source.CreatedAt.DateTime,
+            UpdatedAt = source.UpdatedAt.DateTime
+        });
     }
 }
