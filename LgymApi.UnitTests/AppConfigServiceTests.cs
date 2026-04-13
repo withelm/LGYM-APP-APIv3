@@ -139,29 +139,50 @@ public sealed class AppConfigServiceTests
         result.Error.Should().BeOfType<AppConfigNotFoundError>();
     }
 
-    [Test]
-    public async Task GetByIdAsync_WithValidId_ReturnsSuccess()
-    {
-        var userId = Id<User>.New();
-        var configId = Id<AppConfig>.New();
-        var userRepo = new FakeUserRepository(userId);
-        var roleRepo = new FakeRoleRepository(hasPermission: true);
-        var appConfigRepo = new FakeAppConfigRepository(configId);
+     [Test]
+     public async Task GetByIdAsync_WithValidId_ReturnsSuccess()
+     {
+         var userId = Id<User>.New();
+         var configId = Id<AppConfig>.New();
+         var userRepo = new FakeUserRepository(userId);
+         var roleRepo = new FakeRoleRepository(hasPermission: true);
+         var appConfigRepo = new FakeAppConfigRepository(configId);
 
-        var service = new AppConfigService(
-            userRepo,
-            roleRepo,
-            appConfigRepo,
-            new NoOpUnitOfWork());
+         var service = new AppConfigService(
+             userRepo,
+             roleRepo,
+             appConfigRepo,
+             new NoOpUnitOfWork());
 
-        var result = await service.GetByIdAsync(userId, configId);
+         var result = await service.GetByIdAsync(userId, configId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
-        result.Value.Id.Should().Be(configId);
-    }
+         result.IsSuccess.Should().BeTrue();
+         result.Value.Should().NotBeNull();
+         result.Value.Id.Should().Be(configId);
+     }
 
-    // UpdateAsync Tests
+     [Test]
+     public async Task GetByIdAsync_WithNoPermission_ReturnsForbiddenError()
+     {
+         var userId = Id<User>.New();
+         var configId = Id<AppConfig>.New();
+         var userRepo = new FakeUserRepository(userId);
+         var roleRepo = new FakeRoleRepository(hasPermission: false);
+         var appConfigRepo = new FakeAppConfigRepository(configId);
+
+         var service = new AppConfigService(
+             userRepo,
+             roleRepo,
+             appConfigRepo,
+             new NoOpUnitOfWork());
+
+         var result = await service.GetByIdAsync(userId, configId);
+
+         result.IsFailure.Should().BeTrue();
+         result.Error.Should().BeOfType<AppConfigForbiddenError>();
+     }
+
+     // UpdateAsync Tests
     [Test]
     public async Task UpdateAsync_WithEmptyUserId_ReturnsForbidden()
     {
@@ -221,30 +242,52 @@ public sealed class AppConfigServiceTests
         result.Error.Should().BeOfType<InvalidAppConfigError>();
     }
 
-    [Test]
-    public async Task UpdateAsync_WithValidInput_ReturnsSuccess()
-    {
-        var userId = Id<User>.New();
-        var configId = Id<AppConfig>.New();
-        var userRepo = new FakeUserRepository(userId);
-        var roleRepo = new FakeRoleRepository(hasPermission: true);
-        var appConfigRepo = new FakeAppConfigRepository(configId, tracked: true);
-        var uow = new FakeUnitOfWork();
+     [Test]
+     public async Task UpdateAsync_WithValidInput_ReturnsSuccess()
+     {
+         var userId = Id<User>.New();
+         var configId = Id<AppConfig>.New();
+         var userRepo = new FakeUserRepository(userId);
+         var roleRepo = new FakeRoleRepository(hasPermission: true);
+         var appConfigRepo = new FakeAppConfigRepository(configId, tracked: true);
+         var uow = new FakeUnitOfWork();
 
-        var service = new AppConfigService(
-            userRepo,
-            roleRepo,
-            appConfigRepo,
-            uow);
+         var service = new AppConfigService(
+             userRepo,
+             roleRepo,
+             appConfigRepo,
+             uow);
 
-        var input = new UpdateAppConfigInput(Platforms.Android, "1.0", "1.1", false, "url", "notes");
-        var result = await service.UpdateAsync(userId, configId, input);
+         var input = new UpdateAppConfigInput(Platforms.Android, "1.0", "1.1", false, "url", "notes");
+         var result = await service.UpdateAsync(userId, configId, input);
 
-        result.IsSuccess.Should().BeTrue();
-        uow.SaveChangesCalled.Should().BeTrue();
-    }
+         result.IsSuccess.Should().BeTrue();
+         uow.SaveChangesCalled.Should().BeTrue();
+     }
 
-    // DeleteAsync Tests
+     [Test]
+     public async Task UpdateAsync_WithNoPermission_ReturnsForbiddenError()
+     {
+         var userId = Id<User>.New();
+         var configId = Id<AppConfig>.New();
+         var userRepo = new FakeUserRepository(userId);
+         var roleRepo = new FakeRoleRepository(hasPermission: false);
+         var appConfigRepo = new FakeAppConfigRepository(configId, tracked: true);
+
+         var service = new AppConfigService(
+             userRepo,
+             roleRepo,
+             appConfigRepo,
+             new NoOpUnitOfWork());
+
+         var input = new UpdateAppConfigInput(Platforms.Android, "1.0", "1.1", false, null, null);
+         var result = await service.UpdateAsync(userId, configId, input);
+
+         result.IsFailure.Should().BeTrue();
+         result.Error.Should().BeOfType<AppConfigForbiddenError>();
+     }
+
+     // DeleteAsync Tests
     [Test]
     public async Task DeleteAsync_WithEmptyUserId_ReturnsForbidden()
     {
@@ -280,30 +323,51 @@ public sealed class AppConfigServiceTests
         result.Error.Should().BeOfType<AppConfigNotFoundError>();
     }
 
-    [Test]
-    public async Task DeleteAsync_WithValidId_ReturnsSuccess()
-    {
-        var userId = Id<User>.New();
-        var configId = Id<AppConfig>.New();
-        var userRepo = new FakeUserRepository(userId);
-        var roleRepo = new FakeRoleRepository(hasPermission: true);
-        var appConfigRepo = new FakeAppConfigRepository(configId, tracked: true);
-        var uow = new FakeUnitOfWork();
+     [Test]
+     public async Task DeleteAsync_WithValidId_ReturnsSuccess()
+     {
+         var userId = Id<User>.New();
+         var configId = Id<AppConfig>.New();
+         var userRepo = new FakeUserRepository(userId);
+         var roleRepo = new FakeRoleRepository(hasPermission: true);
+         var appConfigRepo = new FakeAppConfigRepository(configId, tracked: true);
+         var uow = new FakeUnitOfWork();
 
-        var service = new AppConfigService(
-            userRepo,
-            roleRepo,
-            appConfigRepo,
-            uow);
+         var service = new AppConfigService(
+             userRepo,
+             roleRepo,
+             appConfigRepo,
+             uow);
 
-        var result = await service.DeleteAsync(userId, configId);
+         var result = await service.DeleteAsync(userId, configId);
 
-        result.IsSuccess.Should().BeTrue();
-        appConfigRepo.DeleteCalled.Should().BeTrue();
-        uow.SaveChangesCalled.Should().BeTrue();
-    }
+         result.IsSuccess.Should().BeTrue();
+         appConfigRepo.DeleteCalled.Should().BeTrue();
+         uow.SaveChangesCalled.Should().BeTrue();
+     }
 
-    private sealed class NoOpUserRepository : IUserRepository
+     [Test]
+     public async Task DeleteAsync_WithNoPermission_ReturnsForbiddenError()
+     {
+         var userId = Id<User>.New();
+         var configId = Id<AppConfig>.New();
+         var userRepo = new FakeUserRepository(userId);
+         var roleRepo = new FakeRoleRepository(hasPermission: false);
+         var appConfigRepo = new FakeAppConfigRepository(configId, tracked: true);
+
+         var service = new AppConfigService(
+             userRepo,
+             roleRepo,
+             appConfigRepo,
+             new NoOpUnitOfWork());
+
+         var result = await service.DeleteAsync(userId, configId);
+
+         result.IsFailure.Should().BeTrue();
+         result.Error.Should().BeOfType<AppConfigForbiddenError>();
+     }
+
+     private sealed class NoOpUserRepository : IUserRepository
     {
         public Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
