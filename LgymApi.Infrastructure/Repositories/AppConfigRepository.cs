@@ -51,6 +51,12 @@ public sealed class AppConfigRepository : IAppConfigRepository
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
+    public Task<AppConfig?> FindByIdTrackedAsync(Id<AppConfig> id, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.AppConfigs
+            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+    }
+
     public async Task<Pagination<AppConfig>> GetPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default)
     {
         var baseQuery = _dbContext.AppConfigs
