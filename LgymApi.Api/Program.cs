@@ -29,6 +29,8 @@ using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Application.Notifications;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Http.Json;
+using Microsoft.Extensions.Options;
 
 
 const string TestingEnvironment = "Testing";
@@ -45,6 +47,15 @@ builder.Services
         options.JsonSerializerOptions.Converters.Add(new TypedIdJsonConverterFactory());
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
     });
+
+builder.Services.Configure<JsonOptions>(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    options.SerializerOptions.Converters.Add(new TypedIdJsonConverterFactory());
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
+});
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
@@ -124,8 +135,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 if (context.Exception is SecurityTokenExpiredException)
                 {
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return context.Response.WriteAsJsonAsync(new { message = Messages.ExpiredToken });
+                    return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, Messages.ExpiredToken, context.HttpContext.RequestAborted);
                 }
 
                 return Task.CompletedTask;
@@ -135,11 +145,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 if (!context.Response.HasStarted)
                 {
                     context.HandleResponse();
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
+                    return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, Messages.InvalidToken, context.HttpContext.RequestAborted);
                 }
 
                 return Task.CompletedTask;
+            },
+            OnForbidden = context =>
+            {
+                return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status403Forbidden, Messages.Unauthorized, context.HttpContext.RequestAborted);
             }
         };
     });
