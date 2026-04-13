@@ -29,6 +29,8 @@ using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Application.Notifications;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Http.Json;
+using Microsoft.Extensions.Options;
 
 
 const string TestingEnvironment = "Testing";
@@ -45,6 +47,15 @@ builder.Services
         options.JsonSerializerOptions.Converters.Add(new TypedIdJsonConverterFactory());
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
     });
+
+builder.Services.Configure<JsonOptions>(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    options.SerializerOptions.Converters.Add(new TypedIdJsonConverterFactory());
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
+});
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
