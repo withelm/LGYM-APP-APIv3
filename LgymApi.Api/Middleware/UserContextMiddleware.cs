@@ -28,45 +28,39 @@ public sealed class UserContextMiddleware
         var sidClaim = context.User.FindFirst(AuthConstants.ClaimNames.SessionId)?.Value;
         if (string.IsNullOrWhiteSpace(sidClaim) || !Id<UserSession>.TryParse(sidClaim, out var sessionId))
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
+            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status401Unauthorized, Messages.InvalidToken, context.RequestAborted);
             return;
         }
 
         if (!await userSessionStore.ValidateSessionAsync(sessionId, context.RequestAborted))
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = Messages.Unauthorized });
+            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status401Unauthorized, Messages.Unauthorized, context.RequestAborted);
             return;
         }
 
         var userIdClaim = context.User.FindFirst(AuthConstants.ClaimNames.UserId)?.Value;
         if (string.IsNullOrWhiteSpace(userIdClaim) || !Id<User>.TryParse(userIdClaim, out var userId))
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
+            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status401Unauthorized, Messages.InvalidToken, context.RequestAborted);
             return;
         }
 
         var user = await userRepository.FindByIdIncludingDeletedAsync(userId);
         if (user == null)
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
+            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status401Unauthorized, Messages.InvalidToken, context.RequestAborted);
             return;
         }
 
         if (user.IsDeleted)
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = Messages.Unauthorized });
+            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status401Unauthorized, Messages.Unauthorized, context.RequestAborted);
             return;
         }
 
         if (user.IsBlocked)
         {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(new { message = Messages.AccountBlocked });
+            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status403Forbidden, Messages.AccountBlocked, context.RequestAborted);
             return;
         }
 

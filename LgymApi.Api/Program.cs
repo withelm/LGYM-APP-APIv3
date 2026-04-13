@@ -135,8 +135,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 if (context.Exception is SecurityTokenExpiredException)
                 {
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return context.Response.WriteAsJsonAsync(new { message = Messages.ExpiredToken });
+                    return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, Messages.ExpiredToken, context.HttpContext.RequestAborted);
                 }
 
                 return Task.CompletedTask;
@@ -146,11 +145,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 if (!context.Response.HasStarted)
                 {
                     context.HandleResponse();
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return context.Response.WriteAsJsonAsync(new { message = Messages.InvalidToken });
+                    return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, Messages.InvalidToken, context.HttpContext.RequestAborted);
                 }
 
                 return Task.CompletedTask;
+            },
+            OnForbidden = context =>
+            {
+                return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status403Forbidden, Messages.Unauthorized, context.HttpContext.RequestAborted);
             }
         };
     });
