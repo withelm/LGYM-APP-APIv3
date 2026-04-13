@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.IntegrationTests;
 
@@ -163,7 +165,7 @@ public sealed class AppConfigAdminTests : IntegrationTestBase
         var admin = await SeedAdminAsync();
         SetAuthorizationHeader(admin.Id);
 
-        var randomId = Guid.NewGuid().ToString();
+        var randomId = Id<AppConfig>.New().ToString();
         var getResponse = await Client.GetAsync($"/api/appconfig/{randomId}");
 
         getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -174,7 +176,7 @@ public sealed class AppConfigAdminTests : IntegrationTestBase
     {
         ClearAuthorizationHeader();
 
-        var randomId = Guid.NewGuid().ToString();
+        var randomId = Id<AppConfig>.New().ToString();
         var getResponse = await Client.GetAsync($"/api/appconfig/{randomId}");
 
         getResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -252,7 +254,7 @@ public sealed class AppConfigAdminTests : IntegrationTestBase
     {
         ClearAuthorizationHeader();
 
-        var randomId = Guid.NewGuid().ToString();
+        var randomId = Id<AppConfig>.New().ToString();
         var updateResponse = await Client.PostAsJsonAsync($"/api/appconfig/{randomId}/update", new
         {
             platform = Platforms.Android.ToString(),
@@ -314,7 +316,7 @@ public sealed class AppConfigAdminTests : IntegrationTestBase
     {
         ClearAuthorizationHeader();
 
-        var randomId = Guid.NewGuid().ToString();
+        var randomId = Id<AppConfig>.New().ToString();
         var deleteResponse = await Client.PostAsJsonAsync($"/api/appconfig/{randomId}/delete", new { });
 
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
