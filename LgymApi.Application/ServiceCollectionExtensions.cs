@@ -1,6 +1,6 @@
 using LgymApi.Application.Features.AdminManagement;
 using LgymApi.Application.Features.AdminManagement;
-using LgymApi.Application.Features.AppConfig;
+using LgymApi.Application.AppConfig;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.Enum;
 using LgymApi.Application.Features.Exercise;
