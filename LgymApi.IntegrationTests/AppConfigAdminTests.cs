@@ -111,6 +111,72 @@ public sealed class AppConfigAdminTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetPaginated_WithPlatformFilter_ReturnsOnlyMatchingConfigs()
+    {
+        var admin = await SeedAdminAsync();
+        SetAuthorizationHeader(admin.Id);
+
+        // Create configs with different platforms
+        await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", new
+        {
+            platform = Platforms.Android.ToString(),
+            minRequiredVersion = "1.0.0",
+            latestVersion = "1.1.0",
+            forceUpdate = false,
+            updateUrl = "https://example.com/android",
+            releaseNotes = "Android config"
+        });
+
+        await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", new
+        {
+            platform = Platforms.Ios.ToString(),
+            minRequiredVersion = "2.0.0",
+            latestVersion = "2.1.0",
+            forceUpdate = true,
+            updateUrl = "https://example.com/ios",
+            releaseNotes = "iOS config"
+        });
+
+        // Filter by Platform = Android
+        var paginatedResponse = await Client.PostAsJsonAsync("/api/appconfig/paginated", new
+        {
+            page = 1,
+            pageSize = 20,
+            filterGroups = new object[]
+            {
+                new
+                {
+                    @operator = 0, // And
+                    conditions = new object[]
+                    {
+                        new
+                        {
+                            fieldName = "platform",
+                            @operator = 0, // Equals
+                            value = Platforms.Android.ToString()
+                        }
+                    },
+                    groups = new object[] { }
+                }
+            }
+        });
+        paginatedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var json = await ReadJsonAsync(paginatedResponse);
+        json.RootElement.TryGetProperty("items", out var items).Should().BeTrue();
+        
+        var itemsArray = items.EnumerateArray().ToList();
+        itemsArray.Should().HaveCountGreaterThanOrEqualTo(1, "at least 1 Android config should exist");
+
+        // Verify all items have Platform = Android
+        foreach (var item in itemsArray)
+        {
+            item.TryGetProperty("platform", out var platform).Should().BeTrue();
+            platform.GetString().Should().Be(Platforms.Android.ToString());
+        }
+    }
+
+    [Test]
     public async Task GetById_ReturnsExpectedJsonShape()
     {
         var admin = await SeedAdminAsync();
