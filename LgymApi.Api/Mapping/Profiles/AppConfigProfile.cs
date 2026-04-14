@@ -26,8 +26,8 @@ public sealed class AppConfigProfile : IMappingProfile
             ForceUpdate = source.ForceUpdate,
             UpdateUrl = source.UpdateUrl,
             ReleaseNotes = source.ReleaseNotes,
-            CreatedAt = source.CreatedAt.DateTime,
-            UpdatedAt = source.UpdatedAt.DateTime
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt
         });
     }
 }

@@ -1,7 +1,7 @@
 using LgymApi.Application.Common.Errors;
 using FluentAssertions;
 using LgymApi.Application.Features.AdminManagement.Models;
-using LgymApi.Application.Features.AppConfig;
+using LgymApi.Application.AppConfig;
 using LgymApi.Application.Models;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;

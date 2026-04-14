@@ -2,7 +2,7 @@ using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.AppConfig.Contracts;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Features.AppConfig;
+using LgymApi.Application.AppConfig;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;

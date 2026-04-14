@@ -8,7 +8,7 @@ using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
-namespace LgymApi.Application.Features.AppConfig;
+namespace LgymApi.Application.AppConfig;
 
 public sealed class AppConfigService : IAppConfigService
 {

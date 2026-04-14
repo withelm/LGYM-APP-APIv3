@@ -5,7 +5,9 @@ using LgymApi.Application.Pagination;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 
-namespace LgymApi.Application.Features.AppConfig;
+namespace LgymApi.Application.AppConfig;
+
+// CreateAppVersionInput and UpdateAppConfigInput are in the same namespace
 
 public interface IAppConfigService
 {
