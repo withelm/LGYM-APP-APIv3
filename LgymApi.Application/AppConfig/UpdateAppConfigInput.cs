@@ -1,6 +1,6 @@
 using LgymApi.Domain.Enums;
 
-namespace LgymApi.Application.Features.AppConfig;
+namespace LgymApi.Application.AppConfig;
 
 public sealed record UpdateAppConfigInput(
     Platforms Platform,
