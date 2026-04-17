@@ -34,64 +34,7 @@ Configure via `appsettings.json` files or environment variables:
 Common environment variable overrides:
 
 - `ConnectionStrings__Postgres`
-- `Jwt__SigningKey`
-
-## Container runtime contract
-
-The container image expects environment-specific config to be mounted from outside the image.
-Do not bake secrets or site-specific values into the image.
-
-- Mount the runtime config at `/run/config/appsettings.container.json`
-- Set `LGYM_APP_CONFIG_PATH=/run/config/appsettings.container.json`
-- Use `ASPNETCORE_ENVIRONMENT=Development` for local dev and `ASPNETCORE_ENVIRONMENT=Production` for production
-- Publish the API on container port `8080` and map that port to a host port
-- Set `ConnectionStrings__Postgres` from the runtime environment
-- Set `Jwt__SigningKey` only if the mounted config does not already provide it
-
-The process runs from `/app` inside the container, so the mounted config and any relative paths must assume `/app` as the content root.
-Avoid launch profile assumptions when testing the image.
-
-### Local development
-
-Use the same image for local runs and point it at an external config file:
-
-```bash
-docker run -d --rm --name lgym-api-dev \
-  -p 18080:8080 \
-  -e ASPNETCORE_ENVIRONMENT=Development \
-  -e LGYM_APP_CONFIG_PATH=/run/config/appsettings.container.json \
-  -e ConnectionStrings__Postgres='Host=host.docker.internal;Port=5433;Database=LGYM-APP;Username=postgres;Password=REPLACE_ME;TimeZone=Europe/Warsaw' \
-  -e Jwt__SigningKey='REPLACE_ME_MIN_32_CHARS' \
-  -v "$(pwd)/appsettings.container.json:/run/config/appsettings.container.json:ro" \
-  lgym-api:test
-```
-
-Smoke check:
-
-```bash
-curl --fail http://localhost:18080/health/live
-```
-
-### Production
-
-Use the same image and mount the production config from the host or secret store:
-
-```bash
-docker run -d --name lgym-api \
-  -p 8080:8080 \
-  -e ASPNETCORE_ENVIRONMENT=Production \
-  -e LGYM_APP_CONFIG_PATH=/run/config/appsettings.container.json \
-  -e ConnectionStrings__Postgres='Host=PROD_DB_HOST;Port=5432;Database=LGYM-APP;Username=PROD_USER;Password=REPLACE_ME;TimeZone=Europe/Warsaw' \
-  -e Jwt__SigningKey='REPLACE_ME_OR_SET_IN_CONFIG' \
-  -v /etc/lgym-api/appsettings.container.json:/run/config/appsettings.container.json:ro \
-  lgym-api:test
-```
-
-Smoke check:
-
-```bash
-curl --fail http://localhost:8080/health/live
-```
+- `Jwt__Secret`
 
 ## Quick start
 
