@@ -28,6 +28,7 @@ using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Application.Notifications;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
@@ -36,6 +37,12 @@ using Microsoft.Extensions.Options;
 const string TestingEnvironment = "Testing";
 
 var builder = WebApplication.CreateBuilder(args);
+
+ExternalConfigBootstrap.Configure(
+    builder.Configuration,
+    builder.Environment.ContentRootPath,
+    builder.Environment.EnvironmentName,
+    args);
 
 builder.Services
     .AddControllers()
@@ -274,6 +281,9 @@ if (!app.Environment.IsEnvironment(TestingEnvironment))
 
 app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
 app.UseMiddleware<LgymApi.Api.Middleware.ApiIdempotencyMiddleware>();
+
+app.MapGet("/health/live", static () => Results.Json(new { status = "ok" }))
+    .AllowAnonymous();
 
 app.MapControllers();
 app.MapHub<LgymApi.Api.Hubs.NotificationHub>("/hubs/notifications");
