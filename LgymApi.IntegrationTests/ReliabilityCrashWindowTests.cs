@@ -1,4 +1,6 @@
 using FluentAssertions;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
 using LgymApi.Domain.Entities;
@@ -6,6 +8,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -289,5 +292,210 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             unchanged!.Status.Should().Be(ActionExecutionStatus.DeadLettered,
                 "recovery should skip dead-lettered envelopes");
         }
+    }
+
+    [Test]
+    public async Task InspectAsync_PendingNotification_WithMissingSchedulerJob_IsRecoverable()
+    {
+        // Arrange - simulate a dispatched notification whose Hangfire job vanished after the durable row was written
+        const string missingJobId = "missing-email-job";
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
+            Channel = NotificationChannel.Email,
+            Type = EmailNotificationTypes.Welcome,
+            Recipient = "missing-job@example.com",
+            PayloadJson = "{}",
+            Status = EmailNotificationStatus.Pending,
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
+            DispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-4),
+            SchedulerJobId = missingJobId,
+            Attempts = 0
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.NotificationMessages.Add(notification);
+            await db.SaveChangesAsync();
+        }
+
+        var hangfireStateReader = Factory.Services.GetRequiredService<InMemoryHangfireJobStateReader>();
+        hangfireStateReader.SetMissing(missingJobId);
+
+        using var inspectionScope = Factory.Services.CreateScope();
+        var inspector = inspectionScope.ServiceProvider.GetRequiredService<IEmailNotificationRecoverabilityInspector>();
+
+        // Act
+        var result = await inspector.InspectAsync();
+
+        // Assert
+        result.BrokenJobsFound.Should().Be(1);
+        result.RecoverableNotifications.Should().Be(1);
+        result.ActiveJobsSkipped.Should().Be(0);
+        result.AlreadySentSkipped.Should().Be(0);
+        result.DeadLetterSkipped.Should().Be(0);
+
+        result.Notifications.Should().ContainSingle(item =>
+            item.NotificationId == notification.Id
+            && item.Disposition == EmailNotificationRecoverabilityDisposition.Recoverable
+            && item.HangfireState == null
+            && item.HasBrokenSchedulerState);
+    }
+
+    [Test]
+    public async Task InspectAsync_SentNotification_WithMissingSchedulerJob_IsSkipped()
+    {
+        // Arrange - preserve duplicate-send protection even when Hangfire metadata is stale
+        const string missingJobId = "sent-missing-email-job";
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
+            Channel = NotificationChannel.Email,
+            Type = EmailNotificationTypes.Welcome,
+            Recipient = "already-sent@example.com",
+            PayloadJson = "{}",
+            Status = EmailNotificationStatus.Sent,
+            SentAt = DateTimeOffset.UtcNow.AddMinutes(-3),
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
+            DispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-4),
+            SchedulerJobId = missingJobId,
+            Attempts = 1
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.NotificationMessages.Add(notification);
+            await db.SaveChangesAsync();
+        }
+
+        var hangfireStateReader = Factory.Services.GetRequiredService<InMemoryHangfireJobStateReader>();
+        hangfireStateReader.SetMissing(missingJobId);
+
+        using var inspectionScope = Factory.Services.CreateScope();
+        var inspector = inspectionScope.ServiceProvider.GetRequiredService<IEmailNotificationRecoverabilityInspector>();
+
+        // Act
+        var result = await inspector.InspectAsync();
+
+        // Assert
+        result.BrokenJobsFound.Should().Be(0);
+        result.RecoverableNotifications.Should().Be(0);
+        result.ActiveJobsSkipped.Should().Be(0);
+        result.AlreadySentSkipped.Should().Be(1);
+        result.DeadLetterSkipped.Should().Be(0);
+
+        result.Notifications.Should().ContainSingle(item =>
+            item.NotificationId == notification.Id
+            && item.Disposition == EmailNotificationRecoverabilityDisposition.AlreadySentSkipped
+            && item.HangfireState == null
+            && !item.HasBrokenSchedulerState);
+    }
+
+    [Test]
+    public async Task RemediateAsync_PendingNotification_ReplaysAndReconcilesStaleJob()
+    {
+        const string staleJobId = "stale-email-job";
+
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
+            Channel = NotificationChannel.Email,
+            Type = EmailNotificationTypes.Welcome,
+            Recipient = "replay@example.com",
+            PayloadJson = "{}",
+            Status = EmailNotificationStatus.Pending,
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
+            DispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-4),
+            SchedulerJobId = staleJobId,
+            Attempts = 0
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.NotificationMessages.Add(notification);
+            await db.SaveChangesAsync();
+        }
+
+        var hangfireStateReader = Factory.Services.GetRequiredService<InMemoryHangfireJobStateReader>();
+        hangfireStateReader.SetBroken(staleJobId, "Failed");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var remediator = scope.ServiceProvider.GetRequiredService<IEmailNotificationRecoverabilityRemediator>();
+            await remediator.RemediateAsync(CancellationToken.None);
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var recovered = await db.NotificationMessages.FindAsync(notification.Id);
+
+            recovered.Should().NotBeNull();
+            recovered!.Status.Should().Be(EmailNotificationStatus.Pending);
+            recovered.DispatchedAt.Should().NotBeNull();
+            recovered.SchedulerJobId.Should().NotBeNullOrWhiteSpace();
+            recovered.SchedulerJobId.Should().NotBe(staleJobId);
+        }
+
+        var reconciler = Factory.Services.GetRequiredService<InMemoryHangfireJobReconciler>();
+        reconciler.DeletedJobIds.Should().ContainSingle(x => x == staleJobId);
+    }
+
+    [Test]
+    public async Task RemediateAsync_SentNotification_RemainsUnchanged()
+    {
+        const string staleJobId = "sent-stale-email-job";
+
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
+            Channel = NotificationChannel.Email,
+            Type = EmailNotificationTypes.Welcome,
+            Recipient = "sent@example.com",
+            PayloadJson = "{}",
+            Status = EmailNotificationStatus.Sent,
+            SentAt = DateTimeOffset.UtcNow.AddMinutes(-3),
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
+            DispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-4),
+            SchedulerJobId = staleJobId,
+            Attempts = 1
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.NotificationMessages.Add(notification);
+            await db.SaveChangesAsync();
+        }
+
+        var hangfireStateReader = Factory.Services.GetRequiredService<InMemoryHangfireJobStateReader>();
+        hangfireStateReader.SetBroken(staleJobId, "Deleted");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var remediator = scope.ServiceProvider.GetRequiredService<IEmailNotificationRecoverabilityRemediator>();
+            await remediator.RemediateAsync(CancellationToken.None);
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var recovered = await db.NotificationMessages.FindAsync(notification.Id);
+
+            recovered.Should().NotBeNull();
+            recovered!.Status.Should().Be(EmailNotificationStatus.Sent);
+            recovered.SentAt.Should().NotBeNull();
+            recovered.SchedulerJobId.Should().Be(staleJobId);
+        }
+
+        var reconciler = Factory.Services.GetRequiredService<InMemoryHangfireJobReconciler>();
+        reconciler.DeletedJobIds.Should().BeEmpty();
     }
 }

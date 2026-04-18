@@ -6,6 +6,7 @@ using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Infrastructure.Jobs;
 using LgymApi.Infrastructure.Services;
 
 namespace LgymApi.UnitTests;
@@ -14,7 +15,7 @@ namespace LgymApi.UnitTests;
 public sealed class HangfireEmailBackgroundSchedulerTests
 {
     [Test]
-    public void Enqueue_CreatesHangfireJob_ForWelcomeEmailJob()
+    public void Enqueue_CreatesHangfireJob_ForConcreteEmailJob()
     {
         var client = new FakeBackgroundJobClient();
         var scheduler = new HangfireEmailBackgroundScheduler(client);
@@ -24,10 +25,25 @@ public sealed class HangfireEmailBackgroundSchedulerTests
 
         client.CreatedJobs.Should().HaveCount(1);
         var created = client.CreatedJobs[0];
-        created.Job.Type.Should().Be(typeof(IEmailJob));
+        created.Job.Type.Should().Be(typeof(EmailJob));
         created.Job.Method.Name.Should().Be("ExecuteAsync");
+        created.Job.Args.Should().HaveCount(1);
         created.Job.Args[0].Should().Be(notificationId);
         created.State.Should().BeOfType<EnqueuedState>();
+    }
+
+    [Test]
+    public void Enqueue_PassesOnlyTypedNotificationId_NoPayloadObject()
+    {
+        var client = new FakeBackgroundJobClient();
+        var scheduler = new HangfireEmailBackgroundScheduler(client);
+        var notificationId = Id<NotificationMessage>.New();
+
+        scheduler.Enqueue(notificationId);
+
+        var created = client.CreatedJobs[0];
+        created.Job.Args.Should().HaveCount(1);
+        created.Job.Args[0].Should().BeOfType<Id<NotificationMessage>>();
     }
 
     private sealed class FakeBackgroundJobClient : IBackgroundJobClient

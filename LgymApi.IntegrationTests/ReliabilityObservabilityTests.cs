@@ -1,10 +1,13 @@
 using FluentAssertions;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
@@ -334,6 +337,117 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         results.Should().HaveCount(1);
         results.First().Id.Should().Be(deadLettered.Id);
         results.First().IsDeadLettered.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task InspectAsync_EmailNotifications_UsesDurableStateBeforeHangfireState()
+    {
+        // Arrange
+        const string brokenJobId = "email-broken-job";
+        const string activeJobId = "email-active-job";
+        const string sentJobId = "email-sent-job";
+        const string deadLetterJobId = "email-dead-letter-job";
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            await db.NotificationMessages.AddRangeAsync(
+                new NotificationMessage
+                {
+                    Id = Id<NotificationMessage>.New(),
+                    Channel = NotificationChannel.Email,
+                    Type = EmailNotificationTypes.Welcome,
+                    CorrelationId = Id<CorrelationScope>.New(),
+                    Recipient = new Email("broken@example.com"),
+                    PayloadJson = "{}",
+                    Status = EmailNotificationStatus.Pending,
+                    DispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-10),
+                    SchedulerJobId = brokenJobId
+                },
+                new NotificationMessage
+                {
+                    Id = Id<NotificationMessage>.New(),
+                    Channel = NotificationChannel.Email,
+                    Type = EmailNotificationTypes.Welcome,
+                    CorrelationId = Id<CorrelationScope>.New(),
+                    Recipient = new Email("active@example.com"),
+                    PayloadJson = "{}",
+                    Status = EmailNotificationStatus.Pending,
+                    DispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-9),
+                    SchedulerJobId = activeJobId
+                },
+                new NotificationMessage
+                {
+                    Id = Id<NotificationMessage>.New(),
+                    Channel = NotificationChannel.Email,
+                    Type = EmailNotificationTypes.Welcome,
+                    CorrelationId = Id<CorrelationScope>.New(),
+                    Recipient = new Email("sent@example.com"),
+                    PayloadJson = "{}",
+                    Status = EmailNotificationStatus.Sent,
+                    SentAt = DateTimeOffset.UtcNow.AddMinutes(-8),
+                    DispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-9),
+                    SchedulerJobId = sentJobId
+                },
+                new NotificationMessage
+                {
+                    Id = Id<NotificationMessage>.New(),
+                    Channel = NotificationChannel.Email,
+                    Type = EmailNotificationTypes.Welcome,
+                    CorrelationId = Id<CorrelationScope>.New(),
+                    Recipient = new Email("dead@example.com"),
+                    PayloadJson = "{}",
+                    Status = EmailNotificationStatus.Failed,
+                    IsDeadLettered = true,
+                    DeadLetterReason = "poison",
+                    DispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-7),
+                    SchedulerJobId = deadLetterJobId
+                });
+
+            await db.SaveChangesAsync();
+        }
+
+        var hangfireStateReader = Factory.Services.GetRequiredService<InMemoryHangfireJobStateReader>();
+        hangfireStateReader.SetBroken(brokenJobId, "Failed");
+        hangfireStateReader.SetActive(activeJobId, "Processing");
+        hangfireStateReader.SetBroken(sentJobId, "Deleted");
+        hangfireStateReader.SetBroken(deadLetterJobId, "Failed");
+
+        using var inspectionScope = Factory.Services.CreateScope();
+        var inspector = inspectionScope.ServiceProvider.GetRequiredService<IEmailNotificationRecoverabilityInspector>();
+
+        // Act
+        var result = await inspector.InspectAsync();
+
+        // Assert
+        result.BrokenJobsFound.Should().Be(1);
+        result.RecoverableNotifications.Should().Be(1);
+        result.ActiveJobsSkipped.Should().Be(1);
+        result.AlreadySentSkipped.Should().Be(1);
+        result.DeadLetterSkipped.Should().Be(1);
+
+        result.Notifications.Should().ContainSingle(item =>
+            item.SchedulerJobId == brokenJobId
+            && item.Disposition == EmailNotificationRecoverabilityDisposition.Recoverable
+            && item.HangfireState == "Failed"
+            && item.HasBrokenSchedulerState);
+
+        result.Notifications.Should().ContainSingle(item =>
+            item.SchedulerJobId == activeJobId
+            && item.Disposition == EmailNotificationRecoverabilityDisposition.ActiveJobSkipped
+            && item.HangfireState == "Processing"
+            && !item.HasBrokenSchedulerState);
+
+        result.Notifications.Should().ContainSingle(item =>
+            item.SchedulerJobId == sentJobId
+            && item.Disposition == EmailNotificationRecoverabilityDisposition.AlreadySentSkipped
+            && item.HangfireState == null);
+
+        result.Notifications.Should().ContainSingle(item =>
+            item.SchedulerJobId == deadLetterJobId
+            && item.Disposition == EmailNotificationRecoverabilityDisposition.DeadLetterSkipped
+            && item.HangfireState == null);
     }
 
     [Test]

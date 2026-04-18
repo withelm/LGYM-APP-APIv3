@@ -24,6 +24,12 @@ public interface IEmailNotificationLogRepository
     Task<List<NotificationMessage>> GetFailedAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves dispatched notification messages that still retain a scheduler job identifier.
+    /// Used by recoverability inspection to correlate durable notification state with scheduler state.
+    /// </summary>
+    Task<List<NotificationMessage>> GetDispatchedWithSchedulerJobAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves all dead-lettered notification messages (terminal poison state).
     /// Used for operational alerts and troubleshooting stranded notifications.
     /// </summary>

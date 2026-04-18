@@ -59,6 +59,18 @@ public sealed class EmailNotificationLogRepository : IEmailNotificationLogReposi
     }
 
     /// <summary>
+    /// Retrieves dispatched notification messages that still retain a scheduler job identifier.
+    /// Used by recoverability inspection to correlate durable notification state with scheduler state.
+    /// </summary>
+    public async Task<List<NotificationMessage>> GetDispatchedWithSchedulerJobAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.NotificationMessages
+            .Where(x => x.DispatchedAt != null && x.SchedulerJobId != null && x.SchedulerJobId != string.Empty)
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
     /// Retrieves all dead-lettered notification messages (terminal poison state).
     /// Used for operational alerts and troubleshooting stranded notifications.
     /// </summary>

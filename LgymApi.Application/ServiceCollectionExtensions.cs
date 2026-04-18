@@ -19,6 +19,7 @@ using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
+using LgymApi.Application.Notifications;
 using LgymApi.Application.Services;
 using LgymApi.Application.Units;
 using LgymApi.Domain.Enums;
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMeasurementsService, MeasurementsService>();
         services.AddScoped<IInAppNotificationServiceDependencies, InAppNotificationServiceDependencies>();
         services.AddScoped<IInAppNotificationService, InAppNotificationService>();
+        services.AddScoped<IEmailNotificationRecoverabilityRemediationService, EmailNotificationRecoverabilityRemediationService>();
         services.AddScoped<PasswordResetServiceDependencies>();
         services.AddScoped<IPasswordResetTokenGenerationService, PasswordResetTokenGenerationService>();
         services.AddScoped<IPasswordResetService, PasswordResetService>();

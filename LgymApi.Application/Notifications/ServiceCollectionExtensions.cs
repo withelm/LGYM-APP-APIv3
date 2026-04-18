@@ -8,6 +8,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<IInAppNotificationServiceDependencies, InAppNotificationServiceDependencies>();
         services.AddScoped<IInAppNotificationService, InAppNotificationService>();
+        services.AddScoped<IEmailNotificationRecoverabilityRemediationService, EmailNotificationRecoverabilityRemediationService>();
         return services;
     }
 }

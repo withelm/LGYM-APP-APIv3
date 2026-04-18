@@ -1,6 +1,8 @@
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,6 +93,39 @@ public sealed class CommittedIntentDispatcher : ICommittedIntentDispatcher
                     "Failed to dispatch committed notification message {NotificationId}. It remains recoverable as undispatched.",
                     notification.Id);
             }
+        }
+    }
+
+    private async Task<string?> DispatchNotificationMessageAsync(
+        AppDbContext dbContext,
+        IEmailBackgroundScheduler scheduler,
+        Id<NotificationMessage> notificationId,
+        CancellationToken cancellationToken)
+    {
+        var notification = await dbContext.NotificationMessages
+            .Where(x => x.Id == notificationId && x.Status == EmailNotificationStatus.Pending && x.DispatchedAt == null && !x.IsDeadLettered)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (notification == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var schedulerJobId = scheduler.Enqueue(notification.Id);
+            notification.DispatchedAt = DateTimeOffset.UtcNow;
+            notification.SchedulerJobId = schedulerJobId;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return schedulerJobId;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to dispatch committed notification message {NotificationId}. It remains recoverable as undispatched.",
+                notification.Id);
+            return null;
         }
     }
 }

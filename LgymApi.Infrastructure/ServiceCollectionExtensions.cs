@@ -121,6 +121,21 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITutorialProgressRepository, TutorialProgressRepository>();
         services.AddScoped<IApiIdempotencyRecordRepository, ApiIdempotencyRecordRepository>();
         services.AddScoped<IInAppNotificationRepository, InAppNotificationRepository>();
+        if (isTesting)
+        {
+            services.AddSingleton<InMemoryHangfireJobStateReader>();
+            services.AddSingleton<IHangfireJobStateReader>(sp => sp.GetRequiredService<InMemoryHangfireJobStateReader>());
+            services.AddSingleton<InMemoryHangfireJobReconciler>();
+            services.AddSingleton<IHangfireJobReconciler>(sp => sp.GetRequiredService<InMemoryHangfireJobReconciler>());
+        }
+        else
+        {
+            services.AddSingleton<IHangfireJobStateReader, HangfireJobStateReader>();
+            services.AddSingleton<IHangfireJobReconciler, HangfireJobReconciler>();
+        }
+
+        services.AddScoped<IEmailNotificationRecoverabilityInspector, EmailNotificationRecoverabilityInspector>();
+        services.AddScoped<IEmailNotificationRecoverabilityRemediator, EmailNotificationRecoverabilityRemediator>();
         services.AddScoped<GridifyExecutionService>();
         services.AddScoped<GridifyExecutionServiceContract>(sp => sp.GetRequiredService<GridifyExecutionService>());
         services.AddScoped<IQueryPaginationService, QueryPaginationFacade>();

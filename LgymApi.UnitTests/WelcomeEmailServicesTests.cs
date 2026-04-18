@@ -263,6 +263,9 @@ public sealed class WelcomeEmailServicesTests
         public Task<List<NotificationMessage>> GetFailedAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(new List<NotificationMessage>());
 
+        public Task<List<NotificationMessage>> GetDispatchedWithSchedulerJobAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<NotificationMessage>());
+
         public Task<List<NotificationMessage>> GetDeadLetteredAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(new List<NotificationMessage>());
 

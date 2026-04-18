@@ -90,6 +90,58 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreateInvitation_ProcessesInvitationEmailNotification_EndToEnd()
+    {
+        var trainer = await SeedTrainerAsync("trainer-email-e2e", "trainer-email-e2e@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-email-e2e", email: "trainee-email-e2e@example.com", password: "password123");
+        SetAuthorizationHeader(trainer.Id);
+
+        SetIdempotencyKey("test-invitation-email-e2e");
+        var response = await Client.PostAsJsonAsync("/api/trainer/invitations", new
+        {
+            traineeId = trainee.Id.ToString()
+        });
+        ClearIdempotencyKey();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
+        invitation.Should().NotBeNull();
+
+        await ProcessPendingCommandsAsync();
+
+        Domain.ValueObjects.Id<NotificationMessage> notificationId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var verifyDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            if (!Id<CorrelationScope>.TryParse(invitation!.Id, out var correlationId))
+            {
+                throw new InvalidOperationException($"Failed to parse invitation ID: {invitation.Id}");
+            }
+
+            var pendingNotification = await verifyDb.NotificationMessages.SingleAsync(x => x.CorrelationId == correlationId);
+            pendingNotification.Status.Should().Be(EmailNotificationStatus.Pending);
+            notificationId = pendingNotification.Id;
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
+            await handler.ProcessAsync(notificationId);
+        }
+
+        using var verifyScope = Factory.Services.CreateScope();
+        var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var notification = await db.NotificationMessages.SingleAsync(x => x.Id == notificationId);
+        notification.Status.Should().Be(EmailNotificationStatus.Sent);
+        notification.SentAt.Should().NotBeNull();
+        notification.DispatchedAt.Should().NotBeNull();
+        notification.SchedulerJobId.Should().NotBeNullOrWhiteSpace();
+        Factory.EmailSender.SentMessages.Should().ContainSingle();
+        Factory.EmailSender.SentMessages[0].To.Should().Be("trainee-email-e2e@example.com");
+    }
+
+    [Test]
     public async Task InvitationEmailJob_ProcessesPendingNotification_AndMarksSent()
     {
         var trainer = await SeedTrainerAsync("trainer-email-job", "trainer-email-job@example.com", preferredLanguage: "en");

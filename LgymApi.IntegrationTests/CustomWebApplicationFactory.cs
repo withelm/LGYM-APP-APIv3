@@ -2,6 +2,7 @@ using LgymApi.Infrastructure.Data;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.TestUtils;
+using LgymApi.Infrastructure.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,10 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(EmailSender);
+
+            services.RemoveAll<IHangfireJobReconciler>();
+            services.AddSingleton<InMemoryHangfireJobReconciler>();
+            services.AddSingleton<IHangfireJobReconciler>(sp => sp.GetRequiredService<InMemoryHangfireJobReconciler>());
 
             using var serviceProvider = services.BuildServiceProvider();
             using var scope = serviceProvider.CreateScope();
