@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LgymApi.Application.Pagination;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.UnitTests.Pagination;
 
@@ -180,6 +181,65 @@ public sealed class GridifyPaginationFilterValidationTests
 
         act.Should().Throw<ArgumentException>()
             .WithMessage("*Value 'eighteen' is not valid for field 'age'*");
+    }
+
+    [Test]
+    public void GridifyPagination_NormalizesEnumStringValueByName()
+    {
+        var adapter = FilterToGridifyAdapterTestFactory.Create();
+        var input = new FilterInput
+        {
+            FilterGroups =
+            [
+                new FilterGroup
+                {
+                    Operator = GroupOperator.And,
+                    Conditions =
+                    [
+                        new FilterCondition
+                        {
+                            FieldName = "invitationStatus",
+                            Operator = FilterOperator.Equals,
+                            Value = nameof(TrainerInvitationStatus.Pending)
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var query = adapter.Adapt(input);
+
+        query.Should().Be("invitationStatus=Pending");
+    }
+
+    [Test]
+    public void GridifyPagination_RejectsInvalidEnumValue()
+    {
+        var adapter = FilterToGridifyAdapterTestFactory.Create();
+        var input = new FilterInput
+        {
+            FilterGroups =
+            [
+                new FilterGroup
+                {
+                    Operator = GroupOperator.And,
+                    Conditions =
+                    [
+                        new FilterCondition
+                        {
+                            FieldName = "invitationStatus",
+                            Operator = FilterOperator.Equals,
+                            Value = "NotAStatus"
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var act = () => adapter.Adapt(input);
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*Value 'NotAStatus' is not valid for field 'invitationStatus'*");
     }
 
     private sealed class FilterToGridifyAdapterTestFactoryProxy

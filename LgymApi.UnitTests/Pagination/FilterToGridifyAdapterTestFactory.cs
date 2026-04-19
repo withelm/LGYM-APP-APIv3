@@ -13,7 +13,8 @@ internal static class FilterToGridifyAdapterTestFactory
                 new GridifyFieldDefinition { FieldName = "createdAt", FieldType = typeof(DateTime) },
                 new GridifyFieldDefinition { FieldName = "age", FieldType = typeof(int) },
                 new GridifyFieldDefinition { FieldName = "isActive", FieldType = typeof(bool) },
-                new GridifyFieldDefinition { FieldName = "id", FieldType = typeof(Guid) }
+                new GridifyFieldDefinition { FieldName = "id", FieldType = typeof(Guid) },
+                new GridifyFieldDefinition { FieldName = "invitationStatus", FieldType = typeof(LgymApi.Domain.Enums.TrainerInvitationStatus) }
             ],
             maxPageSize: maxPageSize,
             maxNestingDepth: maxNestingDepth);

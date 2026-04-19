@@ -4,7 +4,6 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Infrastructure.Jobs;
 
 namespace LgymApi.Infrastructure.Services;
 

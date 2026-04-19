@@ -11,9 +11,12 @@
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-    <AssemblyName>LgymApi.Resources.Generator.Debug</AssemblyName>
-  </PropertyGroup>
+  <!-- Removed Debug-only AssemblyName override to ensure the generator
+       produces the same assembly name in Debug and Release. This avoids
+       tooling file-locks when the analyzer is referenced by other projects
+       (e.g., LgymApi.Resources) which expect a consistent analyzer assembly
+       name. The default assembly name (project name) will be used for all
+       configurations. -->
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
