@@ -105,7 +105,9 @@ public sealed partial class FilterToGridifyAdapter
 
     private string BuildInCondition(FilterCondition condition, GridifyFieldDefinition field)
     {
-        if (condition.Value is string || condition.Value is not IEnumerable values)
+        var unwrapped = UnwrapJsonElement(condition.Value);
+
+        if (unwrapped is string || unwrapped is not IEnumerable values)
         {
             throw new ArgumentException($"IN operator for field '{condition.FieldName}' requires a non-empty collection.", nameof(condition));
         }

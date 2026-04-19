@@ -124,7 +124,9 @@ public sealed partial class FilterToGridifyAdapter
         return jsonElement.ValueKind switch
         {
             JsonValueKind.String => jsonElement.GetString(),
-            JsonValueKind.Number => jsonElement.GetDouble(),
+            JsonValueKind.Number => jsonElement.TryGetInt64(out var longValue) ? longValue
+                : jsonElement.TryGetDecimal(out var decimalValue) ? decimalValue
+                : (object)jsonElement.GetDouble(),
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             JsonValueKind.Null or JsonValueKind.Undefined => null,
