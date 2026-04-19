@@ -2,7 +2,7 @@ namespace LgymApi.Domain.ValueObjects;
 
 public readonly record struct Id<TEntity>
 {
-    private Guid Value { get; }
+    public Guid Value { get; }
 
     public Id(Guid value)
     {
