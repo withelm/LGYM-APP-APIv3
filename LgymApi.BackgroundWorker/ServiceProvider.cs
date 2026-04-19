@@ -53,7 +53,6 @@ public static class ServiceProvider
         services.AddScoped<IActionMessageJob, ActionMessageJob>();
         services.AddScoped<ActionMessageJob>();
 
-
         services.AddScoped<BackgroundActionOrchestratorService>();
         services.AddNotificationsModule();
 
