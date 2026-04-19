@@ -2,6 +2,7 @@ using System.Collections;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using LgymApi.Application.Pagination;
 
 namespace LgymApi.Infrastructure.Pagination;
@@ -10,6 +11,8 @@ public sealed partial class FilterToGridifyAdapter
 {
     private static string NormalizeSingleValue(object? value, Type targetType, string fieldName)
     {
+        value = UnwrapJsonElement(value);
+
         if (value is null)
         {
             throw new ArgumentException($"Field '{fieldName}' requires a value.", nameof(value));
@@ -109,6 +112,25 @@ public sealed partial class FilterToGridifyAdapter
                 nameof(value),
                 exception);
         }
+    }
+
+    private static object? UnwrapJsonElement(object? value)
+    {
+        if (value is not JsonElement jsonElement)
+        {
+            return value;
+        }
+
+        return jsonElement.ValueKind switch
+        {
+            JsonValueKind.String => jsonElement.GetString(),
+            JsonValueKind.Number => jsonElement.GetDouble(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            JsonValueKind.Array => jsonElement.EnumerateArray().Select(element => UnwrapJsonElement(element)).ToList(),
+            _ => jsonElement.GetRawText()
+        };
     }
 
 
