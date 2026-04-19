@@ -298,6 +298,8 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<NotificationMessage>(entity =>
         {
             entity.ToTable("NotificationMessages");
+            entity.Property(e => e.Channel).HasConversion<string>();
+            entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.Type)
                 .HasConversion(
                     notificationType => notificationType.Value,
