@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LgymApi.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class ConvertEnumColumnsToVarchar : Migration
+    public partial class ConvertEnumColumnsToText : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -34,19 +34,21 @@ namespace LgymApi.Infrastructure.Migrations
         {
             // Convert string enum names back to integer values before restoring column type.
             migrationBuilder.Sql("""
-                ALTER TABLE "NotificationMessages" ALTER COLUMN "Status" TYPE integer USING CASE "Status"
-                    WHEN 'Pending' THEN 0
-                    WHEN 'Sent'    THEN 1
-                    WHEN 'Failed'  THEN 2
-                    ELSE 0
+                ALTER TABLE "NotificationMessages" ALTER COLUMN "Status" TYPE integer USING CASE
+                    WHEN "Status" = 'Pending' THEN 0
+                    WHEN "Status" = 'Sent'    THEN 1
+                    WHEN "Status" = 'Failed'  THEN 2
+                    WHEN "Status" ~ '^[0-9]+$' THEN "Status"::integer
+                    ELSE CAST("Status" AS integer)
                 END;
                 """);
 
             migrationBuilder.Sql("""
-                ALTER TABLE "NotificationMessages" ALTER COLUMN "Channel" TYPE integer USING CASE "Channel"
-                    WHEN 'Email' THEN 0
-                    WHEN 'InApp' THEN 1
-                    ELSE 0
+                ALTER TABLE "NotificationMessages" ALTER COLUMN "Channel" TYPE integer USING CASE
+                    WHEN "Channel" = 'Email' THEN 0
+                    WHEN "Channel" = 'InApp' THEN 1
+                    WHEN "Channel" ~ '^[0-9]+$' THEN "Channel"::integer
+                    ELSE CAST("Channel" AS integer)
                 END;
                 """);
         }

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LgymApi.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260418122259_ConvertEnumColumnsToVarchar")]
-    partial class ConvertEnumColumnsToVarchar
+    [Migration("20260418122259_ConvertEnumColumnsToText")]
+    partial class ConvertEnumColumnsToText
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
