@@ -79,6 +79,7 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
         services.AddScoped<ILegacyPasswordService, LegacyPasswordService>();
         services.AddScoped<IUserSessionStore, UserSessionStore>();
         services.AddScoped<IEmailTemplateComposer, TrainerInvitationEmailTemplateComposer>();
@@ -98,6 +99,7 @@ public static class ServiceCollectionExtensions
                 : sp.GetRequiredService<SmtpEmailSender>();
         });
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserExternalLoginRepository, UserExternalLoginRepository>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ITrainerRelationshipRepository, TrainerRelationshipRepository>();

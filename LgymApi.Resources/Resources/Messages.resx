@@ -36,6 +36,12 @@
   <data name="InvalidToken" xml:space="preserve">
     <value>Invalid JWT token.</value>
   </data>
+  <data name="GoogleAccountAlreadyLinked" xml:space="preserve">
+    <value>This Google account is already linked to another user.</value>
+  </data>
+  <data name="GoogleIdTokenRequired" xml:space="preserve">
+    <value>Google ID token is required.</value>
+  </data>
   <data name="ExpiredToken" xml:space="preserve">
     <value>Token has expired.</value>
   </data>
@@ -257,6 +263,15 @@
   </data>
   <data name="AccountBlocked" xml:space="preserve">
     <value>Your account has been blocked.</value>
+  </data>
+  <data name="GoogleTokenInvalid" xml:space="preserve">
+    <value>Google sign-in token is invalid.</value>
+  </data>
+  <data name="GoogleEmailNotVerified" xml:space="preserve">
+    <value>Your Google account email address is not verified.</value>
+  </data>
+  <data name="GoogleEmailConflict" xml:space="preserve">
+    <value>An account with this email already exists. Sign in with your password and link Google manually.</value>
   </data>
   <data name="CannotBlockSelf" xml:space="preserve">
     <value>You cannot block yourself.</value>
