@@ -19,6 +19,7 @@ using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
+using LgymApi.Application.ExternalAuth;
 using LgymApi.Application.Services;
 using LgymApi.Application.Units;
 using LgymApi.Domain.Enums;
@@ -49,6 +50,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlanDayServiceDependencies, PlanDayServiceDependencies>();
         services.AddScoped<IPlanDayService, PlanDayService>();
         services.AddScoped<IRankService, RankService>();
+        services.AddScoped<IAccountLinkingService, AccountLinkingService>();
+        services.AddScoped<IExternalAuthService, ExternalAuthService>();
+        services.AddScoped<IGoogleUserRegistrar, GoogleUserRegistrar>();
+        services.AddScoped<ILoginResultBuilder, LoginResultBuilder>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<ISupplementationService, SupplementationService>();
