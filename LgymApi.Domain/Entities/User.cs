@@ -28,6 +28,7 @@ public sealed class User : EntityBase<User>
     public ICollection<Measurement> Measurements { get; set; } = new List<Measurement>();
     public ICollection<MainRecord> MainRecords { get; set; } = new List<MainRecord>();
     public ICollection<EloRegistry> EloRegistries { get; set; } = new List<EloRegistry>();
+    public ICollection<UserExternalLogin> ExternalLogins { get; set; } = new List<UserExternalLogin>();
     public ICollection<Gym> Gyms { get; set; } = new List<Gym>();
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }
