@@ -29,6 +29,20 @@ public sealed class TraineeRelationshipController : ControllerBase
         _mapper = mapper;
     }
 
+    [HttpGet("invitations")]
+    [ProducesResponseType(typeof(List<TrainerInvitationDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPendingInvitations(CancellationToken cancellationToken = default)
+    {
+        var trainee = HttpContext.GetCurrentUser();
+        var result = await _trainerRelationshipService.GetPendingInvitationsForTraineeAsync(trainee!, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<TrainerInvitationResult, TrainerInvitationDto>(result.Value));
+    }
+
     [HttpPost("invitations/{invitationId}/accept")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> AcceptInvitation([FromRoute] string invitationId, CancellationToken cancellationToken = default)
