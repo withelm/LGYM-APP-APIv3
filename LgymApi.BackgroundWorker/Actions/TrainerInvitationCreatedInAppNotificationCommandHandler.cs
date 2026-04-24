@@ -25,7 +25,7 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandler : gl
             command.TrainerId,
             false,
             global::LgymApi.Resources.Messages.TrainerInvitationSent,
-            "/trainers/invitations",
+            "/athlete/relationship",
             InAppNotificationTypes.InvitationSent);
 
         var result = await _notificationService.CreateAsync(input, cancellationToken);

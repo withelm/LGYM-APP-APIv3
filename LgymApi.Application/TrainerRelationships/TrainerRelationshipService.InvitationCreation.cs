@@ -116,6 +116,15 @@ public sealed partial class TrainerRelationshipService
 
         await _trainerRelationshipRepository.AddInvitationAsync(invitation, cancellationToken);
         await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = invitation.Id });
+        if (trainee != null)
+        {
+            await _commandDispatcher.EnqueueAsync(new TrainerInvitationCreatedInAppNotificationCommand
+            {
+                TraineeId = trainee.Id,
+                TrainerId = currentTrainer.Id
+            });
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<TrainerInvitationResult, AppError>.Success(MapInvitation(invitation));
