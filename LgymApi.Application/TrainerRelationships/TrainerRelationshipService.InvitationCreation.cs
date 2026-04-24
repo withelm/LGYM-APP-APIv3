@@ -150,6 +150,18 @@ public sealed partial class TrainerRelationshipService
         return Result<List<TrainerInvitationResult>, AppError>.Success(invitations.Select(MapInvitation).ToList());
     }
 
+    public async Task<Result<List<TrainerInvitationResult>, AppError>> GetPendingInvitationsForTraineeAsync(
+        UserEntity currentTrainee,
+        CancellationToken cancellationToken = default)
+    {
+        var invitations = await _trainerRelationshipRepository.GetPendingInvitationsForTraineeAsync(
+            currentTrainee.Id,
+            currentTrainee.Email.Value,
+            cancellationToken);
+
+        return Result<List<TrainerInvitationResult>, AppError>.Success(invitations);
+    }
+
     public async Task<Result<Pagination<TrainerInvitationResult>, AppError>> GetInvitationsPaginatedAsync(UserEntity currentTrainer, FilterInput filterInput, CancellationToken cancellationToken = default)
     {
         var ensureTrainerResult = await EnsureTrainerAsync(currentTrainer, cancellationToken);

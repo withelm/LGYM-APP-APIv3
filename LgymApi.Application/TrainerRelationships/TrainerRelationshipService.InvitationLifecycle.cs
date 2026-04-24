@@ -205,6 +205,7 @@ public sealed partial class TrainerRelationshipService
             Id = invitation.Id,
             TrainerId = invitation.TrainerId,
             TraineeId = invitation.TraineeId,
+            InviteeEmail = invitation.InviteeEmail,
             Code = invitation.Code,
             Status = invitation.Status,
             ExpiresAt = invitation.ExpiresAt,

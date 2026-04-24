@@ -91,6 +91,38 @@ public sealed partial class TrainerRelationshipRepository : ITrainerRelationship
             .FirstOrDefaultAsync(i => i.Id == invitationId && i.Code == code, cancellationToken);
     }
 
+    public Task<List<TrainerInvitationResult>> GetPendingInvitationsForTraineeAsync(
+        Id<User> traineeId,
+        string traineeEmail,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        return (
+            from invitation in _dbContext.TrainerInvitations.AsNoTracking()
+            join trainee in _dbContext.Users.AsNoTracking() on invitation.TraineeId equals trainee.Id into traineeGroup
+            from trainee in traineeGroup.DefaultIfEmpty()
+            where invitation.Status == TrainerInvitationStatus.Pending
+                && invitation.ExpiresAt > now
+                && (invitation.TraineeId == traineeId || invitation.InviteeEmail == traineeEmail)
+            orderby invitation.CreatedAt descending
+            select new TrainerInvitationResult
+            {
+                Id = invitation.Id,
+                TrainerId = invitation.TrainerId,
+                TraineeId = invitation.TraineeId,
+                InviteeEmail = invitation.InviteeEmail,
+                Code = invitation.Code,
+                Status = invitation.Status,
+                ExpiresAt = invitation.ExpiresAt,
+                RespondedAt = invitation.RespondedAt,
+                CreatedAt = invitation.CreatedAt,
+                TraineeName = trainee.Name,
+                TraineeEmail = trainee.Email
+            }
+        ).ToListAsync(cancellationToken);
+    }
+
     public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainerInvitations
