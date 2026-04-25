@@ -218,6 +218,9 @@ public sealed class RoleServiceTests
          public Task<User?> FindByIdIncludingDeletedAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default)
              => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
 
+         public Task<User?> FindByIdWithRolesAsync(Id<LgymApi.Domain.Entities.User> id, CancellationToken cancellationToken = default)
+             => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Name == name));
 

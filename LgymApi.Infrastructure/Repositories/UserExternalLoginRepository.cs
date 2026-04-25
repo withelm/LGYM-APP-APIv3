@@ -31,6 +31,13 @@ public sealed class UserExternalLoginRepository : IUserExternalLoginRepository
             .FirstOrDefaultAsync(x => x.Provider == provider && x.ProviderKey == providerKey && !x.IsDeleted, cancellationToken);
     }
 
+    public Task<UserExternalLogin?> FindByUserAndProviderAsync(Id<User> userId, string provider, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.UserExternalLogins
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.Provider == provider && !x.IsDeleted, cancellationToken);
+    }
+
     public Task<List<UserExternalLogin>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.UserExternalLogins

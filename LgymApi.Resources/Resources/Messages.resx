@@ -273,6 +273,9 @@
   <data name="GoogleEmailConflict" xml:space="preserve">
     <value>An account with this email already exists. Sign in with your password and link Google manually.</value>
   </data>
+  <data name="UserLoadFailed" xml:space="preserve">
+    <value>Failed to load the created user.</value>
+  </data>
   <data name="CannotBlockSelf" xml:space="preserve">
     <value>You cannot block yourself.</value>
   </data>

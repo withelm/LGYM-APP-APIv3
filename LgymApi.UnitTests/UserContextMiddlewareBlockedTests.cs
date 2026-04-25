@@ -98,6 +98,8 @@ public sealed class UserContextMiddlewareBlockedTests
             => Task.FromResult(Users.FirstOrDefault(u => u.Id == id && !u.IsDeleted));
         public Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+        public Task<User?> FindByIdWithRolesAsync(Id<User> id, CancellationToken cancellationToken = default)
+            => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
             => Task.FromResult(Users.FirstOrDefault(u => u.Name == name));
         public Task<User?> FindByEmailAsync(Email email, CancellationToken cancellationToken = default)

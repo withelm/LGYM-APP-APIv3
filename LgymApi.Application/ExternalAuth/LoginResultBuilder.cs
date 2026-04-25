@@ -6,6 +6,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Resources;
 
 namespace LgymApi.Application.ExternalAuth;
 
@@ -15,15 +16,18 @@ public sealed class LoginResultBuilder : ILoginResultBuilder
     private readonly IRankService _rankService;
     private readonly ITokenService _tokenService;
     private readonly ITutorialService _tutorialService;
+    private readonly IUserRepository _userRepository;
     private readonly IUserSessionStore _userSessionStore;
 
     public LoginResultBuilder(
+        IUserRepository userRepository,
         IUserSessionStore userSessionStore,
         ITokenService tokenService,
         IEloRegistryRepository eloRepository,
         IRankService rankService,
         ITutorialService tutorialService)
     {
+        _userRepository = userRepository;
         _userSessionStore = userSessionStore;
         _tokenService = tokenService;
         _eloRepository = eloRepository;
@@ -33,8 +37,14 @@ public sealed class LoginResultBuilder : ILoginResultBuilder
 
     public async Task<Result<LoginResult, AppError>> BuildAsync(User user, string preferredTimeZone, CancellationToken cancellationToken)
     {
-        var roles = user.UserRoles.Select(ur => ur.Role.Name).OrderBy(name => name).ToList();
-        var permissionClaims = user.UserRoles
+        var userWithRoles = await _userRepository.FindByIdWithRolesAsync(user.Id, cancellationToken);
+        if (userWithRoles == null)
+        {
+            return Result<LoginResult, AppError>.Failure(new InternalServerError(Messages.UserLoadFailed));
+        }
+
+        var roles = userWithRoles.UserRoles.Select(ur => ur.Role.Name).OrderBy(name => name).ToList();
+        var permissionClaims = userWithRoles.UserRoles
             .SelectMany(ur => ur.Role.RoleClaims)
             .Where(rc => rc.ClaimType == LgymApi.Domain.Security.AuthConstants.PermissionClaimType)
             .Select(rc => rc.ClaimValue)
@@ -42,12 +52,12 @@ public sealed class LoginResultBuilder : ILoginResultBuilder
             .OrderBy(value => value)
             .ToList();
 
-        var session = await _userSessionStore.CreateSessionAsync(user.Id, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
+        var session = await _userSessionStore.CreateSessionAsync(userWithRoles.Id, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
 
-        var token = _tokenService.CreateToken(user.Id, session.Id, session.Jti, roles, permissionClaims);
-        var elo = await _eloRepository.GetLatestEloAsync(user.Id, cancellationToken) ?? 1000;
-        var nextRank = _rankService.GetNextRank(user.ProfileRank);
-        var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(user.Id, cancellationToken);
+        var token = _tokenService.CreateToken(userWithRoles.Id, session.Id, session.Jti, roles, permissionClaims);
+        var elo = await _eloRepository.GetLatestEloAsync(userWithRoles.Id, cancellationToken) ?? 1000;
+        var nextRank = _rankService.GetNextRank(userWithRoles.ProfileRank);
+        var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(userWithRoles.Id, cancellationToken);
 
         return Result<LoginResult, AppError>.Success(new LoginResult
         {
@@ -55,18 +65,18 @@ public sealed class LoginResultBuilder : ILoginResultBuilder
             PermissionClaims = permissionClaims,
             User = new UserInfoResult
             {
-                Name = user.Name,
-                Id = user.Id,
-                Email = user.Email,
-                Avatar = user.Avatar,
-                ProfileRank = user.ProfileRank,
-                PreferredTimeZone = string.IsNullOrWhiteSpace(user.PreferredTimeZone) ? preferredTimeZone : user.PreferredTimeZone,
-                CreatedAt = user.CreatedAt.UtcDateTime,
-                UpdatedAt = user.UpdatedAt.UtcDateTime,
+                Name = userWithRoles.Name,
+                Id = userWithRoles.Id,
+                Email = userWithRoles.Email,
+                Avatar = userWithRoles.Avatar,
+                ProfileRank = userWithRoles.ProfileRank,
+                PreferredTimeZone = string.IsNullOrWhiteSpace(userWithRoles.PreferredTimeZone) ? preferredTimeZone : userWithRoles.PreferredTimeZone,
+                CreatedAt = userWithRoles.CreatedAt.UtcDateTime,
+                UpdatedAt = userWithRoles.UpdatedAt.UtcDateTime,
                 Elo = elo,
                 NextRank = nextRank == null ? null : new RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
-                IsDeleted = user.IsDeleted,
-                IsVisibleInRanking = user.IsVisibleInRanking,
+                IsDeleted = userWithRoles.IsDeleted,
+                IsVisibleInRanking = userWithRoles.IsVisibleInRanking,
                 Roles = roles,
                 PermissionClaims = permissionClaims,
                 HasActiveTutorials = hasActiveTutorials

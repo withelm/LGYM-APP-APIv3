@@ -41,6 +41,13 @@ public sealed class UserRepository : IUserRepository
     {
         return _dbContext.Users
             .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    }
+
+    public Task<User?> FindByIdWithRolesAsync(Id<User> id, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Users
+            .IgnoreQueryFilters()
             .Include(u => u.UserRoles)
             .ThenInclude(ur => ur.Role)
             .ThenInclude(r => r.RoleClaims)

@@ -20,7 +20,7 @@ public sealed class GoogleTokenValidator : IGoogleTokenValidator
         var clientId = _configuration["GoogleAuth:ClientId"];
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            return null;
+            throw new InvalidOperationException("GoogleAuth:ClientId configuration is missing.");
         }
 
         try

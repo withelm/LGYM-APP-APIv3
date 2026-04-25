@@ -31,15 +31,30 @@ public sealed class AccountLinkingService : IAccountLinkingService
     public async Task<Result<Unit, AppError>> LinkGoogleAsync(Id<User> userId, string idToken, CancellationToken cancellationToken)
     {
         var token = await _googleTokenValidator.ValidateAsync(idToken, cancellationToken);
-        if (token == null || !token.EmailVerified)
+        if (token == null)
         {
-            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.InvalidToken));
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.GoogleTokenInvalid));
+        }
+
+        if (!token.EmailVerified)
+        {
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.GoogleEmailNotVerified));
         }
 
         var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
         if (user == null)
         {
             return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
+        }
+
+        var existingUserLogin = await _userExternalLoginRepository.FindByUserAndProviderAsync(
+            userId,
+            AuthConstants.ExternalProviders.Google,
+            cancellationToken);
+
+        if (existingUserLogin != null)
+        {
+            return Result<Unit, AppError>.Failure(new ConflictError(Messages.GoogleAccountAlreadyLinked));
         }
 
         var existingLogin = await _userExternalLoginRepository.FindByProviderAsync(

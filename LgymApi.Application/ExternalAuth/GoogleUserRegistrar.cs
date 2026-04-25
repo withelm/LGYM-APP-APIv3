@@ -82,9 +82,9 @@ public sealed class GoogleUserRegistrar : IGoogleUserRegistrar
             return Result<User, AppError>.Failure(new ConflictError(Messages.GoogleEmailConflict));
         }
 
-        var createdUser = await _userRepository.FindByIdIncludingDeletedAsync(user.Id, cancellationToken);
+        var createdUser = await _userRepository.FindByIdWithRolesAsync(user.Id, cancellationToken);
         return createdUser == null
-            ? Result<User, AppError>.Failure(new InternalServerError(Messages.Unauthorized))
+            ? Result<User, AppError>.Failure(new InternalServerError(Messages.UserLoadFailed))
             : Result<User, AppError>.Success(createdUser);
     }
 
