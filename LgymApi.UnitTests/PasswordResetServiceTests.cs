@@ -357,6 +357,9 @@ public sealed class PasswordResetServiceTests
         public Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
+        public Task<User?> FindByIdWithRolesAsync(Id<User> id, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 

@@ -11,6 +11,7 @@ public interface IUserRepository
 {
     Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default);
     Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default);
+    Task<User?> FindByIdWithRolesAsync(Id<User> id, CancellationToken cancellationToken = default);
     Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default);
     Task<User?> FindByEmailAsync(Email email, CancellationToken cancellationToken = default);
     Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default);

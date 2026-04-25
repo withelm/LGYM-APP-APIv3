@@ -49,4 +49,9 @@ public static class AuthConstants
     {
         public const string JwtSigningKey = "Jwt:SigningKey";
     }
+
+    public static class ExternalProviders
+    {
+        public const string Google = "Google";
+    }
 }

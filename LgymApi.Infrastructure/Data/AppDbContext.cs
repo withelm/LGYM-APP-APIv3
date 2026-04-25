@@ -54,6 +54,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -590,6 +591,24 @@ public sealed class AppDbContext : DbContext
             entity.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(e => e.UserId);
+        });
+
+        modelBuilder.Entity<UserExternalLogin>(entity =>
+        {
+            entity.ToTable("UserExternalLogins");
+            entity.Property(e => e.Provider).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ProviderKey).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.ProviderEmail).HasMaxLength(256);
+            entity.HasIndex(e => new { e.Provider, e.ProviderKey })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.UserId, e.Provider })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.ExternalLogins)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         RoleSeedDataConfiguration.Apply(modelBuilder);

@@ -44,6 +44,15 @@ public sealed class UserRepository : IUserRepository
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
+    public Task<User?> FindByIdWithRolesAsync(Id<User> id, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Users
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .ThenInclude(r => r.RoleClaims)
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    }
+
     public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Name == name, cancellationToken);
