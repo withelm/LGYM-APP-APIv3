@@ -63,7 +63,7 @@ public sealed class ExternalAuthServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<UserUnauthorizedError>();
-        _userExternalLoginRepository.DidNotReceiveWithAnyArgs().FindByProviderAsync(default!, default!, default);
+        await _userExternalLoginRepository.DidNotReceiveWithAnyArgs().FindByProviderAsync(default!, default!, default);
         _unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
@@ -119,7 +119,7 @@ public sealed class ExternalAuthServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ForbiddenError>();
-        _loginResultBuilder.DidNotReceiveWithAnyArgs().BuildAsync(default!, default!, default);
+        await _loginResultBuilder.DidNotReceiveWithAnyArgs().BuildAsync(default!, default!, default);
         _unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
@@ -158,7 +158,7 @@ public sealed class ExternalAuthServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ConflictError>();
-        _loginResultBuilder.DidNotReceiveWithAnyArgs().BuildAsync(default!, default!, default);
+        await _loginResultBuilder.DidNotReceiveWithAnyArgs().BuildAsync(default!, default!, default);
         _unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
