@@ -76,7 +76,14 @@ public sealed class AccountLinkingService : IAccountLinkingService
             ProviderEmail = token.Email
         }, cancellationToken);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex.GetType().Name == "DbUpdateException")
+        {
+            return Result<Unit, AppError>.Failure(new ConflictError(Messages.GoogleAccountAlreadyLinked));
+        }
 
         return Result<Unit, AppError>.Success(Unit.Value);
     }
