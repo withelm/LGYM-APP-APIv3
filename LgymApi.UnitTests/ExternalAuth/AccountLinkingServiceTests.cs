@@ -38,7 +38,7 @@ public sealed class AccountLinkingServiceTests
     }
 
     [Test]
-    public async Task LinkGoogle_InvalidToken_ReturnsUnauthorized()
+    public async Task LinkGoogle_InvalidToken_ReturnsInvalidUserError()
     {
         _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<GoogleTokenPayload?>(null));
@@ -52,7 +52,7 @@ public sealed class AccountLinkingServiceTests
     }
 
     [Test]
-    public async Task LinkGoogle_UnverifiedEmail_ReturnsUnauthorized()
+    public async Task LinkGoogle_UnverifiedEmail_ReturnsInvalidUserError()
     {
         _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new GoogleTokenPayload("sub123", "test@example.com", false, "Test User", null));

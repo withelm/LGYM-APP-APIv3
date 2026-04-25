@@ -37,7 +37,7 @@
     <value>Invalid JWT token.</value>
   </data>
   <data name="GoogleAccountAlreadyLinked" xml:space="preserve">
-    <value>This Google account is already linked to another user.</value>
+    <value>This Google account is already linked.</value>
   </data>
   <data name="GoogleIdTokenRequired" xml:space="preserve">
     <value>Google ID token is required.</value>

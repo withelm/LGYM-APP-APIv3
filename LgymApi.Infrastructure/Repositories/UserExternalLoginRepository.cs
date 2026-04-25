@@ -25,9 +25,6 @@ public sealed class UserExternalLoginRepository : IUserExternalLoginRepository
         return _dbContext.UserExternalLogins
             .AsNoTracking()
             .Include(x => x.User)
-            .ThenInclude(u => u.UserRoles)
-            .ThenInclude(ur => ur.Role)
-            .ThenInclude(r => r.RoleClaims)
             .FirstOrDefaultAsync(x => x.Provider == provider && x.ProviderKey == providerKey && !x.IsDeleted, cancellationToken);
     }
 

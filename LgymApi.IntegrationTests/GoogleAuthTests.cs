@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.IO;
 using FluentAssertions;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;

@@ -1,11 +1,7 @@
 using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Auth.Contracts;
-using LgymApi.Api.Features.User.Contracts;
-using LgymApi.Api.Middleware;
 using LgymApi.Application.ExternalAuth;
-using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
-using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,7 +22,7 @@ public sealed class AuthController : ControllerBase
 
     [HttpPost("google")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LgymApi.Api.Features.User.Contracts.LoginResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Google([FromBody] GoogleSignInRequest request, CancellationToken cancellationToken = default)
     {
         var result = await _externalAuthService.GoogleSignInAsync(request.IdToken, cancellationToken);
@@ -35,7 +31,7 @@ public sealed class AuthController : ControllerBase
             return result.ToActionResult();
         }
 
-        var mapped = _mapper.Map<LoginResult, LoginResponseDto>(result.Value);
+        var mapped = _mapper.Map<LgymApi.Application.Features.User.Models.LoginResult, LgymApi.Api.Features.User.Contracts.LoginResponseDto>(result.Value);
         return Ok(mapped);
     }
 }
