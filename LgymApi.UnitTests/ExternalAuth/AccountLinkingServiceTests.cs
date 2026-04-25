@@ -99,14 +99,15 @@ public sealed class AccountLinkingServiceTests
     public async Task LinkGoogle_AlreadyLinkedToAnotherUser_ReturnsConflict()
     {
         var user = CreateUser();
+        var anotherUser = CreateUser();
         var existingLogin = new UserExternalLogin
         {
             Id = Id<UserExternalLogin>.New(),
-            UserId = user.Id,
+            UserId = anotherUser.Id,
             Provider = AuthConstants.ExternalProviders.Google,
             ProviderKey = "sub123",
             ProviderEmail = "linked@example.com",
-            User = user
+            User = anotherUser
         };
 
         _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
