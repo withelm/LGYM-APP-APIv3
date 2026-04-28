@@ -20,7 +20,6 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
     private readonly ITrainingRepository _trainingRepository;
     private readonly ITrainingExerciseScoreRepository _trainingExerciseScoreRepository;
     private readonly IExerciseScoreRepository _exerciseScoreRepository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly ILogger<UpdateTrainingMainRecordsHandler> _logger;
 
@@ -29,7 +28,6 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
         ITrainingRepository trainingRepository,
         ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
         IExerciseScoreRepository exerciseScoreRepository,
-        IUnitOfWork unitOfWork,
         IUnitConverter<WeightUnits> weightUnitConverter,
         ILogger<UpdateTrainingMainRecordsHandler> logger)
     {
@@ -37,7 +35,6 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
         _trainingRepository = trainingRepository ?? throw new ArgumentNullException(nameof(trainingRepository));
         _trainingExerciseScoreRepository = trainingExerciseScoreRepository ?? throw new ArgumentNullException(nameof(trainingExerciseScoreRepository));
         _exerciseScoreRepository = exerciseScoreRepository ?? throw new ArgumentNullException(nameof(exerciseScoreRepository));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _weightUnitConverter = weightUnitConverter ?? throw new ArgumentNullException(nameof(weightUnitConverter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -175,11 +172,6 @@ public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<Trainin
                 }, cancellationToken);
                 newRecordsCount++;
             }
-        }
-
-        if (newRecordsCount > 0)
-        {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
         _logger.LogInformation(

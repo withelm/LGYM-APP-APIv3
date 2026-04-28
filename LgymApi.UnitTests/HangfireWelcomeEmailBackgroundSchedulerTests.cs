@@ -1,9 +1,9 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
 using LgymApi.BackgroundWorker.Common.Notifications;
-using LgymApi.BackgroundWorker.Common.Jobs;
+using LgymApi.Infrastructure.Jobs;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Services;
@@ -24,7 +24,7 @@ public sealed class HangfireEmailBackgroundSchedulerTests
 
         client.CreatedJobs.Should().HaveCount(1);
         var created = client.CreatedJobs[0];
-        created.Job.Type.Should().Be(typeof(IEmailJob));
+        created.Job.Type.Should().Be(typeof(EmailJob));
         created.Job.Method.Name.Should().Be("ExecuteAsync");
         created.Job.Args[0].Should().Be(notificationId);
         created.State.Should().BeOfType<EnqueuedState>();
@@ -46,3 +46,4 @@ public sealed class HangfireEmailBackgroundSchedulerTests
         }
     }
 }
+

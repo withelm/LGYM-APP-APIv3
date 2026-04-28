@@ -1,4 +1,4 @@
-using LgymApi.Application.Common.Errors;
+﻿using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.BackgroundWorker.Common.Commands;
@@ -57,8 +57,6 @@ public sealed partial class TrainerRelationshipService
                 TrainerId = invitation.TrainerId,
                 TraineeId = currentTrainee.Id
             }, cancellationToken);
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch
         {
@@ -77,6 +75,8 @@ public sealed partial class TrainerRelationshipService
             TrainerId = invitation.TrainerId,
             TraineeId = currentTrainee.Id
         });
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<Unit, AppError>.Success(Unit.Value);
     }
@@ -109,12 +109,12 @@ public sealed partial class TrainerRelationshipService
         invitation.Status = TrainerInvitationStatus.Rejected;
         invitation.RespondedAt = DateTimeOffset.UtcNow;
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
         await _commandDispatcher.EnqueueAsync(new TrainerInvitationRejectedInAppNotificationCommand
         {
             TrainerId = invitation.TrainerId,
             TraineeId = currentTrainee.Id
         });
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -145,8 +145,8 @@ public sealed partial class TrainerRelationshipService
         invitation.Status = TrainerInvitationStatus.Revoked;
         invitation.RespondedAt = DateTimeOffset.UtcNow;
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
         await _commandDispatcher.EnqueueAsync(new InvitationRevokedCommand { InvitationId = invitation.Id });
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<Unit, AppError>.Success(Unit.Value);
     }
@@ -205,6 +205,7 @@ public sealed partial class TrainerRelationshipService
             Id = invitation.Id,
             TrainerId = invitation.TrainerId,
             TraineeId = invitation.TraineeId,
+            InviteeEmail = invitation.InviteeEmail,
             Code = invitation.Code,
             Status = invitation.Status,
             ExpiresAt = invitation.ExpiresAt,
@@ -218,3 +219,4 @@ public sealed partial class TrainerRelationshipService
         return Id<TrainerInvitation>.New().ToString().Replace("-", string.Empty, StringComparison.Ordinal)[..12].ToUpperInvariant();
     }
 }
+

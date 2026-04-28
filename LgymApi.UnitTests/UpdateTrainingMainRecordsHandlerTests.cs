@@ -19,7 +19,6 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
     private TestTrainingRepository _testTrainingRepository = null!;
     private TestTrainingExerciseScoreRepository _testTrainingExerciseScoreRepository = null!;
     private TestExerciseScoreRepository _testExerciseScoreRepository = null!;
-    private TestUnitOfWork _testUnitOfWork = null!;
     private TestWeightUnitConverter _testConverter = null!;
     private TestLogger _testLogger = null!;
     private UpdateTrainingMainRecordsHandler _handler = null!;
@@ -31,7 +30,6 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         _testTrainingRepository = new TestTrainingRepository();
         _testTrainingExerciseScoreRepository = new TestTrainingExerciseScoreRepository();
         _testExerciseScoreRepository = new TestExerciseScoreRepository();
-        _testUnitOfWork = new TestUnitOfWork();
         _testConverter = new TestWeightUnitConverter();
         _testLogger = new TestLogger();
         _handler = new UpdateTrainingMainRecordsHandler(
@@ -39,7 +37,6 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
             _testTrainingRepository,
             _testTrainingExerciseScoreRepository,
             _testExerciseScoreRepository,
-            _testUnitOfWork,
             _testConverter,
             _testLogger);
     }
@@ -173,9 +170,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Act
         await _handler.ExecuteAsync(command);
 
-         // Assert
-         _testMainRecordRepository.AddedRecords.Should().BeEmpty();
-         _testUnitOfWork.SaveChangesCalled.Should().BeFalse();
+        // Assert
+        _testMainRecordRepository.AddedRecords.Should().BeEmpty();
     }
 
     [Test]
@@ -222,9 +218,8 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Act
         await _handler.ExecuteAsync(command);
 
-         // Assert
-         _testMainRecordRepository.AddedRecords.Should().BeEmpty();
-         _testUnitOfWork.SaveChangesCalled.Should().BeFalse();
+        // Assert
+        _testMainRecordRepository.AddedRecords.Should().BeEmpty();
     }
 
     [Test]
@@ -283,11 +278,10 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
         // Act
         await _handler.ExecuteAsync(command);
 
-          // Assert
-          _testMainRecordRepository.AddedRecords.Should().HaveCount(1);
-          _testMainRecordRepository.AddedRecords[0].ExerciseId.Should().Be(exerciseId2);
-          _testMainRecordRepository.AddedRecords[0].Weight.Value.Should().Be(80);
-          _testUnitOfWork.SaveChangesCalled.Should().BeTrue();
+        // Assert
+        _testMainRecordRepository.AddedRecords.Should().HaveCount(1);
+        _testMainRecordRepository.AddedRecords[0].ExerciseId.Should().Be(exerciseId2);
+        _testMainRecordRepository.AddedRecords[0].Weight.Value.Should().Be(80);
     }
 
     // Test doubles
@@ -398,31 +392,6 @@ public sealed class UpdateTrainingMainRecordsHandlerTests
 
         public Task<ExerciseScore?> GetBestScoreAsync(Id<User> userId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
-    }
-
-    private sealed class TestUnitOfWork : IUnitOfWork
-    {
-        public bool SaveChangesCalled { get; private set; }
-
-        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            SaveChangesCalled = true;
-            return Task.FromResult(1);
-        }
-
-        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult<IUnitOfWorkTransaction>(new FakeTransaction());
-        }
-
-        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
-    }
-
-    private sealed class FakeTransaction : IUnitOfWorkTransaction
-    {
-        public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task RollbackAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class TestWeightUnitConverter : IUnitConverter<WeightUnits>

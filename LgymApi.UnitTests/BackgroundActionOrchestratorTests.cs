@@ -1,4 +1,4 @@
-using LgymApi.Domain.ValueObjects;
+﻿using LgymApi.Domain.ValueObjects;
 using System.Text.Json;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
@@ -52,6 +52,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler2>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
@@ -78,6 +79,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerSuccess>();
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerFailure>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
@@ -109,6 +111,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerFailure>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
@@ -146,6 +149,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerFailure>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
@@ -171,6 +175,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>(); // Base type handler
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
@@ -195,6 +200,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         // No handlers registered
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
@@ -216,6 +222,7 @@ public sealed class BackgroundActionOrchestratorTests
          var envelopeId = Id<CommandEnvelope>.New();
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
 
@@ -239,6 +246,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
 
@@ -268,6 +276,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
 
@@ -296,6 +305,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
 
@@ -319,6 +329,7 @@ public sealed class BackgroundActionOrchestratorTests
         var capturedScopeIds = new System.Collections.Concurrent.ConcurrentBag<string>();
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<ScopedTracker>(); // Scoped service to track instance isolation
         services.AddScoped<IBackgroundAction<TestCommand>>(sp => new ScopeAwareHandler(sp.GetRequiredService<ScopedTracker>(), capturedScopeIds));
         services.AddScoped<IBackgroundAction<TestCommand>>(sp => new ScopeAwareHandler(sp.GetRequiredService<ScopedTracker>(), capturedScopeIds));
@@ -349,6 +360,7 @@ public sealed class BackgroundActionOrchestratorTests
         var concurrencyTracker = new ConcurrencyTracker();
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         // Register 8 handlers to exceed MaxDegreeOfParallelism=4
         for (int i = 0; i < 8; i++)
         {
@@ -378,6 +390,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerSuccess>();
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerFailure>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
@@ -412,6 +425,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
@@ -435,6 +449,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler2>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
@@ -463,6 +478,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerFailure>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
@@ -492,6 +508,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerFailure>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
@@ -519,6 +536,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerFailure>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();
@@ -544,6 +562,7 @@ public sealed class BackgroundActionOrchestratorTests
         _repository.AddEnvelope(envelope);
 
         var services = new ServiceCollection();
+        services.AddScoped<IUnitOfWork>(_ => _unitOfWork);
         services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerFailure>();
         services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
         _serviceProvider = services.BuildServiceProvider();

@@ -1,8 +1,9 @@
-using System.Text;
+﻿using System.Text;
 using System.Threading.RateLimiting;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using LgymApi.BackgroundWorker;
+using LgymApi.BackgroundWorker.Jobs;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application;
@@ -263,7 +264,7 @@ if (!app.Environment.IsEnvironment(TestingEnvironment))
         Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
     });
 
-    RecurringJob.AddOrUpdate<ICommittedIntentDispatchJob>(
+    RecurringJob.AddOrUpdate<CommittedIntentDispatchJob>(
         "reliability-committed-intent-dispatch",
         job => job.ExecuteAsync(CancellationToken.None),
         Cron.Minutely);
@@ -292,3 +293,4 @@ await app.RunAsync();
 
 // For WebApplicationFactory in integration tests
 public partial class Program { }
+

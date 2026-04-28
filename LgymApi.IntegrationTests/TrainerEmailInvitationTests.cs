@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -43,6 +43,7 @@ public sealed class TrainerEmailInvitationTests : IntegrationTestBase
         body.Should().NotBeNull();
         body!.Status.Should().Be("Pending");
         body.TraineeId.Should().BeEmpty();
+        body.InviteeEmail.Should().Be("new-unknown@example.com");
         body.Code.Should().NotBeNullOrWhiteSpace();
     }
 
@@ -67,6 +68,7 @@ public sealed class TrainerEmailInvitationTests : IntegrationTestBase
         body.Should().NotBeNull();
         body!.Status.Should().Be("Pending");
         body.TraineeId.Should().Be(existingUser.Id.ToString());
+        body.InviteeEmail.Should().Be("existing-user@example.com");
     }
 
     [Test]
@@ -365,6 +367,8 @@ public sealed class TrainerEmailInvitationTests : IntegrationTestBase
 
         [JsonPropertyName("traineeId")]
         public string TraineeId { get; set; } = string.Empty;
+        [JsonPropertyName("inviteeEmail")]
+        public string InviteeEmail { get; set; } = string.Empty;
 
         [JsonPropertyName("code")]
         public string Code { get; set; } = string.Empty;
@@ -388,3 +392,6 @@ public sealed class TrainerEmailInvitationTests : IntegrationTestBase
         public string Message { get; set; } = string.Empty;
     }
 }
+
+
+

@@ -61,6 +61,9 @@ public sealed partial class BackgroundActionOrchestratorService
             // Execute via cached compiled delegate (no MethodInfo.Invoke)
             await invoker(handler, command, cancellationToken);
 
+            // Persist any EF changes staged by the handler in this isolated scope.
+            await CommitHandlerScopeAsync(scope, cancellationToken);
+
             _logger.LogInformation(
                 "Handler {HandlerType} executed successfully for command {CommandType}.",
                 resolvedHandlerTypeName,

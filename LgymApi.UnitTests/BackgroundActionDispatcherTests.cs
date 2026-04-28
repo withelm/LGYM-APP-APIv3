@@ -1,330 +1,144 @@
 using FluentAssertions;
-using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
-using LgymApi.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
 
-/// <summary>
-/// Tests for CommandDispatcher covering:
-/// - Single handler dispatch flow
-/// - Multi-handler dispatch flow
-/// - Zero-handler no-enqueue path
-/// - Duplicate/idempotent path blocks duplicate enqueue
-/// - Persistence + enqueue contract assertions
-/// </summary>
 [TestFixture]
 public sealed class BackgroundActionDispatcherTests
 {
-    private FakeCommandEnvelopeRepository _repository = null!;
-    private FakeUnitOfWork _unitOfWork = null!;
-    private FakeActionMessageScheduler _scheduler = null!;
-    private AppDbContext _dbContext = null!;
-    private Microsoft.Extensions.DependencyInjection.ServiceProvider _serviceProvider = null!;
-
-    [SetUp]
-    public void SetUp()
+    [Test]
+    public async Task EnqueueAsync_WithRegisteredHandler_StagesEnvelope_WithoutCommitOrScheduling()
     {
-        _repository = new FakeCommandEnvelopeRepository();
-        _unitOfWork = new FakeUnitOfWork();
-        _scheduler = new FakeActionMessageScheduler();
-        _dbContext = new AppDbContext(
-            new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase($"command-dispatcher-tests-{Id<BackgroundActionDispatcherTests>.New()}")
-                .Options);
-    }
+        using var harness = CreateHarness(services =>
+            services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler>());
 
-    [TearDown]
-    public void TearDown()
-    {
-        _serviceProvider?.Dispose();
-        _dbContext?.Dispose();
+        CommandEnvelope? stagedEnvelope = null;
+        harness.Repository
+            .AddOrGetExistingAsync(Arg.Any<CommandEnvelope>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                stagedEnvelope = callInfo.Arg<CommandEnvelope>();
+                return stagedEnvelope;
+            });
+
+        await harness.Dispatcher.EnqueueAsync(new TestCommand { Value = "stage-me" });
+
+        await harness.Repository.Received(1)
+            .AddOrGetExistingAsync(Arg.Any<CommandEnvelope>(), Arg.Any<CancellationToken>());
+
+        stagedEnvelope.Should().NotBeNull();
+        stagedEnvelope!.Status.Should().Be(ActionExecutionStatus.Pending);
+        stagedEnvelope.CommandTypeFullName.Should().Be(typeof(TestCommand).FullName);
+        stagedEnvelope.PayloadJson.Should().Contain("stage-me");
+        harness.UnitOfWork.ReceivedCalls().Should().BeEmpty("dispatcher now only stages work");
+        harness.Scheduler.ReceivedCalls().Should().BeEmpty("dispatcher must not schedule work directly");
     }
 
     [Test]
-    public async Task Enqueue_SingleHandler_CreatesEnvelopeAndEnqueues()
+    public async Task EnqueueAsync_WithReadPhaseDuplicate_ReturnsWithoutCommitOrScheduling()
     {
-        // Arrange
-        var services = new ServiceCollection();
-        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
-        services.AddSingleton<ILogger<CommandDispatcher>>(_ => new FakeLogger<CommandDispatcher>());
-        _serviceProvider = services.BuildServiceProvider();
+        using var harness = CreateHarness(services =>
+            services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler>());
 
-        var dispatcher = CreateDispatcher();
-        var command = new TestCommand { Value = "test-single" };
+        CommandEnvelope? attemptedEnvelope = null;
+        var existingEnvelope = new CommandEnvelope
+        {
+            Id = Id<CommandEnvelope>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
+            CommandTypeFullName = typeof(TestCommand).FullName!,
+            PayloadJson = "{\"value\":\"duplicate\"}",
+            Status = ActionExecutionStatus.Pending,
+            NextAttemptAt = DateTimeOffset.UtcNow
+        };
 
-        // Act
-        await dispatcher.EnqueueAsync(command);
+        harness.Repository
+            .AddOrGetExistingAsync(Arg.Any<CommandEnvelope>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                attemptedEnvelope = callInfo.Arg<CommandEnvelope>();
+                return existingEnvelope;
+            });
 
-        // Assert
-        _repository.Envelopes.Count.Should().Be(1, "Should persist exactly one envelope");
+        await harness.Dispatcher.EnqueueAsync(new TestCommand { Value = "duplicate" });
 
-        var envelope = _repository.Envelopes.First();
-        envelope.Status.Should().Be(ActionExecutionStatus.Pending);
-        envelope.CommandTypeFullName.Should().Be(typeof(TestCommand).FullName);
-        envelope.PayloadJson.Should().Contain("test-single");
+        await harness.Repository.Received(1)
+            .AddOrGetExistingAsync(Arg.Any<CommandEnvelope>(), Arg.Any<CancellationToken>());
+
+        attemptedEnvelope.Should().NotBeNull();
+        attemptedEnvelope.Should().NotBeSameAs(existingEnvelope, "duplicate detection should short-circuit when the repository returns an existing envelope");
+        harness.UnitOfWork.ReceivedCalls().Should().BeEmpty("duplicate short-circuit must not commit");
+        harness.Scheduler.ReceivedCalls().Should().BeEmpty("duplicate short-circuit must not schedule");
     }
 
     [Test]
-    public async Task Enqueue_MultipleHandlers_CreatesOneEnvelopeAndOneJob()
+    public async Task EnqueueAsync_WithNoRegisteredHandlers_ShortCircuitsBeforeStaging()
     {
-        // Arrange
-        var services = new ServiceCollection();
-        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
-        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler2>();
-        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandlerSuccess>();
-        services.AddSingleton<ILogger<CommandDispatcher>>(_ => new FakeLogger<CommandDispatcher>());
-        _serviceProvider = services.BuildServiceProvider();
+        using var harness = CreateHarness();
 
-        var dispatcher = CreateDispatcher();
-        var command = new TestCommand { Value = "test-multi" };
+        await harness.Dispatcher.EnqueueAsync(new TestCommand { Value = "no-handlers" });
 
-        // Act
-        await dispatcher.EnqueueAsync(command);
-
-        // Assert
-        _repository.Envelopes.Count.Should().Be(1, "Should persist exactly one envelope despite multiple handlers");
+        harness.Repository.ReceivedCalls().Should().BeEmpty("zero-handler dispatch should return before staging");
+        harness.UnitOfWork.ReceivedCalls().Should().BeEmpty("zero-handler dispatch must not commit");
+        harness.Scheduler.ReceivedCalls().Should().BeEmpty("zero-handler dispatch must not schedule");
     }
 
     [Test]
-    public async Task Enqueue_ZeroHandlers_NoEnqueueAndNoFailure()
+    public async Task EnqueueAsync_WithNullCommand_ThrowsArgumentNullException()
     {
-        // Arrange
-        var services = new ServiceCollection();
-        services.AddSingleton<ILogger<CommandDispatcher>>(_ => new FakeLogger<CommandDispatcher>());
-        _serviceProvider = services.BuildServiceProvider(); // No handlers registered
+        using var harness = CreateHarness(services =>
+            services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler>());
 
-        var dispatcher = CreateDispatcher();
-        var command = new TestCommand { Value = "test-zero" };
+        Func<Task> action = () => harness.Dispatcher.EnqueueAsync<TestCommand>(null!);
 
-        // Act
-        await dispatcher.EnqueueAsync(command);
-
-        // Assert - Zero-handler path: safe no-op, no failure, no enqueue
-        _repository.Envelopes.Count.Should().Be(0, "Should not persist envelope when no handlers registered");
-    }
-
-    [Test]
-    public async Task Enqueue_DuplicateCommand_BlocksDuplicateEnqueue()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
-        services.AddSingleton<ILogger<CommandDispatcher>>(_ => new FakeLogger<CommandDispatcher>());
-        _serviceProvider = services.BuildServiceProvider();
-
-        var dispatcher = CreateDispatcher();
-        var command = new TestCommand { Value = "test-duplicate" };
-
-        // Act - Dispatch same command twice
-        await dispatcher.EnqueueAsync(command);
-        await dispatcher.EnqueueAsync(command); // Duplicate dispatch with identical content
-
-        // Assert - Deterministic correlation ID should deduplicate second dispatch
-
-        // Assert - Idempotency check: duplicate envelope should not enqueue
-        _repository.Envelopes.Count.Should().Be(1, "Should not create duplicate envelope for identical command");
-    }
-
-    [Test]
-    public async Task Enqueue_NullCommand_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-        services.AddSingleton<ILogger<CommandDispatcher>>(_ => new FakeLogger<CommandDispatcher>());
-        _serviceProvider = services.BuildServiceProvider();
-
-        var dispatcher = CreateDispatcher();
-
-        // Act & Assert
-        var action = async () => await dispatcher.EnqueueAsync<TestCommand>(null!);
         await action.Should().ThrowAsync<ArgumentNullException>();
+        harness.Repository.ReceivedCalls().Should().BeEmpty();
+        harness.UnitOfWork.ReceivedCalls().Should().BeEmpty();
+        harness.Scheduler.ReceivedCalls().Should().BeEmpty();
     }
 
-    [Test]
-    public async Task Enqueue_ExactTypeMatchingOnly_DerivedCommandDoesNotInherit()
+    private static DispatcherHarness CreateHarness(Action<IServiceCollection>? configureServices = null)
     {
-        // Arrange
+        var repository = Substitute.For<ICommandEnvelopeRepository>();
+        var scheduler = Substitute.For<IActionMessageScheduler>();
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+
         var services = new ServiceCollection();
-        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>(); // Base command handler
         services.AddSingleton<ILogger<CommandDispatcher>>(_ => new FakeLogger<CommandDispatcher>());
-        _serviceProvider = services.BuildServiceProvider();
+        services.AddSingleton(scheduler);
+        services.AddSingleton(unitOfWork);
+        configureServices?.Invoke(services);
 
-        var dispatcher = CreateDispatcher();
-        var derivedCommand = new DerivedTestCommand { Value = "derived", DerivedValue = "extra" };
+        var serviceProvider = services.BuildServiceProvider();
+        var dispatcher = new CommandDispatcher(
+            serviceProvider,
+            repository,
+            serviceProvider.GetRequiredService<ILogger<CommandDispatcher>>());
 
-        // Act - DerivedTestCommand has NO handlers registered (base handler should NOT match)
-        await dispatcher.EnqueueAsync(derivedCommand);
-
-        // Assert - Zero-handler path because exact-type matching only
-        _repository.Envelopes.Count.Should().Be(0, "Should not persist envelope for derived command when only base handler exists");
+        return new DispatcherHarness(serviceProvider, repository, scheduler, unitOfWork, dispatcher);
     }
 
-    [Test]
-    public async Task Enqueue_PersistsThenEnqueues_OrderGuaranteed()
+    private sealed class DispatcherHarness(
+        IDisposable serviceProvider,
+        ICommandEnvelopeRepository repository,
+        IActionMessageScheduler scheduler,
+        IUnitOfWork unitOfWork,
+        CommandDispatcher dispatcher) : IDisposable
     {
-        // Arrange
-        var services = new ServiceCollection();
-        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
-        services.AddSingleton<ILogger<CommandDispatcher>>(_ => new FakeLogger<CommandDispatcher>());
-        _serviceProvider = services.BuildServiceProvider();
+        public ICommandEnvelopeRepository Repository { get; } = repository;
+        public IActionMessageScheduler Scheduler { get; } = scheduler;
+        public IUnitOfWork UnitOfWork { get; } = unitOfWork;
+        public CommandDispatcher Dispatcher { get; } = dispatcher;
 
-        var dispatcher = CreateDispatcher();
-        var command = new TestCommand { Value = "test-order" };
-
-        // Act
-        await dispatcher.EnqueueAsync(command);
-
-        // Assert - Envelope must be persisted before enqueue
-        _repository.Envelopes.Count.Should().Be(1);
-    }
-
-    private CommandDispatcher CreateDispatcher()
-    {
-        return new CommandDispatcher(
-            _serviceProvider,
-            _repository,
-            _unitOfWork,
-            _dbContext,
-            _scheduler,
-            _serviceProvider.GetRequiredService<ILogger<CommandDispatcher>>());
-    }
-
-    // Test doubles
-    private sealed class FakeCommandEnvelopeRepository : ICommandEnvelopeRepository
-    {
-        public List<CommandEnvelope> Envelopes { get; } = new();
-
-        public void AddEnvelope(CommandEnvelope envelope) => Envelopes.Add(envelope);
-
-        public Task AddAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
-        {
-            Envelopes.Add(envelope);
-            return Task.CompletedTask;
-        }
-
-        public Task<CommandEnvelope?> FindByIdAsync(Id<CommandEnvelope> id, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Envelopes.FirstOrDefault(e => e.Id == id));
-        }
-
-        public Task<CommandEnvelope?> FindByCorrelationIdAsync(Id<CorrelationScope> correlationId, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Envelopes.FirstOrDefault(e => e.CorrelationId == correlationId));
-        }
-
-        public Task<List<CommandEnvelope>> GetPendingRetriesAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Envelopes
-                .Where(e => e.Status == ActionExecutionStatus.Failed && e.NextAttemptAt <= DateTimeOffset.UtcNow)
-                .ToList());
-        }
-
-        public Task UpdateAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task<CommandEnvelope> AddOrGetExistingAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
-        {
-
-            var existing = Envelopes.FirstOrDefault(e => e.CorrelationId == envelope.CorrelationId);
-            if (existing != null)
-            {
-                return Task.FromResult(existing);
-            }
-
-            Envelopes.Add(envelope);
-            return Task.FromResult(envelope);
-        }
-
-        public Task<List<CommandEnvelope>> GetPendingUndispatchedAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Envelopes
-                .Where(e => e.Status == ActionExecutionStatus.Pending && e.DispatchedAt == null)
-                .ToList());
-        }
-
-        public Task<List<CommandEnvelope>> GetFailedAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Envelopes
-                .Where(e => e.Status == ActionExecutionStatus.Failed)
-                .ToList());
-        }
-
-        public Task<List<CommandEnvelope>> GetDeadLetteredAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Envelopes
-                .Where(e => e.Status == ActionExecutionStatus.DeadLettered)
-                .ToList());
-        }
-
-        public Task<int> CountByStatusAsync(ActionExecutionStatus status, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Envelopes.Count(e => e.Status == status));
-        }
-
-        public Task<int> DeleteCompletedOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
-        {
-            var toDelete = Envelopes
-                .Where(e => e.Status == ActionExecutionStatus.Completed && e.CompletedAt.HasValue && e.CompletedAt < cutoffDate)
-                .ToList();
-            
-            var count = toDelete.Count;
-            foreach (var e in toDelete)
-            {
-                Envelopes.Remove(e);
-            }
-
-            return Task.FromResult(count);
-        }
-    }
-
-    private sealed class FakeUnitOfWork : IUnitOfWork
-    {
-        public int SaveCallCount { get; private set; }
-
-        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            SaveCallCount++;
-            return Task.FromResult(1);
-        }
-
-        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult<IUnitOfWorkTransaction>(new FakeTransaction());
-        }
-
-        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
-
-        public void Dispose() { }
-
-        private sealed class FakeTransaction : IUnitOfWorkTransaction
-        {
-            public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-            public Task RollbackAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-        }
-    }
-
-
-    private sealed class FakeActionMessageScheduler : IActionMessageScheduler
-    {
-        public List<Id<CommandEnvelope>> EnqueuedIds { get; } = new();
-
-        public string? Enqueue(Id<CommandEnvelope> actionMessageId)
-        {
-            EnqueuedIds.Add(actionMessageId);
-            return "test-job-id";
-        }
+        public void Dispose() => serviceProvider.Dispose();
     }
 
     private sealed class FakeLogger<T> : ILogger<T>
@@ -334,39 +148,13 @@ public sealed class BackgroundActionDispatcherTests
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
     }
 
-    // Test command types
-    private class TestCommand : IActionCommand
+    private sealed class TestCommand : IActionCommand
     {
         public string Value { get; set; } = string.Empty;
     }
 
-    private class DerivedTestCommand : TestCommand
+    private sealed class TestActionHandler : IBackgroundAction<TestCommand>
     {
-        public string DerivedValue { get; set; } = string.Empty;
-    }
-
-    // Test action handlers
-    private sealed class TestActionHandler1 : IBackgroundAction<TestCommand>
-    {
-        public Task ExecuteAsync(TestCommand command, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class TestActionHandler2 : IBackgroundAction<TestCommand>
-    {
-        public Task ExecuteAsync(TestCommand command, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class TestActionHandlerSuccess : IBackgroundAction<TestCommand>
-    {
-        public Task ExecuteAsync(TestCommand command, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
+        public Task ExecuteAsync(TestCommand command, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

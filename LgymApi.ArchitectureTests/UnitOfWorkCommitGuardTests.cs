@@ -10,7 +10,6 @@ public sealed class UnitOfWorkCommitGuardTests
     private static readonly string[] AllowedSegments =
     {
         "/LgymApi.Application/",
-        "/LgymApi.BackgroundWorker/",  // Orchestration service owns command envelope lifecycle
         "/LgymApi.Infrastructure/UnitOfWork/",
         "/LgymApi.Infrastructure/Data/",
         "/LgymApi.DataSeeder/",
@@ -28,7 +27,10 @@ public sealed class UnitOfWorkCommitGuardTests
     private static readonly string[] AllowedFileSuffixes =
     {
         "/LgymApi.Api/Middleware/ApiIdempotencyMiddleware.cs",
-        "/LgymApi.Infrastructure/Services/CommittedIntentDispatcher.cs"
+        "/LgymApi.Infrastructure/Services/CommittedIntentDispatcher.cs",
+        "/LgymApi.BackgroundWorker/BackgroundActionOrchestratorService.cs",
+        "/LgymApi.BackgroundWorker/Notifications/EmailSchedulerService.cs",
+        "/LgymApi.BackgroundWorker/Notifications/EmailJobHandlerService.cs"
     };
 
     [Test]

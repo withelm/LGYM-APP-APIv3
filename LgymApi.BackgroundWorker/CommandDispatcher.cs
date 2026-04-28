@@ -7,8 +7,6 @@ using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -23,26 +21,20 @@ public sealed class CommandDispatcher : ICommandDispatcher
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ICommandEnvelopeRepository _commandEnvelopeRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly AppDbContext _dbContext;
-    private readonly IActionMessageScheduler _scheduler;
     private readonly ILogger<CommandDispatcher> _logger;
 
     public CommandDispatcher(
         IServiceProvider serviceProvider,
         ICommandEnvelopeRepository commandEnvelopeRepository,
-        IUnitOfWork unitOfWork,
-        AppDbContext dbContext,
-        IActionMessageScheduler scheduler,
         ILogger<CommandDispatcher> logger)
     {
         _serviceProvider = serviceProvider;
         _commandEnvelopeRepository = commandEnvelopeRepository;
-        _unitOfWork = unitOfWork;
-        _dbContext = dbContext;
-        _scheduler = scheduler;
         _logger = logger;
+        // Note: staging-only dispatcher - persistence commit and scheduling are performed elsewhere
     }
+
+    // NOTE: intentionally exposing a single 3-argument constructor to enforce staging-only public surface.
 
     /// <summary>
     /// Enqueues a strongly-typed command for background action execution asynchronously.
@@ -115,57 +107,12 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return; // Idempotent path: no duplicate enqueue
         }
 
-        // Persist new envelope - DB unique constraint will enforce duplicate protection atomically
-        try
-        {
-            await _unitOfWork.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex)
-        {
-            // Conflict: unique constraint violation on CorrelationId (concurrent duplicate insert)
-            // This handles the race condition where two concurrent callers passed the read phase
-            // but both attempted insert - DB constraint ensures only one succeeds
-            
-            _logger.LogInformation(
-                ex,
-                "Unique constraint violation on CorrelationId {CorrelationId}. Concurrent duplicate detected. Fetching existing envelope.",
-                correlationId);
-
-            // Detach the failed envelope to avoid tracking conflicts
-            _dbContext.Entry(envelope).State = EntityState.Detached;
-
-            // Fetch the winning envelope that was persisted by concurrent caller
-            var existing = await _commandEnvelopeRepository.FindByCorrelationIdAsync(correlationId);
-            
-            if (existing == null)
-            {
-                // Edge case: constraint violation but envelope not found
-                // This indicates soft-delete race or unexpected DB state
-                _logger.LogError(
-                    "Unique constraint violation but existing envelope not found for correlation {CorrelationId}. Re-throwing exception.",
-                    correlationId);
-                throw;
-            }
-
-            _logger.LogInformation(
-                "Concurrent duplicate resolved: using existing envelope {EnvelopeId} for correlation {CorrelationId}. Skipping enqueue.",
-                existing.Id,
-                correlationId);
-            
-            return; // Idempotent path: conflict resolved, skip enqueue
-        }
-
+        // Staging-only behavior: envelope has been staged via repository's AddOrGetExistingAsync.
+        // Commit and scheduling are the responsibility of a separate unit-of-work and dispatcher.
         _logger.LogInformation(
-            "Command envelope {EnvelopeId} persisted for correlation {CorrelationId}.",
+            "Command envelope {EnvelopeId} staged for correlation {CorrelationId}.",
             envelope.Id,
             correlationId);
-
-        // Enqueue orchestration job by envelope ID only (durable reference)
-        _scheduler.Enqueue(envelope.Id);
-
-        _logger.LogInformation(
-            "Command envelope {EnvelopeId} enqueued for orchestration.",
-            envelope.Id);
     }
 
     /// <summary>

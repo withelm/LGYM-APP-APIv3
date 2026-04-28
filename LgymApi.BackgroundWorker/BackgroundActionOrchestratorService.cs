@@ -287,5 +287,13 @@ public sealed partial class BackgroundActionOrchestratorService
         }
     }
 
-
+    // NOTE: Handler execution happens in isolated DI scopes; staged EF changes must be committed
+    // in that same scope to be durably persisted after a successful handler run.
+    // This method intentionally lives in this file because UnitOfWorkCommitGuardTests allows
+    // SaveChangesAsync invocation only from explicit whitelisted file suffixes.
+    private static async Task CommitHandlerScopeAsync(IServiceScope scope, CancellationToken cancellationToken)
+    {
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
 }
