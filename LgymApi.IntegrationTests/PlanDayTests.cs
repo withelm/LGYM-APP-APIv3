@@ -45,6 +45,36 @@ public sealed class PlanDayTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreatePlanDay_WithMultipleExercises_ReturnsOk()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "plandaymultiuser",
+            email: "plandaymulti@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseA = await CreateExerciseViaEndpointAsync(userId, "PlanDay Multi Exercise A", BodyParts.Chest);
+        var exerciseB = await CreateExerciseViaEndpointAsync(userId, "PlanDay Multi Exercise B", BodyParts.Back);
+        var planId = await CreatePlanViaEndpointAsync(userId, "PlanDay Multi Plan");
+
+        var request = new
+        {
+            name = "Multi Day",
+            exercises = new[]
+            {
+                new { exercise = exerciseA.ToString(), series = 4, reps = "10" },
+                new { exercise = exerciseB.ToString(), series = 3, reps = "12" }
+            }
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Test]
     public async Task CreatePlanDay_WithMissingName_ReturnsBadRequest()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
