@@ -574,12 +574,17 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<InAppNotification>(entity =>
         {
             entity.ToTable("in_app_notifications");
+            entity.Property(e => e.DeliveryKey)
+                .HasMaxLength(200);
             entity.Property(e => e.Type)
                 .HasConversion(
                     notificationType => notificationType.Value,
                     value => InAppNotificationType.Parse(value))
                 .IsRequired();
             entity.HasIndex(e => new { e.RecipientId, e.CreatedAt, e.Id });
+            entity.HasIndex(e => new { e.RecipientId, e.Type, e.DeliveryKey })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE AND \"DeliveryKey\" IS NOT NULL");
         });
 
         modelBuilder.Entity<UserSession>(entity =>

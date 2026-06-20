@@ -21,6 +21,27 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
         return _dbContext.InAppNotifications.AddAsync(notification, cancellationToken).AsTask();
     }
 
+    public Task<InAppNotification?> FindByDeliveryKeyAsync(
+        Id<User> recipientId,
+        InAppNotificationType type,
+        string deliveryKey,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.InAppNotifications
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.RecipientId == recipientId
+                     && x.Type == type
+                     && x.DeliveryKey == deliveryKey
+                     && !x.IsDeleted,
+                cancellationToken);
+    }
+
+    public void Detach(InAppNotification notification)
+    {
+        _dbContext.Entry(notification).State = EntityState.Detached;
+    }
+
     public Task<InAppNotification?> GetByIdAsync(Id<InAppNotification> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.InAppNotifications
