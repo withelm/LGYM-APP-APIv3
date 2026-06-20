@@ -32,7 +32,7 @@ public interface IPhotoStorageProvider
     /// <remarks>
     /// Security: The signed URL should enforce:
     /// - Content-Type validation (only image/jpeg, image/png, image/heic)
-    /// - File size limit (max 10MB)
+    /// - File size limit (provider/configuration dependent; API currently verifies against configured PhotoStorageOptions.MaxFileSizeBytes)
     /// - Single-use or limited-use semantics (provider-dependent)
     /// </remarks>
     Task<string> GenerateSignedUploadUrlAsync(

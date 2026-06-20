@@ -44,6 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(photoStorageOptions);
         EmailOptionsFactory.Validate(emailOptions);
         services.AddSingleton(emailOptions);
+        services.AddHttpContextAccessor();
         // Google auth fallback uses Google userinfo over HTTP when the ID token omits profile/email claims.
         services.AddHttpClient();
         services.AddSingleton<IEmailNotificationsFeature, EmailNotificationsFeature>();
