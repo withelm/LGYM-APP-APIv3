@@ -48,6 +48,7 @@ public sealed class ReportRequestCreatedInAppNotificationCommandHandler : global
             var input = new NotificationsApp.Models.CreateInAppNotificationInput(
                 command.TraineeId,
                 command.TrainerId,
+                $"report-request:{command.RequestId}:created",
                 false,
                 string.Format(global::LgymApi.Resources.Messages.TrainerReportRequestReceived, trainerName, templateName),
                 $"/trainer/report-requests/{command.RequestId}",

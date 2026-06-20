@@ -46,6 +46,7 @@ public sealed class ReportFeedbackAddedInAppNotificationCommandHandler : global:
             var input = new NotificationsApp.Models.CreateInAppNotificationInput(
                 command.TraineeId,
                 command.TrainerId,
+                $"report-feedback:{command.SubmissionId}:{command.TriggeredAt:O}",
                 false,
                 string.Format(global::LgymApi.Resources.Messages.TrainerReportFeedbackReceived, trainerName, templateName),
                 $"/trainer/report-submissions/{command.SubmissionId}",
