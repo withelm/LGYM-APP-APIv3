@@ -74,9 +74,6 @@ public sealed class PhotoHistoryItemResponse : IResultDto
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonPropertyName("storageKey")]
-    public string StorageKey { get; set; } = string.Empty;
-
     [JsonPropertyName("viewType")]
     public string ViewType { get; set; } = string.Empty;
 

@@ -384,7 +384,6 @@ public sealed partial class ReportingService
             results.Add(new PhotoHistoryItemResult
             {
                 Id = photo.Id,
-                StorageKey = photo.StorageKey,
                 ViewType = photo.ViewType.ToString(),
                 SizeBytes = photo.SizeBytes,
                 ThumbnailUrl = thumbnailUrl,

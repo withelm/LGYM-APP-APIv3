@@ -76,7 +76,6 @@ public sealed class ReportingProfile : IMappingProfile
         configuration.CreateMap<PhotoHistoryItemResult, PhotoHistoryItemResponse>((source, _) => new PhotoHistoryItemResponse
         {
             Id = source?.Id.ToString() ?? string.Empty,
-            StorageKey = source?.StorageKey ?? string.Empty,
             ViewType = source?.ViewType ?? string.Empty,
             SizeBytes = source?.SizeBytes ?? 0,
             ThumbnailUrl = source?.ThumbnailUrl,

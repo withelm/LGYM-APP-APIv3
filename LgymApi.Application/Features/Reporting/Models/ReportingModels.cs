@@ -130,7 +130,6 @@ public sealed class GetPhotoHistoryCommand
 public sealed class PhotoHistoryItemResult
 {
     public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Photo> Id { get; set; }
-    public string StorageKey { get; set; } = string.Empty;
     public string ViewType { get; set; } = string.Empty;
     public long SizeBytes { get; set; }
     public string? ThumbnailUrl { get; set; }
