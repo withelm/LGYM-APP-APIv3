@@ -7,4 +7,7 @@ public sealed class GoogleSignInRequest : IDto
 {
     [JsonPropertyName("idToken")]
     public string IdToken { get; set; } = string.Empty;
+
+    [JsonPropertyName("accessToken")]
+    public string? AccessToken { get; set; }
 }

@@ -7,6 +7,9 @@ public sealed class LinkGoogleRequest : IDto
 {
     [JsonPropertyName("idToken")]
     public string IdToken { get; set; } = string.Empty;
+
+    [JsonPropertyName("accessToken")]
+    public string? AccessToken { get; set; }
 }
 
 public sealed class ExternalLoginDto : IResultDto

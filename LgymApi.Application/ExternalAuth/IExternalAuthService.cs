@@ -6,5 +6,5 @@ namespace LgymApi.Application.ExternalAuth;
 
 public interface IExternalAuthService
 {
-    Task<Result<LoginResult, AppError>> GoogleSignInAsync(string idToken, CancellationToken cancellationToken);
+    Task<Result<LoginResult, AppError>> GoogleSignInAsync(string idToken, string? accessToken, CancellationToken cancellationToken);
 }

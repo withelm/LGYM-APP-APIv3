@@ -30,9 +30,9 @@ public sealed class ExternalAuthService : IExternalAuthService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<LoginResult, AppError>> GoogleSignInAsync(string idToken, CancellationToken cancellationToken)
+    public async Task<Result<LoginResult, AppError>> GoogleSignInAsync(string idToken, string? accessToken, CancellationToken cancellationToken)
     {
-        var payload = await _googleTokenValidator.ValidateAsync(idToken, cancellationToken);
+        var payload = await _googleTokenValidator.ValidateAsync(idToken, accessToken, cancellationToken);
         if (payload == null)
         {
             return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.GoogleTokenInvalid));

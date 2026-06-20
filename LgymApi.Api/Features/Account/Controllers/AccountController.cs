@@ -30,7 +30,7 @@ public sealed class AccountController : ControllerBase
         // validation (FluentValidation will run automatically when configured)
         var userId = LgymApi.Api.Middleware.HttpContextExtensions.GetCurrentUserId(HttpContext);
 
-        var result = await _accountLinkingService.LinkGoogleAsync(userId, request.IdToken, cancellationToken);
+        var result = await _accountLinkingService.LinkGoogleAsync(userId, request.IdToken, request.AccessToken, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
