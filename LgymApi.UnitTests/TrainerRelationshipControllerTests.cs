@@ -15,6 +15,7 @@ using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Pagination;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -78,6 +79,16 @@ public sealed class TrainerRelationshipControllerTests
         ((ObjectResult)result).StatusCode.Should().Be(400);
     }
 
+    [Test]
+    public async Task GetCurrentTrainer_WhenLinkExists_ReturnsOk()
+    {
+        var controller = CreateTraineeController();
+
+        var result = await controller.GetCurrentTrainer();
+
+        result.Should().BeOfType<OkObjectResult>();
+    }
+
     private static TrainerRelationshipController CreateController()
     {
         var services = new ServiceCollection();
@@ -85,6 +96,31 @@ public sealed class TrainerRelationshipControllerTests
         using var provider = services.BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         return new TrainerRelationshipController(new StubTrainerRelationshipService(), mapper);
+    }
+
+    private static TraineeRelationshipController CreateTraineeController()
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+
+        var controller = new TraineeRelationshipController(new StubTrainerRelationshipService(), mapper)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+
+        controller.HttpContext.Items["User"] = new User
+        {
+            Id = Id<User>.New(),
+            Name = "Trainee",
+            Email = "trainee@example.com"
+        };
+
+        return controller;
     }
 
     private sealed class StubTrainerRelationshipService : ITrainerRelationshipService
@@ -105,6 +141,14 @@ public sealed class TrainerRelationshipControllerTests
         public Task<Result<Unit, AppError>> DeleteTraineePlanAsync(User currentTrainer, Id<User> traineeId, Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<Unit, AppError>> AssignTraineePlanAsync(User currentTrainer, Id<User> traineeId, Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<Unit, AppError>> UnassignTraineePlanAsync(User currentTrainer, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<TraineeTrainerProfileResult, AppError>> GetCurrentTrainerAsync(User currentTrainee, CancellationToken cancellationToken = default) => Task.FromResult(Result<TraineeTrainerProfileResult, AppError>.Success(new TraineeTrainerProfileResult
+        {
+            TrainerId = Id<User>.New(),
+            Name = "Trainer Test",
+            Email = "trainer@example.com",
+            Avatar = null,
+            LinkedAt = DateTimeOffset.UtcNow
+        }));
         public Task<Result<TrainerManagedPlanResult, AppError>> GetActiveAssignedPlanAsync(User currentTrainee, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<Unit, AppError>> AcceptInvitationAsync(User currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<Unit, AppError>> RejectInvitationAsync(User currentTrainee, Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

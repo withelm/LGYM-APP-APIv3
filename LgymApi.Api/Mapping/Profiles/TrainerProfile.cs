@@ -47,6 +47,15 @@ public sealed class TrainerProfile : IMappingProfile
             CreatedAt = source.CreatedAt
         });
 
+        configuration.CreateMap<TraineeTrainerProfileResult, TraineeTrainerProfileDto>((source, _) => new TraineeTrainerProfileDto
+        {
+            TrainerId = source.TrainerId.ToString(),
+            Name = source.Name,
+            Email = source.Email,
+            Avatar = source.Avatar,
+            LinkedAt = source.LinkedAt
+        });
+
         configuration.CreateMap<SupplementPlanItemResult, SupplementPlanItemDto>((source, _) => new SupplementPlanItemDto
         {
             Id = source.Id.ToString(),

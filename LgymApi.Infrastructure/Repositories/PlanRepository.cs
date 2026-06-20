@@ -87,48 +87,63 @@ public sealed class PlanRepository : IPlanRepository
             .StageUpdateAsync(_dbContext, p => p.IsActive, p => false, cancellationToken);
     }
 
+    public async Task<Plan> ClonePlanAsync(Id<Plan> sourcePlanId, Id<User> userId, bool isActive = true, CancellationToken cancellationToken = default)
+    {
+        var planToCopy = await _dbContext.Plans
+            .FirstOrDefaultAsync(p => p.Id == sourcePlanId && !p.IsDeleted, cancellationToken);
+
+        if (planToCopy == null)
+        {
+            throw new InvalidOperationException("Plan not found");
+        }
+
+        return await ClonePlanGraphAsync(planToCopy, userId, isActive, cancellationToken);
+    }
+
     public async Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Id<User> userId, CancellationToken cancellationToken = default)
     {
-        // 1. Find plan by ShareCode
         var planToCopy = await _dbContext.Plans
             .FirstOrDefaultAsync(p => p.ShareCode == shareCode && !p.IsDeleted, cancellationToken);
 
         if (planToCopy == null)
             throw new InvalidOperationException("Plan not found");
 
-        // 2. Get all non-deleted PlanDays with their exercises
+        return await ClonePlanGraphAsync(planToCopy, userId, isActive: true, cancellationToken);
+    }
+
+    private async Task<Plan> ClonePlanGraphAsync(Plan planToCopy, Id<User> userId, bool isActive, CancellationToken cancellationToken)
+    {
         var planDaysToCopy = await _dbContext.PlanDays
             .Include(pd => pd.Exercises)
             .ThenInclude(pde => pde.Exercise)
             .Where(pd => pd.PlanId == planToCopy.Id && !pd.IsDeleted)
             .ToListAsync(cancellationToken);
 
-        // 3. Build copied graph in current unit of work.
         var newPlan = new Plan
         {
+            Id = Id<Plan>.New(),
             UserId = userId,
             Name = planToCopy.Name,
-            IsActive = true,
+            IsActive = isActive,
             IsDeleted = false
         };
 
         await _dbContext.Plans.AddAsync(newPlan, cancellationToken);
 
-        var copiedExercises = new Dictionary<Id<Exercise>, Exercise>(); // Old ExerciseId -> New Exercise
+        var copiedExercises = new Dictionary<Id<Exercise>, Exercise>();
 
-        // 4. Iterate through days
         foreach (var planDay in planDaysToCopy)
         {
             var newPlanDay = new PlanDay
             {
-                Plan = newPlan,
+                Id = Id<PlanDay>.New(),
+                PlanId = newPlan.Id,
                 Name = planDay.Name,
                 IsDeleted = false
             };
 
             await _dbContext.PlanDays.AddAsync(newPlanDay, cancellationToken);
 
-            // 5. Iterate through exercises in the day
             foreach (var planDayExercise in planDay.Exercises.OrderBy(e => e.Order).ThenBy(e => e.Id))
             {
                 var exercise = planDayExercise.Exercise;
@@ -139,15 +154,13 @@ public sealed class PlanRepository : IPlanRepository
 
                 Exercise exerciseToUse;
 
-                // CORE LOGIC: Deep Copy for user exercises, reference for system exercises
                 if (exercise.UserId.HasValue)
                 {
-                    // Check if we already copied this exercise
                     if (!copiedExercises.TryGetValue(exercise.Id, out var copiedExercise))
                     {
-                        // Deep Copy: Create new Exercise entity for current user
                         var newExercise = new Exercise
                         {
+                            Id = Id<Exercise>.New(),
                             Name = exercise.Name,
                             UserId = userId,
                             BodyPart = exercise.BodyPart,
@@ -167,14 +180,14 @@ public sealed class PlanRepository : IPlanRepository
                 }
                 else
                 {
-                    // System exercise: Keep reference to original
                     exerciseToUse = exercise;
                 }
 
                 var newPlanDayExercise = new PlanDayExercise
                 {
-                    PlanDay = newPlanDay,
-                    Exercise = exerciseToUse,
+                    Id = Id<PlanDayExercise>.New(),
+                    PlanDayId = newPlanDay.Id,
+                    ExerciseId = exerciseToUse.Id,
                     Order = planDayExercise.Order,
                     Series = planDayExercise.Series,
                     Reps = planDayExercise.Reps

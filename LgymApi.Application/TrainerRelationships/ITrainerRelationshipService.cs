@@ -32,6 +32,7 @@ public interface ITrainerRelationshipService
     Task<Result<Unit, AppError>> DeleteTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<PlanEntity> planId, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> AssignTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<PlanEntity> planId, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> UnassignTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default);
+    Task<Result<TraineeTrainerProfileResult, AppError>> GetCurrentTrainerAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default);
     Task<Result<TrainerManagedPlanResult, AppError>> GetActiveAssignedPlanAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> AcceptInvitationAsync(UserEntity currentTrainee, Id<TrainerInvitationEntity> invitationId, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> RejectInvitationAsync(UserEntity currentTrainee, Id<TrainerInvitationEntity> invitationId, CancellationToken cancellationToken = default);

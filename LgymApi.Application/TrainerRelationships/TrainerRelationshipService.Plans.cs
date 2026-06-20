@@ -128,7 +128,7 @@ public sealed partial class TrainerRelationshipService
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
-        if (plan == null || plan.UserId != traineeId)
+        if (plan == null || (plan.UserId != traineeId && plan.UserId != currentTrainer.Id))
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
@@ -139,8 +139,21 @@ public sealed partial class TrainerRelationshipService
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
-        await _planRepository.SetActivePlanAsync(traineeId, planId, cancellationToken);
-        trainee.PlanId = planId;
+        Id<PlanEntity> assignedPlanId;
+
+        if (plan.UserId == currentTrainer.Id)
+        {
+            await _planRepository.ClearActivePlansAsync(traineeId, cancellationToken);
+            var clonedPlan = await _planRepository.ClonePlanAsync(plan.Id, traineeId, isActive: true, cancellationToken);
+            assignedPlanId = clonedPlan.Id;
+        }
+        else
+        {
+            await _planRepository.SetActivePlanAsync(traineeId, planId, cancellationToken);
+            assignedPlanId = planId;
+        }
+
+        trainee.PlanId = assignedPlanId;
         await _userRepository.UpdateAsync(trainee, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);

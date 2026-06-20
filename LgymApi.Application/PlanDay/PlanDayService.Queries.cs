@@ -29,7 +29,7 @@ public sealed partial class PlanDayService : IPlanDayService
             return Result<PlanDayDetailsContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        if (plan.UserId != currentUser.Id)
+        if (!await CanAccessPlanAsync(currentUser, plan.UserId, cancellationToken))
         {
             return Result<PlanDayDetailsContext, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
@@ -66,7 +66,7 @@ public sealed partial class PlanDayService : IPlanDayService
             return Result<PlanDaysContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        if (plan.UserId != currentUser.Id)
+        if (!await CanAccessPlanAsync(currentUser, plan.UserId, cancellationToken))
         {
             return Result<PlanDaysContext, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
@@ -133,7 +133,7 @@ public sealed partial class PlanDayService : IPlanDayService
             return Result<PlanDaysInfoContext, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        if (plan.UserId != currentUser.Id)
+        if (!await CanAccessPlanAsync(currentUser, plan.UserId, cancellationToken))
         {
             return Result<PlanDaysInfoContext, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
