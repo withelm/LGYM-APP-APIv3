@@ -5,7 +5,9 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Measurements.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Measurement = LgymApi.Domain.Entities.Measurement;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -13,17 +15,18 @@ using UserEntity = LgymApi.Domain.Entities.User;
 namespace LgymApi.Api.Features.Measurements.Controllers;
 
 [ApiController]
-    [Route("api")]
-    public sealed class MeasurementsController : ControllerBase
-    {
-        private readonly IMeasurementsService _measurementsService;
-        private readonly IMapper _mapper;
+[Authorize]
+[Route("api")]
+public sealed class MeasurementsController : ControllerBase
+{
+    private readonly IMeasurementsService _measurementsService;
+    private readonly IMapper _mapper;
 
-        public MeasurementsController(IMeasurementsService measurementsService, IMapper mapper)
-        {
-            _measurementsService = measurementsService;
-            _mapper = mapper;
-        }
+    public MeasurementsController(IMeasurementsService measurementsService, IMapper mapper)
+    {
+        _measurementsService = measurementsService;
+        _mapper = mapper;
+    }
 
     [HttpPost("measurements/add")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]

@@ -35,6 +35,28 @@ public sealed class MeasurementsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task AddMeasurementsBulk_WithoutAuth_ReturnsUnauthorized()
+    {
+        var response = await Client.PostAsJsonAsync("/api/measurements/add-bulk", new
+        {
+            measurements = new object[]
+            {
+                new { bodyPart = BodyParts.BodyWeight.ToString(), value = 80.2, unit = MeasurementUnits.Kilograms.ToString() }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Test]
+    public async Task GetMeasurementsTrends_WithoutAuth_ReturnsUnauthorized()
+    {
+        var response = await Client.GetAsync($"/api/measurements/{Guid.NewGuid()}/trends");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Test]
     public async Task GetMeasurementsHistory_WithLengthUnitConversion_ReturnsConvertedValues()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
