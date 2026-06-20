@@ -81,6 +81,18 @@ public sealed class MeasurementsServiceTests
     }
 
     [Test]
+    public async Task AddMeasurementAsync_WhenValueIsNotPositive_ReturnsInvalidMeasurementError()
+    {
+        var currentUser = new User { Id = Id<User>.New(), Name = "user", Email = "weight-value@example.com", ProfileRank = "Rookie" };
+        var service = CreateService();
+
+        var result = await service.AddMeasurementAsync(currentUser, BodyParts.BodyWeight, MeasurementUnits.Kilograms, 0);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidMeasurementError>();
+    }
+
+    [Test]
     public async Task GetMeasurementsTrendAsync_WhenValueGrows_ReturnsUpDirectionAndDifference()
     {
         var userId = Id<User>.New();
