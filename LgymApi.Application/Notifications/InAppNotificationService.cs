@@ -27,6 +27,7 @@ public sealed class InAppNotificationService : IInAppNotificationService
             Id = Id<InAppNotification>.New(),
             RecipientId = input.RecipientId,
             SenderUserId = input.SenderUserId,
+            DeliveryKey = input.DeliveryKey,
             IsSystemNotification = input.IsSystemNotification,
             Message = input.Message,
             RedirectUrl = input.RedirectUrl,
@@ -35,7 +36,21 @@ public sealed class InAppNotificationService : IInAppNotificationService
         };
 
         await _deps.InAppNotificationRepository.AddAsync(notification, cancellationToken);
-        await _deps.UnitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await _deps.UnitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            var existingResult = await TryResolveDuplicateDeliveryAsync(input, notification, ex, cancellationToken);
+            if (existingResult != null)
+            {
+                return Result<InAppNotificationResult, AppError>.Success(existingResult);
+            }
+
+            throw;
+        }
 
         var result = MapToResult(notification);
 
@@ -102,4 +117,45 @@ public sealed class InAppNotificationService : IInAppNotificationService
 
     private static InAppNotificationResult MapToResult(InAppNotification notification)
         => new(notification.Id, notification.RecipientId, notification.Message, notification.RedirectUrl, notification.IsRead, notification.Type, notification.IsSystemNotification, notification.SenderUserId, notification.CreatedAt);
+
+    private async Task<InAppNotificationResult?> TryResolveDuplicateDeliveryAsync(
+        CreateInAppNotificationInput input,
+        InAppNotification notification,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(input.DeliveryKey) || !IsDeliveryKeyUniqueViolation(exception))
+        {
+            return null;
+        }
+
+        _deps.InAppNotificationRepository.Detach(notification);
+
+        var existing = await _deps.InAppNotificationRepository.FindByDeliveryKeyAsync(
+            input.RecipientId,
+            input.Type,
+            input.DeliveryKey,
+            cancellationToken);
+
+        if (existing == null)
+        {
+            return null;
+        }
+
+        _logger.LogInformation(
+            "Skipped duplicate in-app notification for recipient {RecipientId} type {Type} deliveryKey {DeliveryKey}.",
+            input.RecipientId,
+            input.Type,
+            input.DeliveryKey);
+
+        return MapToResult(existing);
+    }
+
+    private static bool IsDeliveryKeyUniqueViolation(Exception exception)
+    {
+        const string indexName = "IX_in_app_notifications_RecipientId_Type_DeliveryKey";
+
+        return string.Equals(exception.GetType().Name, "DbUpdateException", StringComparison.Ordinal)
+            && exception.ToString().Contains(indexName, StringComparison.Ordinal);
+    }
 }

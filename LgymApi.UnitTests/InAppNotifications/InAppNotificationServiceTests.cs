@@ -11,6 +11,7 @@ using IInAppNotificationPushPublisher = global::LgymApi.Application.Notification
 using LgymApi.Application.Notifications.Errors;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Domain.Notifications;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
@@ -26,7 +27,7 @@ public sealed class InAppNotificationServiceTests
         var service = CreateService(repository: repo);
         var userId = Id<User>.New();
         var input = new CreateInAppNotificationInput(
-            userId, null, true, "Test message", null, InAppNotificationTypes.InvitationSent);
+            userId, null, null, true, "Test message", null, InAppNotificationTypes.InvitationSent);
 
         var result = await service.CreateAsync(input);
 
@@ -42,7 +43,7 @@ public sealed class InAppNotificationServiceTests
         var service = CreateService(repository: repo);
         var userId = Id<User>.New();
         var input = new CreateInAppNotificationInput(
-            userId, null, true, "Persisted", null, InAppNotificationTypes.InvitationSent);
+            userId, null, null, true, "Persisted", null, InAppNotificationTypes.InvitationSent);
 
         await service.CreateAsync(input);
 
@@ -58,7 +59,7 @@ public sealed class InAppNotificationServiceTests
         var push = new FakePushPublisher();
         var service = CreateService(pushPublisher: push);
         var input = new CreateInAppNotificationInput(
-            Id<User>.New(), null, true, "Push me", null, InAppNotificationTypes.InvitationSent);
+            Id<User>.New(), null, null, true, "Push me", null, InAppNotificationTypes.InvitationSent);
 
         await service.CreateAsync(input);
 
@@ -72,7 +73,7 @@ public sealed class InAppNotificationServiceTests
         var push = new FakePushPublisher { ThrowOnPush = true };
         var service = CreateService(pushPublisher: push);
         var input = new CreateInAppNotificationInput(
-            Id<User>.New(), null, true, "Still ok", null, InAppNotificationTypes.InvitationSent);
+            Id<User>.New(), null, null, true, "Still ok", null, InAppNotificationTypes.InvitationSent);
 
         var result = await service.CreateAsync(input);
 
@@ -246,6 +247,38 @@ public sealed class InAppNotificationServiceTests
         result.Value.Should().Be(2);
     }
 
+    [Test]
+    public async Task CreateAsync_DuplicateDeliveryKey_ReturnsExistingNotificationWithoutPushingAgain()
+    {
+        var repo = new FakeInAppNotificationRepository();
+        var unitOfWork = new FakeUnitOfWork
+        {
+            SaveChangesException = new DbUpdateException("duplicate IX_in_app_notifications_RecipientId_Type_DeliveryKey")
+        };
+        var push = new FakePushPublisher();
+        var userId = Id<User>.New();
+        var existing = AddNotification(repo, userId, "Already there");
+        existing.Type = InAppNotificationTypes.InvitationSent;
+        existing.DeliveryKey = "trainer-invitation:abc:sent";
+
+        var service = CreateService(repository: repo, unitOfWork: unitOfWork, pushPublisher: push);
+        var input = new CreateInAppNotificationInput(
+            userId,
+            null,
+            "trainer-invitation:abc:sent",
+            true,
+            "Already there",
+            null,
+            InAppNotificationTypes.InvitationSent);
+
+        var result = await service.CreateAsync(input);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Id.Should().Be(existing.Id);
+        push.PushCalls.Should().Be(0);
+        repo.DetachCalls.Should().Be(1);
+    }
+
     #region Helpers
 
     private static InAppNotificationService CreateService(
@@ -271,6 +304,7 @@ public sealed class InAppNotificationServiceTests
             Id = Id<InAppNotification>.New(),
             RecipientId = userId,
             SenderUserId = null,
+            DeliveryKey = null,
             IsSystemNotification = true,
             Message = message,
             RedirectUrl = null,
@@ -306,6 +340,7 @@ public sealed class InAppNotificationServiceTests
     internal sealed class FakeInAppNotificationRepository : IInAppNotificationRepository
     {
         public List<InAppNotification> Added { get; } = new();
+        public int DetachCalls { get; private set; }
         public int MarkAsReadCalls { get; private set; }
         public int MarkAllAsReadCalls { get; private set; }
         public Id<User> LastMarkAllAsReadUserId { get; private set; }
@@ -315,6 +350,22 @@ public sealed class InAppNotificationServiceTests
         {
             Added.Add(notification);
             return Task.CompletedTask;
+        }
+
+        public Task<InAppNotification?> FindByDeliveryKeyAsync(
+            Id<User> recipientId,
+            InAppNotificationType type,
+            string deliveryKey,
+            CancellationToken cancellationToken = default)
+        {
+            var found = Added.FirstOrDefault(n => n.RecipientId == recipientId && n.Type == type && n.DeliveryKey == deliveryKey);
+            return Task.FromResult<InAppNotification?>(found);
+        }
+
+        public void Detach(InAppNotification notification)
+        {
+            DetachCalls++;
+            Added.Remove(notification);
         }
 
         public Task<InAppNotification?> GetByIdAsync(Id<InAppNotification> id, CancellationToken cancellationToken = default)
@@ -387,10 +438,16 @@ public sealed class InAppNotificationServiceTests
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
         public int SaveChangesCalls { get; private set; }
+        public Exception? SaveChangesException { get; set; }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SaveChangesCalls++;
+            if (SaveChangesException != null)
+            {
+                throw SaveChangesException;
+            }
+
             return Task.FromResult(1);
         }
 
