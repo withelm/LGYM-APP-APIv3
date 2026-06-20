@@ -32,6 +32,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 
 const string TestingEnvironment = "Testing";
@@ -250,6 +251,11 @@ localizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
 
 var app = builder.Build();
 
+if (!app.Environment.IsEnvironment(TestingEnvironment))
+{
+    await ValidateDatabaseSchemaAsync(app.Services);
+}
+
 var photoStorageProvider = builder.Configuration["PhotoStorage:Provider"] ?? "Local";
 var photoStorageBucket = builder.Configuration["PhotoStorage:BucketName"] ?? string.Empty;
 var photoStorageEndpoint = builder.Configuration["PhotoStorage:Endpoint"] ?? string.Empty;
@@ -299,6 +305,23 @@ app.MapControllers();
 app.MapHub<LgymApi.Api.Hubs.NotificationHub>("/hubs/notifications");
 
 await app.RunAsync();
+
+static async Task ValidateDatabaseSchemaAsync(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+    var pendingMigrationList = pendingMigrations.ToList();
+
+    if (pendingMigrationList.Count == 0)
+    {
+        return;
+    }
+
+    throw new InvalidOperationException(
+        "Database schema is behind the application model. Apply pending EF Core migrations before starting the API. " +
+        $"Pending migrations: {string.Join(", ", pendingMigrationList)}");
+}
 
 // For WebApplicationFactory in integration tests
 public partial class Program { }
