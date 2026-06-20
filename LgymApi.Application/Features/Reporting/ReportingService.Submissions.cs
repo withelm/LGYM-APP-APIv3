@@ -299,38 +299,28 @@ public sealed partial class ReportingService : IReportingService
         {
             if (string.IsNullOrWhiteSpace(field.ModuleConfig))
             {
-                continue;
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
             }
 
             try
             {
                 var config = JsonSerializer.Deserialize<JsonElement>(field.ModuleConfig);
-                if (config.TryGetProperty("requiredViews", out var requiredViewsElement) 
-                    && requiredViewsElement.ValueKind == JsonValueKind.Array)
+                if (!TryReadRequiredPhotoViews(config, out var requiredViews))
                 {
-                    foreach (var viewElement in requiredViewsElement.EnumerateArray())
-                    {
-                        if (viewElement.ValueKind == JsonValueKind.String)
-                        {
-                            var viewString = viewElement.GetString();
-                            if (!string.IsNullOrWhiteSpace(viewString) 
-                                && System.Enum.TryParse<PhotoViewType>(viewString, true, out var viewType))
-                            {
-                                allRequiredViews.Add(viewType);
-                            }
-                        }
-                    }
+                    return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
                 }
+
+                allRequiredViews.UnionWith(requiredViews);
             }
             catch (JsonException)
             {
-                continue;
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
             }
         }
 
         if (allRequiredViews.Count == 0)
         {
-            return Result<Unit, AppError>.Success(Unit.Value);
+            return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
         }
 
         var uploadedPhotos = await _reportingRepository.GetPhotosByRequestIdAsync(request.Id, cancellationToken);
@@ -342,9 +332,7 @@ public sealed partial class ReportingService : IReportingService
         var missingViews = allRequiredViews.Except(uploadedViews).ToList();
         if (missingViews.Count > 0)
         {
-            var missingViewNames = missingViews.Select(v => v.ToString());
-            var errorMessage = $"Missing required photo views: {string.Join(", ", missingViewNames)}";
-            return Result<Unit, AppError>.Failure(new InvalidReportingError(errorMessage));
+            return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
         }
 
         return Result<Unit, AppError>.Success(Unit.Value);

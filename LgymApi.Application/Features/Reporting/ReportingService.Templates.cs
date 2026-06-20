@@ -3,6 +3,7 @@ using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -169,7 +170,124 @@ public sealed partial class ReportingService : IReportingService
             return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
         }
 
+        foreach (var field in command.Fields)
+        {
+            if (!System.Enum.IsDefined(field.Type))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+
+            if (!IsValidModuleConfig(field.Type, field.ModuleConfig))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+        }
+
         return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    private static bool IsValidModuleConfig(ReportFieldType fieldType, JsonElement? moduleConfig)
+    {
+        return fieldType switch
+        {
+            ReportFieldType.Photos => TryReadRequiredPhotoViews(moduleConfig, out _),
+            ReportFieldType.Measurements => TryReadMeasurementTypes(moduleConfig, out _),
+            ReportFieldType.Text or ReportFieldType.Number or ReportFieldType.Boolean or ReportFieldType.Date
+                => moduleConfig is null || !moduleConfig.Value.ValueKind.Equals(JsonValueKind.Object) && !moduleConfig.HasValue || !moduleConfig.HasValue,
+            _ => false
+        };
+    }
+
+    private static bool TryReadRequiredPhotoViews(JsonElement? moduleConfig, out HashSet<PhotoViewType> requiredViews)
+    {
+        requiredViews = [];
+        if (!TryGetArrayProperty(moduleConfig, "requiredViews", out var requiredViewsElement))
+        {
+            return false;
+        }
+
+        foreach (var viewElement in requiredViewsElement.EnumerateArray())
+        {
+            if (viewElement.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            var viewName = viewElement.GetString();
+            if (string.IsNullOrWhiteSpace(viewName)
+                || !System.Enum.TryParse<PhotoViewType>(viewName.Trim(), true, out var viewType)
+                || !System.Enum.IsDefined(viewType))
+            {
+                return false;
+            }
+
+            requiredViews.Add(viewType);
+        }
+
+        return requiredViews.Count > 0;
+    }
+
+    private static bool TryReadMeasurementTypes(JsonElement? moduleConfig, out HashSet<BodyParts> measurementTypes)
+    {
+        measurementTypes = [];
+        if (!TryGetArrayProperty(moduleConfig, "measurementTypes", out var measurementTypesElement))
+        {
+            return false;
+        }
+
+        foreach (var measurementTypeElement in measurementTypesElement.EnumerateArray())
+        {
+            if (measurementTypeElement.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            var bodyPartName = measurementTypeElement.GetString();
+            if (string.IsNullOrWhiteSpace(bodyPartName)
+                || !TryResolveBodyPart(bodyPartName, out var bodyPart)
+                || bodyPart == BodyParts.Unknown)
+            {
+                return false;
+            }
+
+            measurementTypes.Add(bodyPart);
+        }
+
+        return measurementTypes.Count > 0;
+    }
+
+    private static bool TryResolveBodyPart(string bodyPartName, out BodyParts bodyPart)
+    {
+        var normalized = bodyPartName.Trim();
+        switch (normalized.ToLowerInvariant())
+        {
+            case "weight":
+                bodyPart = BodyParts.BodyWeight;
+                return true;
+            case "bodyfat":
+                bodyPart = BodyParts.BodyFat;
+                return true;
+            case "thighs":
+                bodyPart = BodyParts.Thigh;
+                return true;
+        }
+
+        return System.Enum.TryParse<BodyParts>(normalized, true, out bodyPart)
+               && System.Enum.IsDefined(bodyPart);
+    }
+
+    private static bool TryGetArrayProperty(JsonElement? moduleConfig, string propertyName, out JsonElement arrayElement)
+    {
+        arrayElement = default;
+
+        if (!moduleConfig.HasValue || moduleConfig.Value.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        var config = moduleConfig.Value;
+        return config.TryGetProperty(propertyName, out arrayElement)
+               && arrayElement.ValueKind == JsonValueKind.Array;
     }
 
     private static ReportTemplateResult MapTemplate(ReportTemplate template)

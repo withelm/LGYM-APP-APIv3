@@ -13,6 +13,7 @@ using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NUnit.Framework;
@@ -337,6 +338,61 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
+    public void PhotosField_WithInvalidRequiredView_ShouldHaveError()
+    {
+        var request = new UpsertReportTemplateRequest
+        {
+            Name = "Photo Progress Report",
+            Fields =
+            [
+                new ReportTemplateFieldRequest
+                {
+                    Key = "progress_photos",
+                    Label = "Progress Photos",
+                    Type = ReportFieldType.Photos,
+                    IsRequired = true,
+                    Order = 1,
+                    ModuleConfig = JsonDocument.Parse("""
+                        {
+                            "requiredViews": ["frontt"]
+                        }
+                        """).RootElement
+                }
+            ]
+        };
+
+        var result = _validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("Fields[0].ModuleConfig");
+    }
+
+    [Test]
+    public async Task SubmitReportRequest_WithInvalidPhotoModuleConfig_ShouldReturnValidationError()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var trainee = CreateUser(traineeId);
+        var template = CreateTemplateWithPhotos(templateId, new[] { "Frontt" });
+        var request = CreateReportRequest(requestId, traineeId, templateId, template);
+
+        var service = CreateReportingService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request));
+
+        var command = new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement>
+            {
+                ["photos"] = JsonDocument.Parse("[]").RootElement
+            }
+        };
+
+        var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+        result.Error.Message.Should().Be(Messages.ReportFieldValidationFailed);
+    }
+
+    [Test]
     public void ScalarField_WithModuleConfig_ShouldHaveError()
     {
         var request = new UpsertReportTemplateRequest
@@ -453,7 +509,7 @@ public sealed class ReportingServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Contain("Missing required photo views: Back");
+        result.Error.Message.Should().Be(Messages.ReportFieldValidationFailed);
     }
 
     [Test]
@@ -484,10 +540,7 @@ public sealed class ReportingServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Contain("Missing required photo views");
-        result.Error.Message.Should().Contain("Front");
-        result.Error.Message.Should().Contain("Side");
-        result.Error.Message.Should().Contain("Back");
+        result.Error.Message.Should().Be(Messages.ReportFieldValidationFailed);
     }
 
     [Test]
