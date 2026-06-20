@@ -41,6 +41,31 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
+    [HttpPost("measurements/add-bulk")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AddMeasurementsBulk([FromBody] MeasurementsBulkFormDto form, CancellationToken cancellationToken = default)
+    {
+        var user = HttpContext.GetCurrentUser();
+        var inputs = form.Measurements
+            .Select(item => new MeasurementCreateInput
+            {
+                BodyPart = item.BodyPart,
+                Unit = item.Unit,
+                Value = item.Value
+            })
+            .ToList();
+
+        var result = await _measurementsService.AddMeasurementsAsync(user!, inputs, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
+    }
+
     [HttpGet("measurements:/{id}/getMeasurementDetail")]
     [ProducesResponseType(typeof(MeasurementResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
@@ -116,6 +141,24 @@ namespace LgymApi.Api.Features.Measurements.Controllers;
         }
 
         return Ok(_mapper.Map<MeasurementTrendResult, MeasurementTrendDto>(result.Value));
+    }
+
+    [HttpGet("measurements/{id}/trends")]
+    [ProducesResponseType(typeof(MeasurementTrendsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetMeasurementsTrends([FromRoute] string id, CancellationToken cancellationToken = default)
+    {
+        var user = HttpContext.GetCurrentUser();
+        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
+        var result = await _measurementsService.GetMeasurementsTrendsAsync(user!, routeUserId, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<List<MeasurementTrendResult>, MeasurementTrendsDto>(result.Value));
     }
 
 }

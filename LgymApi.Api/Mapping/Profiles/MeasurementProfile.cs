@@ -31,10 +31,20 @@ public sealed class MeasurementProfile : IMappingProfile
             Measurements = context!.MapList<Measurement, MeasurementResponseDto>(source)
         });
 
+        configuration.CreateMap<List<MeasurementTrendResult>, MeasurementTrendsDto>((source, context) => new MeasurementTrendsDto
+        {
+            Trends = context!.MapList<MeasurementTrendResult, MeasurementTrendDto>(source)
+        });
+
         configuration.CreateMap<MeasurementTrendResult, MeasurementTrendDto>((source, _) => new MeasurementTrendDto
         {
             BodyPart = source.BodyPart.ToLookup(),
             Unit = source.Unit.ToLookup(),
+            FirstMeasurementValue = source.FirstMeasurementValue,
+            FirstMeasurementDate = source.FirstMeasurementDate?.UtcDateTime,
+            LastMeasurementValue = source.LastMeasurementValue,
+            LastMeasurementDate = source.LastMeasurementDate?.UtcDateTime,
+            Difference = source.Difference,
             StartValue = source.StartValue,
             CurrentValue = source.CurrentValue,
             Change = source.Change,
@@ -44,13 +54,13 @@ public sealed class MeasurementProfile : IMappingProfile
         });
     }
 
-    private static HeightUnits ParseUnit(string? unit)
+    private static MeasurementUnits ParseUnit(string? unit)
     {
-        if (!string.IsNullOrWhiteSpace(unit) && Enum.TryParse(unit, true, out HeightUnits parsed))
+        if (!string.IsNullOrWhiteSpace(unit) && Enum.TryParse(unit, true, out MeasurementUnits parsed))
         {
             return parsed;
         }
 
-        return HeightUnits.Unknown;
+        return MeasurementUnits.Unknown;
     }
 }

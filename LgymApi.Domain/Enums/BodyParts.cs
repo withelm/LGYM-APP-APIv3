@@ -28,5 +28,19 @@ public enum BodyParts
     [EnumTranslation(EnumTranslationKeys.BodyParts.Calves)]
     Calves = 10,
     [EnumTranslation(EnumTranslationKeys.BodyParts.Glutes)]
-    Glutes = 11
+    Glutes = 11,
+    [EnumTranslation(EnumTranslationKeys.BodyParts.BodyWeight)]
+    BodyWeight = 12,
+    [EnumTranslation(EnumTranslationKeys.BodyParts.Neck)]
+    Neck = 13,
+    [EnumTranslation(EnumTranslationKeys.BodyParts.Waist)]
+    Waist = 14,
+    [EnumTranslation(EnumTranslationKeys.BodyParts.Hips)]
+    Hips = 15,
+    [EnumTranslation(EnumTranslationKeys.BodyParts.Thigh)]
+    Thigh = 16,
+    [EnumTranslation(EnumTranslationKeys.BodyParts.BodyFat)]
+    BodyFat = 17,
+    [EnumTranslation(EnumTranslationKeys.BodyParts.Bmi)]
+    Bmi = 18
 }

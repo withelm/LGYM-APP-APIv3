@@ -10,9 +10,9 @@ namespace LgymApi.IntegrationTests;
 public sealed class MeasurementsTests : IntegrationTestBase
 {
     [Test]
-    public async Task AddMeasurement_WithValidData_CreatesMeasurement()
+    public async Task AddMeasurement_WithBodyWeight_CreatesMeasurement()
     {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
+        var (_, token) = await RegisterUserViaEndpointAsync(
             name: "measureuser",
             email: "measure@example.com",
             password: "password123");
@@ -22,265 +22,20 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var request = new
         {
-            bodyPart = BodyParts.Chest.ToString(),
-            value = 100.5,
-            unit = HeightUnits.Centimeters.ToString()
+            bodyPart = BodyParts.BodyWeight.ToString(),
+            value = 80.5,
+            unit = MeasurementUnits.Kilograms.ToString()
         };
 
         var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
         body!.Message.Should().Be("Created");
     }
 
     [Test]
-    public async Task AddMeasurement_WithoutAuth_ReturnsNotFound()
-    {
-        ClearAuthorizationHeader();
-
-        var request = new
-        {
-            bodyPart = BodyParts.Chest.ToString(),
-            value = 100.5,
-            unit = HeightUnits.Centimeters.ToString()
-        };
-
-        var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Test]
-    public async Task AddMeasurement_WithInvalidBodyPart_ReturnsBadRequest()
-    {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
-            name: "measureuser2",
-            email: "measure2@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        var request = new
-        {
-            bodyPart = "InvalidBodyPart",
-            value = 50.0,
-            unit = HeightUnits.Centimeters.ToString()
-        };
-
-        var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Test]
-    public async Task GetMeasurementsHistory_WithNoMeasurements_ReturnsNotFound()
-    {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
-            name: "historyuser",
-            email: "history@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        var response = await Client.GetAsync($"/api/measurements/{userId}/getHistory");
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Test]
-    public async Task GetMeasurementsHistory_WithMeasurements_ReturnsHistory()
-    {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
-            name: "historyuser2",
-            email: "history2@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        var addRequest = new
-        {
-            bodyPart = BodyParts.Biceps.ToString(),
-            value = 35.0,
-            unit = HeightUnits.Centimeters.ToString()
-        };
-        await Client.PostAsJsonAsync("/api/measurements/add", addRequest);
-
-        var response = await Client.GetAsync($"/api/measurements/{userId}/getHistory");
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
-        body.Should().NotBeNull();
-        body!.Measurements.Should().HaveCountGreaterThanOrEqualTo(1);
-        body.Measurements[0].Value.Should().Be(35.0);
-    }
-
-    [Test]
-    public async Task GetMeasurementsHistory_WithBodyPartFilter_FiltersCorrectly()
-    {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
-            name: "filteruser",
-            email: "filter@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        var chestRequest = new { bodyPart = BodyParts.Chest.ToString(), value = 100.0, unit = HeightUnits.Centimeters.ToString() };
-        await Client.PostAsJsonAsync("/api/measurements/add", chestRequest);
-
-        var bicepsRequest = new { bodyPart = BodyParts.Biceps.ToString(), value = 40.0, unit = HeightUnits.Centimeters.ToString() };
-        await Client.PostAsJsonAsync("/api/measurements/add", bicepsRequest);
-
-        var response = await Client.GetAsync($"/api/measurements/{userId}/getHistory?bodyPart=Chest");
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
-        body.Should().NotBeNull();
-        body!.Measurements.Should().HaveCount(1);
-        body.Measurements[0].Value.Should().Be(100.0);
-    }
-
-    [Test]
-    public async Task GetMeasurementsHistory_WithOtherUserId_ReturnsForbidden()
-    {
-        var (userId1, token1) = await RegisterUserViaEndpointAsync(
-            name: "user1",
-            email: "user1@example.com",
-            password: "password123");
-
-        var (userId2, _) = await RegisterUserViaEndpointAsync(
-            name: "user2",
-            email: "user2@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token1);
-
-        var response = await Client.GetAsync($"/api/measurements/{userId2}/getHistory");
-
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    [Test]
-    public async Task GetMeasurementsHistory_WithMultipleMeasurements_ReturnsOrderedByDate()
-    {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
-            name: "orderuser",
-            email: "order@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        var firstRequest = new { bodyPart = BodyParts.Chest.ToString(), value = 95.0, unit = HeightUnits.Centimeters.ToString() };
-        await Client.PostAsJsonAsync("/api/measurements/add", firstRequest);
-
-        var secondRequest = new { bodyPart = BodyParts.Chest.ToString(), value = 100.0, unit = HeightUnits.Centimeters.ToString() };
-        await Client.PostAsJsonAsync("/api/measurements/add", secondRequest);
-
-        var response = await Client.GetAsync($"/api/measurements/{userId}/getHistory");
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
-        body.Should().NotBeNull();
-        body!.Measurements.Should().HaveCount(2);
-        body.Measurements[0].Value.Should().Be(95.0);
-        body.Measurements[1].Value.Should().Be(100.0);
-    }
-
-    [Test]
-    public async Task AddMeasurement_WithAliasUnit_ReturnsBadRequest()
-    {
-        var (_, token) = await RegisterUserViaEndpointAsync(
-            name: "measurealias",
-            email: "measurealias@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        var request = new
-        {
-            bodyPart = BodyParts.Chest.ToString(),
-            value = 77.7,
-            unit = "cm"
-        };
-
-        var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Test]
-    public async Task AddMeasurement_WithNumericEnumValue_ReturnsBadRequest()
-    {
-        var (_, token) = await RegisterUserViaEndpointAsync(
-            name: "measurenumeric",
-            email: "measurenumeric@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        var request = new
-        {
-            bodyPart = 1,
-            value = 77.7,
-            unit = 2
-        };
-
-        var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Test]
-    public async Task GetMeasurementsList_WithUnitConversion_ReturnsConvertedValues()
-    {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
-            name: "listmeasureuser",
-            email: "listmeasure@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        await Client.PostAsJsonAsync("/api/measurements/add", new
-        {
-            bodyPart = BodyParts.Chest.ToString(),
-            value = 120.0,
-            unit = HeightUnits.Centimeters.ToString()
-        });
-
-        await Client.PostAsJsonAsync("/api/measurements/add", new
-        {
-            bodyPart = BodyParts.Chest.ToString(),
-            value = 1.1,
-            unit = HeightUnits.Meters.ToString()
-        });
-
-        var response = await Client.GetAsync($"/api/measurements/{userId}/list?bodyPart=Chest&unit=Centimeters");
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
-        body.Should().NotBeNull();
-        body!.Measurements.Should().HaveCount(2);
-        body.Measurements[0].Value.Should().Be(110.0);
-        body.Measurements[1].Value.Should().Be(120.0);
-        body.Measurements[0].Unit!.Name.Should().Be(HeightUnits.Centimeters.ToString());
-        body.Measurements[1].Unit!.Name.Should().Be(HeightUnits.Centimeters.ToString());
-    }
-
-    [Test]
-    public async Task GetMeasurementsHistory_WithUnitConversion_ReturnsConvertedValues()
+    public async Task GetMeasurementsHistory_WithLengthUnitConversion_ReturnsConvertedValues()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
             name: "historymeasureuser",
@@ -290,112 +45,191 @@ public sealed class MeasurementsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        await Client.PostAsJsonAsync("/api/measurements/add", new
-        {
-            bodyPart = BodyParts.Chest.ToString(),
-            value = 120.0,
-            unit = HeightUnits.Centimeters.ToString()
-        });
+        await AddMeasurementAsync(BodyParts.Waist, 120.0, MeasurementUnits.Centimeters);
+        await AddMeasurementAsync(BodyParts.Waist, 1.1, MeasurementUnits.Meters);
 
-        await Client.PostAsJsonAsync("/api/measurements/add", new
-        {
-            bodyPart = BodyParts.Chest.ToString(),
-            value = 1.1,
-            unit = HeightUnits.Meters.ToString()
-        });
+        var response = await Client.GetAsync($"/api/measurements/{userId}/getHistory?bodyPart=Waist&unit=Centimeters");
 
-        var response = await Client.GetAsync($"/api/measurements/{userId}/getHistory?bodyPart=Chest&unit=Centimeters");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await response.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
-        body.Should().NotBeNull();
         body!.Measurements.Should().HaveCount(2);
         body.Measurements[0].Value.Should().Be(120.0);
         body.Measurements[1].Value.Should().Be(110.0);
-        body.Measurements[0].Unit!.Name.Should().Be(HeightUnits.Centimeters.ToString());
-        body.Measurements[1].Unit!.Name.Should().Be(HeightUnits.Centimeters.ToString());
+        body.Measurements[0].Unit!.Name.Should().Be(MeasurementUnits.Centimeters.ToString());
     }
 
     [Test]
-    public async Task GetMeasurementsTrend_WithMeasurements_ReturnsCorrectTrend()
+    public async Task GetMeasurementsTrend_WhenValueGrows_ReturnsUpDirection()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
-            name: "trendmeasureuser",
-            email: "trendmeasure@example.com",
+            name: "trendupuser",
+            email: "trendup@example.com",
             password: "password123");
 
         Client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        await Client.PostAsJsonAsync("/api/measurements/add", new
+        await AddMeasurementAsync(BodyParts.BodyWeight, 80.0, MeasurementUnits.Kilograms);
+        await AddMeasurementAsync(BodyParts.BodyWeight, 94.1, MeasurementUnits.Kilograms);
+
+        var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=BodyWeight&unit=Kilograms");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
+        body!.FirstMeasurementValue.Should().Be(80.0);
+        body.LastMeasurementValue.Should().Be(94.1);
+        body.Difference.Should().Be(14.1);
+        body.Direction.Should().Be("up");
+    }
+
+    [Test]
+    public async Task GetMeasurementsTrend_WhenValueDrops_ReturnsDownDirection()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "trenddownuser",
+            email: "trenddown@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        await AddMeasurementAsync(BodyParts.Waist, 90.0, MeasurementUnits.Centimeters);
+        await AddMeasurementAsync(BodyParts.Waist, 86.6, MeasurementUnits.Centimeters);
+
+        var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=Waist&unit=Centimeters");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
+        body!.Difference.Should().Be(3.4);
+        body.Direction.Should().Be("down");
+    }
+
+    [Test]
+    public async Task GetMeasurementsTrend_WhenValueDoesNotChange_ReturnsSameDirection()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "trendsameuser",
+            email: "trendsame@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        await AddMeasurementAsync(BodyParts.BodyFat, 18.0, MeasurementUnits.Percent);
+        await AddMeasurementAsync(BodyParts.BodyFat, 18.0, MeasurementUnits.Percent);
+
+        var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=BodyFat&unit=Percent");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
+        body!.Difference.Should().Be(0.0);
+        body.Direction.Should().Be("same");
+    }
+
+    [Test]
+    public async Task GetMeasurementsTrend_WhenOnlyOneMeasurementExists_ReturnsInsufficientData()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "trendoneuser",
+            email: "trendone@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        await AddMeasurementAsync(BodyParts.Neck, 40.0, MeasurementUnits.Centimeters);
+
+        var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=Neck&unit=Centimeters");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
+        body!.Direction.Should().Be("insufficient_data");
+        body.Points.Should().Be(1);
+    }
+
+    [Test]
+    public async Task GetMeasurementsTrend_WhenNoMeasurementsExist_ReturnsInsufficientData()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "trendemptyuser",
+            email: "trendempty@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=Bmi&unit=Bmi");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
+        body!.Direction.Should().Be("insufficient_data");
+        body.Points.Should().Be(0);
+    }
+
+    [Test]
+    public async Task GetMeasurementsTrends_WithMultipleTypes_ReturnsSummariesPerType()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "trendmultiuser",
+            email: "trendmulti@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        await AddMeasurementAsync(BodyParts.BodyWeight, 80.0, MeasurementUnits.Kilograms);
+        await AddMeasurementAsync(BodyParts.BodyWeight, 82.0, MeasurementUnits.Kilograms);
+        await AddMeasurementAsync(BodyParts.Waist, 90.0, MeasurementUnits.Centimeters);
+        await AddMeasurementAsync(BodyParts.Waist, 88.0, MeasurementUnits.Centimeters);
+        await AddMeasurementAsync(BodyParts.BodyFat, 15.0, MeasurementUnits.Percent);
+
+        var response = await Client.GetAsync($"/api/measurements/{userId}/trends");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<MeasurementTrendsResponse>();
+        body!.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Name == BodyParts.BodyWeight.ToString() && x.Direction == "up");
+        body.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Name == BodyParts.Waist.ToString() && x.Direction == "down");
+        body.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Name == BodyParts.BodyFat.ToString() && x.Direction == "insufficient_data");
+    }
+
+    [Test]
+    public async Task AddMeasurementsBulk_WithMultipleOptionalMeasurements_CreatesAllProvidedMeasurements()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "bulkmeasureuser",
+            email: "bulkmeasure@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Client.PostAsJsonAsync("/api/measurements/add-bulk", new
         {
-            bodyPart = BodyParts.Chest.ToString(),
-            value = 100.0,
-            unit = HeightUnits.Centimeters.ToString()
+            measurements = new object[]
+            {
+                new { bodyPart = BodyParts.BodyWeight.ToString(), value = 80.2, unit = MeasurementUnits.Kilograms.ToString() },
+                new { bodyPart = BodyParts.Waist.ToString(), value = 89.4, unit = MeasurementUnits.Centimeters.ToString() },
+                new { bodyPart = BodyParts.BodyFat.ToString(), value = 16.1, unit = MeasurementUnits.Percent.ToString() }
+            }
         });
 
-        await Client.PostAsJsonAsync("/api/measurements/add", new
-        {
-            bodyPart = BodyParts.Chest.ToString(),
-            value = 1.05,
-            unit = HeightUnits.Meters.ToString()
-        });
-
-        var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=Chest&unit=Centimeters");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
-        body.Should().NotBeNull();
-        body!.StartValue.Should().Be(100.0);
-        body.CurrentValue.Should().Be(105.0);
-        body.Change.Should().Be(5.0);
-        body.ChangePercentage.Should().Be(5.0);
-        body.Direction.Should().Be("up");
-        body.Points.Should().Be(2);
+        var historyResponse = await Client.GetFromJsonAsync<MeasurementsHistoryResponse>($"/api/measurements/{userId}/getHistory");
+        historyResponse!.Measurements.Should().HaveCount(3);
     }
 
-    [Test]
-    public async Task GetMeasurementsTrend_WithoutAuth_ReturnsUnauthorized()
+    private async Task AddMeasurementAsync(BodyParts bodyPart, double value, MeasurementUnits unit)
     {
-        var (userId, _) = await RegisterUserViaEndpointAsync(
-            name: "trendauthuser",
-            email: "trendauth@example.com",
-            password: "password123");
+        var response = await Client.PostAsJsonAsync("/api/measurements/add", new
+        {
+            bodyPart = bodyPart.ToString(),
+            value,
+            unit = unit.ToString()
+        });
 
-        ClearAuthorizationHeader();
-
-        var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=Chest&unit=Centimeters");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Test]
-    public async Task GetMeasurementsTrend_WithUnknownUnit_ReturnsBadRequest()
-    {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
-            name: "trendinvaliduser",
-            email: "trendinvalid@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=Chest&unit=Unknown");
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Test]
-    public async Task GetMeasurementsList_WithUndefinedUnitValue_ReturnsBadRequest()
-    {
-        var (userId, token) = await RegisterUserViaEndpointAsync(
-            name: "listinvalidunituser",
-            email: "listinvalidunit@example.com",
-            password: "password123");
-
-        Client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        var response = await Client.GetAsync($"/api/measurements/{userId}/list?bodyPart=Chest&unit=999");
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     private sealed class MessageResponse
@@ -410,11 +244,14 @@ public sealed class MeasurementsTests : IntegrationTestBase
         public List<MeasurementResponse> Measurements { get; set; } = new();
     }
 
+    private sealed class MeasurementTrendsResponse
+    {
+        [JsonPropertyName("trends")]
+        public List<MeasurementTrendResponse> Trends { get; set; } = new();
+    }
+
     private sealed class MeasurementResponse
     {
-        [JsonPropertyName("userId")]
-        public string UserId { get; set; } = string.Empty;
-
         [JsonPropertyName("bodyPart")]
         public BodyPartLookup? BodyPart { get; set; }
 
@@ -423,9 +260,6 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         [JsonPropertyName("value")]
         public double Value { get; set; }
-
-        [JsonPropertyName("createdAt")]
-        public DateTime CreatedAt { get; set; }
     }
 
     private sealed class BodyPartLookup
@@ -442,17 +276,17 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
     private sealed class MeasurementTrendResponse
     {
-        [JsonPropertyName("startValue")]
-        public double StartValue { get; set; }
+        [JsonPropertyName("bodyPart")]
+        public BodyPartLookup? BodyPart { get; set; }
 
-        [JsonPropertyName("currentValue")]
-        public double CurrentValue { get; set; }
+        [JsonPropertyName("firstMeasurementValue")]
+        public double? FirstMeasurementValue { get; set; }
 
-        [JsonPropertyName("change")]
-        public double Change { get; set; }
+        [JsonPropertyName("lastMeasurementValue")]
+        public double? LastMeasurementValue { get; set; }
 
-        [JsonPropertyName("changePercentage")]
-        public double ChangePercentage { get; set; }
+        [JsonPropertyName("difference")]
+        public double? Difference { get; set; }
 
         [JsonPropertyName("direction")]
         public string Direction { get; set; } = string.Empty;

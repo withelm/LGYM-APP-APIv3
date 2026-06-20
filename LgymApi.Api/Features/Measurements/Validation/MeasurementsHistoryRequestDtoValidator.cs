@@ -1,5 +1,6 @@
 using FluentValidation;
 using LgymApi.Api.Features.Measurements.Contracts;
+using LgymApi.Application.Features.Measurements;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 
@@ -18,7 +19,9 @@ public sealed class MeasurementsHistoryRequestDtoValidator : AbstractValidator<M
         RuleFor(x => x.Unit)
             .Must(x => !x.HasValue || System.Enum.IsDefined(x.Value))
             .WithMessage(Messages.UnitRequired)
-            .Must(x => !x.HasValue || x.Value != HeightUnits.Unknown)
+            .Must(x => !x.HasValue || x.Value != MeasurementUnits.Unknown)
+            .WithMessage(Messages.UnitRequired)
+            .Must((dto, unit) => !unit.HasValue || (dto.BodyPart.HasValue && MeasurementUnitResolver.IsUnitAllowedForBodyPart(dto.BodyPart.Value, unit.Value)))
             .WithMessage(Messages.UnitRequired);
     }
 }
