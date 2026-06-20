@@ -23,6 +23,7 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandler : g
         var input = new NotificationsApp.Models.CreateInAppNotificationInput(
             command.TrainerId,
             command.TraineeId,
+            $"trainer-invitation:{command.InvitationId}:rejected",
             false,
             global::LgymApi.Resources.Messages.TrainerInvitationRejected,
             "/trainers/dashboard",

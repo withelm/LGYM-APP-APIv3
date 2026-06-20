@@ -37,6 +37,7 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandlerTests
         service.Calls.Should().Be(1);
         service.LastInput!.RecipientId.Should().Be(command.TraineeId);
         service.LastInput.SenderUserId.Should().Be(command.TrainerId);
+        service.LastInput.DeliveryKey.Should().Be($"trainer-invitation:{invitationId}:sent");
         service.LastInput.IsSystemNotification.Should().BeFalse();
         service.LastInput.Message.Should().Be("Jan Kowalski zaprasza Cię do współpracy trenerskiej.");
         service.LastInput.RedirectUrl.Should().Be($"/trainers/invitations/{invitationId}");

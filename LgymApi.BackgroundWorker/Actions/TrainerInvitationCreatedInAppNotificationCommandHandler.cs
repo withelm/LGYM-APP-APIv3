@@ -30,6 +30,7 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandler : gl
         var input = new NotificationsApp.Models.CreateInAppNotificationInput(
             command.TraineeId,
             command.TrainerId,
+            $"trainer-invitation:{command.InvitationId}:sent",
             false,
             $"{trainerName} zaprasza Cię do współpracy trenerskiej.",
             $"/trainers/invitations/{command.InvitationId}",

@@ -23,14 +23,15 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandlerTest
     {
         var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Success(CreateResult()));
         var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>.Instance);
-        var command = new TrainerInvitationAcceptedInAppNotificationCommand { TrainerId = Id<User>.New(), TraineeId = Id<User>.New() };
+        var command = new TrainerInvitationAcceptedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() };
 
          await handler.ExecuteAsync(command);
 
-         service.Calls.Should().Be(1);
-         service.LastInput!.RecipientId.Should().Be(command.TrainerId);
-         service.LastInput.SenderUserId.Should().Be(command.TraineeId);
-         service.LastInput.IsSystemNotification.Should().BeFalse();
+          service.Calls.Should().Be(1);
+          service.LastInput!.RecipientId.Should().Be(command.TrainerId);
+          service.LastInput.SenderUserId.Should().Be(command.TraineeId);
+          service.LastInput.DeliveryKey.Should().Be($"trainer-invitation:{command.InvitationId}:accepted");
+          service.LastInput.IsSystemNotification.Should().BeFalse();
          service.LastInput.Message.Should().Be(Messages.TrainerInvitationAccepted);
          service.LastInput.RedirectUrl.Should().Be("/trainers/dashboard");
          service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationAccepted);
@@ -42,7 +43,7 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandlerTest
         var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Failure(new BadRequestError("boom")));
         var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>.Instance);
 
-         await handler.ExecuteAsync(new TrainerInvitationAcceptedInAppNotificationCommand { TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
+         await handler.ExecuteAsync(new TrainerInvitationAcceptedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
 
          service.Calls.Should().Be(1);
     }
