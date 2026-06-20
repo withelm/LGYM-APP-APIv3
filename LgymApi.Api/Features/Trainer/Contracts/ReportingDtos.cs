@@ -33,6 +33,9 @@ public sealed class ReportTemplateFieldRequest : IDto
 
     [JsonPropertyName("order")]
     public int Order { get; set; }
+
+    [JsonPropertyName("moduleConfig")]
+    public JsonElement? ModuleConfig { get; set; }
 }
 
 public sealed class ReportTemplateDto : IResultDto
@@ -72,6 +75,9 @@ public sealed class ReportTemplateFieldDto : IResultDto
 
     [JsonPropertyName("order")]
     public int Order { get; set; }
+
+    [JsonPropertyName("moduleConfig")]
+    public JsonElement? ModuleConfig { get; set; }
 }
 
 public sealed class CreateReportRequestRequest : IDto
@@ -125,6 +131,15 @@ public sealed class SubmitReportRequestRequest : IDto
     public Dictionary<string, JsonElement> Answers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
+public sealed class UpdateReportSubmissionFeedbackRequest : IDto
+{
+    [JsonPropertyName("trainerOverallComment")]
+    public string? TrainerOverallComment { get; set; }
+
+    [JsonPropertyName("trainerFieldComments")]
+    public Dictionary<string, string?> TrainerFieldComments { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
 public sealed class ReportSubmissionDto : IResultDto
 {
     [JsonPropertyName("_id")]
@@ -141,6 +156,12 @@ public sealed class ReportSubmissionDto : IResultDto
 
     [JsonPropertyName("answers")]
     public Dictionary<string, JsonElement> Answers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonPropertyName("trainerOverallComment")]
+    public string? TrainerOverallComment { get; set; }
+
+    [JsonPropertyName("trainerFieldComments")]
+    public Dictionary<string, string> TrainerFieldComments { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     [JsonPropertyName("request")]
     public ReportRequestDto Request { get; set; } = new();

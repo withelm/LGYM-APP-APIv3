@@ -17,6 +17,7 @@ public sealed class ReportTemplateFieldCommand
     public ReportFieldType Type { get; set; }
     public bool IsRequired { get; set; }
     public int Order { get; set; }
+    public JsonElement? ModuleConfig { get; set; }
 }
 
 public sealed class CreateReportRequestCommand
@@ -29,6 +30,12 @@ public sealed class CreateReportRequestCommand
 public sealed class SubmitReportRequestCommand
 {
     public Dictionary<string, JsonElement> Answers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
+public sealed class UpdateReportSubmissionFeedbackCommand
+{
+    public string? TrainerOverallComment { get; set; }
+    public Dictionary<string, string?> FieldComments { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed class ReportTemplateResult
@@ -48,6 +55,7 @@ public sealed class ReportTemplateFieldResult
     public ReportFieldType Type { get; set; }
     public bool IsRequired { get; set; }
     public int Order { get; set; }
+    public JsonElement? ModuleConfig { get; set; }
 }
 
 public sealed class ReportRequestResult
@@ -71,5 +79,62 @@ public sealed class ReportSubmissionResult
     public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> TraineeId { get; set; }
     public DateTimeOffset SubmittedAt { get; set; }
     public Dictionary<string, JsonElement> Answers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public string? TrainerOverallComment { get; set; }
+    public Dictionary<string, string> TrainerFieldComments { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public ReportRequestResult Request { get; set; } = new();
+}
+
+public sealed class InitiatePhotoUploadCommand
+{
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest> ReportRequestId { get; set; }
+    public string ViewType { get; set; } = string.Empty;
+    public string MimeType { get; set; } = string.Empty;
+    public long SizeBytes { get; set; }
+}
+
+public sealed class InitiatePhotoUploadResult
+{
+    public string UploadUrl { get; set; } = string.Empty;
+    public string StorageKey { get; set; } = string.Empty;
+    public DateTimeOffset ExpiresAt { get; set; }
+}
+
+public sealed class SignedReadUrlResult
+{
+    public string ReadUrl { get; set; } = string.Empty;
+    public DateTimeOffset ExpiresAt { get; set; }
+}
+
+public sealed class CompletePhotoUploadCommand
+{
+    public string StorageKey { get; set; } = string.Empty;
+    public string MimeType { get; set; } = string.Empty;
+    public long SizeBytes { get; set; }
+    public string Checksum { get; set; } = string.Empty;
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest> ReportRequestId { get; set; }
+    public string ViewType { get; set; } = string.Empty;
+}
+
+public sealed class CompletePhotoUploadResult
+{
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Photo> PhotoId { get; set; }
+    public DateTimeOffset UploadedAt { get; set; }
+}
+
+public sealed class GetPhotoHistoryCommand
+{
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>? TraineeId { get; set; }
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest>? RequestId { get; set; }
+}
+
+public sealed class PhotoHistoryItemResult
+{
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.Photo> Id { get; set; }
+    public string StorageKey { get; set; } = string.Empty;
+    public string ViewType { get; set; } = string.Empty;
+    public long SizeBytes { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string ReadUrl { get; set; } = string.Empty;
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest> ReportRequestId { get; set; }
+    public DateTimeOffset UploadedAt { get; set; }
 }

@@ -2,10 +2,16 @@ using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Application.Options;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
+using LgymApi.BackgroundWorker.Actions;
+using LgymApi.Application.Abstractions.Storage;
 using LgymApi.TestUtils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,7 +27,12 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
      {
          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
          {
-             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
+             ["PhotoStorage:Provider"] = "CloudflareR2",
+             ["PhotoStorage:BucketName"] = "lgym-report-photos-dev",
+             ["PhotoStorage:Endpoint"] = "https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com",
+             ["PhotoStorage:AccessKeyId"] = "test-access-key",
+             ["PhotoStorage:SecretAccessKey"] = "test-secret-key"
          });
 
          using var provider = TestServiceProviderFactory.CreateInfrastructureProvider(
@@ -176,7 +187,12 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
      {
          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
          {
-             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
+             ["PhotoStorage:Provider"] = "CloudflareR2",
+             ["PhotoStorage:BucketName"] = "lgym-report-photos-dev",
+             ["PhotoStorage:Endpoint"] = "https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com",
+             ["PhotoStorage:AccessKeyId"] = "test-access-key",
+             ["PhotoStorage:SecretAccessKey"] = "test-secret-key"
          });
 
          using var provider = TestServiceProviderFactory.CreateInfrastructureProvider(
@@ -199,6 +215,7 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
          services.AddLogging();
          services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
          services.AddBackgroundWorkerServices(isTesting: true);
+         services.AddScoped<IInAppNotificationPushPublisher, FakeInAppNotificationPushPublisher>();
 
          using var provider = services.BuildServiceProvider();
          var scheduler = provider.GetRequiredService<IActionMessageScheduler>();
@@ -211,7 +228,12 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
          var services = new ServiceCollection();
          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
          {
-             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
+             ["PhotoStorage:Provider"] = "CloudflareR2",
+             ["PhotoStorage:BucketName"] = "lgym-report-photos-dev",
+             ["PhotoStorage:Endpoint"] = "https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com",
+             ["PhotoStorage:AccessKeyId"] = "test-access-key",
+             ["PhotoStorage:SecretAccessKey"] = "test-secret-key"
          });
 
          services.AddLogging();
@@ -240,6 +262,57 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
      }
 
      [Test]
+     public void AddBackgroundWorkerServices_RegistersCommittedIntentDispatchJob()
+     {
+         var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
+         {
+             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
+             ["PhotoStorage:Provider"] = "CloudflareR2",
+             ["PhotoStorage:BucketName"] = "lgym-report-photos-dev",
+             ["PhotoStorage:Endpoint"] = "https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com",
+             ["PhotoStorage:AccessKeyId"] = "test-access-key",
+             ["PhotoStorage:SecretAccessKey"] = "test-secret-key"
+         });
+
+         using var provider = TestServiceProviderFactory.CreateInfrastructureProvider(
+             configuration,
+             isTesting: true,
+             includeBackgroundWorker: true);
+
+         var job = provider.GetRequiredService<ICommittedIntentDispatchJob>();
+         job.Should().BeOfType<LgymApi.BackgroundWorker.Jobs.CommittedIntentDispatchJob>();
+     }
+
+     [Test]
+     public void AddBackgroundWorkerServices_RegistersInvitationInAppNotificationHandlers()
+     {
+         var services = new ServiceCollection();
+         var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
+         {
+             ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
+             ["PhotoStorage:Provider"] = "CloudflareR2",
+             ["PhotoStorage:BucketName"] = "lgym-report-photos-dev",
+             ["PhotoStorage:Endpoint"] = "https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com",
+             ["PhotoStorage:AccessKeyId"] = "test-access-key",
+             ["PhotoStorage:SecretAccessKey"] = "test-secret-key"
+         });
+
+         services.AddLogging();
+         services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+         services.AddBackgroundWorkerServices(isTesting: true);
+         services.AddScoped<IInAppNotificationPushPublisher, FakeInAppNotificationPushPublisher>();
+
+         using var provider = services.BuildServiceProvider();
+
+         provider.GetRequiredService<IBackgroundAction<TrainerInvitationCreatedInAppNotificationCommand>>()
+             .Should().BeOfType<TrainerInvitationCreatedInAppNotificationCommandHandler>();
+         provider.GetRequiredService<IBackgroundAction<TrainerInvitationAcceptedInAppNotificationCommand>>()
+             .Should().BeOfType<TrainerInvitationAcceptedInAppNotificationCommandHandler>();
+         provider.GetRequiredService<IBackgroundAction<TrainerInvitationRejectedInAppNotificationCommand>>()
+             .Should().BeOfType<TrainerInvitationRejectedInAppNotificationCommandHandler>();
+     }
+
+     [Test]
      public void AddInfrastructure_RegistersConfiguredAppDefaults()
      {
          var services = new ServiceCollection();
@@ -255,6 +328,62 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
 
          defaults.PreferredLanguage.Should().Be("pl-PL");
          defaults.PreferredTimeZone.Should().Be("UTC");
+     }
+
+     [Test]
+     public void AddInfrastructure_UsesLocalPhotoStorageProvider_WhenTestingAndProviderLocal()
+     {
+         var services = new ServiceCollection();
+         var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
+         values["PhotoStorage:Provider"] = "Local";
+         var configuration = TestConfigurationBuilder.BuildConfiguration(values);
+
+         services.AddHttpContextAccessor();
+         services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+
+         using var provider = services.BuildServiceProvider();
+         provider.GetRequiredService<IPhotoStorageProvider>().Should().BeOfType<LocalPhotoStorageProvider>();
+     }
+
+     [Test]
+     public void AddInfrastructure_UsesCloudflareR2PhotoStorageProvider_WhenConfigured()
+     {
+         var services = new ServiceCollection();
+         var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
+         values["PhotoStorage:Provider"] = "CloudflareR2";
+         values["PhotoStorage:BucketName"] = "lgym-report-photos-dev";
+         values["PhotoStorage:Endpoint"] = "https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com";
+         values["PhotoStorage:AccessKeyId"] = "test-access-key";
+         values["PhotoStorage:SecretAccessKey"] = "test-secret-key";
+         var configuration = TestConfigurationBuilder.BuildConfiguration(values);
+
+         services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+
+         using var provider = services.BuildServiceProvider();
+         provider.GetRequiredService<IPhotoStorageProvider>().Should().BeOfType<CloudflareR2PhotoStorageProvider>();
+     }
+
+     [Test]
+     public void AddInfrastructure_Throws_WhenProviderLocalOutsideDevelopmentOrTesting()
+     {
+         var services = new ServiceCollection();
+         var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
+         values["PhotoStorage:Provider"] = "Local";
+         var configuration = TestConfigurationBuilder.BuildConfiguration(values);
+
+         var action = () => services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: false);
+
+         action.Should()
+             .Throw<InvalidOperationException>()
+             .WithMessage("LocalPhotoStorageProvider cannot be used outside Development.");
+     }
+
+     private sealed class FakeInAppNotificationPushPublisher : IInAppNotificationPushPublisher
+     {
+         public Task PushAsync(InAppNotificationResult notification, CancellationToken ct = default)
+         {
+             return Task.CompletedTask;
+         }
      }
 
      [Test]

@@ -42,7 +42,8 @@ public sealed partial class ReportingService : IReportingService
                     Label = x.Label.Trim(),
                     Type = x.Type,
                     IsRequired = x.IsRequired,
-                    Order = x.Order
+                    Order = x.Order,
+                    ModuleConfig = x.ModuleConfig.HasValue ? JsonSerializer.Serialize(x.ModuleConfig.Value) : null
                 })
                 .ToList()
         };
@@ -119,7 +120,8 @@ public sealed partial class ReportingService : IReportingService
                 Label = field.Label.Trim(),
                 Type = field.Type,
                 IsRequired = field.IsRequired,
-                Order = field.Order
+                Order = field.Order,
+                ModuleConfig = field.ModuleConfig.HasValue ? JsonSerializer.Serialize(field.ModuleConfig.Value) : null
             });
         }
 
@@ -188,7 +190,10 @@ public sealed partial class ReportingService : IReportingService
                     Label = x.Label,
                     Type = x.Type,
                     IsRequired = x.IsRequired,
-                    Order = x.Order
+                    Order = x.Order,
+                    ModuleConfig = string.IsNullOrWhiteSpace(x.ModuleConfig) 
+                        ? null 
+                        : JsonSerializer.Deserialize<JsonElement>(x.ModuleConfig)
                 })
                 .ToList()
         };

@@ -141,9 +141,6 @@
   <data name="PermissionTrainerAccess" xml:space="preserve">
     <value>Trainer access</value>
   </data>
-  <data name="PermissionTrainerAccess" xml:space="preserve">
-    <value>Trainer access</value>
-  </data>
   <data name="RoleWithThatName" xml:space="preserve">
     <value>A role with that name already exists.</value>
   </data>
@@ -260,6 +257,18 @@
   </data>
   <data name="TrainerInvitationRejected" xml:space="preserve">
     <value>A trainee has rejected your invitation.</value>
+  </data>
+  <data name="TrainerReportRequestReceived" xml:space="preserve">
+    <value>{0} sent you a report request: {1}.</value>
+  </data>
+  <data name="TrainerReportFeedbackReceived" xml:space="preserve">
+    <value>{0} added feedback to your report: {1}.</value>
+  </data>
+  <data name="GenericTrainerDisplayName" xml:space="preserve">
+    <value>Trainer</value>
+  </data>
+  <data name="GenericReportDisplayName" xml:space="preserve">
+    <value>report</value>
   </data>
   <data name="AccountBlocked" xml:space="preserve">
     <value>Your account has been blocked.</value>

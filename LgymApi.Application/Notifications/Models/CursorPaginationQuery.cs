@@ -6,4 +6,4 @@ namespace LgymApi.Application.Notifications.Models;
 public sealed record CursorPaginationQuery(
     int Limit = 20,
     DateTimeOffset? CursorCreatedAt = null,
-    Id<User>? CursorId = null);
+    Id<InAppNotification>? CursorId = null);

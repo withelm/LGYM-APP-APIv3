@@ -64,7 +64,7 @@ public sealed class InAppNotificationService : IInAppNotificationService
         var lastItem = items.LastOrDefault();
         var resultItems = items.Select(MapToResult).ToList();
 
-        return Result<PagedResult<InAppNotificationResult>, AppError>.Success(new PagedResult<InAppNotificationResult>(resultItems, hasNextPage, hasNextPage ? lastItem?.CreatedAt : null, hasNextPage ? lastItem?.Id.Rebind<User>() : null));
+        return Result<PagedResult<InAppNotificationResult>, AppError>.Success(new PagedResult<InAppNotificationResult>(resultItems, hasNextPage, hasNextPage ? lastItem?.CreatedAt : null, hasNextPage ? lastItem?.Id : null));
     }
 
     public async Task<Result<Unit, AppError>> MarkAsReadAsync(Id<InAppNotification> notificationId, Id<User> requestingUserId, CancellationToken cancellationToken = default)

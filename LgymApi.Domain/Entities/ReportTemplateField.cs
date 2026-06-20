@@ -11,6 +11,7 @@ public sealed class ReportTemplateField : EntityBase<ReportTemplateField>
     public ReportFieldType Type { get; set; }
     public bool IsRequired { get; set; }
     public int Order { get; set; }
+    public string? ModuleConfig { get; set; }
 
     public ReportTemplate Template { get; set; } = null!;
 }

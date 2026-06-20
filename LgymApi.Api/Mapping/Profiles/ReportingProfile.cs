@@ -14,7 +14,8 @@ public sealed class ReportingProfile : IMappingProfile
             Label = source.Label,
             Type = source.Type,
             IsRequired = source.IsRequired,
-            Order = source.Order
+            Order = source.Order,
+            ModuleConfig = source.ModuleConfig
         });
 
         configuration.CreateMap<ReportTemplateResult, ReportTemplateDto>((source, mapper) => new ReportTemplateDto
@@ -48,7 +49,40 @@ public sealed class ReportingProfile : IMappingProfile
             TraineeId = source?.TraineeId.ToString() ?? string.Empty,
             SubmittedAt = source?.SubmittedAt ?? default,
             Answers = source?.Answers ?? new Dictionary<string, System.Text.Json.JsonElement>(StringComparer.OrdinalIgnoreCase),
+            TrainerOverallComment = source?.TrainerOverallComment,
+            TrainerFieldComments = source?.TrainerFieldComments ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
             Request = MapRequest(source?.Request, mapper)
+        });
+
+        configuration.CreateMap<InitiatePhotoUploadResult, InitiatePhotoUploadResponse>((source, _) => new InitiatePhotoUploadResponse
+        {
+            UploadUrl = source?.UploadUrl ?? string.Empty,
+            StorageKey = source?.StorageKey ?? string.Empty,
+            ExpiresAt = source?.ExpiresAt ?? default
+        });
+
+        configuration.CreateMap<SignedReadUrlResult, GetSignedReadUrlResponse>((source, _) => new GetSignedReadUrlResponse
+        {
+            ReadUrl = source?.ReadUrl ?? string.Empty,
+            ExpiresAt = source?.ExpiresAt ?? default
+        });
+
+        configuration.CreateMap<CompletePhotoUploadResult, CompletePhotoUploadResponse>((source, _) => new CompletePhotoUploadResponse
+        {
+            PhotoId = source?.PhotoId.ToString() ?? string.Empty,
+            UploadedAt = source?.UploadedAt ?? default
+        });
+
+        configuration.CreateMap<PhotoHistoryItemResult, PhotoHistoryItemResponse>((source, _) => new PhotoHistoryItemResponse
+        {
+            Id = source?.Id.ToString() ?? string.Empty,
+            StorageKey = source?.StorageKey ?? string.Empty,
+            ViewType = source?.ViewType ?? string.Empty,
+            SizeBytes = source?.SizeBytes ?? 0,
+            ThumbnailUrl = source?.ThumbnailUrl,
+            ReadUrl = source?.ReadUrl ?? string.Empty,
+            ReportRequestId = source?.ReportRequestId.ToString() ?? string.Empty,
+            UploadedAt = source?.UploadedAt ?? default
         });
     }
 

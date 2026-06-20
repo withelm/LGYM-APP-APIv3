@@ -12,5 +12,14 @@ public interface IReportingRepository
     Task<ReportRequest?> FindRequestByIdAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default);
     Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task AddSubmissionAsync(ReportSubmission submission, CancellationToken cancellationToken = default);
+    Task<ReportSubmission?> FindSubmissionByIdForTrainerAsync(Id<ReportSubmission> submissionId, Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default);
+    Task<List<ReportSubmission>> GetSubmissionsByTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default);
+    Task<Photo?> FindPhotoByIdAsync(Id<Photo> photoId, CancellationToken cancellationToken = default);
+    Task<Photo?> FindActivePhotoByRequestAndViewAsync(Id<ReportRequest> requestId, Domain.Enums.PhotoViewType viewType, CancellationToken cancellationToken = default);
+    Task<List<Photo>> GetPhotosByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
+    Task<List<Photo>> GetPhotosByRequestIdAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default);
+    Task<long> GetActivePhotoStorageBytesAsync(CancellationToken cancellationToken = default);
+    Task<int> CountPhotosCreatedSinceAsync(DateTimeOffset sinceUtc, CancellationToken cancellationToken = default);
+    Task SavePhotoAsync(Photo photo, CancellationToken cancellationToken = default);
 }

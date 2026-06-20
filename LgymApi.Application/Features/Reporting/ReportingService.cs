@@ -1,14 +1,18 @@
 using System.Text.Json;
 using System.Globalization;
+using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
+using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
+using Microsoft.Extensions.Logging;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Features.Reporting;
@@ -18,18 +22,24 @@ public sealed partial class ReportingService : IReportingService
     private readonly IRoleRepository _roleRepository;
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IReportingRepository _reportingRepository;
+    private readonly ICommandDispatcher _commandDispatcher;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPhotoStorageProvider _photoStorageProvider;
+    private readonly IPhotoUploadInitTracker _photoUploadInitTracker;
+    private readonly ILogger<ReportingService> _logger;
+    private readonly PhotoStorageOptions _photoStorageOptions;
 
-    public ReportingService(
-        IRoleRepository roleRepository,
-        ITrainerRelationshipRepository trainerRelationshipRepository,
-        IReportingRepository reportingRepository,
-        IUnitOfWork unitOfWork)
+    public ReportingService(IReportingServiceDependencies dependencies)
     {
-        _roleRepository = roleRepository;
-        _trainerRelationshipRepository = trainerRelationshipRepository;
-        _reportingRepository = reportingRepository;
-        _unitOfWork = unitOfWork;
+        _roleRepository = dependencies.RoleRepository;
+        _trainerRelationshipRepository = dependencies.TrainerRelationshipRepository;
+        _reportingRepository = dependencies.ReportingRepository;
+        _commandDispatcher = dependencies.CommandDispatcher;
+        _unitOfWork = dependencies.UnitOfWork;
+        _photoStorageProvider = dependencies.PhotoStorageProvider;
+        _photoUploadInitTracker = dependencies.PhotoUploadInitTracker;
+        _logger = dependencies.Logger;
+        _photoStorageOptions = dependencies.PhotoStorageOptions;
     }
 
     private async Task<Result<Unit, AppError>> EnsureTrainerAsync(UserEntity currentTrainer, CancellationToken cancellationToken)

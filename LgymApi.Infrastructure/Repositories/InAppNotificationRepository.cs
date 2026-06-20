@@ -32,7 +32,7 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
         Id<User> userId,
         int limit,
         DateTimeOffset? cursorCreatedAt,
-        Id<User>? cursorId,
+        Id<InAppNotification>? cursorId,
         CancellationToken cancellationToken = default)
     {
         var query = _dbContext.InAppNotifications
@@ -42,13 +42,15 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
         if (cursorCreatedAt.HasValue && cursorId.HasValue)
         {
             var cursorTs = cursorCreatedAt.Value;
-            var cursorIdString = cursorId.Value.ToString();
-            query = query.Where(x => x.CreatedAt < cursorTs || (x.CreatedAt == cursorTs && string.CompareOrdinal(x.Id.ToString(), cursorIdString) < 0));
+            var cursorGuid = cursorId.Value.Value;
+            query = query.Where(x =>
+                x.CreatedAt < cursorTs ||
+                (x.CreatedAt == cursorTs && EF.Property<Guid>(x, nameof(InAppNotification.Id)).CompareTo(cursorGuid) < 0));
         }
 
         var results = await query
             .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id.ToString())
+            .ThenByDescending(x => x.Id)
             .Take(limit + 1)
             .ToListAsync(cancellationToken);
 

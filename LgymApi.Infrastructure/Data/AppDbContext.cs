@@ -55,6 +55,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
+    public DbSet<Photo> Photos => Set<Photo>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -346,6 +347,7 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("ReportTemplateFields");
             entity.Property(e => e.Key).HasMaxLength(64).IsRequired();
             entity.Property(e => e.Label).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.ModuleConfig).HasColumnType("text");
             entity.Property(e => e.Type).HasConversion<string>();
             entity.HasIndex(e => new { e.TemplateId, e.Key })
                 .IsUnique()
@@ -609,6 +611,32 @@ public sealed class AppDbContext : DbContext
                 .WithMany(u => u.ExternalLogins)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Photo>(entity =>
+        {
+            entity.ToTable("Photos");
+            entity.Property(e => e.StorageKey).IsRequired();
+            entity.Property(e => e.MimeType).IsRequired();
+            entity.Property(e => e.SizeBytes).IsRequired();
+            entity.Property(e => e.Checksum).IsRequired();
+            entity.Property(e => e.ViewType).HasConversion<string>();
+            entity.HasIndex(e => new { e.ReportRequestId, e.ViewType })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.OwnerUserId, e.CreatedAt });
+            entity.HasOne(e => e.ReportRequest)
+                .WithMany()
+                .HasForeignKey(e => e.ReportRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Uploader)
+                .WithMany()
+                .HasForeignKey(e => e.UploaderUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         RoleSeedDataConfiguration.Apply(modelBuilder);

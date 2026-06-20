@@ -68,7 +68,7 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         body.Items[1].SenderUserId.Should().Be(sender.Id.ToString());
         body.HasNextPage.Should().BeTrue();
         body.NextCursorCreatedAt.Should().Be(middle.CreatedAt);
-        body.NextCursorId.Should().Be(middle.Id.Rebind<User>().ToString());
+        body.NextCursorId.Should().Be(middle.Id.ToString());
         body.Items.Select(x => x.Id).Should().NotContain(oldest.Id.ToString());
     }
 

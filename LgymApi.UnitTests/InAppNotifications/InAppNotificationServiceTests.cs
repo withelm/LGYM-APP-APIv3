@@ -327,7 +327,7 @@ public sealed class InAppNotificationServiceTests
             Id<User> userId,
             int limit,
             DateTimeOffset? cursorCreatedAt,
-            Id<User>? cursorId,
+            Id<InAppNotification>? cursorId,
             CancellationToken cancellationToken = default)
         {
             var query = Added.Where(n => n.RecipientId == userId);

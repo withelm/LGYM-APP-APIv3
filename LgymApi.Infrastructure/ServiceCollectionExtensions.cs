@@ -12,6 +12,8 @@ using LgymApi.Infrastructure.Services;
 using LgymApi.Infrastructure.UnitOfWork;
 using LgymApi.Domain.Entities;
 using LgymApi.Application.Options;
+using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -32,13 +34,18 @@ public static class ServiceCollectionExtensions
         bool isTesting = false,
         bool hostBackgroundServer = false)
     {
+        var isDevelopmentOrTesting = enableSensitiveLogging || isTesting;
         var appDefaultsOptions = AppDefaultsOptionsFactory.Resolve(configuration);
+        var photoStorageOptions = BuildPhotoStorageOptions(configuration);
 
         var emailOptions = EmailOptionsFactory.Create(configuration, appDefaultsOptions);
 
         services.AddSingleton(appDefaultsOptions);
+        services.AddSingleton(photoStorageOptions);
         EmailOptionsFactory.Validate(emailOptions);
         services.AddSingleton(emailOptions);
+        // Google auth fallback uses Google userinfo over HTTP when the ID token omits profile/email claims.
+        services.AddHttpClient();
         services.AddSingleton<IEmailNotificationsFeature, EmailNotificationsFeature>();
         services.AddSingleton<IEmailMetrics, EmailMetrics>();
 
@@ -98,6 +105,9 @@ public static class ServiceCollectionExtensions
                 ? sp.GetRequiredService<DummyEmailSender>()
                 : sp.GetRequiredService<SmtpEmailSender>();
         });
+        services.AddSingleton<LocalPhotoDevelopmentStore>();
+        services.AddSingleton<IPhotoUploadInitTracker, InMemoryPhotoUploadInitTracker>();
+        RegisterPhotoStorageProvider(services, photoStorageOptions, isDevelopmentOrTesting);
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUserExternalLoginRepository, UserExternalLoginRepository>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
@@ -143,5 +153,73 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         return services;
+    }
+
+    private static void RegisterPhotoStorageProvider(
+        IServiceCollection services,
+        PhotoStorageOptions options,
+        bool isDevelopmentOrTesting)
+    {
+        if (string.Equals(options.Provider, "CloudflareR2", StringComparison.OrdinalIgnoreCase))
+        {
+            ValidateCloudflareR2Options(options);
+            services.AddScoped<IPhotoStorageProvider, CloudflareR2PhotoStorageProvider>();
+            return;
+        }
+
+        if (string.Equals(options.Provider, "Local", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!isDevelopmentOrTesting)
+            {
+                throw new InvalidOperationException("LocalPhotoStorageProvider cannot be used outside Development.");
+            }
+
+            services.AddScoped<IPhotoStorageProvider, LocalPhotoStorageProvider>();
+            return;
+        }
+
+        throw new InvalidOperationException($"Unsupported photo storage provider: {options.Provider}");
+    }
+
+    private static PhotoStorageOptions BuildPhotoStorageOptions(IConfiguration configuration)
+    {
+        var options = configuration.GetSection("PhotoStorage").Get<PhotoStorageOptions>() ?? new PhotoStorageOptions();
+
+        options.Provider = string.IsNullOrWhiteSpace(options.Provider) ? "Local" : options.Provider.Trim();
+        options.AllowedMimeTypes = options.AllowedMimeTypes
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (options.AllowedMimeTypes.Count == 0)
+        {
+            options.AllowedMimeTypes = ["image/jpeg", "image/png", "image/heic"];
+        }
+
+        return options;
+    }
+
+    private static void ValidateCloudflareR2Options(PhotoStorageOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.BucketName))
+        {
+            throw new InvalidOperationException("PhotoStorage:BucketName is required for CloudflareR2.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Endpoint))
+        {
+            throw new InvalidOperationException("PhotoStorage:Endpoint is required for CloudflareR2.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.AccessKeyId))
+        {
+            throw new InvalidOperationException("PhotoStorage:AccessKeyId is required for CloudflareR2.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.SecretAccessKey))
+        {
+            throw new InvalidOperationException("PhotoStorage:SecretAccessKey is required for CloudflareR2.");
+        }
     }
 }

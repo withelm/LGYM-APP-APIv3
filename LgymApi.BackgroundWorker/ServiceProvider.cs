@@ -52,6 +52,7 @@ public static class ServiceProvider
         services.AddScoped<EmailJob>();
         services.AddScoped<IActionMessageJob, ActionMessageJob>();
         services.AddScoped<ActionMessageJob>();
+        services.AddScoped<ICommittedIntentDispatchJob, CommittedIntentDispatchJob>();
 
         services.AddScoped<BackgroundActionOrchestratorService>();
         services.AddNotificationsModule();
@@ -63,6 +64,11 @@ public static class ServiceProvider
         services.AddBackgroundAction<TrainingCompletedCommand, UpdateTrainingMainRecordsHandler>();
         services.AddBackgroundAction<InvitationAcceptedCommand, InvitationAcceptedEmailHandler>();
         services.AddBackgroundAction<InvitationRevokedCommand, InvitationRevokedEmailHandler>();
+        services.AddBackgroundAction<TrainerInvitationCreatedInAppNotificationCommand, TrainerInvitationCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<TrainerInvitationAcceptedInAppNotificationCommand, TrainerInvitationAcceptedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<TrainerInvitationRejectedInAppNotificationCommand, TrainerInvitationRejectedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<ReportRequestCreatedInAppNotificationCommand, ReportRequestCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<ReportFeedbackAddedInAppNotificationCommand, ReportFeedbackAddedInAppNotificationCommandHandler>();
 
 
         return services;

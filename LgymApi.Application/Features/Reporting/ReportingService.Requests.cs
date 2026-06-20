@@ -1,6 +1,7 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -37,11 +38,19 @@ public sealed partial class ReportingService : IReportingService
             TraineeId = traineeId,
             TemplateId = templateResult.Value.Id,
             Status = ReportRequestStatus.Pending,
-            DueAt = command.DueAt,
+            DueAt = NormalizeDueAt(command.DueAt),
             Note = string.IsNullOrWhiteSpace(command.Note) ? null : command.Note.Trim()
         };
 
         await _reportingRepository.AddRequestAsync(request, cancellationToken);
+        // Queue notification before commit so the worker dispatch stays bound to the same unit of work.
+        await _commandDispatcher.EnqueueAsync(new ReportRequestCreatedInAppNotificationCommand
+        {
+            RequestId = request.Id,
+            TraineeId = traineeId,
+            TrainerId = currentTrainer.Id,
+            TemplateName = templateResult.Value.Name
+        });
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         request.Template = templateResult.Value;
@@ -56,7 +65,7 @@ public sealed partial class ReportingService : IReportingService
 
         foreach (var request in requests)
         {
-            if (request.DueAt.HasValue && request.DueAt.Value <= now)
+            if (IsRequestExpired(request.DueAt, now))
             {
                 request.Status = ReportRequestStatus.Expired;
                 hasUpdates = true;
@@ -88,4 +97,25 @@ public sealed partial class ReportingService : IReportingService
             Template = MapTemplate(request.Template)
         };
     }
+
+    private static DateTimeOffset? NormalizeDueAt(DateTimeOffset? dueAt)
+    {
+        if (!dueAt.HasValue)
+        {
+            return null;
+        }
+
+        var value = dueAt.Value;
+        if (value.TimeOfDay != TimeSpan.Zero)
+        {
+            return value;
+        }
+
+        return new DateTimeOffset(value.Year, value.Month, value.Day, 0, 0, 0, value.Offset)
+            .AddDays(1)
+            .AddTicks(-1);
+    }
+
+    private static bool IsRequestExpired(DateTimeOffset? dueAt, DateTimeOffset now)
+        => dueAt.HasValue && NormalizeDueAt(dueAt).Value <= now;
 }

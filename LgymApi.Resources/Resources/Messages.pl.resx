@@ -135,9 +135,6 @@
   <data name="PermissionTrainerAccess" xml:space="preserve">
     <value>Dostęp trenera</value>
   </data>
-  <data name="PermissionTrainerAccess" xml:space="preserve">
-    <value>Dostęp trenera</value>
-  </data>
   <data name="RoleWithThatName" xml:space="preserve">
     <value>Istnieje rola o takiej nazwie.</value>
   </data>
@@ -251,6 +248,18 @@
   </data>
   <data name="TrainerInvitationRejected" xml:space="preserve">
     <value>Uczeń odrzucił Twoje zaproszenie.</value>
+  </data>
+  <data name="TrainerReportRequestReceived" xml:space="preserve">
+    <value>{0} wysłał Ci prośbę o raport: {1}.</value>
+  </data>
+  <data name="TrainerReportFeedbackReceived" xml:space="preserve">
+    <value>{0} dodał komentarz do Twojego raportu: {1}.</value>
+  </data>
+  <data name="GenericTrainerDisplayName" xml:space="preserve">
+    <value>Trener</value>
+  </data>
+  <data name="GenericReportDisplayName" xml:space="preserve">
+    <value>raport</value>
   </data>
   <data name="AccountBlocked" xml:space="preserve">
     <value>Twoje konto zostało zablokowane.</value>

@@ -250,6 +250,16 @@ localizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
 
 var app = builder.Build();
 
+var photoStorageProvider = builder.Configuration["PhotoStorage:Provider"] ?? "Local";
+var photoStorageBucket = builder.Configuration["PhotoStorage:BucketName"] ?? string.Empty;
+var photoStorageEndpoint = builder.Configuration["PhotoStorage:Endpoint"] ?? string.Empty;
+
+app.Logger.LogInformation(
+    "Photo storage provider configured: {Provider}, bucket: {BucketName}, endpoint: {Endpoint}",
+    photoStorageProvider,
+    photoStorageBucket,
+    photoStorageEndpoint);
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

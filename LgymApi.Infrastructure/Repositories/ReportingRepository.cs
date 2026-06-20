@@ -55,7 +55,7 @@ public sealed class ReportingRepository : IReportingRepository
     public Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ReportRequests
-            .Where(x => x.TraineeId == traineeId && x.Status == ReportRequestStatus.Pending)
+            .Where(x => x.TraineeId == traineeId && (x.Status == ReportRequestStatus.Pending || x.Status == ReportRequestStatus.Expired))
             .Include(x => x.Template)
             .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
             .OrderByDescending(x => x.CreatedAt)
@@ -65,6 +65,31 @@ public sealed class ReportingRepository : IReportingRepository
     public async Task AddSubmissionAsync(ReportSubmission submission, CancellationToken cancellationToken = default)
     {
         await _dbContext.ReportSubmissions.AddAsync(submission, cancellationToken);
+    }
+
+    public Task<ReportSubmission?> FindSubmissionByIdForTrainerAsync(Id<ReportSubmission> submissionId, Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.ReportSubmissions
+            .Include(x => x.ReportRequest)
+            .ThenInclude(x => x.Template)
+            .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
+            .FirstOrDefaultAsync(
+                x => x.Id == submissionId
+                     && x.TraineeId == traineeId
+                     && x.ReportRequest.TrainerId == trainerId,
+                cancellationToken);
+    }
+
+    public Task<List<ReportSubmission>> GetSubmissionsByTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.ReportSubmissions
+            .AsNoTracking()
+            .Where(x => x.TraineeId == traineeId)
+            .Include(x => x.ReportRequest)
+            .ThenInclude(x => x.Template)
+            .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
     }
 
     public Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
@@ -77,5 +102,71 @@ public sealed class ReportingRepository : IReportingRepository
             .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
+    }
+
+    public Task<Photo?> FindPhotoByIdAsync(Id<Photo> photoId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Photos
+            .Include(x => x.ReportRequest)
+            .FirstOrDefaultAsync(x => x.Id == photoId && !x.IsDeleted, cancellationToken);
+    }
+
+    public Task<Photo?> FindActivePhotoByRequestAndViewAsync(
+        Id<ReportRequest> requestId,
+        PhotoViewType viewType,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Photos
+            .FirstOrDefaultAsync(x => x.ReportRequestId == requestId && x.ViewType == viewType && !x.IsDeleted, cancellationToken);
+    }
+
+    public Task<List<Photo>> GetPhotosByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Photos
+            .AsNoTracking()
+            .Where(x => x.OwnerUserId == traineeId && !x.IsDeleted)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<List<Photo>> GetPhotosByRequestIdAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Photos
+            .AsNoTracking()
+            .Where(x => x.ReportRequestId == requestId && !x.IsDeleted)
+            .OrderBy(x => x.ViewType)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<long> GetActivePhotoStorageBytesAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Photos
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted)
+            .SumAsync(x => (long?)x.SizeBytes, cancellationToken) ?? 0L;
+    }
+
+    public Task<int> CountPhotosCreatedSinceAsync(DateTimeOffset sinceUtc, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Photos
+            .IgnoreQueryFilters()
+            .CountAsync(x => x.CreatedAt >= sinceUtc, cancellationToken);
+    }
+
+    public async Task SavePhotoAsync(Photo photo, CancellationToken cancellationToken = default)
+    {
+        var existingPhoto = await _dbContext.Photos
+            .Where(p => p.ReportRequestId == photo.ReportRequestId 
+                     && p.ViewType == photo.ViewType 
+                     && !p.IsDeleted)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingPhoto != null)
+        {
+            existingPhoto.IsDeleted = true;
+            existingPhoto.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        await _dbContext.Photos.AddAsync(photo, cancellationToken);
     }
 }

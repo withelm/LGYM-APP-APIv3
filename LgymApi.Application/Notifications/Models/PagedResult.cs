@@ -7,4 +7,4 @@ public sealed record PagedResult<T>(
     IReadOnlyList<T> Items,
     bool HasNextPage,
     DateTimeOffset? NextCursorCreatedAt,
-    Id<User>? NextCursorId);
+    Id<InAppNotification>? NextCursorId);

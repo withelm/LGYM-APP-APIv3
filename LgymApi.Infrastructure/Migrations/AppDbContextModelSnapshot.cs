@@ -740,6 +740,64 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("PasswordResetTokens", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.Photo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Checksum")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReportRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThumbnailStorageKey")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploaderUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ViewType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UploaderUserId");
+
+                    b.HasIndex("OwnerUserId", "CreatedAt");
+
+                    b.HasIndex("ReportRequestId", "ViewType")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("Photos", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Plan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -914,6 +972,12 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid>("TraineeId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("TrainerFieldCommentsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TrainerOverallComment")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -984,6 +1048,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
+
+                    b.Property<string>("ModuleConfig")
+                        .HasColumnType("text");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
@@ -1817,6 +1884,33 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.Photo", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.ReportRequest", "ReportRequest")
+                        .WithMany()
+                        .HasForeignKey("ReportRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Uploader")
+                        .WithMany()
+                        .HasForeignKey("UploaderUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("ReportRequest");
+
+                    b.Navigation("Uploader");
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.Plan", b =>

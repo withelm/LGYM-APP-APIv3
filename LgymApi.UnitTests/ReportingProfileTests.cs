@@ -52,12 +52,16 @@ public sealed class ReportingProfileTests
              ReportRequestId = Id<LgymApi.Domain.Entities.ReportRequest>.New(),
              TraineeId = Id<LgymApi.Domain.Entities.User>.New(),
             Answers = new Dictionary<string, JsonElement>(),
+            TrainerOverallComment = "Overall coach feedback",
+            TrainerFieldComments = new Dictionary<string, string> { ["weight"] = "Add more context" },
             Request = requestResult
         };
 
         var submissionDto = mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(submissionResult);
         submissionDto.Answers.Should().BeEmpty();
         submissionDto.Request.Should().NotBeNull();
+        submissionDto.TrainerOverallComment.Should().Be("Overall coach feedback");
+        submissionDto.TrainerFieldComments["weight"].Should().Be("Add more context");
     }
 
     [Test]

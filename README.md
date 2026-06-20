@@ -35,6 +35,9 @@ Common environment variable overrides:
 
 - `ConnectionStrings__Postgres`
 - `Jwt__SigningKey`
+- `PhotoStorage__Provider`
+- `PhotoStorage__AccessKeyId`
+- `PhotoStorage__SecretAccessKey`
 
 ## Container runtime contract
 
@@ -100,6 +103,77 @@ Run the API:
 ```bash
 dotnet run --project LgymApi.Api
 ```
+
+## Report photo storage in development
+
+LGYM supports two development storage modes for report photos:
+
+- `PhotoStorage__Provider=Local` - default local dev storage written under `dev-photo-storage`.
+- `PhotoStorage__Provider=CloudflareR2` - private Cloudflare R2 direct-upload flow for realistic end-to-end testing.
+
+### Local storage
+
+Use local storage when you want the API to serve development upload/read endpoints without cloud credentials.
+
+```env
+PhotoStorage__Provider=Local
+```
+
+### Cloudflare R2 development storage
+
+Use Cloudflare R2 when you want the backend to generate signed PUT/GET URLs against the private development bucket.
+
+Required environment variables or user-secrets:
+
+```env
+PhotoStorage__Provider=CloudflareR2
+PhotoStorage__BucketName=lgym-report-photos-dev
+PhotoStorage__AccountId=38c1c25f99af223efee28a9afcf5d575
+PhotoStorage__Endpoint=https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com
+PhotoStorage__AccessKeyId=<ACCESS_KEY_ID>
+PhotoStorage__SecretAccessKey=<SECRET_ACCESS_KEY>
+PhotoStorage__SignedUploadExpirationMinutes=10
+PhotoStorage__SignedReadExpirationMinutes=15
+PhotoStorage__MaxFileSizeBytes=5242880
+PhotoStorage__AllowedMimeTypes__0=image/jpeg
+PhotoStorage__AllowedMimeTypes__1=image/png
+PhotoStorage__AllowedMimeTypes__2=image/heic
+PhotoStorage__DevMaxTotalBytes=8589934592
+PhotoStorage__DevMaxUploadsPerDay=200
+PhotoStorage__DevMaxUploadInitPerUserPerHour=50
+```
+
+Do not commit:
+
+- `PhotoStorage__AccessKeyId`
+- `PhotoStorage__SecretAccessKey`
+- any local secrets file containing those values
+
+Development bucket notes:
+
+- bucket: `lgym-report-photos-dev`
+- bucket stays private
+- Public Development URL must remain disabled
+- lifecycle rule deletes `photos/` objects after 7 days
+
+### Manual smoke test
+
+1. Start the backend with `PhotoStorage__Provider=CloudflareR2`.
+2. Call `POST /api/trainee/reporting/photos/upload-init` or the trainer equivalent.
+3. Confirm the response contains a signed PUT URL and backend-generated `storageKey` under `photos/`.
+4. Upload a JPEG/PNG/HEIC file directly to the signed URL with HTTP `PUT`.
+5. Confirm the object appears in Cloudflare R2 under the expected prefix.
+6. Call `POST /api/trainee/reporting/photos/complete-upload`.
+7. Confirm the photo metadata row appears in PostgreSQL.
+8. Call the history or signed preview endpoint and open the signed GET URL.
+9. Confirm the image loads from the private bucket.
+10. Confirm an unauthorized user cannot get a signed read URL for that photo.
+
+Important limitation:
+
+- Cloudflare R2 presigned `PUT` does **not** guarantee max file size enforcement at storage level.
+- LGYM validates declared size in `upload-init`, then verifies the real stored object size in `complete-upload` before saving metadata to PostgreSQL.
+- If object metadata verification fails, backend rejects finalization and removes the invalid object.
 
 ## Persistence conventions (Unit of Work)
 

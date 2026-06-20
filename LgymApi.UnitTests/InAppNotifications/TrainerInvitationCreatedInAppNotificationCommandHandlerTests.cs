@@ -1,9 +1,13 @@
 using FluentAssertions;
+using LgymApi.Application.Features.AdminManagement.Models;
+using LgymApi.Application.Models;
+using LgymApi.Application.Pagination;
 using Microsoft.Extensions.Logging.Abstractions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
+using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
@@ -20,8 +24,13 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandlerTests
     public async Task ExecuteAsync_Success_CreatesExpectedNotification()
     {
         var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Success(CreateResult()));
-        var handler = new TrainerInvitationCreatedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationCreatedInAppNotificationCommandHandler>.Instance);
-        var command = new TrainerInvitationCreatedInAppNotificationCommand { TraineeId = Id<User>.New(), TrainerId = Id<User>.New() };
+        var trainerId = Id<User>.New();
+        var invitationId = Id<TrainerInvitation>.New();
+        var handler = new TrainerInvitationCreatedInAppNotificationCommandHandler(
+            service,
+            new FakeUserRepository(new User { Id = trainerId, Name = "Jan Kowalski" }),
+            NullLogger<TrainerInvitationCreatedInAppNotificationCommandHandler>.Instance);
+        var command = new TrainerInvitationCreatedInAppNotificationCommand { InvitationId = invitationId, TraineeId = Id<User>.New(), TrainerId = trainerId };
 
         await handler.ExecuteAsync(command);
 
@@ -29,8 +38,8 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandlerTests
         service.LastInput!.RecipientId.Should().Be(command.TraineeId);
         service.LastInput.SenderUserId.Should().Be(command.TrainerId);
         service.LastInput.IsSystemNotification.Should().BeFalse();
-        service.LastInput.Message.Should().Be(Messages.TrainerInvitationSent);
-        service.LastInput.RedirectUrl.Should().Be("/trainers/invitations");
+        service.LastInput.Message.Should().Be("Jan Kowalski zaprasza Cię do współpracy trenerskiej.");
+        service.LastInput.RedirectUrl.Should().Be($"/trainers/invitations/{invitationId}");
         service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationSent);
     }
 
@@ -38,9 +47,12 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandlerTests
     public async Task ExecuteAsync_Failure_StillInvokesService()
     {
         var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Failure(new BadRequestError("boom")));
-        var handler = new TrainerInvitationCreatedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationCreatedInAppNotificationCommandHandler>.Instance);
+        var handler = new TrainerInvitationCreatedInAppNotificationCommandHandler(
+            service,
+            new FakeUserRepository(new User { Id = Id<User>.New(), Name = "Trainer" }),
+            NullLogger<TrainerInvitationCreatedInAppNotificationCommandHandler>.Instance);
 
-        await handler.ExecuteAsync(new TrainerInvitationCreatedInAppNotificationCommand { TraineeId = Id<User>.New(), TrainerId = Id<User>.New() });
+        await handler.ExecuteAsync(new TrainerInvitationCreatedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TraineeId = Id<User>.New(), TrainerId = Id<User>.New() });
 
         service.Calls.Should().Be(1);
     }
@@ -68,5 +80,25 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandlerTests
         public Task<Result<Unit, AppError>> MarkAsReadAsync(Id<InAppNotification> notificationId, Id<User> requestingUserId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<Result<Unit, AppError>> MarkAllAsReadAsync(Id<User> userId, DateTimeOffset? before, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<Result<int, AppError>> GetUnreadCountAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+    }
+
+    private sealed class FakeUserRepository : IUserRepository
+    {
+        private readonly User _user;
+
+        public FakeUserRepository(User user) => _user = user;
+
+        public Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default)
+            => Task.FromResult<User?>(id == _user.Id ? _user : null);
+
+        public Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<User?> FindByIdWithRolesAsync(Id<User> id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<User?> FindByEmailAsync(Email email, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task AddAsync(User user, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task UpdateAsync(User user, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 }

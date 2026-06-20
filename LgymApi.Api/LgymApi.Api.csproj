@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>lgym-api-2ca0696d-36ff-4556-bb1c-a3420f7ee7de</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
