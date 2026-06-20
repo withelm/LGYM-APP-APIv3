@@ -103,6 +103,11 @@ public sealed partial class TrainerRelationshipService
         }
 
         var trainee = await _userRepository.FindByEmailAsync(normalizedInviteeEmail, cancellationToken);
+        if (trainee is { IsDeleted: false }
+            && await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync(trainee.Id, cancellationToken))
+        {
+            return Result<TrainerInvitationResult, AppError>.Failure(new TrainerRelationshipConflictError(Messages.TraineeAlreadyLinked));
+        }
 
         var invitation = new TrainerInvitation
         {
