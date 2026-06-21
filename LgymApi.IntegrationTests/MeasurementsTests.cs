@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.IntegrationTests;
 
@@ -51,7 +53,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
     [Test]
     public async Task GetMeasurementsTrends_WithoutAuth_ReturnsUnauthorized()
     {
-        var response = await Client.GetAsync($"/api/measurements/{Guid.NewGuid()}/trends");
+        var response = await Client.GetAsync($"/api/measurements/{Id<UserEntity>.New()}/trends");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
