@@ -103,7 +103,7 @@ public static class ReportingModuleConfigParser
         return true;
     }
 
-    private static bool TryResolveBodyPart(string bodyPartName, out BodyParts bodyPart)
+    public static bool TryResolveBodyPart(string bodyPartName, out BodyParts bodyPart)
     {
         var normalized = bodyPartName.Trim();
         switch (normalized.ToLowerInvariant())
