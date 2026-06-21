@@ -763,11 +763,13 @@ public sealed class ReportingServiceTests
         var uploadInitTracker = Substitute.For<IPhotoUploadInitTracker>();
         uploadInitTracker.CountRecentUploadInitsAsync(Arg.Any<Id<User>>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns(0);
+        var reportSubmissionMeasurementWriter = Substitute.For<IReportSubmissionMeasurementWriter>();
 
         var dependencies = Substitute.For<IReportingServiceDependencies>();
         dependencies.ReportingRepository.Returns(repository);
         dependencies.UnitOfWork.Returns(unitOfWork);
         dependencies.CommandDispatcher.Returns(commandDispatcher);
+        dependencies.ReportSubmissionMeasurementWriter.Returns(reportSubmissionMeasurementWriter);
         dependencies.RoleRepository.Returns(Substitute.For<IRoleRepository>());
         dependencies.TrainerRelationshipRepository.Returns(Substitute.For<ITrainerRelationshipRepository>());
         dependencies.PhotoStorageProvider.Returns(Substitute.For<IPhotoStorageProvider>());
