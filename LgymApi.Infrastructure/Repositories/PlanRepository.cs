@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 
 namespace LgymApi.Infrastructure.Repositories;
 
-public sealed class PlanRepository : IPlanRepository
+public sealed partial class PlanRepository : IPlanRepository
 {
     /// <summary>
     /// Length of generated share codes.
@@ -109,95 +109,6 @@ public sealed class PlanRepository : IPlanRepository
             throw new InvalidOperationException("Plan not found");
 
         return await ClonePlanGraphAsync(planToCopy, userId, isActive: true, cancellationToken);
-    }
-
-    private async Task<Plan> ClonePlanGraphAsync(Plan planToCopy, Id<User> userId, bool isActive, CancellationToken cancellationToken)
-    {
-        var planDaysToCopy = await _dbContext.PlanDays
-            .Include(pd => pd.Exercises)
-            .ThenInclude(pde => pde.Exercise)
-            .Where(pd => pd.PlanId == planToCopy.Id && !pd.IsDeleted)
-            .ToListAsync(cancellationToken);
-
-        var newPlan = new Plan
-        {
-            Id = Id<Plan>.New(),
-            UserId = userId,
-            Name = planToCopy.Name,
-            IsActive = isActive,
-            IsDeleted = false
-        };
-
-        await _dbContext.Plans.AddAsync(newPlan, cancellationToken);
-
-        var copiedExercises = new Dictionary<Id<Exercise>, Exercise>();
-
-        foreach (var planDay in planDaysToCopy)
-        {
-            var newPlanDay = new PlanDay
-            {
-                Id = Id<PlanDay>.New(),
-                PlanId = newPlan.Id,
-                Name = planDay.Name,
-                IsDeleted = false
-            };
-
-            await _dbContext.PlanDays.AddAsync(newPlanDay, cancellationToken);
-
-            foreach (var planDayExercise in planDay.Exercises.OrderBy(e => e.Order).ThenBy(e => e.Id))
-            {
-                var exercise = planDayExercise.Exercise;
-                if (exercise == null)
-                {
-                    continue;
-                }
-
-                Exercise exerciseToUse;
-
-                if (exercise.UserId.HasValue)
-                {
-                    if (!copiedExercises.TryGetValue(exercise.Id, out var copiedExercise))
-                    {
-                        var newExercise = new Exercise
-                        {
-                            Id = Id<Exercise>.New(),
-                            Name = exercise.Name,
-                            UserId = userId,
-                            BodyPart = exercise.BodyPart,
-                            Description = exercise.Description,
-                            Image = exercise.Image,
-                            IsDeleted = false
-                        };
-
-                        await _dbContext.Exercises.AddAsync(newExercise, cancellationToken);
-                        copiedExercises[exercise.Id] = newExercise;
-                        exerciseToUse = newExercise;
-                    }
-                    else
-                    {
-                        exerciseToUse = copiedExercise;
-                    }
-                }
-                else
-                {
-                    exerciseToUse = exercise;
-                }
-
-                var newPlanDayExercise = new PlanDayExercise
-                {
-                    Id = Id<PlanDayExercise>.New(),
-                    PlanDayId = newPlanDay.Id,
-                    ExerciseId = exerciseToUse.Id,
-                    Order = planDayExercise.Order,
-                    Series = planDayExercise.Series,
-                    Reps = planDayExercise.Reps
-                };
-
-                await _dbContext.PlanDayExercises.AddAsync(newPlanDayExercise, cancellationToken);
-            }
-        }
-
-        return newPlan;
     }
 
     public async Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default)
