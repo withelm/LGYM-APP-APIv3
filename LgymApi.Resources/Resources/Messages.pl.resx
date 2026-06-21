@@ -201,6 +201,9 @@
   <data name="ReportRequestExpired" xml:space="preserve">
     <value>Termin zgłoszenia raportu minął.</value>
   </data>
+  <data name="MissingRequiredPhotoViews" xml:space="preserve">
+    <value>Brakuje wymaganych ujęć zdjęć.</value>
+  </data>
   <data name="InvalidDateRange" xml:space="preserve">
     <value>Nieprawidłowy zakres dat. toDate musi być równe lub późniejsze niż fromDate.</value>
   </data>

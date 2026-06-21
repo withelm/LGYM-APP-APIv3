@@ -20,6 +20,11 @@ internal static class SoftDeleteFilterApplier
                 continue;
             }
 
+            if (clrType == typeof(LgymApi.Domain.Entities.Photo))
+            {
+                continue;
+            }
+
             var parameter = Expression.Parameter(clrType, "entity");
             var isDeletedProperty = Expression.Call(
                 typeof(EF),

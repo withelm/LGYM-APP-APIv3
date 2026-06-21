@@ -39,7 +39,7 @@ public sealed partial class TrainerRelationshipService
         var plan = new PlanEntity
         {
             Id = Id<PlanEntity>.New(),
-            UserId = traineeId,
+            UserId = currentTrainer.Id,
             Name = name.Trim(),
             IsActive = false,
             IsDeleted = false
@@ -64,7 +64,7 @@ public sealed partial class TrainerRelationshipService
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
-        if (plan == null || plan.UserId != traineeId)
+        if (plan == null || (plan.UserId != traineeId && plan.UserId != currentTrainer.Id))
         {
             return Result<TrainerManagedPlanResult, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
@@ -89,7 +89,7 @@ public sealed partial class TrainerRelationshipService
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
-        if (plan == null || plan.UserId != traineeId)
+        if (plan == null || (plan.UserId != traineeId && plan.UserId != currentTrainer.Id))
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
