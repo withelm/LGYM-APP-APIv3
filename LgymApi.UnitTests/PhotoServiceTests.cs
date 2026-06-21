@@ -279,6 +279,21 @@ public sealed class PhotoServiceTests
     }
 
     [Test]
+    public async Task GetSignedReadUrlAsync_WhenPhotoIdMissingOrInvalid_ReturnsInvalidError()
+    {
+        var currentUser = CreateUser(Id<User>.New(), "user@example.com");
+        var service = CreateService();
+
+        var missingResult = await service.GetSignedReadUrlAsync(currentUser, " ");
+        var invalidResult = await service.GetSignedReadUrlAsync(currentUser, "not-a-guid");
+
+        missingResult.IsFailure.Should().BeTrue();
+        invalidResult.IsFailure.Should().BeTrue();
+        missingResult.Error.Should().BeOfType<InvalidReportingError>();
+        invalidResult.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
     public async Task CompletePhotoUploadAsync_WhenDuplicateFinalize_ShouldSoftDeleteOldPhoto()
     {
         var traineeId = Id<User>.New();
@@ -616,6 +631,77 @@ public sealed class PhotoServiceTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().HaveCount(1);
         result.Value[0].ViewType.Should().Be("Side");
+    }
+
+    [Test]
+    public async Task GetPhotoHistoryAsync_WhenNeitherRequestNorTraineeProvided_ReturnsInvalidError()
+    {
+        var currentUser = CreateUser(Id<User>.New(), "user@example.com");
+        var service = CreateService();
+
+        var result = await service.GetPhotoHistoryAsync(currentUser, new GetPhotoHistoryCommand());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
+    public async Task GetPhotoHistoryAsync_WhenRequestDoesNotExist_ReturnsInvalidError()
+    {
+        var currentUser = CreateUser(Id<User>.New(), "user@example.com");
+        var requestId = Id<ReportRequest>.New();
+        var service = CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(null));
+
+        var result = await service.GetPhotoHistoryAsync(currentUser, new GetPhotoHistoryCommand { RequestId = requestId });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
+    public async Task GetPhotoHistoryAsync_WhenPhotoHasThumbnail_ReturnsThumbnailSignedUrl()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var trainee = CreateUser(traineeId, "trainee@example.com");
+        var request = CreateReportRequest(requestId, traineeId);
+
+        var photos = new List<Photo>
+        {
+            new Photo
+            {
+                Id = Id<Photo>.New(),
+                ReportRequestId = requestId,
+                OwnerUserId = traineeId,
+                UploaderUserId = traineeId,
+                ViewType = PhotoViewType.Front,
+                StorageKey = "photos/front.jpg",
+                ThumbnailStorageKey = "photos/front-thumb.jpg",
+                MimeType = "image/jpeg",
+                SizeBytes = 1024,
+                Checksum = "abc123",
+                IsDeleted = false
+            }
+        };
+
+        var repo = Substitute.For<IReportingRepository>();
+        repo.GetPhotosByRequestIdAsync(requestId, Arg.Any<CancellationToken>()).Returns(photos);
+
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        storageProvider.GenerateSignedReadUrlAsync("photos/front.jpg", Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns("https://storage.example.com/read-url");
+        storageProvider.GenerateSignedReadUrlAsync("photos/front-thumb.jpg", Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns("https://storage.example.com/thumb-url");
+
+        var service = CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            reportingRepository: repo,
+            photoStorageProvider: storageProvider);
+
+        var result = await service.GetPhotoHistoryAsync(trainee, new GetPhotoHistoryCommand { RequestId = requestId });
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value[0].ThumbnailUrl.Should().Be("https://storage.example.com/thumb-url");
     }
 
     [Test]
