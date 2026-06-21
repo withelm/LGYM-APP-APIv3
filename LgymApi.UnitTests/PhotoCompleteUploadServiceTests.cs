@@ -31,7 +31,7 @@ public sealed class PhotoCompleteUploadServiceTests
         repo.FindRequestByIdAsync(requestId, Arg.Any<CancellationToken>()).Returns(request);
         repo.GetPhotosByRequestIdAsync(requestId, Arg.Any<CancellationToken>()).Returns(existingPhotos);
         repo.FindActivePhotoByRequestAndViewAsync(requestId, PhotoViewType.Front, Arg.Any<CancellationToken>()).Returns(oldPhoto);
-        repo.SavePhotoAsync(Arg.Do<Photo>(p => { savedPhoto = p; oldPhoto.IsDeleted = true; oldPhoto.UpdatedAt = DateTimeOffset.UtcNow; }), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        repo.SavePhotoAsync(Arg.Do<Photo>(p => savedPhoto = p), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
 
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         storageProvider.GetMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new PhotoMetadata { ContentType = "image/jpeg", SizeBytes = 2048, ETag = "newchecksum", UploadedAt = DateTimeOffset.UtcNow });
@@ -41,7 +41,6 @@ public sealed class PhotoCompleteUploadServiceTests
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/new-photo.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "newchecksum" });
 
         result.IsSuccess.Should().BeTrue();
-        oldPhoto.IsDeleted.Should().BeTrue();
         savedPhoto.Should().NotBeNull();
         savedPhoto!.ViewType.Should().Be(PhotoViewType.Front);
         savedPhoto.Checksum.Should().Be("newchecksum");
