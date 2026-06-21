@@ -1,6 +1,6 @@
 namespace LgymApi.Domain.ValueObjects;
 
-public readonly record struct Id<TEntity>
+public readonly record struct Id<TEntity> : IComparable<Id<TEntity>>, IComparable
 {
     public Guid Value { get; }
 
@@ -32,6 +32,26 @@ public readonly record struct Id<TEntity>
     public Guid GetValue() => Value;
 
     public Id<TScope> Rebind<TScope>() => new(Value);
+
+    public int CompareTo(Id<TEntity> other)
+    {
+        return Value.CompareTo(other.Value);
+    }
+
+    public int CompareTo(object? obj)
+    {
+        if (obj is null)
+        {
+            return 1;
+        }
+
+        if (obj is Id<TEntity> other)
+        {
+            return CompareTo(other);
+        }
+
+        throw new ArgumentException($"Object must be of type {nameof(Id<TEntity>)}.", nameof(obj));
+    }
 
     public static bool TryParse(string id, out Id<TEntity> parsedId)
     {

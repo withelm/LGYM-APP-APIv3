@@ -42,6 +42,17 @@ public sealed class PlanDayTests : IntegrationTestBase
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
         body.Should().NotBeNull();
         body!.Message.Should().Be("Created");
+
+        var verifyResponse = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
+        verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var planDays = await verifyResponse.Content.ReadFromJsonAsync<List<PlanDayVmResponse>>();
+        planDays.Should().NotBeNull();
+        planDays!.Should().ContainSingle();
+        planDays[0].Name.Should().Be("Chest Day");
+        planDays[0].Exercises.Should().ContainSingle();
+        planDays[0].Exercises[0].Series.Should().Be(4);
+        planDays[0].Exercises[0].Reps.Should().Be("10");
     }
 
     [Test]
@@ -221,6 +232,50 @@ public sealed class PlanDayTests : IntegrationTestBase
         body!.Exercises.Select(e => e.Exercise?.Id)
             .Should()
             .ContainInOrder(exerciseB.ToString(), exerciseC.ToString(), exerciseA.ToString());
+    }
+
+    [Test]
+    public async Task GetPlanDay_WithDuplicateExerciseOrders_UsesDeterministicIdTieBreak()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "ordertieuser",
+            email: "ordertie@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseA = await CreateExerciseViaEndpointAsync(userId, "Tie Exercise A", BodyParts.Back);
+        var exerciseB = await CreateExerciseViaEndpointAsync(userId, "Tie Exercise B", BodyParts.Chest);
+        var exerciseC = await CreateExerciseViaEndpointAsync(userId, "Tie Exercise C", BodyParts.Quads);
+        var planId = await CreatePlanViaEndpointAsync(userId, "Tie Plan");
+
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Tie Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseA.ToString(), Series = 3, Reps = "10" },
+            new() { ExerciseId = exerciseB.ToString(), Series = 4, Reps = "8" },
+            new() { ExerciseId = exerciseC.ToString(), Series = 5, Reps = "6" }
+        });
+
+        var dbContext = GetDbContext();
+        var exercises = await dbContext.PlanDayExercises
+            .Where(x => x.PlanDayId == planDayId)
+            .ToListAsync();
+
+        foreach (var exercise in exercises)
+        {
+            exercise.Order = 0;
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var repository = new LgymApi.Infrastructure.Repositories.PlanDayExerciseRepository(dbContext);
+        var orderedExercises = await repository.GetByPlanDayIdAsync(planDayId);
+
+        orderedExercises.Select(x => x.ExerciseId.ToString())
+            .Should()
+            .ContainInOrder(
+                exercises.OrderBy(x => x.Id.Value).Select(x => x.ExerciseId.ToString()).ToArray());
     }
 
     [Test]
