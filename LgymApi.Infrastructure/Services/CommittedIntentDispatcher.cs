@@ -1,4 +1,5 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Options;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
@@ -14,13 +15,16 @@ public sealed class CommittedIntentDispatcher : ICommittedIntentDispatcher
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CommittedIntentDispatcher> _logger;
+    private readonly BackgroundCommandOptions _backgroundCommandOptions;
 
     public CommittedIntentDispatcher(
         IServiceScopeFactory scopeFactory,
-        ILogger<CommittedIntentDispatcher> logger)
+        ILogger<CommittedIntentDispatcher> logger,
+        BackgroundCommandOptions backgroundCommandOptions)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _backgroundCommandOptions = backgroundCommandOptions;
     }
 
     public async Task DispatchCommittedIntentsAsync(CancellationToken cancellationToken = default)
@@ -30,8 +34,32 @@ public sealed class CommittedIntentDispatcher : ICommittedIntentDispatcher
         var actionScheduler = scope.ServiceProvider.GetRequiredService<IActionMessageScheduler>();
         var emailScheduler = scope.ServiceProvider.GetRequiredService<IEmailBackgroundScheduler>();
 
+        await RecoverStaleProcessingEnvelopesAsync(dbContext, cancellationToken);
         await DispatchCommandEnvelopesAsync(dbContext, actionScheduler, cancellationToken);
         await DispatchNotificationMessagesAsync(dbContext, emailScheduler, cancellationToken);
+    }
+
+    private async Task RecoverStaleProcessingEnvelopesAsync(AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var staleThresholdUtc = DateTimeOffset.UtcNow.AddMinutes(-Math.Max(1, _backgroundCommandOptions.ProcessingLeaseTimeoutMinutes));
+        var staleEnvelopes = await dbContext.CommandEnvelopes
+            .Include(x => x.ExecutionLogs)
+            .Where(x => x.Status == ActionExecutionStatus.Processing
+                        && x.ProcessingStartedAtUtc != null
+                        && x.ProcessingStartedAtUtc <= staleThresholdUtc)
+            .OrderBy(x => x.ProcessingStartedAtUtc)
+            .Take(BatchSize)
+            .ToListAsync(cancellationToken);
+
+        foreach (var envelope in staleEnvelopes)
+        {
+            envelope.ResetStaleProcessing($"Recovered stale processing lease after {_backgroundCommandOptions.ProcessingLeaseTimeoutMinutes} minute timeout.");
+        }
+
+        if (staleEnvelopes.Count > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private async Task DispatchCommandEnvelopesAsync(

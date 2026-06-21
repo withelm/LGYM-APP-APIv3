@@ -46,6 +46,12 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
     public DateTimeOffset? LastAttemptAt { get; set; }
 
     /// <summary>
+    /// Timestamp when the current processing lease started.
+    /// Null when the envelope is not actively processing.
+    /// </summary>
+    public DateTimeOffset? ProcessingStartedAtUtc { get; set; }
+
+    /// <summary>
     /// Timestamp when the envelope was first successfully processed.
     /// Null until status reaches Completed.
     /// </summary>
@@ -86,6 +92,7 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
         // Update envelope state
         Status = ActionExecutionStatus.Failed;
         LastAttemptAt = DateTimeOffset.UtcNow;
+        ProcessingStartedAtUtc = null;
 
         // Schedule next attempt if we haven't exhausted all delay values
         // attemptNumber includes current failed attempt, so we use (attemptNumber - 1) as delay index
@@ -122,6 +129,7 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
         LastAttemptAt = DateTimeOffset.UtcNow;
         NextAttemptAt = null;
         CompletedAt = DateTimeOffset.UtcNow;
+        ProcessingStartedAtUtc = null;
 
         // Record dead-letter event in execution log
         var executionLog = new ActionExecutionLog
@@ -151,6 +159,7 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
         LastAttemptAt = DateTimeOffset.UtcNow;
         CompletedAt = DateTimeOffset.UtcNow;
         NextAttemptAt = null;
+        ProcessingStartedAtUtc = null;
 
         // No execution log added - orchestrator already recorded per-handler HandlerExecution logs
     }
@@ -172,5 +181,31 @@ public sealed class CommandEnvelope : EntityBase<CommandEnvelope>
     public int GetExecutionAttemptCount()
     {
         return ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.Execute);
+    }
+
+    public void ResetStaleProcessing(string reason)
+    {
+        if (Status != ActionExecutionStatus.Processing)
+        {
+            return;
+        }
+
+        Status = ActionExecutionStatus.Pending;
+        LastAttemptAt = DateTimeOffset.UtcNow;
+        NextAttemptAt = DateTimeOffset.UtcNow;
+        ProcessingStartedAtUtc = null;
+        DispatchedAt = null;
+        SchedulerJobId = null;
+
+        ExecutionLogs.Add(new ActionExecutionLog
+        {
+            Id = Id<ActionExecutionLog>.New(),
+            CommandEnvelopeId = Id,
+            ActionType = ActionExecutionLogType.Execute,
+            Status = ActionExecutionStatus.Failed,
+            AttemptNumber = GetExecutionAttemptCount(),
+            ErrorMessage = reason,
+            ErrorDetails = reason
+        });
     }
 }
