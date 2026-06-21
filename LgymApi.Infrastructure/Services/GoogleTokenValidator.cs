@@ -137,7 +137,7 @@ public sealed class GoogleTokenValidator : IGoogleTokenValidator
     }
 
     // Dedicated DTO for the Google userinfo fallback response.
-    private sealed class GoogleUserInfoResponse
+    private sealed record GoogleUserInfoResponse
     {
         [JsonPropertyName("sub")]
         public string? Sub { get; init; }
