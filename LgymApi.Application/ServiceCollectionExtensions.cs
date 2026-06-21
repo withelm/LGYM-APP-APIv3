@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGymService, GymService>();
         services.AddScoped<IMainRecordsServiceDependencies, MainRecordsServiceDependencies>();
         services.AddScoped<IMainRecordsService, MainRecordsService>();
+        services.AddScoped<IMeasurementsServiceDependencies, MeasurementsServiceDependencies>();
         services.AddScoped<IMeasurementsService, MeasurementsService>();
         services.AddScoped<IInAppNotificationServiceDependencies, InAppNotificationServiceDependencies>();
         services.AddScoped<IInAppNotificationService, InAppNotificationService>();

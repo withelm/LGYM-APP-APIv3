@@ -21,20 +21,14 @@ public sealed class MeasurementsService : IMeasurementsService
     private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
 
-    public MeasurementsService(
-        IMeasurementRepository measurementRepository,
-        IRoleRepository roleRepository,
-        ITrainerRelationshipRepository trainerRelationshipRepository,
-        IUnitConverter<HeightUnits> heightUnitConverter,
-        IUnitConverter<WeightUnits> weightUnitConverter,
-        IUnitOfWork unitOfWork)
+    public MeasurementsService(IMeasurementsServiceDependencies dependencies)
     {
-        _measurementRepository = measurementRepository;
-        _roleRepository = roleRepository;
-        _trainerRelationshipRepository = trainerRelationshipRepository;
-        _heightUnitConverter = heightUnitConverter;
-        _weightUnitConverter = weightUnitConverter;
-        _unitOfWork = unitOfWork;
+        _measurementRepository = dependencies.MeasurementRepository;
+        _roleRepository = dependencies.RoleRepository;
+        _trainerRelationshipRepository = dependencies.TrainerRelationshipRepository;
+        _heightUnitConverter = dependencies.HeightUnitConverter;
+        _weightUnitConverter = dependencies.WeightUnitConverter;
+        _unitOfWork = dependencies.UnitOfWork;
     }
 
     public async Task<Result<Unit, AppError>> AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, MeasurementUnits unit, double value, CancellationToken cancellationToken = default)
@@ -133,14 +127,10 @@ public sealed class MeasurementsService : IMeasurementsService
     }
 
     public Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default)
-    {
-        return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: false, cancellationToken);
-    }
+        => GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: false, cancellationToken);
 
     public Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsHistoryAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default)
-    {
-        return GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: true, cancellationToken);
-    }
+        => GetMeasurementsInternalAsync(currentUser, routeUserId, bodyPart, unit, orderAscending: true, cancellationToken);
 
     public async Task<Result<MeasurementTrendResult, AppError>> GetMeasurementsTrendAsync(
         UserEntity currentUser,
@@ -168,74 +158,11 @@ public sealed class MeasurementsService : IMeasurementsService
         var measurements = await _measurementRepository.GetByUserAsync(routeUserId, bodyPart, cancellationToken);
         if (measurements.Count < 1)
         {
-            return Result<MeasurementTrendResult, AppError>.Success(CreateInsufficientTrend(bodyPart, unit, 0));
+            return Result<MeasurementTrendResult, AppError>.Success(MeasurementTrendCalculator.CreateInsufficientTrend(bodyPart, unit, 0));
         }
 
         var ordered = measurements.OrderBy(m => m.CreatedAt).ToList();
-        if (ordered.Count == 1)
-        {
-            var parsedSingleUnit = ParseMeasurementUnit(ordered[0].Unit);
-            if (parsedSingleUnit == MeasurementUnits.Unknown)
-            {
-                return Result<MeasurementTrendResult, AppError>.Failure(new InvalidMeasurementError(Messages.UnitRequired));
-            }
-
-            var singleValue = ConvertValue(ordered[0].Value, parsedSingleUnit, unit, bodyPart);
-            return Result<MeasurementTrendResult, AppError>.Success(new MeasurementTrendResult
-            {
-                BodyPart = bodyPart,
-                Unit = unit,
-                StartValue = Math.Round(singleValue, 2),
-                CurrentValue = Math.Round(singleValue, 2),
-                Change = 0d,
-                ChangePercentage = 0d,
-                FirstMeasurementValue = Math.Round(singleValue, 2),
-                FirstMeasurementDate = ordered[0].CreatedAt,
-                LastMeasurementValue = Math.Round(singleValue, 2),
-                LastMeasurementDate = ordered[0].CreatedAt,
-                Difference = 0d,
-                Direction = "insufficient_data",
-                Points = 1
-            });
-        }
-
-        var convertedValues = new List<double>();
-        foreach (var measurement in ordered)
-        {
-            var parsedUnit = ParseMeasurementUnit(measurement.Unit);
-            if (parsedUnit == MeasurementUnits.Unknown)
-            {
-                return Result<MeasurementTrendResult, AppError>.Failure(new InvalidMeasurementError(Messages.UnitRequired));
-            }
-
-            convertedValues.Add(ConvertValue(measurement.Value, parsedUnit, unit, bodyPart));
-        }
-
-        var startValue = convertedValues[0];
-        var currentValue = convertedValues[^1];
-        var change = currentValue - startValue;
-        var roundedChange = Math.Round(change, 2);
-        const double percentageEpsilon = 0.0001d;
-        var changePercentage = Math.Abs(startValue) <= percentageEpsilon
-            ? 0d
-            : (change / startValue) * 100d;
-
-        return Result<MeasurementTrendResult, AppError>.Success(new MeasurementTrendResult
-        {
-            BodyPart = bodyPart,
-            Unit = unit,
-            StartValue = Math.Round(startValue, 2),
-            CurrentValue = Math.Round(currentValue, 2),
-            Change = roundedChange,
-            ChangePercentage = Math.Round(changePercentage, 2),
-            FirstMeasurementValue = Math.Round(startValue, 2),
-            FirstMeasurementDate = ordered[0].CreatedAt,
-            LastMeasurementValue = Math.Round(currentValue, 2),
-            LastMeasurementDate = ordered[^1].CreatedAt,
-            Difference = Math.Round(Math.Abs(roundedChange), 2),
-            Direction = ResolveDirection(roundedChange),
-            Points = ordered.Count
-        });
+        return MeasurementTrendCalculator.BuildTrendResult(ordered, bodyPart, unit, ConvertValue);
     }
 
     public async Task<Result<List<MeasurementTrendResult>, AppError>> GetMeasurementsTrendsAsync(
@@ -259,8 +186,8 @@ public sealed class MeasurementsService : IMeasurementsService
         foreach (var groupedMeasurements in measurements.GroupBy(m => m.BodyPart).OrderBy(group => group.Key.ToString()))
         {
             var ordered = groupedMeasurements.OrderBy(m => m.CreatedAt).ToList();
-            var defaultUnit = ResolveTrendTargetUnit(ordered);
-            var trendResult = BuildTrendResult(ordered, groupedMeasurements.Key, defaultUnit);
+            var defaultUnit = MeasurementTrendCalculator.ResolveTrendTargetUnit(ordered);
+            var trendResult = MeasurementTrendCalculator.BuildTrendResult(ordered, groupedMeasurements.Key, defaultUnit, ConvertValue);
             if (trendResult.IsFailure)
             {
                 return Result<List<MeasurementTrendResult>, AppError>.Failure(trendResult.Error);
@@ -270,77 +197,6 @@ public sealed class MeasurementsService : IMeasurementsService
         }
 
         return Result<List<MeasurementTrendResult>, AppError>.Success(trends);
-    }
-
-    private Result<MeasurementTrendResult, AppError> BuildTrendResult(
-        IReadOnlyList<MeasurementEntity> ordered,
-        BodyParts bodyPart,
-        MeasurementUnits unit)
-    {
-        if (ordered.Count == 1)
-        {
-            var parsedSingleUnit = ParseMeasurementUnit(ordered[0].Unit);
-            if (parsedSingleUnit == MeasurementUnits.Unknown)
-            {
-                return Result<MeasurementTrendResult, AppError>.Failure(new InvalidMeasurementError(Messages.UnitRequired));
-            }
-
-            var singleValue = ConvertValue(ordered[0].Value, parsedSingleUnit, unit, bodyPart);
-            return Result<MeasurementTrendResult, AppError>.Success(new MeasurementTrendResult
-            {
-                BodyPart = bodyPart,
-                Unit = unit,
-                StartValue = Math.Round(singleValue, 2),
-                CurrentValue = Math.Round(singleValue, 2),
-                Change = 0d,
-                ChangePercentage = 0d,
-                FirstMeasurementValue = Math.Round(singleValue, 2),
-                FirstMeasurementDate = ordered[0].CreatedAt,
-                LastMeasurementValue = Math.Round(singleValue, 2),
-                LastMeasurementDate = ordered[0].CreatedAt,
-                Difference = 0d,
-                Direction = "insufficient_data",
-                Points = 1
-            });
-        }
-
-        var convertedValues = new List<double>(ordered.Count);
-        foreach (var measurement in ordered)
-        {
-            var parsedUnit = ParseMeasurementUnit(measurement.Unit);
-            if (parsedUnit == MeasurementUnits.Unknown)
-            {
-                return Result<MeasurementTrendResult, AppError>.Failure(new InvalidMeasurementError(Messages.UnitRequired));
-            }
-
-            convertedValues.Add(ConvertValue(measurement.Value, parsedUnit, unit, bodyPart));
-        }
-
-        var startValue = convertedValues[0];
-        var currentValue = convertedValues[^1];
-        var change = currentValue - startValue;
-        var roundedChange = Math.Round(change, 2);
-        const double percentageEpsilon = 0.0001d;
-        var changePercentage = Math.Abs(startValue) <= percentageEpsilon
-            ? 0d
-            : (change / startValue) * 100d;
-
-        return Result<MeasurementTrendResult, AppError>.Success(new MeasurementTrendResult
-        {
-            BodyPart = bodyPart,
-            Unit = unit,
-            StartValue = Math.Round(startValue, 2),
-            CurrentValue = Math.Round(currentValue, 2),
-            Change = roundedChange,
-            ChangePercentage = Math.Round(changePercentage, 2),
-            FirstMeasurementValue = Math.Round(startValue, 2),
-            FirstMeasurementDate = ordered[0].CreatedAt,
-            LastMeasurementValue = Math.Round(currentValue, 2),
-            LastMeasurementDate = ordered[^1].CreatedAt,
-            Difference = Math.Round(Math.Abs(roundedChange), 2),
-            Direction = ResolveDirection(roundedChange),
-            Points = ordered.Count
-        });
     }
 
     private async Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsInternalAsync(
@@ -377,36 +233,7 @@ public sealed class MeasurementsService : IMeasurementsService
             ? measurements.OrderBy(m => m.CreatedAt)
             : measurements.OrderByDescending(m => m.CreatedAt);
 
-        var result = new List<MeasurementEntity>();
-        foreach (var m in ordered)
-        {
-            var parsedUnit = ParseMeasurementUnit(m.Unit);
-            if (parsedUnit == MeasurementUnits.Unknown)
-            {
-                return Result<List<MeasurementEntity>, AppError>.Failure(new InvalidMeasurementError(Messages.UnitRequired));
-            }
-
-            var targetUnit = unit ?? parsedUnit;
-            if (!MeasurementUnitResolver.IsUnitAllowedForBodyPart(m.BodyPart, targetUnit))
-            {
-                return Result<List<MeasurementEntity>, AppError>.Failure(new InvalidMeasurementError(Messages.UnitRequired));
-            }
-
-            var convertedValue = ConvertValue(m.Value, parsedUnit, targetUnit, m.BodyPart);
-
-            result.Add(new MeasurementEntity
-            {
-                Id = m.Id,
-                UserId = m.UserId,
-                BodyPart = m.BodyPart,
-                Unit = targetUnit.ToString(),
-                Value = Math.Round(convertedValue, 2),
-                CreatedAt = m.CreatedAt,
-                UpdatedAt = m.UpdatedAt
-            });
-        }
-
-        return Result<List<MeasurementEntity>, AppError>.Success(result);
+        return MeasurementListProjector.ProjectMeasurements(ordered, unit, ConvertValue);
     }
 
     private async Task<Result<Unit, AppError>> ValidateAccessAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken)
@@ -434,51 +261,6 @@ public sealed class MeasurementsService : IMeasurementsService
         }
 
         return Result<Unit, AppError>.Success(Unit.Value);
-    }
-
-    private static string ResolveDirection(double change)
-    {
-        const double epsilon = 0.0001d;
-        if (change > epsilon)
-        {
-            return "up";
-        }
-
-        if (change < -epsilon)
-        {
-            return "down";
-        }
-
-        return "same";
-    }
-
-    private static MeasurementTrendResult CreateInsufficientTrend(BodyParts bodyPart, MeasurementUnits unit, int points)
-    {
-        return new MeasurementTrendResult
-        {
-            BodyPart = bodyPart,
-            Unit = unit,
-            Direction = "insufficient_data",
-            Points = points
-        };
-    }
-
-    private static MeasurementUnits ParseMeasurementUnit(string? unit)
-    {
-        return MeasurementUnitResolver.TryParseStoredUnit(unit, out var parsedUnit)
-            ? parsedUnit
-            : MeasurementUnits.Unknown;
-    }
-
-    private MeasurementUnits ResolveTrendTargetUnit(List<MeasurementEntity> measurements)
-    {
-        var latestUnit = ParseMeasurementUnit(measurements[^1].Unit);
-        if (latestUnit != MeasurementUnits.Unknown)
-        {
-            return latestUnit;
-        }
-
-        return MeasurementUnitResolver.GetDefaultUnit(measurements[^1].BodyPart);
     }
 
     private double ConvertValue(double value, MeasurementUnits fromUnit, MeasurementUnits toUnit, BodyParts bodyPart)

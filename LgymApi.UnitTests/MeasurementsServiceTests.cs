@@ -268,7 +268,39 @@ public sealed class MeasurementsServiceTests
         var weightConverter = new StubWeightUnitConverter();
         var unitOfWork = new StubUnitOfWork();
 
-        return new MeasurementsService(measurementRepository, roleRepository, trainerRelationshipRepository, heightConverter, weightConverter, unitOfWork);
+        return new MeasurementsService(new StubMeasurementsServiceDependencies(
+            measurementRepository,
+            roleRepository,
+            trainerRelationshipRepository,
+            heightConverter,
+            weightConverter,
+            unitOfWork));
+    }
+
+    private sealed class StubMeasurementsServiceDependencies : IMeasurementsServiceDependencies
+    {
+        public StubMeasurementsServiceDependencies(
+            IMeasurementRepository measurementRepository,
+            IRoleRepository roleRepository,
+            ITrainerRelationshipRepository trainerRelationshipRepository,
+            IUnitConverter<HeightUnits> heightUnitConverter,
+            IUnitConverter<WeightUnits> weightUnitConverter,
+            IUnitOfWork unitOfWork)
+        {
+            MeasurementRepository = measurementRepository;
+            RoleRepository = roleRepository;
+            TrainerRelationshipRepository = trainerRelationshipRepository;
+            HeightUnitConverter = heightUnitConverter;
+            WeightUnitConverter = weightUnitConverter;
+            UnitOfWork = unitOfWork;
+        }
+
+        public IMeasurementRepository MeasurementRepository { get; }
+        public IRoleRepository RoleRepository { get; }
+        public ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
+        public IUnitConverter<HeightUnits> HeightUnitConverter { get; }
+        public IUnitConverter<WeightUnits> WeightUnitConverter { get; }
+        public IUnitOfWork UnitOfWork { get; }
     }
 
     private sealed class CapturingMeasurementRepository : IMeasurementRepository
