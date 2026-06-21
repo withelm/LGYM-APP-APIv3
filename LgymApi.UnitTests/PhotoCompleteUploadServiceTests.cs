@@ -35,7 +35,7 @@ public sealed class PhotoCompleteUploadServiceTests
 
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         storageProvider.GetMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new PhotoMetadata { ContentType = "image/jpeg", SizeBytes = 2048, ETag = "newchecksum", UploadedAt = DateTimeOffset.UtcNow });
-        var pendingUpload = new PendingPhotoUpload { StorageKey = $"photos/{traineeId}/{requestId}/Front/new-photo.jpg", InitiatedByUserId = traineeId, OwnerUserId = traineeId, ReportRequestId = requestId, ViewType = "Front", MimeType = "image/jpeg", SizeBytes = 2048, CreatedAtUtc = DateTimeOffset.UtcNow, ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(10) };
+        var pendingUpload = new PendingPhotoUpload { StorageKey = $"photos/{traineeId}/{requestId}/Front/new-photo.jpg", InitiatedByUserId = traineeId, OwnerUserId = traineeId, ReportRequestId = requestId, ViewType = PhotoViewType.Front, DeclaredContentType = "image/jpeg", DeclaredSizeBytes = 2048, CreatedAtUtc = DateTimeOffset.UtcNow, ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(10) };
 
         var service = PhotoServiceTestFactory.CreateService(reportingRepository: repo, photoStorageProvider: storageProvider, pendingUpload: pendingUpload);
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/new-photo.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "newchecksum" });
@@ -55,7 +55,7 @@ public sealed class PhotoCompleteUploadServiceTests
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         storageProvider.GetMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new PhotoMetadata { ContentType = "image/jpeg", SizeBytes = 4096, ETag = "etag", UploadedAt = DateTimeOffset.UtcNow });
-        var pendingUpload = new PendingPhotoUpload { StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", InitiatedByUserId = traineeId, OwnerUserId = traineeId, ReportRequestId = requestId, ViewType = "Front", MimeType = "image/jpeg", SizeBytes = 2048, CreatedAtUtc = DateTimeOffset.UtcNow, ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(10) };
+        var pendingUpload = new PendingPhotoUpload { StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", InitiatedByUserId = traineeId, OwnerUserId = traineeId, ReportRequestId = requestId, ViewType = PhotoViewType.Front, DeclaredContentType = "image/jpeg", DeclaredSizeBytes = 2048, CreatedAtUtc = DateTimeOffset.UtcNow, ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(10) };
 
         var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), photoStorageProvider: storageProvider, pendingUpload: pendingUpload);
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "etag" });

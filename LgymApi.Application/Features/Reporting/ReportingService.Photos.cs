@@ -90,15 +90,17 @@ public sealed partial class ReportingService
 
         await _photoUploadInitTracker.RecordUploadInitAsync(new PendingPhotoUpload
         {
+            Id = Id<PhotoUploadSession>.New(),
             StorageKey = storageKey,
             InitiatedByUserId = currentUser.Id,
             OwnerUserId = request.TraineeId,
             ReportRequestId = command.ReportRequestId,
-            ViewType = parsedViewType.ToString(),
-            MimeType = command.MimeType,
-            SizeBytes = command.SizeBytes,
+            ViewType = parsedViewType,
+            DeclaredContentType = command.MimeType,
+            DeclaredSizeBytes = command.SizeBytes,
             CreatedAtUtc = DateTimeOffset.UtcNow,
-            ExpiresAtUtc = expiresAt
+            ExpiresAtUtc = expiresAt,
+            Status = PhotoUploadSessionStatus.Pending
         }, cancellationToken);
 
         _logger.LogInformation(
@@ -121,67 +123,30 @@ public sealed partial class ReportingService
         CompletePhotoUploadCommand command,
         CancellationToken cancellationToken = default)
     {
-        if (command.ReportRequestId.IsEmpty || string.IsNullOrWhiteSpace(command.StorageKey))
+        var validationContext = await ValidateCompletePhotoUploadRequestAsync(currentUser, command, cancellationToken);
+        if (validationContext.IsFailure)
         {
-            return Result<CompletePhotoUploadResult, AppError>.Failure(
-                new InvalidReportingError(Messages.FieldRequired));
+            return Result<CompletePhotoUploadResult, AppError>.Failure(validationContext.Error);
         }
 
-        var request = await _reportingRepository.FindRequestByIdAsync(command.ReportRequestId, cancellationToken);
-        if (request == null || request.IsDeleted)
+        var request = validationContext.Value.Request;
+        var parsedViewType = validationContext.Value.ParsedViewType;
+
+        var uploadSessionResult = await GetUploadSessionOrErrorAsync(command.StorageKey, cancellationToken);
+        if (uploadSessionResult.IsFailure)
         {
-            return Result<CompletePhotoUploadResult, AppError>.Failure(
-                new ReportingNotFoundError(Messages.DidntFind));
+            return Result<CompletePhotoUploadResult, AppError>.Failure(uploadSessionResult.Error);
         }
 
-        var authCheck = await ValidatePhotoAccessAsync(currentUser, request.TraineeId, cancellationToken);
-        if (authCheck.IsFailure)
+        var uploadSession = uploadSessionResult.Value;
+
+        var completedResult = await TryGetCompletedPhotoResultAsync(uploadSession, cancellationToken);
+        if (completedResult != null)
         {
-            return Result<CompletePhotoUploadResult, AppError>.Failure(authCheck.Error);
+            return Result<CompletePhotoUploadResult, AppError>.Success(completedResult);
         }
 
-        var viewTypeValidation = TryParseViewType(command.ViewType, out var parsedViewType);
-        if (viewTypeValidation.IsFailure)
-        {
-            return Result<CompletePhotoUploadResult, AppError>.Failure(viewTypeValidation.Error);
-        }
-
-        var mimeTypeValidation = ValidateMimeType(command.MimeType);
-        if (mimeTypeValidation.IsFailure)
-        {
-            return Result<CompletePhotoUploadResult, AppError>.Failure(mimeTypeValidation.Error);
-        }
-
-        var sizeValidation = ValidateFileSize(command.SizeBytes);
-        if (sizeValidation.IsFailure)
-        {
-            return Result<CompletePhotoUploadResult, AppError>.Failure(sizeValidation.Error);
-        }
-
-        var expectedPrefix = BuildStorageKeyPrefix(request.TraineeId, command.ReportRequestId, parsedViewType);
-        if (!command.StorageKey.StartsWith(expectedPrefix, StringComparison.Ordinal))
-        {
-            _logger.LogWarning(
-                "Photo complete-upload rejected due to invalid storage key prefix for user {UserId}. Expected prefix {ExpectedPrefix}",
-                currentUser.Id,
-                expectedPrefix);
-
-            return Result<CompletePhotoUploadResult, AppError>.Failure(
-                new InvalidReportingError("Invalid storage key prefix"));
-        }
-
-        var pendingUpload = await _photoUploadInitTracker.GetPendingUploadAsync(command.StorageKey, cancellationToken);
-        if (pendingUpload == null)
-        {
-            _logger.LogWarning(
-                "Photo complete-upload rejected because no pending upload-init exists for key {StorageKey}",
-                command.StorageKey);
-
-            return Result<CompletePhotoUploadResult, AppError>.Failure(
-                new InvalidReportingError("Upload session not found or expired"));
-        }
-
-        var pendingUploadValidation = ValidatePendingUpload(currentUser, command, request.TraineeId, parsedViewType, pendingUpload);
+        var pendingUploadValidation = ValidatePendingUpload(currentUser, command, request.TraineeId, parsedViewType, uploadSession);
         if (pendingUploadValidation.IsFailure)
         {
             _logger.LogWarning(
@@ -189,27 +154,16 @@ public sealed partial class ReportingService
                 command.StorageKey,
                 pendingUploadValidation.Error.Message);
 
-            await _photoUploadInitTracker.RemovePendingUploadAsync(command.StorageKey, cancellationToken);
-
             return Result<CompletePhotoUploadResult, AppError>.Failure(pendingUploadValidation.Error);
         }
 
-        PhotoMetadata? metadata;
-        try
+        var metadataResult = await TryGetPhotoMetadataAsync(command.StorageKey, cancellationToken);
+        if (metadataResult.IsFailure)
         {
-            metadata = await _photoStorageProvider.GetMetadataAsync(command.StorageKey, cancellationToken);
+            return Result<CompletePhotoUploadResult, AppError>.Failure(metadataResult.Error);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Photo complete-upload metadata lookup failed for key {StorageKey} using provider {Provider}",
-                command.StorageKey,
-                _photoStorageOptions.Provider);
 
-            return Result<CompletePhotoUploadResult, AppError>.Failure(
-                new InvalidReportingError("Failed to verify uploaded photo metadata"));
-        }
+        var metadata = metadataResult.Value;
 
         if (metadata == null)
         {
@@ -221,7 +175,7 @@ public sealed partial class ReportingService
                 new InvalidReportingError("Uploaded photo object was not found"));
         }
 
-        var metadataValidation = ValidateUploadedObjectMetadata(command, metadata);
+        var metadataValidation = ValidateUploadedObjectMetadata(command, uploadSession, metadata);
         if (metadataValidation.IsFailure)
         {
             _logger.LogWarning(
@@ -229,8 +183,7 @@ public sealed partial class ReportingService
                 command.StorageKey,
                 metadataValidation.Error.Message);
 
-            await CleanupInvalidUploadedObjectAsync(command.StorageKey, cancellationToken);
-            await _photoUploadInitTracker.RemovePendingUploadAsync(command.StorageKey, cancellationToken);
+            await PersistInvalidUploadAndCleanupAsync(command.StorageKey, metadataValidation.Error.Message, cancellationToken);
             return Result<CompletePhotoUploadResult, AppError>.Failure(metadataValidation.Error);
         }
 
@@ -239,36 +192,11 @@ public sealed partial class ReportingService
             parsedViewType,
             cancellationToken);
 
-        var photo = new Domain.Entities.Photo
-        {
-            Id = Id<Domain.Entities.Photo>.New(),
-            StorageKey = command.StorageKey,
-            MimeType = metadata.ContentType,
-            SizeBytes = metadata.SizeBytes,
-            Checksum = ResolveStoredChecksum(command.Checksum, metadata.ETag),
-            ViewType = parsedViewType,
-            ReportRequestId = command.ReportRequestId,
-            UploaderUserId = currentUser.Id,
-            OwnerUserId = request.TraineeId
-        };
-
-        await _reportingRepository.SavePhotoAsync(photo, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await _photoUploadInitTracker.RemovePendingUploadAsync(command.StorageKey, cancellationToken);
+        var photo = await CreateAndPersistPhotoAsync(currentUser, command, metadata, parsedViewType, request.TraineeId, cancellationToken);
 
         if (existingPhoto != null && !string.Equals(existingPhoto.StorageKey, photo.StorageKey, StringComparison.Ordinal))
         {
-            try
-            {
-                await _photoStorageProvider.DeleteAsync(existingPhoto.StorageKey, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Photo complete-upload saved new metadata but failed to delete replaced object {StorageKey}",
-                    existingPhoto.StorageKey);
-            }
+            await TryDeleteReplacedObjectAsync(existingPhoto.StorageKey, cancellationToken);
         }
 
         _logger.LogInformation(

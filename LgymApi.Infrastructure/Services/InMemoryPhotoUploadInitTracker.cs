@@ -34,7 +34,7 @@ public sealed class InMemoryPhotoUploadInitTracker : IPhotoUploadInitTracker
         return Task.CompletedTask;
     }
 
-    public Task<PendingPhotoUpload?> GetPendingUploadAsync(
+    public Task<PendingPhotoUpload?> GetUploadSessionAsync(
         string storageKey,
         CancellationToken cancellationToken = default)
     {
@@ -45,13 +45,69 @@ public sealed class InMemoryPhotoUploadInitTracker : IPhotoUploadInitTracker
             return Task.FromResult<PendingPhotoUpload?>(null);
         }
 
-        if (pendingUpload.ExpiresAtUtc < DateTimeOffset.UtcNow)
+        return Task.FromResult<PendingPhotoUpload?>(pendingUpload);
+    }
+
+    public Task MarkCompletedAsync(
+        string storageKey,
+        Id<LgymApi.Domain.Entities.Photo> photoId,
+        DateTimeOffset completedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (_pendingUploads.TryGetValue(storageKey, out var pendingUpload))
         {
-            _pendingUploads.TryRemove(storageKey, out _);
-            return Task.FromResult<PendingPhotoUpload?>(null);
+            pendingUpload.Status = LgymApi.Domain.Enums.PhotoUploadSessionStatus.Completed;
+            pendingUpload.CompletedPhotoId = photoId;
+            pendingUpload.CompletedAtUtc = completedAtUtc;
         }
 
-        return Task.FromResult<PendingPhotoUpload?>(pendingUpload);
+        return Task.CompletedTask;
+    }
+
+    public Task MarkFailedAsync(
+        string storageKey,
+        string failureReason,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (_pendingUploads.TryGetValue(storageKey, out var pendingUpload))
+        {
+            pendingUpload.Status = LgymApi.Domain.Enums.PhotoUploadSessionStatus.Failed;
+            pendingUpload.FailureReason = failureReason;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task MarkExpiredAsync(
+        string storageKey,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (_pendingUploads.TryGetValue(storageKey, out var pendingUpload))
+        {
+            pendingUpload.Status = LgymApi.Domain.Enums.PhotoUploadSessionStatus.Expired;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<PendingPhotoUpload>> GetCleanupCandidatesAsync(
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        IReadOnlyList<PendingPhotoUpload> candidates = _pendingUploads.Values
+            .Where(x => x.ExpiresAtUtc < nowUtc
+                        && x.Status is LgymApi.Domain.Enums.PhotoUploadSessionStatus.Pending or LgymApi.Domain.Enums.PhotoUploadSessionStatus.Failed)
+            .ToList();
+
+        return Task.FromResult(candidates);
     }
 
     public Task RemovePendingUploadAsync(

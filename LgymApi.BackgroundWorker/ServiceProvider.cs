@@ -53,6 +53,7 @@ public static class ServiceProvider
         services.AddScoped<IActionMessageJob, ActionMessageJob>();
         services.AddScoped<ActionMessageJob>();
         services.AddScoped<ICommittedIntentDispatchJob, CommittedIntentDispatchJob>();
+        services.AddScoped<IExpiredPhotoUploadCleanupJob, ExpiredPhotoUploadCleanupJob>();
 
         services.AddScoped<BackgroundActionOrchestratorService>();
         services.AddNotificationsModule();

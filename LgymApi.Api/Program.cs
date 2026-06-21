@@ -263,18 +263,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-if (!app.Environment.IsEnvironment(TestingEnvironment))
-{
-    app.UseHangfireDashboard("/hangfire", new DashboardOptions
-    {
-        Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
-    });
-
-    RecurringJob.AddOrUpdate<ICommittedIntentDispatchJob>(
-        "reliability-committed-intent-dispatch",
-        job => job.ExecuteAsync(CancellationToken.None),
-        Cron.Minutely);
-}
+ProgramHangfire.ConfigureRecurringJobs(app, TestingEnvironment);
 
 app.UseRequestLocalization(localizationOptions);
 app.UseMiddleware<ExceptionHandlingMiddleware>();

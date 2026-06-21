@@ -56,6 +56,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
     public DbSet<Photo> Photos => Set<Photo>();
+    public DbSet<PhotoUploadSession> PhotoUploadSessions => Set<PhotoUploadSession>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -471,6 +472,8 @@ public sealed class AppDbContext : DbContext
             // Work retrieval index: (Status, NextAttemptAt) for pending retries
             entity.HasIndex(e => new { e.Status, e.NextAttemptAt })
                 .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.Status, e.ProcessingStartedAtUtc })
+                .HasFilter("\"IsDeleted\" = FALSE");
             // One-to-many relationship with ExecutionLog
             entity.HasMany(e => e.ExecutionLogs)
                 .WithOne(l => l.CommandEnvelope)
@@ -642,6 +645,39 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.OwnerUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PhotoUploadSession>(entity =>
+        {
+            entity.ToTable("PhotoUploadSessions");
+            entity.Property(e => e.StorageKey).IsRequired();
+            entity.Property(e => e.DeclaredContentType).HasMaxLength(128).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.ViewType).HasConversion<string>();
+            entity.Property(e => e.FailureReason).HasMaxLength(500);
+            entity.HasIndex(e => e.StorageKey)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.OwnerUserId, e.CreatedAt });
+            entity.HasIndex(e => new { e.ReportRequestId, e.ViewType });
+            entity.HasIndex(e => new { e.Status, e.ExpiresAtUtc });
+            entity.HasOne(e => e.ReportRequest)
+                .WithMany()
+                .HasForeignKey(e => e.ReportRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.OwnerUser)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.InitiatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.InitiatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.CompletedPhoto)
+                .WithMany()
+                .HasForeignKey(e => e.CompletedPhotoId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         RoleSeedDataConfiguration.Apply(modelBuilder);

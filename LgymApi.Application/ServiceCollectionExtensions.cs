@@ -57,6 +57,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILoginResultBuilder, LoginResultBuilder>();
         services.AddScoped<IReportingServiceDependencies, ReportingServiceDependencies>();
         services.AddScoped<IReportingService, ReportingService>();
+        services.AddScoped<IExpiredPhotoUploadCleanupService, ExpiredPhotoUploadCleanupService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<ISupplementationService, SupplementationService>();
         services.AddScoped<ITrainingServiceDependencies, TrainingServiceDependencies>();

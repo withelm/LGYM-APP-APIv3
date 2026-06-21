@@ -63,7 +63,7 @@ internal static class PhotoServiceTestFactory
         var uploadInitTracker = Substitute.For<IPhotoUploadInitTracker>();
         uploadInitTracker.CountRecentUploadInitsAsync(Arg.Any<Id<User>>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns(0);
-        uploadInitTracker.GetPendingUploadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        uploadInitTracker.GetUploadSessionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(ci =>
             {
                 var storageKey = ci.ArgAt<string>(0);

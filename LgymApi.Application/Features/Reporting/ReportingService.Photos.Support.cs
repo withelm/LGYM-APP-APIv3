@@ -128,6 +128,12 @@ public sealed partial class ReportingService
     }
 
     private Result<Unit, AppError> ValidateUploadedObjectMetadata(CompletePhotoUploadCommand command, PhotoMetadata metadata)
+        => ValidateUploadedObjectMetadata(command, null, metadata);
+
+    private Result<Unit, AppError> ValidateUploadedObjectMetadata(
+        CompletePhotoUploadCommand command,
+        PendingPhotoUpload? uploadSession,
+        PhotoMetadata metadata)
     {
         var sizeValidation = ValidateFileSize(metadata.SizeBytes);
         if (sizeValidation.IsFailure)
@@ -141,14 +147,26 @@ public sealed partial class ReportingService
             return mimeValidation;
         }
 
-        if (!string.Equals(command.MimeType, metadata.ContentType, StringComparison.OrdinalIgnoreCase))
+        var expectedMimeType = uploadSession?.DeclaredContentType ?? command.MimeType;
+        if (!string.Equals(expectedMimeType, metadata.ContentType, StringComparison.OrdinalIgnoreCase))
         {
             return Result<Unit, AppError>.Failure(new InvalidReportingError("Uploaded photo MIME type does not match the initiated upload"));
         }
 
-        if (command.SizeBytes != metadata.SizeBytes)
+        var expectedSizeBytes = uploadSession?.DeclaredSizeBytes ?? command.SizeBytes;
+        if (metadata.SizeBytes > expectedSizeBytes)
         {
             return Result<Unit, AppError>.Failure(new InvalidReportingError("Uploaded photo size does not match the initiated upload"));
+        }
+
+        if (command.SizeBytes != expectedSizeBytes)
+        {
+            return Result<Unit, AppError>.Failure(new InvalidReportingError("Upload completion request does not match the initiated upload"));
+        }
+
+        if (!string.Equals(command.MimeType, expectedMimeType, StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<Unit, AppError>.Failure(new InvalidReportingError("Upload completion request does not match the initiated upload"));
         }
 
         if (!string.IsNullOrWhiteSpace(command.Checksum)
@@ -171,14 +189,46 @@ public sealed partial class ReportingService
             || pendingUpload.InitiatedByUserId != currentUser.Id
             || pendingUpload.OwnerUserId != ownerUserId
             || pendingUpload.ReportRequestId != command.ReportRequestId
-            || !string.Equals(pendingUpload.ViewType, parsedViewType.ToString(), StringComparison.Ordinal)
-            || !string.Equals(pendingUpload.MimeType, command.MimeType, StringComparison.OrdinalIgnoreCase)
-            || pendingUpload.SizeBytes != command.SizeBytes)
+            || pendingUpload.ViewType != parsedViewType
+            || !string.Equals(pendingUpload.DeclaredContentType, command.MimeType, StringComparison.OrdinalIgnoreCase)
+            || pendingUpload.DeclaredSizeBytes != command.SizeBytes)
         {
             return Result<Unit, AppError>.Failure(new InvalidReportingError("Upload session does not match the original upload-init request"));
         }
 
+        if (pendingUpload.Status != PhotoUploadSessionStatus.Pending)
+        {
+            return Result<Unit, AppError>.Failure(new InvalidReportingError("Upload session is not pending"));
+        }
+
+        if (pendingUpload.ExpiresAtUtc < DateTimeOffset.UtcNow)
+        {
+            return Result<Unit, AppError>.Failure(new InvalidReportingError("Upload session not found or expired"));
+        }
+
         return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    private Result<Unit, AppError> EnsureStorageKeyHasExpectedPrefix(
+        UserEntity currentUser,
+        string storageKey,
+        Id<UserEntity> traineeId,
+        Id<ReportRequest> reportRequestId,
+        PhotoViewType parsedViewType)
+    {
+        var expectedPrefix = BuildStorageKeyPrefix(traineeId, reportRequestId, parsedViewType);
+        if (storageKey.StartsWith(expectedPrefix, StringComparison.Ordinal))
+        {
+            return Result<Unit, AppError>.Success(Unit.Value);
+        }
+
+        _logger.LogWarning(
+            "Photo complete-upload rejected due to invalid storage key prefix for user {UserId}. Expected prefix {ExpectedPrefix}",
+            currentUser.Id,
+            expectedPrefix);
+
+        return Result<Unit, AppError>.Failure(
+            new InvalidReportingError("Invalid storage key prefix"));
     }
 
     private async Task CleanupInvalidUploadedObjectAsync(string storageKey, CancellationToken cancellationToken)

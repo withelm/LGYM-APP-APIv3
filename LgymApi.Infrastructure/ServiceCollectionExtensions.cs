@@ -37,11 +37,13 @@ public static class ServiceCollectionExtensions
         var isDevelopmentOrTesting = enableSensitiveLogging || isTesting;
         var appDefaultsOptions = AppDefaultsOptionsFactory.Resolve(configuration);
         var photoStorageOptions = BuildPhotoStorageOptions(configuration);
+        var backgroundCommandOptions = configuration.GetSection("BackgroundCommands").Get<BackgroundCommandOptions>() ?? new BackgroundCommandOptions();
 
         var emailOptions = EmailOptionsFactory.Create(configuration, appDefaultsOptions);
 
         services.AddSingleton(appDefaultsOptions);
         services.AddSingleton(photoStorageOptions);
+        services.AddSingleton(backgroundCommandOptions);
         EmailOptionsFactory.Validate(emailOptions);
         services.AddSingleton(emailOptions);
         services.AddHttpContextAccessor();
@@ -107,7 +109,8 @@ public static class ServiceCollectionExtensions
                 : sp.GetRequiredService<SmtpEmailSender>();
         });
         services.AddSingleton<LocalPhotoDevelopmentStore>();
-        services.AddSingleton<IPhotoUploadInitTracker, InMemoryPhotoUploadInitTracker>();
+        services.AddSingleton<InMemoryPhotoUploadInitTracker>();
+        services.AddScoped<IPhotoUploadInitTracker, DbPhotoUploadInitTracker>();
         RegisterPhotoStorageProvider(services, photoStorageOptions, isDevelopmentOrTesting);
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUserExternalLoginRepository, UserExternalLoginRepository>();

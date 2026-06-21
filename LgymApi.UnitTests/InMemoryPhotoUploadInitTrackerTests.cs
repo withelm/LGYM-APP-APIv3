@@ -25,18 +25,19 @@ public sealed class InMemoryPhotoUploadInitTrackerTests
     }
 
     [Test]
-    public async Task GetPendingUploadAsync_WhenUploadExpired_RemovesAndReturnsNull()
+    public async Task GetUploadSessionAsync_WhenUploadExpired_ReturnsStoredExpiredSession()
     {
         var tracker = new InMemoryPhotoUploadInitTracker();
         var userId = Id<User>.New();
         var pendingUpload = CreatePendingUpload(userId, "photos/expired.jpg", DateTimeOffset.UtcNow.AddMinutes(-20), DateTimeOffset.UtcNow.AddMinutes(-1));
         await tracker.RecordUploadInitAsync(pendingUpload);
 
-        var result = await tracker.GetPendingUploadAsync(pendingUpload.StorageKey);
-        var secondRead = await tracker.GetPendingUploadAsync(pendingUpload.StorageKey);
+        var result = await tracker.GetUploadSessionAsync(pendingUpload.StorageKey);
+        var secondRead = await tracker.GetUploadSessionAsync(pendingUpload.StorageKey);
 
-        result.Should().BeNull();
-        secondRead.Should().BeNull();
+        result.Should().NotBeNull();
+        result!.ExpiresAtUtc.Should().BeBefore(DateTimeOffset.UtcNow);
+        secondRead.Should().NotBeNull();
     }
 
     [Test]
@@ -49,7 +50,7 @@ public sealed class InMemoryPhotoUploadInitTrackerTests
 
         await tracker.RemovePendingUploadAsync(pendingUpload.StorageKey);
 
-        (await tracker.GetPendingUploadAsync(pendingUpload.StorageKey)).Should().BeNull();
+        (await tracker.GetUploadSessionAsync(pendingUpload.StorageKey)).Should().BeNull();
     }
 
     private static PendingPhotoUpload CreatePendingUpload(Id<User> userId, string storageKey, DateTimeOffset createdAtUtc, DateTimeOffset expiresAtUtc)
@@ -59,9 +60,9 @@ public sealed class InMemoryPhotoUploadInitTrackerTests
             InitiatedByUserId = userId,
             OwnerUserId = userId,
             ReportRequestId = Id<ReportRequest>.New(),
-            ViewType = "Front",
-            MimeType = "image/jpeg",
-            SizeBytes = 1024,
+            ViewType = LgymApi.Domain.Enums.PhotoViewType.Front,
+            DeclaredContentType = "image/jpeg",
+            DeclaredSizeBytes = 1024,
             CreatedAtUtc = createdAtUtc,
             ExpiresAtUtc = expiresAtUtc
         };
