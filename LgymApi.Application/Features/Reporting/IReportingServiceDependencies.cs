@@ -11,6 +11,7 @@ public interface IReportingServiceDependencies
     IRoleRepository RoleRepository { get; }
     ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
     IReportingRepository ReportingRepository { get; }
+    IReportSubmissionMeasurementWriter ReportSubmissionMeasurementWriter { get; }
     ICommandDispatcher CommandDispatcher { get; }
     IUnitOfWork UnitOfWork { get; }
     IPhotoStorageProvider PhotoStorageProvider { get; }
@@ -25,6 +26,7 @@ internal sealed class ReportingServiceDependencies : IReportingServiceDependenci
         IRoleRepository roleRepository,
         ITrainerRelationshipRepository trainerRelationshipRepository,
         IReportingRepository reportingRepository,
+        IReportSubmissionMeasurementWriter reportSubmissionMeasurementWriter,
         ICommandDispatcher commandDispatcher,
         IUnitOfWork unitOfWork,
         IPhotoStorageProvider photoStorageProvider,
@@ -35,6 +37,7 @@ internal sealed class ReportingServiceDependencies : IReportingServiceDependenci
         RoleRepository = roleRepository;
         TrainerRelationshipRepository = trainerRelationshipRepository;
         ReportingRepository = reportingRepository;
+        ReportSubmissionMeasurementWriter = reportSubmissionMeasurementWriter;
         CommandDispatcher = commandDispatcher;
         UnitOfWork = unitOfWork;
         PhotoStorageProvider = photoStorageProvider;
@@ -46,6 +49,7 @@ internal sealed class ReportingServiceDependencies : IReportingServiceDependenci
     public IRoleRepository RoleRepository { get; }
     public ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
     public IReportingRepository ReportingRepository { get; }
+    public IReportSubmissionMeasurementWriter ReportSubmissionMeasurementWriter { get; }
     public ICommandDispatcher CommandDispatcher { get; }
     public IUnitOfWork UnitOfWork { get; }
     public IPhotoStorageProvider PhotoStorageProvider { get; }

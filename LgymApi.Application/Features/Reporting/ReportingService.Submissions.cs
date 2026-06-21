@@ -51,6 +51,8 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportSubmissionResult, AppError>.Failure(photoValidationResult.Error);
         }
 
+        var submittedAtUtc = DateTimeOffset.UtcNow;
+
         var submission = new ReportSubmission
         {
             Id = Id<ReportSubmission>.New(),
@@ -59,10 +61,17 @@ public sealed partial class ReportingService : IReportingService
             PayloadJson = JsonSerializer.Serialize(normalizedAnswers)
         };
 
-        request.SubmittedAt = DateTimeOffset.UtcNow;
+        request.SubmittedAt = submittedAtUtc;
         request.Status = ReportRequestStatus.Submitted;
 
         await _reportingRepository.AddSubmissionAsync(submission, cancellationToken);
+        await _reportSubmissionMeasurementWriter.StageMeasurementsAsync(
+            currentTrainee,
+            request.Template,
+            normalizedAnswers,
+            submittedAtUtc,
+            cancellationToken);
+
         try
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);

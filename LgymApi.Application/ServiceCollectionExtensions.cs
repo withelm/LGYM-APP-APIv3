@@ -56,6 +56,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGoogleUserRegistrar, GoogleUserRegistrar>();
         services.AddScoped<ILoginResultBuilder, LoginResultBuilder>();
         services.AddScoped<IReportingServiceDependencies, ReportingServiceDependencies>();
+        services.AddScoped<IReportSubmissionMeasurementWriter, ReportSubmissionMeasurementWriter>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IExpiredPhotoUploadCleanupService, ExpiredPhotoUploadCleanupService>();
         services.AddScoped<IRoleService, RoleService>();

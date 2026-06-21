@@ -22,6 +22,7 @@ public sealed partial class ReportingService : IReportingService
     private readonly IRoleRepository _roleRepository;
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IReportingRepository _reportingRepository;
+    private readonly IReportSubmissionMeasurementWriter _reportSubmissionMeasurementWriter;
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPhotoStorageProvider _photoStorageProvider;
@@ -34,6 +35,7 @@ public sealed partial class ReportingService : IReportingService
         _roleRepository = dependencies.RoleRepository;
         _trainerRelationshipRepository = dependencies.TrainerRelationshipRepository;
         _reportingRepository = dependencies.ReportingRepository;
+        _reportSubmissionMeasurementWriter = dependencies.ReportSubmissionMeasurementWriter;
         _commandDispatcher = dependencies.CommandDispatcher;
         _unitOfWork = dependencies.UnitOfWork;
         _photoStorageProvider = dependencies.PhotoStorageProvider;
