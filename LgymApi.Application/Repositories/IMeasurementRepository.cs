@@ -9,4 +9,10 @@ public interface IMeasurementRepository
     Task AddAsync(Measurement measurement, CancellationToken cancellationToken = default);
     Task<Measurement?> FindByIdAsync(Id<Measurement> id, CancellationToken cancellationToken = default);
     Task<List<Measurement>> GetByUserAsync(Id<User> userId, BodyParts? bodyPart, CancellationToken cancellationToken = default);
+    Task<HashSet<BodyParts>> GetExistingBodyPartsByUserAndCreatedAtRangeAsync(
+        Id<User> userId,
+        IReadOnlyCollection<BodyParts> bodyParts,
+        DateTimeOffset createdAtFromUtc,
+        DateTimeOffset createdAtToUtc,
+        CancellationToken cancellationToken = default);
 }
