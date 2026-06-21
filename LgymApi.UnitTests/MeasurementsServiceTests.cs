@@ -321,6 +321,23 @@ public sealed class MeasurementsServiceTests
         public Task<List<Measurement>> GetByUserAsync(Id<User> userId, BodyParts? bodyPart, CancellationToken cancellationToken = default)
             => GetFilteredAsync(userId, bodyPart, cancellationToken);
 
+        public async Task<HashSet<BodyParts>> GetExistingBodyPartsByUserAndCreatedAtRangeAsync(
+            Id<User> userId,
+            IReadOnlyCollection<BodyParts> bodyParts,
+            DateTimeOffset createdAtFromUtc,
+            DateTimeOffset createdAtToUtc,
+            CancellationToken cancellationToken = default)
+        {
+            var items = await GetByUserHandler(userId, null, cancellationToken);
+
+            return items
+                .Where(item => bodyParts.Contains(item.BodyPart)
+                               && item.CreatedAt >= createdAtFromUtc
+                               && item.CreatedAt < createdAtToUtc)
+                .Select(item => item.BodyPart)
+                .ToHashSet();
+        }
+
         private async Task<List<Measurement>> GetFilteredAsync(Id<User> userId, BodyParts? bodyPart, CancellationToken cancellationToken)
         {
             var items = await GetByUserHandler(userId, bodyPart, cancellationToken);
