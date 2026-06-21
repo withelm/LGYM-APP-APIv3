@@ -2,7 +2,9 @@ using Hangfire;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Api.Configuration;
 
-static class ProgramHangfire
+namespace LgymApi.Api;
+
+internal static class ProgramHangfire
 {
     public static void ConfigureRecurringJobs(WebApplication app, string testingEnvironment)
     {
