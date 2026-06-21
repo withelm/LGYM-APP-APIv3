@@ -21,9 +21,9 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
         return _dbContext.PlanDayExercises
             .AsNoTracking()
             .Where(e => planDayIds.Contains(e.PlanDayId))
-            .OrderBy(e => EF.Property<Guid>(e, nameof(PlanDayExercise.PlanDayId)))
+            .OrderBy(e => e.PlanDayId.Value)
             .ThenBy(e => e.Order)
-            .ThenBy(e => EF.Property<Guid>(e, nameof(PlanDayExercise.Id)))
+            .ThenBy(e => e.Id.Value)
             .ToListAsync(cancellationToken);
     }
 
@@ -33,7 +33,7 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
             .AsNoTracking()
             .Where(e => e.PlanDayId == planDayId)
             .OrderBy(e => e.Order)
-            .ThenBy(e => EF.Property<Guid>(e, nameof(PlanDayExercise.Id)))
+            .ThenBy(e => e.Id.Value)
             .ToListAsync(cancellationToken);
     }
 
@@ -71,9 +71,9 @@ public sealed class PlanDayExerciseRepository : IPlanDayExerciseRepository
 
         var orderedExercises = await _dbContext.PlanDayExercises
             .Where(e => affectedPlanDayIds.Contains(e.PlanDayId))
-            .OrderBy(e => EF.Property<Guid>(e, nameof(PlanDayExercise.PlanDayId)))
+            .OrderBy(e => e.PlanDayId.Value)
             .ThenBy(e => e.Order)
-            .ThenBy(e => EF.Property<Guid>(e, nameof(PlanDayExercise.Id)))
+            .ThenBy(e => e.Id.Value)
             .ToListAsync(cancellationToken);
 
         Id<PlanDay>? currentPlanDayId = null;

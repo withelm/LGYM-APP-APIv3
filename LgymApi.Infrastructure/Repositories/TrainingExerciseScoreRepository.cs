@@ -25,9 +25,9 @@ public sealed class TrainingExerciseScoreRepository : ITrainingExerciseScoreRepo
         return _dbContext.TrainingExerciseScores
             .AsNoTracking()
             .Where(t => trainingIds.Contains(t.TrainingId))
-            .OrderBy(t => EF.Property<Guid>(t, nameof(TrainingExerciseScore.TrainingId)))
+            .OrderBy(t => t.TrainingId.Value)
             .ThenBy(t => t.Order)
-            .ThenBy(t => EF.Property<Guid>(t, nameof(TrainingExerciseScore.Id)))
+            .ThenBy(t => t.Id.Value)
             .ToListAsync(cancellationToken);
     }
 }
