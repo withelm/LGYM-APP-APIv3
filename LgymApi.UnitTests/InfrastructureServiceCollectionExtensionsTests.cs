@@ -338,10 +338,10 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
          values["PhotoStorage:Provider"] = "Local";
          var configuration = TestConfigurationBuilder.BuildConfiguration(values);
 
-         services.AddHttpContextAccessor();
          services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
 
          using var provider = services.BuildServiceProvider();
+         provider.GetRequiredService<Microsoft.AspNetCore.Http.IHttpContextAccessor>().Should().NotBeNull();
          provider.GetRequiredService<IPhotoStorageProvider>().Should().BeOfType<LocalPhotoStorageProvider>();
      }
 
