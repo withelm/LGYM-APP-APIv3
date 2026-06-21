@@ -1,8 +1,6 @@
-using System.Reflection;
 using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
-using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using NUnit.Framework;
 
@@ -18,7 +16,7 @@ public sealed class ReportingServiceModuleConfigTests
             { "requiredViews": ["front", "Side", "back"] }
             """).RootElement;
 
-        var result = InvokeBool("TryReadRequiredPhotoViews", config, out var views);
+        var result = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(config, out _, out var views);
 
         result.Should().BeTrue();
         views.Should().BeEquivalentTo(new[] { PhotoViewType.Front, PhotoViewType.Side, PhotoViewType.Back });
@@ -31,7 +29,7 @@ public sealed class ReportingServiceModuleConfigTests
             { "requiredViews": [1] }
             """).RootElement;
 
-        var result = InvokeBool("TryReadRequiredPhotoViews", config, out _);
+        var result = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(config, out _, out _);
 
         result.Should().BeFalse();
     }
@@ -43,7 +41,7 @@ public sealed class ReportingServiceModuleConfigTests
             { "measurementTypes": ["weight", "bodyFat", "thighs"] }
             """).RootElement;
 
-        var result = InvokeBool("TryReadMeasurementTypes", config, out var types);
+        var result = ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(config, out _, out var types);
 
         result.Should().BeTrue();
         types.Should().BeEquivalentTo(new[] { BodyParts.BodyWeight, BodyParts.BodyFat, BodyParts.Thigh });
@@ -56,33 +54,24 @@ public sealed class ReportingServiceModuleConfigTests
             { "measurementTypes": ["unknown"] }
             """).RootElement;
 
-        var result = InvokeBool("TryReadMeasurementTypes", config, out _);
+        var result = ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(config, out _, out _);
 
         result.Should().BeFalse();
     }
 
     [Test]
-    public void TryGetArrayProperty_WhenPropertyMissingOrWrongKind_ReturnsFalse()
+    public void TryNormalizePhotoModuleConfig_WhenPropertyMissingOrWrongKind_ReturnsFalse()
     {
-        var config = JsonDocument.Parse("""
+        var missingConfig = JsonDocument.Parse("""
+            { "wrongProperty": ["front"] }
+            """).RootElement;
+        var wrongKindConfig = JsonDocument.Parse("""
             { "requiredViews": "front" }
             """).RootElement;
-        var method = typeof(ReportingService).GetMethod("TryGetArrayProperty", BindingFlags.Static | BindingFlags.NonPublic)!;
-        var args = new object?[] { config, "missing", null };
-        var missing = (bool)method.Invoke(null, args)!;
-        args = new object?[] { config, "requiredViews", null };
-        var wrongKind = (bool)method.Invoke(null, args)!;
+        var missing = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(missingConfig, out _, out _);
+        var wrongKind = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(wrongKindConfig, out _, out _);
 
         missing.Should().BeFalse();
         wrongKind.Should().BeFalse();
-    }
-
-    private static bool InvokeBool(string methodName, JsonElement config, out HashSet<Enum> values)
-    {
-        var method = typeof(ReportingService).GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic)!;
-        var args = new object?[] { config, null };
-        var result = (bool)method.Invoke(null, args)!;
-        values = ((System.Collections.IEnumerable)args[1]!).Cast<Enum>().ToHashSet();
-        return result;
     }
 }

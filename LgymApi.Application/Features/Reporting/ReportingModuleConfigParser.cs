@@ -1,18 +1,25 @@
 using System.Text.Json;
-using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Features.Reporting;
 
-public sealed partial class ReportingService
+public static class ReportingModuleConfigParser
 {
-    private static bool TryReadRequiredPhotoViews(JsonElement? moduleConfig, out HashSet<PhotoViewType> requiredViews)
+    public static bool TryNormalizePhotoModuleConfig(
+        JsonElement? moduleConfig,
+        out JsonElement normalizedConfig,
+        out IReadOnlyList<PhotoViewType> requiredViews)
     {
+        normalizedConfig = default;
         requiredViews = [];
+
         if (!TryGetArrayProperty(moduleConfig, "requiredViews", out var requiredViewsElement))
         {
             return false;
         }
+
+        var parsedViews = new List<PhotoViewType>();
+        var seen = new HashSet<PhotoViewType>();
 
         foreach (var viewElement in requiredViewsElement.EnumerateArray())
         {
@@ -21,27 +28,47 @@ public sealed partial class ReportingService
                 return false;
             }
 
-            var viewName = viewElement.GetString();
+            var viewName = viewElement.GetString()?.Trim();
             if (string.IsNullOrWhiteSpace(viewName)
-                || !System.Enum.TryParse<PhotoViewType>(viewName.Trim(), true, out var viewType)
-                || !System.Enum.IsDefined(viewType))
+                || !System.Enum.TryParse<PhotoViewType>(viewName, true, out var viewType)
+                || !System.Enum.IsDefined(viewType)
+                || !seen.Add(viewType))
             {
                 return false;
             }
 
-            requiredViews.Add(viewType);
+            parsedViews.Add(viewType);
         }
 
-        return requiredViews.Count > 0;
+        if (parsedViews.Count == 0)
+        {
+            return false;
+        }
+
+        requiredViews = parsedViews;
+        normalizedConfig = JsonSerializer.SerializeToElement(new
+        {
+            requiredViews = parsedViews.Select(x => x.ToString()).ToArray()
+        });
+
+        return true;
     }
 
-    private static bool TryReadMeasurementTypes(JsonElement? moduleConfig, out HashSet<BodyParts> measurementTypes)
+    public static bool TryNormalizeMeasurementModuleConfig(
+        JsonElement? moduleConfig,
+        out JsonElement normalizedConfig,
+        out IReadOnlyList<BodyParts> measurementTypes)
     {
+        normalizedConfig = default;
         measurementTypes = [];
+
         if (!TryGetArrayProperty(moduleConfig, "measurementTypes", out var measurementTypesElement))
         {
             return false;
         }
+
+        var parsedTypes = new List<BodyParts>();
+        var seen = new HashSet<BodyParts>();
 
         foreach (var measurementTypeElement in measurementTypesElement.EnumerateArray())
         {
@@ -53,15 +80,27 @@ public sealed partial class ReportingService
             var bodyPartName = measurementTypeElement.GetString();
             if (string.IsNullOrWhiteSpace(bodyPartName)
                 || !TryResolveBodyPart(bodyPartName, out var bodyPart)
-                || bodyPart == BodyParts.Unknown)
+                || bodyPart == BodyParts.Unknown
+                || !seen.Add(bodyPart))
             {
                 return false;
             }
 
-            measurementTypes.Add(bodyPart);
+            parsedTypes.Add(bodyPart);
         }
 
-        return measurementTypes.Count > 0;
+        if (parsedTypes.Count == 0)
+        {
+            return false;
+        }
+
+        measurementTypes = parsedTypes;
+        normalizedConfig = JsonSerializer.SerializeToElement(new
+        {
+            measurementTypes = parsedTypes.Select(x => x.ToString()).ToArray()
+        });
+
+        return true;
     }
 
     private static bool TryResolveBodyPart(string bodyPartName, out BodyParts bodyPart)
@@ -93,8 +132,7 @@ public sealed partial class ReportingService
             return false;
         }
 
-        var config = moduleConfig.Value;
-        return config.TryGetProperty(propertyName, out arrayElement)
+        return moduleConfig.Value.TryGetProperty(propertyName, out arrayElement)
                && arrayElement.ValueKind == JsonValueKind.Array;
     }
 }

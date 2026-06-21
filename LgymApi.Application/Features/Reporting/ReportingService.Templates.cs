@@ -44,7 +44,7 @@ public sealed partial class ReportingService : IReportingService
                     Type = x.Type,
                     IsRequired = x.IsRequired,
                     Order = x.Order,
-                    ModuleConfig = x.ModuleConfig.HasValue ? JsonSerializer.Serialize(x.ModuleConfig.Value) : null
+                    ModuleConfig = NormalizeModuleConfig(x.Type, x.ModuleConfig)
                 })
                 .ToList()
         };
@@ -122,7 +122,7 @@ public sealed partial class ReportingService : IReportingService
                 Type = field.Type,
                 IsRequired = field.IsRequired,
                 Order = field.Order,
-                ModuleConfig = field.ModuleConfig.HasValue ? JsonSerializer.Serialize(field.ModuleConfig.Value) : null
+                ModuleConfig = NormalizeModuleConfig(field.Type, field.ModuleConfig)
             });
         }
 
@@ -190,11 +190,23 @@ public sealed partial class ReportingService : IReportingService
     {
         return fieldType switch
         {
-            ReportFieldType.Photos => TryReadRequiredPhotoViews(moduleConfig, out _),
-            ReportFieldType.Measurements => TryReadMeasurementTypes(moduleConfig, out _),
+            ReportFieldType.Photos => ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(moduleConfig, out _, out _),
+            ReportFieldType.Measurements => ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(moduleConfig, out _, out _),
             ReportFieldType.Text or ReportFieldType.Number or ReportFieldType.Boolean or ReportFieldType.Date
                 => moduleConfig is null || !moduleConfig.Value.ValueKind.Equals(JsonValueKind.Object) && !moduleConfig.HasValue || !moduleConfig.HasValue,
             _ => false
+        };
+    }
+
+    private static string? NormalizeModuleConfig(ReportFieldType fieldType, JsonElement? moduleConfig)
+    {
+        return fieldType switch
+        {
+            ReportFieldType.Photos when ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(moduleConfig, out var normalizedPhotos, out _)
+                => JsonSerializer.Serialize(normalizedPhotos),
+            ReportFieldType.Measurements when ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(moduleConfig, out var normalizedMeasurements, out _)
+                => JsonSerializer.Serialize(normalizedMeasurements),
+            _ => moduleConfig.HasValue ? JsonSerializer.Serialize(moduleConfig.Value) : null
         };
     }
 

@@ -76,4 +76,35 @@ public sealed class ReportingValidatorsTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(x => x.PropertyName == "Fields[0].ModuleConfig");
     }
+
+    [TestCase("Foo")]
+    [TestCase("Unknown")]
+    public void UpsertReportTemplateRequestValidator_Fails_ForInvalidMeasurementType(string measurementType)
+    {
+        var validator = new UpsertReportTemplateRequestValidator();
+        var request = new UpsertReportTemplateRequest
+        {
+            Name = "Weekly",
+            Fields =
+            [
+                new ReportTemplateFieldRequest
+                {
+                    Key = "measurements",
+                    Label = "Measurements",
+                    Type = ReportFieldType.Measurements,
+                    Order = 0,
+                    ModuleConfig = JsonDocument.Parse($$"""
+                        {
+                            "measurementTypes": ["{{measurementType}}"]
+                        }
+                        """).RootElement
+                }
+            ]
+        };
+
+        var result = validator.Validate(request);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(x => x.PropertyName == "Fields[0].ModuleConfig");
+    }
 }

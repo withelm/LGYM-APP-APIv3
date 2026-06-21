@@ -1,5 +1,6 @@
 using FluentValidation;
 using LgymApi.Api.Features.Trainer.Contracts;
+using LgymApi.Application.Features.Reporting;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 using System.Text.Json;
@@ -75,7 +76,7 @@ public sealed class UpsertReportTemplateRequestValidator : AbstractValidator<Ups
                 return false;
             }
 
-            return TryReadRequiredViews(requiredViews, out _);
+            return ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(jsonElement, out _, out _);
         }
         catch
         {
@@ -108,81 +109,11 @@ public sealed class UpsertReportTemplateRequestValidator : AbstractValidator<Ups
                 return false;
             }
 
-            return TryReadMeasurementTypes(measurementTypes, out _);
+            return ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(jsonElement, out _, out _);
         }
         catch
         {
             return false;
         }
-    }
-
-    private static bool TryReadRequiredViews(JsonElement requiredViews, out HashSet<PhotoViewType> parsedViews)
-    {
-        parsedViews = [];
-
-        foreach (var viewElement in requiredViews.EnumerateArray())
-        {
-            if (viewElement.ValueKind != JsonValueKind.String)
-            {
-                return false;
-            }
-
-            var viewName = viewElement.GetString();
-            if (string.IsNullOrWhiteSpace(viewName)
-                || !System.Enum.TryParse<PhotoViewType>(viewName.Trim(), true, out var viewType)
-                || !System.Enum.IsDefined(viewType))
-            {
-                return false;
-            }
-
-            parsedViews.Add(viewType);
-        }
-
-        return parsedViews.Count > 0;
-    }
-
-    private static bool TryReadMeasurementTypes(JsonElement measurementTypes, out HashSet<BodyParts> parsedBodyParts)
-    {
-        parsedBodyParts = [];
-
-        foreach (var measurementTypeElement in measurementTypes.EnumerateArray())
-        {
-            if (measurementTypeElement.ValueKind != JsonValueKind.String)
-            {
-                return false;
-            }
-
-            var bodyPartName = measurementTypeElement.GetString();
-            if (string.IsNullOrWhiteSpace(bodyPartName)
-                || !TryResolveBodyPart(bodyPartName, out var bodyPart)
-                || bodyPart == BodyParts.Unknown)
-            {
-                return false;
-            }
-
-            parsedBodyParts.Add(bodyPart);
-        }
-
-        return parsedBodyParts.Count > 0;
-    }
-
-    private static bool TryResolveBodyPart(string bodyPartName, out BodyParts bodyPart)
-    {
-        var normalized = bodyPartName.Trim();
-        switch (normalized.ToLowerInvariant())
-        {
-            case "weight":
-                bodyPart = BodyParts.BodyWeight;
-                return true;
-            case "bodyfat":
-                bodyPart = BodyParts.BodyFat;
-                return true;
-            case "thighs":
-                bodyPart = BodyParts.Thigh;
-                return true;
-        }
-
-        return System.Enum.TryParse<BodyParts>(normalized, true, out bodyPart)
-               && System.Enum.IsDefined(bodyPart);
     }
 }

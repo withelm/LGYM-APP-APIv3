@@ -29,7 +29,7 @@ public sealed partial class ReportingService
             try
             {
                 var config = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(field.ModuleConfig);
-                if (!TryReadRequiredPhotoViews(config, out var requiredViews))
+                if (!ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(config, out _, out var requiredViews))
                 {
                     return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
                 }
