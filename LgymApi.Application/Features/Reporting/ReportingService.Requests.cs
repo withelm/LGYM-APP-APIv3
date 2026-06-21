@@ -59,7 +59,7 @@ public sealed partial class ReportingService : IReportingService
 
     public async Task<Result<List<ReportRequestResult>, AppError>> GetPendingRequestsForTraineeAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
     {
-        var requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
+        var requests = await _reportingRepository.GetPendingOrExpiredRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
         var hasUpdates = false;
 
@@ -75,7 +75,7 @@ public sealed partial class ReportingService : IReportingService
         if (hasUpdates)
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            requests = await _reportingRepository.GetPendingRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
+            requests = await _reportingRepository.GetPendingOrExpiredRequestsByTraineeIdAsync(currentTrainee.Id, cancellationToken);
         }
 
         return Result<List<ReportRequestResult>, AppError>.Success(requests.Select(MapRequest).ToList());

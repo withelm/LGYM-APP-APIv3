@@ -30,10 +30,10 @@ public interface IPhotoStorageProvider
     /// The URL includes authentication credentials and constraints.
     /// </returns>
     /// <remarks>
-    /// Security: The signed URL should enforce:
-    /// - Content-Type validation (only image/jpeg, image/png, image/heic)
-    /// - File size limit (provider/configuration dependent; API currently verifies against configured PhotoStorageOptions.MaxFileSizeBytes)
-    /// - Single-use or limited-use semantics (provider-dependent)
+    /// Security considerations:
+    /// - Providers should carry content-type expectations where supported by the backing storage.
+    /// - Server-side file-size enforcement is provider-dependent; LGYM additionally verifies configured size limits during upload-init and complete-upload.
+    /// - Single-use or limited-use semantics remain provider-dependent.
     /// </remarks>
     Task<string> GenerateSignedUploadUrlAsync(
         string storageKey,

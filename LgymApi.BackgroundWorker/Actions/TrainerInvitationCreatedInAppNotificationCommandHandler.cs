@@ -1,6 +1,7 @@
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Notifications;
+using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
 using NotificationsApp = global::LgymApi.Application.Notifications;
 
@@ -25,14 +26,14 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandler : gl
     public async Task ExecuteAsync(TrainerInvitationCreatedInAppNotificationCommand command, CancellationToken cancellationToken = default)
     {
         var trainer = await _userRepository.FindByIdAsync(command.TrainerId, cancellationToken);
-        var trainerName = string.IsNullOrWhiteSpace(trainer?.Name) ? "Trainer" : trainer.Name;
+        var trainerName = string.IsNullOrWhiteSpace(trainer?.Name) ? Messages.GenericTrainerDisplayName : trainer.Name;
 
         var input = new NotificationsApp.Models.CreateInAppNotificationInput(
             command.TraineeId,
             command.TrainerId,
             $"trainer-invitation:{command.InvitationId}:sent",
             false,
-            $"{trainerName} zaprasza Cię do współpracy trenerskiej.",
+            string.Format(Messages.TrainerInvitationCreatedNotification, trainerName),
             $"/trainers/invitations/{command.InvitationId}",
             InAppNotificationTypes.InvitationSent);
 

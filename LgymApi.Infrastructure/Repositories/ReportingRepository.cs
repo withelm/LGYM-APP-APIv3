@@ -52,7 +52,7 @@ public sealed class ReportingRepository : IReportingRepository
             .FirstOrDefaultAsync(x => x.Id == requestId, cancellationToken);
     }
 
-    public Task<List<ReportRequest>> GetPendingRequestsByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
+    public Task<List<ReportRequest>> GetPendingOrExpiredRequestsByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
     {
         return _dbContext.ReportRequests
             .Where(x => x.TraineeId == traineeId && (x.Status == ReportRequestStatus.Pending || x.Status == ReportRequestStatus.Expired))

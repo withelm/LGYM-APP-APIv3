@@ -252,6 +252,9 @@
   <data name="TrainerInvitationSent" xml:space="preserve">
     <value>Your trainer invitation has been sent.</value>
   </data>
+  <data name="TrainerInvitationCreatedNotification" xml:space="preserve">
+    <value>{0} invited you to work together.</value>
+  </data>
   <data name="TrainerInvitationAccepted" xml:space="preserve">
     <value>A trainer has accepted your invitation.</value>
   </data>
