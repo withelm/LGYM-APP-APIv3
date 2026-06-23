@@ -20,5 +20,6 @@ internal static class ProgramHangfire
 
         RecurringJob.AddOrUpdate<ICommittedIntentDispatchJob>("reliability-committed-intent-dispatch", job => job.ExecuteAsync(CancellationToken.None), Cron.Minutely);
         RecurringJob.AddOrUpdate<IExpiredPhotoUploadCleanupJob>("reporting-expired-photo-upload-cleanup", job => job.ExecuteAsync(CancellationToken.None), Cron.Minutely);
+        RecurringJob.AddOrUpdate<IRecurringReportAssignmentProcessingJob>("reporting-recurring-report-assignments", job => job.ExecuteAsync(CancellationToken.None), Cron.Minutely);
     }
 }
