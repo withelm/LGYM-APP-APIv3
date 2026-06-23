@@ -62,6 +62,15 @@ public sealed class ReportingRepository : IReportingRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<ReportRequest?> FindRequestByIdWithSubmissionAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.ReportRequests
+            .Include(x => x.Template)
+            .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
+            .Include(x => x.Submission)
+            .FirstOrDefaultAsync(x => x.Id == requestId, cancellationToken);
+    }
+
     public async Task AddSubmissionAsync(ReportSubmission submission, CancellationToken cancellationToken = default)
     {
         await _dbContext.ReportSubmissions.AddAsync(submission, cancellationToken);
@@ -78,6 +87,15 @@ public sealed class ReportingRepository : IReportingRepository
                      && x.TraineeId == traineeId
                      && x.ReportRequest.TrainerId == trainerId,
                 cancellationToken);
+    }
+
+    public Task<ReportSubmission?> FindSubmissionByIdForTraineeAsync(Id<ReportSubmission> submissionId, Id<User> traineeId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.ReportSubmissions
+            .Include(x => x.ReportRequest)
+            .ThenInclude(x => x.Template)
+            .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
+            .FirstOrDefaultAsync(x => x.Id == submissionId && x.TraineeId == traineeId, cancellationToken);
     }
 
     public Task<List<ReportSubmission>> GetSubmissionsByTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default)

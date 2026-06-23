@@ -11,8 +11,10 @@ public interface IReportingRepository
     Task AddRequestAsync(ReportRequest request, CancellationToken cancellationToken = default);
     Task<ReportRequest?> FindRequestByIdAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default);
     Task<List<ReportRequest>> GetPendingOrExpiredRequestsByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
+    Task<ReportRequest?> FindRequestByIdWithSubmissionAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default);
     Task AddSubmissionAsync(ReportSubmission submission, CancellationToken cancellationToken = default);
     Task<ReportSubmission?> FindSubmissionByIdForTrainerAsync(Id<ReportSubmission> submissionId, Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default);
+    Task<ReportSubmission?> FindSubmissionByIdForTraineeAsync(Id<ReportSubmission> submissionId, Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<List<ReportSubmission>> GetSubmissionsByTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<Photo?> FindPhotoByIdAsync(Id<Photo> photoId, CancellationToken cancellationToken = default);

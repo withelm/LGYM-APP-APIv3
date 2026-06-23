@@ -81,6 +81,8 @@ public sealed class ReportSubmissionResult
     public Dictionary<string, JsonElement> Answers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public string? TrainerOverallComment { get; set; }
     public Dictionary<string, string> TrainerFieldComments { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public DateTimeOffset? TrainerFeedbackAddedAt { get; set; }
+    public DateTimeOffset? TrainerFeedbackReadAt { get; set; }
     public ReportRequestResult Request { get; set; } = new();
 }
 

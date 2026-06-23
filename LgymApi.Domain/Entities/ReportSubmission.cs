@@ -9,6 +9,8 @@ public sealed class ReportSubmission : EntityBase<ReportSubmission>
     public string PayloadJson { get; set; } = "{}";
     public string? TrainerOverallComment { get; set; }
     public string? TrainerFieldCommentsJson { get; set; }
+    public DateTimeOffset? TrainerFeedbackAddedAt { get; set; }
+    public DateTimeOffset? TrainerFeedbackReadAt { get; set; }
 
     public ReportRequest ReportRequest { get; set; } = null!;
     public User Trainee { get; set; } = null!;
