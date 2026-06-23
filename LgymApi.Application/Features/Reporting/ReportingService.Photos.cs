@@ -103,6 +103,8 @@ public sealed partial class ReportingService
             Status = PhotoUploadSessionStatus.Pending
         }, cancellationToken);
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
         _logger.LogInformation(
             "Photo upload-init succeeded for user {UserId}, report request {ReportRequestId}, provider {Provider}, key {StorageKey}",
             currentUser.Id,

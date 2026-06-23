@@ -204,8 +204,9 @@ public sealed class TrainerReportingPhotoControllerTests
         services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
         using var provider = services.BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
 
-        var controller = new TrainerReportingController(reportingService, mapper)
+        var controller = new TrainerReportingController(reportingService, recurringService, mapper)
         {
             ControllerContext = new ControllerContext
             {

@@ -39,7 +39,9 @@ internal static class PhotoServiceTestFactory
         Func<Id<User>, Id<User>, CancellationToken, Task<TrainerTraineeLink?>>? hasTrainerTraineeLink = null,
         IPhotoStorageProvider? photoStorageProvider = null,
         IReportingRepository? reportingRepository = null,
-        PendingPhotoUpload? pendingUpload = null)
+        PendingPhotoUpload? pendingUpload = null,
+        IUnitOfWork? unitOfWork = null,
+        IPhotoUploadInitTracker? photoUploadInitTracker = null)
     {
         var roleRepository = Substitute.For<IRoleRepository>();
         roleRepository.UserHasRoleAsync(Arg.Any<Id<User>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -57,10 +59,10 @@ internal static class PhotoServiceTestFactory
         }
 
         var commandDispatcher = Substitute.For<ICommandDispatcher>();
-        var unitOfWork = Substitute.For<IUnitOfWork>();
+        var resolvedUnitOfWork = unitOfWork ?? Substitute.For<IUnitOfWork>();
 
         var storageProvider = photoStorageProvider ?? Substitute.For<IPhotoStorageProvider>();
-        var uploadInitTracker = Substitute.For<IPhotoUploadInitTracker>();
+        var uploadInitTracker = photoUploadInitTracker ?? Substitute.For<IPhotoUploadInitTracker>();
         uploadInitTracker.CountRecentUploadInitsAsync(Arg.Any<Id<User>>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns(0);
         uploadInitTracker.GetUploadSessionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -77,7 +79,7 @@ internal static class PhotoServiceTestFactory
         dependencies.TrainerRelationshipRepository.Returns(trainerRelationshipRepository);
         dependencies.ReportingRepository.Returns(repo);
         dependencies.CommandDispatcher.Returns(commandDispatcher);
-        dependencies.UnitOfWork.Returns(unitOfWork);
+        dependencies.UnitOfWork.Returns(resolvedUnitOfWork);
         dependencies.PhotoStorageProvider.Returns(storageProvider);
         dependencies.PhotoUploadInitTracker.Returns(uploadInitTracker);
         dependencies.Logger.Returns(Substitute.For<ILogger<ReportingService>>());
