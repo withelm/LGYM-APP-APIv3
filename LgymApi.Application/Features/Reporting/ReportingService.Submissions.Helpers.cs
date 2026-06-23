@@ -1,0 +1,164 @@
+using System.Globalization;
+using System.Text.Json;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
+using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using LgymApi.Resources;
+
+namespace LgymApi.Application.Features.Reporting;
+
+public sealed partial class ReportingService
+{
+    private static Result<Unit, AppError> ValidateAnswersAgainstTemplate(ReportTemplate template, Dictionary<string, JsonElement> answers)
+    {
+        var expected = template.Fields.ToDictionary(x => x.Key, x => x, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var field in template.Fields)
+        {
+            if (field.IsRequired && !answers.ContainsKey(field.Key))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+        }
+
+        foreach (var answer in answers)
+        {
+            if (!expected.TryGetValue(answer.Key, out var field))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+
+            if (answer.Value.ValueKind == JsonValueKind.Null)
+            {
+                if (field.IsRequired)
+                {
+                    return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+                }
+
+                continue;
+            }
+
+            if (!IsValueValidForType(answer.Value, field.Type))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+        }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    private static Dictionary<string, JsonElement> NormalizeAnswers(IReadOnlyDictionary<string, JsonElement> answers)
+    {
+        var normalizedAnswers = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var answer in answers)
+        {
+            normalizedAnswers[answer.Key] = answer.Value;
+        }
+
+        return normalizedAnswers;
+    }
+
+    private static Dictionary<string, string> NormalizeTrainerFieldComments(IReadOnlyDictionary<string, string?> comments)
+    {
+        var normalizedComments = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var comment in comments)
+        {
+            if (string.IsNullOrWhiteSpace(comment.Key) || string.IsNullOrWhiteSpace(comment.Value))
+            {
+                continue;
+            }
+
+            normalizedComments[comment.Key] = comment.Value.Trim();
+        }
+
+        return normalizedComments;
+    }
+
+    private static Result<Unit, AppError> ValidateTrainerFieldComments(ReportTemplate template, Dictionary<string, string> comments)
+    {
+        var expected = template.Fields
+            .Select(field => field.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var commentKey in comments.Keys)
+        {
+            if (!expected.Contains(commentKey))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+        }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    private static bool IsDuplicateSubmissionException(Exception exception)
+    {
+        var message = exception.ToString();
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        return message.Contains("ReportRequestId", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("ReportSubmissions", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("unique", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsValueValidForType(JsonElement value, ReportFieldType type)
+    {
+        return type switch
+        {
+            ReportFieldType.Text => value.ValueKind == JsonValueKind.String,
+            ReportFieldType.Number => value.ValueKind == JsonValueKind.Number,
+            ReportFieldType.Boolean => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
+            ReportFieldType.Date => value.ValueKind == JsonValueKind.String
+                && DateTimeOffset.TryParse(value.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _),
+            ReportFieldType.Photos => value.ValueKind is JsonValueKind.Array or JsonValueKind.Object,
+            ReportFieldType.Measurements => value.ValueKind == JsonValueKind.Object,
+            _ => false
+        };
+    }
+
+    private static ReportSubmissionResult MapSubmission(ReportSubmission submission)
+    {
+        var answersRaw = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(submission.PayloadJson);
+        var answers = answersRaw == null
+            ? new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, JsonElement>(answersRaw, StringComparer.OrdinalIgnoreCase);
+        var trainerFieldCommentsRaw = string.IsNullOrWhiteSpace(submission.TrainerFieldCommentsJson)
+            ? null
+            : JsonSerializer.Deserialize<Dictionary<string, string>>(submission.TrainerFieldCommentsJson);
+        var trainerFieldComments = trainerFieldCommentsRaw == null
+            ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>(trainerFieldCommentsRaw, StringComparer.OrdinalIgnoreCase);
+
+        return new ReportSubmissionResult
+        {
+            Id = submission.Id,
+            ReportRequestId = submission.ReportRequestId,
+            TraineeId = submission.TraineeId,
+            SubmittedAt = submission.CreatedAt,
+            Answers = answers,
+            TrainerOverallComment = submission.TrainerOverallComment,
+            TrainerFieldComments = trainerFieldComments,
+            TrainerFeedbackAddedAt = submission.TrainerFeedbackAddedAt,
+            TrainerFeedbackReadAt = submission.TrainerFeedbackReadAt,
+            Request = MapRequest(submission.ReportRequest)
+        };
+    }
+
+    private static DateTimeOffset CalculateNextEligibleAt(DateTimeOffset readAt, int intervalValue, RecurringReportIntervalUnit intervalUnit)
+    {
+        return intervalUnit switch
+        {
+            RecurringReportIntervalUnit.Day => readAt.AddDays(intervalValue),
+            RecurringReportIntervalUnit.Week => readAt.AddDays(intervalValue * 7d),
+            RecurringReportIntervalUnit.Month => readAt.AddMonths(intervalValue),
+            _ => readAt.AddDays(intervalValue)
+        };
+    }
+}

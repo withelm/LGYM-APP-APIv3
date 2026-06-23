@@ -81,6 +81,26 @@ public sealed class TraineeReportingController : ControllerBase
         return Ok(_mapper.MapList<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
     }
 
+    [HttpPost("report-submissions/{submissionId}/mark-feedback-read")]
+    [ProducesResponseType(typeof(ReportSubmissionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> MarkFeedbackRead([FromRoute] string submissionId, CancellationToken cancellationToken = default)
+    {
+        if (!Id<ReportSubmission>.TryParse(submissionId, out var parsedSubmissionId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        var trainee = HttpContext.GetCurrentUser();
+        var result = await _reportingService.MarkTrainerFeedbackAsReadAsync(trainee!, parsedSubmissionId, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
+    }
+
     [HttpPost("photos/initiate")]
     [HttpPost("reporting/photos/upload-init")]
     [ProducesResponseType(typeof(InitiatePhotoUploadResponse), StatusCodes.Status200OK)]

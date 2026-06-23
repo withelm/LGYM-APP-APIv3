@@ -51,7 +51,29 @@ public sealed class ReportingProfile : IMappingProfile
             Answers = source?.Answers ?? new Dictionary<string, System.Text.Json.JsonElement>(StringComparer.OrdinalIgnoreCase),
             TrainerOverallComment = source?.TrainerOverallComment,
             TrainerFieldComments = source?.TrainerFieldComments ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            TrainerFeedbackAddedAt = source?.TrainerFeedbackAddedAt,
+            TrainerFeedbackReadAt = source?.TrainerFeedbackReadAt,
             Request = MapRequest(source?.Request, mapper)
+        });
+
+        configuration.CreateMap<RecurringReportAssignmentResult, RecurringReportAssignmentDto>((source, mapper) => new RecurringReportAssignmentDto
+        {
+            Id = source?.Id.ToString() ?? string.Empty,
+            TrainerId = source?.TrainerId.ToString() ?? string.Empty,
+            TraineeId = source?.TraineeId.ToString() ?? string.Empty,
+            TemplateId = source?.TemplateId.ToString() ?? string.Empty,
+            IntervalValue = source?.IntervalValue ?? 0,
+            IntervalUnit = source?.IntervalUnit ?? default,
+            StartsAt = source?.StartsAt ?? default,
+            EndsAt = source?.EndsAt,
+            IsActive = source?.IsActive ?? false,
+            Note = source?.Note,
+            CurrentReportRequestId = source?.CurrentReportRequestId?.ToString(),
+            LastRequestCreatedAt = source?.LastRequestCreatedAt,
+            NextEligibleAt = source?.NextEligibleAt,
+            CreatedAt = source?.CreatedAt ?? default,
+            Template = MapTemplate(source?.Template, mapper),
+            CurrentReportRequest = MapNullableRequest(source?.CurrentReportRequest, mapper)
         });
 
         configuration.CreateMap<InitiatePhotoUploadResult, InitiatePhotoUploadResponse>((source, _) => new InitiatePhotoUploadResponse
@@ -113,5 +135,15 @@ public sealed class ReportingProfile : IMappingProfile
         }
 
         return mapper.Map<ReportRequestResult, ReportRequestDto>(source) ?? new ReportRequestDto();
+    }
+
+    private static ReportRequestDto? MapNullableRequest(ReportRequestResult? source, MappingContext? mapper)
+    {
+        if (source == null || mapper == null)
+        {
+            return null;
+        }
+
+        return mapper.Map<ReportRequestResult, ReportRequestDto>(source);
     }
 }

@@ -20,11 +20,13 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 public sealed partial class TrainerReportingController : ControllerBase
 {
     private readonly IReportingService _reportingService;
+    private readonly IRecurringReportAssignmentService _recurringReportAssignmentService;
     private readonly IMapper _mapper;
 
-    public TrainerReportingController(IReportingService reportingService, IMapper mapper)
+    public TrainerReportingController(IReportingService reportingService, IRecurringReportAssignmentService recurringReportAssignmentService, IMapper mapper)
     {
         _reportingService = reportingService;
+        _recurringReportAssignmentService = recurringReportAssignmentService;
         _mapper = mapper;
     }
 
@@ -230,4 +232,5 @@ public sealed partial class TrainerReportingController : ControllerBase
             ModuleConfig = field.ModuleConfig
         };
     }
+
 }
