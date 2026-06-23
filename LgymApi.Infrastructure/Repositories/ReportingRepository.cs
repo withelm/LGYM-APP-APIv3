@@ -131,7 +131,7 @@ public sealed class ReportingRepository : IReportingRepository
 
     public Task<Photo?> FindActivePhotoByRequestAndViewAsync(
         Id<ReportRequest> requestId,
-        PhotoViewType viewType,
+        string viewType,
         CancellationToken cancellationToken = default)
     {
         return _dbContext.Photos

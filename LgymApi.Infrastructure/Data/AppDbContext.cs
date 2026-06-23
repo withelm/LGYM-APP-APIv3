@@ -664,7 +664,6 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.MimeType).IsRequired();
             entity.Property(e => e.SizeBytes).IsRequired();
             entity.Property(e => e.Checksum).IsRequired();
-            entity.Property(e => e.ViewType).HasConversion<string>();
             entity.HasIndex(e => new { e.ReportRequestId, e.ViewType })
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
@@ -689,7 +688,6 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.StorageKey).IsRequired();
             entity.Property(e => e.DeclaredContentType).HasMaxLength(128).IsRequired();
             entity.Property(e => e.Status).HasConversion<string>();
-            entity.Property(e => e.ViewType).HasConversion<string>();
             entity.Property(e => e.FailureReason).HasMaxLength(500);
             entity.HasIndex(e => e.StorageKey)
                 .IsUnique()
