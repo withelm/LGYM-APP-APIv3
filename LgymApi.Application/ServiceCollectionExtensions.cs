@@ -58,6 +58,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReportingServiceDependencies, ReportingServiceDependencies>();
         services.AddScoped<IReportSubmissionMeasurementWriter, ReportSubmissionMeasurementWriter>();
         services.AddScoped<IReportingService, ReportingService>();
+        services.AddScoped<IRecurringReportAssignmentServiceDependencies, RecurringReportAssignmentServiceDependencies>();
+        services.AddScoped<IRecurringReportAssignmentService, RecurringReportAssignmentService>();
         services.AddScoped<IExpiredPhotoUploadCleanupService, ExpiredPhotoUploadCleanupService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<ISupplementationService, SupplementationService>();
