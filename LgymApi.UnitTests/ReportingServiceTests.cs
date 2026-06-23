@@ -188,7 +188,7 @@ public sealed class ReportingServiceTests
                     Order = 2,
                     ModuleConfig = JsonDocument.Parse("""
                         {
-                            "requiredViews": ["front", "side", "back"]
+                            "requiredViews": ["front", "sideLeft", "sideRight", "back"]
                         }
                         """).RootElement
                 },
@@ -247,7 +247,7 @@ public sealed class ReportingServiceTests
                     Order = 1,
                     ModuleConfig = JsonDocument.Parse("""
                         {
-                            "requiredViews": ["front", "side", "back"]
+                            "requiredViews": ["front", "sideLeft", "sideRight", "back"]
                         }
                         """).RootElement
                 }
@@ -485,13 +485,14 @@ public sealed class ReportingServiceTests
         var requestId = Id<ReportRequest>.New();
         var templateId = Id<ReportTemplate>.New();
         var trainee = CreateUser(traineeId);
-        var template = CreateTemplateWithPhotos(templateId, new[] { "Front", "Side", "Back" });
+        var template = CreateTemplateWithPhotos(templateId, new[] { "Front", "SideLeft", "SideRight", "Back" });
         var request = CreateReportRequest(requestId, traineeId, templateId, template);
 
         var uploadedPhotos = new List<Photo>
         {
             CreatePhoto(Id<Photo>.New(), requestId, traineeId, PhotoViewType.Front),
-            CreatePhoto(Id<Photo>.New(), requestId, traineeId, PhotoViewType.Side)
+            CreatePhoto(Id<Photo>.New(), requestId, traineeId, PhotoViewType.SideLeft),
+            CreatePhoto(Id<Photo>.New(), requestId, traineeId, PhotoViewType.Back)
         };
 
         var service = CreateReportingService(
@@ -520,7 +521,7 @@ public sealed class ReportingServiceTests
         var requestId = Id<ReportRequest>.New();
         var templateId = Id<ReportTemplate>.New();
         var trainee = CreateUser(traineeId);
-        var template = CreateTemplateWithPhotos(templateId, new[] { "Front", "Side", "Back" });
+        var template = CreateTemplateWithPhotos(templateId, new[] { "Front", "SideLeft", "SideRight", "Back" });
         var request = CreateReportRequest(requestId, traineeId, templateId, template);
 
         var uploadedPhotos = new List<Photo>();
@@ -542,6 +543,34 @@ public sealed class ReportingServiceTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidReportingError>();
         result.Error.Message.Should().Be(Messages.ReportFieldValidationFailed);
+    }
+
+    [Test]
+    public async Task SubmitReportRequest_WithOptionalPhotosAndNoUploads_ShouldSucceed()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var trainee = CreateUser(traineeId);
+        var template = CreateTemplateWithOptionalPhotos(templateId, new[] { "Front", "SideLeft", "SideRight", "Back" });
+        var request = CreateReportRequest(requestId, traineeId, templateId, template);
+
+        var service = CreateReportingService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            getPhotosByRequestId: (_, _) => Task.FromResult(new List<Photo>()),
+            addSubmission: (_, _) => Task.CompletedTask);
+
+        var command = new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement>
+            {
+                ["feedback"] = JsonDocument.Parse("\"All good\"").RootElement
+            }
+        };
+
+        var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
+
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Test]
@@ -586,13 +615,14 @@ public sealed class ReportingServiceTests
         var requestId = Id<ReportRequest>.New();
         var templateId = Id<ReportTemplate>.New();
         var trainee = CreateUser(traineeId);
-        var template = CreateTemplateWithPhotos(templateId, new[] { "Front", "Side", "Back" });
+        var template = CreateTemplateWithPhotos(templateId, new[] { "Front", "SideLeft", "SideRight", "Back" });
         var request = CreateReportRequest(requestId, traineeId, templateId, template);
 
         var uploadedPhotos = new List<Photo>
         {
             CreatePhoto(Id<Photo>.New(), requestId, traineeId, PhotoViewType.Front),
-            CreatePhoto(Id<Photo>.New(), requestId, traineeId, PhotoViewType.Side),
+            CreatePhoto(Id<Photo>.New(), requestId, traineeId, PhotoViewType.SideLeft),
+            CreatePhoto(Id<Photo>.New(), requestId, traineeId, PhotoViewType.SideRight),
             CreatePhoto(Id<Photo>.New(), requestId, traineeId, PhotoViewType.Back)
         };
 
@@ -712,6 +742,41 @@ public sealed class ReportingServiceTests
         };
     }
 
+    private static ReportTemplate CreateTemplateWithOptionalPhotos(Id<ReportTemplate> templateId, string[] requiredViews)
+    {
+        var config = new { requiredViews };
+        return new ReportTemplate
+        {
+            Id = templateId,
+            Name = "Optional Photo Progress Report",
+            TrainerId = Id<User>.New(),
+            Fields =
+            [
+                new ReportTemplateField
+                {
+                    Id = Id<ReportTemplateField>.New(),
+                    TemplateId = templateId,
+                    Key = "feedback",
+                    Label = "Feedback",
+                    Type = ReportFieldType.Text,
+                    IsRequired = true,
+                    Order = 1,
+                },
+                new ReportTemplateField
+                {
+                    Id = Id<ReportTemplateField>.New(),
+                    TemplateId = templateId,
+                    Key = "photos",
+                    Label = "Progress Photos",
+                    Type = ReportFieldType.Photos,
+                    IsRequired = false,
+                    Order = 2,
+                    ModuleConfig = JsonSerializer.Serialize(config)
+                }
+            ]
+        };
+    }
+
     private static ReportTemplate CreateTemplateWithoutPhotos(Id<ReportTemplate> templateId)
     {
         return new ReportTemplate
@@ -754,14 +819,15 @@ public sealed class ReportingServiceTests
 
     private static Photo CreatePhoto(Id<Photo> photoId, Id<ReportRequest> requestId, Id<User> traineeId, PhotoViewType viewType)
     {
+        var normalizedViewType = viewType.ToString();
         return new Photo
         {
             Id = photoId,
             ReportRequestId = requestId,
             OwnerUserId = traineeId,
             UploaderUserId = traineeId,
-            ViewType = viewType,
-            StorageKey = $"photos/{traineeId}/{requestId}/{viewType}/photo.jpg",
+            ViewType = normalizedViewType,
+            StorageKey = $"photos/{traineeId}/{requestId}/{normalizedViewType}/photo.jpg",
             MimeType = "image/jpeg",
             SizeBytes = 1024,
             Checksum = "abc123",

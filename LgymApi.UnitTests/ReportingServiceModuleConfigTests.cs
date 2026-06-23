@@ -19,7 +19,20 @@ public sealed class ReportingServiceModuleConfigTests
         var result = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(config, out _, out var views);
 
         result.Should().BeTrue();
-        views.Should().BeEquivalentTo(new[] { PhotoViewType.Front, PhotoViewType.Side, PhotoViewType.Back });
+        views.Should().BeEquivalentTo(new[] { "Front", "Side", "Back" });
+    }
+
+    [Test]
+    public void TryReadRequiredPhotoViews_WithLeftAndRightSides_ReturnsParsedViews()
+    {
+        var config = JsonDocument.Parse("""
+            { "requiredViews": ["front", "SideLeft", "SideRight", "back"] }
+            """).RootElement;
+
+        var result = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(config, out _, out var views);
+
+        result.Should().BeTrue();
+        views.Should().BeEquivalentTo(new[] { "Front", "SideLeft", "SideRight", "Back" });
     }
 
     [Test]
