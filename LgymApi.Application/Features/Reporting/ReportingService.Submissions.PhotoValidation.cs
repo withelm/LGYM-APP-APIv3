@@ -12,13 +12,15 @@ public sealed partial class ReportingService
         ReportRequest request,
         CancellationToken cancellationToken)
     {
-        var photoFields = request.Template.Fields.Where(f => f.Type == ReportFieldType.Photos).ToList();
+        var photoFields = request.Template.Fields
+            .Where(f => f.Type == ReportFieldType.Photos && f.IsRequired)
+            .ToList();
         if (photoFields.Count == 0)
         {
             return Result<Unit, AppError>.Success(Unit.Value);
         }
 
-        var allRequiredViews = new HashSet<PhotoViewType>();
+        var allRequiredViews = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var field in photoFields)
         {
             if (string.IsNullOrWhiteSpace(field.ModuleConfig))
@@ -51,7 +53,7 @@ public sealed partial class ReportingService
         var uploadedViews = uploadedPhotos
             .Where(p => !p.IsDeleted)
             .Select(p => p.ViewType)
-            .ToHashSet();
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var missingViews = allRequiredViews.Except(uploadedViews).ToList();
         if (missingViews.Count > 0)

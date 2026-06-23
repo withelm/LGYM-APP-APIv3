@@ -8,7 +8,7 @@ public static class ReportingModuleConfigParser
     public static bool TryNormalizePhotoModuleConfig(
         JsonElement? moduleConfig,
         out JsonElement normalizedConfig,
-        out IReadOnlyList<PhotoViewType> requiredViews)
+        out IReadOnlyList<string> requiredViews)
     {
         normalizedConfig = default;
         requiredViews = [];
@@ -18,8 +18,8 @@ public static class ReportingModuleConfigParser
             return false;
         }
 
-        var parsedViews = new List<PhotoViewType>();
-        var seen = new HashSet<PhotoViewType>();
+        var parsedViews = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var viewElement in requiredViewsElement.EnumerateArray())
         {
@@ -29,15 +29,13 @@ public static class ReportingModuleConfigParser
             }
 
             var viewName = viewElement.GetString()?.Trim();
-            if (string.IsNullOrWhiteSpace(viewName)
-                || !System.Enum.TryParse<PhotoViewType>(viewName, true, out var viewType)
-                || !System.Enum.IsDefined(viewType)
-                || !seen.Add(viewType))
+            if (!TryNormalizePhotoViewName(viewName, out var normalizedView)
+                || !seen.Add(normalizedView))
             {
                 return false;
             }
 
-            parsedViews.Add(viewType);
+            parsedViews.Add(normalizedView);
         }
 
         if (parsedViews.Count == 0)
@@ -48,10 +46,31 @@ public static class ReportingModuleConfigParser
         requiredViews = parsedViews;
         normalizedConfig = JsonSerializer.SerializeToElement(new
         {
-            requiredViews = parsedViews.Select(x => x.ToString()).ToArray()
+            requiredViews = parsedViews.ToArray()
         });
 
         return true;
+    }
+
+    public static bool TryNormalizePhotoViewName(string? viewName, out string normalizedView)
+    {
+        normalizedView = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(viewName))
+        {
+            return false;
+        }
+
+        var trimmed = viewName.Trim();
+        if (System.Enum.TryParse<PhotoViewType>(trimmed, true, out var enumValue)
+            && System.Enum.IsDefined(enumValue))
+        {
+            normalizedView = enumValue.ToString();
+            return true;
+        }
+
+        normalizedView = trimmed;
+        return normalizedView.Length > 0;
     }
 
     public static bool TryNormalizeMeasurementModuleConfig(
@@ -111,16 +130,23 @@ public static class ReportingModuleConfigParser
             case "weight":
                 bodyPart = BodyParts.BodyWeight;
                 return true;
-            case "bodyfat":
-                bodyPart = BodyParts.BodyFat;
-                return true;
             case "thighs":
                 bodyPart = BodyParts.Thigh;
                 return true;
         }
 
+        // BMI should return later as an automatically calculated value, not a manually configured measurement type.
+        if (normalized.Equals("bodyfat", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("bmi", StringComparison.OrdinalIgnoreCase))
+        {
+            bodyPart = BodyParts.Unknown;
+            return false;
+        }
+
         return System.Enum.TryParse(normalized, true, out bodyPart)
-               && System.Enum.IsDefined(bodyPart);
+               && System.Enum.IsDefined(bodyPart)
+               && bodyPart != BodyParts.BodyFat
+               && bodyPart != BodyParts.Bmi;
     }
 
     private static bool TryGetArrayProperty(JsonElement? moduleConfig, string propertyName, out JsonElement arrayElement)
