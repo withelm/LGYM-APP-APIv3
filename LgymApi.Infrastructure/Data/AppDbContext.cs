@@ -41,6 +41,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<EmailNotificationSubscription> EmailNotificationSubscriptions => Set<EmailNotificationSubscription>();
     public DbSet<ReportTemplate> ReportTemplates => Set<ReportTemplate>();
     public DbSet<ReportTemplateField> ReportTemplateFields => Set<ReportTemplateField>();
+    public DbSet<RecurringReportAssignment> RecurringReportAssignments => Set<RecurringReportAssignment>();
     public DbSet<ReportRequest> ReportRequests => Set<ReportRequest>();
     public DbSet<ReportSubmission> ReportSubmissions => Set<ReportSubmission>();
     public DbSet<SupplementPlan> SupplementPlans => Set<SupplementPlan>();
@@ -366,6 +367,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.Note).HasMaxLength(1000);
             entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.CreatedAt });
             entity.HasIndex(e => new { e.TraineeId, e.Status, e.CreatedAt });
+            entity.HasIndex(e => e.RecurringReportAssignmentId);
             entity.HasOne(e => e.Trainer)
                 .WithMany()
                 .HasForeignKey(e => e.TrainerId)
@@ -378,6 +380,10 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.TemplateId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.RecurringReportAssignment)
+                .WithMany()
+                .HasForeignKey(e => e.RecurringReportAssignmentId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(e => e.Submission)
                 .WithOne(e => e.ReportRequest)
                 .HasForeignKey<ReportSubmission>(e => e.ReportRequestId)
@@ -388,6 +394,8 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("ReportSubmissions");
             entity.Property(e => e.PayloadJson).IsRequired();
+            entity.Property(e => e.TrainerOverallComment).HasMaxLength(4000);
+            entity.Property(e => e.TrainerFieldCommentsJson).HasColumnType("text");
             entity.HasIndex(e => e.ReportRequestId)
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
@@ -395,6 +403,34 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.TraineeId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RecurringReportAssignment>(entity =>
+        {
+            entity.ToTable("RecurringReportAssignments");
+            entity.Property(e => e.IntervalUnit).HasConversion<string>();
+            entity.Property(e => e.Note).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.IsActive });
+            entity.HasIndex(e => new { e.TraineeId, e.NextEligibleAt });
+            entity.HasIndex(e => e.CurrentReportRequestId)
+                .IsUnique()
+                .HasFilter("\"CurrentReportRequestId\" IS NOT NULL AND \"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Template)
+                .WithMany()
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.CurrentReportRequest)
+                .WithMany()
+                .HasForeignKey(e => e.CurrentReportRequestId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<SupplementPlan>(entity =>
