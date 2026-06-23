@@ -26,7 +26,7 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandler : g
             $"trainer-invitation:{command.InvitationId}:accepted",
             false,
             global::LgymApi.Resources.Messages.TrainerInvitationAccepted,
-            "/trainers/dashboard",
+            $"/trainer/members/{command.TraineeId}",
             InAppNotificationTypes.InvitationAccepted);
 
         var result = await _notificationService.CreateAsync(input, cancellationToken);

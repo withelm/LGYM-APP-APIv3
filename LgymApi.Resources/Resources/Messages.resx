@@ -259,7 +259,7 @@
     <value>{0} invited you to work together.</value>
   </data>
   <data name="TrainerInvitationAccepted" xml:space="preserve">
-    <value>A trainer has accepted your invitation.</value>
+    <value>A trainee has accepted your invitation.</value>
   </data>
   <data name="TrainerInvitationRejected" xml:space="preserve">
     <value>A trainee has rejected your invitation.</value>
@@ -270,8 +270,17 @@
   <data name="TrainerReportFeedbackReceived" xml:space="preserve">
     <value>{0} added feedback to your report: {1}.</value>
   </data>
+  <data name="TrainerReportSubmissionReceived" xml:space="preserve">
+    <value>{0} submitted a report: {1}.</value>
+  </data>
+  <data name="TrainerRelationshipEnded" xml:space="preserve">
+    <value>{0} ended your collaboration.</value>
+  </data>
   <data name="GenericTrainerDisplayName" xml:space="preserve">
     <value>Trainer</value>
+  </data>
+  <data name="GenericTraineeDisplayName" xml:space="preserve">
+    <value>Trainee</value>
   </data>
   <data name="GenericReportDisplayName" xml:space="preserve">
     <value>report</value>

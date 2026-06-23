@@ -26,7 +26,7 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandler : g
             $"trainer-invitation:{command.InvitationId}:rejected",
             false,
             global::LgymApi.Resources.Messages.TrainerInvitationRejected,
-            "/trainers/dashboard",
+            "/trainer/invitations",
             InAppNotificationTypes.InvitationRejected);
 
         var result = await _notificationService.CreateAsync(input, cancellationToken);

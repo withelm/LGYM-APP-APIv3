@@ -250,7 +250,7 @@
     <value>{0} zaprasza Cię do współpracy trenerskiej.</value>
   </data>
   <data name="TrainerInvitationAccepted" xml:space="preserve">
-    <value>Trener zaakceptował Twoje zaproszenie.</value>
+    <value>Podopieczny zaakceptował Twoje zaproszenie.</value>
   </data>
   <data name="TrainerInvitationRejected" xml:space="preserve">
     <value>Uczeń odrzucił Twoje zaproszenie.</value>
@@ -261,8 +261,17 @@
   <data name="TrainerReportFeedbackReceived" xml:space="preserve">
     <value>{0} dodał komentarz do Twojego raportu: {1}.</value>
   </data>
+  <data name="TrainerReportSubmissionReceived" xml:space="preserve">
+    <value>{0} wysłał raport: {1}.</value>
+  </data>
+  <data name="TrainerRelationshipEnded" xml:space="preserve">
+    <value>{0} zakończył współpracę.</value>
+  </data>
   <data name="GenericTrainerDisplayName" xml:space="preserve">
     <value>Trener</value>
+  </data>
+  <data name="GenericTraineeDisplayName" xml:space="preserve">
+    <value>Podopieczny</value>
   </data>
   <data name="GenericReportDisplayName" xml:space="preserve">
     <value>raport</value>

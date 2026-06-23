@@ -33,7 +33,7 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandlerTest
           service.LastInput.DeliveryKey.Should().Be($"trainer-invitation:{command.InvitationId}:accepted");
           service.LastInput.IsSystemNotification.Should().BeFalse();
          service.LastInput.Message.Should().Be(Messages.TrainerInvitationAccepted);
-         service.LastInput.RedirectUrl.Should().Be("/trainers/dashboard");
+         service.LastInput.RedirectUrl.Should().Be($"/trainer/members/{command.TraineeId}");
          service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationAccepted);
     }
 
