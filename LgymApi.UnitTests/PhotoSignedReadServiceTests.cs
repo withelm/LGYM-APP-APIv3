@@ -22,7 +22,7 @@ public sealed class PhotoSignedReadServiceTests
         var photo = new Photo
         {
             Id = photoId, OwnerUserId = ownerId, UploaderUserId = ownerId, ReportRequestId = Id<ReportRequest>.New(),
-            ViewType = PhotoViewType.Front, StorageKey = "photos/front.jpg", MimeType = "image/jpeg", SizeBytes = 1024, Checksum = "etag"
+            ViewType = PhotoViewType.Front.ToString(), StorageKey = "photos/front.jpg", MimeType = "image/jpeg", SizeBytes = 1024, Checksum = "etag"
         };
 
         var repo = Substitute.For<IReportingRepository>();

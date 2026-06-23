@@ -305,7 +305,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                     order = 0,
                     moduleConfig = new
                     {
-                        requiredViews = new[] { "Front", "Side", "Back" }
+                        requiredViews = new[] { "Front", "SideLeft", "SideRight", "Back" }
                     }
                 }
             }
@@ -369,7 +369,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                     order = 0,
                     moduleConfig = new
                     {
-                        requiredViews = new[] { "Front", "Side", "Back" }
+                        requiredViews = new[] { "Front", "SideLeft", "SideRight", "Back" }
                     }
                 }
             }
@@ -399,7 +399,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                     ReportRequestId = requestId,
                     OwnerUserId = traineeId,
                     UploaderUserId = traineeId,
-                    ViewType = Domain.Enums.PhotoViewType.Front,
+                    ViewType = Domain.Enums.PhotoViewType.Front.ToString(),
                     StorageKey = "photos/front.jpg",
                     MimeType = "image/jpeg",
                     SizeBytes = 1024,
@@ -411,8 +411,8 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                     ReportRequestId = requestId,
                     OwnerUserId = traineeId,
                     UploaderUserId = traineeId,
-                    ViewType = Domain.Enums.PhotoViewType.Side,
-                    StorageKey = "photos/side.jpg",
+                    ViewType = Domain.Enums.PhotoViewType.SideLeft.ToString(),
+                    StorageKey = "photos/side-left.jpg",
                     MimeType = "image/jpeg",
                     SizeBytes = 1024,
                     Checksum = "def456"
@@ -423,11 +423,23 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                     ReportRequestId = requestId,
                     OwnerUserId = traineeId,
                     UploaderUserId = traineeId,
-                    ViewType = Domain.Enums.PhotoViewType.Back,
-                    StorageKey = "photos/back.jpg",
+                    ViewType = Domain.Enums.PhotoViewType.SideRight.ToString(),
+                    StorageKey = "photos/side-right.jpg",
                     MimeType = "image/jpeg",
                     SizeBytes = 1024,
                     Checksum = "ghi789"
+                },
+                new Photo
+                {
+                    Id = Id<Photo>.New(),
+                    ReportRequestId = requestId,
+                    OwnerUserId = traineeId,
+                    UploaderUserId = traineeId,
+                    ViewType = Domain.Enums.PhotoViewType.Back.ToString(),
+                    StorageKey = "photos/back.jpg",
+                    MimeType = "image/jpeg",
+                    SizeBytes = 1024,
+                    Checksum = "jkl012"
                 });
 
             await db.SaveChangesAsync();
@@ -631,7 +643,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 ReportRequestId = requestId,
                 OwnerUserId = traineeId,
                 UploaderUserId = traineeId,
-                ViewType = PhotoViewType.Front,
+                ViewType = PhotoViewType.Front.ToString(),
                 StorageKey = "photos/old-front.jpg",
                 MimeType = "image/jpeg",
                 SizeBytes = 1024,
@@ -648,7 +660,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 ReportRequestId = requestId,
                 OwnerUserId = traineeId,
                 UploaderUserId = traineeId,
-                ViewType = PhotoViewType.Front,
+                ViewType = PhotoViewType.Front.ToString(),
                 StorageKey = "photos/new-front.jpg",
                 MimeType = "image/jpeg",
                 SizeBytes = 2048,
@@ -668,7 +680,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             Id<ReportRequest>.TryParse(request!.Id, out var requestId).Should().BeTrue();
 
             var photos = await db.Photos
-                .Where(p => p.ReportRequestId == requestId && p.ViewType == PhotoViewType.Front)
+                .Where(p => p.ReportRequestId == requestId && p.ViewType == PhotoViewType.Front.ToString())
                 .ToListAsync();
 
             photos.Should().HaveCount(2);

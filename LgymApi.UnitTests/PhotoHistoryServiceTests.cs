@@ -53,7 +53,7 @@ public sealed class PhotoHistoryServiceTests
         var requestId = Id<ReportRequest>.New();
         var trainee = PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
-        var photos = new List<Photo> { new() { Id = Id<Photo>.New(), ReportRequestId = requestId, OwnerUserId = traineeId, UploaderUserId = traineeId, ViewType = PhotoViewType.Front, StorageKey = "photos/front.jpg", MimeType = "image/jpeg", SizeBytes = 1024, Checksum = "abc123", IsDeleted = false } };
+        var photos = new List<Photo> { new() { Id = Id<Photo>.New(), ReportRequestId = requestId, OwnerUserId = traineeId, UploaderUserId = traineeId, ViewType = PhotoViewType.Front.ToString(), StorageKey = "photos/front.jpg", MimeType = "image/jpeg", SizeBytes = 1024, Checksum = "abc123", IsDeleted = false } };
 
         var repo = Substitute.For<IReportingRepository>();
         repo.GetPhotosByRequestIdAsync(requestId, Arg.Any<CancellationToken>()).Returns(photos);
@@ -77,7 +77,7 @@ public sealed class PhotoHistoryServiceTests
         var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
         var link = new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainerId, TraineeId = traineeId };
-        var photos = new List<Photo> { new() { Id = Id<Photo>.New(), ReportRequestId = requestId, OwnerUserId = traineeId, UploaderUserId = traineeId, ViewType = PhotoViewType.Side, StorageKey = "photos/side.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "def456", IsDeleted = false } };
+        var photos = new List<Photo> { new() { Id = Id<Photo>.New(), ReportRequestId = requestId, OwnerUserId = traineeId, UploaderUserId = traineeId, ViewType = PhotoViewType.Side.ToString(), StorageKey = "photos/side.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "def456", IsDeleted = false } };
 
         var repo = Substitute.For<IReportingRepository>();
         repo.GetPhotosByRequestIdAsync(requestId, Arg.Any<CancellationToken>()).Returns(photos);
@@ -120,7 +120,7 @@ public sealed class PhotoHistoryServiceTests
         var requestId = Id<ReportRequest>.New();
         var trainee = PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
-        var photos = new List<Photo> { new() { Id = Id<Photo>.New(), ReportRequestId = requestId, OwnerUserId = traineeId, UploaderUserId = traineeId, ViewType = PhotoViewType.Front, StorageKey = "photos/front.jpg", ThumbnailStorageKey = "photos/front-thumb.jpg", MimeType = "image/jpeg", SizeBytes = 1024, Checksum = "abc123", IsDeleted = false } };
+        var photos = new List<Photo> { new() { Id = Id<Photo>.New(), ReportRequestId = requestId, OwnerUserId = traineeId, UploaderUserId = traineeId, ViewType = PhotoViewType.Front.ToString(), StorageKey = "photos/front.jpg", ThumbnailStorageKey = "photos/front-thumb.jpg", MimeType = "image/jpeg", SizeBytes = 1024, Checksum = "abc123", IsDeleted = false } };
 
         var repo = Substitute.For<IReportingRepository>();
         repo.GetPhotosByRequestIdAsync(requestId, Arg.Any<CancellationToken>()).Returns(photos);
