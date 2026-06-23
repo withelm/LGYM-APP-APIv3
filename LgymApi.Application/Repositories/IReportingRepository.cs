@@ -18,7 +18,7 @@ public interface IReportingRepository
     Task<List<ReportSubmission>> GetSubmissionsByTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<List<ReportSubmission>> GetSubmissionsByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<Photo?> FindPhotoByIdAsync(Id<Photo> photoId, CancellationToken cancellationToken = default);
-    Task<Photo?> FindActivePhotoByRequestAndViewAsync(Id<ReportRequest> requestId, Domain.Enums.PhotoViewType viewType, CancellationToken cancellationToken = default);
+    Task<Photo?> FindActivePhotoByRequestAndViewAsync(Id<ReportRequest> requestId, string viewType, CancellationToken cancellationToken = default);
     Task<List<Photo>> GetPhotosByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<List<Photo>> GetPhotosByRequestIdAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default);
     Task<long> GetActivePhotoStorageBytesAsync(CancellationToken cancellationToken = default);

@@ -10,7 +10,7 @@ public sealed class PendingPhotoUpload
     public Id<LgymApi.Domain.Entities.User> InitiatedByUserId { get; set; }
     public Id<LgymApi.Domain.Entities.User> OwnerUserId { get; set; }
     public Id<LgymApi.Domain.Entities.ReportRequest> ReportRequestId { get; set; }
-    public PhotoViewType ViewType { get; set; }
+    public string ViewType { get; set; } = string.Empty;
     public string DeclaredContentType { get; set; } = string.Empty;
     public long DeclaredSizeBytes { get; set; }
     public DateTimeOffset CreatedAtUtc { get; set; }

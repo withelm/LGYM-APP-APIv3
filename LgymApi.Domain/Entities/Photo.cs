@@ -1,4 +1,3 @@
-using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
@@ -10,7 +9,7 @@ public sealed class Photo : EntityBase<Photo>
     public long SizeBytes { get; set; }
     public string Checksum { get; set; } = string.Empty;
     public string? ThumbnailStorageKey { get; set; }
-    public PhotoViewType ViewType { get; set; }
+    public string ViewType { get; set; } = string.Empty;
     public Id<ReportRequest> ReportRequestId { get; set; }
     public Id<User> UploaderUserId { get; set; }
     public Id<User> OwnerUserId { get; set; }
