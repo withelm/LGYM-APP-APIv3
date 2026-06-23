@@ -60,7 +60,7 @@ public sealed class InMemoryPhotoUploadInitTrackerTests
             InitiatedByUserId = userId,
             OwnerUserId = userId,
             ReportRequestId = Id<ReportRequest>.New(),
-            ViewType = LgymApi.Domain.Enums.PhotoViewType.Front,
+            ViewType = LgymApi.Domain.Enums.PhotoViewType.Front.ToString(),
             DeclaredContentType = "image/jpeg",
             DeclaredSizeBytes = 1024,
             CreatedAtUtc = createdAtUtc,

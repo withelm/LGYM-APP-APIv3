@@ -112,7 +112,7 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
             InitiatedByUserId = Domain.ValueObjects.Id<Domain.Entities.User>.New(),
             OwnerUserId = Domain.ValueObjects.Id<Domain.Entities.User>.New(),
             ReportRequestId = Domain.ValueObjects.Id<Domain.Entities.ReportRequest>.New(),
-            ViewType = Domain.Enums.PhotoViewType.Front,
+            ViewType = Domain.Enums.PhotoViewType.Front.ToString(),
             DeclaredContentType = "image/jpeg",
             DeclaredSizeBytes = 1024,
             CreatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-20),
