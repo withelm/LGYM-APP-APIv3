@@ -92,6 +92,27 @@ public sealed class CreateReportRequestRequest : IDto
     public string? Note { get; set; }
 }
 
+public sealed class UpsertRecurringReportAssignmentRequest : IDto
+{
+    [JsonPropertyName("templateId")]
+    public string TemplateId { get; set; } = string.Empty;
+
+    [JsonPropertyName("intervalValue")]
+    public int IntervalValue { get; set; }
+
+    [JsonPropertyName("intervalUnit")]
+    public RecurringReportIntervalUnit IntervalUnit { get; set; }
+
+    [JsonPropertyName("startsAt")]
+    public DateTimeOffset StartsAt { get; set; }
+
+    [JsonPropertyName("endsAt")]
+    public DateTimeOffset? EndsAt { get; set; }
+
+    [JsonPropertyName("note")]
+    public string? Note { get; set; }
+}
+
 public sealed class ReportRequestDto : IResultDto
 {
     [JsonPropertyName("_id")]
@@ -163,6 +184,63 @@ public sealed class ReportSubmissionDto : IResultDto
     [JsonPropertyName("trainerFieldComments")]
     public Dictionary<string, string> TrainerFieldComments { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    [JsonPropertyName("trainerFeedbackAddedAt")]
+    public DateTimeOffset? TrainerFeedbackAddedAt { get; set; }
+
+    [JsonPropertyName("trainerFeedbackReadAt")]
+    public DateTimeOffset? TrainerFeedbackReadAt { get; set; }
+
     [JsonPropertyName("request")]
     public ReportRequestDto Request { get; set; } = new();
+}
+
+public sealed class RecurringReportAssignmentDto : IResultDto
+{
+    [JsonPropertyName("_id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("trainerId")]
+    public string TrainerId { get; set; } = string.Empty;
+
+    [JsonPropertyName("traineeId")]
+    public string TraineeId { get; set; } = string.Empty;
+
+    [JsonPropertyName("templateId")]
+    public string TemplateId { get; set; } = string.Empty;
+
+    [JsonPropertyName("intervalValue")]
+    public int IntervalValue { get; set; }
+
+    [JsonPropertyName("intervalUnit")]
+    public RecurringReportIntervalUnit IntervalUnit { get; set; }
+
+    [JsonPropertyName("startsAt")]
+    public DateTimeOffset StartsAt { get; set; }
+
+    [JsonPropertyName("endsAt")]
+    public DateTimeOffset? EndsAt { get; set; }
+
+    [JsonPropertyName("isActive")]
+    public bool IsActive { get; set; }
+
+    [JsonPropertyName("note")]
+    public string? Note { get; set; }
+
+    [JsonPropertyName("currentReportRequestId")]
+    public string? CurrentReportRequestId { get; set; }
+
+    [JsonPropertyName("lastRequestCreatedAt")]
+    public DateTimeOffset? LastRequestCreatedAt { get; set; }
+
+    [JsonPropertyName("nextEligibleAt")]
+    public DateTimeOffset? NextEligibleAt { get; set; }
+
+    [JsonPropertyName("createdAt")]
+    public DateTimeOffset CreatedAt { get; set; }
+
+    [JsonPropertyName("template")]
+    public ReportTemplateDto Template { get; set; } = new();
+
+    [JsonPropertyName("currentReportRequest")]
+    public ReportRequestDto? CurrentReportRequest { get; set; }
 }
