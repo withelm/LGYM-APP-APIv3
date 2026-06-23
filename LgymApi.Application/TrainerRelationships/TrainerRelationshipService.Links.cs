@@ -1,5 +1,6 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -31,6 +32,11 @@ public sealed partial class TrainerRelationshipService
 
         await _trainerRelationshipRepository.RemoveLinkAsync(link, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _commandDispatcher.EnqueueAsync(new TrainerRelationshipEndedInAppNotificationCommand
+        {
+            TrainerId = link.TrainerId,
+            TraineeId = currentTrainee.Id
+        });
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 }
