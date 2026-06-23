@@ -2,6 +2,7 @@ using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using NSubstitute;
@@ -44,6 +45,37 @@ public sealed class PhotoUploadServiceTests
         result.Value.StorageKey.Should().Contain("Front");
         result.Value.StorageKey.Should().EndWith(".jpg");
         result.Value.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
+    }
+
+    [Test]
+    public async Task InitiatePhotoUploadAsync_PersistsPendingUploadSession()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var currentUser = PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com");
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        storageProvider.GenerateSignedUploadUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns("https://storage.example.com/signed-upload-url");
+
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            photoStorageProvider: storageProvider,
+            unitOfWork: unitOfWork);
+
+        var result = await service.InitiatePhotoUploadAsync(currentUser, new InitiatePhotoUploadCommand
+        {
+            ReportRequestId = requestId,
+            ViewType = "front",
+            MimeType = "image/jpeg",
+            SizeBytes = 5_242_880
+        });
+
+        result.IsSuccess.Should().BeTrue();
+        await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]

@@ -155,6 +155,28 @@ public sealed class BackgroundActionRegistrationTests
     }
 
     [Test]
+    public void ServiceProvider_Registers_NewTrainerNotificationHandlers()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionCreatedInAppNotificationCommand, LgymApi.BackgroundWorker.Actions.ReportSubmissionCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainerRelationshipEndedInAppNotificationCommand, LgymApi.BackgroundWorker.Actions.TrainerRelationshipEndedInAppNotificationCommandHandler>();
+
+        var reportSubmissionDescriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionCreatedInAppNotificationCommand>))
+            .ToList();
+        var relationshipEndedDescriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainerRelationshipEndedInAppNotificationCommand>))
+            .ToList();
+
+        reportSubmissionDescriptors.Should().ContainSingle();
+        reportSubmissionDescriptors[0].ImplementationType.Should().Be(typeof(LgymApi.BackgroundWorker.Actions.ReportSubmissionCreatedInAppNotificationCommandHandler));
+
+        relationshipEndedDescriptors.Should().ContainSingle();
+        relationshipEndedDescriptors[0].ImplementationType.Should().Be(typeof(LgymApi.BackgroundWorker.Actions.TrainerRelationshipEndedInAppNotificationCommandHandler));
+    }
+
+    [Test]
     public void AddBackgroundAction_HandlersAreScoped_NewInstancePerScope()
     {
         // Arrange

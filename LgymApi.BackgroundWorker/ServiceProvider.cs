@@ -54,6 +54,7 @@ public static class ServiceProvider
         services.AddScoped<ActionMessageJob>();
         services.AddScoped<ICommittedIntentDispatchJob, CommittedIntentDispatchJob>();
         services.AddScoped<IExpiredPhotoUploadCleanupJob, ExpiredPhotoUploadCleanupJob>();
+        services.AddScoped<IRecurringReportAssignmentProcessingJob, RecurringReportAssignmentProcessingJob>();
 
         services.AddScoped<BackgroundActionOrchestratorService>();
         services.AddNotificationsModule();
@@ -69,7 +70,9 @@ public static class ServiceProvider
         services.AddBackgroundAction<TrainerInvitationAcceptedInAppNotificationCommand, TrainerInvitationAcceptedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TrainerInvitationRejectedInAppNotificationCommand, TrainerInvitationRejectedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportRequestCreatedInAppNotificationCommand, ReportRequestCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<ReportSubmissionCreatedInAppNotificationCommand, ReportSubmissionCreatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportFeedbackAddedInAppNotificationCommand, ReportFeedbackAddedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<TrainerRelationshipEndedInAppNotificationCommand, TrainerRelationshipEndedInAppNotificationCommandHandler>();
 
 
         return services;
