@@ -112,7 +112,7 @@ public sealed partial class ReportingService
             results.Add(new PhotoHistoryItemResult
             {
                 Id = photo.Id,
-                ViewType = photo.ViewType.ToString(),
+                ViewType = photo.ViewType,
                 SizeBytes = photo.SizeBytes,
                 ThumbnailUrl = thumbnailUrl,
                 ReadUrl = readUrl,

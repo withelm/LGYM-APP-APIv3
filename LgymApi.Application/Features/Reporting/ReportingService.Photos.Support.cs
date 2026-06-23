@@ -45,27 +45,27 @@ public sealed partial class ReportingService
     private static string GenerateStorageKey(
         Id<UserEntity> traineeId,
         Id<ReportRequest> reportRequestId,
-        PhotoViewType viewType,
+        string viewType,
         string fileExtension)
     {
         var timestamp = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH-mm-ssZ");
         var uniqueSuffix = Id<Photo>.New().ToString().Replace("-", string.Empty, StringComparison.Ordinal);
+        var sanitizedViewType = SanitizeViewTypeSegment(viewType);
 
-        return $"photos/{traineeId}/{reportRequestId}/{viewType}/{timestamp}-{uniqueSuffix}.{fileExtension}";
+        return $"photos/{traineeId}/{reportRequestId}/{sanitizedViewType}/{timestamp}-{uniqueSuffix}.{fileExtension}";
     }
 
     private static string BuildStorageKeyPrefix(
         Id<UserEntity> traineeId,
         Id<ReportRequest> reportRequestId,
-        PhotoViewType viewType)
+        string viewType)
     {
-        return $"photos/{traineeId}/{reportRequestId}/{viewType}/";
+        return $"photos/{traineeId}/{reportRequestId}/{SanitizeViewTypeSegment(viewType)}/";
     }
 
-    private Result<Unit, AppError> TryParseViewType(string viewType, out PhotoViewType parsedViewType)
+    private Result<Unit, AppError> TryParseViewType(string viewType, out string parsedViewType)
     {
-        if (!System.Enum.TryParse<PhotoViewType>(viewType, ignoreCase: true, out parsedViewType)
-            || !System.Enum.IsDefined(parsedViewType))
+        if (!ReportingModuleConfigParser.TryNormalizePhotoViewName(viewType, out parsedViewType))
         {
             return Result<Unit, AppError>.Failure(new InvalidReportingError($"Invalid view type: {viewType}"));
         }
@@ -182,14 +182,14 @@ public sealed partial class ReportingService
         UserEntity currentUser,
         CompletePhotoUploadCommand command,
         Id<UserEntity> ownerUserId,
-        PhotoViewType parsedViewType,
+        string parsedViewType,
         PendingPhotoUpload pendingUpload)
     {
         if (!string.Equals(pendingUpload.StorageKey, command.StorageKey, StringComparison.Ordinal)
             || pendingUpload.InitiatedByUserId != currentUser.Id
             || pendingUpload.OwnerUserId != ownerUserId
             || pendingUpload.ReportRequestId != command.ReportRequestId
-            || pendingUpload.ViewType != parsedViewType
+            || !string.Equals(pendingUpload.ViewType, parsedViewType, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(pendingUpload.DeclaredContentType, command.MimeType, StringComparison.OrdinalIgnoreCase)
             || pendingUpload.DeclaredSizeBytes != command.SizeBytes)
         {
@@ -214,7 +214,7 @@ public sealed partial class ReportingService
         string storageKey,
         Id<UserEntity> traineeId,
         Id<ReportRequest> reportRequestId,
-        PhotoViewType parsedViewType)
+        string parsedViewType)
     {
         var expectedPrefix = BuildStorageKeyPrefix(traineeId, reportRequestId, parsedViewType);
         if (storageKey.StartsWith(expectedPrefix, StringComparison.Ordinal))
@@ -254,6 +254,27 @@ public sealed partial class ReportingService
     }
 
     private static string NormalizeChecksum(string checksum) => checksum.Trim().Trim('"');
+
+    private static string SanitizeViewTypeSegment(string viewType)
+    {
+        var trimmed = viewType.Trim();
+        if (trimmed.Length == 0)
+        {
+            return "Unknown";
+        }
+
+        var sanitizedChars = trimmed
+            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '-')
+            .ToArray();
+
+        var sanitized = new string(sanitizedChars);
+        while (sanitized.Contains("--", StringComparison.Ordinal))
+        {
+            sanitized = sanitized.Replace("--", "-", StringComparison.Ordinal);
+        }
+
+        return sanitized.Trim('-');
+    }
 
     private TimeSpan GetSignedUploadExpiration() => TimeSpan.FromMinutes(_photoStorageOptions.SignedUploadExpirationMinutes);
 

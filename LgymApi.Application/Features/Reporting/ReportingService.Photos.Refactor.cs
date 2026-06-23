@@ -13,7 +13,7 @@ namespace LgymApi.Application.Features.Reporting;
 
 public sealed partial class ReportingService
 {
-    private sealed record CompletePhotoUploadValidationContext(ReportRequest Request, PhotoViewType ParsedViewType);
+    private sealed record CompletePhotoUploadValidationContext(ReportRequest Request, string ParsedViewType);
 
     private async Task<Result<CompletePhotoUploadValidationContext, AppError>> ValidateCompletePhotoUploadRequestAsync(
         UserEntity currentUser,
@@ -154,7 +154,7 @@ public sealed partial class ReportingService
         UserEntity currentUser,
         CompletePhotoUploadCommand command,
         PhotoMetadata metadata,
-        PhotoViewType parsedViewType,
+        string parsedViewType,
         Id<UserEntity> ownerUserId,
         CancellationToken cancellationToken)
     {
