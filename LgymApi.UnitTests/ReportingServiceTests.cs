@@ -10,6 +10,7 @@ using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -544,6 +545,41 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
+    public async Task SubmitReportRequest_WhenSuccessful_EnqueuesTrainerSubmissionNotification()
+    {
+        var traineeId = Id<User>.New();
+        var trainerId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var trainee = CreateUser(traineeId);
+        var template = CreateTemplateWithoutPhotos(templateId);
+        template.Name = "Weekly check-in";
+        var request = CreateReportRequest(requestId, traineeId, templateId, template);
+        request.TrainerId = trainerId;
+        var commandDispatcher = Substitute.For<ICommandDispatcher>();
+        var service = CreateReportingService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            commandDispatcher: commandDispatcher);
+
+        var command = new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement>
+            {
+                ["feedback"] = JsonDocument.Parse("\"Done\"").RootElement
+            }
+        };
+
+        var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
+
+        result.IsSuccess.Should().BeTrue();
+        await commandDispatcher.Received(1).EnqueueAsync(Arg.Is<ReportSubmissionCreatedInAppNotificationCommand>(queued =>
+            queued.TrainerId == trainerId
+            && queued.TraineeId == traineeId
+            && queued.TemplateName == "Weekly check-in"
+            && !queued.SubmissionId.IsEmpty));
+    }
+
+    [Test]
     public async Task SubmitReportRequest_WithAllRequiredPhotoViews_ShouldSucceed()
     {
         var traineeId = Id<User>.New();
@@ -736,11 +772,12 @@ public sealed class ReportingServiceTests
     private static ReportingService CreateReportingService(
         Func<Id<ReportRequest>, CancellationToken, Task<ReportRequest?>>? findRequestById = null,
         Func<Id<ReportRequest>, CancellationToken, Task<List<Photo>>>? getPhotosByRequestId = null,
-        Func<ReportSubmission, CancellationToken, Task>? addSubmission = null)
+        Func<ReportSubmission, CancellationToken, Task>? addSubmission = null,
+        ICommandDispatcher? commandDispatcher = null)
     {
         var repository = Substitute.For<IReportingRepository>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
-        var commandDispatcher = Substitute.For<ICommandDispatcher>();
+        commandDispatcher ??= Substitute.For<ICommandDispatcher>();
 
         if (findRequestById != null)
         {
