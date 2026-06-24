@@ -1,6 +1,7 @@
 using LgymApi.Application.Features.AdminManagement;
 using LgymApi.Application.Features.AdminManagement;
 using LgymApi.Application.AppConfig;
+using LgymApi.Application.Features.DietPlans;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.Enum;
 using LgymApi.Application.Features.Exercise;
@@ -33,6 +34,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IAppConfigService, AppConfigService>();
+        services.AddScoped<IDietPlanService, DietPlanService>();
         services.AddScoped<IEloRegistryService, EloRegistryService>();
         services.AddScoped<IEnumService, EnumService>();
         services.AddScoped<IExerciseService, ExerciseService>();
