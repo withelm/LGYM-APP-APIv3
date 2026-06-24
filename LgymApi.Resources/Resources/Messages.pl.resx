@@ -276,6 +276,12 @@
   <data name="GenericReportDisplayName" xml:space="preserve">
     <value>raport</value>
   </data>
+  <data name="TrainerDietPlanUpdated" xml:space="preserve">
+    <value>{0} zaktualizował Twój plan diety: {1}.</value>
+  </data>
+  <data name="GenericDietPlanDisplayName" xml:space="preserve">
+    <value>plan diety</value>
+  </data>
   <data name="AccountBlocked" xml:space="preserve">
     <value>Twoje konto zostało zablokowane.</value>
   </data>
