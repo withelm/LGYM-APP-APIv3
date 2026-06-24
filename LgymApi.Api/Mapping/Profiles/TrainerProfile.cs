@@ -1,4 +1,5 @@
 using LgymApi.Api.Features.Trainer.Contracts;
+using LgymApi.Application.Features.DietPlans.Models;
 using LgymApi.Application.Features.Supplementation.Models;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
@@ -97,6 +98,47 @@ public sealed class TrainerProfile : IMappingProfile
             PlannedDoses = source.PlannedDoses,
             TakenDoses = source.TakenDoses,
             AdherenceRate = source.AdherenceRate
+        });
+
+        configuration.CreateMap<DietMealResult, DietMealDto>((source, _) => new DietMealDto
+        {
+            Id = source.Id.ToString(),
+            Name = source.Name,
+            Order = source.Order,
+            Description = source.Description,
+            EstimatedCalories = source.EstimatedCalories,
+            ProteinGrams = source.ProteinGrams,
+            CarbsGrams = source.CarbsGrams,
+            FatGrams = source.FatGrams
+        });
+
+        configuration.CreateMap<DietPlanResult, DietPlanDto>((source, mapper) => new DietPlanDto
+        {
+            Id = source.Id.ToString(),
+            TrainerId = source.TrainerId.ToString(),
+            TraineeId = source.TraineeId.ToString(),
+            Name = source.Name,
+            StartDate = source.StartDate,
+            EndDate = source.EndDate,
+            EstimatedCalories = source.EstimatedCalories,
+            ProteinGrams = source.ProteinGrams,
+            CarbsGrams = source.CarbsGrams,
+            FatGrams = source.FatGrams,
+            Notes = source.Notes,
+            IsActive = source.IsActive,
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt,
+            Meals = mapper?.MapList<DietMealResult, DietMealDto>(source.Meals) ?? []
+        });
+
+        configuration.CreateMap<DietPlanHistoryResult, DietPlanHistoryDto>((source, _) => new DietPlanHistoryDto
+        {
+            Id = source.Id.ToString(),
+            DietPlanId = source.DietPlanId.ToString(),
+            ChangedByUserId = source.ChangedByUserId.ToString(),
+            ChangeDate = source.ChangeDate,
+            ChangeType = source.ChangeType,
+            SnapshotJson = source.SnapshotJson
         });
 
     }
