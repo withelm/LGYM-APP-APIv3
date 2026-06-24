@@ -10,6 +10,7 @@ public static class InAppNotificationTypes
     // Keep this value aligned with the existing mobile notification contract.
     public static readonly InAppNotificationType ReportRequestReceived = InAppNotificationType.Define("ReportRequestReceived");
     public static readonly InAppNotificationType ReportFeedbackReceived = InAppNotificationType.Define("ReportFeedbackReceived");
+    public static readonly InAppNotificationType DietPlanUpdated = InAppNotificationType.Define("DietPlanUpdated");
 
     public static IReadOnlyCollection<InAppNotificationType> All { get; } =
     [
@@ -19,7 +20,8 @@ public static class InAppNotificationTypes
         ReportSubmissionReceived,
         TrainerRelationshipEnded,
         ReportRequestReceived,
-        ReportFeedbackReceived
+        ReportFeedbackReceived,
+        DietPlanUpdated
     ];
 
     public static bool TryFromValue(string? value, out InAppNotificationType notificationType)

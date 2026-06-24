@@ -72,6 +72,7 @@ public static class ServiceProvider
         services.AddBackgroundAction<ReportRequestCreatedInAppNotificationCommand, ReportRequestCreatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportSubmissionCreatedInAppNotificationCommand, ReportSubmissionCreatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportFeedbackAddedInAppNotificationCommand, ReportFeedbackAddedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<DietPlanUpdatedInAppNotificationCommand, DietPlanUpdatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TrainerRelationshipEndedInAppNotificationCommand, TrainerRelationshipEndedInAppNotificationCommandHandler>();
 
 
