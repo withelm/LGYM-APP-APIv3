@@ -117,6 +117,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ITrainerRelationshipRepository, TrainerRelationshipRepository>();
+        services.AddScoped<IDietPlanRepository, DietPlanRepository>();
         services.AddScoped<IReportingRepository, ReportingRepository>();
         services.AddScoped<IRecurringReportAssignmentRepository, RecurringReportAssignmentRepository>();
         services.AddScoped<ISupplementationRepository, SupplementationRepository>();

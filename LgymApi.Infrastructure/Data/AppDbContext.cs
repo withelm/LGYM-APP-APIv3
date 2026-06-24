@@ -47,6 +47,9 @@ public sealed class AppDbContext : DbContext
     public DbSet<SupplementPlan> SupplementPlans => Set<SupplementPlan>();
     public DbSet<SupplementPlanItem> SupplementPlanItems => Set<SupplementPlanItem>();
     public DbSet<SupplementIntakeLog> SupplementIntakeLogs => Set<SupplementIntakeLog>();
+    public DbSet<DietPlan> DietPlans => Set<DietPlan>();
+    public DbSet<DietMeal> DietMeals => Set<DietMeal>();
+    public DbSet<DietPlanHistory> DietPlanHistories => Set<DietPlanHistory>();
     public DbSet<CommandEnvelope> CommandEnvelopes => Set<CommandEnvelope>();
     public DbSet<ActionExecutionLog> ActionExecutionLogs => Set<ActionExecutionLog>();
     public DbSet<ApiIdempotencyRecord> ApiIdempotencyRecords => Set<ApiIdempotencyRecord>();
@@ -478,6 +481,51 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.PlanItemId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DietPlan>(entity =>
+        {
+            entity.ToTable("DietPlans");
+            entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.CreatedAt });
+            entity.HasIndex(e => new { e.TraineeId, e.IsActive });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DietMeal>(entity =>
+        {
+            entity.ToTable("DietMeals");
+            entity.Property(e => e.Name).HasMaxLength(160).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(2000);
+            entity.HasIndex(e => new { e.DietPlanId, e.Order });
+            entity.HasOne(e => e.DietPlan)
+                .WithMany(e => e.Meals)
+                .HasForeignKey(e => e.DietPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DietPlanHistory>(entity =>
+        {
+            entity.ToTable("DietPlanHistories");
+            entity.Property(e => e.ChangeType).HasMaxLength(64).IsRequired();
+            entity.Property(e => e.SnapshotJson).HasColumnType("text").IsRequired();
+            entity.HasIndex(e => new { e.DietPlanId, e.ChangeDate });
+            entity.HasOne(e => e.DietPlan)
+                .WithMany(e => e.HistoryEntries)
+                .HasForeignKey(e => e.DietPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CommandEnvelope>(entity =>
