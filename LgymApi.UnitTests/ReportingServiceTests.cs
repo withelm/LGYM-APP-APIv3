@@ -702,6 +702,357 @@ public sealed class ReportingServiceTests
         request.SubmittedAt.Should().NotBeNull();
     }
 
+    [Test]
+    public async Task SubmitReportRequest_WithNullAnswers_ReturnsValidationError()
+    {
+        var service = CreateReportingService();
+
+        var result = await service.SubmitReportRequestAsync(CreateUser(Id<User>.New()), Id<ReportRequest>.New(), new SubmitReportRequestCommand { Answers = null! });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
+    public async Task SubmitReportRequest_WhenRequestBelongsToDifferentTrainee_ReturnsNotFound()
+    {
+        var requestId = Id<ReportRequest>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var currentTrainee = CreateUser(Id<User>.New());
+        var request = CreateReportRequest(requestId, Id<User>.New(), templateId, CreateTemplateWithoutPhotos(templateId));
+        var service = CreateReportingService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request));
+
+        var result = await service.SubmitReportRequestAsync(currentTrainee, requestId, new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("\"ok\"").RootElement }
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+    }
+
+    [Test]
+    public async Task SubmitReportRequest_WhenRequestAlreadySubmitted_ReturnsInvalidReportingError()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(requestId, traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        request.Status = ReportRequestStatus.Submitted;
+        var service = CreateReportingService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request));
+
+        var result = await service.SubmitReportRequestAsync(CreateUser(traineeId), requestId, new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("\"ok\"").RootElement }
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
+    public async Task SubmitReportRequest_WhenDuplicateSubmissionDetected_ReturnsInvalidReportingError()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(requestId, traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns<Task<int>>(_ => throw new InvalidOperationException("duplicate key in ReportSubmissions on ReportRequestId"));
+        var service = CreateReportingService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            unitOfWork: unitOfWork);
+
+        var result = await service.SubmitReportRequestAsync(CreateUser(traineeId), requestId, new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("\"ok\"").RootElement }
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
+    public async Task UpdateTrainerFeedbackAsync_WhenFeedbackCleared_DoesNotEnqueueNotificationAndClearsNextEligibleAt()
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var submissionId = Id<ReportSubmission>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var submission = CreateSubmission(submissionId, traineeId, request);
+        submission.TrainerOverallComment = "old";
+        submission.TrainerFeedbackAddedAt = DateTimeOffset.UtcNow.AddDays(-1);
+        submission.TrainerFieldCommentsJson = "{\"feedback\":\"old\"}";
+        var assignment = new RecurringReportAssignment { Id = Id<RecurringReportAssignment>.New(), NextEligibleAt = DateTimeOffset.UtcNow.AddDays(2) };
+        var commandDispatcher = Substitute.For<ICommandDispatcher>();
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainer: (_, _, _, _) => Task.FromResult<ReportSubmission?>(submission),
+            recurringAssignmentByRequestId: (_, _) => Task.FromResult<RecurringReportAssignment?>(assignment),
+            commandDispatcher: commandDispatcher,
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: true);
+
+        var result = await service.UpdateTrainerFeedbackAsync(CreateUser(trainerId), traineeId, submissionId, new UpdateReportSubmissionFeedbackCommand
+        {
+            TrainerOverallComment = "   ",
+            FieldComments = []
+        });
+
+        result.IsSuccess.Should().BeTrue();
+        submission.TrainerOverallComment.Should().BeNull();
+        submission.TrainerFieldCommentsJson.Should().BeNull();
+        assignment.NextEligibleAt.Should().BeNull();
+        await commandDispatcher.DidNotReceive().EnqueueAsync(Arg.Any<ReportFeedbackAddedInAppNotificationCommand>());
+    }
+
+    [Test]
+    public async Task MarkTrainerFeedbackAsReadAsync_WhenAlreadyRead_SkipsSaveChanges()
+    {
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var submissionId = Id<ReportSubmission>.New();
+        var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var submission = CreateSubmission(submissionId, traineeId, request);
+        submission.TrainerFeedbackAddedAt = DateTimeOffset.UtcNow.AddHours(-2);
+        submission.TrainerFeedbackReadAt = DateTimeOffset.UtcNow.AddHours(-1);
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainee: (_, _, _) => Task.FromResult<ReportSubmission?>(submission),
+            unitOfWork: unitOfWork);
+
+        var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submissionId);
+
+        result.IsSuccess.Should().BeTrue();
+        await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task MarkTrainerFeedbackAsReadAsync_WhenAssignmentExists_SetsNextEligibleAt()
+    {
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var submissionId = Id<ReportSubmission>.New();
+        var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var submission = CreateSubmission(submissionId, traineeId, request);
+        submission.TrainerFeedbackAddedAt = DateTimeOffset.UtcNow.AddHours(-2);
+        var assignment = new RecurringReportAssignment
+        {
+            Id = Id<RecurringReportAssignment>.New(),
+            IntervalValue = 2,
+            IntervalUnit = RecurringReportIntervalUnit.Week
+        };
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainee: (_, _, _) => Task.FromResult<ReportSubmission?>(submission),
+            recurringAssignmentByRequestId: (_, _) => Task.FromResult<RecurringReportAssignment?>(assignment));
+
+        var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submissionId);
+
+        result.IsSuccess.Should().BeTrue();
+        submission.TrainerFeedbackReadAt.Should().NotBeNull();
+        assignment.NextEligibleAt.Should().BeAfter(submission.TrainerFeedbackReadAt!.Value.AddDays(13));
+    }
+
+    [Test]
+    public async Task SubmitReportRequest_WhenPendingRequestIsPastDue_MarksExpiredBeforeSubmit()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(requestId, traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        request.DueAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        var service = CreateReportingService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            unitOfWork: unitOfWork);
+
+        var result = await service.SubmitReportRequestAsync(CreateUser(traineeId), requestId, new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("\"ok\"").RootElement }
+        });
+
+        result.IsSuccess.Should().BeTrue();
+        await unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task SubmitReportRequest_WhenAnswersFailValidation_ReturnsInvalidReportingError()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(requestId, traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var service = CreateReportingService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request));
+
+        var result = await service.SubmitReportRequestAsync(CreateUser(traineeId), requestId, new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("1").RootElement }
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
+    public async Task UpdateTrainerFeedbackAsync_WhenOwnershipFails_ReturnsFailure()
+    {
+        var trainerId = Id<User>.New();
+        var result = await CreateReportingService(userHasTrainerRole: false).UpdateTrainerFeedbackAsync(
+            CreateUser(trainerId),
+            Id<User>.New(),
+            Id<ReportSubmission>.New(),
+            new UpdateReportSubmissionFeedbackCommand());
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task UpdateTrainerFeedbackAsync_WhenSubmissionIdEmpty_ReturnsFailure()
+    {
+        var result = await CreateReportingService(userHasTrainerRole: true, hasActiveTrainerLink: true).UpdateTrainerFeedbackAsync(
+            CreateUser(Id<User>.New()),
+            Id<User>.New(),
+            Id<ReportSubmission>.Empty,
+            new UpdateReportSubmissionFeedbackCommand());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
+    public async Task UpdateTrainerFeedbackAsync_WhenSubmissionNotFound_ReturnsFailure()
+    {
+        var result = await CreateReportingService(userHasTrainerRole: true, hasActiveTrainerLink: true).UpdateTrainerFeedbackAsync(
+            CreateUser(Id<User>.New()),
+            Id<User>.New(),
+            Id<ReportSubmission>.New(),
+            new UpdateReportSubmissionFeedbackCommand());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+    }
+
+    [Test]
+    public async Task UpdateTrainerFeedbackAsync_WhenFieldCommentsInvalid_ReturnsFailure()
+    {
+        var traineeId = Id<User>.New();
+        var submissionId = Id<ReportSubmission>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var submission = CreateSubmission(submissionId, traineeId, request);
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainer: (_, _, _, _) => Task.FromResult<ReportSubmission?>(submission),
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: true);
+
+        var result = await service.UpdateTrainerFeedbackAsync(CreateUser(Id<User>.New()), traineeId, submissionId, new UpdateReportSubmissionFeedbackCommand
+        {
+            FieldComments = new Dictionary<string, string?> { ["unknown"] = "bad" }
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
+    public async Task UpdateTrainerFeedbackAsync_WhenFeedbackAdded_EnqueuesNotification()
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var submissionId = Id<ReportSubmission>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var submission = CreateSubmission(submissionId, traineeId, request);
+        var commandDispatcher = Substitute.For<ICommandDispatcher>();
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainer: (_, _, _, _) => Task.FromResult<ReportSubmission?>(submission),
+            commandDispatcher: commandDispatcher,
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: true);
+
+        var result = await service.UpdateTrainerFeedbackAsync(CreateUser(trainerId), traineeId, submissionId, new UpdateReportSubmissionFeedbackCommand
+        {
+            TrainerOverallComment = "Great progress"
+        });
+
+        result.IsSuccess.Should().BeTrue();
+        await commandDispatcher.Received(1).EnqueueAsync(Arg.Any<ReportFeedbackAddedInAppNotificationCommand>());
+    }
+
+    [Test]
+    public async Task MarkTrainerFeedbackAsReadAsync_WhenSubmissionIdEmpty_ReturnsFailure()
+    {
+        var result = await CreateReportingService().MarkTrainerFeedbackAsReadAsync(CreateUser(Id<User>.New()), Id<ReportSubmission>.Empty);
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task MarkTrainerFeedbackAsReadAsync_WhenSubmissionMissing_ReturnsFailure()
+    {
+        var result = await CreateReportingService().MarkTrainerFeedbackAsReadAsync(CreateUser(Id<User>.New()), Id<ReportSubmission>.New());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+    }
+
+    [Test]
+    public async Task MarkTrainerFeedbackAsReadAsync_WhenFeedbackNotAdded_ReturnsFailure()
+    {
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var submissionId = Id<ReportSubmission>.New();
+        var submission = CreateSubmission(submissionId, traineeId, CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId)));
+        var service = CreateReportingService(findSubmissionByIdForTrainee: (_, _, _) => Task.FromResult<ReportSubmission?>(submission));
+
+        var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submissionId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+    }
+
+    [Test]
+    public async Task GetTraineeSubmissionsAsync_WhenOwnershipFails_ReturnsFailure()
+    {
+        var result = await CreateReportingService(userHasTrainerRole: false).GetTraineeSubmissionsAsync(CreateUser(Id<User>.New()), Id<User>.New());
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task GetTraineeSubmissionsAsync_WhenOwnershipSucceeds_ReturnsMappedResults()
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var submission = CreateSubmission(Id<ReportSubmission>.New(), traineeId, request);
+        var service = CreateReportingService(
+            getSubmissionsByTrainerAndTrainee: (_, _, _) => Task.FromResult(new List<ReportSubmission> { submission }),
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: true);
+
+        var result = await service.GetTraineeSubmissionsAsync(CreateUser(trainerId), traineeId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task GetOwnSubmissionsAsync_ReturnsMappedResults()
+    {
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var submission = CreateSubmission(Id<ReportSubmission>.New(), traineeId, request);
+        var service = CreateReportingService(getSubmissionsByTrainee: (_, _) => Task.FromResult(new List<ReportSubmission> { submission }));
+
+        var result = await service.GetOwnSubmissionsAsync(CreateUser(traineeId));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle();
+    }
+
     #endregion
 
     #region Helper Methods
@@ -835,14 +1186,33 @@ public sealed class ReportingServiceTests
         };
     }
 
+    private static ReportSubmission CreateSubmission(Id<ReportSubmission> submissionId, Id<User> traineeId, ReportRequest request)
+        => new()
+        {
+            Id = submissionId,
+            ReportRequestId = request.Id,
+            ReportRequest = request,
+            TraineeId = traineeId,
+            PayloadJson = "{}",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
     private static ReportingService CreateReportingService(
         Func<Id<ReportRequest>, CancellationToken, Task<ReportRequest?>>? findRequestById = null,
         Func<Id<ReportRequest>, CancellationToken, Task<List<Photo>>>? getPhotosByRequestId = null,
         Func<ReportSubmission, CancellationToken, Task>? addSubmission = null,
-        ICommandDispatcher? commandDispatcher = null)
+        Func<Id<ReportSubmission>, Id<User>, Id<User>, CancellationToken, Task<ReportSubmission?>>? findSubmissionByIdForTrainer = null,
+        Func<Id<ReportSubmission>, Id<User>, CancellationToken, Task<ReportSubmission?>>? findSubmissionByIdForTrainee = null,
+        Func<Id<User>, Id<User>, CancellationToken, Task<List<ReportSubmission>>>? getSubmissionsByTrainerAndTrainee = null,
+        Func<Id<User>, CancellationToken, Task<List<ReportSubmission>>>? getSubmissionsByTrainee = null,
+        Func<Id<ReportRequest>, CancellationToken, Task<RecurringReportAssignment?>>? recurringAssignmentByRequestId = null,
+        ICommandDispatcher? commandDispatcher = null,
+        IUnitOfWork? unitOfWork = null,
+        bool userHasTrainerRole = false,
+        bool hasActiveTrainerLink = false)
     {
         var repository = Substitute.For<IReportingRepository>();
-        var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork ??= Substitute.For<IUnitOfWork>();
         commandDispatcher ??= Substitute.For<ICommandDispatcher>();
 
         if (findRequestById != null)
@@ -863,18 +1233,56 @@ public sealed class ReportingServiceTests
                 .Returns(args => addSubmission((ReportSubmission)args[0], (CancellationToken)args[1]));
         }
 
+        if (findSubmissionByIdForTrainer != null)
+        {
+            repository.FindSubmissionByIdForTrainerAsync(Arg.Any<Id<ReportSubmission>>(), Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+                .Returns(args => findSubmissionByIdForTrainer((Id<ReportSubmission>)args[0], (Id<User>)args[1], (Id<User>)args[2], (CancellationToken)args[3]));
+        }
+
+        if (findSubmissionByIdForTrainee != null)
+        {
+            repository.FindSubmissionByIdForTraineeAsync(Arg.Any<Id<ReportSubmission>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+                .Returns(args => findSubmissionByIdForTrainee((Id<ReportSubmission>)args[0], (Id<User>)args[1], (CancellationToken)args[2]));
+        }
+
+        if (getSubmissionsByTrainerAndTrainee != null)
+        {
+            repository.GetSubmissionsByTrainerAndTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+                .Returns(args => getSubmissionsByTrainerAndTrainee((Id<User>)args[0], (Id<User>)args[1], (CancellationToken)args[2]));
+        }
+
+        if (getSubmissionsByTrainee != null)
+        {
+            repository.GetSubmissionsByTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+                .Returns(args => getSubmissionsByTrainee((Id<User>)args[0], (CancellationToken)args[1]));
+        }
+
         var uploadInitTracker = Substitute.For<IPhotoUploadInitTracker>();
         uploadInitTracker.CountRecentUploadInitsAsync(Arg.Any<Id<User>>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns(0);
         var reportSubmissionMeasurementWriter = Substitute.For<IReportSubmissionMeasurementWriter>();
+        var roleRepository = Substitute.For<IRoleRepository>();
+        roleRepository.UserHasRoleAsync(Arg.Any<Id<User>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(userHasTrainerRole);
+        var trainerRelationshipRepository = Substitute.For<ITrainerRelationshipRepository>();
+        trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns(hasActiveTrainerLink ? new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() } : null);
+        var recurringRepository = Substitute.For<IRecurringReportAssignmentRepository>();
+
+        if (recurringAssignmentByRequestId != null)
+        {
+            recurringRepository.FindByCurrentReportRequestIdAsync(Arg.Any<Id<ReportRequest>>(), Arg.Any<CancellationToken>())
+                .Returns(args => recurringAssignmentByRequestId((Id<ReportRequest>)args[0], (CancellationToken)args[1]));
+        }
 
         var dependencies = Substitute.For<IReportingServiceDependencies>();
         dependencies.ReportingRepository.Returns(repository);
         dependencies.UnitOfWork.Returns(unitOfWork);
         dependencies.CommandDispatcher.Returns(commandDispatcher);
         dependencies.ReportSubmissionMeasurementWriter.Returns(reportSubmissionMeasurementWriter);
-        dependencies.RoleRepository.Returns(Substitute.For<IRoleRepository>());
-        dependencies.TrainerRelationshipRepository.Returns(Substitute.For<ITrainerRelationshipRepository>());
+        dependencies.RoleRepository.Returns(roleRepository);
+        dependencies.TrainerRelationshipRepository.Returns(trainerRelationshipRepository);
+        dependencies.RecurringReportAssignmentRepository.Returns(recurringRepository);
         dependencies.PhotoStorageProvider.Returns(Substitute.For<IPhotoStorageProvider>());
         dependencies.PhotoUploadInitTracker.Returns(uploadInitTracker);
         dependencies.Logger.Returns(Substitute.For<ILogger<ReportingService>>());
