@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LgymApi.Api.Configuration;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Data.Sqlite;
