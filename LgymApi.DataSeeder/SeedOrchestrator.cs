@@ -28,15 +28,23 @@ public sealed class SeedOrchestrator
             await context.Database.EnsureDeletedAsync(cancellationToken);
         }
 
-        if (options.UseMigrations)
+        if (!context.Database.IsRelational())
         {
-            Console.WriteLine("Applying migrations...");
-            await context.Database.MigrateAsync(cancellationToken);
+            Console.WriteLine("Ensuring non-relational test database is created...");
+            await context.Database.EnsureCreatedAsync(cancellationToken);
         }
         else
         {
-            Console.WriteLine("Ensuring database is created...");
-            await context.Database.EnsureCreatedAsync(cancellationToken);
+            if (!options.UseMigrations)
+            {
+                Console.WriteLine("EnsureCreated bootstrap is disabled for relational databases to prevent EF Core schema drift. Applying migrations instead...");
+            }
+            else
+            {
+                Console.WriteLine("Applying migrations...");
+            }
+
+            await context.Database.MigrateAsync(cancellationToken);
         }
 
         seedContext.AdminUser ??= await FindExistingUserAsync(context, "Admin", cancellationToken);
