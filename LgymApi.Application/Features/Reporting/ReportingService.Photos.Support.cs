@@ -62,7 +62,6 @@ public sealed partial class ReportingService
     {
         return $"photos/{traineeId}/{reportRequestId}/{SanitizeViewTypeSegment(viewType)}/";
     }
-
     private Result<Unit, AppError> TryParseViewType(string viewType, out string parsedViewType)
     {
         if (!ReportingModuleConfigParser.TryNormalizePhotoViewName(viewType, out parsedViewType))
