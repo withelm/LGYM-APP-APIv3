@@ -1,6 +1,7 @@
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Application.Features.DietPlans.Models;
 using LgymApi.Application.Features.Supplementation.Models;
+using LgymApi.Application.Features.TraineeNotes.Models;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Mapping.Core;
 
@@ -139,6 +140,32 @@ public sealed class TrainerProfile : IMappingProfile
             ChangeDate = source.ChangeDate,
             ChangeType = source.ChangeType,
             SnapshotJson = source.SnapshotJson
+        });
+
+        configuration.CreateMap<TraineeNoteResult, TraineeNoteDto>((source, _) => new TraineeNoteDto
+        {
+            Id = source.Id.ToString(),
+            TrainerId = source.TrainerId.ToString(),
+            TraineeId = source.TraineeId.ToString(),
+            Title = source.Title,
+            Content = source.Content,
+            VisibleToTrainee = source.VisibleToTrainee,
+            IsPinned = source.IsPinned,
+            LastUpdatedByUserId = source.LastUpdatedByUserId.ToString(),
+            LastUpdatedAt = source.LastUpdatedAt,
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt,
+        });
+
+        configuration.CreateMap<TraineeNoteHistoryResult, TraineeNoteHistoryDto>((source, _) => new TraineeNoteHistoryDto
+        {
+            Id = source.Id.ToString(),
+            TraineeNoteId = source.TraineeNoteId.ToString(),
+            ChangedByUserId = source.ChangedByUserId.ToString(),
+            ChangedAt = source.ChangedAt,
+            PreviousContent = source.PreviousContent,
+            NewContent = source.NewContent,
+            ChangeType = source.ChangeType,
         });
 
     }

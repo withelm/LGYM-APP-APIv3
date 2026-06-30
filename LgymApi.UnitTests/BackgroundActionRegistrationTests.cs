@@ -192,6 +192,21 @@ public sealed class BackgroundActionRegistrationTests
     }
 
     [Test]
+    public void ServiceProvider_Registers_TraineeNoteUpdatedNotificationHandler()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TraineeNoteUpdatedInAppNotificationCommand, LgymApi.BackgroundWorker.Actions.TraineeNoteUpdatedInAppNotificationCommandHandler>();
+
+        var descriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TraineeNoteUpdatedInAppNotificationCommand>))
+            .ToList();
+
+        descriptors.Should().ContainSingle();
+        descriptors[0].ImplementationType.Should().Be(typeof(LgymApi.BackgroundWorker.Actions.TraineeNoteUpdatedInAppNotificationCommandHandler));
+    }
+
+    [Test]
     public void AddBackgroundAction_HandlersAreScoped_NewInstancePerScope()
     {
         // Arrange

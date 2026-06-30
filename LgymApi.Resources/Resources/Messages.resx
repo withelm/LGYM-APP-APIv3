@@ -291,6 +291,12 @@
   <data name="GenericDietPlanDisplayName" xml:space="preserve">
     <value>diet plan</value>
   </data>
+  <data name="GenericTrainerNoteDisplayName" xml:space="preserve">
+    <value>trainer note</value>
+  </data>
+  <data name="TrainerTraineeNoteUpdated" xml:space="preserve">
+    <value>{0} updated your note: {1}</value>
+  </data>
   <data name="AccountBlocked" xml:space="preserve">
     <value>Your account has been blocked.</value>
   </data>

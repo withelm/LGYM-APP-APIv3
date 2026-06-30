@@ -50,6 +50,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<DietPlan> DietPlans => Set<DietPlan>();
     public DbSet<DietMeal> DietMeals => Set<DietMeal>();
     public DbSet<DietPlanHistory> DietPlanHistories => Set<DietPlanHistory>();
+    public DbSet<TraineeNote> TraineeNotes => Set<TraineeNote>();
+    public DbSet<TraineeNoteHistory> TraineeNoteHistories => Set<TraineeNoteHistory>();
     public DbSet<CommandEnvelope> CommandEnvelopes => Set<CommandEnvelope>();
     public DbSet<ActionExecutionLog> ActionExecutionLogs => Set<ActionExecutionLog>();
     public DbSet<ApiIdempotencyRecord> ApiIdempotencyRecords => Set<ApiIdempotencyRecord>();
@@ -521,6 +523,44 @@ public sealed class AppDbContext : DbContext
             entity.HasOne(e => e.DietPlan)
                 .WithMany(e => e.HistoryEntries)
                 .HasForeignKey(e => e.DietPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TraineeNote>(entity =>
+        {
+            entity.ToTable("TraineeNotes");
+            entity.Property(e => e.Title).HasMaxLength(160);
+            entity.Property(e => e.Content).HasMaxLength(8000).IsRequired();
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.LastUpdatedAt });
+            entity.HasIndex(e => new { e.TraineeId, e.VisibleToTrainee, e.LastUpdatedAt });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.LastUpdatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.LastUpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TraineeNoteHistory>(entity =>
+        {
+            entity.ToTable("TraineeNoteHistories");
+            entity.Property(e => e.PreviousContent).HasMaxLength(8000);
+            entity.Property(e => e.NewContent).HasMaxLength(8000).IsRequired();
+            entity.Property(e => e.ChangeType).HasMaxLength(64).IsRequired();
+            entity.HasIndex(e => new { e.TraineeNoteId, e.ChangedAt });
+            entity.HasOne(e => e.TraineeNote)
+                .WithMany(e => e.HistoryEntries)
+                .HasForeignKey(e => e.TraineeNoteId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.ChangedByUser)
                 .WithMany()

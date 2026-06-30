@@ -282,6 +282,12 @@
   <data name="GenericDietPlanDisplayName" xml:space="preserve">
     <value>plan diety</value>
   </data>
+  <data name="GenericTrainerNoteDisplayName" xml:space="preserve">
+    <value>notatka trenera</value>
+  </data>
+  <data name="TrainerTraineeNoteUpdated" xml:space="preserve">
+    <value>{0} zaktualizował Twoją notatkę: {1}</value>
+  </data>
   <data name="AccountBlocked" xml:space="preserve">
     <value>Twoje konto zostało zablokowane.</value>
   </data>

@@ -118,6 +118,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ITrainerRelationshipRepository, TrainerRelationshipRepository>();
         services.AddScoped<IDietPlanRepository, DietPlanRepository>();
+        services.AddScoped<ITraineeNoteRepository, TraineeNoteRepository>();
         services.AddScoped<IReportingRepository, ReportingRepository>();
         services.AddScoped<IRecurringReportAssignmentRepository, RecurringReportAssignmentRepository>();
         services.AddScoped<ISupplementationRepository, SupplementationRepository>();

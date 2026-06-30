@@ -17,6 +17,7 @@ using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Training;
+using LgymApi.Application.Features.TraineeNotes;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
@@ -65,6 +66,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IExpiredPhotoUploadCleanupService, ExpiredPhotoUploadCleanupService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<ISupplementationService, SupplementationService>();
+        services.AddScoped<ITraineeNoteService, TraineeNoteService>();
         services.AddScoped<ITrainingServiceDependencies, TrainingServiceDependencies>();
         services.AddScoped<ITrainingService, TrainingService>();
         services.AddScoped<ITrainerRelationshipServiceDependencies, TrainerRelationshipServiceDependencies>();
