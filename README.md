@@ -58,6 +58,37 @@ Avoid launch profile assumptions when testing the image.
 docker build -t lgym-api:test .
 ```
 
+### Publish the image from GitHub Actions
+
+The `.github/workflows/api-image.yml` workflow builds the image on pull requests and publishes it to Docker Hub on:
+
+- push to `main`
+- push of tags matching `v*.*.*`
+- manual `workflow_dispatch`
+
+Configure these GitHub repository variables:
+
+- `DOCKERHUB_NAMESPACE` - Docker Hub namespace, usually your username or organization
+- `DOCKERHUB_IMAGE_NAME` - image name, for example `lgym-api`; optional because the workflow defaults to `lgym-api`
+- `DOCKERHUB_USERNAME` - Docker Hub login username; optional if it is the same as `DOCKERHUB_NAMESPACE`
+
+Configure this GitHub repository secret:
+
+- `DOCKERHUB_TOKEN` - Docker Hub access token or password used by the workflow login step
+
+Published tags include:
+
+- `latest` for `main`
+- branch/tag refs from GitHub metadata
+- `sha-<short-sha>` for traceability
+- optional custom tag from manual workflow input `image_tag`
+
+Example image reference:
+
+```bash
+docker pull docker.io/<DOCKERHUB_NAMESPACE>/<DOCKERHUB_IMAGE_NAME>:latest
+```
+
 ### Local development with an external PostgreSQL database
 
 For a local PostgreSQL instance that is not running in Docker, copy the example environment file and update the database password/port/name:
