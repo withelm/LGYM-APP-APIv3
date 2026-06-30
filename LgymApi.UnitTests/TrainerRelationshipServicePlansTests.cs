@@ -27,16 +27,18 @@ public sealed class TrainerRelationshipServicePlansTests
         var link = new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id };
         var oldPlan = new Plan { Id = Id<Plan>.New(), UserId = trainee.Id, Name = "Old", CreatedAt = DateTimeOffset.UtcNow.AddDays(-1) };
         var newPlan = new Plan { Id = Id<Plan>.New(), UserId = trainee.Id, Name = "New", CreatedAt = DateTimeOffset.UtcNow };
+        var trainerTemplate = new Plan { Id = Id<Plan>.New(), UserId = trainer.Id, Name = "Template", CreatedAt = DateTimeOffset.UtcNow.AddHours(-1) };
         var deps = CreateDependencies();
         deps.RoleRepository.UserHasRoleAsync(trainer.Id, Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
         deps.TrainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(trainer.Id, trainee.Id, Arg.Any<CancellationToken>()).Returns(link);
         deps.PlanRepository.GetByUserIdAsync(trainee.Id, Arg.Any<CancellationToken>()).Returns([oldPlan, newPlan]);
+        deps.PlanRepository.GetByUserIdAsync(trainer.Id, Arg.Any<CancellationToken>()).Returns([trainerTemplate]);
         var service = new TrainerRelationshipService(deps);
 
         var result = await service.GetTraineePlansAsync(trainer, trainee.Id);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Select(x => x.Name).Should().Equal("New", "Old");
+        result.Value.Select(x => x.Name).Should().Equal("New", "Template", "Old");
     }
 
     [Test]
@@ -67,7 +69,7 @@ public sealed class TrainerRelationshipServicePlansTests
 
         result.IsSuccess.Should().BeTrue();
         addedPlan.Should().NotBeNull();
-        addedPlan!.UserId.Should().Be(trainee.Id);
+        addedPlan!.UserId.Should().Be(trainer.Id);
     }
 
     [Test]
