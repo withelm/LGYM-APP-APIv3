@@ -41,7 +41,7 @@ public sealed class EfUnitOfWorkTransaction : IUnitOfWorkTransaction
         {
             _logger?.LogWarning(
                 ex,
-                "Committed-intent dispatch failed after transaction commit. Intents remain recoverable by recovery flow.");
+                "Committed-intent dispatch failed after transaction commit. Undispatched intents remain recoverable by the dispatcher on a future pass; envelopes already marked Processing require manual/operator intervention until a heartbeat-based lease renewal strategy exists.");
         }
     }
 

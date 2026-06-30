@@ -204,6 +204,52 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task StaleProcessingEnvelope_LeaseTimeoutExceeded_RemainsProcessingUntilOperatorIntervention()
+    {
+        var correlationId = Id<CorrelationScope>.New();
+        var processingStartedAt = DateTimeOffset.UtcNow.AddHours(-1);
+        var envelope = new CommandEnvelope
+        {
+            Id = Id<CommandEnvelope>.New(),
+            CorrelationId = correlationId,
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            PayloadJson = "{\"UserId\":\"00000000-0000-0000-0000-000000000005\",\"Email\":\"stale-processing@example.com\"}",
+            Status = ActionExecutionStatus.Processing,
+            CreatedAt = DateTimeOffset.UtcNow.AddHours(-1).AddMinutes(-5),
+            DispatchedAt = DateTimeOffset.UtcNow.AddHours(-1).AddMinutes(-4),
+            ProcessingStartedAtUtc = processingStartedAt,
+            SchedulerJobId = "stale-processing-job-id"
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.CommandEnvelopes.Add(envelope);
+            await db.SaveChangesAsync();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var dispatcher = scope.ServiceProvider.GetRequiredService<ICommittedIntentDispatcher>();
+            await dispatcher.DispatchCommittedIntentsAsync(CancellationToken.None);
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var unchanged = await db.CommandEnvelopes.FindAsync(envelope.Id);
+
+            unchanged.Should().NotBeNull();
+            unchanged!.Status.Should().Be(ActionExecutionStatus.Processing,
+                "automatic stale-processing recovery is intentionally disabled until a safe lease-renewal strategy exists");
+            unchanged.ProcessingStartedAtUtc.Should().Be(processingStartedAt,
+                "dispatcher should not clear an active processing lease based only on age");
+            unchanged.DispatchedAt.Should().NotBeNull();
+            unchanged.SchedulerJobId.Should().Be("stale-processing-job-id");
+        }
+    }
+
+    [Test]
     public async Task CompletedEnvelope_NotRedispatched()
     {
         // Arrange - Create an envelope that was already completed

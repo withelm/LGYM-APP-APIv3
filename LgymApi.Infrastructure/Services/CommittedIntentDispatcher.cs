@@ -41,25 +41,11 @@ public sealed class CommittedIntentDispatcher : ICommittedIntentDispatcher
 
     private async Task RecoverStaleProcessingEnvelopesAsync(AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        var staleThresholdUtc = DateTimeOffset.UtcNow.AddMinutes(-Math.Max(1, _backgroundCommandOptions.ProcessingLeaseTimeoutMinutes));
-        var staleEnvelopes = await dbContext.CommandEnvelopes
-            .Include(x => x.ExecutionLogs)
-            .Where(x => x.Status == ActionExecutionStatus.Processing
-                        && x.ProcessingStartedAtUtc != null
-                        && x.ProcessingStartedAtUtc <= staleThresholdUtc)
-            .OrderBy(x => x.ProcessingStartedAtUtc)
-            .Take(BatchSize)
-            .ToListAsync(cancellationToken);
+        _logger.LogDebug(
+            "Automatic recovery of processing command envelopes is disabled to avoid double-dispatch without a heartbeat/lease-renewal mechanism. Configured timeout remains {ProcessingLeaseTimeoutMinutes} minute(s).",
+            _backgroundCommandOptions.ProcessingLeaseTimeoutMinutes);
 
-        foreach (var envelope in staleEnvelopes)
-        {
-            envelope.ResetStaleProcessing($"Recovered stale processing lease after {_backgroundCommandOptions.ProcessingLeaseTimeoutMinutes} minute timeout.");
-        }
-
-        if (staleEnvelopes.Count > 0)
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
+        await Task.CompletedTask;
     }
 
     private async Task DispatchCommandEnvelopesAsync(
