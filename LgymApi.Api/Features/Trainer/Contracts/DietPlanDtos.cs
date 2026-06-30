@@ -3,7 +3,7 @@ using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.Trainer.Contracts;
 
-public abstract class DietMacrosContractBase
+public abstract class DietMacrosContractBase : IDto, IResultDto
 {
     [JsonPropertyName("estimatedCalories")]
     public int? EstimatedCalories { get; set; }
