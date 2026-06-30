@@ -38,7 +38,7 @@ internal static class DietPlanMapping
             ChangedByUserId = changedByUserId,
             ChangeDate = DateTimeOffset.UtcNow,
             ChangeType = changeType,
-            SnapshotJson = JsonSerializer.Serialize(CreateSnapshot(plan))
+            SnapshotJson = JsonSerializer.Serialize(MapPlan(plan))
         };
 
     public static DietPlanResult MapPlan(DietPlan plan) => new()
@@ -68,25 +68,6 @@ internal static class DietPlanMapping
         ChangeDate = entry.ChangeDate,
         ChangeType = entry.ChangeType,
         SnapshotJson = entry.SnapshotJson
-    };
-
-    private static DietPlanResult CreateSnapshot(DietPlan plan) => new()
-    {
-        Id = plan.Id,
-        TrainerId = plan.TrainerId,
-        TraineeId = plan.TraineeId,
-        Name = plan.Name,
-        StartDate = plan.StartDate,
-        EndDate = plan.EndDate,
-        EstimatedCalories = plan.EstimatedCalories,
-        ProteinGrams = plan.ProteinGrams,
-        CarbsGrams = plan.CarbsGrams,
-        FatGrams = plan.FatGrams,
-        Notes = plan.Notes,
-        IsActive = plan.IsActive,
-        CreatedAt = plan.CreatedAt,
-        UpdatedAt = plan.UpdatedAt,
-        Meals = plan.Meals.OrderBy(x => x.Order).Select(MapMeal).ToList()
     };
 
     private static DietMealResult MapMeal(DietMeal meal) => new()
