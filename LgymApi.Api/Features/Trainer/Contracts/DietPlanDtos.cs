@@ -3,17 +3,8 @@ using LgymApi.Api.Interfaces;
 
 namespace LgymApi.Api.Features.Trainer.Contracts;
 
-public sealed class UpsertDietPlanRequest : IDto
+public abstract class DietMacrosContractBase
 {
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("startDate")]
-    public DateOnly StartDate { get; set; }
-
-    [JsonPropertyName("endDate")]
-    public DateOnly? EndDate { get; set; }
-
     [JsonPropertyName("estimatedCalories")]
     public int? EstimatedCalories { get; set; }
 
@@ -25,18 +16,9 @@ public sealed class UpsertDietPlanRequest : IDto
 
     [JsonPropertyName("fatGrams")]
     public decimal? FatGrams { get; set; }
-
-    [JsonPropertyName("notes")]
-    public string? Notes { get; set; }
-
-    [JsonPropertyName("isActive")]
-    public bool IsActive { get; set; }
-
-    [JsonPropertyName("meals")]
-    public List<UpsertDietMealRequest> Meals { get; set; } = [];
 }
 
-public sealed class UpsertDietMealRequest : IDto
+public abstract class DietMealContractBase : DietMacrosContractBase
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -46,31 +28,10 @@ public sealed class UpsertDietMealRequest : IDto
 
     [JsonPropertyName("description")]
     public string? Description { get; set; }
-
-    [JsonPropertyName("estimatedCalories")]
-    public int? EstimatedCalories { get; set; }
-
-    [JsonPropertyName("proteinGrams")]
-    public decimal? ProteinGrams { get; set; }
-
-    [JsonPropertyName("carbsGrams")]
-    public decimal? CarbsGrams { get; set; }
-
-    [JsonPropertyName("fatGrams")]
-    public decimal? FatGrams { get; set; }
 }
 
-public sealed class DietPlanDto : IResultDto
+public abstract class DietPlanContractBase : DietMacrosContractBase
 {
-    [JsonPropertyName("_id")]
-    public string Id { get; set; } = string.Empty;
-
-    [JsonPropertyName("trainerId")]
-    public string TrainerId { get; set; } = string.Empty;
-
-    [JsonPropertyName("traineeId")]
-    public string TraineeId { get; set; } = string.Empty;
-
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
@@ -80,23 +41,34 @@ public sealed class DietPlanDto : IResultDto
     [JsonPropertyName("endDate")]
     public DateOnly? EndDate { get; set; }
 
-    [JsonPropertyName("estimatedCalories")]
-    public int? EstimatedCalories { get; set; }
-
-    [JsonPropertyName("proteinGrams")]
-    public decimal? ProteinGrams { get; set; }
-
-    [JsonPropertyName("carbsGrams")]
-    public decimal? CarbsGrams { get; set; }
-
-    [JsonPropertyName("fatGrams")]
-    public decimal? FatGrams { get; set; }
-
     [JsonPropertyName("notes")]
     public string? Notes { get; set; }
 
     [JsonPropertyName("isActive")]
     public bool IsActive { get; set; }
+}
+
+public sealed class UpsertDietPlanRequest : DietPlanContractBase, IDto
+{
+
+    [JsonPropertyName("meals")]
+    public List<UpsertDietMealRequest> Meals { get; set; } = [];
+}
+
+public sealed class UpsertDietMealRequest : DietMealContractBase, IDto
+{
+}
+
+public sealed class DietPlanDto : DietPlanContractBase, IResultDto
+{
+    [JsonPropertyName("_id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("trainerId")]
+    public string TrainerId { get; set; } = string.Empty;
+
+    [JsonPropertyName("traineeId")]
+    public string TraineeId { get; set; } = string.Empty;
 
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; set; }
@@ -108,31 +80,10 @@ public sealed class DietPlanDto : IResultDto
     public List<DietMealDto> Meals { get; set; } = [];
 }
 
-public sealed class DietMealDto : IResultDto
+public sealed class DietMealDto : DietMealContractBase, IResultDto
 {
     [JsonPropertyName("_id")]
     public string Id { get; set; } = string.Empty;
-
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("order")]
-    public int Order { get; set; }
-
-    [JsonPropertyName("description")]
-    public string? Description { get; set; }
-
-    [JsonPropertyName("estimatedCalories")]
-    public int? EstimatedCalories { get; set; }
-
-    [JsonPropertyName("proteinGrams")]
-    public decimal? ProteinGrams { get; set; }
-
-    [JsonPropertyName("carbsGrams")]
-    public decimal? CarbsGrams { get; set; }
-
-    [JsonPropertyName("fatGrams")]
-    public decimal? FatGrams { get; set; }
 }
 
 public sealed class DietPlanHistoryDto : IResultDto
