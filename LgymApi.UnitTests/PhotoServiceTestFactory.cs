@@ -41,7 +41,8 @@ internal static class PhotoServiceTestFactory
         IReportingRepository? reportingRepository = null,
         PendingPhotoUpload? pendingUpload = null,
         IUnitOfWork? unitOfWork = null,
-        IPhotoUploadInitTracker? photoUploadInitTracker = null)
+        IPhotoUploadInitTracker? photoUploadInitTracker = null,
+        PhotoStorageOptions? photoStorageOptions = null)
     {
         var roleRepository = Substitute.For<IRoleRepository>();
         roleRepository.UserHasRoleAsync(Arg.Any<Id<User>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -83,7 +84,7 @@ internal static class PhotoServiceTestFactory
         dependencies.PhotoStorageProvider.Returns(storageProvider);
         dependencies.PhotoUploadInitTracker.Returns(uploadInitTracker);
         dependencies.Logger.Returns(Substitute.For<ILogger<ReportingService>>());
-        dependencies.PhotoStorageOptions.Returns(new PhotoStorageOptions());
+        dependencies.PhotoStorageOptions.Returns(photoStorageOptions ?? new PhotoStorageOptions());
 
         return new ReportingService(dependencies);
     }

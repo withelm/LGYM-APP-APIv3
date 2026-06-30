@@ -40,7 +40,10 @@ public sealed class TrainerInvitationCreatedInAppNotificationCommandHandler : gl
         var result = await _notificationService.CreateAsync(input, cancellationToken);
         if (result.IsFailure)
         {
-            _logger.LogError($"Failed to create invitation-sent notification for trainee {command.TraineeId}: {result.Error}");
+            _logger.LogError(
+                "Failed to create invitation-sent notification for trainee {TraineeId}: {Error}",
+                command.TraineeId,
+                result.Error);
         }
     }
 }

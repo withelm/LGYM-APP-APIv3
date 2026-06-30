@@ -31,6 +31,12 @@ public sealed partial class ReportingService
                 new ReportingNotFoundError(Messages.DidntFind));
         }
 
+        var requestStatusValidation = EnsureRequestAllowsPhotoUpload(request);
+        if (requestStatusValidation.IsFailure)
+        {
+            return Result<InitiatePhotoUploadResult, AppError>.Failure(requestStatusValidation.Error);
+        }
+
         var authCheck = await ValidatePhotoAccessAsync(currentUser, request.TraineeId, cancellationToken);
         if (authCheck.IsFailure)
         {
@@ -57,16 +63,19 @@ public sealed partial class ReportingService
             return Result<InitiatePhotoUploadResult, AppError>.Failure(sizeValidation.Error);
         }
 
-        var limitValidation = await ValidateDeveloperLimitsAsync(currentUser.Id, cancellationToken);
-        if (limitValidation.IsFailure)
+        if (ShouldEnforceDevelopmentPhotoLimits())
         {
-            _logger.LogWarning(
-                "Photo upload-init rejected for user {UserId} and report request {ReportRequestId}: {Reason}",
-                currentUser.Id,
-                command.ReportRequestId,
-                limitValidation.Error.Message);
+            var limitValidation = await ValidateDeveloperLimitsAsync(currentUser.Id, cancellationToken);
+            if (limitValidation.IsFailure)
+            {
+                _logger.LogWarning(
+                    "Photo upload-init rejected for user {UserId} and report request {ReportRequestId}: {Reason}",
+                    currentUser.Id,
+                    command.ReportRequestId,
+                    limitValidation.Error.Message);
 
-            return Result<InitiatePhotoUploadResult, AppError>.Failure(limitValidation.Error);
+                return Result<InitiatePhotoUploadResult, AppError>.Failure(limitValidation.Error);
+            }
         }
 
         var storageKey = GenerateStorageKey(
@@ -79,12 +88,6 @@ public sealed partial class ReportingService
             "Photo upload-init creating storage key with prefix {StorageKeyPrefix} for user {UserId}",
             BuildStorageKeyPrefix(request.TraineeId, command.ReportRequestId, parsedViewType),
             currentUser.Id);
-
-        var uploadUrl = await _photoStorageProvider.GenerateSignedUploadUrlAsync(
-            storageKey,
-            command.MimeType,
-            GetSignedUploadExpiration(),
-            cancellationToken);
 
         var expiresAt = DateTimeOffset.UtcNow.Add(GetSignedUploadExpiration());
 
@@ -104,6 +107,12 @@ public sealed partial class ReportingService
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var uploadUrl = await _photoStorageProvider.GenerateSignedUploadUrlAsync(
+            storageKey,
+            command.MimeType,
+            GetSignedUploadExpiration(),
+            cancellationToken);
 
         _logger.LogInformation(
             "Photo upload-init succeeded for user {UserId}, report request {ReportRequestId}, provider {Provider}, key {StorageKey}",

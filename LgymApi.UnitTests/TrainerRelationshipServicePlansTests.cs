@@ -54,6 +54,23 @@ public sealed class TrainerRelationshipServicePlansTests
     }
 
     [Test]
+    public async Task CreateTraineePlanAsync_CreatesPlanForTrainee()
+    {
+        var trainer = CreateUser();
+        var trainee = CreateUser();
+        var deps = CreateOwnedTraineeDependencies(trainer, trainee);
+        Plan? addedPlan = null;
+        deps.PlanRepository.AddAsync(Arg.Do<Plan>(plan => addedPlan = plan), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        var service = new TrainerRelationshipService(deps);
+
+        var result = await service.CreateTraineePlanAsync(trainer, trainee.Id, "New plan");
+
+        result.IsSuccess.Should().BeTrue();
+        addedPlan.Should().NotBeNull();
+        addedPlan!.UserId.Should().Be(trainee.Id);
+    }
+
+    [Test]
     public async Task AssignTraineePlanAsync_WhenTrainerOwnsPlan_ClonesAndAssignsClone()
     {
         var trainer = CreateUser();

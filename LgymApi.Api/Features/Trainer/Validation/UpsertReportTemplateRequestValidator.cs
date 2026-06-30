@@ -53,67 +53,64 @@ public sealed class UpsertReportTemplateRequestValidator : AbstractValidator<Ups
 
     private static bool ValidatePhotosConfig(JsonElement? config)
     {
-        if (config == null || !config.HasValue)
+        if (!config.HasValue)
         {
             return false;
         }
 
-        try
-        {
-            var jsonElement = config.Value;
-            if (jsonElement.ValueKind != JsonValueKind.Object)
-            {
-                return false;
-            }
-
-            if (!jsonElement.TryGetProperty("requiredViews", out var requiredViews))
-            {
-                return false;
-            }
-
-            if (requiredViews.ValueKind != JsonValueKind.Array)
-            {
-                return false;
-            }
-
-            return ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(jsonElement, out _, out _);
-        }
-        catch
+        var jsonElement = config.Value;
+        if (jsonElement.ValueKind != JsonValueKind.Object)
         {
             return false;
         }
+
+        if (!jsonElement.TryGetProperty("requiredViews", out var requiredViews)
+            || requiredViews.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var requiredView in requiredViews.EnumerateArray())
+        {
+            if (requiredView.ValueKind != JsonValueKind.String
+                || !ReportingModuleConfigParser.TryNormalizePhotoViewName(requiredView.GetString(), out _))
+            {
+                return false;
+            }
+        }
+
+        return ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(jsonElement, out _, out _);
     }
 
     private static bool ValidateMeasurementsConfig(JsonElement? config)
     {
-        if (config == null || !config.HasValue)
+        if (!config.HasValue)
         {
             return false;
         }
 
-        try
-        {
-            var jsonElement = config.Value;
-            if (jsonElement.ValueKind != JsonValueKind.Object)
-            {
-                return false;
-            }
-
-            if (!jsonElement.TryGetProperty("measurementTypes", out var measurementTypes))
-            {
-                return false;
-            }
-
-            if (measurementTypes.ValueKind != JsonValueKind.Array)
-            {
-                return false;
-            }
-
-            return ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(jsonElement, out _, out _);
-        }
-        catch
+        var jsonElement = config.Value;
+        if (jsonElement.ValueKind != JsonValueKind.Object)
         {
             return false;
         }
+
+        if (!jsonElement.TryGetProperty("measurementTypes", out var measurementTypes)
+            || measurementTypes.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var measurementType in measurementTypes.EnumerateArray())
+        {
+            if (measurementType.ValueKind != JsonValueKind.String
+                || !ReportingModuleConfigParser.TryResolveBodyPart(measurementType.GetString() ?? string.Empty, out var bodyPart)
+                || bodyPart == BodyParts.Unknown)
+            {
+                return false;
+            }
+        }
+
+        return ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(jsonElement, out _, out _);
     }
 }

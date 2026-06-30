@@ -33,6 +33,12 @@ public sealed partial class ReportingService
                 new ReportingNotFoundError(Messages.DidntFind));
         }
 
+        var requestStatusValidation = EnsureRequestAllowsPhotoUpload(request);
+        if (requestStatusValidation.IsFailure)
+        {
+            return Result<CompletePhotoUploadValidationContext, AppError>.Failure(requestStatusValidation.Error);
+        }
+
         var authCheck = await ValidatePhotoAccessAsync(currentUser, request.TraineeId, cancellationToken);
         if (authCheck.IsFailure)
         {

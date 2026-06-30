@@ -93,6 +93,75 @@ public sealed class ReportingServiceSubmissionHelpersTests
     }
 
     [Test]
+    public void ValidateAnswersAgainstTemplate_RejectsMeasurementEntriesOutsideConfiguredTypes()
+    {
+        var template = new ReportTemplate
+        {
+            Id = Id<ReportTemplate>.New(),
+            TrainerId = Id<User>.New(),
+            Name = "Weekly",
+            Fields =
+            [
+                new ReportTemplateField
+                {
+                    Key = "measurements",
+                    Type = ReportFieldType.Measurements,
+                    IsRequired = true,
+                    ModuleConfig = """
+                        { "measurementTypes": ["weight", "waist"] }
+                        """
+                }
+            ]
+        };
+
+        var invalidAnswers = new Dictionary<string, JsonElement>
+        {
+            ["measurements"] = JsonDocument.Parse("""
+                {
+                    "chest": { "value": 100, "unit": "cm" }
+                }
+                """).RootElement
+        };
+
+        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, invalidAnswers), "IsFailure").Should().BeTrue();
+    }
+
+    [Test]
+    public void ValidateAnswersAgainstTemplate_AllowsConfiguredMeasurementEntries()
+    {
+        var template = new ReportTemplate
+        {
+            Id = Id<ReportTemplate>.New(),
+            TrainerId = Id<User>.New(),
+            Name = "Weekly",
+            Fields =
+            [
+                new ReportTemplateField
+                {
+                    Key = "measurements",
+                    Type = ReportFieldType.Measurements,
+                    IsRequired = true,
+                    ModuleConfig = """
+                        { "measurementTypes": ["weight", "waist"] }
+                        """
+                }
+            ]
+        };
+
+        var validAnswers = new Dictionary<string, JsonElement>
+        {
+            ["measurements"] = JsonDocument.Parse("""
+                {
+                    "weight": { "value": 81.5, "unit": "kg" },
+                    "waist": { "value": 86, "unit": "cm" }
+                }
+                """).RootElement
+        };
+
+        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, validAnswers), "IsSuccess").Should().BeTrue();
+    }
+
+    [Test]
     public void NormalizeTrainerFieldComments_TrimsValuesAndSkipsBlanks()
     {
         var method = typeof(ReportingService).GetMethod("NormalizeTrainerFieldComments", BindingFlags.Static | BindingFlags.NonPublic)!;

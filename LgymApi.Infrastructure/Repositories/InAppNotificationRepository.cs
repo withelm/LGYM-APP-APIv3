@@ -60,30 +60,20 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
             .AsNoTracking()
             .Where(x => x.RecipientId == userId && !x.IsDeleted);
 
-        var orderedResults = await query
-            .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id)
-            .ToListAsync(cancellationToken);
-
         if (cursorCreatedAt.HasValue && cursorId.HasValue)
         {
             var cursorTs = cursorCreatedAt.Value;
             var cursorNotificationId = cursorId.Value;
 
-            orderedResults = orderedResults
-                .SkipWhile(x => x.CreatedAt > cursorTs || (x.CreatedAt == cursorTs && x.Id != cursorNotificationId))
-                .Skip(1)
-                .Take(limit + 1)
-                .ToList();
-        }
-        else
-        {
-            orderedResults = orderedResults
-                .Take(limit + 1)
-                .ToList();
+            var cursorGuid = cursorNotificationId.GetValue();
+            query = query.Where(x => x.CreatedAt < cursorTs || (x.CreatedAt == cursorTs && x.Id.GetValue().CompareTo(cursorGuid) < 0));
         }
 
-        return orderedResults;
+        return await query
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .Take(limit + 1)
+            .ToListAsync(cancellationToken);
     }
 
     public Task MarkAsReadAsync(Id<InAppNotification> id, CancellationToken cancellationToken = default)

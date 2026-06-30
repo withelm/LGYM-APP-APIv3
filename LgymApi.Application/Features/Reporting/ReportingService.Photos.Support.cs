@@ -127,6 +127,14 @@ public sealed partial class ReportingService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
+    private bool ShouldEnforceDevelopmentPhotoLimits()
+        => string.Equals(_photoStorageOptions.Provider, "Local", StringComparison.OrdinalIgnoreCase);
+
+    private static Result<Unit, AppError> EnsureRequestAllowsPhotoUpload(ReportRequest request)
+        => request.Status is ReportRequestStatus.Pending or ReportRequestStatus.Expired
+            ? Result<Unit, AppError>.Success(Unit.Value)
+            : Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportRequestNotPending));
+
     private Result<Unit, AppError> ValidateUploadedObjectMetadata(CompletePhotoUploadCommand command, PhotoMetadata metadata)
         => ValidateUploadedObjectMetadata(command, null, metadata);
 
@@ -154,7 +162,7 @@ public sealed partial class ReportingService
         }
 
         var expectedSizeBytes = uploadSession?.DeclaredSizeBytes ?? command.SizeBytes;
-        if (metadata.SizeBytes > expectedSizeBytes)
+        if (metadata.SizeBytes != expectedSizeBytes)
         {
             return Result<Unit, AppError>.Failure(new InvalidReportingError("Uploaded photo size does not match the initiated upload"));
         }

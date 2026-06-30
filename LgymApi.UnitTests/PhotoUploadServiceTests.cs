@@ -4,6 +4,7 @@ using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using NSubstitute;
 using NUnit.Framework;
@@ -269,5 +270,59 @@ public sealed class PhotoUploadServiceTests
         result.IsSuccess.Should().BeTrue();
         result.Value.UploadUrl.Should().Be("https://storage.example.com/signed-upload-url");
         result.Value.StorageKey.Should().Contain("photos/");
+    }
+
+    [Test]
+    public async Task InitiatePhotoUploadAsync_WhenRequestAlreadySubmitted_ReturnsInvalidError()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var currentUser = PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com");
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        request.Status = ReportRequestStatus.Submitted;
+
+        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request));
+
+        var result = await service.InitiatePhotoUploadAsync(currentUser, new InitiatePhotoUploadCommand
+        {
+            ReportRequestId = requestId,
+            ViewType = "front",
+            MimeType = "image/jpeg",
+            SizeBytes = 2_097_152
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+        result.Error.Message.Should().Be(LgymApi.Resources.Messages.ReportRequestNotPending);
+    }
+
+    [Test]
+    public async Task InitiatePhotoUploadAsync_WhenProviderIsNotLocal_SkipsDevelopmentLimits()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var currentUser = PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com");
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        storageProvider.GenerateSignedUploadUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns("https://storage.example.com/signed-upload-url");
+        var reportingRepository = Substitute.For<IReportingRepository>();
+        reportingRepository.FindRequestByIdAsync(requestId, Arg.Any<CancellationToken>()).Returns(request);
+        reportingRepository.GetActivePhotoStorageBytesAsync(Arg.Any<CancellationToken>()).Returns(long.MaxValue);
+
+        var service = PhotoServiceTestFactory.CreateService(
+            photoStorageProvider: storageProvider,
+            reportingRepository: reportingRepository,
+            photoStorageOptions: new LgymApi.Application.Options.PhotoStorageOptions { Provider = "CloudflareR2" });
+
+        var result = await service.InitiatePhotoUploadAsync(currentUser, new InitiatePhotoUploadCommand
+        {
+            ReportRequestId = requestId,
+            ViewType = "front",
+            MimeType = "image/jpeg",
+            SizeBytes = 2_097_152
+        });
+
+        result.IsSuccess.Should().BeTrue();
     }
 }

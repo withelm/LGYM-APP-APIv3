@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -44,9 +45,59 @@ public sealed partial class ReportingService
             {
                 return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
             }
+
+            if (field.Type == ReportFieldType.Measurements
+                && !AreMeasurementAnswersValid(field, answer.Value))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
         }
 
         return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    private static bool AreMeasurementAnswersValid(ReportTemplateField field, JsonElement answer)
+    {
+        if (string.IsNullOrWhiteSpace(field.ModuleConfig)
+            || answer.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        using var moduleConfigDocument = JsonDocument.Parse(field.ModuleConfig);
+        if (!ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(
+                moduleConfigDocument.RootElement,
+                out _,
+                out var allowedBodyParts))
+        {
+            return false;
+        }
+
+        var allowedBodyPartSet = allowedBodyParts.ToHashSet();
+        foreach (var measurementProperty in answer.EnumerateObject())
+        {
+            if (!ReportingModuleConfigParser.TryResolveBodyPart(measurementProperty.Name, out var bodyPart)
+                || !allowedBodyPartSet.Contains(bodyPart)
+                || !TryParseMeasurementEntry(measurementProperty.Value, bodyPart))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryParseMeasurementEntry(JsonElement rawValue, BodyParts bodyPart)
+    {
+        return rawValue.ValueKind == JsonValueKind.Object
+               && rawValue.TryGetProperty("value", out var valueElement)
+               && valueElement.TryGetDouble(out var value)
+               && double.IsFinite(value)
+               && value > 0
+               && rawValue.TryGetProperty("unit", out var unitElement)
+               && unitElement.ValueKind == JsonValueKind.String
+               && MeasurementUnitResolver.TryParseStoredUnit(unitElement.GetString(), out var unit)
+               && MeasurementUnitResolver.IsUnitAllowedForBodyPart(bodyPart, unit);
     }
 
     private static Dictionary<string, JsonElement> NormalizeAnswers(IReadOnlyDictionary<string, JsonElement> answers)

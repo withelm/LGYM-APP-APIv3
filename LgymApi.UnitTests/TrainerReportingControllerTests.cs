@@ -170,6 +170,30 @@ public sealed class TrainerReportingControllerTests
         captured!.FieldComments.Should().ContainKey("Weight");
     }
 
+    [Test]
+    public async Task UpdateSubmissionFeedback_WhenTrainerFieldCommentsIsNull_UsesEmptyDictionary()
+    {
+        var service = Substitute.For<IReportingService>();
+        var traineeId = Id<User>.New();
+        var submissionId = Id<ReportSubmission>.New();
+        UpdateReportSubmissionFeedbackCommand? captured = null;
+        service.UpdateTrainerFeedbackAsync(Arg.Any<User>(), traineeId, submissionId, Arg.Do<UpdateReportSubmissionFeedbackCommand>(cmd => captured = cmd), Arg.Any<CancellationToken>())
+            .Returns(Result.Success<ReportSubmissionResult, AppError>(CreateSubmissionResult(traineeId)));
+        var controller = CreateController(service);
+
+        var request = new UpdateReportSubmissionFeedbackRequest
+        {
+            TrainerOverallComment = "overall",
+            TrainerFieldComments = null!
+        };
+
+        var result = await controller.UpdateSubmissionFeedback(traineeId.ToString(), submissionId.ToString(), request);
+
+        result.Should().BeOfType<OkObjectResult>();
+        captured.Should().NotBeNull();
+        captured!.FieldComments.Should().BeEmpty();
+    }
+
     private static TrainerReportingController CreateController(IReportingService reportingService)
     {
         var services = new ServiceCollection();

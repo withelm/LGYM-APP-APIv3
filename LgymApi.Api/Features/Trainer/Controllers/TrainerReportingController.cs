@@ -208,7 +208,7 @@ public sealed partial class TrainerReportingController : ControllerBase
             new UpdateReportSubmissionFeedbackCommand
             {
                 TrainerOverallComment = request.TrainerOverallComment,
-                FieldComments = new Dictionary<string, string?>(request.TrainerFieldComments, StringComparer.OrdinalIgnoreCase)
+                FieldComments = new Dictionary<string, string?>(request.TrainerFieldComments ?? [], StringComparer.OrdinalIgnoreCase)
             },
             cancellationToken);
 

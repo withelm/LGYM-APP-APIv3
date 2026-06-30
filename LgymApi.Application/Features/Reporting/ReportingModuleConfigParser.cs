@@ -69,8 +69,7 @@ public static class ReportingModuleConfigParser
             return true;
         }
 
-        normalizedView = trimmed;
-        return normalizedView.Length > 0;
+        return false;
     }
 
     public static bool TryNormalizeMeasurementModuleConfig(
@@ -135,6 +134,12 @@ public static class ReportingModuleConfigParser
                 return true;
         }
 
+        if (normalized.Equals("bodyfat", StringComparison.OrdinalIgnoreCase))
+        {
+            bodyPart = BodyParts.BodyFat;
+            return true;
+        }
+
         // BMI should return later as an automatically calculated value, not a manually configured measurement type.
         if (normalized.Equals("bodyfat", StringComparison.OrdinalIgnoreCase)
             || normalized.Equals("bmi", StringComparison.OrdinalIgnoreCase))
@@ -145,7 +150,6 @@ public static class ReportingModuleConfigParser
 
         return System.Enum.TryParse(normalized, true, out bodyPart)
                && System.Enum.IsDefined(bodyPart)
-               && bodyPart != BodyParts.BodyFat
                && bodyPart != BodyParts.Bmi;
     }
 

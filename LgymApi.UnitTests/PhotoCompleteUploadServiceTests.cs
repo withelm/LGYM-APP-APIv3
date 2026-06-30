@@ -96,4 +96,40 @@ public sealed class PhotoCompleteUploadServiceTests
         result.Error.Should().BeOfType<InvalidReportingError>();
         result.Error.Message.Should().Contain("Invalid view type");
     }
+
+    [Test]
+    public async Task CompletePhotoUploadAsync_WhenMetadataSizeIsSmallerThanInitiated_ReturnsInvalidError()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var currentUser = PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com");
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        storageProvider.GetMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new PhotoMetadata { ContentType = "image/jpeg", SizeBytes = 1024, ETag = "etag", UploadedAt = DateTimeOffset.UtcNow });
+        var pendingUpload = new PendingPhotoUpload { StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", InitiatedByUserId = traineeId, OwnerUserId = traineeId, ReportRequestId = requestId, ViewType = PhotoViewType.Front.ToString(), DeclaredContentType = "image/jpeg", DeclaredSizeBytes = 2048, CreatedAtUtc = DateTimeOffset.UtcNow, ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(10) };
+
+        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), photoStorageProvider: storageProvider, pendingUpload: pendingUpload);
+        var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "etag" });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+        result.Error.Message.Should().Contain("size");
+    }
+
+    [Test]
+    public async Task CompletePhotoUploadAsync_WhenRequestAlreadySubmitted_ReturnsInvalidError()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var currentUser = PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com");
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        request.Status = ReportRequestStatus.Submitted;
+        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request));
+
+        var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "etag" });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+        result.Error.Message.Should().Be(LgymApi.Resources.Messages.ReportRequestNotPending);
+    }
 }

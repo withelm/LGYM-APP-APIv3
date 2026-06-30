@@ -39,7 +39,7 @@ public sealed partial class TrainerRelationshipService
         var plan = new PlanEntity
         {
             Id = Id<PlanEntity>.New(),
-            UserId = currentTrainer.Id,
+            UserId = traineeId,
             Name = name.Trim(),
             IsActive = false,
             IsDeleted = false
