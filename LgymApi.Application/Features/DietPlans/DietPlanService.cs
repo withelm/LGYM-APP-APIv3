@@ -1,4 +1,3 @@
-using System.Text.Json;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.DietPlans.Models;
@@ -9,7 +8,6 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
-
 namespace LgymApi.Application.Features.DietPlans;
 
 public sealed class DietPlanService : IDietPlanService
@@ -40,7 +38,7 @@ public sealed class DietPlanService : IDietPlanService
         }
 
         var plans = await _dietPlanRepository.GetPlansByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
-        return Result<List<DietPlanResult>, AppError>.Success(plans.Select(MapPlan).ToList());
+        return Result<List<DietPlanResult>, AppError>.Success(plans.Select(DietPlanMapping.MapPlan).ToList());
     }
 
     public async Task<Result<DietPlanResult, AppError>> GetTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<DietPlan> dietPlanId, CancellationToken cancellationToken = default)
@@ -48,7 +46,7 @@ public sealed class DietPlanService : IDietPlanService
         var planResult = await EnsureOwnedPlanAsync(currentTrainer, traineeId, dietPlanId, cancellationToken);
         return planResult.IsFailure
             ? Result<DietPlanResult, AppError>.Failure(planResult.Error)
-            : Result<DietPlanResult, AppError>.Success(MapPlan(planResult.Value));
+            : Result<DietPlanResult, AppError>.Success(DietPlanMapping.MapPlan(planResult.Value));
     }
 
     public async Task<Result<DietPlanResult, AppError>> CreateTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, UpsertDietPlanCommand command, CancellationToken cancellationToken = default)
@@ -86,7 +84,7 @@ public sealed class DietPlanService : IDietPlanService
             Notes = NormalizeNullable(command.Notes),
             IsActive = command.IsActive,
             IsDeleted = false,
-            Meals = BuildMeals(normalizedMeals.Value)
+            Meals = DietPlanMapping.BuildMeals(normalizedMeals.Value)
         };
 
         await _dietPlanRepository.AddPlanAsync(plan, cancellationToken);
@@ -98,7 +96,7 @@ public sealed class DietPlanService : IDietPlanService
             await NotifyDietPlanUpdatedAsync(plan, currentTrainer.Id);
         }
 
-        return Result<DietPlanResult, AppError>.Success(MapPlan(plan));
+        return Result<DietPlanResult, AppError>.Success(DietPlanMapping.MapPlan(plan));
     }
 
     public async Task<Result<DietPlanResult, AppError>> UpdateTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<DietPlan> dietPlanId, UpsertDietPlanCommand command, CancellationToken cancellationToken = default)
@@ -132,7 +130,7 @@ public sealed class DietPlanService : IDietPlanService
         plan.Notes = NormalizeNullable(command.Notes);
         plan.IsActive = command.IsActive;
 
-        ReplaceMeals(plan, normalizedMeals.Value);
+        DietPlanMapping.ReplaceMeals(plan, normalizedMeals.Value);
 
         await AddHistoryEntryAsync(plan, currentTrainer.Id, "Updated", cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -142,7 +140,7 @@ public sealed class DietPlanService : IDietPlanService
             await NotifyDietPlanUpdatedAsync(plan, currentTrainer.Id);
         }
 
-        return Result<DietPlanResult, AppError>.Success(MapPlan(plan));
+        return Result<DietPlanResult, AppError>.Success(DietPlanMapping.MapPlan(plan));
     }
 
     public async Task<Result<Unit, AppError>> ActivateTraineePlanAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<DietPlan> dietPlanId, CancellationToken cancellationToken = default)
@@ -186,13 +184,13 @@ public sealed class DietPlanService : IDietPlanService
         }
 
         var history = await _dietPlanRepository.GetPlanHistoryAsync(planResult.Value.Id, cancellationToken);
-        return Result<List<DietPlanHistoryResult>, AppError>.Success(history.Select(MapHistory).ToList());
+        return Result<List<DietPlanHistoryResult>, AppError>.Success(history.Select(DietPlanMapping.MapHistory).ToList());
     }
 
     public async Task<Result<List<DietPlanResult>, AppError>> GetCurrentPlansAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
     {
         var plans = await _dietPlanRepository.GetActivePlansForTraineeAsync(currentTrainee.Id, cancellationToken);
-        return Result<List<DietPlanResult>, AppError>.Success(plans.Select(MapPlan).ToList());
+        return Result<List<DietPlanResult>, AppError>.Success(plans.Select(DietPlanMapping.MapPlan).ToList());
     }
 
     public async Task<Result<DietPlanResult, AppError>> GetCurrentPlanAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
@@ -200,7 +198,7 @@ public sealed class DietPlanService : IDietPlanService
         var plan = await _dietPlanRepository.GetActivePlanForTraineeAsync(currentTrainee.Id, cancellationToken);
         return plan == null
             ? Result<DietPlanResult, AppError>.Failure(new NotFoundError(Messages.DidntFind))
-            : Result<DietPlanResult, AppError>.Success(MapPlan(plan));
+            : Result<DietPlanResult, AppError>.Success(DietPlanMapping.MapPlan(plan));
     }
 
     private async Task<Result<Unit, AppError>> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
@@ -284,59 +282,8 @@ public sealed class DietPlanService : IDietPlanService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    private static List<DietMeal> BuildMeals(IEnumerable<UpsertDietMealCommand> meals)
-        => meals.Select(meal => new DietMeal
-        {
-            Id = Id<DietMeal>.New(),
-            Name = meal.Name,
-            Order = meal.Order,
-            Description = meal.Description,
-            EstimatedCalories = meal.EstimatedCalories,
-            ProteinGrams = meal.ProteinGrams,
-            CarbsGrams = meal.CarbsGrams,
-            FatGrams = meal.FatGrams
-        }).ToList();
-
-    private static void ReplaceMeals(DietPlan plan, IReadOnlyCollection<UpsertDietMealCommand> meals)
-    {
-        plan.Meals.Clear();
-        foreach (var meal in BuildMeals(meals))
-        {
-            plan.Meals.Add(meal);
-        }
-    }
-
-    private async Task AddHistoryEntryAsync(DietPlan plan, Id<UserEntity> changedByUserId, string changeType, CancellationToken cancellationToken)
-    {
-        var snapshot = new DietPlanResult
-        {
-            Id = plan.Id,
-            TrainerId = plan.TrainerId,
-            TraineeId = plan.TraineeId,
-            Name = plan.Name,
-            StartDate = plan.StartDate,
-            EndDate = plan.EndDate,
-            EstimatedCalories = plan.EstimatedCalories,
-            ProteinGrams = plan.ProteinGrams,
-            CarbsGrams = plan.CarbsGrams,
-            FatGrams = plan.FatGrams,
-            Notes = plan.Notes,
-            IsActive = plan.IsActive,
-            CreatedAt = plan.CreatedAt,
-            UpdatedAt = plan.UpdatedAt,
-            Meals = plan.Meals.OrderBy(x => x.Order).Select(MapMeal).ToList()
-        };
-
-        await _dietPlanRepository.AddHistoryEntryAsync(new DietPlanHistory
-        {
-            Id = Id<DietPlanHistory>.New(),
-            DietPlanId = plan.Id,
-            ChangedByUserId = changedByUserId,
-            ChangeDate = DateTimeOffset.UtcNow,
-            ChangeType = changeType,
-            SnapshotJson = JsonSerializer.Serialize(snapshot)
-        }, cancellationToken);
-    }
+    private Task AddHistoryEntryAsync(DietPlan plan, Id<UserEntity> changedByUserId, string changeType, CancellationToken cancellationToken)
+        => _dietPlanRepository.AddHistoryEntryAsync(DietPlanMapping.CreateHistoryEntry(plan, changedByUserId, changeType), cancellationToken);
 
     private Task NotifyDietPlanUpdatedAsync(DietPlan plan, Id<UserEntity> trainerId)
         => _commandDispatcher.EnqueueAsync(new DietPlanUpdatedInAppNotificationCommand
@@ -350,45 +297,4 @@ public sealed class DietPlanService : IDietPlanService
 
     private static string? NormalizeNullable(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static DietPlanResult MapPlan(DietPlan plan) => new()
-    {
-        Id = plan.Id,
-        TrainerId = plan.TrainerId,
-        TraineeId = plan.TraineeId,
-        Name = plan.Name,
-        StartDate = plan.StartDate,
-        EndDate = plan.EndDate,
-        EstimatedCalories = plan.EstimatedCalories,
-        ProteinGrams = plan.ProteinGrams,
-        CarbsGrams = plan.CarbsGrams,
-        FatGrams = plan.FatGrams,
-        Notes = plan.Notes,
-        IsActive = plan.IsActive,
-        CreatedAt = plan.CreatedAt,
-        UpdatedAt = plan.UpdatedAt,
-        Meals = plan.Meals.OrderBy(x => x.Order).Select(MapMeal).ToList()
-    };
-
-    private static DietMealResult MapMeal(DietMeal meal) => new()
-    {
-        Id = meal.Id,
-        Name = meal.Name,
-        Order = meal.Order,
-        Description = meal.Description,
-        EstimatedCalories = meal.EstimatedCalories,
-        ProteinGrams = meal.ProteinGrams,
-        CarbsGrams = meal.CarbsGrams,
-        FatGrams = meal.FatGrams
-    };
-
-    private static DietPlanHistoryResult MapHistory(DietPlanHistory entry) => new()
-    {
-        Id = entry.Id,
-        DietPlanId = entry.DietPlanId,
-        ChangedByUserId = entry.ChangedByUserId,
-        ChangeDate = entry.ChangeDate,
-        ChangeType = entry.ChangeType,
-        SnapshotJson = entry.SnapshotJson
-    };
 }
