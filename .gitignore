@@ -116,12 +116,14 @@ appsettings.Production.json
 appsettings.Local.json
 appsettings.*.json
 !appsettings.json
+!appsettings.container.example.json
 
 # .env files
 .env
 .env.local
 .env.development
 .env.production
+!.env.example
 
 # OS files
 .DS_Store
