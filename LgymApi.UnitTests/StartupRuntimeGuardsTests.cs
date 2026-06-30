@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
+using System.Reflection;
 
 namespace LgymApi.UnitTests;
 
@@ -46,6 +47,46 @@ public sealed class StartupRuntimeGuardsTests
         app.LogPhotoStorageConfiguration();
 
         provider.Messages.Should().ContainSingle(message => message.Contains("CloudflareR2") && message.Contains("bucket") && message.Contains("https://endpoint"));
+    }
+
+    [Test]
+    public async Task TableExistsAsync_WhenSqliteTableExists_ReturnsTrue()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+        await dbContext.Database.ExecuteSqlRawAsync("CREATE TABLE ExistingTable (Id INTEGER PRIMARY KEY);");
+
+        var result = await InvokeTableExistsAsync(dbContext, null, "ExistingTable");
+
+        result.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task TableExistsAsync_WhenSqliteTableMissing_ReturnsFalse()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+
+        var result = await InvokeTableExistsAsync(dbContext, null, "MissingTable");
+
+        result.Should().BeFalse();
+    }
+
+    private static async Task<bool> InvokeTableExistsAsync(AppDbContext dbContext, string? schema, string tableName)
+    {
+        var tableIdentifierType = typeof(StartupRuntimeGuards).GetNestedType("TableIdentifier", BindingFlags.NonPublic)!;
+        var tableIdentifier = Activator.CreateInstance(tableIdentifierType, schema, tableName)!;
+        var method = typeof(StartupRuntimeGuards).GetMethod("TableExistsAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var task = (Task<bool>)method.Invoke(null, [dbContext, tableIdentifier])!;
+        return await task;
     }
 
     private sealed class CapturingLoggerProvider : ILoggerProvider

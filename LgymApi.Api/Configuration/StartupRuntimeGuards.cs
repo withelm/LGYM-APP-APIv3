@@ -1,6 +1,7 @@
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using System.Data;
 
 namespace LgymApi.Api.Configuration;
 
@@ -44,12 +45,7 @@ internal static class StartupRuntimeGuards
 
         foreach (var table in mappedTables)
         {
-            try
-            {
-                var validationSql = $"SELECT 1 FROM {table.ToDelimitedSql()} LIMIT 1;";
-                await dbContext.Database.ExecuteSqlRawAsync(validationSql);
-            }
-            catch (Exception ex) when (IsMissingTableException(ex))
+            if (!await TableExistsAsync(dbContext, table))
             {
                 missingTables.Add(table.ToDisplayName());
             }
@@ -66,12 +62,59 @@ internal static class StartupRuntimeGuards
             "This usually means migrations history drift, manual schema changes, or a database created outside the EF Core migrations flow.");
     }
 
-    private static bool IsMissingTableException(Exception exception)
+    private static async Task<bool> TableExistsAsync(AppDbContext dbContext, TableIdentifier table)
     {
-        var message = exception.ToString();
-        return message.Contains("42P01", StringComparison.OrdinalIgnoreCase)
-               || message.Contains("relation", StringComparison.OrdinalIgnoreCase) && message.Contains("does not exist", StringComparison.OrdinalIgnoreCase)
-               || message.Contains("no such table", StringComparison.OrdinalIgnoreCase);
+        var providerName = dbContext.Database.ProviderName;
+        return providerName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true
+            ? await SqliteTableExistsAsync(dbContext, table)
+            : await InformationSchemaTableExistsAsync(dbContext, table);
+    }
+
+    private static async Task<bool> SqliteTableExistsAsync(AppDbContext dbContext, TableIdentifier table)
+        => await ExecuteExistsScalarAsync(
+            dbContext,
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = @tableName LIMIT 1;",
+            ("@tableName", table.Name));
+
+    private static async Task<bool> InformationSchemaTableExistsAsync(AppDbContext dbContext, TableIdentifier table)
+        => await ExecuteExistsScalarAsync(
+            dbContext,
+            "SELECT 1 FROM information_schema.tables WHERE table_name = @tableName AND ((@tableSchema IS NULL AND table_schema = current_schema()) OR (@tableSchema IS NOT NULL AND table_schema = @tableSchema)) LIMIT 1;",
+            ("@tableName", table.Name),
+            ("@tableSchema", table.Schema));
+
+    private static async Task<bool> ExecuteExistsScalarAsync(AppDbContext dbContext, string sql, params (string Name, object? Value)[] parameters)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose)
+        {
+            await connection.OpenAsync();
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = sql;
+
+            foreach (var parameter in parameters)
+            {
+                var dbParameter = command.CreateParameter();
+                dbParameter.ParameterName = parameter.Name;
+                dbParameter.Value = parameter.Value ?? DBNull.Value;
+                command.Parameters.Add(dbParameter);
+            }
+
+            var scalar = await command.ExecuteScalarAsync();
+            return scalar is not null && scalar != DBNull.Value;
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                await connection.CloseAsync();
+            }
+        }
     }
 
     private readonly record struct TableIdentifier(string? Schema, string Name)
