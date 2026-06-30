@@ -84,7 +84,7 @@ public sealed class StartupRuntimeGuardsTests
     public async Task ValidateDatabaseSchemaAsync_WhenUsingNonRelationalProvider_PropagatesRelationalProviderError()
     {
         var services = new ServiceCollection();
-        services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase($"runtime-guards-{Guid.NewGuid():N}"));
+        services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase($"runtime-guards-{Id<StartupRuntimeGuardsTests>.New()}"));
         await using var provider = services.BuildServiceProvider();
 
         var action = async () => await StartupRuntimeGuards.ValidateDatabaseSchemaAsync(provider);

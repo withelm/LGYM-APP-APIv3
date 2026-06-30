@@ -80,7 +80,7 @@ public sealed class MeasurementRepositoryTests
 
     private static AppDbContext CreateDbContext(string name)
         => new(new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"{name}-{Guid.NewGuid():N}")
+            .UseInMemoryDatabase($"{name}-{Id<MeasurementRepositoryTests>.New()}")
             .Options);
 
     private static Measurement CreateMeasurement(Id<User> userId, BodyParts bodyPart, DateTimeOffset createdAt)
