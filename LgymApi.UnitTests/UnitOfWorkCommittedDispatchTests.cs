@@ -5,9 +5,11 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.UnitOfWork;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 
 namespace LgymApi.UnitTests;
 
@@ -54,6 +56,76 @@ public sealed class UnitOfWorkCommittedDispatchTests
         await action.Should().NotThrowAsync();
         
         dbTransaction.CommitCalls.Should().Be(1);
+        dispatcher.CallCount.Should().Be(1);
+    }
+
+    [Test]
+    public async Task BeginTransactionAsync_WhenUsingInMemoryProvider_ReturnsNoOpTransaction()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"uow-noop-transaction-{Id<UnitOfWorkCommittedDispatchTests>.New()}")
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+        var unitOfWork = new EfUnitOfWork(dbContext, Substitute.For<ICommittedIntentDispatcher>(), NullLogger<EfUnitOfWork>.Instance);
+
+        var transaction = await unitOfWork.BeginTransactionAsync();
+
+        transaction.GetType().Name.Should().Be("NoOpUnitOfWorkTransaction");
+    }
+
+    [Test]
+    public void DetachEntity_WhenEntityIsTracked_SetsDetachedState()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"uow-detach-{Id<UnitOfWorkCommittedDispatchTests>.New()}")
+            .Options;
+        using var dbContext = new AppDbContext(options);
+        var envelope = new CommandEnvelope
+        {
+            Id = Id<CommandEnvelope>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
+            CommandTypeFullName = "Detach.Command",
+            PayloadJson = "{}",
+            Status = ActionExecutionStatus.Pending
+        };
+        dbContext.CommandEnvelopes.Add(envelope);
+        var unitOfWork = new EfUnitOfWork(dbContext, null, NullLogger<EfUnitOfWork>.Instance);
+
+        unitOfWork.DetachEntity(envelope);
+
+        dbContext.Entry(envelope).State.Should().Be(EntityState.Detached);
+    }
+
+    [Test]
+    public async Task BeginTransactionAsync_WhenUsingRelationalProvider_ReturnsEfTransaction()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+        var unitOfWork = new EfUnitOfWork(dbContext, null, NullLogger<EfUnitOfWork>.Instance);
+
+        var transaction = await unitOfWork.BeginTransactionAsync();
+
+        transaction.Should().BeOfType<EfUnitOfWorkTransaction>();
+        await transaction.DisposeAsync();
+    }
+
+    [Test]
+    public async Task SaveChangesAsync_WhenDispatcherThrows_DoesNotBubbleException()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"uow-dispatch-throw-{Id<UnitOfWorkCommittedDispatchTests>.New()}")
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+        var dispatcher = new ThrowingCommittedIntentDispatcher();
+        var unitOfWork = new EfUnitOfWork(dbContext, dispatcher, NullLogger<EfUnitOfWork>.Instance);
+
+        var action = async () => await unitOfWork.SaveChangesAsync();
+
+        await action.Should().NotThrowAsync();
         dispatcher.CallCount.Should().Be(1);
     }
 
