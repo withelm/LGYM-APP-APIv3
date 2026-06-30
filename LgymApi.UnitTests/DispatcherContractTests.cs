@@ -32,9 +32,10 @@ public sealed class DispatcherContractTests
          var dispatcher = new FakeCommandDispatcher();
          var command = new TestCommand { Value = 99 };
 
-         // Act & Assert: compiler enforces ICommand constraint
-         dispatcher.EnqueueAsync(command);
-         // Test passed (compiler enforces ICommand constraint at compile time)
+        // Act & Assert: compiler enforces ICommand constraint
+        dispatcher.EnqueueAsync(command);
+
+        dispatcher.EnqueuedCommands.Should().ContainSingle().Which.Should().BeSameAs(command);
     }
 
     [Test]

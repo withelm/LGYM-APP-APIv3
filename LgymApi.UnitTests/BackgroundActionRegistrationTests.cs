@@ -245,7 +245,7 @@ public sealed class BackgroundActionRegistrationTests
         services.AddBackgroundAction<TestCommand, TestAction>();
 
         // Assert - if we reach here, the generic constraint is correctly enforced
-        // Test passed (no assertion needed as type system enforces the constraint)
+        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IBackgroundAction<TestCommand>));
     }
 
     [Test]
