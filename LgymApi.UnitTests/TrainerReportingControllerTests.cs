@@ -194,14 +194,84 @@ public sealed class TrainerReportingControllerTests
         captured!.FieldComments.Should().BeEmpty();
     }
 
-    private static TrainerReportingController CreateController(IReportingService reportingService)
+    [Test]
+    public async Task CreateRecurringReportAssignment_WithInvalidIds_ReturnsBadRequest()
+    {
+        var controller = CreateController(Substitute.For<IReportingService>());
+
+        (await controller.CreateRecurringReportAssignment("bad-user", new UpsertRecurringReportAssignmentRequest { TemplateId = Id<ReportTemplate>.New().ToString() }))
+            .Should().BeAssignableTo<ObjectResult>();
+        (await controller.CreateRecurringReportAssignment(Id<User>.New().ToString(), new UpsertRecurringReportAssignmentRequest { TemplateId = "bad-template" }))
+            .Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task CreateRecurringReportAssignment_WithValidRequest_ForwardsParsedValues()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        UpsertRecurringReportAssignmentCommand? captured = null;
+        recurringService.CreateAsync(Arg.Any<User>(), traineeId, Arg.Do<UpsertRecurringReportAssignmentCommand>(cmd => captured = cmd), Arg.Any<CancellationToken>())
+            .Returns(Result.Success<RecurringReportAssignmentResult, AppError>(CreateAssignmentResult(traineeId, templateId)));
+        var controller = CreateController(reportingService, recurringService);
+        var startsAt = DateTimeOffset.UtcNow;
+
+        var result = await controller.CreateRecurringReportAssignment(traineeId.ToString(), new UpsertRecurringReportAssignmentRequest
+        {
+            TemplateId = templateId.ToString(),
+            IntervalValue = 2,
+            IntervalUnit = RecurringReportIntervalUnit.Month,
+            StartsAt = startsAt,
+            EndsAt = startsAt.AddDays(30),
+            Note = "note"
+        });
+
+        result.Should().BeOfType<ObjectResult>();
+        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status201Created);
+        captured.Should().NotBeNull();
+        captured!.TemplateId.Should().Be(templateId);
+        captured.IntervalValue.Should().Be(2);
+        captured.IntervalUnit.Should().Be(RecurringReportIntervalUnit.Month);
+        captured.Note.Should().Be("note");
+    }
+
+    [Test]
+    public async Task GetRecurringReportAssignments_WithInvalidTraineeId_ReturnsBadRequest()
+    {
+        var controller = CreateController(Substitute.For<IReportingService>());
+
+        var result = await controller.GetRecurringReportAssignments("bad-user");
+
+        result.Should().BeAssignableTo<ObjectResult>();
+        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Test]
+    public async Task DeleteRecurringReportAssignment_WithValidIds_ForwardsToService()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        var assignmentId = Id<RecurringReportAssignment>.New();
+        recurringService.DeleteAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>())
+            .Returns(Result.Success<Unit, AppError>(Unit.Value));
+        var controller = CreateController(reportingService, recurringService);
+
+        var result = await controller.DeleteRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
+
+        result.Should().BeOfType<OkObjectResult>();
+        await recurringService.Received(1).DeleteAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>());
+    }
+
+    private static TrainerReportingController CreateController(IReportingService reportingService, IRecurringReportAssignmentService? recurringService = null)
     {
         var services = new ServiceCollection();
         services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
         using var provider = services.BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
-        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
-        var controller = new TrainerReportingController(reportingService, recurringService, mapper)
+        var controller = new TrainerReportingController(reportingService, recurringService ?? Substitute.For<IRecurringReportAssignmentService>(), mapper)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -239,5 +309,18 @@ public sealed class TrainerReportingControllerTests
             TraineeId = traineeId,
             SubmittedAt = DateTimeOffset.UtcNow,
             Request = CreateRequestResult(traineeId, Id<ReportTemplate>.New())
+        };
+
+    private static RecurringReportAssignmentResult CreateAssignmentResult(Id<User> traineeId, Id<ReportTemplate> templateId)
+        => new()
+        {
+            Id = Id<RecurringReportAssignment>.New(),
+            TrainerId = Id<User>.New(),
+            TraineeId = traineeId,
+            TemplateId = templateId,
+            IntervalValue = 1,
+            IntervalUnit = RecurringReportIntervalUnit.Week,
+            StartsAt = DateTimeOffset.UtcNow,
+            Template = CreateTemplateResult(templateId)
         };
 }

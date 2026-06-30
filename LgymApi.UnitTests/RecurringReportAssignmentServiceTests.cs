@@ -250,6 +250,124 @@ public sealed class RecurringReportAssignmentServiceTests
         await commandDispatcher.Received(1).EnqueueAsync(Arg.Any<ReportRequestCreatedInAppNotificationCommand>());
     }
 
+    [Test]
+    public async Task UpdateAsync_UpdatesAssignmentFields()
+    {
+        await using var db = CreateDbContext("recurring-update-success");
+        var trainer = CreateUser();
+        var traineeId = Id<User>.New();
+        var oldTemplate = CreateTemplate(trainer.Id);
+        var newTemplate = CreateTemplate(trainer.Id);
+        var assignment = CreateAssignment(trainer.Id, traineeId, oldTemplate.Id);
+        db.ReportTemplates.AddRange(oldTemplate, newTemplate);
+        db.RecurringReportAssignments.Add(assignment);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, trainer.Id, traineeId, ownsTrainee: true);
+        var startsAt = DateTimeOffset.UtcNow.AddDays(2);
+
+        var result = await service.UpdateAsync(trainer, traineeId, assignment.Id, new UpsertRecurringReportAssignmentCommand
+        {
+            TemplateId = newTemplate.Id,
+            IntervalValue = 2,
+            IntervalUnit = RecurringReportIntervalUnit.Month,
+            StartsAt = startsAt,
+            EndsAt = startsAt.AddDays(30),
+            Note = "updated note"
+        });
+
+        result.IsSuccess.Should().BeTrue();
+        var stored = db.RecurringReportAssignments.Single();
+        stored.TemplateId.Should().Be(newTemplate.Id);
+        stored.IntervalValue.Should().Be(2);
+        stored.IntervalUnit.Should().Be(RecurringReportIntervalUnit.Month);
+        stored.Note.Should().Be("updated note");
+    }
+
+    [Test]
+    public async Task PauseAndResumeAsync_ToggleActiveState()
+    {
+        await using var db = CreateDbContext("recurring-pause-resume");
+        var trainer = CreateUser();
+        var traineeId = Id<User>.New();
+        var template = CreateTemplate(trainer.Id);
+        var assignment = CreateAssignment(trainer.Id, traineeId, template.Id);
+        db.ReportTemplates.Add(template);
+        db.RecurringReportAssignments.Add(assignment);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, trainer.Id, traineeId, ownsTrainee: true);
+
+        (await service.PauseAsync(trainer, traineeId, assignment.Id)).IsSuccess.Should().BeTrue();
+        db.RecurringReportAssignments.Single().IsActive.Should().BeFalse();
+
+        (await service.ResumeAsync(trainer, traineeId, assignment.Id)).IsSuccess.Should().BeTrue();
+        db.RecurringReportAssignments.Single().IsActive.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task DeleteAsync_SoftDeletesAssignment()
+    {
+        await using var db = CreateDbContext("recurring-delete");
+        var trainer = CreateUser();
+        var traineeId = Id<User>.New();
+        var template = CreateTemplate(trainer.Id);
+        var assignment = CreateAssignment(trainer.Id, traineeId, template.Id);
+        db.ReportTemplates.Add(template);
+        db.RecurringReportAssignments.Add(assignment);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, trainer.Id, traineeId, ownsTrainee: true);
+
+        var result = await service.DeleteAsync(trainer, traineeId, assignment.Id);
+
+        result.IsSuccess.Should().BeTrue();
+        var stored = db.RecurringReportAssignments.IgnoreQueryFilters().Single();
+        stored.IsDeleted.Should().BeTrue();
+        stored.IsActive.Should().BeFalse();
+    }
+
+    [Test]
+    public async Task UpdateAsync_WhenTemplateDeleted_ReturnsFailure()
+    {
+        await using var db = CreateDbContext("recurring-update-template-deleted");
+        var trainer = CreateUser();
+        var traineeId = Id<User>.New();
+        var template = CreateTemplate(trainer.Id);
+        template.IsDeleted = true;
+        var activeTemplate = CreateTemplate(trainer.Id);
+        var assignment = new RecurringReportAssignment
+        {
+            Id = Id<RecurringReportAssignment>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = traineeId,
+            TemplateId = activeTemplate.Id,
+            Template = activeTemplate,
+            IntervalValue = 1,
+            IntervalUnit = RecurringReportIntervalUnit.Week,
+            StartsAt = DateTimeOffset.UtcNow.AddDays(-10),
+            IsActive = true
+        };
+
+        db.ReportTemplates.AddRange(template, activeTemplate);
+        db.RecurringReportAssignments.Add(assignment);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, trainer.Id, traineeId, ownsTrainee: true);
+
+        var result = await service.UpdateAsync(trainer, traineeId, assignment.Id, new UpsertRecurringReportAssignmentCommand
+        {
+            TemplateId = template.Id,
+            IntervalValue = 2,
+            IntervalUnit = RecurringReportIntervalUnit.Month,
+            StartsAt = DateTimeOffset.UtcNow,
+            Note = "updated"
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+    }
+
     private static RecurringReportAssignmentService CreateService(
         AppDbContext db,
         Id<User> trainerId,
@@ -309,5 +427,20 @@ public sealed class RecurringReportAssignmentServiceTests
                     IsRequired = true,
                 }
             ]
+        };
+
+    private static RecurringReportAssignment CreateAssignment(Id<User> trainerId, Id<User> traineeId, Id<ReportTemplate> templateId)
+        => new()
+        {
+            Id = Id<RecurringReportAssignment>.New(),
+            TrainerId = trainerId,
+            TraineeId = traineeId,
+            TemplateId = templateId,
+            IntervalValue = 1,
+            IntervalUnit = RecurringReportIntervalUnit.Week,
+            StartsAt = DateTimeOffset.UtcNow.AddDays(-5),
+            IsActive = true,
+            Note = "weekly",
+            NextEligibleAt = DateTimeOffset.UtcNow.AddDays(-1)
         };
 }
