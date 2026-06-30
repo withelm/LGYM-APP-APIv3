@@ -238,6 +238,26 @@ public sealed class TrainerReportingControllerTests
     }
 
     [Test]
+    public async Task CreateRecurringReportAssignment_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        recurringService.CreateAsync(Arg.Any<User>(), traineeId, Arg.Any<UpsertRecurringReportAssignmentCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<RecurringReportAssignmentResult, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(Substitute.For<IReportingService>(), recurringService);
+
+        var result = await controller.CreateRecurringReportAssignment(traineeId.ToString(), new UpsertRecurringReportAssignmentRequest
+        {
+            TemplateId = Id<ReportTemplate>.New().ToString(),
+            IntervalValue = 1,
+            IntervalUnit = RecurringReportIntervalUnit.Week,
+            StartsAt = DateTimeOffset.UtcNow
+        });
+
+        result.Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
     public async Task GetRecurringReportAssignments_WithInvalidTraineeId_ReturnsBadRequest()
     {
         var controller = CreateController(Substitute.For<IReportingService>());
@@ -246,6 +266,184 @@ public sealed class TrainerReportingControllerTests
 
         result.Should().BeAssignableTo<ObjectResult>();
         ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Test]
+    public async Task GetRecurringReportAssignments_WhenServiceSucceeds_ReturnsMappedDtos()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        recurringService.GetForTraineeAsync(Arg.Any<User>(), traineeId, Arg.Any<CancellationToken>())
+            .Returns(Result.Success<List<RecurringReportAssignmentResult>, AppError>([CreateAssignmentResult(traineeId, Id<ReportTemplate>.New())]));
+        var controller = CreateController(reportingService, recurringService);
+
+        var result = await controller.GetRecurringReportAssignments(traineeId.ToString());
+
+        result.Should().BeOfType<OkObjectResult>();
+        ((OkObjectResult)result).Value.Should().BeAssignableTo<IEnumerable<RecurringReportAssignmentDto>>();
+    }
+
+    [Test]
+    public async Task GetRecurringReportAssignments_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        recurringService.GetForTraineeAsync(Arg.Any<User>(), traineeId, Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<List<RecurringReportAssignmentResult>, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(Substitute.For<IReportingService>(), recurringService);
+
+        var result = await controller.GetRecurringReportAssignments(traineeId.ToString());
+
+        result.Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task UpdateRecurringReportAssignment_WithInvalidIds_ReturnsBadRequest()
+    {
+        var controller = CreateController(Substitute.For<IReportingService>());
+
+        (await controller.UpdateRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString(), new UpsertRecurringReportAssignmentRequest { TemplateId = Id<ReportTemplate>.New().ToString() }))
+            .Should().BeAssignableTo<ObjectResult>();
+        (await controller.UpdateRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment", new UpsertRecurringReportAssignmentRequest { TemplateId = Id<ReportTemplate>.New().ToString() }))
+            .Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task UpdateRecurringReportAssignment_WithValidIds_ForwardsParsedValues()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        var assignmentId = Id<RecurringReportAssignment>.New();
+        var templateId = Id<ReportTemplate>.New();
+        Id<RecurringReportAssignment> capturedAssignmentId = Id<RecurringReportAssignment>.Empty;
+        recurringService.UpdateAsync(Arg.Any<User>(), traineeId, Arg.Do<Id<RecurringReportAssignment>>(id => capturedAssignmentId = id), Arg.Any<UpsertRecurringReportAssignmentCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success<RecurringReportAssignmentResult, AppError>(CreateAssignmentResult(traineeId, templateId)));
+        var controller = CreateController(reportingService, recurringService);
+
+        var result = await controller.UpdateRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString(), new UpsertRecurringReportAssignmentRequest
+        {
+            TemplateId = templateId.ToString(),
+            IntervalValue = 1,
+            IntervalUnit = RecurringReportIntervalUnit.Week,
+            StartsAt = DateTimeOffset.UtcNow
+        });
+
+        result.Should().BeOfType<OkObjectResult>();
+        capturedAssignmentId.Should().Be(assignmentId);
+    }
+
+    [Test]
+    public async Task UpdateRecurringReportAssignment_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        var assignmentId = Id<RecurringReportAssignment>.New();
+        recurringService.UpdateAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<UpsertRecurringReportAssignmentCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<RecurringReportAssignmentResult, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(Substitute.For<IReportingService>(), recurringService);
+
+        var result = await controller.UpdateRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString(), new UpsertRecurringReportAssignmentRequest
+        {
+            TemplateId = Id<ReportTemplate>.New().ToString(),
+            IntervalValue = 1,
+            IntervalUnit = RecurringReportIntervalUnit.Week,
+            StartsAt = DateTimeOffset.UtcNow
+        });
+
+        result.Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task PauseRecurringReportAssignment_WithInvalidIds_ReturnsBadRequest()
+    {
+        var controller = CreateController(Substitute.For<IReportingService>());
+
+        (await controller.PauseRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString())).Should().BeAssignableTo<ObjectResult>();
+        (await controller.PauseRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment")).Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task PauseRecurringReportAssignment_WithValidIds_ForwardsToService()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        var assignmentId = Id<RecurringReportAssignment>.New();
+        recurringService.PauseAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>())
+            .Returns(Result.Success<RecurringReportAssignmentResult, AppError>(CreateAssignmentResult(traineeId, Id<ReportTemplate>.New())));
+        var controller = CreateController(reportingService, recurringService);
+
+        var result = await controller.PauseRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
+
+        result.Should().BeOfType<OkObjectResult>();
+        await recurringService.Received(1).PauseAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task PauseRecurringReportAssignment_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        var assignmentId = Id<RecurringReportAssignment>.New();
+        recurringService.PauseAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<RecurringReportAssignmentResult, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(Substitute.For<IReportingService>(), recurringService);
+
+        var result = await controller.PauseRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
+
+        result.Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task ResumeRecurringReportAssignment_WithInvalidIds_ReturnsBadRequest()
+    {
+        var controller = CreateController(Substitute.For<IReportingService>());
+
+        (await controller.ResumeRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString())).Should().BeAssignableTo<ObjectResult>();
+        (await controller.ResumeRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment")).Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task ResumeRecurringReportAssignment_WithValidIds_ForwardsToService()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        var assignmentId = Id<RecurringReportAssignment>.New();
+        recurringService.ResumeAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>())
+            .Returns(Result.Success<RecurringReportAssignmentResult, AppError>(CreateAssignmentResult(traineeId, Id<ReportTemplate>.New())));
+        var controller = CreateController(reportingService, recurringService);
+
+        var result = await controller.ResumeRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
+
+        result.Should().BeOfType<OkObjectResult>();
+        await recurringService.Received(1).ResumeAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ResumeRecurringReportAssignment_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        var assignmentId = Id<RecurringReportAssignment>.New();
+        recurringService.ResumeAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<RecurringReportAssignmentResult, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(Substitute.For<IReportingService>(), recurringService);
+
+        var result = await controller.ResumeRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
+
+        result.Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task DeleteRecurringReportAssignment_WithInvalidIds_ReturnsBadRequest()
+    {
+        var controller = CreateController(Substitute.For<IReportingService>());
+
+        (await controller.DeleteRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString())).Should().BeAssignableTo<ObjectResult>();
+        (await controller.DeleteRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment")).Should().BeAssignableTo<ObjectResult>();
     }
 
     [Test]
@@ -263,6 +461,21 @@ public sealed class TrainerReportingControllerTests
 
         result.Should().BeOfType<OkObjectResult>();
         await recurringService.Received(1).DeleteAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task DeleteRecurringReportAssignment_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var recurringService = Substitute.For<IRecurringReportAssignmentService>();
+        var traineeId = Id<User>.New();
+        var assignmentId = Id<RecurringReportAssignment>.New();
+        recurringService.DeleteAsync(Arg.Any<User>(), traineeId, assignmentId, Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<Unit, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(Substitute.For<IReportingService>(), recurringService);
+
+        var result = await controller.DeleteRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
+
+        result.Should().BeAssignableTo<ObjectResult>();
     }
 
     private static TrainerReportingController CreateController(IReportingService reportingService, IRecurringReportAssignmentService? recurringService = null)

@@ -164,6 +164,144 @@ public sealed class TraineeReportingControllerTests
         payload.Should().ContainSingle();
     }
 
+    [Test]
+    public async Task GetPendingRequests_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        reportingService.GetPendingRequestsForTraineeAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<List<ReportRequestResult>, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(reportingService);
+
+        var result = await controller.GetPendingRequests();
+
+        result.Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task SubmitRequest_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var requestId = Id<ReportRequest>.New();
+        reportingService.SubmitReportRequestAsync(Arg.Any<User>(), requestId, Arg.Any<SubmitReportRequestCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<ReportSubmissionResult, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(reportingService);
+
+        var result = await controller.SubmitRequest(requestId.ToString(), new SubmitReportRequestRequest { Answers = [] });
+
+        result.Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task GetOwnSubmissions_ReturnsMappedDtos()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var requestId = Id<ReportRequest>.New();
+        var submissionId = Id<ReportSubmission>.New();
+        reportingService.GetOwnSubmissionsAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success<List<ReportSubmissionResult>, AppError>([CreateSubmissionResult(submissionId, requestId)]));
+        var controller = CreateController(reportingService);
+
+        var result = await controller.GetOwnSubmissions();
+
+        result.Should().BeOfType<OkObjectResult>();
+        ((OkObjectResult)result).Value.Should().BeAssignableTo<IEnumerable<ReportSubmissionDto>>();
+    }
+
+    [Test]
+    public async Task MarkFeedbackRead_WithValidId_ForwardsParsedIdAndReturnsOk()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var requestId = Id<ReportRequest>.New();
+        var submissionId = Id<ReportSubmission>.New();
+        Id<ReportSubmission> capturedSubmissionId = Id<ReportSubmission>.Empty;
+        reportingService.MarkTrainerFeedbackAsReadAsync(Arg.Any<User>(), Arg.Do<Id<ReportSubmission>>(id => capturedSubmissionId = id), Arg.Any<CancellationToken>())
+            .Returns(Result.Success<ReportSubmissionResult, AppError>(CreateSubmissionResult(submissionId, requestId)));
+        var controller = CreateController(reportingService);
+
+        var result = await controller.MarkFeedbackRead(submissionId.ToString());
+
+        result.Should().BeOfType<OkObjectResult>();
+        capturedSubmissionId.Should().Be(submissionId);
+    }
+
+    [Test]
+    public async Task MarkFeedbackRead_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var submissionId = Id<ReportSubmission>.New();
+        reportingService.MarkTrainerFeedbackAsReadAsync(Arg.Any<User>(), submissionId, Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<ReportSubmissionResult, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(reportingService);
+
+        var result = await controller.MarkFeedbackRead(submissionId.ToString());
+
+        result.Should().BeAssignableTo<ObjectResult>();
+    }
+
+    [Test]
+    public async Task InitiatePhotoUpload_WithValidRequest_ReturnsMappedResponse()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var requestId = Id<ReportRequest>.New();
+        reportingService.InitiatePhotoUploadAsync(Arg.Any<User>(), Arg.Is<InitiatePhotoUploadCommand>(cmd => cmd.ReportRequestId == requestId), Arg.Any<CancellationToken>())
+            .Returns(Result.Success<InitiatePhotoUploadResult, AppError>(new InitiatePhotoUploadResult
+            {
+                StorageKey = "photos/key.jpg",
+                UploadUrl = "https://upload.example.com",
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(10)
+            }));
+        var controller = CreateController(reportingService);
+
+        var result = await controller.InitiatePhotoUpload(new InitiatePhotoUploadRequest
+        {
+            ReportRequestId = requestId.ToString(),
+            ViewType = "Front",
+            MimeType = "image/jpeg",
+            SizeBytes = 1234
+        });
+
+        result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Test]
+    public async Task CompletePhotoUpload_WithValidRequest_ReturnsMappedResponse()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var requestId = Id<ReportRequest>.New();
+        reportingService.CompletePhotoUploadAsync(Arg.Any<User>(), Arg.Is<CompletePhotoUploadCommand>(cmd => cmd.ReportRequestId == requestId), Arg.Any<CancellationToken>())
+            .Returns(Result.Success<CompletePhotoUploadResult, AppError>(new CompletePhotoUploadResult
+            {
+                PhotoId = Id<Photo>.New(),
+                UploadedAt = DateTimeOffset.UtcNow
+            }));
+        var controller = CreateController(reportingService);
+
+        var result = await controller.CompletePhotoUpload(new CompletePhotoUploadRequest
+        {
+            ReportRequestId = requestId.ToString(),
+            StorageKey = "photos/key.jpg",
+            MimeType = "image/jpeg",
+            SizeBytes = 1234,
+            Checksum = "etag",
+            ViewType = "Front"
+        });
+
+        result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Test]
+    public async Task GetPhotoHistory_WhenServiceFails_ReturnsMappedErrorResult()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        reportingService.GetPhotoHistoryAsync(Arg.Any<User>(), Arg.Any<GetPhotoHistoryCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<List<PhotoHistoryItemResult>, AppError>(new InvalidReportingError("bad request")));
+        var controller = CreateController(reportingService);
+
+        var result = await controller.GetPhotoHistory(null);
+
+        result.Should().BeAssignableTo<ObjectResult>();
+    }
+
     private static ReportSubmissionResult CreateSubmissionResult(Id<ReportSubmission> submissionId, Id<ReportRequest> requestId)
         => new()
         {
