@@ -40,6 +40,11 @@ public static class MeasurementUnitResolver
 
     public static bool TryParseStoredUnit(string? rawUnit, out MeasurementUnits unit)
     {
+        if (TryParseUnitAlias(rawUnit, out unit))
+        {
+            return true;
+        }
+
         if (!string.IsNullOrWhiteSpace(rawUnit) && System.Enum.TryParse(rawUnit, true, out MeasurementUnits parsed) && parsed != MeasurementUnits.Unknown)
         {
             unit = parsed;
@@ -48,6 +53,23 @@ public static class MeasurementUnitResolver
 
         unit = MeasurementUnits.Unknown;
         return false;
+    }
+
+    private static bool TryParseUnitAlias(string? rawUnit, out MeasurementUnits unit)
+    {
+        unit = rawUnit?.Trim().ToLowerInvariant() switch
+        {
+            "kg" or "kgs" => MeasurementUnits.Kilograms,
+            "lb" or "lbs" => MeasurementUnits.Pounds,
+            "m" => MeasurementUnits.Meters,
+            "cm" => MeasurementUnits.Centimeters,
+            "mm" => MeasurementUnits.Millimeters,
+            "%" or "percent" => MeasurementUnits.Percent,
+            "bmi" => MeasurementUnits.Bmi,
+            _ => MeasurementUnits.Unknown
+        };
+
+        return unit != MeasurementUnits.Unknown;
     }
 
     public static bool TryGetHeightUnit(MeasurementUnits unit, out HeightUnits heightUnit)

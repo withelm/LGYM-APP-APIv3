@@ -54,4 +54,15 @@ public sealed class MeasurementUnitResolverTests
         weightUnit.Should().Be(WeightUnits.Pounds);
         MeasurementUnitResolver.TryGetWeightUnit(MeasurementUnits.Percent, out _).Should().BeFalse();
     }
+
+    [TestCase("kg", MeasurementUnits.Kilograms)]
+    [TestCase("lbs", MeasurementUnits.Pounds)]
+    [TestCase("cm", MeasurementUnits.Centimeters)]
+    [TestCase("mm", MeasurementUnits.Millimeters)]
+    [TestCase("%", MeasurementUnits.Percent)]
+    public void TryParseStoredUnit_AllowsCommonAliases(string rawUnit, MeasurementUnits expectedUnit)
+    {
+        MeasurementUnitResolver.TryParseStoredUnit(rawUnit, out var parsedUnit).Should().BeTrue();
+        parsedUnit.Should().Be(expectedUnit);
+    }
 }
