@@ -9,7 +9,6 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
-using LgymApi.Resources;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
@@ -25,16 +24,16 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandlerTest
         var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>.Instance);
         var command = new TrainerInvitationAcceptedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() };
 
-         await handler.ExecuteAsync(command);
+        await handler.ExecuteAsync(command);
 
-          service.Calls.Should().Be(1);
-          service.LastInput!.RecipientId.Should().Be(command.TrainerId);
-          service.LastInput.SenderUserId.Should().Be(command.TraineeId);
-          service.LastInput.DeliveryKey.Should().Be($"trainer-invitation:{command.InvitationId}:accepted");
-          service.LastInput.IsSystemNotification.Should().BeFalse();
-         service.LastInput.Message.Should().Be(Messages.TrainerInvitationAccepted);
-         service.LastInput.RedirectUrl.Should().Be($"/trainer/members/{command.TraineeId}");
-         service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationAccepted);
+        service.Calls.Should().Be(1);
+        service.LastInput!.RecipientId.Should().Be(command.TrainerId);
+        service.LastInput.SenderUserId.Should().Be(command.TraineeId);
+        service.LastInput.DeliveryKey.Should().Be($"trainer-invitation:{command.InvitationId}:accepted");
+        service.LastInput.IsSystemNotification.Should().BeFalse();
+        service.LastInput.Message.Should().Be(Messages.TrainerInvitationAccepted);
+        service.LastInput.RedirectUrl.Should().Be($"/trainer/members/{command.TraineeId}");
+        service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationAccepted);
     }
 
     [Test]
@@ -43,9 +42,9 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandlerTest
         var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Failure(new BadRequestError("boom")));
         var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>.Instance);
 
-         await handler.ExecuteAsync(new TrainerInvitationAcceptedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
+        await handler.ExecuteAsync(new TrainerInvitationAcceptedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
 
-         service.Calls.Should().Be(1);
+        service.Calls.Should().Be(1);
     }
 
     private static InAppNotificationResult CreateResult()

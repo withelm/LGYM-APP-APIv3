@@ -31,7 +31,7 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandlerTest
         service.LastInput.DeliveryKey.Should().Be($"trainer-invitation:{command.InvitationId}:rejected");
         service.LastInput.IsSystemNotification.Should().BeFalse();
         service.LastInput.Message.Should().Be(Messages.TrainerInvitationRejected);
-        service.LastInput.RedirectUrl.Should().Be("/trainers/dashboard");
+        service.LastInput.RedirectUrl.Should().Be("/trainer/invitations");
         service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationRejected);
     }
 

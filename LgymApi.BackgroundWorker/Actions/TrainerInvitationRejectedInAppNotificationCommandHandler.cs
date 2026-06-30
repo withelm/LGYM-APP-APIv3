@@ -32,7 +32,10 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandler : g
         var result = await _notificationService.CreateAsync(input, cancellationToken);
         if (result.IsFailure)
         {
-            _logger.LogError($"Failed to create invitation-rejected notification for trainer {command.TrainerId}: {result.Error}");
+            _logger.LogError(
+                "Failed to create invitation-rejected notification for trainer {TrainerId}: {Error}",
+                command.TrainerId,
+                result.Error);
         }
     }
 }
