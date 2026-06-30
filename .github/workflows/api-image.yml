@@ -1,18 +1,12 @@
 name: API Image
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
-  push:
-    branches: [main]
-    tags:
-      - "v*.*.*"
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Optional extra Docker image tag to publish"
+        description: "Docker image tag to publish"
         required: false
+        default: latest
         type: string
 
 permissions:
@@ -26,64 +20,24 @@ env:
   DOCKERFILE: Dockerfile
 
 jobs:
-  pr-build:
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Generate image metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: lgym-api
-          tags: |
-            type=sha,format=short,prefix=sha-
-
-      - name: Build API image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ env.DOCKERFILE }}
-          push: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Publish workflow summary
-        env:
-          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
-        run: |
-          echo '## API image build (pull request)' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Build completed with `push: false` using root `Dockerfile`.' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Build-validated image references:' >> "$GITHUB_STEP_SUMMARY"
-          echo "$IMAGE_TAGS" | tr ',' '\n' | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
-
   publish:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || vars.DOCKERHUB_NAMESPACE }}
       DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
       DOCKERHUB_IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE_NAME || 'lgym-api' }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      IMAGE_TAG: ${{ inputs.image_tag || 'latest' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate Docker Hub configuration
+      - name: Validate Docker Hub variables
         run: |
-          test -n "$DOCKERHUB_USERNAME" || { echo 'Missing GitHub variable DOCKERHUB_USERNAME or DOCKERHUB_NAMESPACE.'; exit 1; }
-          test -n "$DOCKERHUB_NAMESPACE" || { echo 'Missing GitHub variable DOCKERHUB_NAMESPACE.'; exit 1; }
-          test -n "$DOCKERHUB_IMAGE_NAME" || { echo 'Missing GitHub variable DOCKERHUB_IMAGE_NAME.'; exit 1; }
-          test -n "$DOCKERHUB_TOKEN" || { echo 'Missing GitHub secret DOCKERHUB_TOKEN.'; exit 1; }
+          test -n "$DOCKERHUB_USERNAME"
+          test -n "$DOCKERHUB_NAMESPACE"
+          test -n "$DOCKERHUB_IMAGE_NAME"
+          test -n "$IMAGE_TAG"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -101,11 +55,8 @@ jobs:
         with:
           images: docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ env.DOCKERHUB_IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=ref,event=branch
-            type=ref,event=tag
+            type=raw,value=${{ env.IMAGE_TAG }}
             type=sha,format=short,prefix=sha-
-            type=raw,value=${{ inputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' && inputs.image_tag != '' }}
 
       - name: Build and push API image
         uses: docker/build-push-action@v6
