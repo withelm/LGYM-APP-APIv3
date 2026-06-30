@@ -47,22 +47,53 @@ Do not bake secrets or site-specific values into the image.
 - Publish the API on container port `8080` and map that port to a host port
 - Set `ConnectionStrings__Postgres` from the runtime environment
 - Set `Jwt__SigningKey` only if the mounted config does not already provide it
+- Keep PostgreSQL outside this image; for a database running on the Docker host, use `host.docker.internal` from inside the container
 
 The process runs from `/app` inside the container, so the mounted config and any relative paths must assume `/app` as the content root.
 Avoid launch profile assumptions when testing the image.
 
-### Local development
+### Build the image
+
+```bash
+docker build -t lgym-api:test .
+```
+
+### Local development with an external PostgreSQL database
+
+For a local PostgreSQL instance that is not running in Docker, copy the example environment file and update the database password/port/name:
+
+```bash
+cp .env.example .env
+# edit .env
+```
+
+Then start only the API container:
+
+```bash
+docker compose -f docker-compose.external-db.yml up --build -d
+```
+
+The compose file does not start PostgreSQL. It connects the API container to the host machine through `host.docker.internal`, with a Linux-compatible `host-gateway` mapping.
+
+Smoke check:
+
+```bash
+curl --fail http://localhost:18080/health/live
+```
+
+### Manual local run
 
 Use the same image for local runs and point it at an external config file:
 
 ```bash
 docker run -d --rm --name lgym-api-dev \
   -p 18080:8080 \
+  --add-host=host.docker.internal:host-gateway \
   -e ASPNETCORE_ENVIRONMENT=Development \
   -e LGYM_APP_CONFIG_PATH=/run/config/appsettings.container.json \
-  -e ConnectionStrings__Postgres='Host=host.docker.internal;Port=5433;Database=LGYM-APP;Username=postgres;Password=REPLACE_ME;TimeZone=Europe/Warsaw' \
+  -e ConnectionStrings__Postgres='Host=host.docker.internal;Port=5432;Database=LGYM-APP;Username=postgres;Password=REPLACE_ME;TimeZone=Europe/Warsaw' \
   -e Jwt__SigningKey='REPLACE_ME_MIN_32_CHARS' \
-  -v "$(pwd)/appsettings.container.json:/run/config/appsettings.container.json:ro" \
+  -v "$(pwd)/appsettings.container.example.json:/run/config/appsettings.container.json:ro" \
   lgym-api:test
 ```
 
