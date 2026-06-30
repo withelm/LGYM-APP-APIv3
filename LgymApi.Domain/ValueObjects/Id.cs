@@ -31,6 +31,8 @@ public readonly record struct Id<TEntity>
 
     public Guid GetValue() => Value;
 
+    public int CompareByValue(Id<TEntity> other) => Value.CompareTo(other.Value);
+
     public Id<TScope> Rebind<TScope>() => new(Value);
 
     public static bool TryParse(string id, out Id<TEntity> parsedId)
