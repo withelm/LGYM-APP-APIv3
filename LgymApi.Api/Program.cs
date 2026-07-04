@@ -7,7 +7,6 @@ using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application;
 using LgymApi.Infrastructure;
-using LgymApi.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
@@ -249,6 +248,7 @@ localizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
 };
 
 var app = builder.Build();
+await StartupMigrationBootstrap.ApplyAsync(app, TestingEnvironment);
 
 if (app.Environment.IsDevelopment())
 {
