@@ -60,11 +60,9 @@ docker build -t lgym-api:test .
 
 ### Publish the image from GitHub Actions
 
-The `.github/workflows/api-image.yml` workflow builds the image on pull requests and publishes it to Docker Hub on:
-
-- push to `main`
-- push of tags matching `v*.*.*`
-- manual `workflow_dispatch`
+The `.github/workflows/api-image.yml` workflow publishes the image only through manual `workflow_dispatch` from the repository default branch.
+Each successful run automatically bumps the next patch semver image version based on existing Git tags matching `v*.*.*`.
+If no matching tag exists yet, the first published version is `v0.1.0`.
 
 Configure these GitHub repository variables:
 
@@ -78,10 +76,11 @@ Configure this GitHub repository secret:
 
 Published tags include:
 
-- `latest` for `main`
-- branch/tag refs from GitHub metadata
+- the auto-generated semver tag, for example `v1.2.4`
+- `latest`
 - `sha-<short-sha>` for traceability
-- optional custom tag from manual workflow input `image_tag`
+
+After publishing the image, the workflow also creates and pushes the matching Git tag so the next run can derive the next version deterministically.
 
 Example image reference:
 

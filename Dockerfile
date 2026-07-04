@@ -32,14 +32,11 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_EnableDiagnostics=0
 
-RUN addgroup --system --gid 10001 lgym \
-    && adduser --system --uid 10001 --ingroup lgym --home /app --no-create-home lgym \
-    && mkdir -p /run/config \
-    && chown -R lgym:lgym /app /run/config
+RUN mkdir -p /run/config
 
-COPY --from=build --chown=lgym:lgym /app/publish/ ./
+COPY --from=build /app/publish/ ./
 
-USER lgym
+USER $APP_UID
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "LgymApi.Api.dll"]
