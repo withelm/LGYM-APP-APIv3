@@ -7,7 +7,6 @@ using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application;
 using LgymApi.Infrastructure;
-using LgymApi.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
@@ -31,7 +30,6 @@ using LgymApi.Application.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http.Json;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 
@@ -250,13 +248,7 @@ localizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
 };
 
 var app = builder.Build();
-
-if (!app.Environment.IsEnvironment(TestingEnvironment))
-{
-    await using var startupScope = app.Services.CreateAsyncScope();
-    var dbContext = startupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await dbContext.Database.MigrateAsync();
-}
+await StartupMigrationBootstrap.ApplyAsync(app, TestingEnvironment);
 
 if (app.Environment.IsDevelopment())
 {
