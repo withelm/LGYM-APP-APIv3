@@ -31,6 +31,7 @@ using LgymApi.Application.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 
@@ -249,6 +250,13 @@ localizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
 };
 
 var app = builder.Build();
+
+if (!app.Environment.IsEnvironment(TestingEnvironment))
+{
+    await using var startupScope = app.Services.CreateAsyncScope();
+    var dbContext = startupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {
