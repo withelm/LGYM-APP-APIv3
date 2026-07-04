@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LgymApi.Api.Configuration;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,7 @@ public sealed class StartupMigrationBootstrapTests
         using var app = CreateApp("Development", services =>
         {
             services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase($"startup-migration-{Guid.NewGuid():N}"));
+                options.UseInMemoryDatabase($"startup-migration-{Id<StartupMigrationBootstrapTests>.New():N}"));
         });
 
         var act = () => StartupMigrationBootstrap.ApplyAsync(app, testingEnvironmentName);
@@ -40,7 +41,7 @@ public sealed class StartupMigrationBootstrapTests
         using var app = CreateApp("Testing", services =>
         {
             services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase($"startup-migration-{Guid.NewGuid():N}"));
+                options.UseInMemoryDatabase($"startup-migration-{Id<StartupMigrationBootstrapTests>.New():N}"));
         });
 
         var act = () => StartupMigrationBootstrap.ApplyAsync(app, "Testing");
@@ -54,7 +55,7 @@ public sealed class StartupMigrationBootstrapTests
         using var app = CreateApp("Development", services =>
         {
             services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase($"startup-migration-{Guid.NewGuid():N}"));
+                options.UseInMemoryDatabase($"startup-migration-{Id<StartupMigrationBootstrapTests>.New():N}"));
         });
 
         var act = () => StartupMigrationBootstrap.ApplyAsync(app, "Testing");
