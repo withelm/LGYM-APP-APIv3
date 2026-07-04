@@ -1,0 +1,20 @@
+name: lgym-api
+
+services:
+  api:
+    image: "${LGYM_API_IMAGE:-lgym-api:local}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${LGYM_API_PORT:-18080}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      LGYM_APP_CONFIG_PATH: "/run/config/appsettings.container.json"
+      ConnectionStrings__Postgres: "${LGYM_POSTGRES_CONNECTION_STRING:?Set LGYM_POSTGRES_CONNECTION_STRING in .env or your shell}"
+      Jwt__SigningKey: "${LGYM_JWT_SIGNING_KEY:?Set LGYM_JWT_SIGNING_KEY in .env or your shell}"
+    volumes:
+      - "${LGYM_CONFIG_FILE:-./appsettings.container.example.json}:/run/config/appsettings.container.json:ro"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
