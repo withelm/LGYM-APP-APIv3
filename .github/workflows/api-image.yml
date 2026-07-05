@@ -1,87 +1,79 @@
 name: API Image
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: read
-  packages: write
+  contents: write
 
 concurrency:
   group: api-image-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/lgym-api
+  DOCKERFILE: Dockerfile
 
 jobs:
-  pr-build:
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+  publish:
     runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || vars.DOCKERHUB_NAMESPACE }}
+      DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+      DOCKERHUB_IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE_NAME || 'lgym-api' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Generate image metadata
-        id: meta
-        uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,format=short,prefix=sha-
+          fetch-depth: 0
+          fetch-tags: true
 
-      - name: Build API image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: LgymApi.Api/Dockerfile
-          push: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Publish workflow summary
+      - name: Validate publish ref
         env:
-          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: test "$GITHUB_REF_NAME" = "$DEFAULT_BRANCH"
+
+      - name: Determine next image version
+        id: version
         run: |
-          echo '## API image build (pull request)' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Build completed with `push: false` using `LgymApi.Api/Dockerfile`.' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Build-validated image references:' >> "$GITHUB_STEP_SUMMARY"
-          echo "$IMAGE_TAGS" | tr ',' '\n' | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+          latest_tag=$(git tag --list 'v*.*.*' --sort=-version:refname | head -n1)
 
-  publish-main:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+          if [ -z "$latest_tag" ]; then
+            next_tag='v0.1.0'
+          else
+            version=${latest_tag#v}
+            IFS=. read -r major minor patch <<< "$version"
+            next_tag="v${major}.${minor}.$((patch + 1))"
+          fi
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+          echo "image_tag=$next_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Docker Hub variables
+        env:
+          IMAGE_TAG: ${{ steps.version.outputs.image_tag }}
+        run: |
+          test -n "$DOCKERHUB_USERNAME"
+          test -n "$DOCKERHUB_NAMESPACE"
+          test -n "$DOCKERHUB_IMAGE_NAME"
+          test -n "$IMAGE_TAG"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.io
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Generate image metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ env.DOCKERHUB_IMAGE_NAME }}
           tags: |
+            type=raw,value=${{ steps.version.outputs.image_tag }}
             type=raw,value=latest
             type=sha,format=short,prefix=sha-
 
@@ -89,16 +81,28 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: LgymApi.Api/Dockerfile
+          file: ${{ env.DOCKERFILE }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Create release tag
+        env:
+          IMAGE_TAG: ${{ steps.version.outputs.image_tag }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag "$IMAGE_TAG"
+          git push origin "$IMAGE_TAG"
+
       - name: Publish workflow summary
         env:
+          IMAGE_TAG: ${{ steps.version.outputs.image_tag }}
           IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          echo '## API image publish (main)' >> "$GITHUB_STEP_SUMMARY"
+          echo '## API image publish' >> "$GITHUB_STEP_SUMMARY"
           echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Published image references:' >> "$GITHUB_STEP_SUMMARY"
+          echo "Version bump: $IMAGE_TAG" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Published Docker Hub image references:' >> "$GITHUB_STEP_SUMMARY"
           echo "$IMAGE_TAGS" | tr ',' '\n' | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"

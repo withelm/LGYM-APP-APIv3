@@ -120,12 +120,14 @@ appsettings.container.json
 appsettings.*.container.json
 appsettings.secrets.json
 *.local.secrets.json
+!appsettings.container.example.json
 
 # .env files
 .env
 .env.local
 .env.development
 .env.production
+!.env.example
 
 # Local runtime/storage artifacts
 dev-photo-storage/

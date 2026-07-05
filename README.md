@@ -50,22 +50,83 @@ Do not bake secrets or site-specific values into the image.
 - Publish the API on container port `8080` and map that port to a host port
 - Set `ConnectionStrings__Postgres` from the runtime environment
 - Set `Jwt__SigningKey` only if the mounted config does not already provide it
+- Keep PostgreSQL outside this image; for a database running on the Docker host, use `host.docker.internal` from inside the container
 
 The process runs from `/app` inside the container, so the mounted config and any relative paths must assume `/app` as the content root.
 Avoid launch profile assumptions when testing the image.
 
-### Local development
+### Build the image
+
+```bash
+docker build -t lgym-api:test .
+```
+
+### Publish the image from GitHub Actions
+
+The `.github/workflows/api-image.yml` workflow publishes the image only through manual `workflow_dispatch` from the repository default branch.
+Each successful run automatically bumps the next patch semver image version based on existing Git tags matching `v*.*.*`.
+If no matching tag exists yet, the first published version is `v0.1.0`.
+
+Configure these GitHub repository variables:
+
+- `DOCKERHUB_NAMESPACE` - Docker Hub namespace, usually your username or organization
+- `DOCKERHUB_IMAGE_NAME` - image name, for example `lgym-api`; optional because the workflow defaults to `lgym-api`
+- `DOCKERHUB_USERNAME` - Docker Hub login username; optional if it is the same as `DOCKERHUB_NAMESPACE`
+
+Configure this GitHub repository secret:
+
+- `DOCKERHUB_TOKEN` - Docker Hub access token or password used by the workflow login step
+
+Published tags include:
+
+- the auto-generated semver tag, for example `v1.2.4`
+- `latest`
+- `sha-<short-sha>` for traceability
+
+After publishing the image, the workflow also creates and pushes the matching Git tag so the next run can derive the next version deterministically.
+
+Example image reference:
+
+```bash
+docker pull docker.io/<DOCKERHUB_NAMESPACE>/<DOCKERHUB_IMAGE_NAME>:latest
+```
+
+### Local development with an external PostgreSQL database
+
+For a local PostgreSQL instance that is not running in Docker, copy the example environment file and update the database password/port/name:
+
+```bash
+cp .env.example .env
+# edit .env
+```
+
+Then start only the API container:
+
+```bash
+docker compose -f docker-compose.external-db.yml up --build -d
+```
+
+The compose file does not start PostgreSQL. It connects the API container to the host machine through `host.docker.internal`, with a Linux-compatible `host-gateway` mapping.
+
+Smoke check:
+
+```bash
+curl --fail http://localhost:18080/health/live
+```
+
+### Manual local run
 
 Use the same image for local runs and point it at an external config file:
 
 ```bash
 docker run -d --rm --name lgym-api-dev \
   -p 18080:8080 \
+  --add-host=host.docker.internal:host-gateway \
   -e ASPNETCORE_ENVIRONMENT=Development \
   -e LGYM_APP_CONFIG_PATH=/run/config/appsettings.container.json \
-  -e ConnectionStrings__Postgres='Host=host.docker.internal;Port=5433;Database=LGYM-APP;Username=postgres;Password=REPLACE_ME;TimeZone=Europe/Warsaw' \
+  -e ConnectionStrings__Postgres='Host=host.docker.internal;Port=5432;Database=LGYM-APP;Username=postgres;Password=REPLACE_ME;TimeZone=Europe/Warsaw' \
   -e Jwt__SigningKey='REPLACE_ME_MIN_32_CHARS' \
-  -v "$(pwd)/appsettings.container.json:/run/config/appsettings.container.json:ro" \
+  -v "$(pwd)/appsettings.container.example.json:/run/config/appsettings.container.json:ro" \
   lgym-api:test
 ```
 
