@@ -95,8 +95,8 @@ public sealed class MeasurementsController : ControllerBase
     public async Task<IActionResult> GetMeasurementsHistory([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var result = await _measurementsService.GetMeasurementsHistoryAsync(user!, routeUserId, request?.BodyPart, request?.Unit, cancellationToken);
+        Id<UserEntity>.TryParse(id, out var parsedUserId);
+        var result = await _measurementsService.GetMeasurementsHistoryAsync(user!, parsedUserId, request?.BodyPart, request?.Unit, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -115,8 +115,8 @@ public sealed class MeasurementsController : ControllerBase
     public async Task<IActionResult> GetMeasurementsList([FromRoute] string id, [FromQuery] MeasurementsHistoryRequestDto? request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var result = await _measurementsService.GetMeasurementsListAsync(user!, routeUserId, request?.BodyPart, request?.Unit, cancellationToken);
+        Id<UserEntity>.TryParse(id, out var parsedUserId);
+        var result = await _measurementsService.GetMeasurementsListAsync(user!, parsedUserId, request?.BodyPart, request?.Unit, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -135,8 +135,8 @@ public sealed class MeasurementsController : ControllerBase
     public async Task<IActionResult> GetMeasurementsTrend([FromRoute] string id, [FromQuery] MeasurementTrendRequestDto request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var result = await _measurementsService.GetMeasurementsTrendAsync(user!, routeUserId, request.BodyPart, request.Unit, cancellationToken);
+        Id<UserEntity>.TryParse(id, out var parsedUserId);
+        var result = await _measurementsService.GetMeasurementsTrendAsync(user!, parsedUserId, request.BodyPart, request.Unit, cancellationToken);
         
         if (result.IsFailure)
         {
@@ -153,8 +153,8 @@ public sealed class MeasurementsController : ControllerBase
     public async Task<IActionResult> GetMeasurementsTrends([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var routeUserId = Id<UserEntity>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<UserEntity>.Empty;
-        var result = await _measurementsService.GetMeasurementsTrendsAsync(user!, routeUserId, cancellationToken);
+        Id<UserEntity>.TryParse(id, out var parsedUserId);
+        var result = await _measurementsService.GetMeasurementsTrendsAsync(user!, parsedUserId, cancellationToken);
 
         if (result.IsFailure)
         {
