@@ -282,6 +282,7 @@ app.UseMiddleware<LgymApi.Api.Middleware.ApiIdempotencyMiddleware>();
 app.MapGet("/health/live", static () => Results.Json(new { status = "ok" }))
     .AllowAnonymous();
 
+app.MapLocalPhotoDevelopmentEndpoints();
 app.MapControllers();
 app.MapHub<LgymApi.Api.Hubs.NotificationHub>("/hubs/notifications");
 

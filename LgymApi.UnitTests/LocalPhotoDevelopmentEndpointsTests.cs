@@ -1,11 +1,10 @@
 using FluentAssertions;
-using LgymApi.Api.Features.Trainer.Controllers;
+using LgymApi.Api.Configuration;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using NUnit.Framework;
@@ -13,7 +12,7 @@ using NUnit.Framework;
 namespace LgymApi.UnitTests;
 
 [TestFixture]
-public sealed class LocalPhotoDevelopmentControllerTests
+public sealed class LocalPhotoDevelopmentEndpointsTests
 {
     private LocalPhotoDevelopmentStore _store = null!;
     private string _testPrefix = null!;
@@ -38,46 +37,63 @@ public sealed class LocalPhotoDevelopmentControllerTests
     [Test]
     public async Task Upload_WhenEnvironmentIsNotDevelopment_ReturnsNotFound()
     {
-        var controller = CreateController(isDevelopment: false);
-        controller.ControllerContext.HttpContext.Request.Body = new MemoryStream(new byte[] { 1 });
+        var request = new DefaultHttpContext().Request;
+        request.Body = new MemoryStream(new byte[] { 1 });
 
-        var result = await controller.Upload($"{_testPrefix}/photo.jpg", CancellationToken.None);
+        var result = await LocalPhotoDevelopmentEndpoints.UploadAsync(
+            $"{_testPrefix}/photo.jpg",
+            request,
+            _store,
+            new StubWebHostEnvironment(isDevelopment: false),
+            CancellationToken.None);
 
-        result.Should().BeOfType<NotFoundResult>();
+        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.NotFound>();
     }
 
     [Test]
     public async Task Upload_WhenStorageKeyMissing_ReturnsBadRequest()
     {
-        var controller = CreateController(isDevelopment: true);
-        controller.ControllerContext.HttpContext.Request.Body = new MemoryStream(new byte[] { 1 });
+        var request = new DefaultHttpContext().Request;
+        request.Body = new MemoryStream(new byte[] { 1 });
 
-        var result = await controller.Upload(" ", CancellationToken.None);
+        var result = await LocalPhotoDevelopmentEndpoints.UploadAsync(
+            " ",
+            request,
+            _store,
+            new StubWebHostEnvironment(isDevelopment: true),
+            CancellationToken.None);
 
-        result.Should().BeOfType<BadRequestResult>();
+        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.BadRequest>();
     }
 
     [Test]
     public async Task Upload_WhenDevelopment_SavesDecodedFileAndReturnsNoContent()
     {
-        var controller = CreateController(isDevelopment: true);
         var storageKey = $"{_testPrefix}/photos/my image.png";
-        controller.ControllerContext.HttpContext.Request.Body = new MemoryStream(new byte[] { 10, 20, 30 });
+        var request = new DefaultHttpContext().Request;
+        request.Body = new MemoryStream(new byte[] { 10, 20, 30 });
 
-        var result = await controller.Upload(Uri.EscapeDataString(storageKey), CancellationToken.None);
+        var result = await LocalPhotoDevelopmentEndpoints.UploadAsync(
+            Uri.EscapeDataString(storageKey),
+            request,
+            _store,
+            new StubWebHostEnvironment(isDevelopment: true),
+            CancellationToken.None);
 
-        result.Should().BeOfType<NoContentResult>();
+        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.NoContent>();
         (await _store.ReadAsync(storageKey)).Should().Equal(new byte[] { 10, 20, 30 });
     }
 
     [Test]
     public async Task Read_WhenFileDoesNotExist_ReturnsNotFound()
     {
-        var controller = CreateController(isDevelopment: true);
+        var result = await LocalPhotoDevelopmentEndpoints.ReadAsync(
+            $"{_testPrefix}/missing.jpg",
+            _store,
+            new StubWebHostEnvironment(isDevelopment: true),
+            CancellationToken.None);
 
-        var result = await controller.Read($"{_testPrefix}/missing.jpg", CancellationToken.None);
-
-        result.Should().BeOfType<NotFoundResult>();
+        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.NotFound>();
     }
 
     [Test]
@@ -89,24 +105,17 @@ public sealed class LocalPhotoDevelopmentControllerTests
             await _store.SaveAsync(storageKey, stream);
         }
 
-        var controller = CreateController(isDevelopment: true);
+        var result = await LocalPhotoDevelopmentEndpoints.ReadAsync(
+            Uri.EscapeDataString(storageKey),
+            _store,
+            new StubWebHostEnvironment(isDevelopment: true),
+            CancellationToken.None);
 
-        var result = await controller.Read(Uri.EscapeDataString(storageKey), CancellationToken.None);
-
-        result.Should().BeOfType<FileContentResult>();
-        var fileResult = (FileContentResult)result;
+        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.FileContentHttpResult>();
+        var fileResult = (Microsoft.AspNetCore.Http.HttpResults.FileContentHttpResult)result.Result!;
         fileResult.ContentType.Should().Be("image/png");
         fileResult.FileContents.Should().Equal(new byte[] { 7, 8, 9 });
     }
-
-    private LocalPhotoDevelopmentController CreateController(bool isDevelopment)
-        => new(_store, new StubWebHostEnvironment(isDevelopment))
-        {
-            ControllerContext = new ControllerContext
-            {
-                HttpContext = new DefaultHttpContext()
-            }
-        };
 
     private sealed class StubWebHostEnvironment : IWebHostEnvironment
     {
