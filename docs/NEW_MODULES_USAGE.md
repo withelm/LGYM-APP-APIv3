@@ -1,28 +1,28 @@
-# Nowe moduły - dokumentacja i instrukcja obsługi
+# New modules usage guide
 
-## 1. Moduł zdjęć raportowych
+## 1. Report photo module
 
-### Cel
+### Purpose
 
-Moduł umożliwia dodawanie zdjęć do raportów podopiecznych bez przesyłania binarki przez bazę danych. Backend zarządza tylko autoryzacją, signed URL i metadanymi.
+The report photo module lets trainees and trainers attach progress photos to report requests without streaming the binary through PostgreSQL. The backend owns authorization, signed URLs, upload session tracking, and photo metadata persistence.
 
-### Główne elementy
+### Main building blocks
 
-- `IPhotoStorageProvider` - kontrakt storage providera,
-- `ReportingService.Photos.cs` - logika biznesowa upload-init, complete-upload, signed read i historii,
-- `CloudflareR2PhotoStorageProvider` - produkcyjny/dev-realistic provider signed URL,
-- `LocalPhotoStorageProvider` - development-only provider lokalny,
-- `LocalPhotoDevelopmentController` - endpointy pomocnicze dla lokalnego flow.
+- `IPhotoStorageProvider` - storage abstraction for signed upload/read URLs and metadata lookup.
+- `ReportingService.Photos.cs` - business flow for upload-init, complete-upload, signed reads, and history.
+- `CloudflareR2PhotoStorageProvider` - signed direct-upload provider for realistic development and production.
+- `LocalPhotoStorageProvider` - local-development provider backed by files under `dev-photo-storage`.
+- `LocalPhotoDevelopmentEndpoints` - development-only endpoints behind `/dev/photos/*` used by the local provider.
 
-### Konfiguracja
+### Configuration
 
-Sekcja `PhotoStorage`:
+`PhotoStorage` section example:
 
 ```json
 {
   "PhotoStorage": {
     "Provider": "Local",
-    "BucketName": "lgym-report-photos-dev",
+    "BucketName": "YOUR_BUCKET_NAME",
     "Endpoint": "https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com",
     "SignedUploadExpirationMinutes": 10,
     "SignedReadExpirationMinutes": 15,
@@ -32,22 +32,22 @@ Sekcja `PhotoStorage`:
 }
 ```
 
-Sekrety, których **nie wolno commitować**:
+Never commit:
 
 - `PhotoStorage:AccessKeyId`
 - `PhotoStorage:SecretAccessKey`
-- lokalne pliki z override konfiguracji
+- local config overrides that contain real credentials
 
-### Obsługa - flow użytkownika
+### User flow
 
-#### Krok 1 - inicjalizacja uploadu
+#### Step 1 - initialize upload
 
-Trainee lub trainer woła:
+The trainee or trainer calls:
 
 - `POST /api/trainee/reporting/photos/upload-init`
-- albo `POST /api/trainer/reporting/photos/upload-init`
+- `POST /api/trainer/reporting/photos/upload-init`
 
-Przykładowe body:
+Example request body:
 
 ```json
 {
@@ -58,27 +58,27 @@ Przykładowe body:
 }
 ```
 
-Backend:
+The backend then:
 
-- sprawdza dostęp do requestu,
-- waliduje MIME/type i rozmiar,
-- generuje `storageKey`,
-- zapisuje pending upload-init,
-- zwraca `uploadUrl`, `storageKey`, `expiresAt`.
+- verifies access to the report request,
+- validates MIME type and declared size,
+- generates a `storageKey`,
+- persists the pending upload-init session,
+- returns `uploadUrl`, `storageKey`, and `expiresAt`.
 
-#### Krok 2 - wysłanie binarki
+#### Step 2 - upload the binary
 
-- dla `CloudflareR2`: klient robi `PUT` bezpośrednio na signed URL,
-- dla `Local`: upload trafia przez development endpoint `PUT /dev/photos/upload/{storageKey}`.
+- for `CloudflareR2`, the client performs a direct `PUT` to the signed URL,
+- for `Local`, the client uploads through `PUT /dev/photos/upload/{storageKey}`.
 
-#### Krok 3 - finalizacja uploadu
+#### Step 3 - complete upload
 
-Wywołanie:
+Call one of:
 
 - `POST /api/trainee/reporting/photos/complete-upload`
-- albo `POST /api/trainer/reporting/photos/complete-upload`
+- `POST /api/trainer/reporting/photos/complete-upload`
 
-Przykładowe body:
+Example request body:
 
 ```json
 {
@@ -91,51 +91,51 @@ Przykładowe body:
 }
 ```
 
-Backend:
+The backend:
 
-- sprawdza zgodność z upload-init,
-- pobiera metadata obiektu ze storage,
-- odrzuca niezgodne lub podejrzane pliki,
-- zapisuje encję `Photo`,
-- usuwa poprzedni plik dla tego samego `viewType`, jeśli został zastąpiony.
+- verifies the request against upload-init,
+- reads object metadata from storage,
+- rejects mismatched or suspicious files,
+- persists the `Photo` entity,
+- soft-deletes the previous photo for the same `viewType` if it gets replaced.
 
-#### Krok 4 - historia i podgląd
+#### Step 4 - history and preview
 
 - `GET /api/trainee/reporting/photos/history?requestId=...`
 - `GET /api/trainer/reporting/photos/history?traineeId=...&requestId=...`
 - `GET /api/trainer/reporting/photos/{photoId}/signed-url`
 
-### Zasady bezpieczeństwa
+### Security rules
 
-- `Local` provider ma działać tylko w Development/Testing,
-- dostęp do zdjęć jest sprawdzany przez backend,
-- klient nie może traktować `storageKey` jako dowodu własności,
-- signed URL są krótkotrwałe,
-- finalizacja weryfikuje realne metadata obiektu, nie tylko dane deklarowane przez klienta.
+- `Local` provider must only run in Development or Testing.
+- Photo access is always authorized by the backend.
+- Clients must not treat `storageKey` as proof of ownership.
+- Signed URLs are short-lived.
+- Completion validates real object metadata, not just client-declared values.
 
 ---
 
-## 2. Rozszerzony moduł reporting
+## 2. Extended reporting module
 
-### Co doszło
+### What was added
 
-- `moduleConfig` w polach szablonu,
-- wsparcie dla typów modułowych, w tym `Photos` i `Measurements`,
-- feedback trenera per raport i per pole,
-- dodatkowe in-app powiadomienia po requestach i feedbacku.
+- `moduleConfig` on template fields,
+- module-aware field types, including `Photos` and `Measurements`,
+- trainer feedback per submission and per field,
+- extra in-app notifications for report requests and feedback.
 
-### Tworzenie szablonu z konfiguracją modułu
+### Creating a template with module configuration
 
 Endpoint:
 
 - `POST /api/trainer/report-templates`
 
-Przykład pola zdjęciowego:
+Example photo field:
 
 ```json
 {
   "key": "progressPhotos",
-  "label": "Zdjęcia sylwetki",
+  "label": "Progress photos",
   "type": "Photos",
   "isRequired": true,
   "order": 3,
@@ -145,18 +145,18 @@ Przykład pola zdjęciowego:
 }
 ```
 
-Ważne:
+Important details:
 
-- `moduleConfig` jest przechowywane i zwracane do klienta,
-- przy submit backend sprawdza, czy wymagane widoki zdjęć faktycznie istnieją,
-- komentarze trenera do pól muszą odnosić się tylko do kluczy z template.
+- `moduleConfig` is stored and returned to the client,
+- submission validation ensures required photo views really exist,
+- trainer field comments must reference existing template keys only.
 
-Przykład pola pomiarowego:
+Example measurements field:
 
 ```json
 {
   "key": "checkInMeasurements",
-  "label": "Pomiary kontrolne",
+  "label": "Check-in measurements",
   "type": "Measurements",
   "isRequired": true,
   "order": 4,
@@ -166,66 +166,66 @@ Przykład pola pomiarowego:
 }
 ```
 
-W praktyce validator oczekuje dla typu `Measurements` obiektu z tablicą `measurementTypes`.
+For `Measurements`, the validator expects a JSON object with a `measurementTypes` array.
 
-### Feedback trenera
+### Trainer feedback
 
 Endpoint:
 
 - `POST /api/trainer/trainees/{traineeId}/report-submissions/{submissionId}/feedback`
 
-Przykład:
+Example payload:
 
 ```json
 {
-  "trainerOverallComment": "Dobra robota, popraw tempo progresji.",
+  "trainerOverallComment": "Great work, but tighten the progression pacing.",
   "trainerFieldComments": {
-    "weight": "Dodaj kontekst co do nawodnienia.",
-    "progressPhotos": "Zrób kolejną serię w bardziej równym świetle."
+    "weight": "Add context about hydration.",
+    "progressPhotos": "Retake the next series in more even lighting."
   }
 }
 ```
 
-### Operacyjnie
+### Operational behavior
 
-- request raportu tworzy powiadomienie dla trainee,
-- feedback trenera tworzy powiadomienie dla trainee,
-- template z polem `Photos` wymusza komplet wymaganych zdjęć przed submit.
-
----
-
-## 3. Moduł in-app notifications dla reporting/invitations
-
-### Nowe zdarzenia
-
-- zaproszenie od trenera dla istniejącego użytkownika,
-- utworzenie requestu raportu,
-- dodanie feedbacku do submission.
-
-### Jak to działa
-
-1. serwis aplikacyjny enqueueuje komendę,
-2. `CommandEnvelope` jest zapisywany w tej samej granicy UoW,
-3. po commicie uruchamiany jest dispatch,
-4. handler tworzy `InAppNotification`,
-5. publisher może wypchnąć zdarzenie przez SignalR.
-
-### Dlaczego to ważne
-
-Poprzednio łatwo było o podwójne schedulowanie tego samego envelope. Teraz istnieje jedna główna ścieżka durable dispatch po zapisie transakcji.
+- creating a report request sends a trainee notification,
+- adding trainer feedback sends a trainee notification,
+- templates with required `Photos` modules enforce complete uploads before submission.
 
 ---
 
-## 4. Moduł measurements - bulk i trendy
+## 3. In-app notifications for reporting and invitations
 
-### Nowe możliwości
+### New events
 
-- dodawanie wielu pomiarów jednym requestem,
-- liczenie trendu pojedynczego body partu,
-- liczenie listy trendów dla wszystkich grup pomiarowych,
-- automatyczna konwersja jednostek w odczycie.
+- trainer invitation for an existing user,
+- report request creation,
+- feedback added to a submission.
 
-### Endpointy
+### Flow
+
+1. the application service enqueues a command,
+2. `CommandEnvelope` is persisted inside the same unit-of-work boundary,
+3. dispatch runs after commit,
+4. the handler creates an `InAppNotification`,
+5. the publisher may push the event through SignalR.
+
+### Why it matters
+
+This removes the earlier risk of double-scheduling the same envelope. There is now a single durable dispatch path after the transaction commits.
+
+---
+
+## 4. Measurements module - bulk add and trends
+
+### New capabilities
+
+- add many measurements in one request,
+- calculate a single body-part trend,
+- calculate a trend list across measurement groups,
+- convert units automatically on read.
+
+### Endpoints
 
 - `POST /api/measurements/add`
 - `POST /api/measurements/add-bulk`
@@ -234,7 +234,7 @@ Poprzednio łatwo było o podwójne schedulowanie tego samego envelope. Teraz is
 - `GET /api/measurements/{id}/trend`
 - `GET /api/measurements/{id}/trends`
 
-### Przykład bulk add
+### Bulk add example
 
 ```json
 {
@@ -245,41 +245,41 @@ Poprzednio łatwo było o podwójne schedulowanie tego samego envelope. Teraz is
 }
 ```
 
-### Zasady walidacji
+### Validation rules
 
-- jednostka musi pasować do body part,
-- wartości muszą być dodatnie,
-- trendy są zwracane dopiero po poprawnej autoryzacji do użytkownika,
-- gdy jest za mało punktów danych, trend zwraca stan `insufficient_data` zamiast błędnych wniosków.
+- the unit must match the body part,
+- values must be positive,
+- trends are returned only after authorization succeeds,
+- if there is not enough data, the trend returns `insufficient_data` instead of a misleading result.
 
 ---
 
-## 5. Moduł trainee self-service
+## 5. Trainee self-service
 
-### Nowe endpointy
+### New endpoints
 
-- `GET /api/trainee/trainer` - zwraca podstawowy profil aktualnego trenera,
-- `GET /api/trainee/plan/active` - zwraca aktywny plan przypisany przez trenera.
+- `GET /api/trainee/trainer` - returns the current trainer profile,
+- `GET /api/trainee/plan/active` - returns the active trainer-assigned plan.
 
-### Zastosowanie
+### Why it helps
 
-- mobile może od razu pokazać, z kim trainee jest połączony,
-- mobile może pobrać aktualny plan bez szukania go po innych ścieżkach.
+- mobile clients can immediately show who the trainee is linked to,
+- mobile clients can fetch the active plan without navigating other trainer routes.
 
 ---
 
 ## 6. Google auth fallback
 
-### Co się zmieniło
+### What changed
 
-- endpointy Google auth/linkingu przyjmują także `accessToken`,
-- jeśli poprawny ID token nie niesie emaila lub profilu, backend próbuje pobrać dane z Google `userinfo`.
+- Google auth and account-linking endpoints now also accept `accessToken`,
+- when the ID token is valid but lacks profile or email data, the backend falls back to Google `userinfo`.
 
-### Po co
+### Why
 
-Niektóre flow po stronie Google zwracają poprawny subject, ale niepełne claimy. Ten fallback pozwala nie zrywać logowania i linkowania kont, o ile userinfo potwierdzi ten sam `sub`.
+Some Google flows return a valid subject with incomplete claims. The fallback keeps sign-in and linking working as long as `userinfo` confirms the same `sub`.
 
-### Uwaga
+### Important note
 
-- fallback nie omija walidacji bezpieczeństwa,
-- email nadal jest wymagany do bieżącego flow rejestracji i deduplikacji użytkowników.
+- the fallback does not bypass security validation,
+- email is still required for the current registration and deduplication flow.

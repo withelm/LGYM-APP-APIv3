@@ -188,9 +188,9 @@ Required environment variables or user-secrets:
 
 ```env
 PhotoStorage__Provider=CloudflareR2
-PhotoStorage__BucketName=lgym-report-photos-dev
-PhotoStorage__AccountId=38c1c25f99af223efee28a9afcf5d575
-PhotoStorage__Endpoint=https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com
+PhotoStorage__BucketName=YOUR_BUCKET_NAME
+PhotoStorage__AccountId=YOUR_ACCOUNT_ID
+PhotoStorage__Endpoint=https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com
 PhotoStorage__AccessKeyId=<ACCESS_KEY_ID>
 PhotoStorage__SecretAccessKey=<SECRET_ACCESS_KEY>
 PhotoStorage__SignedUploadExpirationMinutes=10
@@ -212,7 +212,6 @@ Do not commit:
 
 Development bucket notes:
 
-- bucket: `lgym-report-photos-dev`
 - bucket stays private
 - Public Development URL must remain disabled
 - lifecycle rule deletes `photos/` objects after 7 days
