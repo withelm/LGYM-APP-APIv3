@@ -1,15 +1,30 @@
 {
   "ConnectionStrings": {
-    "Postgres": "Host=localhost;Port=5432;Database=LGYM-APP;Username=postgres;Password=YOUR_DEV_PASSWORD;TimeZone=Europe/Warsaw"
+    "Postgres": "Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=REPLACE_ME;TimeZone=Europe/Warsaw"
   },
   "Jwt": {
-    "Secret": "your-development-jwt-secret-at-least-32-characters-long"
+    "SigningKey": "REPLACE_ME_WITH_AT_LEAST_32_CHARS_FOR_LOCAL_DEV"
   },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Debug",
-      "Microsoft.AspNetCore": "Information",
-      "Microsoft.EntityFrameworkCore.Database.Command": "Information"
-    }
+  "GoogleAuth": {
+    "ClientId": "YOUR_GOOGLE_CLIENT_ID"
+  },
+  "PhotoStorage": {
+    "Provider": "CloudflareR2",
+    "BucketName": "YOUR_BUCKET_NAME",
+    "AccountId": "YOUR_ACCOUNT_ID",
+    "Endpoint": "https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com",
+    "AccessKeyId": "YOUR_ACCESS_KEY_ID",
+    "SecretAccessKey": "YOUR_SECRET_ACCESS_KEY",
+    "SignedUploadExpirationMinutes": 10,
+    "SignedReadExpirationMinutes": 15,
+    "MaxFileSizeBytes": 5242880,
+    "AllowedMimeTypes": [
+      "image/jpeg",
+      "image/png",
+      "image/heic"
+    ],
+    "DevMaxTotalBytes": 8589934592,
+    "DevMaxUploadsPerDay": 200,
+    "DevMaxUploadInitPerUserPerHour": 50
   }
 }
