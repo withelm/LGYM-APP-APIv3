@@ -2,6 +2,7 @@ using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System.Data;
+using System.Data.Common;
 
 namespace LgymApi.Api.Configuration;
 
@@ -80,10 +81,16 @@ internal static class StartupRuntimeGuards
         => await ExecuteExistsScalarAsync(
             dbContext,
             "SELECT 1 FROM information_schema.tables WHERE table_name = @tableName AND ((@tableSchema IS NULL AND table_schema = current_schema()) OR (@tableSchema IS NOT NULL AND table_schema = @tableSchema)) LIMIT 1;",
-            ("@tableName", table.Name),
-            ("@tableSchema", table.Schema));
+            new SqlParameterSpec("@tableName", table.Name, DbType.String),
+            new SqlParameterSpec("@tableSchema", table.Schema, DbType.String));
 
     private static async Task<bool> ExecuteExistsScalarAsync(AppDbContext dbContext, string sql, params (string Name, object? Value)[] parameters)
+        => await ExecuteExistsScalarAsync(
+            dbContext,
+            sql,
+            parameters.Select(parameter => new SqlParameterSpec(parameter.Name, parameter.Value)).ToArray());
+
+    private static async Task<bool> ExecuteExistsScalarAsync(AppDbContext dbContext, string sql, params SqlParameterSpec[] parameters)
     {
         var connection = dbContext.Database.GetDbConnection();
         var shouldClose = connection.State != ConnectionState.Open;
@@ -99,10 +106,7 @@ internal static class StartupRuntimeGuards
 
             foreach (var parameter in parameters)
             {
-                var dbParameter = command.CreateParameter();
-                dbParameter.ParameterName = parameter.Name;
-                dbParameter.Value = parameter.Value ?? DBNull.Value;
-                command.Parameters.Add(dbParameter);
+                command.Parameters.Add(CreateParameter(command, parameter));
             }
 
             var scalar = await command.ExecuteScalarAsync();
@@ -116,6 +120,22 @@ internal static class StartupRuntimeGuards
             }
         }
     }
+
+    private static DbParameter CreateParameter(DbCommand command, SqlParameterSpec parameter)
+    {
+        var dbParameter = command.CreateParameter();
+        dbParameter.ParameterName = parameter.Name;
+        dbParameter.Value = parameter.Value ?? DBNull.Value;
+
+        if (parameter.DbType.HasValue)
+        {
+            dbParameter.DbType = parameter.DbType.Value;
+        }
+
+        return dbParameter;
+    }
+
+    private readonly record struct SqlParameterSpec(string Name, object? Value, DbType? DbType = null);
 
     private readonly record struct TableIdentifier(string? Schema, string Name)
     {

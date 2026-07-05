@@ -9,6 +9,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
+using System.Data;
+using System.Data.Common;
 using System.Reflection;
 
 namespace LgymApi.UnitTests;
@@ -158,6 +160,22 @@ public sealed class StartupRuntimeGuardsTests
         await action.Should().ThrowAsync<SqliteException>();
     }
 
+    [Test]
+    public void CreateParameter_WhenExplicitDbTypeProvided_AppliesTypeEvenForNullValue()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        using var command = connection.CreateCommand();
+        var parameterSpecType = typeof(StartupRuntimeGuards).GetNestedType("SqlParameterSpec", BindingFlags.NonPublic)!;
+        var parameterSpec = Activator.CreateInstance(parameterSpecType, "@tableSchema", null, DbType.String)!;
+        var method = typeof(StartupRuntimeGuards).GetMethod("CreateParameter", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+        var result = (DbParameter)method.Invoke(null, [command, parameterSpec])!;
+
+        result.ParameterName.Should().Be("@tableSchema");
+        result.Value.Should().Be(DBNull.Value);
+        result.DbType.Should().Be(DbType.String);
+    }
+
     private static async Task InvokeValidateMappedTablesExistAsync(AppDbContext dbContext)
     {
         var method = typeof(StartupRuntimeGuards).GetMethod("ValidateMappedTablesExistAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -167,7 +185,12 @@ public sealed class StartupRuntimeGuardsTests
 
     private static async Task<bool> InvokeExecuteExistsScalarAsync(AppDbContext dbContext, string sql)
     {
-        var method = typeof(StartupRuntimeGuards).GetMethod("ExecuteExistsScalarAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var method = typeof(StartupRuntimeGuards).GetMethod(
+            "ExecuteExistsScalarAsync",
+            BindingFlags.NonPublic | BindingFlags.Static,
+            binder: null,
+            [typeof(AppDbContext), typeof(string), typeof((string Name, object? Value)[])],
+            modifiers: null)!;
         var task = (Task<bool>)method.Invoke(null, [dbContext, sql, Array.Empty<(string Name, object? Value)>()])!;
         return await task;
     }
