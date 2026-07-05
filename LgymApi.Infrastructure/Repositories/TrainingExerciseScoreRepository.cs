@@ -25,9 +25,9 @@ public sealed class TrainingExerciseScoreRepository : ITrainingExerciseScoreRepo
         return _dbContext.TrainingExerciseScores
             .AsNoTracking()
             .Where(t => trainingIds.Contains(t.TrainingId))
-            .OrderBy(t => t.TrainingId.Value)
+            .OrderBy(t => t.TrainingId.GetValue())
             .ThenBy(t => t.Order)
-            .ThenBy(t => t.Id.Value)
+            .ThenBy(t => t.Id.GetValue())
             .ToListAsync(cancellationToken);
     }
 }
