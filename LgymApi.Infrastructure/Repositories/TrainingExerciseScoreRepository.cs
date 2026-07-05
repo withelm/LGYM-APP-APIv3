@@ -15,19 +15,19 @@ public sealed class TrainingExerciseScoreRepository : ITrainingExerciseScoreRepo
         _dbContext = dbContext;
     }
 
-    public Task AddRangeAsync(IEnumerable<TrainingExerciseScore> scores, CancellationToken cancellationToken = default)
+    public Task AddRangeAsync(IEnumerable<TrainingExerciseScore> items, CancellationToken cancellationToken = default)
     {
-        return _dbContext.TrainingExerciseScores.AddRangeAsync(scores, cancellationToken);
+        return _dbContext.TrainingExerciseScores.AddRangeAsync(items, cancellationToken);
     }
 
     public Task<List<TrainingExerciseScore>> GetByTrainingIdsAsync(List<Id<Training>> trainingIds, CancellationToken cancellationToken = default)
     {
         return _dbContext.TrainingExerciseScores
             .AsNoTracking()
-            .Where(t => trainingIds.Contains(t.TrainingId))
-            .OrderBy(t => t.TrainingId.GetValue())
-            .ThenBy(t => t.Order)
-            .ThenBy(t => t.Id.GetValue())
+            .Where(item => trainingIds.Contains(item.TrainingId))
+            .OrderBy(item => item.TrainingId)
+            .ThenBy(item => item.Order)
+            .ThenBy(item => item.Id)
             .ToListAsync(cancellationToken);
     }
 }
