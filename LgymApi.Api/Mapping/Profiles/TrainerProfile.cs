@@ -11,6 +11,31 @@ public sealed class TrainerProfile : IMappingProfile
 {
     public void Configure(MappingConfiguration configuration)
     {
+        configuration.CreateMap<UpsertDietMealRequest, UpsertDietMealCommand>((source, _) => new UpsertDietMealCommand
+        {
+            Name = source.Name,
+            Order = source.Order,
+            Description = source.Description,
+            EstimatedCalories = source.EstimatedCalories,
+            ProteinGrams = source.ProteinGrams,
+            CarbsGrams = source.CarbsGrams,
+            FatGrams = source.FatGrams
+        });
+
+        configuration.CreateMap<UpsertDietPlanRequest, UpsertDietPlanCommand>((source, context) => new UpsertDietPlanCommand
+        {
+            Name = source.Name,
+            StartDate = source.StartDate,
+            EndDate = source.EndDate,
+            EstimatedCalories = source.EstimatedCalories,
+            ProteinGrams = source.ProteinGrams,
+            CarbsGrams = source.CarbsGrams,
+            FatGrams = source.FatGrams,
+            Notes = source.Notes,
+            IsActive = source.IsActive,
+            Meals = context?.MapList<UpsertDietMealRequest, UpsertDietMealCommand>(source.Meals) ?? []
+        });
+
         configuration.CreateMap<TrainerInvitationResult, TrainerInvitationDto>((source, _) => new TrainerInvitationDto
         {
             Id = source.Id.ToString(),

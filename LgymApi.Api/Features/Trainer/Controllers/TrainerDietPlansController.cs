@@ -11,6 +11,7 @@ using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.Trainer.Controllers;
 
@@ -42,9 +43,14 @@ public sealed class TrainerDietPlansController : ControllerBase
     [ProducesResponseType(typeof(DietPlanDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTraineePlan([FromRoute] string traineeId, [FromRoute] string dietPlanId, CancellationToken cancellationToken = default)
     {
-        if (!TryParseIds(traineeId, dietPlanId, out var parsedTraineeId, out var parsedPlanId, out var errorResult))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return errorResult!;
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
+        }
+
+        if (!Id<DietPlan>.TryParse(dietPlanId, out var parsedPlanId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
@@ -56,9 +62,13 @@ public sealed class TrainerDietPlansController : ControllerBase
     [ProducesResponseType(typeof(DietPlanDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateTraineePlan([FromRoute] string traineeId, [FromBody] UpsertDietPlanRequest request, CancellationToken cancellationToken = default)
     {
-        Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId);
+        Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId);
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _dietPlanService.CreateTraineePlanAsync(trainer!, parsedTraineeId, MapCommand(request), cancellationToken);
+        var result = await _dietPlanService.CreateTraineePlanAsync(
+            trainer!,
+            parsedTraineeId,
+            _mapper.Map<UpsertDietPlanRequest, UpsertDietPlanCommand>(request),
+            cancellationToken);
         return result.IsFailure
             ? result.ToActionResult()
             : StatusCode(StatusCodes.Status201Created, _mapper.Map<DietPlanResult, DietPlanDto>(result.Value));
@@ -68,13 +78,23 @@ public sealed class TrainerDietPlansController : ControllerBase
     [ProducesResponseType(typeof(DietPlanDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateTraineePlan([FromRoute] string traineeId, [FromRoute] string dietPlanId, [FromBody] UpsertDietPlanRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryParseIds(traineeId, dietPlanId, out var parsedTraineeId, out var parsedPlanId, out var errorResult))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return errorResult!;
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
+        }
+
+        if (!Id<DietPlan>.TryParse(dietPlanId, out var parsedPlanId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _dietPlanService.UpdateTraineePlanAsync(trainer!, parsedTraineeId, parsedPlanId, MapCommand(request), cancellationToken);
+        var result = await _dietPlanService.UpdateTraineePlanAsync(
+            trainer!,
+            parsedTraineeId,
+            parsedPlanId,
+            _mapper.Map<UpsertDietPlanRequest, UpsertDietPlanCommand>(request),
+            cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<DietPlanResult, DietPlanDto>(result.Value));
     }
 
@@ -82,9 +102,14 @@ public sealed class TrainerDietPlansController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> ActivateTraineePlan([FromRoute] string traineeId, [FromRoute] string dietPlanId, CancellationToken cancellationToken = default)
     {
-        if (!TryParseIds(traineeId, dietPlanId, out var parsedTraineeId, out var parsedPlanId, out var errorResult))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return errorResult!;
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
+        }
+
+        if (!Id<DietPlan>.TryParse(dietPlanId, out var parsedPlanId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
@@ -96,9 +121,14 @@ public sealed class TrainerDietPlansController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteTraineePlan([FromRoute] string traineeId, [FromRoute] string dietPlanId, CancellationToken cancellationToken = default)
     {
-        if (!TryParseIds(traineeId, dietPlanId, out var parsedTraineeId, out var parsedPlanId, out var errorResult))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return errorResult!;
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
+        }
+
+        if (!Id<DietPlan>.TryParse(dietPlanId, out var parsedPlanId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
@@ -110,55 +140,18 @@ public sealed class TrainerDietPlansController : ControllerBase
     [ProducesResponseType(typeof(List<DietPlanHistoryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTraineePlanHistory([FromRoute] string traineeId, [FromRoute] string dietPlanId, CancellationToken cancellationToken = default)
     {
-        if (!TryParseIds(traineeId, dietPlanId, out var parsedTraineeId, out var parsedPlanId, out var errorResult))
+        if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return errorResult!;
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
+        }
+
+        if (!Id<DietPlan>.TryParse(dietPlanId, out var parsedPlanId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
         var trainer = HttpContext.GetCurrentUser();
         var result = await _dietPlanService.GetTraineePlanHistoryAsync(trainer!, parsedTraineeId, parsedPlanId, cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.MapList<DietPlanHistoryResult, DietPlanHistoryDto>(result.Value));
-    }
-
-    private static UpsertDietPlanCommand MapCommand(UpsertDietPlanRequest request) => new()
-    {
-        Name = request.Name,
-        StartDate = request.StartDate,
-        EndDate = request.EndDate,
-        EstimatedCalories = request.EstimatedCalories,
-        ProteinGrams = request.ProteinGrams,
-        CarbsGrams = request.CarbsGrams,
-        FatGrams = request.FatGrams,
-        Notes = request.Notes,
-        IsActive = request.IsActive,
-        Meals = request.Meals?.Select(meal => new UpsertDietMealCommand
-        {
-            Name = meal.Name,
-            Order = meal.Order,
-            Description = meal.Description,
-            EstimatedCalories = meal.EstimatedCalories,
-            ProteinGrams = meal.ProteinGrams,
-            CarbsGrams = meal.CarbsGrams,
-            FatGrams = meal.FatGrams
-        }).ToList() ?? []
-    };
-
-    private bool TryParseIds(string traineeId, string dietPlanId, out Id<LgymApi.Domain.Entities.User> parsedTraineeId, out Id<DietPlan> parsedPlanId, out IActionResult? errorResult)
-    {
-        errorResult = null;
-        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out parsedTraineeId))
-        {
-            parsedPlanId = default;
-            errorResult = BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
-            return false;
-        }
-
-        if (!Id<DietPlan>.TryParse(dietPlanId, out parsedPlanId))
-        {
-            errorResult = BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
-            return false;
-        }
-
-        return true;
     }
 }
