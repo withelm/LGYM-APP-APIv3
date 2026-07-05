@@ -134,6 +134,8 @@ public sealed class TypedIdTests
         // Uncomment the following line to verify compilation fails:
         // Id<User> id2 = id.GetValue(); // This should NOT compile
 #pragma warning restore CS0219
+
+        typeof(Id<User>).GetMethods().Any(method => method.Name == "op_Implicit").Should().BeFalse();
     }
 
     [Test]
@@ -147,6 +149,8 @@ public sealed class TypedIdTests
         // Uncomment the following line to verify compilation fails:
         // var unwrapped = id; // Cannot assign Id<T> to Guid implicitly
 #pragma warning restore CS0219
+
+        typeof(Id<User>).GetMethods().Any(method => method.Name == "op_Implicit").Should().BeFalse();
     }
 
     #endregion

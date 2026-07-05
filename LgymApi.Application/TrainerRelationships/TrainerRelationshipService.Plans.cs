@@ -18,7 +18,15 @@ public sealed partial class TrainerRelationshipService
             return Result<List<TrainerManagedPlanResult>, AppError>.Failure(ensureResult.Error);
         }
 
-        var plans = await _planRepository.GetByUserIdAsync(traineeId, cancellationToken);
+        var traineePlansTask = _planRepository.GetByUserIdAsync(traineeId, cancellationToken);
+        var trainerPlansTask = _planRepository.GetByUserIdAsync(currentTrainer.Id, cancellationToken);
+        await Task.WhenAll(traineePlansTask, trainerPlansTask);
+
+        var plans = traineePlansTask.Result
+            .Concat(trainerPlansTask.Result)
+            .DistinctBy(x => x.Id)
+            .ToList();
+
         var mapped = plans.OrderByDescending(x => x.CreatedAt).Select(MapPlan).ToList();
         return Result<List<TrainerManagedPlanResult>, AppError>.Success(mapped);
     }
@@ -39,7 +47,7 @@ public sealed partial class TrainerRelationshipService
         var plan = new PlanEntity
         {
             Id = Id<PlanEntity>.New(),
-            UserId = traineeId,
+            UserId = currentTrainer.Id,
             Name = name.Trim(),
             IsActive = false,
             IsDeleted = false
@@ -64,7 +72,7 @@ public sealed partial class TrainerRelationshipService
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
-        if (plan == null || plan.UserId != traineeId)
+        if (plan == null || (plan.UserId != traineeId && plan.UserId != currentTrainer.Id))
         {
             return Result<TrainerManagedPlanResult, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
@@ -89,7 +97,7 @@ public sealed partial class TrainerRelationshipService
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
-        if (plan == null || plan.UserId != traineeId)
+        if (plan == null || (plan.UserId != traineeId && plan.UserId != currentTrainer.Id))
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
@@ -128,7 +136,7 @@ public sealed partial class TrainerRelationshipService
         }
 
         var plan = await _planRepository.FindByIdAsync(planId, cancellationToken);
-        if (plan == null || plan.UserId != traineeId)
+        if (plan == null || (plan.UserId != traineeId && plan.UserId != currentTrainer.Id))
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
@@ -139,8 +147,21 @@ public sealed partial class TrainerRelationshipService
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
-        await _planRepository.SetActivePlanAsync(traineeId, planId, cancellationToken);
-        trainee.PlanId = planId;
+        Id<PlanEntity> assignedPlanId;
+
+        if (plan.UserId == currentTrainer.Id)
+        {
+            await _planRepository.ClearActivePlansAsync(traineeId, cancellationToken);
+            var clonedPlan = await _planRepository.ClonePlanAsync(plan.Id, traineeId, isActive: true, cancellationToken);
+            assignedPlanId = clonedPlan.Id;
+        }
+        else
+        {
+            await _planRepository.SetActivePlanAsync(traineeId, planId, cancellationToken);
+            assignedPlanId = planId;
+        }
+
+        trainee.PlanId = assignedPlanId;
         await _userRepository.UpdateAsync(trainee, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);

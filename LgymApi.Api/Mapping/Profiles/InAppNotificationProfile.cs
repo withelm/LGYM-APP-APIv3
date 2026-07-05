@@ -25,7 +25,7 @@ public sealed class InAppNotificationProfile : IMappingProfile
             new CursorPaginationQuery(
                 source.Limit,
                 source.CursorCreatedAt,
-                !string.IsNullOrWhiteSpace(source.CursorId) && Id<User>.TryParse(source.CursorId, out var cursorId)
+                !string.IsNullOrWhiteSpace(source.CursorId) && Id<InAppNotification>.TryParse(source.CursorId, out var cursorId)
                     ? cursorId
                     : null));
 

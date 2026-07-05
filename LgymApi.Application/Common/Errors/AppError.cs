@@ -167,6 +167,27 @@ public class ConflictError : AppError
 }
 
 /// <summary>
+/// Error indicating the request was syntactically valid but semantically invalid (HTTP 422).
+/// </summary>
+public class UnprocessableEntityError : AppError
+{
+    private readonly string _message;
+    private readonly object? _payload;
+
+    public UnprocessableEntityError(string message, object? payload = null)
+    {
+        _message = message;
+        _payload = payload;
+    }
+
+    public override string Message => _message;
+
+    public override int HttpStatusCode => 422;
+
+    public override object? GetPayload() => _payload;
+}
+
+/// <summary>
 /// Error indicating an unexpected server-side failure (HTTP 500).
 /// </summary>
 public class InternalServerError : AppError

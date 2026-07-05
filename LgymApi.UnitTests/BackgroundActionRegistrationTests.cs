@@ -155,6 +155,58 @@ public sealed class BackgroundActionRegistrationTests
     }
 
     [Test]
+    public void ServiceProvider_Registers_NewTrainerNotificationHandlers()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionCreatedInAppNotificationCommand, LgymApi.BackgroundWorker.Actions.ReportSubmissionCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainerRelationshipEndedInAppNotificationCommand, LgymApi.BackgroundWorker.Actions.TrainerRelationshipEndedInAppNotificationCommandHandler>();
+
+        var reportSubmissionDescriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionCreatedInAppNotificationCommand>))
+            .ToList();
+        var relationshipEndedDescriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TrainerRelationshipEndedInAppNotificationCommand>))
+            .ToList();
+
+        reportSubmissionDescriptors.Should().ContainSingle();
+        reportSubmissionDescriptors[0].ImplementationType.Should().Be(typeof(LgymApi.BackgroundWorker.Actions.ReportSubmissionCreatedInAppNotificationCommandHandler));
+
+        relationshipEndedDescriptors.Should().ContainSingle();
+        relationshipEndedDescriptors[0].ImplementationType.Should().Be(typeof(LgymApi.BackgroundWorker.Actions.TrainerRelationshipEndedInAppNotificationCommandHandler));
+    }
+
+    [Test]
+    public void ServiceProvider_Registers_DietPlanUpdatedNotificationHandler()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.DietPlanUpdatedInAppNotificationCommand, LgymApi.BackgroundWorker.Actions.DietPlanUpdatedInAppNotificationCommandHandler>();
+
+        var descriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.DietPlanUpdatedInAppNotificationCommand>))
+            .ToList();
+
+        descriptors.Should().ContainSingle();
+        descriptors[0].ImplementationType.Should().Be(typeof(LgymApi.BackgroundWorker.Actions.DietPlanUpdatedInAppNotificationCommandHandler));
+    }
+
+    [Test]
+    public void ServiceProvider_Registers_TraineeNoteUpdatedNotificationHandler()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TraineeNoteUpdatedInAppNotificationCommand, LgymApi.BackgroundWorker.Actions.TraineeNoteUpdatedInAppNotificationCommandHandler>();
+
+        var descriptors = services
+            .Where(d => d.ServiceType == typeof(IBackgroundAction<LgymApi.BackgroundWorker.Common.Commands.TraineeNoteUpdatedInAppNotificationCommand>))
+            .ToList();
+
+        descriptors.Should().ContainSingle();
+        descriptors[0].ImplementationType.Should().Be(typeof(LgymApi.BackgroundWorker.Actions.TraineeNoteUpdatedInAppNotificationCommandHandler));
+    }
+
+    [Test]
     public void AddBackgroundAction_HandlersAreScoped_NewInstancePerScope()
     {
         // Arrange
@@ -193,7 +245,7 @@ public sealed class BackgroundActionRegistrationTests
         services.AddBackgroundAction<TestCommand, TestAction>();
 
         // Assert - if we reach here, the generic constraint is correctly enforced
-        // Test passed (no assertion needed as type system enforces the constraint)
+        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IBackgroundAction<TestCommand>));
     }
 
     [Test]

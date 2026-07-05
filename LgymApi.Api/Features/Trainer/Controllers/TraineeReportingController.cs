@@ -65,4 +65,141 @@ public sealed class TraineeReportingController : ControllerBase
 
         return Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
     }
+
+    [HttpGet("report-submissions")]
+    [ProducesResponseType(typeof(List<ReportSubmissionDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetOwnSubmissions(CancellationToken cancellationToken = default)
+    {
+        var trainee = HttpContext.GetCurrentUser();
+        var result = await _reportingService.GetOwnSubmissionsAsync(trainee!, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
+    }
+
+    [HttpPost("report-submissions/{submissionId}/mark-feedback-read")]
+    [ProducesResponseType(typeof(ReportSubmissionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> MarkFeedbackRead([FromRoute] string submissionId, CancellationToken cancellationToken = default)
+    {
+        if (!Id<ReportSubmission>.TryParse(submissionId, out var parsedSubmissionId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        var trainee = HttpContext.GetCurrentUser();
+        var result = await _reportingService.MarkTrainerFeedbackAsReadAsync(trainee!, parsedSubmissionId, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
+    }
+
+    [HttpPost("photos/initiate")]
+    [HttpPost("reporting/photos/upload-init")]
+    [ProducesResponseType(typeof(InitiatePhotoUploadResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> InitiatePhotoUpload([FromBody] InitiatePhotoUploadRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!Id<ReportRequest>.TryParse(request.ReportRequestId, out var parsedRequestId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        var currentUser = HttpContext.GetCurrentUser();
+        var result = await _reportingService.InitiatePhotoUploadAsync(
+            currentUser!,
+            new InitiatePhotoUploadCommand
+            {
+                ReportRequestId = parsedRequestId,
+                ViewType = request.ViewType,
+                MimeType = request.MimeType,
+                SizeBytes = request.SizeBytes
+            },
+            cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<InitiatePhotoUploadResult, InitiatePhotoUploadResponse>(result.Value));
+    }
+
+    [HttpPost("photos/complete-upload")]
+    [HttpPost("reporting/photos/complete-upload")]
+    [ProducesResponseType(typeof(CompletePhotoUploadResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CompletePhotoUpload([FromBody] CompletePhotoUploadRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!Id<ReportRequest>.TryParse(request.ReportRequestId, out var parsedRequestId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        var currentUser = HttpContext.GetCurrentUser();
+        var result = await _reportingService.CompletePhotoUploadAsync(
+            currentUser!,
+            new CompletePhotoUploadCommand
+            {
+                StorageKey = request.StorageKey,
+                MimeType = request.MimeType,
+                SizeBytes = request.SizeBytes,
+                Checksum = request.Checksum,
+                ReportRequestId = parsedRequestId,
+                ViewType = request.ViewType
+            },
+            cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<CompletePhotoUploadResult, CompletePhotoUploadResponse>(result.Value));
+    }
+
+    [HttpGet("reporting/photos/history")]
+    [ProducesResponseType(typeof(GetPhotoHistoryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetPhotoHistory([FromQuery] string? requestId, CancellationToken cancellationToken = default)
+    {
+        Id<ReportRequest>? parsedRequestId = null;
+        if (!string.IsNullOrWhiteSpace(requestId))
+        {
+            if (!Id<ReportRequest>.TryParse(requestId, out var tempId))
+            {
+                return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+            }
+            parsedRequestId = tempId;
+        }
+
+        var currentUser = HttpContext.GetCurrentUser();
+        var result = await _reportingService.GetPhotoHistoryAsync(
+            currentUser!,
+            new GetPhotoHistoryCommand
+            {
+                TraineeId = currentUser.Id,
+                RequestId = parsedRequestId
+            },
+            cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        var response = new GetPhotoHistoryResponse
+        {
+            Photos = _mapper.MapList<PhotoHistoryItemResult, PhotoHistoryItemResponse>(result.Value)
+        };
+
+        return Ok(response);
+    }
 }

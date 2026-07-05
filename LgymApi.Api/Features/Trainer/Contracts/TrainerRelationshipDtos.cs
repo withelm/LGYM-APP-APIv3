@@ -163,3 +163,21 @@ public sealed class TrainerManagedPlanDto : IResultDto
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+public sealed class TraineeTrainerProfileDto : IResultDto
+{
+    [JsonPropertyName("trainerId")]
+    public string TrainerId { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("email")]
+    public string Email { get; set; } = string.Empty;
+
+    [JsonPropertyName("avatar")]
+    public string? Avatar { get; set; }
+
+    [JsonPropertyName("linkedAt")]
+    public DateTimeOffset LinkedAt { get; set; }
+}

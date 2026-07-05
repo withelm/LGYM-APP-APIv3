@@ -41,11 +41,17 @@ public sealed class AppDbContext : DbContext
     public DbSet<EmailNotificationSubscription> EmailNotificationSubscriptions => Set<EmailNotificationSubscription>();
     public DbSet<ReportTemplate> ReportTemplates => Set<ReportTemplate>();
     public DbSet<ReportTemplateField> ReportTemplateFields => Set<ReportTemplateField>();
+    public DbSet<RecurringReportAssignment> RecurringReportAssignments => Set<RecurringReportAssignment>();
     public DbSet<ReportRequest> ReportRequests => Set<ReportRequest>();
     public DbSet<ReportSubmission> ReportSubmissions => Set<ReportSubmission>();
     public DbSet<SupplementPlan> SupplementPlans => Set<SupplementPlan>();
     public DbSet<SupplementPlanItem> SupplementPlanItems => Set<SupplementPlanItem>();
     public DbSet<SupplementIntakeLog> SupplementIntakeLogs => Set<SupplementIntakeLog>();
+    public DbSet<DietPlan> DietPlans => Set<DietPlan>();
+    public DbSet<DietMeal> DietMeals => Set<DietMeal>();
+    public DbSet<DietPlanHistory> DietPlanHistories => Set<DietPlanHistory>();
+    public DbSet<TraineeNote> TraineeNotes => Set<TraineeNote>();
+    public DbSet<TraineeNoteHistory> TraineeNoteHistories => Set<TraineeNoteHistory>();
     public DbSet<CommandEnvelope> CommandEnvelopes => Set<CommandEnvelope>();
     public DbSet<ActionExecutionLog> ActionExecutionLogs => Set<ActionExecutionLog>();
     public DbSet<ApiIdempotencyRecord> ApiIdempotencyRecords => Set<ApiIdempotencyRecord>();
@@ -55,6 +61,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
+    public DbSet<Photo> Photos => Set<Photo>();
+    public DbSet<PhotoUploadSession> PhotoUploadSessions => Set<PhotoUploadSession>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -346,6 +354,7 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("ReportTemplateFields");
             entity.Property(e => e.Key).HasMaxLength(64).IsRequired();
             entity.Property(e => e.Label).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.ModuleConfig).HasColumnType("text");
             entity.Property(e => e.Type).HasConversion<string>();
             entity.HasIndex(e => new { e.TemplateId, e.Key })
                 .IsUnique()
@@ -363,6 +372,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.Note).HasMaxLength(1000);
             entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.CreatedAt });
             entity.HasIndex(e => new { e.TraineeId, e.Status, e.CreatedAt });
+            entity.HasIndex(e => e.RecurringReportAssignmentId);
             entity.HasOne(e => e.Trainer)
                 .WithMany()
                 .HasForeignKey(e => e.TrainerId)
@@ -375,6 +385,10 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.TemplateId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.RecurringReportAssignment)
+                .WithMany()
+                .HasForeignKey(e => e.RecurringReportAssignmentId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(e => e.Submission)
                 .WithOne(e => e.ReportRequest)
                 .HasForeignKey<ReportSubmission>(e => e.ReportRequestId)
@@ -385,6 +399,8 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("ReportSubmissions");
             entity.Property(e => e.PayloadJson).IsRequired();
+            entity.Property(e => e.TrainerOverallComment).HasMaxLength(4000);
+            entity.Property(e => e.TrainerFieldCommentsJson).HasColumnType("text");
             entity.HasIndex(e => e.ReportRequestId)
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = FALSE");
@@ -392,6 +408,34 @@ public sealed class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.TraineeId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RecurringReportAssignment>(entity =>
+        {
+            entity.ToTable("RecurringReportAssignments");
+            entity.Property(e => e.IntervalUnit).HasConversion<string>();
+            entity.Property(e => e.Note).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.IsActive });
+            entity.HasIndex(e => new { e.TraineeId, e.NextEligibleAt });
+            entity.HasIndex(e => e.CurrentReportRequestId)
+                .IsUnique()
+                .HasFilter("\"CurrentReportRequestId\" IS NOT NULL AND \"IsDeleted\" = FALSE");
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Template)
+                .WithMany()
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.CurrentReportRequest)
+                .WithMany()
+                .HasForeignKey(e => e.CurrentReportRequestId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<SupplementPlan>(entity =>
@@ -441,6 +485,89 @@ public sealed class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<DietPlan>(entity =>
+        {
+            entity.ToTable("DietPlans");
+            entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.CreatedAt });
+            entity.HasIndex(e => new { e.TraineeId, e.IsActive });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DietMeal>(entity =>
+        {
+            entity.ToTable("DietMeals");
+            entity.Property(e => e.Name).HasMaxLength(160).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(2000);
+            entity.HasIndex(e => new { e.DietPlanId, e.Order });
+            entity.HasOne(e => e.DietPlan)
+                .WithMany(e => e.Meals)
+                .HasForeignKey(e => e.DietPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DietPlanHistory>(entity =>
+        {
+            entity.ToTable("DietPlanHistories");
+            entity.Property(e => e.ChangeType).HasMaxLength(64).IsRequired();
+            entity.Property(e => e.SnapshotJson).HasColumnType("text").IsRequired();
+            entity.HasIndex(e => new { e.DietPlanId, e.ChangeDate });
+            entity.HasOne(e => e.DietPlan)
+                .WithMany(e => e.HistoryEntries)
+                .HasForeignKey(e => e.DietPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TraineeNote>(entity =>
+        {
+            entity.ToTable("TraineeNotes");
+            entity.Property(e => e.Title).HasMaxLength(160);
+            entity.Property(e => e.Content).HasMaxLength(8000).IsRequired();
+            entity.HasIndex(e => new { e.TrainerId, e.TraineeId, e.LastUpdatedAt });
+            entity.HasIndex(e => new { e.TraineeId, e.VisibleToTrainee, e.LastUpdatedAt });
+            entity.HasOne(e => e.Trainer)
+                .WithMany()
+                .HasForeignKey(e => e.TrainerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trainee)
+                .WithMany()
+                .HasForeignKey(e => e.TraineeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.LastUpdatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.LastUpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TraineeNoteHistory>(entity =>
+        {
+            entity.ToTable("TraineeNoteHistories");
+            entity.Property(e => e.PreviousContent).HasMaxLength(8000);
+            entity.Property(e => e.NewContent).HasMaxLength(8000).IsRequired();
+            entity.Property(e => e.ChangeType).HasMaxLength(64).IsRequired();
+            entity.HasIndex(e => new { e.TraineeNoteId, e.ChangedAt });
+            entity.HasOne(e => e.TraineeNote)
+                .WithMany(e => e.HistoryEntries)
+                .HasForeignKey(e => e.TraineeNoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<CommandEnvelope>(entity =>
         {
             entity.ToTable("CommandEnvelopes");
@@ -468,6 +595,8 @@ public sealed class AppDbContext : DbContext
                 .HasFilter("\"IsDeleted\" = FALSE");
             // Work retrieval index: (Status, NextAttemptAt) for pending retries
             entity.HasIndex(e => new { e.Status, e.NextAttemptAt })
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.Status, e.ProcessingStartedAtUtc })
                 .HasFilter("\"IsDeleted\" = FALSE");
             // One-to-many relationship with ExecutionLog
             entity.HasMany(e => e.ExecutionLogs)
@@ -572,12 +701,17 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<InAppNotification>(entity =>
         {
             entity.ToTable("in_app_notifications");
+            entity.Property(e => e.DeliveryKey)
+                .HasMaxLength(200);
             entity.Property(e => e.Type)
                 .HasConversion(
                     notificationType => notificationType.Value,
                     value => InAppNotificationType.Parse(value))
                 .IsRequired();
             entity.HasIndex(e => new { e.RecipientId, e.CreatedAt, e.Id });
+            entity.HasIndex(e => new { e.RecipientId, e.Type, e.DeliveryKey })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE AND \"DeliveryKey\" IS NOT NULL");
         });
 
         modelBuilder.Entity<UserSession>(entity =>
@@ -609,6 +743,63 @@ public sealed class AppDbContext : DbContext
                 .WithMany(u => u.ExternalLogins)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Photo>(entity =>
+        {
+            entity.ToTable("Photos");
+            entity.Property(e => e.StorageKey).IsRequired();
+            entity.Property(e => e.MimeType).IsRequired();
+            entity.Property(e => e.SizeBytes).IsRequired();
+            entity.Property(e => e.Checksum).IsRequired();
+            entity.HasIndex(e => new { e.ReportRequestId, e.ViewType })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.OwnerUserId, e.CreatedAt });
+            entity.HasOne(e => e.ReportRequest)
+                .WithMany()
+                .HasForeignKey(e => e.ReportRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Uploader)
+                .WithMany()
+                .HasForeignKey(e => e.UploaderUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PhotoUploadSession>(entity =>
+        {
+            entity.ToTable("PhotoUploadSessions");
+            entity.Property(e => e.StorageKey).IsRequired();
+            entity.Property(e => e.DeclaredContentType).HasMaxLength(128).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.FailureReason).HasMaxLength(500);
+            entity.HasIndex(e => e.StorageKey)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.OwnerUserId, e.CreatedAt });
+            entity.HasIndex(e => new { e.ReportRequestId, e.ViewType });
+            entity.HasIndex(e => new { e.Status, e.ExpiresAtUtc });
+            entity.HasOne(e => e.ReportRequest)
+                .WithMany()
+                .HasForeignKey(e => e.ReportRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.OwnerUser)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.InitiatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.InitiatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.CompletedPhoto)
+                .WithMany()
+                .HasForeignKey(e => e.CompletedPhotoId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         RoleSeedDataConfiguration.Apply(modelBuilder);

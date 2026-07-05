@@ -30,16 +30,13 @@ public static class Program
         Console.WriteLine();
 
         var dropDatabase = ConsolePrompt.Confirm("Drop existing database before seeding?", false);
-        var migrationChoice = ConsolePrompt.Choose(
-            "Apply EF Core migrations or use EnsureCreated?",
-            new[] { "Migrate", "EnsureCreated" },
-            "Migrate");
+        Console.WriteLine("EF Core migrations are required for relational databases. EnsureCreated is reserved only for non-relational test stores.");
         var seedDemo = ConsolePrompt.Confirm("Seed demo data?", false);
 
         var options = new SeedOptions
         {
             DropDatabase = dropDatabase,
-            UseMigrations = migrationChoice.Equals("Migrate", StringComparison.OrdinalIgnoreCase),
+            UseMigrations = true,
             SeedDemoData = seedDemo
         };
 
@@ -109,6 +106,8 @@ public static class Program
         services.AddScoped<IEntitySeeder, UserTutorialStepProgressSeeder>();
         services.AddScoped<IEntitySeeder, UserSessionSeeder>();
         services.AddScoped<IEntitySeeder, UserExternalLoginSeeder>();
+        services.AddScoped<IEntitySeeder, PhotoSeeder>();
+        services.AddScoped<IEntitySeeder, PhotoUploadSessionSeeder>();
         services.AddScoped<SeedOrchestrator>();
         return services.BuildServiceProvider();
     }

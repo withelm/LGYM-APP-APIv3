@@ -25,7 +25,7 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType(typeof(LgymApi.Api.Features.User.Contracts.LoginResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Google([FromBody] GoogleSignInRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await _externalAuthService.GoogleSignInAsync(request.IdToken, cancellationToken);
+        var result = await _externalAuthService.GoogleSignInAsync(request.IdToken, request.AccessToken, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

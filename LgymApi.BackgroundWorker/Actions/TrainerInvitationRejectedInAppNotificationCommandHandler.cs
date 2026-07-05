@@ -23,15 +23,19 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandler : g
         var input = new NotificationsApp.Models.CreateInAppNotificationInput(
             command.TrainerId,
             command.TraineeId,
+            $"trainer-invitation:{command.InvitationId}:rejected",
             false,
             global::LgymApi.Resources.Messages.TrainerInvitationRejected,
-            "/trainers/dashboard",
+            "/trainer/invitations",
             InAppNotificationTypes.InvitationRejected);
 
         var result = await _notificationService.CreateAsync(input, cancellationToken);
         if (result.IsFailure)
         {
-            _logger.LogError($"Failed to create invitation-rejected notification for trainer {command.TrainerId}: {result.Error}");
+            _logger.LogError(
+                "Failed to create invitation-rejected notification for trainer {TrainerId}: {Error}",
+                command.TrainerId,
+                result.Error);
         }
     }
 }

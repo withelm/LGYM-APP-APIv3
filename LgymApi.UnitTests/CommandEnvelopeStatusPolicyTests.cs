@@ -148,6 +148,12 @@ public class CommandEnvelopeStatusPolicyTests
 
         // Act
         _envelope.MarkCompleted();
+
+        // Assert
+        _envelope.Status.Should().Be(ActionExecutionStatus.Completed);
+        var handlerLogs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
+        handlerLogs.Should().HaveCount(3);
+        handlerLogs.Count(log => log.Status == ActionExecutionStatus.Failed).Should().Be(2);
     }
 
     #endregion

@@ -63,6 +63,7 @@ public sealed partial class TrainerRelationshipService
         await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = invitation.Id });
         await _commandDispatcher.EnqueueAsync(new TrainerInvitationCreatedInAppNotificationCommand
         {
+            InvitationId = invitation.Id,
             TraineeId = traineeId,
             TrainerId = currentTrainer.Id
         });
@@ -102,6 +103,11 @@ public sealed partial class TrainerRelationshipService
         }
 
         var trainee = await _userRepository.FindByEmailAsync(normalizedInviteeEmail, cancellationToken);
+        if (trainee is { IsDeleted: false }
+            && await _trainerRelationshipRepository.HasActiveLinkForTraineeAsync(trainee.Id, cancellationToken))
+        {
+            return Result<TrainerInvitationResult, AppError>.Failure(new TrainerRelationshipConflictError(Messages.TraineeAlreadyLinked));
+        }
 
         var invitation = new TrainerInvitation
         {
@@ -116,6 +122,15 @@ public sealed partial class TrainerRelationshipService
 
         await _trainerRelationshipRepository.AddInvitationAsync(invitation, cancellationToken);
         await _commandDispatcher.EnqueueAsync(new InvitationCreatedCommand { InvitationId = invitation.Id });
+        if (trainee is { IsDeleted: false })
+        {
+            await _commandDispatcher.EnqueueAsync(new TrainerInvitationCreatedInAppNotificationCommand
+            {
+                InvitationId = invitation.Id,
+                TraineeId = trainee.Id,
+                TrainerId = currentTrainer.Id
+            });
+        }
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<TrainerInvitationResult, AppError>.Success(MapInvitation(invitation));

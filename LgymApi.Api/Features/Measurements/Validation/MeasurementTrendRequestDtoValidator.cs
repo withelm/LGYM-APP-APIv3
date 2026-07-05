@@ -1,5 +1,6 @@
 using FluentValidation;
 using LgymApi.Api.Features.Measurements.Contracts;
+using LgymApi.Application.Features.Measurements;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 
@@ -16,7 +17,8 @@ public sealed class MeasurementTrendRequestDtoValidator : AbstractValidator<Meas
 
         RuleFor(x => x.Unit)
             .IsInEnum()
-            .NotEqual(HeightUnits.Unknown)
+            .NotEqual(MeasurementUnits.Unknown)
+            .Must((dto, unit) => MeasurementUnitResolver.IsUnitAllowedForBodyPart(dto.BodyPart, unit))
             .WithMessage(Messages.UnitRequired);
     }
 }

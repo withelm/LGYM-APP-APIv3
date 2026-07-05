@@ -194,7 +194,6 @@ public sealed class BackgroundActionDispatcherTests
             _repository,
             _unitOfWork,
             _dbContext,
-            _scheduler,
             _serviceProvider.GetRequiredService<ILogger<CommandDispatcher>>());
     }
 

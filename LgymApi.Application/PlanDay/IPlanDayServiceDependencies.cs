@@ -5,6 +5,7 @@ namespace LgymApi.Application.Features.PlanDay;
 public interface IPlanDayServiceDependencies
 {
     IPlanRepository PlanRepository { get; }
+    ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
     IPlanDayRepository PlanDayRepository { get; }
     IPlanDayExerciseRepository PlanDayExerciseRepository { get; }
     IExerciseRepository ExerciseRepository { get; }
@@ -16,6 +17,7 @@ internal sealed class PlanDayServiceDependencies : IPlanDayServiceDependencies
 {
     public PlanDayServiceDependencies(
         IPlanRepository planRepository,
+        ITrainerRelationshipRepository trainerRelationshipRepository,
         IPlanDayRepository planDayRepository,
         IPlanDayExerciseRepository planDayExerciseRepository,
         IExerciseRepository exerciseRepository,
@@ -23,6 +25,7 @@ internal sealed class PlanDayServiceDependencies : IPlanDayServiceDependencies
         IUnitOfWork unitOfWork)
     {
         PlanRepository = planRepository;
+        TrainerRelationshipRepository = trainerRelationshipRepository;
         PlanDayRepository = planDayRepository;
         PlanDayExerciseRepository = planDayExerciseRepository;
         ExerciseRepository = exerciseRepository;
@@ -31,6 +34,7 @@ internal sealed class PlanDayServiceDependencies : IPlanDayServiceDependencies
     }
 
     public IPlanRepository PlanRepository { get; }
+    public ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
     public IPlanDayRepository PlanDayRepository { get; }
     public IPlanDayExerciseRepository PlanDayExerciseRepository { get; }
     public IExerciseRepository ExerciseRepository { get; }

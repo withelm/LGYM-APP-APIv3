@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Globalization;
+using LgymApi.Api;
 using LgymApi.Api.Configuration;
 using Microsoft.AspNetCore.Localization;
 using LgymApi.Api.Middleware;
@@ -31,7 +32,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
-
+using Microsoft.EntityFrameworkCore;
 
 const string TestingEnvironment = "Testing";
 
@@ -250,24 +251,20 @@ localizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
 var app = builder.Build();
 await StartupMigrationBootstrap.ApplyAsync(app, TestingEnvironment);
 
+if (!app.Environment.IsEnvironment(TestingEnvironment))
+{
+    await StartupRuntimeGuards.ValidateDatabaseSchemaAsync(app.Services);
+}
+
+app.LogPhotoStorageConfiguration();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-if (!app.Environment.IsEnvironment(TestingEnvironment))
-{
-    app.UseHangfireDashboard("/hangfire", new DashboardOptions
-    {
-        Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
-    });
-
-    RecurringJob.AddOrUpdate<ICommittedIntentDispatchJob>(
-        "reliability-committed-intent-dispatch",
-        job => job.ExecuteAsync(CancellationToken.None),
-        Cron.Minutely);
-}
+ProgramHangfire.ConfigureRecurringJobs(app, TestingEnvironment);
 
 app.UseRequestLocalization(localizationOptions);
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -285,10 +282,9 @@ app.UseMiddleware<LgymApi.Api.Middleware.ApiIdempotencyMiddleware>();
 app.MapGet("/health/live", static () => Results.Json(new { status = "ok" }))
     .AllowAnonymous();
 
+app.MapLocalPhotoDevelopmentEndpoints();
 app.MapControllers();
 app.MapHub<LgymApi.Api.Hubs.NotificationHub>("/hubs/notifications");
 
 await app.RunAsync();
-
-// For WebApplicationFactory in integration tests
 public partial class Program { }

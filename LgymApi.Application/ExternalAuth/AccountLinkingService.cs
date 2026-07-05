@@ -28,9 +28,9 @@ public sealed class AccountLinkingService : IAccountLinkingService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<Unit, AppError>> LinkGoogleAsync(Id<User> userId, string idToken, CancellationToken cancellationToken)
+    public async Task<Result<Unit, AppError>> LinkGoogleAsync(Id<User> userId, string idToken, string? accessToken, CancellationToken cancellationToken)
     {
-        var token = await _googleTokenValidator.ValidateAsync(idToken, cancellationToken);
+        var token = await _googleTokenValidator.ValidateAsync(idToken, accessToken, cancellationToken);
         if (token == null)
         {
             return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.GoogleTokenInvalid));

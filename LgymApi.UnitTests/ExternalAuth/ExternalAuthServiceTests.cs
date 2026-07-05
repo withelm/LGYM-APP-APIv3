@@ -43,10 +43,10 @@ public sealed class ExternalAuthServiceTests
     [Test]
     public async Task GoogleSignIn_InvalidToken_ReturnsUnauthorized()
     {
-        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<GoogleTokenPayload?>(null));
 
-        var result = await _service.GoogleSignInAsync("invalid-token", CancellationToken.None);
+        var result = await _service.GoogleSignInAsync("invalid-token", null, CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<UserUnauthorizedError>();
@@ -56,10 +56,10 @@ public sealed class ExternalAuthServiceTests
     [Test]
     public async Task GoogleSignIn_UnverifiedEmail_ReturnsUnauthorized()
     {
-        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new GoogleTokenPayload("sub123", "test@example.com", false, "Test User", null));
 
-        var result = await _service.GoogleSignInAsync("token", CancellationToken.None);
+        var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<UserUnauthorizedError>();
@@ -81,14 +81,14 @@ public sealed class ExternalAuthServiceTests
             User = existingUser
         };
 
-        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new GoogleTokenPayload("sub123", "test@example.com", true, "Test User", null));
         _userExternalLoginRepository.FindByProviderAsync(AuthConstants.ExternalProviders.Google, "sub123", Arg.Any<CancellationToken>())
             .Returns(externalLogin);
         _loginResultBuilder.BuildAsync(existingUser, existingUser.PreferredTimeZone, Arg.Any<CancellationToken>())
             .Returns(Result.Success<LoginResult, AppError>(CreateLoginResult()));
 
-        var result = await _service.GoogleSignInAsync("token", CancellationToken.None);
+        var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Token.Should().Be("jwt-token");
@@ -110,12 +110,12 @@ public sealed class ExternalAuthServiceTests
             User = blockedUser
         };
 
-        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new GoogleTokenPayload("sub123", "test@example.com", true, "Test User", null));
         _userExternalLoginRepository.FindByProviderAsync(AuthConstants.ExternalProviders.Google, "sub123", Arg.Any<CancellationToken>())
             .Returns(externalLogin);
 
-        var result = await _service.GoogleSignInAsync("token", CancellationToken.None);
+        var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ForbiddenError>();
@@ -128,7 +128,7 @@ public sealed class ExternalAuthServiceTests
     {
         var createdUser = CreateUser(preferredTimeZone: "UTC");
 
-        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new GoogleTokenPayload("sub123", "test@example.com", true, "Test User", null));
         _userExternalLoginRepository.FindByProviderAsync(AuthConstants.ExternalProviders.Google, "sub123", Arg.Any<CancellationToken>())
             .Returns((UserExternalLogin?)null);
@@ -137,7 +137,7 @@ public sealed class ExternalAuthServiceTests
         _loginResultBuilder.BuildAsync(createdUser, createdUser.PreferredTimeZone, Arg.Any<CancellationToken>())
             .Returns(Result.Success<LoginResult, AppError>(CreateLoginResult()));
 
-        var result = await _service.GoogleSignInAsync("token", CancellationToken.None);
+        var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Token.Should().Be("jwt-token");
@@ -147,14 +147,14 @@ public sealed class ExternalAuthServiceTests
     [Test]
     public async Task GoogleSignIn_EmailCollision_NoLink_ReturnsConflict()
     {
-        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _googleTokenValidator.ValidateAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new GoogleTokenPayload("sub123", "test@example.com", true, "Test User", null));
         _userExternalLoginRepository.FindByProviderAsync(AuthConstants.ExternalProviders.Google, "sub123", Arg.Any<CancellationToken>())
             .Returns((UserExternalLogin?)null);
         _googleUserRegistrar.RegisterAsync(Arg.Any<GoogleTokenPayload>(), Arg.Any<CancellationToken>())
             .Returns(Result.Failure<User, AppError>(new ConflictError("email conflict")));
 
-        var result = await _service.GoogleSignInAsync("token", CancellationToken.None);
+        var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ConflictError>();

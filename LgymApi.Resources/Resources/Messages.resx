@@ -141,9 +141,6 @@
   <data name="PermissionTrainerAccess" xml:space="preserve">
     <value>Trainer access</value>
   </data>
-  <data name="PermissionTrainerAccess" xml:space="preserve">
-    <value>Trainer access</value>
-  </data>
   <data name="RoleWithThatName" xml:space="preserve">
     <value>A role with that name already exists.</value>
   </data>
@@ -210,6 +207,9 @@
   <data name="ReportRequestExpired" xml:space="preserve">
     <value>Report request has expired.</value>
   </data>
+  <data name="MissingRequiredPhotoViews" xml:space="preserve">
+    <value>Missing required photo views.</value>
+  </data>
   <data name="InvalidDateRange" xml:space="preserve">
     <value>Invalid date range. toDate must be on or after fromDate.</value>
   </data>
@@ -255,11 +255,47 @@
   <data name="TrainerInvitationSent" xml:space="preserve">
     <value>Your trainer invitation has been sent.</value>
   </data>
+  <data name="TrainerInvitationCreatedNotification" xml:space="preserve">
+    <value>{0} invited you to work together.</value>
+  </data>
   <data name="TrainerInvitationAccepted" xml:space="preserve">
-    <value>A trainer has accepted your invitation.</value>
+    <value>A trainee has accepted your invitation.</value>
   </data>
   <data name="TrainerInvitationRejected" xml:space="preserve">
     <value>A trainee has rejected your invitation.</value>
+  </data>
+  <data name="TrainerReportRequestReceived" xml:space="preserve">
+    <value>{0} sent you a report request: {1}.</value>
+  </data>
+  <data name="TrainerReportFeedbackReceived" xml:space="preserve">
+    <value>{0} added feedback to your report: {1}.</value>
+  </data>
+  <data name="TrainerReportSubmissionReceived" xml:space="preserve">
+    <value>{0} submitted a report: {1}.</value>
+  </data>
+  <data name="TrainerRelationshipEnded" xml:space="preserve">
+    <value>{0} ended your collaboration.</value>
+  </data>
+  <data name="GenericTrainerDisplayName" xml:space="preserve">
+    <value>Trainer</value>
+  </data>
+  <data name="GenericTraineeDisplayName" xml:space="preserve">
+    <value>Trainee</value>
+  </data>
+  <data name="GenericReportDisplayName" xml:space="preserve">
+    <value>report</value>
+  </data>
+  <data name="TrainerDietPlanUpdated" xml:space="preserve">
+    <value>{0} updated your diet plan: {1}.</value>
+  </data>
+  <data name="GenericDietPlanDisplayName" xml:space="preserve">
+    <value>diet plan</value>
+  </data>
+  <data name="GenericTrainerNoteDisplayName" xml:space="preserve">
+    <value>trainer note</value>
+  </data>
+  <data name="TrainerTraineeNoteUpdated" xml:space="preserve">
+    <value>{0} updated your note: {1}</value>
   </data>
   <data name="AccountBlocked" xml:space="preserve">
     <value>Your account has been blocked.</value>

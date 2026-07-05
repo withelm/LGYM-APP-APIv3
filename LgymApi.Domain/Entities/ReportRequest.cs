@@ -8,6 +8,7 @@ public sealed class ReportRequest : EntityBase<ReportRequest>
     public Id<User> TrainerId { get; set; }
     public Id<User> TraineeId { get; set; }
     public Id<ReportTemplate> TemplateId { get; set; }
+    public Id<RecurringReportAssignment>? RecurringReportAssignmentId { get; set; }
     public ReportRequestStatus Status { get; set; } = ReportRequestStatus.Pending;
     public DateTimeOffset? DueAt { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }
@@ -16,5 +17,6 @@ public sealed class ReportRequest : EntityBase<ReportRequest>
     public User Trainer { get; set; } = null!;
     public User Trainee { get; set; } = null!;
     public ReportTemplate Template { get; set; } = null!;
+    public RecurringReportAssignment? RecurringReportAssignment { get; set; }
     public ReportSubmission? Submission { get; set; }
 }

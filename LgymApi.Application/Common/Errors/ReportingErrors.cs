@@ -19,13 +19,18 @@ public sealed class ReportingNotFoundError : NotFoundError
 /// </summary>
 public sealed class InvalidReportingError : BadRequestError
 {
+    private readonly int _httpStatusCode;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="InvalidReportingError"/> class.
     /// </summary>
     /// <param name="message">The error message.</param>
-    public InvalidReportingError(string message) : base(message)
+    public InvalidReportingError(string message, int httpStatusCode = 400, object? payload = null) : base(message, payload)
     {
+        _httpStatusCode = httpStatusCode;
     }
+
+    public override int HttpStatusCode => _httpStatusCode;
 }
 
 /// <summary>

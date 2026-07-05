@@ -16,7 +16,7 @@ public sealed class MeasurementFormDto : IDto
 
     [JsonPropertyName("unit")]
     [JsonRequired]
-    public HeightUnits Unit { get; set; }
+    public MeasurementUnits Unit { get; set; }
 
     [JsonPropertyName("value")]
     [JsonRequired]
@@ -50,13 +50,20 @@ public sealed class MeasurementResponseDto : IResultDto
     public DateTime? UpdatedAt { get; set; }
 }
 
+public sealed class MeasurementsBulkFormDto : IDto
+{
+    [JsonPropertyName("measurements")]
+    [JsonRequired]
+    public List<MeasurementFormDto> Measurements { get; set; } = new();
+}
+
 public sealed class MeasurementsHistoryRequestDto : IDto
 {
     [JsonPropertyName("bodyPart")]
     public BodyParts? BodyPart { get; set; }
 
     [JsonPropertyName("unit")]
-    public HeightUnits? Unit { get; set; }
+    public MeasurementUnits? Unit { get; set; }
 }
 
 public sealed class MeasurementsHistoryDto : IResultDto
@@ -71,6 +78,12 @@ public sealed class MeasurementsListDto : IResultDto
     public List<MeasurementResponseDto> Measurements { get; set; } = new();
 }
 
+public sealed class MeasurementTrendsDto : IResultDto
+{
+    [JsonPropertyName("trends")]
+    public List<MeasurementTrendDto> Trends { get; set; } = new();
+}
+
 public sealed class MeasurementTrendRequestDto : IDto
 {
     [JsonPropertyName("bodyPart")]
@@ -79,7 +92,7 @@ public sealed class MeasurementTrendRequestDto : IDto
 
     [JsonPropertyName("unit")]
     [JsonRequired]
-    public HeightUnits Unit { get; set; }
+    public MeasurementUnits Unit { get; set; }
 }
 
 public sealed class MeasurementTrendDto : IResultDto
@@ -90,17 +103,32 @@ public sealed class MeasurementTrendDto : IResultDto
     [JsonPropertyName("unit")]
     public EnumLookupDto Unit { get; set; } = new();
 
+    [JsonPropertyName("firstMeasurementValue")]
+    public double? FirstMeasurementValue { get; set; }
+
+    [JsonPropertyName("firstMeasurementDate")]
+    public DateTime? FirstMeasurementDate { get; set; }
+
+    [JsonPropertyName("lastMeasurementValue")]
+    public double? LastMeasurementValue { get; set; }
+
+    [JsonPropertyName("lastMeasurementDate")]
+    public DateTime? LastMeasurementDate { get; set; }
+
+    [JsonPropertyName("difference")]
+    public double? Difference { get; set; }
+
     [JsonPropertyName("startValue")]
-    public double StartValue { get; set; }
+    public double? StartValue { get; set; }
 
     [JsonPropertyName("currentValue")]
-    public double CurrentValue { get; set; }
+    public double? CurrentValue { get; set; }
 
     [JsonPropertyName("change")]
-    public double Change { get; set; }
+    public double? Change { get; set; }
 
     [JsonPropertyName("changePercentage")]
-    public double ChangePercentage { get; set; }
+    public double? ChangePercentage { get; set; }
 
     [JsonPropertyName("direction")]
     public string Direction { get; set; } = string.Empty;

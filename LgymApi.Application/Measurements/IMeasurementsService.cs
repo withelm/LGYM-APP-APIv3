@@ -10,9 +10,11 @@ namespace LgymApi.Application.Features.Measurements;
 
 public interface IMeasurementsService
 {
-    Task<Result<Unit, AppError>> AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, HeightUnits unit, double value, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, MeasurementUnits unit, double value, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> AddMeasurementsAsync(UserEntity currentUser, IReadOnlyCollection<MeasurementCreateInput> measurements, CancellationToken cancellationToken = default);
     Task<Result<MeasurementEntity, AppError>> GetMeasurementDetailAsync(UserEntity currentUser, Id<MeasurementEntity> measurementId, CancellationToken cancellationToken = default);
-    Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default);
-    Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsHistoryAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, HeightUnits? unit, CancellationToken cancellationToken = default);
-    Task<Result<MeasurementTrendResult, AppError>> GetMeasurementsTrendAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts bodyPart, HeightUnits unit, CancellationToken cancellationToken = default);
+    Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsListAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default);
+    Task<Result<List<MeasurementEntity>, AppError>> GetMeasurementsHistoryAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default);
+    Task<Result<MeasurementTrendResult, AppError>> GetMeasurementsTrendAsync(UserEntity currentUser, Id<UserEntity> routeUserId, BodyParts bodyPart, MeasurementUnits unit, CancellationToken cancellationToken = default);
+    Task<Result<List<MeasurementTrendResult>, AppError>> GetMeasurementsTrendsAsync(UserEntity currentUser, Id<UserEntity> routeUserId, CancellationToken cancellationToken = default);
 }

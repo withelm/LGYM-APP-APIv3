@@ -23,15 +23,19 @@ public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandler : g
         var input = new NotificationsApp.Models.CreateInAppNotificationInput(
             command.TrainerId,
             command.TraineeId,
+            $"trainer-invitation:{command.InvitationId}:accepted",
             false,
             global::LgymApi.Resources.Messages.TrainerInvitationAccepted,
-            "/trainers/dashboard",
+            $"/trainer/members/{command.TraineeId}",
             InAppNotificationTypes.InvitationAccepted);
 
         var result = await _notificationService.CreateAsync(input, cancellationToken);
         if (result.IsFailure)
         {
-            _logger.LogError($"Failed to create invitation-accepted notification for trainer {command.TrainerId}: {result.Error}");
+            _logger.LogError(
+                "Failed to create invitation-accepted notification for trainer {TrainerId}: {Error}",
+                command.TrainerId,
+                result.Error);
         }
     }
 }

@@ -9,6 +9,7 @@ namespace LgymApi.BackgroundWorker.Common.Commands;
 /// </summary>
 public sealed class TrainerInvitationAcceptedInAppNotificationCommand : IActionCommand
 {
+    public Id<TrainerInvitation> InvitationId { get; init; }
     public Id<User> TrainerId { get; init; }
     public Id<User> TraineeId { get; init; }
 }

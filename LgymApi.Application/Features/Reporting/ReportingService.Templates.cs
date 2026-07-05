@@ -3,6 +3,7 @@ using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -42,7 +43,8 @@ public sealed partial class ReportingService : IReportingService
                     Label = x.Label.Trim(),
                     Type = x.Type,
                     IsRequired = x.IsRequired,
-                    Order = x.Order
+                    Order = x.Order,
+                    ModuleConfig = NormalizeModuleConfig(x.Type, x.ModuleConfig)
                 })
                 .ToList()
         };
@@ -119,7 +121,8 @@ public sealed partial class ReportingService : IReportingService
                 Label = field.Label.Trim(),
                 Type = field.Type,
                 IsRequired = field.IsRequired,
-                Order = field.Order
+                Order = field.Order,
+                ModuleConfig = NormalizeModuleConfig(field.Type, field.ModuleConfig)
             });
         }
 
@@ -167,7 +170,44 @@ public sealed partial class ReportingService : IReportingService
             return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
         }
 
+        foreach (var field in command.Fields)
+        {
+            if (!System.Enum.IsDefined(field.Type))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+
+            if (!IsValidModuleConfig(field.Type, field.ModuleConfig))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+        }
+
         return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    private static bool IsValidModuleConfig(ReportFieldType fieldType, JsonElement? moduleConfig)
+    {
+        return fieldType switch
+        {
+            ReportFieldType.Photos => ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(moduleConfig, out _, out _),
+            ReportFieldType.Measurements => ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(moduleConfig, out _, out _),
+            ReportFieldType.Text or ReportFieldType.Number or ReportFieldType.Boolean or ReportFieldType.Date
+                => moduleConfig is null || !moduleConfig.Value.ValueKind.Equals(JsonValueKind.Object) && !moduleConfig.HasValue || !moduleConfig.HasValue,
+            _ => false
+        };
+    }
+
+    private static string? NormalizeModuleConfig(ReportFieldType fieldType, JsonElement? moduleConfig)
+    {
+        return fieldType switch
+        {
+            ReportFieldType.Photos when ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(moduleConfig, out var normalizedPhotos, out _)
+                => JsonSerializer.Serialize(normalizedPhotos),
+            ReportFieldType.Measurements when ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(moduleConfig, out var normalizedMeasurements, out _)
+                => JsonSerializer.Serialize(normalizedMeasurements),
+            _ => moduleConfig.HasValue ? JsonSerializer.Serialize(moduleConfig.Value) : null
+        };
     }
 
     private static ReportTemplateResult MapTemplate(ReportTemplate template)
@@ -188,7 +228,10 @@ public sealed partial class ReportingService : IReportingService
                     Label = x.Label,
                     Type = x.Type,
                     IsRequired = x.IsRequired,
-                    Order = x.Order
+                    Order = x.Order,
+                    ModuleConfig = string.IsNullOrWhiteSpace(x.ModuleConfig) 
+                        ? null 
+                        : JsonSerializer.Deserialize<JsonElement>(x.ModuleConfig)
                 })
                 .ToList()
         };

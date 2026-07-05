@@ -1,6 +1,9 @@
 using FluentValidation;
 using LgymApi.Api.Features.Trainer.Contracts;
+using LgymApi.Application.Features.Reporting;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
+using System.Text.Json;
 
 namespace LgymApi.Api.Features.Trainer.Validation;
 
@@ -28,6 +31,86 @@ public sealed class UpsertReportTemplateRequestValidator : AbstractValidator<Ups
 
             fields.RuleFor(f => f.Order)
                 .GreaterThanOrEqualTo(0);
+
+            // Validate module config based on field type
+            fields.RuleFor(f => f.ModuleConfig)
+                .Must((field, config) => ValidateModuleConfig(field.Type, config))
+                .WithMessage(Messages.ReportFieldValidationFailed);
         });
+    }
+
+    private static bool ValidateModuleConfig(ReportFieldType type, JsonElement? config)
+    {
+        return type switch
+        {
+            ReportFieldType.Photos => ValidatePhotosConfig(config),
+            ReportFieldType.Measurements => ValidateMeasurementsConfig(config),
+            ReportFieldType.Text or ReportFieldType.Number or ReportFieldType.Boolean or ReportFieldType.Date
+                => config == null || !config.HasValue,
+            _ => false
+        };
+    }
+
+    private static bool ValidatePhotosConfig(JsonElement? config)
+    {
+        if (!config.HasValue)
+        {
+            return false;
+        }
+
+        var jsonElement = config.Value;
+        if (jsonElement.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (!jsonElement.TryGetProperty("requiredViews", out var requiredViews)
+            || requiredViews.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var requiredView in requiredViews.EnumerateArray())
+        {
+            if (requiredView.ValueKind != JsonValueKind.String
+                || !ReportingModuleConfigParser.TryNormalizePhotoViewName(requiredView.GetString(), out _))
+            {
+                return false;
+            }
+        }
+
+        return ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(jsonElement, out _, out _);
+    }
+
+    private static bool ValidateMeasurementsConfig(JsonElement? config)
+    {
+        if (!config.HasValue)
+        {
+            return false;
+        }
+
+        var jsonElement = config.Value;
+        if (jsonElement.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (!jsonElement.TryGetProperty("measurementTypes", out var measurementTypes)
+            || measurementTypes.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var measurementType in measurementTypes.EnumerateArray())
+        {
+            if (measurementType.ValueKind != JsonValueKind.String
+                || !ReportingModuleConfigParser.TryResolveBodyPart(measurementType.GetString() ?? string.Empty, out var bodyPart)
+                || bodyPart == BodyParts.Unknown)
+            {
+                return false;
+            }
+        }
+
+        return ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(jsonElement, out _, out _);
     }
 }

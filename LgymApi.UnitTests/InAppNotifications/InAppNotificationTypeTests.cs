@@ -50,6 +50,15 @@ public sealed class InAppNotificationTypeTests
     }
 
     [Test]
+    public void TryFromValue_WithReportRequestType_ReturnsTrue()
+    {
+        var result = InAppNotificationTypes.TryFromValue("ReportRequestReceived", out var type);
+
+        result.Should().BeTrue();
+        type.Should().Be(InAppNotificationTypes.ReportRequestReceived);
+    }
+
+    [Test]
     public void TryFromValue_WithUnknownValue_ReturnsFalse()
     {
         var result = InAppNotificationTypes.TryFromValue("unknown.type", out var type);

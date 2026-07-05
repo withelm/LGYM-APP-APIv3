@@ -25,7 +25,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
     private readonly ICommandEnvelopeRepository _commandEnvelopeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly AppDbContext _dbContext;
-    private readonly IActionMessageScheduler _scheduler;
     private readonly ILogger<CommandDispatcher> _logger;
 
     public CommandDispatcher(
@@ -33,14 +32,12 @@ public sealed class CommandDispatcher : ICommandDispatcher
         ICommandEnvelopeRepository commandEnvelopeRepository,
         IUnitOfWork unitOfWork,
         AppDbContext dbContext,
-        IActionMessageScheduler scheduler,
         ILogger<CommandDispatcher> logger)
     {
         _serviceProvider = serviceProvider;
         _commandEnvelopeRepository = commandEnvelopeRepository;
         _unitOfWork = unitOfWork;
         _dbContext = dbContext;
-        _scheduler = scheduler;
         _logger = logger;
     }
 
@@ -159,13 +156,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
             "Command envelope {EnvelopeId} persisted for correlation {CorrelationId}.",
             envelope.Id,
             correlationId);
-
-        // Enqueue orchestration job by envelope ID only (durable reference)
-        _scheduler.Enqueue(envelope.Id);
-
-        _logger.LogInformation(
-            "Command envelope {EnvelopeId} enqueued for orchestration.",
-            envelope.Id);
     }
 
     /// <summary>

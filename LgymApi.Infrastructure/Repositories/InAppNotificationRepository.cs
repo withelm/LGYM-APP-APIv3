@@ -21,6 +21,27 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
         return _dbContext.InAppNotifications.AddAsync(notification, cancellationToken).AsTask();
     }
 
+    public Task<InAppNotification?> FindByDeliveryKeyAsync(
+        Id<User> recipientId,
+        InAppNotificationType type,
+        string deliveryKey,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.InAppNotifications
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.RecipientId == recipientId
+                     && x.Type == type
+                     && x.DeliveryKey == deliveryKey
+                     && !x.IsDeleted,
+                cancellationToken);
+    }
+
+    public void Detach(InAppNotification notification)
+    {
+        _dbContext.Entry(notification).State = EntityState.Detached;
+    }
+
     public Task<InAppNotification?> GetByIdAsync(Id<InAppNotification> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.InAppNotifications
@@ -32,7 +53,7 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
         Id<User> userId,
         int limit,
         DateTimeOffset? cursorCreatedAt,
-        Id<User>? cursorId,
+        Id<InAppNotification>? cursorId,
         CancellationToken cancellationToken = default)
     {
         var query = _dbContext.InAppNotifications
@@ -42,17 +63,16 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
         if (cursorCreatedAt.HasValue && cursorId.HasValue)
         {
             var cursorTs = cursorCreatedAt.Value;
-            var cursorIdString = cursorId.Value.ToString();
-            query = query.Where(x => x.CreatedAt < cursorTs || (x.CreatedAt == cursorTs && string.CompareOrdinal(x.Id.ToString(), cursorIdString) < 0));
+            var cursorNotificationId = cursorId.Value;
+
+            query = query.Where(x => x.CreatedAt < cursorTs || (x.CreatedAt == cursorTs && x.Id.CompareByValue(cursorNotificationId) < 0));
         }
 
-        var results = await query
+        return await query
             .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id.ToString())
+            .ThenByDescending(x => x.Id)
             .Take(limit + 1)
             .ToListAsync(cancellationToken);
-
-        return results;
     }
 
     public Task MarkAsReadAsync(Id<InAppNotification> id, CancellationToken cancellationToken = default)

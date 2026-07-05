@@ -13,6 +13,7 @@ public interface IPlanRepository
     Task UpdateAsync(Plan plan, CancellationToken cancellationToken = default);
     Task SetActivePlanAsync(Id<User> userId, Id<Plan> planId, CancellationToken cancellationToken = default);
     Task ClearActivePlansAsync(Id<User> userId, CancellationToken cancellationToken = default);
+    Task<Plan> ClonePlanAsync(Id<Plan> sourcePlanId, Id<User> userId, bool isActive = true, CancellationToken cancellationToken = default);
     Task<Plan> CopyPlanByShareCodeAsync(string shareCode, Id<User> userId, CancellationToken cancellationToken = default);
     Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default);
 }

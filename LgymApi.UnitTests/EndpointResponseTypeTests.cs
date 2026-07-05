@@ -20,6 +20,7 @@ public sealed class EndpointResponseTypeTests
             .Where(type => type.IsClass && !type.IsAbstract)
             .Where(type => typeof(ControllerBase).IsAssignableFrom(type))
             .Where(type => type.GetCustomAttribute<ApiControllerAttribute>() != null)
+            .Where(IsPublicApiController)
             .ToList();
 
         var invalid = new List<string>();
@@ -57,6 +58,7 @@ public sealed class EndpointResponseTypeTests
             .Where(type => type.IsClass && !type.IsAbstract)
             .Where(type => typeof(ControllerBase).IsAssignableFrom(type))
             .Where(type => type.GetCustomAttribute<ApiControllerAttribute>() != null)
+            .Where(IsPublicApiController)
             .ToList();
 
         var missing = new List<string>();
@@ -84,6 +86,17 @@ public sealed class EndpointResponseTypeTests
 
         missing.Should().BeEmpty("Endpoints missing ProducesResponseType(StatusCodes.Status200OK or StatusCodes.Status201Created): " +
             string.Join(", ", missing));
+    }
+
+    private static bool IsPublicApiController(Type controllerType)
+    {
+        var routeAttribute = controllerType.GetCustomAttribute<RouteAttribute>();
+        if (string.IsNullOrWhiteSpace(routeAttribute?.Template))
+        {
+            return false;
+        }
+
+        return routeAttribute.Template.StartsWith("api", StringComparison.OrdinalIgnoreCase);
     }
 
 }

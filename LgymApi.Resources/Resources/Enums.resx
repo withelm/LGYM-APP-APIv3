@@ -34,7 +34,7 @@
     <value>Forearms</value>
   </data>
   <data name="BodyParts_Abs" xml:space="preserve">
-    <value>Abs</value>
+    <value>Abdomen</value>
   </data>
   <data name="BodyParts_Quads" xml:space="preserve">
     <value>Quads</value>
@@ -43,7 +43,28 @@
     <value>Hamstrings</value>
   </data>
   <data name="BodyParts_Calves" xml:space="preserve">
-    <value>Calves</value>
+    <value>Calf</value>
+  </data>
+  <data name="BodyParts_BodyWeight" xml:space="preserve">
+    <value>Body weight</value>
+  </data>
+  <data name="BodyParts_Neck" xml:space="preserve">
+    <value>Neck</value>
+  </data>
+  <data name="BodyParts_Waist" xml:space="preserve">
+    <value>Waist</value>
+  </data>
+  <data name="BodyParts_Hips" xml:space="preserve">
+    <value>Hips</value>
+  </data>
+  <data name="BodyParts_Thigh" xml:space="preserve">
+    <value>Thigh</value>
+  </data>
+  <data name="BodyParts_BodyFat" xml:space="preserve">
+    <value>Body fat</value>
+  </data>
+  <data name="BodyParts_Bmi" xml:space="preserve">
+    <value>BMI</value>
   </data>
   <data name="BodyParts_Glutes" xml:space="preserve">
     <value>Glutes</value>
@@ -68,6 +89,30 @@
   </data>
   <data name="HeightUnits_Millimeters" xml:space="preserve">
     <value>Millimeters</value>
+  </data>
+  <data name="MeasurementUnits_Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="MeasurementUnits_Kilograms" xml:space="preserve">
+    <value>kg</value>
+  </data>
+  <data name="MeasurementUnits_Pounds" xml:space="preserve">
+    <value>lbs</value>
+  </data>
+  <data name="MeasurementUnits_Meters" xml:space="preserve">
+    <value>m</value>
+  </data>
+  <data name="MeasurementUnits_Centimeters" xml:space="preserve">
+    <value>cm</value>
+  </data>
+  <data name="MeasurementUnits_Millimeters" xml:space="preserve">
+    <value>mm</value>
+  </data>
+  <data name="MeasurementUnits_Percent" xml:space="preserve">
+    <value>%</value>
+  </data>
+  <data name="MeasurementUnits_Bmi" xml:space="preserve">
+    <value>BMI</value>
   </data>
   <data name="Platforms_Android" xml:space="preserve">
     <value>Android</value>

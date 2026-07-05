@@ -3,6 +3,7 @@ using System.Globalization;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -26,16 +27,15 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
 
-        if (request.Status != ReportRequestStatus.Pending)
+        if (request.Status != ReportRequestStatus.Pending && request.Status != ReportRequestStatus.Expired)
         {
             return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportRequestNotPending));
         }
 
-        if (request.DueAt.HasValue && request.DueAt.Value <= DateTimeOffset.UtcNow)
+        if (request.Status == ReportRequestStatus.Pending && IsRequestExpired(request.DueAt, DateTimeOffset.UtcNow))
         {
             request.Status = ReportRequestStatus.Expired;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportRequestExpired));
         }
 
         var normalizedAnswers = NormalizeAnswers(command.Answers);
@@ -45,6 +45,14 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportSubmissionResult, AppError>.Failure(validationResult.Error);
         }
 
+        var photoValidationResult = await ValidateRequiredPhotosAsync(request, cancellationToken);
+        if (photoValidationResult.IsFailure)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(photoValidationResult.Error);
+        }
+
+        var submittedAtUtc = DateTimeOffset.UtcNow;
+
         var submission = new ReportSubmission
         {
             Id = Id<ReportSubmission>.New(),
@@ -53,10 +61,17 @@ public sealed partial class ReportingService : IReportingService
             PayloadJson = JsonSerializer.Serialize(normalizedAnswers)
         };
 
-        request.SubmittedAt = DateTimeOffset.UtcNow;
+        request.SubmittedAt = submittedAtUtc;
         request.Status = ReportRequestStatus.Submitted;
 
         await _reportingRepository.AddSubmissionAsync(submission, cancellationToken);
+        await _reportSubmissionMeasurementWriter.StageMeasurementsAsync(
+            currentTrainee,
+            request.Template,
+            normalizedAnswers,
+            submittedAtUtc,
+            cancellationToken);
+
         try
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -67,6 +82,121 @@ public sealed partial class ReportingService : IReportingService
         }
 
         submission.ReportRequest = request;
+
+        await _commandDispatcher.EnqueueAsync(new ReportSubmissionCreatedInAppNotificationCommand
+        {
+            SubmissionId = submission.Id,
+            TrainerId = request.TrainerId,
+            TraineeId = currentTrainee.Id,
+            TemplateName = request.Template.Name
+        });
+
+        return Result<ReportSubmissionResult, AppError>.Success(MapSubmission(submission));
+    }
+
+    public async Task<Result<ReportSubmissionResult, AppError>> UpdateTrainerFeedbackAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<ReportSubmission> submissionId, UpdateReportSubmissionFeedbackCommand command, CancellationToken cancellationToken = default)
+    {
+        var ownershipCheck = await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
+        if (ownershipCheck.IsFailure)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(ownershipCheck.Error);
+        }
+
+        if (submissionId.IsEmpty)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
+        }
+
+        var submission = await _reportingRepository.FindSubmissionByIdForTrainerAsync(submissionId, currentTrainer.Id, traineeId, cancellationToken);
+        if (submission == null)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        var normalizedFieldComments = NormalizeTrainerFieldComments(command.FieldComments);
+        var validationResult = ValidateTrainerFieldComments(submission.ReportRequest.Template, normalizedFieldComments);
+        if (validationResult.IsFailure)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(validationResult.Error);
+        }
+
+        var previousOverallComment = submission.TrainerOverallComment;
+        var previousFieldCommentsJson = submission.TrainerFieldCommentsJson;
+
+        submission.TrainerOverallComment = string.IsNullOrWhiteSpace(command.TrainerOverallComment)
+            ? null
+            : command.TrainerOverallComment.Trim();
+        submission.TrainerFieldCommentsJson = normalizedFieldComments.Count == 0
+            ? null
+            : JsonSerializer.Serialize(normalizedFieldComments);
+
+        var feedbackChanged = !string.Equals(previousOverallComment, submission.TrainerOverallComment, StringComparison.Ordinal)
+            || !string.Equals(previousFieldCommentsJson, submission.TrainerFieldCommentsJson, StringComparison.Ordinal);
+        var hasFeedback = submission.TrainerOverallComment != null || normalizedFieldComments.Count > 0;
+
+        if (feedbackChanged)
+        {
+            submission.TrainerFeedbackAddedAt = hasFeedback ? DateTimeOffset.UtcNow : null;
+            submission.TrainerFeedbackReadAt = null;
+
+            var assignment = await _recurringReportAssignmentRepository.FindByCurrentReportRequestIdAsync(submission.ReportRequestId, cancellationToken);
+            if (assignment != null)
+            {
+                assignment.NextEligibleAt = null;
+            }
+        }
+
+        if (feedbackChanged && hasFeedback)
+        {
+            await _commandDispatcher.EnqueueAsync(new ReportFeedbackAddedInAppNotificationCommand
+            {
+                SubmissionId = submission.Id,
+                TraineeId = traineeId,
+                TrainerId = currentTrainer.Id,
+                TemplateName = submission.ReportRequest.Template.Name,
+                // Include a timestamp so distinct feedback saves are not deduplicated
+                // by the command envelope hash when they target the same submission.
+                TriggeredAt = DateTimeOffset.UtcNow,
+            });
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<ReportSubmissionResult, AppError>.Success(MapSubmission(submission));
+    }
+
+    public async Task<Result<ReportSubmissionResult, AppError>> MarkTrainerFeedbackAsReadAsync(UserEntity currentTrainee, Id<ReportSubmission> submissionId, CancellationToken cancellationToken = default)
+    {
+        if (submissionId.IsEmpty)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
+        }
+
+        var submission = await _reportingRepository.FindSubmissionByIdForTraineeAsync(submissionId, currentTrainee.Id, cancellationToken);
+        if (submission == null)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        if (!submission.TrainerFeedbackAddedAt.HasValue)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.DidntFind));
+        }
+
+        if (!submission.TrainerFeedbackReadAt.HasValue)
+        {
+            var readAt = DateTimeOffset.UtcNow;
+            submission.TrainerFeedbackReadAt = readAt;
+
+            var assignment = await _recurringReportAssignmentRepository.FindByCurrentReportRequestIdAsync(submission.ReportRequestId, cancellationToken);
+            if (assignment != null)
+            {
+                assignment.NextEligibleAt = CalculateNextEligibleAt(readAt, assignment.IntervalValue, assignment.IntervalUnit);
+            }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
         return Result<ReportSubmissionResult, AppError>.Success(MapSubmission(submission));
     }
 
@@ -82,97 +212,10 @@ public sealed partial class ReportingService : IReportingService
         return Result<List<ReportSubmissionResult>, AppError>.Success(submissions.Select(MapSubmission).ToList());
     }
 
-    private static Result<Unit, AppError> ValidateAnswersAgainstTemplate(ReportTemplate template, Dictionary<string, JsonElement> answers)
+    public async Task<Result<List<ReportSubmissionResult>, AppError>> GetOwnSubmissionsAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default)
     {
-        var expected = template.Fields.ToDictionary(x => x.Key, x => x, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var field in template.Fields)
-        {
-            if (field.IsRequired && !answers.ContainsKey(field.Key))
-            {
-                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
-            }
-        }
-
-        foreach (var answer in answers)
-        {
-            if (!expected.TryGetValue(answer.Key, out var field))
-            {
-                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
-            }
-
-            if (answer.Value.ValueKind == JsonValueKind.Null)
-            {
-                if (field.IsRequired)
-                {
-                    return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
-                }
-
-                continue;
-            }
-
-            if (!IsValueValidForType(answer.Value, field.Type))
-            {
-                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
-            }
-        }
-
-        return Result<Unit, AppError>.Success(Unit.Value);
+        var submissions = await _reportingRepository.GetSubmissionsByTraineeAsync(currentTrainee.Id, cancellationToken);
+        return Result<List<ReportSubmissionResult>, AppError>.Success(submissions.Select(MapSubmission).ToList());
     }
 
-    private static Dictionary<string, JsonElement> NormalizeAnswers(IReadOnlyDictionary<string, JsonElement> answers)
-    {
-        var normalizedAnswers = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
-        foreach (var answer in answers)
-        {
-            normalizedAnswers[answer.Key] = answer.Value;
-        }
-
-        return normalizedAnswers;
-    }
-
-    private static bool IsDuplicateSubmissionException(Exception exception)
-    {
-        var message = exception.ToString();
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return false;
-        }
-
-        return message.Contains("ReportRequestId", StringComparison.OrdinalIgnoreCase)
-               || message.Contains("ReportSubmissions", StringComparison.OrdinalIgnoreCase)
-               || message.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
-               || message.Contains("unique", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsValueValidForType(JsonElement value, ReportFieldType type)
-    {
-        return type switch
-        {
-            ReportFieldType.Text => value.ValueKind == JsonValueKind.String,
-            ReportFieldType.Number => value.ValueKind == JsonValueKind.Number,
-            ReportFieldType.Boolean => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
-            ReportFieldType.Date => value.ValueKind == JsonValueKind.String
-                && DateTimeOffset.TryParse(value.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _),
-            _ => false
-        };
-    }
-
-    private static ReportSubmissionResult MapSubmission(ReportSubmission submission)
-    {
-        var answersRaw = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(submission.PayloadJson);
-        var answers = answersRaw == null
-            ? new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase)
-            : new Dictionary<string, JsonElement>(answersRaw, StringComparer.OrdinalIgnoreCase);
-
-        return new ReportSubmissionResult
-        {
-            Id = submission.Id,
-            ReportRequestId = submission.ReportRequestId,
-            TraineeId = submission.TraineeId,
-            SubmittedAt = submission.CreatedAt,
-            Answers = answers,
-            Request = MapRequest(submission.ReportRequest)
-        };
-    }
 }

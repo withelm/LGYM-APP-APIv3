@@ -18,5 +18,13 @@ public interface IReportingService
     Task<Result<ReportRequestResult, AppError>> CreateReportRequestAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CreateReportRequestCommand command, CancellationToken cancellationToken = default);
     Task<Result<List<ReportRequestResult>, AppError>> GetPendingRequestsForTraineeAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default);
     Task<Result<ReportSubmissionResult, AppError>> SubmitReportRequestAsync(UserEntity currentTrainee, Id<ReportRequest> requestId, SubmitReportRequestCommand command, CancellationToken cancellationToken = default);
+    Task<Result<ReportSubmissionResult, AppError>> UpdateTrainerFeedbackAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, Id<ReportSubmission> submissionId, UpdateReportSubmissionFeedbackCommand command, CancellationToken cancellationToken = default);
+    Task<Result<ReportSubmissionResult, AppError>> MarkTrainerFeedbackAsReadAsync(UserEntity currentTrainee, Id<ReportSubmission> submissionId, CancellationToken cancellationToken = default);
+    Task<Result<List<ReportSubmissionResult>, AppError>> GetOwnSubmissionsAsync(UserEntity currentTrainee, CancellationToken cancellationToken = default);
     Task<Result<List<ReportSubmissionResult>, AppError>> GetTraineeSubmissionsAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default);
+
+    Task<Result<InitiatePhotoUploadResult, AppError>> InitiatePhotoUploadAsync(UserEntity currentUser, InitiatePhotoUploadCommand command, CancellationToken cancellationToken = default);
+    Task<Result<SignedReadUrlResult, AppError>> GetSignedReadUrlAsync(UserEntity currentUser, string photoId, CancellationToken cancellationToken = default);
+    Task<Result<CompletePhotoUploadResult, AppError>> CompletePhotoUploadAsync(UserEntity currentUser, CompletePhotoUploadCommand command, CancellationToken cancellationToken = default);
+    Task<Result<List<PhotoHistoryItemResult>, AppError>> GetPhotoHistoryAsync(UserEntity currentUser, GetPhotoHistoryCommand command, CancellationToken cancellationToken = default);
 }

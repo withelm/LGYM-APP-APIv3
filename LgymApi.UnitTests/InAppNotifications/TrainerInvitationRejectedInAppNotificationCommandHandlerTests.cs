@@ -21,16 +21,17 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandlerTest
     {
         var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Success(CreateResult()));
         var handler = new TrainerInvitationRejectedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationRejectedInAppNotificationCommandHandler>.Instance);
-        var command = new TrainerInvitationRejectedInAppNotificationCommand { TrainerId = Id<User>.New(), TraineeId = Id<User>.New() };
+        var command = new TrainerInvitationRejectedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() };
 
         await handler.ExecuteAsync(command);
 
         service.Calls.Should().Be(1);
         service.LastInput!.RecipientId.Should().Be(command.TrainerId);
         service.LastInput.SenderUserId.Should().Be(command.TraineeId);
+        service.LastInput.DeliveryKey.Should().Be($"trainer-invitation:{command.InvitationId}:rejected");
         service.LastInput.IsSystemNotification.Should().BeFalse();
         service.LastInput.Message.Should().Be(Messages.TrainerInvitationRejected);
-        service.LastInput.RedirectUrl.Should().Be("/trainers/dashboard");
+        service.LastInput.RedirectUrl.Should().Be("/trainer/invitations");
         service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationRejected);
     }
 
@@ -40,7 +41,7 @@ public sealed class TrainerInvitationRejectedInAppNotificationCommandHandlerTest
         var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Failure(new BadRequestError("boom")));
         var handler = new TrainerInvitationRejectedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationRejectedInAppNotificationCommandHandler>.Instance);
 
-        await handler.ExecuteAsync(new TrainerInvitationRejectedInAppNotificationCommand { TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
+        await handler.ExecuteAsync(new TrainerInvitationRejectedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
 
         service.Calls.Should().Be(1);
     }

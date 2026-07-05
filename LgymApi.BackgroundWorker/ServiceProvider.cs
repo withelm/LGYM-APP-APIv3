@@ -52,6 +52,9 @@ public static class ServiceProvider
         services.AddScoped<EmailJob>();
         services.AddScoped<IActionMessageJob, ActionMessageJob>();
         services.AddScoped<ActionMessageJob>();
+        services.AddScoped<ICommittedIntentDispatchJob, CommittedIntentDispatchJob>();
+        services.AddScoped<IExpiredPhotoUploadCleanupJob, ExpiredPhotoUploadCleanupJob>();
+        services.AddScoped<IRecurringReportAssignmentProcessingJob, RecurringReportAssignmentProcessingJob>();
 
         services.AddScoped<BackgroundActionOrchestratorService>();
         services.AddNotificationsModule();
@@ -63,6 +66,15 @@ public static class ServiceProvider
         services.AddBackgroundAction<TrainingCompletedCommand, UpdateTrainingMainRecordsHandler>();
         services.AddBackgroundAction<InvitationAcceptedCommand, InvitationAcceptedEmailHandler>();
         services.AddBackgroundAction<InvitationRevokedCommand, InvitationRevokedEmailHandler>();
+        services.AddBackgroundAction<TrainerInvitationCreatedInAppNotificationCommand, TrainerInvitationCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<TrainerInvitationAcceptedInAppNotificationCommand, TrainerInvitationAcceptedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<TrainerInvitationRejectedInAppNotificationCommand, TrainerInvitationRejectedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<ReportRequestCreatedInAppNotificationCommand, ReportRequestCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<ReportSubmissionCreatedInAppNotificationCommand, ReportSubmissionCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<ReportFeedbackAddedInAppNotificationCommand, ReportFeedbackAddedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<DietPlanUpdatedInAppNotificationCommand, DietPlanUpdatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand, TraineeNoteUpdatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<TrainerRelationshipEndedInAppNotificationCommand, TrainerRelationshipEndedInAppNotificationCommandHandler>();
 
 
         return services;

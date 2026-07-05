@@ -74,6 +74,7 @@ public sealed partial class TrainerRelationshipService
 
         await _commandDispatcher.EnqueueAsync(new TrainerInvitationAcceptedInAppNotificationCommand
         {
+            InvitationId = invitation.Id,
             TrainerId = invitation.TrainerId,
             TraineeId = currentTrainee.Id
         });
@@ -112,6 +113,7 @@ public sealed partial class TrainerRelationshipService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await _commandDispatcher.EnqueueAsync(new TrainerInvitationRejectedInAppNotificationCommand
         {
+            InvitationId = invitation.Id,
             TrainerId = invitation.TrainerId,
             TraineeId = currentTrainee.Id
         });

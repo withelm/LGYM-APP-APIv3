@@ -1154,6 +1154,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     {
         var trainer = await SeedTrainerAsync("trainer-plan-assign", "trainer-plan-assign@example.com");
         var trainee = await SeedUserAsync(name: "trainee-plan-assign", email: "trainee-plan-assign@example.com", password: "password123");
+        var templateExerciseName = "Trainer Template Exercise";
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -1174,6 +1175,15 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         createdPlan!.Name.Should().Be("Trainer Owned Plan");
         createdPlan.IsActive.Should().BeFalse();
 
+        Id<Plan>.TryParse(createdPlan.Id, out var createdPlanId).Should().BeTrue();
+
+        var trainerExerciseId = await CreateExerciseViaEndpointAsync(trainer.Id, templateExerciseName, BodyParts.Chest);
+        await CreatePlanDayViaEndpointAsync(
+            trainer.Id,
+            createdPlanId,
+            "Template Day",
+            [new PlanDayExerciseInput { ExerciseId = trainerExerciseId.ToString(), Series = 4, Reps = "10" }]);
+
         var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{createdPlan.Id}/assign", null);
         assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -1182,8 +1192,34 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var activePlan = await activeResponse.Content.ReadFromJsonAsync<TrainerManagedPlanResponse>();
         activePlan.Should().NotBeNull();
-        activePlan!.Id.Should().Be(createdPlan.Id);
+        activePlan!.Id.Should().NotBe(createdPlan.Id);
+        activePlan.Name.Should().Be(createdPlan.Name);
         activePlan.IsActive.Should().BeTrue();
+
+        using (var verifyScope = Factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Id<Plan>.TryParse(activePlan.Id, out var traineePlanId).Should().BeTrue();
+
+            var copiedPlan = await db.Plans.FirstAsync(p => p.Id == traineePlanId);
+            copiedPlan.UserId.Should().Be(trainee.Id);
+
+            var copiedPlanDay = await db.PlanDays
+                .Include(pd => pd.Exercises)
+                .ThenInclude(pde => pde.Exercise)
+                .FirstAsync(pd => pd.PlanId == traineePlanId && !pd.IsDeleted);
+
+            copiedPlanDay.Name.Should().Be("Template Day");
+            copiedPlanDay.Exercises.Should().ContainSingle();
+            copiedPlanDay.Exercises.Single().Series.Should().Be(4);
+            copiedPlanDay.Exercises.Single().Reps.Should().Be("10");
+            copiedPlanDay.Exercises.Single().Exercise.Should().NotBeNull();
+            copiedPlanDay.Exercises.Single().Exercise!.Name.Should().Be(templateExerciseName);
+            copiedPlanDay.Exercises.Single().Exercise!.UserId.Should().Be(trainee.Id);
+
+            var trainerPlan = await db.Plans.FirstAsync(p => p.Id == createdPlanId);
+            trainerPlan.UserId.Should().Be(trainer.Id);
+        }
 
         SetAuthorizationHeader(trainer.Id);
         var unassignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/unassign", null);

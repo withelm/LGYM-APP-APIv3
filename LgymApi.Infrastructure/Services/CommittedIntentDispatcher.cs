@@ -1,4 +1,5 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Options;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Data;
@@ -14,13 +15,16 @@ public sealed class CommittedIntentDispatcher : ICommittedIntentDispatcher
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CommittedIntentDispatcher> _logger;
+    private readonly BackgroundCommandOptions _backgroundCommandOptions;
 
     public CommittedIntentDispatcher(
         IServiceScopeFactory scopeFactory,
-        ILogger<CommittedIntentDispatcher> logger)
+        ILogger<CommittedIntentDispatcher> logger,
+        BackgroundCommandOptions backgroundCommandOptions)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _backgroundCommandOptions = backgroundCommandOptions;
     }
 
     public async Task DispatchCommittedIntentsAsync(CancellationToken cancellationToken = default)
@@ -30,8 +34,18 @@ public sealed class CommittedIntentDispatcher : ICommittedIntentDispatcher
         var actionScheduler = scope.ServiceProvider.GetRequiredService<IActionMessageScheduler>();
         var emailScheduler = scope.ServiceProvider.GetRequiredService<IEmailBackgroundScheduler>();
 
+        await RecoverStaleProcessingEnvelopesAsync(dbContext, cancellationToken);
         await DispatchCommandEnvelopesAsync(dbContext, actionScheduler, cancellationToken);
         await DispatchNotificationMessagesAsync(dbContext, emailScheduler, cancellationToken);
+    }
+
+    private async Task RecoverStaleProcessingEnvelopesAsync(AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        _logger.LogDebug(
+            "Automatic recovery of processing command envelopes is disabled to avoid double-dispatch without a heartbeat/lease-renewal mechanism. Configured timeout remains {ProcessingLeaseTimeoutMinutes} minute(s).",
+            _backgroundCommandOptions.ProcessingLeaseTimeoutMinutes);
+
+        await Task.CompletedTask;
     }
 
     private async Task DispatchCommandEnvelopesAsync(

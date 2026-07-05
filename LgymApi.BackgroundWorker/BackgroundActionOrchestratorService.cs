@@ -97,6 +97,7 @@ public sealed partial class BackgroundActionOrchestratorService
         // Update status to Processing
         envelope.Status = ActionExecutionStatus.Processing;
         envelope.LastAttemptAt = DateTimeOffset.UtcNow;
+        envelope.ProcessingStartedAtUtc = DateTimeOffset.UtcNow;
         envelope.NextAttemptAt = null;
         envelope.ExecutionLogs.Add(envelopeAttemptLog);
         await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);

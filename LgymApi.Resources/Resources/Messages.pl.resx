@@ -135,9 +135,6 @@
   <data name="PermissionTrainerAccess" xml:space="preserve">
     <value>Dostęp trenera</value>
   </data>
-  <data name="PermissionTrainerAccess" xml:space="preserve">
-    <value>Dostęp trenera</value>
-  </data>
   <data name="RoleWithThatName" xml:space="preserve">
     <value>Istnieje rola o takiej nazwie.</value>
   </data>
@@ -204,6 +201,9 @@
   <data name="ReportRequestExpired" xml:space="preserve">
     <value>Termin zgłoszenia raportu minął.</value>
   </data>
+  <data name="MissingRequiredPhotoViews" xml:space="preserve">
+    <value>Brakuje wymaganych ujęć zdjęć.</value>
+  </data>
   <data name="InvalidDateRange" xml:space="preserve">
     <value>Nieprawidłowy zakres dat. toDate musi być równe lub późniejsze niż fromDate.</value>
   </data>
@@ -246,11 +246,47 @@
   <data name="TrainerInvitationSent" xml:space="preserve">
     <value>Twoje zaproszenie do trenera zostało wysłane.</value>
   </data>
+  <data name="TrainerInvitationCreatedNotification" xml:space="preserve">
+    <value>{0} zaprasza Cię do współpracy trenerskiej.</value>
+  </data>
   <data name="TrainerInvitationAccepted" xml:space="preserve">
-    <value>Trener zaakceptował Twoje zaproszenie.</value>
+    <value>Podopieczny zaakceptował Twoje zaproszenie.</value>
   </data>
   <data name="TrainerInvitationRejected" xml:space="preserve">
     <value>Uczeń odrzucił Twoje zaproszenie.</value>
+  </data>
+  <data name="TrainerReportRequestReceived" xml:space="preserve">
+    <value>{0} wysłał Ci prośbę o raport: {1}.</value>
+  </data>
+  <data name="TrainerReportFeedbackReceived" xml:space="preserve">
+    <value>{0} dodał komentarz do Twojego raportu: {1}.</value>
+  </data>
+  <data name="TrainerReportSubmissionReceived" xml:space="preserve">
+    <value>{0} wysłał raport: {1}.</value>
+  </data>
+  <data name="TrainerRelationshipEnded" xml:space="preserve">
+    <value>{0} zakończył współpracę.</value>
+  </data>
+  <data name="GenericTrainerDisplayName" xml:space="preserve">
+    <value>Trener</value>
+  </data>
+  <data name="GenericTraineeDisplayName" xml:space="preserve">
+    <value>Podopieczny</value>
+  </data>
+  <data name="GenericReportDisplayName" xml:space="preserve">
+    <value>raport</value>
+  </data>
+  <data name="TrainerDietPlanUpdated" xml:space="preserve">
+    <value>{0} zaktualizował Twój plan diety: {1}.</value>
+  </data>
+  <data name="GenericDietPlanDisplayName" xml:space="preserve">
+    <value>plan diety</value>
+  </data>
+  <data name="GenericTrainerNoteDisplayName" xml:space="preserve">
+    <value>notatka trenera</value>
+  </data>
+  <data name="TrainerTraineeNoteUpdated" xml:space="preserve">
+    <value>{0} zaktualizował Twoją notatkę: {1}</value>
   </data>
   <data name="AccountBlocked" xml:space="preserve">
     <value>Twoje konto zostało zablokowane.</value>

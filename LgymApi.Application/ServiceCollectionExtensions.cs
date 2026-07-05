@@ -1,6 +1,7 @@
 using LgymApi.Application.Features.AdminManagement;
 using LgymApi.Application.Features.AdminManagement;
 using LgymApi.Application.AppConfig;
+using LgymApi.Application.Features.DietPlans;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.Enum;
 using LgymApi.Application.Features.Exercise;
@@ -16,6 +17,7 @@ using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Training;
+using LgymApi.Application.Features.TraineeNotes;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
@@ -33,6 +35,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IAppConfigService, AppConfigService>();
+        services.AddScoped<IDietPlanService, DietPlanService>();
         services.AddScoped<IEloRegistryService, EloRegistryService>();
         services.AddScoped<IEnumService, EnumService>();
         services.AddScoped<IExerciseService, ExerciseService>();
@@ -40,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGymService, GymService>();
         services.AddScoped<IMainRecordsServiceDependencies, MainRecordsServiceDependencies>();
         services.AddScoped<IMainRecordsService, MainRecordsService>();
+        services.AddScoped<IMeasurementsServiceDependencies, MeasurementsServiceDependencies>();
         services.AddScoped<IMeasurementsService, MeasurementsService>();
         services.AddScoped<IInAppNotificationServiceDependencies, InAppNotificationServiceDependencies>();
         services.AddScoped<IInAppNotificationService, InAppNotificationService>();
@@ -54,9 +58,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IExternalAuthService, ExternalAuthService>();
         services.AddScoped<IGoogleUserRegistrar, GoogleUserRegistrar>();
         services.AddScoped<ILoginResultBuilder, LoginResultBuilder>();
+        services.AddScoped<IReportingServiceDependencies, ReportingServiceDependencies>();
+        services.AddScoped<IReportSubmissionMeasurementWriter, ReportSubmissionMeasurementWriter>();
         services.AddScoped<IReportingService, ReportingService>();
+        services.AddScoped<IRecurringReportAssignmentServiceDependencies, RecurringReportAssignmentServiceDependencies>();
+        services.AddScoped<IRecurringReportAssignmentService, RecurringReportAssignmentService>();
+        services.AddScoped<IExpiredPhotoUploadCleanupService, ExpiredPhotoUploadCleanupService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<ISupplementationService, SupplementationService>();
+        services.AddScoped<ITraineeNoteService, TraineeNoteService>();
         services.AddScoped<ITrainingServiceDependencies, TrainingServiceDependencies>();
         services.AddScoped<ITrainingService, TrainingService>();
         services.AddScoped<ITrainerRelationshipServiceDependencies, TrainerRelationshipServiceDependencies>();

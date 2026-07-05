@@ -17,14 +17,16 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 [ApiController]
 [Route("api/trainer")]
 [Authorize(Policy = AuthConstants.Policies.TrainerAccess)]
-public sealed class TrainerReportingController : ControllerBase
+public sealed partial class TrainerReportingController : ControllerBase
 {
     private readonly IReportingService _reportingService;
+    private readonly IRecurringReportAssignmentService _recurringReportAssignmentService;
     private readonly IMapper _mapper;
 
-    public TrainerReportingController(IReportingService reportingService, IMapper mapper)
+    public TrainerReportingController(IReportingService reportingService, IRecurringReportAssignmentService recurringReportAssignmentService, IMapper mapper)
     {
         _reportingService = reportingService;
+        _recurringReportAssignmentService = recurringReportAssignmentService;
         _mapper = mapper;
     }
 
@@ -183,6 +185,41 @@ public sealed class TrainerReportingController : ControllerBase
         return Ok(_mapper.MapList<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
     }
 
+    [HttpPost("trainees/{traineeId}/report-submissions/{submissionId}/feedback")]
+    [ProducesResponseType(typeof(ReportSubmissionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateSubmissionFeedback([FromRoute] string traineeId, [FromRoute] string submissionId, [FromBody] UpdateReportSubmissionFeedbackRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
+        }
+
+        if (!Id<ReportSubmission>.TryParse(submissionId, out var parsedSubmissionId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        var trainer = HttpContext.GetCurrentUser();
+        var result = await _reportingService.UpdateTrainerFeedbackAsync(
+            trainer!,
+            parsedTraineeId,
+            parsedSubmissionId,
+            new UpdateReportSubmissionFeedbackCommand
+            {
+                TrainerOverallComment = request.TrainerOverallComment,
+                FieldComments = new Dictionary<string, string?>(request.TrainerFieldComments ?? [], StringComparer.OrdinalIgnoreCase)
+            },
+            cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
+    }
+
     private static ReportTemplateFieldCommand MapField(ReportTemplateFieldRequest field)
     {
         return new ReportTemplateFieldCommand
@@ -191,7 +228,9 @@ public sealed class TrainerReportingController : ControllerBase
             Label = field.Label,
             Type = field.Type,
             IsRequired = field.IsRequired,
-            Order = field.Order
+            Order = field.Order,
+            ModuleConfig = field.ModuleConfig
         };
     }
+
 }

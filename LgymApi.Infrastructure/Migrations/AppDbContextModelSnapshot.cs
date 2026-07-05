@@ -263,6 +263,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("ProcessingStartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("SchedulerJobId")
                         .HasColumnType("text");
 
@@ -282,7 +285,158 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasIndex("Status", "NextAttemptAt")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
+                    b.HasIndex("Status", "ProcessingStartedAtUtc")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
                     b.ToTable("CommandEnvelopes", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.DietMeal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("CarbsGrams")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("DietPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("EstimatedCalories")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("FatGrams")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("ProteinGrams")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DietPlanId", "Order");
+
+                    b.ToTable("DietMeals", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.DietPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("CarbsGrams")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("EstimatedCalories")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("FatGrams")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<decimal?>("ProteinGrams")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TraineeId", "IsActive");
+
+                    b.HasIndex("TrainerId", "TraineeId", "CreatedAt");
+
+                    b.ToTable("DietPlans", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.DietPlanHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ChangeDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ChangeType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ChangedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DietPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("DietPlanId", "ChangeDate");
+
+                    b.ToTable("DietPlanHistories", (string)null);
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.EloRegistry", b =>
@@ -516,6 +670,10 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DeliveryKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -548,6 +706,10 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("RecipientId", "CreatedAt", "Id");
+
+                    b.HasIndex("RecipientId", "Type", "DeliveryKey")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE AND \"DeliveryKey\" IS NOT NULL");
 
                     b.ToTable("in_app_notifications", (string)null);
                 });
@@ -740,6 +902,139 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("PasswordResetTokens", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.Photo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Checksum")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReportRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThumbnailStorageKey")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploaderUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ViewType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UploaderUserId");
+
+                    b.HasIndex("OwnerUserId", "CreatedAt");
+
+                    b.HasIndex("ReportRequestId", "ViewType")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("Photos", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.PhotoUploadSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CompletedPhotoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeclaredContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<long>("DeclaredSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("InitiatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReportRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ViewType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedPhotoId");
+
+                    b.HasIndex("InitiatedByUserId");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("OwnerUserId", "CreatedAt");
+
+                    b.HasIndex("ReportRequestId", "ViewType");
+
+                    b.HasIndex("Status", "ExpiresAtUtc");
+
+                    b.ToTable("PhotoUploadSessions", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Plan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -845,6 +1140,73 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("PlanDayExercises", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.RecurringReportAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CurrentReportRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("EndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IntervalUnit")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("IntervalValue")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastRequestCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NextEligibleAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CurrentReportRequestId")
+                        .IsUnique()
+                        .HasFilter("\"CurrentReportRequestId\" IS NOT NULL AND \"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TemplateId");
+
+                    b.HasIndex("TraineeId", "NextEligibleAt");
+
+                    b.HasIndex("TrainerId", "TraineeId", "IsActive");
+
+                    b.ToTable("RecurringReportAssignments", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -862,6 +1224,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("RecurringReportAssignmentId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -883,6 +1248,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RecurringReportAssignmentId")
+                        .IsUnique();
 
                     b.HasIndex("TemplateId");
 
@@ -913,6 +1281,19 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<Guid>("TraineeId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("TrainerFeedbackAddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("TrainerFeedbackReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TrainerFieldCommentsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TrainerOverallComment")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -984,6 +1365,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
+
+                    b.Property<string>("ModuleConfig")
+                        .HasColumnType("text");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
@@ -1280,6 +1664,104 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasIndex("PlanId", "Order", "TimeOfDay");
 
                     b.ToTable("SupplementPlanItems", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TraineeNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LastUpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("VisibleToTrainee")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastUpdatedByUserId");
+
+                    b.HasIndex("TraineeId", "VisibleToTrainee", "LastUpdatedAt");
+
+                    b.HasIndex("TrainerId", "TraineeId", "LastUpdatedAt");
+
+                    b.ToTable("TraineeNotes", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TraineeNoteHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChangeType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ChangedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NewContent")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<string>("PreviousContent")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<Guid>("TraineeNoteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("TraineeNoteId", "ChangedAt");
+
+                    b.ToTable("TraineeNoteHistories", (string)null);
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.TrainerInvitation", b =>
@@ -1686,6 +2168,55 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("CommandEnvelope");
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.DietMeal", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.DietPlan", "DietPlan")
+                        .WithMany("Meals")
+                        .HasForeignKey("DietPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DietPlan");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.DietPlan", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trainee");
+
+                    b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.DietPlanHistory", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.DietPlan", "DietPlan")
+                        .WithMany("HistoryEntries")
+                        .HasForeignKey("DietPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("DietPlan");
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.EloRegistry", b =>
                 {
                     b.HasOne("LgymApi.Domain.Entities.Training", "Training")
@@ -1819,6 +2350,67 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.Photo", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.ReportRequest", "ReportRequest")
+                        .WithMany()
+                        .HasForeignKey("ReportRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Uploader")
+                        .WithMany()
+                        .HasForeignKey("UploaderUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("ReportRequest");
+
+                    b.Navigation("Uploader");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.PhotoUploadSession", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.Photo", "CompletedPhoto")
+                        .WithMany()
+                        .HasForeignKey("CompletedPhotoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "InitiatedByUser")
+                        .WithMany()
+                        .HasForeignKey("InitiatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "OwnerUser")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.ReportRequest", "ReportRequest")
+                        .WithMany()
+                        .HasForeignKey("ReportRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompletedPhoto");
+
+                    b.Navigation("InitiatedByUser");
+
+                    b.Navigation("OwnerUser");
+
+                    b.Navigation("ReportRequest");
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Plan", b =>
                 {
                     b.HasOne("LgymApi.Domain.Entities.User", "User")
@@ -1860,8 +2452,13 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("PlanDay");
                 });
 
-            modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>
+            modelBuilder.Entity("LgymApi.Domain.Entities.RecurringReportAssignment", b =>
                 {
+                    b.HasOne("LgymApi.Domain.Entities.ReportRequest", "CurrentReportRequest")
+                        .WithMany()
+                        .HasForeignKey("CurrentReportRequestId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("LgymApi.Domain.Entities.ReportTemplate", "Template")
                         .WithMany()
                         .HasForeignKey("TemplateId")
@@ -1879,6 +2476,42 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasForeignKey("TrainerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("CurrentReportRequest");
+
+                    b.Navigation("Template");
+
+                    b.Navigation("Trainee");
+
+                    b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.RecurringReportAssignment", "RecurringReportAssignment")
+                        .WithMany()
+                        .HasForeignKey("RecurringReportAssignmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LgymApi.Domain.Entities.ReportTemplate", "Template")
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RecurringReportAssignment");
 
                     b.Navigation("Template");
 
@@ -1986,6 +2619,52 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TraineeNote", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "LastUpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("LastUpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LastUpdatedByUser");
+
+                    b.Navigation("Trainee");
+
+                    b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TraineeNoteHistory", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.TraineeNote", "TraineeNote")
+                        .WithMany("HistoryEntries")
+                        .HasForeignKey("TraineeNoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("TraineeNote");
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.TrainerInvitation", b =>
@@ -2147,6 +2826,13 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("ExecutionLogs");
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.DietPlan", b =>
+                {
+                    b.Navigation("HistoryEntries");
+
+                    b.Navigation("Meals");
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.Exercise", b =>
                 {
                     b.Navigation("ExerciseScores");
@@ -2189,6 +2875,11 @@ namespace LgymApi.Infrastructure.Migrations
             modelBuilder.Entity("LgymApi.Domain.Entities.SupplementPlan", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TraineeNote", b =>
+                {
+                    b.Navigation("HistoryEntries");
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.Training", b =>
