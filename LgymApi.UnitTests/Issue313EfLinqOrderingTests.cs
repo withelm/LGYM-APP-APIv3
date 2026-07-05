@@ -38,6 +38,9 @@ public sealed class Issue313EfLinqOrderingTests
         var exerciseAId = Id<Exercise>.FromBytes(Bytes(11));
         var exerciseBId = Id<Exercise>.FromBytes(Bytes(12));
         var exerciseCId = Id<Exercise>.FromBytes(Bytes(13));
+        var planDayExerciseAId = Id<PlanDayExercise>.FromBytes(Bytes(21));
+        var planDayExerciseBId = Id<PlanDayExercise>.FromBytes(Bytes(22));
+        var planDayExerciseCId = Id<PlanDayExercise>.FromBytes(Bytes(23));
 
         await dbContext.AddRangeAsync(
             new User { Id = userId, Name = "user", Email = "user@example.com", ProfileRank = "Junior 1" },
@@ -46,9 +49,9 @@ public sealed class Issue313EfLinqOrderingTests
             new Exercise { Id = exerciseAId, Name = "Exercise A", BodyPart = BodyParts.Chest },
             new Exercise { Id = exerciseBId, Name = "Exercise B", BodyPart = BodyParts.Back },
             new Exercise { Id = exerciseCId, Name = "Exercise C", BodyPart = BodyParts.Quads },
-            new PlanDayExercise { Id = Id<PlanDayExercise>.FromBytes(Bytes(21)), PlanDayId = planDayId, ExerciseId = exerciseCId, Order = 0, Series = 3, Reps = "8" },
-            new PlanDayExercise { Id = Id<PlanDayExercise>.FromBytes(Bytes(22)), PlanDayId = planDayId, ExerciseId = exerciseAId, Order = 0, Series = 4, Reps = "10" },
-            new PlanDayExercise { Id = Id<PlanDayExercise>.FromBytes(Bytes(23)), PlanDayId = planDayId, ExerciseId = exerciseBId, Order = 0, Series = 5, Reps = "12" });
+            new PlanDayExercise { Id = planDayExerciseCId, PlanDayId = planDayId, ExerciseId = exerciseCId, Order = 0, Series = 3, Reps = "8" },
+            new PlanDayExercise { Id = planDayExerciseAId, PlanDayId = planDayId, ExerciseId = exerciseAId, Order = 0, Series = 4, Reps = "10" },
+            new PlanDayExercise { Id = planDayExerciseBId, PlanDayId = planDayId, ExerciseId = exerciseBId, Order = 0, Series = 5, Reps = "12" });
         await dbContext.SaveChangesAsync();
 
         var repository = new PlanDayExerciseRepository(dbContext);
