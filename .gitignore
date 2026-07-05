@@ -148,3 +148,4 @@ deploy.sh
 **/.sisyphus/
 .evidence/
 **/.evidence/
+.omo
