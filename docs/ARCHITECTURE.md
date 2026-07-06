@@ -9,7 +9,7 @@ This document explains how the backend is structured and how to add a new module
 - `LgymApi.Domain` - core domain types (entities, enums, domain-only helpers).
 - `LgymApi.Infrastructure` - persistence and technical implementations (EF Core `DbContext`, repository implementations, UoW, migrations).
 - `LgymApi.UnitTests` - focused unit tests and architecture guard tests.
-- `LgymApi.IntegrationTests` - end-to-end API tests with `WebApplicationFactory` and in-memory database.
+- `LgymApi.IntegrationTests` - end-to-end API tests with `WebApplicationFactory` and an in-memory fixture today; the initial DB-backed CI scope is documented in `docs/DB_BACKED_INTEGRATION_SCOPE.md`.
 - `LgymApi.Resources` and `LgymApi.Resources.Generator` - localized resources and source generators for strongly-typed message access.
 
 ## 2. Request Flow
@@ -130,6 +130,7 @@ Use this checklist for a new feature module (for example: `Achievements`, `Notif
   - Examples in this repository include UoW commit behavior checks and mapper configuration validation.
 - **Integration tests** validate real HTTP behavior with middleware, auth, serialization, and data persistence.
   - Reuse `IntegrationTestBase` helpers for seeding users, setting auth headers, and creating dependent data.
+- The initial Postgres-backed CI subset is defined in `docs/DB_BACKED_INTEGRATION_SCOPE.md`.
 
 Recommended validation path for new modules:
 
