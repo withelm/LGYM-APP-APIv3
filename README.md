@@ -19,6 +19,7 @@ gyms, measurements, records, scores, and application configuration.
 - `LgymApi.Domain` - domain entities and core model.
 - `LgymApi.Infrastructure` - EF Core persistence, repositories, Unit of Work, migrations.
 - `LgymApi.UnitTests` / `LgymApi.IntegrationTests` - automated tests.
+- Project-level docs live next to each `.csproj` as `<ProjectName>.md`.
 
 ## Requirements
 

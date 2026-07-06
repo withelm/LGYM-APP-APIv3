@@ -29,8 +29,9 @@ When adding, renaming, deleting, or materially changing a `.csproj`:
 1. inspect all project files, e.g. `git ls-files '*.csproj'`;
 2. update `LgymApi.sln` if solution membership changes;
 3. update the project map in this file with why each project exists;
-4. update project references, test commands, workflows, and `Directory.Packages.props` when needed;
-5. avoid inline package versions in `.csproj` files because package versions are centralized.
+4. create or update the matching project doc next to that `.csproj` as `<ProjectName>.md`;
+5. update project references, test commands, workflows, and `Directory.Packages.props` when needed;
+6. avoid inline package versions in `.csproj` files because package versions are centralized.
 
 Final responses for such tasks should mention which `.csproj` files changed and whether this map was updated.
 
