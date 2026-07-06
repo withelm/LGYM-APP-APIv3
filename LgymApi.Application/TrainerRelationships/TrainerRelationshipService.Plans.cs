@@ -18,16 +18,8 @@ public sealed partial class TrainerRelationshipService
             return Result<List<TrainerManagedPlanResult>, AppError>.Failure(ensureResult.Error);
         }
 
-        var traineePlansTask = _planRepository.GetByUserIdAsync(traineeId, cancellationToken);
-        var trainerPlansTask = _planRepository.GetByUserIdAsync(currentTrainer.Id, cancellationToken);
-        await Task.WhenAll(traineePlansTask, trainerPlansTask);
-
-        var plans = traineePlansTask.Result
-            .Concat(trainerPlansTask.Result)
-            .DistinctBy(x => x.Id)
-            .ToList();
-
-        var mapped = plans.OrderByDescending(x => x.CreatedAt).Select(MapPlan).ToList();
+        var traineePlans = await _planRepository.GetByUserIdAsync(traineeId, cancellationToken);
+        var mapped = traineePlans.OrderByDescending(x => x.CreatedAt).Select(MapPlan).ToList();
         return Result<List<TrainerManagedPlanResult>, AppError>.Success(mapped);
     }
 
@@ -102,7 +94,7 @@ public sealed partial class TrainerRelationshipService
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
-        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
         if (trainee == null)
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
@@ -141,7 +133,7 @@ public sealed partial class TrainerRelationshipService
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
-        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
         if (trainee == null)
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
@@ -175,7 +167,7 @@ public sealed partial class TrainerRelationshipService
             return Result<Unit, AppError>.Failure(ensureResult.Error);
         }
 
-        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
         if (trainee == null)
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));

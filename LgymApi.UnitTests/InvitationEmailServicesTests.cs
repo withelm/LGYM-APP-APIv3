@@ -9,6 +9,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
 using EmailNotificationTypes = LgymApi.Domain.Notifications.EmailNotificationTypes;
@@ -233,6 +234,79 @@ public sealed class InvitationEmailServicesTests
          metrics.Sent.Should().Be(0);
          metrics.Failed.Should().Be(0);
          metrics.Retried.Should().Be(0);
+     }
+
+    [Test]
+    public async Task JobHandler_WhenSaveFailsAfterSuccessfulSend_DoesNotThrowOrRetry()
+    {
+        var notification = new NotificationMessage
+        {
+             Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Pending,
+            Attempts = 0,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = Id<CorrelationScope>.New(),
+            Recipient = "trainee@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository { ExistingById = notification };
+        var unitOfWork = new FakeUnitOfWork { ThrowOnSaveCallNumber = 1 };
+        var sender = new FakeEmailSender();
+        var metrics = new FakeEmailMetrics();
+        var handler = new EmailJobHandlerService(
+            repository,
+            new FakeTemplateComposerFactory(new PassThroughComposer()),
+            sender,
+            unitOfWork,
+            metrics,
+            NullLogger<EmailJobHandlerService>.Instance);
+
+         await handler.ProcessAsync(notification.Id);
+
+         sender.SendCalls.Should().Be(1);
+         unitOfWork.SaveChangesCalls.Should().Be(1);
+         notification.Status.Should().Be(EmailNotificationStatus.Sent);
+         notification.SentAt.Should().NotBeNull();
+         metrics.Sent.Should().Be(0);
+          metrics.Failed.Should().Be(0);
+          metrics.Retried.Should().Be(0);
+     }
+
+    [Test]
+    public async Task JobHandler_WhenSaveFailsAfterSuccessfulSend_LogsCriticalWhenEnabled()
+    {
+        var notification = new NotificationMessage
+        {
+             Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Pending,
+            Attempts = 0,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = Id<CorrelationScope>.New(),
+            Recipient = "trainee@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository { ExistingById = notification };
+        var unitOfWork = new FakeUnitOfWork { ThrowOnSaveCallNumber = 1 };
+        var sender = new FakeEmailSender();
+        var metrics = new FakeEmailMetrics();
+        var logger = new CapturingLogger<EmailJobHandlerService>();
+        var handler = new EmailJobHandlerService(
+            repository,
+            new FakeTemplateComposerFactory(new PassThroughComposer()),
+            sender,
+            unitOfWork,
+            metrics,
+            logger);
+
+         await handler.ProcessAsync(notification.Id);
+
+         logger.CriticalMessages.Should().ContainSingle();
+         logger.CriticalMessages[0].Should().Contain("delivered successfully but persisting Sent status failed");
+         sender.SendCalls.Should().Be(1);
+         metrics.Sent.Should().Be(0);
+         metrics.Failed.Should().Be(0);
     }
 
     private sealed class FakeNotificationRepository : IEmailNotificationLogRepository
@@ -296,11 +370,12 @@ public sealed class InvitationEmailServicesTests
     {
         public int SaveChangesCalls { get; private set; }
         public bool ThrowOnSave { get; set; }
+        public int? ThrowOnSaveCallNumber { get; set; }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SaveChangesCalls += 1;
-            if (ThrowOnSave)
+            if (ThrowOnSave || ThrowOnSaveCallNumber == SaveChangesCalls)
             {
                 throw new InvalidOperationException("Simulated concurrent insert failure");
             }
@@ -394,6 +469,34 @@ public sealed class InvitationEmailServicesTests
         public EmailMessage ComposeMessage(EmailNotificationType notificationType, string payloadJson)
         {
             return _composer.Compose(payloadJson);
+        }
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<string> CriticalMessages { get; } = new();
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull
+            => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel)
+            => logLevel == LogLevel.Critical;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == LogLevel.Critical)
+            {
+                CriticalMessages.Add(formatter(state, exception));
+            }
+        }
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose()
+            {
+            }
         }
     }
 }

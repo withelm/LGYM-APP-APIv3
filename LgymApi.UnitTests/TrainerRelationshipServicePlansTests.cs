@@ -20,7 +20,7 @@ namespace LgymApi.UnitTests;
 public sealed class TrainerRelationshipServicePlansTests
 {
     [Test]
-    public async Task GetTraineePlansAsync_ReturnsPlansSortedDescending()
+    public async Task GetTraineePlansAsync_ReturnsOnlyTraineePlansSortedDescending()
     {
         var trainer = CreateUser();
         var trainee = CreateUser();
@@ -38,7 +38,7 @@ public sealed class TrainerRelationshipServicePlansTests
         var result = await service.GetTraineePlansAsync(trainer, trainee.Id);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Select(x => x.Name).Should().Equal("New", "Template", "Old");
+        result.Value.Select(x => x.Name).Should().Equal("New", "Old");
     }
 
     [Test]
@@ -108,6 +108,50 @@ public sealed class TrainerRelationshipServicePlansTests
         result.IsSuccess.Should().BeTrue();
         trainee.PlanId.Should().Be(plan.Id);
         await deps.PlanRepository.Received(1).SetActivePlanAsync(trainee.Id, plan.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task DeleteTraineePlanAsync_WhenAssignedToTrainee_MarksDeletedAndClearsAssignedPlan()
+    {
+        var trainer = CreateUser();
+        var trainee = CreateUser();
+        var plan = new Plan { Id = Id<Plan>.New(), UserId = trainee.Id, Name = "Assigned Plan", IsActive = true };
+        trainee.PlanId = plan.Id;
+
+        var deps = CreateOwnedTraineeDependencies(trainer, trainee);
+        deps.PlanRepository.FindByIdAsync(plan.Id, Arg.Any<CancellationToken>()).Returns(plan);
+        deps.UserRepository.FindByIdAsync(trainee.Id, Arg.Any<CancellationToken>()).Returns(trainee);
+        var service = new TrainerRelationshipService(deps);
+
+        var result = await service.DeleteTraineePlanAsync(trainer, trainee.Id, plan.Id);
+
+        result.IsSuccess.Should().BeTrue();
+        plan.IsDeleted.Should().BeTrue();
+        plan.IsActive.Should().BeFalse();
+        trainee.PlanId.Should().BeNull();
+        await deps.PlanRepository.Received(1).UpdateAsync(plan, Arg.Any<CancellationToken>());
+        await deps.UserRepository.Received(1).UpdateAsync(trainee, Arg.Any<CancellationToken>());
+        await deps.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task UnassignTraineePlanAsync_WhenTraineeExists_ClearsActivePlansAndAssignedPlan()
+    {
+        var trainer = CreateUser();
+        var trainee = CreateUser();
+        trainee.PlanId = Id<Plan>.New();
+
+        var deps = CreateOwnedTraineeDependencies(trainer, trainee);
+        deps.UserRepository.FindByIdAsync(trainee.Id, Arg.Any<CancellationToken>()).Returns(trainee);
+        var service = new TrainerRelationshipService(deps);
+
+        var result = await service.UnassignTraineePlanAsync(trainer, trainee.Id);
+
+        result.IsSuccess.Should().BeTrue();
+        trainee.PlanId.Should().BeNull();
+        await deps.PlanRepository.Received(1).ClearActivePlansAsync(trainee.Id, Arg.Any<CancellationToken>());
+        await deps.UserRepository.Received(1).UpdateAsync(trainee, Arg.Any<CancellationToken>());
+        await deps.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     private static User CreateUser()

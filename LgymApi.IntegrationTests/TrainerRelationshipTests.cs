@@ -1187,6 +1187,16 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{createdPlan.Id}/assign", null);
         assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        SetAuthorizationHeader(trainer.Id);
+        var traineePlansResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/plans");
+        traineePlansResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var traineePlans = await traineePlansResponse.Content.ReadFromJsonAsync<List<TrainerManagedPlanResponse>>();
+        traineePlans.Should().NotBeNull();
+        traineePlans!.Should().ContainSingle();
+        traineePlans.Single().Id.Should().NotBe(createdPlan.Id);
+        traineePlans.Single().Name.Should().Be(createdPlan.Name);
+        traineePlans.Single().IsActive.Should().BeTrue();
+
         SetAuthorizationHeader(trainee.Id);
         var activeResponse = await Client.GetAsync("/api/trainee/plan/active");
         activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
