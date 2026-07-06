@@ -1,81 +1,138 @@
-# LGYM API - Agent Instructions
+# LGYM API - Agent Notes
 
-Root instructions for AI coding agents working in this repository. The repository also contains `AGENTS.md`; keep both files aligned when changing agent instructions.
+## Scope
 
-## What this is
+This file applies repo-wide. Keep `AGENT.md` and `AGENTS.md` aligned. More specific `AGENTS.md` files under subtrees override this file for their subtree.
 
-`LGYM-APP-APIv3` is the backend API for LGYM, a fitness/training application. It serves mobile/web clients and keeps legacy API contracts such as `_id`, `msg`, and `req`, while the implementation follows a layered .NET architecture.
+Main areas:
 
-The API covers authentication, users, roles/permissions, trainer and trainee relationships, invitations, gyms, exercises, plans, training, measurements, records, tutorials, app config, reporting, supplementation, localized messages, background jobs, email/photo infrastructure, and in-app SignalR notifications.
+- API: `LgymApi.Api`
+- Application: `LgymApi.Application`
+- Domain: `LgymApi.Domain`
+- Infrastructure: `LgymApi.Infrastructure`
+- Resources: `LgymApi.Resources` and `LgymApi.Resources.Generator`
+- Background jobs: `LgymApi.BackgroundWorker` and `LgymApi.BackgroundWorker.Common`
+- Data seeding: `LgymApi.DataSeeder`
+- Tests: `LgymApi.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, `LgymApi.DataSeeder.Tests`, `LgymApi.TestUtils`
 
-Before changing architecture, project boundaries, DI, mapping, persistence, or feature layout, read `docs/ARCHITECTURE.md`.
+## Instruction Hierarchy
 
-## What agents should do
+- Root guidance lives here.
+- Project docs live next to each `.csproj` as `<ProjectName>.md`.
+- Architecture overview lives in `docs/ARCHITECTURE.md`.
+- Other docs in `docs/` are supporting references for focused areas.
 
-- Keep changes small, focused, and compatible with existing clients.
-- Preserve the request flow: `Controller -> FluentValidation -> Application Service -> Repository -> Unit of Work -> Mapper -> Middleware`.
-- Keep controllers thin. Put business rules in Application services.
-- Keep repositories stage-only; services own `IUnitOfWork.SaveChangesAsync()` and transactions.
-- Use the custom mapper (`IMapper`, `IMappingProfile`, `MappingContext`), not AutoMapper.
-- Use resource-backed messages from `LgymApi.Resources` for user-facing validation/errors/emails.
-- Run relevant build/tests and state clearly if a command was not run.
+## Documentation Maintenance
 
-## Mandatory `.csproj` purpose rule
+- Keep durable facts in agent-facing docs current when they change.
+- Treat `AGENTS.md` and project docs as anchor documents, not exhaustive manuals.
+- Add concise, factual notes only: entry points, invariants, recurring pitfalls, validation tips, and compatibility risks.
+- Avoid task history and speculative design notes.
+- When a doc links to a focused child document for the area you are changing, read that child document before editing.
+
+## Architecture Documentation
+
+Before changing code in a `.csproj` folder, read that assembly's `<ProjectName>.md` if it exists. Before changing architecture, boundaries, DI, mapping, persistence, feature layout, or cross-project flows, also read `docs/ARCHITECTURE.md`.
+
+For any changed `.csproj` folder, update the matching project doc when responsibilities, dependencies, public APIs, important flows, persistence behavior, messaging, configuration, or cross-project interactions change.
+
+## Mandatory `.csproj` Purpose Rule
 
 Every `.csproj` in the solution must be documented in the project map below.
 
 When adding, renaming, deleting, or materially changing a `.csproj`:
 
-1. inspect all project files, e.g. `git ls-files '*.csproj'`;
+1. inspect all project files, for example with `git ls-files '*.csproj'`;
 2. update `LgymApi.sln` if solution membership changes;
 3. update the project map in this file with why each project exists;
 4. create or update the matching project doc next to that `.csproj` as `<ProjectName>.md`;
 5. update project references, test commands, workflows, and `Directory.Packages.props` when needed;
-6. avoid inline package versions in `.csproj` files because package versions are centralized.
+6. keep package versions centralized instead of adding inline versions to `.csproj` files.
 
 Final responses for such tasks should mention which `.csproj` files changed and whether this map was updated.
 
-## Project purpose map
+## Project Purpose Map
 
 | Project | Why it exists | Rules for agents |
 | --- | --- | --- |
 | `LgymApi.Api/LgymApi.Api.csproj` | ASP.NET Core HTTP entrypoint: controllers, DTO contracts, validators, middleware, mapping profiles, auth, JSON setup, Swagger, CORS, rate limits, SignalR, and composition root. | Keep controllers thin and preserve legacy payload shapes. |
-| `LgymApi.Application/LgymApi.Application.csproj` | Use-case/business orchestration: services, service interfaces, repository abstractions, application models, mapping core, notification abstractions, and app DI. | Own business rules, authorization checks, transactions, and UoW commits here. Do not reference infrastructure implementations. |
-| `LgymApi.Domain/LgymApi.Domain.csproj` | Core domain: entities, enums, strongly typed IDs, domain helpers, and auth/security constants. | Keep free of HTTP/EF/API concerns. Do not reorder or renumber existing enums. |
-| `LgymApi.Infrastructure/LgymApi.Infrastructure.csproj` | Technical implementations: EF Core `DbContext`, migrations, repositories, Unit of Work, storage, email, auth/external services, Hangfire persistence, and infra DI. | Repositories must not call `SaveChangesAsync` or own transactions. Do not register Application services here. |
-| `LgymApi.Resources/LgymApi.Resources.csproj` | Localized `.resx` resources for messages, enums, and emails, with generated strongly typed access. | Add/update English and Polish resources for user-facing text. |
+| `LgymApi.Application/LgymApi.Application.csproj` | Use-case and business orchestration: services, service interfaces, repository abstractions, application models, mapping core, notification abstractions, and application DI. | Own business rules, authorization checks, transactions, and unit-of-work commits here. Do not reference infrastructure implementations. |
+| `LgymApi.Domain/LgymApi.Domain.csproj` | Core domain: entities, enums, strongly typed IDs, domain helpers, and auth/security constants. | Keep free of HTTP, EF, and API concerns. Do not reorder or renumber existing enums. |
+| `LgymApi.Infrastructure/LgymApi.Infrastructure.csproj` | Technical implementations: EF Core `DbContext`, migrations, repositories, unit of work, storage, email, auth/external services, Hangfire persistence, and infrastructure DI. | Repositories must not call `SaveChangesAsync` or own transactions. Do not register application services here. |
+| `LgymApi.Resources/LgymApi.Resources.csproj` | Localized `.resx` resources for messages, enums, and emails, with generated strongly typed access. | Add or update English and Polish resources for user-facing text. |
 | `LgymApi.Resources.Generator/LgymApi.Resources.Generator.csproj` | Roslyn source generator/analyzer used by `LgymApi.Resources`; targets `netstandard2.0` for analyzer compatibility. | Keep deterministic and free of runtime app dependencies. |
 | `LgymApi.BackgroundWorker.Common/LgymApi.BackgroundWorker.Common.csproj` | Shared job contracts, serialization helpers, DI abstractions, and notification/job models. | Put cross-boundary worker contracts here, not HTTP/controller code. |
-| `LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj` | Hangfire/background worker module integrated with Application and Infrastructure services. | Keep jobs idempotent where practical and register worker services in the worker module. |
+| `LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj` | Hangfire/background worker module integrated with application and infrastructure services. | Keep jobs idempotent where practical and register worker services in the worker module. |
 | `LgymApi.DataSeeder/LgymApi.DataSeeder.csproj` | Console executable for deterministic data seeding/bootstrap using infrastructure and EF tooling. | Do not make API startup depend on this executable. |
-| `LgymApi.UnitTests/LgymApi.UnitTests.csproj` | Focused unit tests for service/domain/application/mapping/API/infrastructure units. | Use NUnit, FluentAssertions, NSubstitute, and shared helpers from `LgymApi.TestUtils`. |
-| `LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj` | End-to-end API tests with `WebApplicationFactory`, middleware/auth/serialization/localization, and test persistence. | Reuse integration helpers and validate legacy contract compatibility for changed endpoints. |
-| `LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj` | Roslyn guard tests for dependency direction, ID boundaries, DI placement, feature layout, mapping, enums, and UoW rules. | Treat failures as architecture violations unless an intentional exception is documented. |
+| `LgymApi.UnitTests/LgymApi.UnitTests.csproj` | Focused unit tests for service, domain, application, mapping, API, and infrastructure units. | Use NUnit, FluentAssertions, NSubstitute, and shared helpers from `LgymApi.TestUtils`. |
+| `LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj` | End-to-end API tests with `WebApplicationFactory`, middleware, auth, serialization, localization, and test persistence. | Reuse integration helpers and validate legacy contract compatibility for changed endpoints. |
+| `LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj` | Roslyn guard tests for dependency direction, ID boundaries, DI placement, feature layout, mapping, enums, and unit-of-work rules. | Treat failures as architecture violations unless an intentional exception is documented. |
 | `LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj` | Tests for DataSeeder behavior and seeding assumptions. | Update when seeder inputs, defaults, or seeded entities change. |
-| `LgymApi.TestUtils/LgymApi.TestUtils.csproj` | Shared test builders, fakes, fixtures, and setup helpers; referenced by test projects but not a test project itself. | Centralize reusable fakes/builders here and avoid hidden side effects. |
+| `LgymApi.TestUtils/LgymApi.TestUtils.csproj` | Shared test builders, fakes, fixtures, and setup helpers; referenced by test projects but not a test project itself. | Centralize reusable fakes and builders here and avoid hidden side effects. |
 
-## Critical conventions
+## Environment
 
-- Classes should stay under 300 lines; split large classes instead of hiding size with partial classes.
-- API contracts under `/Contracts/` use raw `string` IDs; Application `*Input` models use strongly typed `Id<T>` where applicable.
+- Windows-only repo.
+- Use Visual Studio and MSBuild 18.x where the task needs IDE/MSBuild behavior.
+- Repo uses the .NET 10 SDK.
+- Initialize submodules before building with `git submodule update --init --recursive` when the task depends on them.
+
+## Build Rules
+
+- Prefer repository-owned entry points and existing solution builds.
+- Restore with `dotnet restore LgymApi.sln`.
+- Sanity-check with `dotnet build LgymApi.sln --configuration Release --no-restore`.
+- Run the API with `dotnet run --project LgymApi.Api`.
+- Do not retarget frameworks or change solution wiring unless the task requires it.
+- Restore normally runs in locked mode; do not update lock state unless the task requires it.
+
+## Test Rules
+
+- Prefer the smallest relevant validation slice first.
+- Use targeted `dotnet test` on affected projects after the relevant build.
+- If you touch E2E code, say clearly whether you only built it or ran it on a prepared workstation.
+- If a build or test cannot be run, say so explicitly.
+
+## Repo-Specific Rules
+
+- Preserve legacy payload shapes such as `_id`, `msg`, and `req`.
+- Keep the request flow: `Controller -> FluentValidation -> Application Service -> Repository -> Unit of Work -> Mapper -> Middleware`.
+- Keep controllers thin; business rules belong in Application services.
+- Keep repositories stage-only; services own `IUnitOfWork.SaveChangesAsync()` and transactions.
+- Use the custom mapper (`IMapper`, `IMappingProfile`, `MappingContext`), not AutoMapper.
+- Use resource-backed messages from `LgymApi.Resources` for user-facing validation, errors, and emails.
+- Register Application services in `LgymApi.Application/ServiceCollectionExtensions.cs` and Infrastructure services and repositories in `LgymApi.Infrastructure/ServiceCollectionExtensions.cs`.
 - `AuthConstants` is the canonical source for roles, permissions, policies, and claim names.
-- Register Application services in `LgymApi.Application/ServiceCollectionExtensions.cs` and Infrastructure services/repositories in `LgymApi.Infrastructure/ServiceCollectionExtensions.cs`.
 - Do not migrate to ASP.NET Identity unless a new ADR explicitly supersedes ADR-005.
-- Do not remove idempotency/uniqueness constraints in `AppDbContext` without an explicit replacement.
+- Do not remove idempotency or uniqueness constraints in `AppDbContext` without an explicit replacement.
+- Follow the repository's `.editorconfig` and existing code style.
 
-## Common commands
+## Change Guidance
 
-```bash
+- Keep edits focused.
+- Prefer fixing shared behavior in `common`-style shared areas only when the issue spans multiple layers or projects.
+- Do not broaden a task into opportunistic refactors unless explicitly asked.
+- Avoid destructive cleanup commands unless explicitly requested.
+
+## Validation Expectations
+
+- Validate the smallest relevant slice first.
+- If you change build, packaging, installer, or project wiring, sanity-check the affected solution build.
+- If you touch tests or E2E code, state clearly whether the suite was built or run.
+- Run relevant build and tests, and state clearly if a command was not run.
+
+## Common Commands
+
+```powershell
+git submodule update --init --recursive
 dotnet restore LgymApi.sln
 dotnet build LgymApi.sln --configuration Release --no-restore
 dotnet run --project LgymApi.Api
 ```
 
-```bash
+```powershell
 dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build
 dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build
 dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build
 dotnet test LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj --configuration Release --no-build
 ```
-
-CI restores, builds, runs unit/architecture/integration/DataSeeder tests, and runs SonarCloud coverage for the main test projects.
