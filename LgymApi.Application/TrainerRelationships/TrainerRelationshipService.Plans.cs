@@ -94,7 +94,7 @@ public sealed partial class TrainerRelationshipService
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
-        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
         if (trainee == null)
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
@@ -133,7 +133,7 @@ public sealed partial class TrainerRelationshipService
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
-        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
         if (trainee == null)
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
@@ -167,7 +167,7 @@ public sealed partial class TrainerRelationshipService
             return Result<Unit, AppError>.Failure(ensureResult.Error);
         }
 
-        var trainee = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)traineeId, cancellationToken);
+        var trainee = await _userRepository.FindByIdAsync(traineeId, cancellationToken);
         if (trainee == null)
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));

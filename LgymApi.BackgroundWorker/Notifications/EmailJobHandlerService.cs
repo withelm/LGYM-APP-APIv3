@@ -104,10 +104,13 @@ public sealed class EmailJobHandlerService : IEmailJobHandler
             }
             catch (Exception persistenceException)
             {
-                _logger.LogCritical(
-                    persistenceException,
-                    "Email notification {NotificationId} was delivered successfully but persisting Sent status failed. Suppressing retry to avoid duplicate email delivery.",
-                    notificationId);
+                if (_logger.IsEnabled(LogLevel.Critical))
+                {
+                    _logger.LogCritical(
+                        persistenceException,
+                        "Email notification {NotificationId} was delivered successfully but persisting Sent status failed. Suppressing retry to avoid duplicate email delivery.",
+                        notificationId);
+                }
                 return;
             }
 
