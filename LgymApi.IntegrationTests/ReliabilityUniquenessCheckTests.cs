@@ -15,6 +15,7 @@ namespace LgymApi.IntegrationTests;
 /// This is a critical prerequisite for T12: these tests MUST pass to guarantee
 /// that reliability tests can actually verify uniqueness enforcement.
 /// </summary>
+[Category(TestCategories.DbBacked)]
 [TestFixture]
 public class ReliabilityUniquenessCheckTests : IntegrationTestBase
 {

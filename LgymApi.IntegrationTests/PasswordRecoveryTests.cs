@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.IntegrationTests;
 
+[Category(TestCategories.DbBacked)]
 [TestFixture]
 public sealed class PasswordRecoveryTests : IntegrationTestBase
 {

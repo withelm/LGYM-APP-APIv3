@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.IntegrationTests.InAppNotifications;
 
+[Category(TestCategories.DbBacked)]
 [TestFixture]
 public sealed class InAppNotificationApiTests : IntegrationTestBase
 {

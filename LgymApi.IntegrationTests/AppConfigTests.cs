@@ -7,6 +7,7 @@ using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.IntegrationTests;
 
+[Category(TestCategories.DbBacked)]
 [TestFixture]
 public sealed class AppConfigTests : IntegrationTestBase
 {
