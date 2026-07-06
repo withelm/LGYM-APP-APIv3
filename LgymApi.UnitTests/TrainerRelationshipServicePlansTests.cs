@@ -20,7 +20,7 @@ namespace LgymApi.UnitTests;
 public sealed class TrainerRelationshipServicePlansTests
 {
     [Test]
-    public async Task GetTraineePlansAsync_ReturnsPlansSortedDescending()
+    public async Task GetTraineePlansAsync_ReturnsOnlyTraineePlansSortedDescending()
     {
         var trainer = CreateUser();
         var trainee = CreateUser();
@@ -38,7 +38,7 @@ public sealed class TrainerRelationshipServicePlansTests
         var result = await service.GetTraineePlansAsync(trainer, trainee.Id);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Select(x => x.Name).Should().Equal("New", "Template", "Old");
+        result.Value.Select(x => x.Name).Should().Equal("New", "Old");
     }
 
     [Test]
