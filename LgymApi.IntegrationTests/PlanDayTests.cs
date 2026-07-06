@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.IntegrationTests;
 
+[Category(TestCategories.DbBacked)]
 [TestFixture]
 public sealed class PlanDayTests : IntegrationTestBase
 {

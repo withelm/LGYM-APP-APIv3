@@ -8,6 +8,7 @@ using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.IntegrationTests;
 
+[Category(TestCategories.DbBacked)]
 [TestFixture]
 public sealed class MeasurementsTests : IntegrationTestBase
 {

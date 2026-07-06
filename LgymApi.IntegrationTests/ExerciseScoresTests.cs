@@ -6,6 +6,7 @@ using LgymApi.Domain.Enums;
 
 namespace LgymApi.IntegrationTests;
 
+[Category(TestCategories.DbBacked)]
 [TestFixture]
 public sealed class ExerciseScoresTests : IntegrationTestBase
 {

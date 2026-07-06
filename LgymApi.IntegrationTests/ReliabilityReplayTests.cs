@@ -14,6 +14,7 @@ namespace LgymApi.IntegrationTests;
 /// T12 Reliability Tests - Replay Detection and Conflict Handling
 /// Tests same-key replay safety, same-key-different-body conflicts, and idempotency record persistence.
 /// </summary>
+[Category(TestCategories.DbBacked)]
 [TestFixture]
 public sealed class ReliabilityReplayTests : IntegrationTestBase
 {

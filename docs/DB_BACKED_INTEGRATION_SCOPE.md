@@ -58,5 +58,7 @@ The full main-branch DB-backed set should include the PR subset plus the additio
 ## Notes
 
 - This scope intentionally stays at the scenario level rather than the workflow level.
-- Later issues can attach traits, containerized database bootstrap, and workflow selectors to the scenarios defined here.
+- The NUnit category used for these scenarios is `DbBacked` (`TestCategories.DbBacked` in `LgymApi.IntegrationTests`).
+- Run the subset locally with `dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --filter TestCategory=DbBacked`.
+- Later issues can attach containerized database bootstrap and workflow selectors to the scenarios defined here.
 - If a future change adds or removes a scenario from the DB-backed stage, update this document first.

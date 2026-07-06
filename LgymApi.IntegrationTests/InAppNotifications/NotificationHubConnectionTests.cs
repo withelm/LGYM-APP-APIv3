@@ -5,6 +5,7 @@ using FluentAssertions;
 
 namespace LgymApi.IntegrationTests.InAppNotifications;
 
+[Category(TestCategories.DbBacked)]
 [TestFixture]
 public sealed class NotificationHubConnectionTests : IntegrationTestBase
 {
