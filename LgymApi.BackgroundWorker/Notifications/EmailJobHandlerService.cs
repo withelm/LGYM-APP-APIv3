@@ -97,7 +97,20 @@ public sealed class EmailJobHandlerService : IEmailJobHandler
             notification.Status = EmailNotificationStatus.Sent;
             notification.SentAt = DateTimeOffset.UtcNow;
             notification.LastError = null;
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception persistenceException)
+            {
+                _logger.LogCritical(
+                    persistenceException,
+                    "Email notification {NotificationId} was delivered successfully but persisting Sent status failed. Suppressing retry to avoid duplicate email delivery.",
+                    notificationId);
+                return;
+            }
+
             _metrics.RecordSent(notification.Type);
             _logger.LogInformation(
                 "Email notification {NotificationId} sent successfully on attempt {Attempt}.",

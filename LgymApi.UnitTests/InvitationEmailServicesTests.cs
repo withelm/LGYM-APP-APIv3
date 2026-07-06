@@ -233,6 +233,43 @@ public sealed class InvitationEmailServicesTests
          metrics.Sent.Should().Be(0);
          metrics.Failed.Should().Be(0);
          metrics.Retried.Should().Be(0);
+     }
+
+    [Test]
+    public async Task JobHandler_WhenSaveFailsAfterSuccessfulSend_DoesNotThrowOrRetry()
+    {
+        var notification = new NotificationMessage
+        {
+             Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Pending,
+            Attempts = 0,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = Id<CorrelationScope>.New(),
+            Recipient = "trainee@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository { ExistingById = notification };
+        var unitOfWork = new FakeUnitOfWork { ThrowOnSaveCallNumber = 1 };
+        var sender = new FakeEmailSender();
+        var metrics = new FakeEmailMetrics();
+        var handler = new EmailJobHandlerService(
+            repository,
+            new FakeTemplateComposerFactory(new PassThroughComposer()),
+            sender,
+            unitOfWork,
+            metrics,
+            NullLogger<EmailJobHandlerService>.Instance);
+
+         await handler.ProcessAsync(notification.Id);
+
+         sender.SendCalls.Should().Be(1);
+         unitOfWork.SaveChangesCalls.Should().Be(1);
+         notification.Status.Should().Be(EmailNotificationStatus.Sent);
+         notification.SentAt.Should().NotBeNull();
+         metrics.Sent.Should().Be(0);
+         metrics.Failed.Should().Be(0);
+         metrics.Retried.Should().Be(0);
     }
 
     private sealed class FakeNotificationRepository : IEmailNotificationLogRepository
@@ -296,11 +333,12 @@ public sealed class InvitationEmailServicesTests
     {
         public int SaveChangesCalls { get; private set; }
         public bool ThrowOnSave { get; set; }
+        public int? ThrowOnSaveCallNumber { get; set; }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SaveChangesCalls += 1;
-            if (ThrowOnSave)
+            if (ThrowOnSave || ThrowOnSaveCallNumber == SaveChangesCalls)
             {
                 throw new InvalidOperationException("Simulated concurrent insert failure");
             }
