@@ -61,5 +61,5 @@ The full main-branch DB-backed set should include the PR subset plus the additio
 - The NUnit category used for these scenarios is `DbBacked` (`TestCategories.DbBacked` in `LgymApi.IntegrationTests`).
 - Run the subset locally with `dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --filter TestCategory=DbBacked`.
 - CI runtime targets are split as follows: pull requests run the fast subset (`UserSessionIntegrationTests` and `ReliabilityReplayTests`), while `main` pushes and the nightly schedule run the full `DbBacked` set.
-- Later issues can attach containerized database bootstrap and workflow selectors to the scenarios defined here.
+- Before the DB-backed test step, CI runs `LgymApi.DataSeeder` against the Postgres service so migrations and required seed data are applied deterministically.
 - If a future change adds or removes a scenario from the DB-backed stage, update this document first.

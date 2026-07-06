@@ -9,7 +9,7 @@ This document explains how the backend is structured and how to add a new module
 - `LgymApi.Domain` - core domain types (entities, enums, domain-only helpers).
 - `LgymApi.Infrastructure` - persistence and technical implementations (EF Core `DbContext`, repository implementations, UoW, migrations).
 - `LgymApi.UnitTests` - focused unit tests and architecture guard tests.
-- `LgymApi.IntegrationTests` - end-to-end API tests with `WebApplicationFactory` and an in-memory fixture today; the initial DB-backed CI scope is documented in `docs/DB_BACKED_INTEGRATION_SCOPE.md`.
+- `LgymApi.IntegrationTests` - end-to-end API tests with `WebApplicationFactory`; DB-backed scenarios are categorized with `TestCategories.DbBacked` and bootstrapped in CI before execution.
 - `LgymApi.Resources` and `LgymApi.Resources.Generator` - localized resources and source generators for strongly-typed message access.
 
 ## 2. Request Flow
