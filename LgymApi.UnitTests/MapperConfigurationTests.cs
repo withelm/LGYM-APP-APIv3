@@ -1,4 +1,5 @@
 using FluentAssertions;
+using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api;
 using LgymApi.Api.Mapping.Profiles;
@@ -73,7 +74,7 @@ public sealed class MapperConfigurationTests
         {
             Name = "Weighted pull-up",
             BodyPart = BodyParts.Back,
-            EloFormula = ExerciseEloFormula.PullupWeighted.ToString(),
+            EloFormula = new LookupItemVm { Id = ExerciseEloFormula.PullupWeighted.ToString(), DisplayName = "Pull-up weighted" },
             Description = "test",
             Image = "image"
         };
@@ -99,7 +100,7 @@ public sealed class MapperConfigurationTests
         {
             Name = "Weighted pull-up",
             BodyPart = BodyParts.Back,
-            EloFormula = ExerciseEloFormula.PullupWeighted.ToString(),
+            EloFormula = new LookupItemVm { Id = ExerciseEloFormula.PullupWeighted.ToString(), DisplayName = "Pull-up weighted" },
             Description = "test",
             Image = "image"
         };

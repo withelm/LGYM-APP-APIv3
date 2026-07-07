@@ -1,4 +1,5 @@
 using FluentValidation;
+using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
@@ -34,7 +35,17 @@ public sealed class ExerciseExtendedFormDtoValidator : AbstractValidator<Exercis
             .WithMessage(Messages.BodyPartRequired);
 
         RuleFor(x => x.EloFormula)
-            .Must(value => string.IsNullOrWhiteSpace(value) || global::System.Enum.TryParse<ExerciseEloFormula>(value, ignoreCase: true, out _))
+            .Must(value => IsValidFormula(value))
             .WithMessage(Messages.InvalidExerciseEloFormula);
+    }
+
+    private static bool IsValidFormula(LookupItemVm? value)
+    {
+        if (value == null || string.IsNullOrWhiteSpace(value.Id))
+        {
+            return true;
+        }
+
+        return global::System.Enum.TryParse<ExerciseEloFormula>(value.Id, ignoreCase: true, out _);
     }
 }

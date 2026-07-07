@@ -1,4 +1,5 @@
 using LgymApi.Api.Extensions;
+using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.Enum;
 using LgymApi.Api.Middleware;
@@ -100,14 +101,15 @@ public sealed class ExerciseProfile : IMappingProfile
         });
     }
 
-    private static ExerciseEloFormula? ParseExerciseEloFormula(string? eloFormula)
+    private static ExerciseEloFormula? ParseExerciseEloFormula(LookupItemVm? eloFormula)
     {
-        if (string.IsNullOrWhiteSpace(eloFormula))
+        var formulaId = eloFormula?.Id;
+        if (string.IsNullOrWhiteSpace(formulaId))
         {
             return null;
         }
 
-        return global::System.Enum.TryParse<ExerciseEloFormula>(eloFormula, ignoreCase: true, out var parsed)
+        return global::System.Enum.TryParse<ExerciseEloFormula>(formulaId, ignoreCase: true, out var parsed)
             ? parsed
             : null;
     }
