@@ -71,6 +71,9 @@ jobs:
         run: printf 'n\nn\n' | dotnet run --project LgymApi.DataSeeder/LgymApi.DataSeeder.csproj --configuration Release --no-build --no-restore
 
       - name: Run DB-backed integration checks
+        env:
+          LGYM_INTEGRATION_DB_PROVIDER: Postgres
+          ConnectionStrings__Postgres: Host=localhost;Port=5433;Database=LGYM-APP;Username=postgres;Password=REPLACE_ME;TimeZone=Europe/Warsaw
         run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=integration-tests.trx" --results-directory ./TestResults/Integration --filter "$DB_BACKED_INTEGRATION_FILTER"
 
       - name: Run DataSeeder tests

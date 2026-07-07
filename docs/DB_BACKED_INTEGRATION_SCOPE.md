@@ -63,3 +63,26 @@ The full main-branch DB-backed set should include the PR subset plus the additio
 - CI runtime targets are split as follows: pull requests run the fast subset (`UserSessionIntegrationTests` and `ReliabilityReplayTests`), while `main` pushes and the nightly schedule run the full `DbBacked` set.
 - Before the DB-backed test step, CI runs `LgymApi.DataSeeder` against the Postgres service so migrations and required seed data are applied deterministically.
 - If a future change adds or removes a scenario from the DB-backed stage, update this document first.
+
+## Local Development
+
+- Prerequisites: PostgreSQL 16 reachable on `localhost:5433` with the `postgres` user and `REPLACE_ME` password, or an override supplied through `ConnectionStrings__Postgres`.
+- Enable the Postgres harness with `LGYM_INTEGRATION_DB_PROVIDER=Postgres`.
+- Run the DB-backed subset with `dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --filter TestCategory=DbBacked`.
+- If you also want the CI bootstrap step locally, run `dotnet run --project LgymApi.DataSeeder/LgymApi.DataSeeder.csproj --configuration Release --no-build --no-restore` with `LGYM_SEEDER_BASE_PATH` pointing at the repo root.
+- Troubleshooting: verify the Postgres service is healthy before starting the tests, and clear any stale `ConnectionStrings__Postgres` override if the harness connects to the wrong server.
+
+## Flaky Test Policy
+
+- CI does not auto-retry DB-backed failures.
+- The primary owner is the repository owner until a dedicated CI owner is assigned; the last engineer who touched the failing test or workflow owns the first triage pass.
+- If the same test fails 3 times with the same signature in 7 days, remove its `DbBacked` tag from the PR subset until the root cause is fixed.
+- Quarantined tests stay documented here and only remain in the full main/nightly set when the failure is understood and explicitly accepted.
+
+## SLA And Monitoring
+
+- PR subset target: under 20 minutes wall clock.
+- Main/nightly full-set target: under 45 minutes wall clock.
+- Stability target: at least 95% green runs over the trailing 14 days, excluding quarantined failures.
+- Monitor GitHub Actions run history and the uploaded TRX summaries from `.github/workflows/pr-and-main-tests.yml`.
+- Review cadence: weekly, and immediately after two consecutive failures or any SLA breach.

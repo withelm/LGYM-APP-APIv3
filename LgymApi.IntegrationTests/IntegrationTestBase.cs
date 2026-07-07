@@ -50,11 +50,18 @@ public abstract class IntegrationTestBase : IDisposable
     public void TearDown()
     {
         Client.Dispose();
-        
+
+        if (Factory.UsesPostgresDatabase)
+        {
+            Factory.Dispose();
+            Factory.DropPostgresDatabase();
+            return;
+        }
+
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.EnsureDeleted();
-        
+
         Factory.Dispose();
     }
 
