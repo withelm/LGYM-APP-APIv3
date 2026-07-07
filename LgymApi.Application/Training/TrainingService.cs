@@ -1,7 +1,9 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Application.Common.Training.Elo;
 using LgymApi.Application.Units;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Features.Training;
 
@@ -17,6 +19,7 @@ public sealed partial class TrainingService : ITrainingService
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IReadOnlyDictionary<ExerciseEloFormula, IExerciseEloCalculator> _exerciseEloCalculators;
 
     public TrainingService(ITrainingServiceDependencies dependencies)
     {
@@ -30,5 +33,6 @@ public sealed partial class TrainingService : ITrainingService
         _eloRepository = dependencies.EloRepository;
         _rankService = dependencies.RankService;
         _unitOfWork = dependencies.UnitOfWork;
+        _exerciseEloCalculators = dependencies.ExerciseEloCalculators.ToDictionary(calculator => calculator.Formula);
     }
 }

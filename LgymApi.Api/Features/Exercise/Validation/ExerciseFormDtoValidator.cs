@@ -19,3 +19,22 @@ public class ExerciseFormDtoValidator : AbstractValidator<ExerciseFormDto>
             .WithMessage(Messages.BodyPartRequired);
     }
 }
+
+public sealed class ExerciseExtendedFormDtoValidator : AbstractValidator<ExerciseExtendedFormDto>
+{
+    public ExerciseExtendedFormDtoValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .WithMessage(Messages.NameIsRequired);
+
+        RuleFor(x => x.BodyPart)
+            .IsInEnum()
+            .NotEqual(BodyParts.Unknown)
+            .WithMessage(Messages.BodyPartRequired);
+
+        RuleFor(x => x.EloFormula)
+            .IsInEnum()
+            .When(x => x.EloFormula.HasValue);
+    }
+}

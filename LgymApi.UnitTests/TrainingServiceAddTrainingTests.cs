@@ -1,12 +1,15 @@
 using FluentAssertions;
 using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Training.Elo;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Services;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using NSubstitute;
@@ -56,6 +59,13 @@ public sealed class TrainingServiceAddTrainingTests
         _deps.EloRepository.Returns(_eloRepository);
         _deps.RankService.Returns(_rankService);
         _deps.UnitOfWork.Returns(_unitOfWork);
+        _deps.ExerciseEloCalculators.Returns(new IExerciseEloCalculator[]
+        {
+            new StandardExerciseEloCalculator(),
+            new StrengthWeightedExerciseEloCalculator(),
+            new VolumeWeightedExerciseEloCalculator(),
+            new PullupWeightedExerciseEloCalculator()
+        });
 
         _service = new TrainingService(_deps);
     }
@@ -232,5 +242,195 @@ public sealed class TrainingServiceAddTrainingTests
 
         // Verify transaction was rolled back
         await transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Should_UseDifferentEloGain_ForDifferentExerciseProfiles()
+    {
+        var userId = Id<User>.New();
+        var gymId = Id<Gym>.New();
+        var planDayId = Id<PlanDay>.New();
+        var exerciseId = Id<Exercise>.New();
+
+        var user = new User
+        {
+            Id = userId,
+            Name = "TestUser",
+            Email = "test@example.com",
+            ProfileRank = "Junior 1"
+        };
+
+        var gym = new Gym { Id = gymId, UserId = userId, Name = "TestGym" };
+
+        var exercises = new List<TrainingExerciseInput>
+        {
+            new() { ExerciseId = exerciseId, Series = 1, Reps = 10, Weight = 80, Unit = WeightUnits.Kilograms }
+        };
+
+        var input = new AddTrainingInput(gymId, planDayId, DateTime.UtcNow, exercises);
+        var previousTraining = new Training
+        {
+            Id = Id<Training>.New(),
+            UserId = userId,
+            TypePlanDayId = planDayId,
+            GymId = gymId
+        };
+
+        var previousScore = new ExerciseScore
+        {
+            Id = Id<ExerciseScore>.New(),
+            ExerciseId = exerciseId,
+            UserId = userId,
+            Reps = 5,
+            Series = 1,
+            Weight = new Weight(80, WeightUnits.Kilograms),
+            TrainingId = previousTraining.Id,
+            Training = previousTraining
+        };
+
+        _userRepository.FindByIdAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns(user);
+        _gymRepository.FindByIdAsync(Arg.Any<Id<Gym>>(), Arg.Any<CancellationToken>())
+            .Returns(gym);
+        _exerciseScoreRepository.GetByUserAndExercisesAsync(Arg.Any<Id<User>>(), Arg.Any<List<Id<Exercise>>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ExerciseScore> { previousScore });
+        _eloRepository.GetLatestEntryAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns(new EloRegistry { Id = Id<EloRegistry>.New(), UserId = userId, Date = DateTimeOffset.UtcNow, Elo = 1000 });
+        async Task<int> RunProfileAsync(ExerciseEloFormula formula)
+        {
+            var transaction = Substitute.For<IUnitOfWorkTransaction>();
+            _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
+                .Returns(transaction);
+            var service = new TrainingService(new SuccessfulTrainingServiceDependencies(
+                _userRepository,
+                _gymRepository,
+                _trainingRepository,
+                _exerciseRepository,
+                _exerciseScoreRepository,
+                _trainingExerciseScoreRepository,
+                _commandDispatcher,
+                _eloRepository,
+                new FixedRankService(),
+                _unitOfWork,
+                new IExerciseEloCalculator[]
+                {
+                    new StandardExerciseEloCalculator(),
+                    new StrengthWeightedExerciseEloCalculator(),
+                    new VolumeWeightedExerciseEloCalculator(),
+                    new PullupWeightedExerciseEloCalculator()
+                }));
+
+            _exerciseRepository.GetByIdsAsync(Arg.Any<List<Id<Exercise>>>(), Arg.Any<CancellationToken>())
+                .Returns(new List<Exercise>
+                {
+                    new()
+                    {
+                        Id = exerciseId,
+                        Name = "Machine Pullup",
+                        EloFormula = formula
+                    }
+                });
+
+            _trainingRepository.AddAsync(Arg.Any<Training>(), Arg.Any<CancellationToken>())
+                .Returns(Task.CompletedTask);
+            _exerciseScoreRepository.AddRangeAsync(Arg.Any<IEnumerable<ExerciseScore>>(), Arg.Any<CancellationToken>())
+                .Returns(Task.CompletedTask);
+            _trainingExerciseScoreRepository.AddRangeAsync(Arg.Any<IEnumerable<TrainingExerciseScore>>(), Arg.Any<CancellationToken>())
+                .Returns(Task.CompletedTask);
+            _eloRepository.AddAsync(Arg.Any<EloRegistry>(), Arg.Any<CancellationToken>())
+                .Returns(Task.CompletedTask);
+            _userRepository.UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+                .Returns(Task.CompletedTask);
+            _commandDispatcher.EnqueueAsync(Arg.Any<TrainingCompletedCommand>())
+                .Returns(Task.CompletedTask);
+            _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(1));
+
+            var result = await service.AddTrainingAsync(userId, input);
+
+            result.IsSuccess.Should().BeTrue();
+            await transaction.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+            return result.Value.GainElo;
+        }
+
+        var standardGain = await RunProfileAsync(ExerciseEloFormula.Standard);
+        var strengthGain = await RunProfileAsync(ExerciseEloFormula.StrengthWeighted);
+        var volumeGain = await RunProfileAsync(ExerciseEloFormula.VolumeWeighted);
+
+        strengthGain.Should().BeLessThan(standardGain);
+        standardGain.Should().BeLessThan(volumeGain);
+    }
+
+    [Test]
+    public void Should_RewardLowerWeight_ForPullupProfile()
+    {
+        var calculator = new PullupWeightedExerciseEloCalculator();
+
+        var lowerWeightGain = calculator.Calculate(new ExerciseEloCalculationInput(
+            PreviousWeight: 80,
+            PreviousReps: 8,
+            CurrentWeight: 60,
+            CurrentReps: 8));
+
+        var higherWeightGain = calculator.Calculate(new ExerciseEloCalculationInput(
+            PreviousWeight: 80,
+            PreviousReps: 8,
+            CurrentWeight: 100,
+            CurrentReps: 8));
+
+        lowerWeightGain.Should().BeGreaterThan(higherWeightGain);
+    }
+
+    private sealed class FixedRankService : IRankService
+    {
+        public IReadOnlyList<RankDefinition> GetRanks() => [new RankDefinition { Name = "Junior 1", NeedElo = 0 }];
+
+        public RankDefinition GetCurrentRank(Elo elo) => new RankDefinition { Name = "Junior 1", NeedElo = 0 };
+
+        public RankDefinition? GetNextRank(string currentRankName)
+            => currentRankName == "Junior 1"
+                ? new RankDefinition { Name = "Junior 2", NeedElo = 1001 }
+                : null;
+    }
+
+    private sealed class SuccessfulTrainingServiceDependencies : ITrainingServiceDependencies
+    {
+        public SuccessfulTrainingServiceDependencies(
+            IUserRepository userRepository,
+            IGymRepository gymRepository,
+            ITrainingRepository trainingRepository,
+            IExerciseRepository exerciseRepository,
+            IExerciseScoreRepository exerciseScoreRepository,
+            ITrainingExerciseScoreRepository trainingExerciseScoreRepository,
+            ICommandDispatcher commandDispatcher,
+            IEloRegistryRepository eloRepository,
+            IRankService rankService,
+            IUnitOfWork unitOfWork,
+            IReadOnlyCollection<IExerciseEloCalculator> exerciseEloCalculators)
+        {
+            UserRepository = userRepository;
+            GymRepository = gymRepository;
+            TrainingRepository = trainingRepository;
+            ExerciseRepository = exerciseRepository;
+            ExerciseScoreRepository = exerciseScoreRepository;
+            TrainingExerciseScoreRepository = trainingExerciseScoreRepository;
+            CommandDispatcher = commandDispatcher;
+            EloRepository = eloRepository;
+            RankService = rankService;
+            UnitOfWork = unitOfWork;
+            ExerciseEloCalculators = exerciseEloCalculators;
+        }
+
+        public IUserRepository UserRepository { get; }
+        public IGymRepository GymRepository { get; }
+        public ITrainingRepository TrainingRepository { get; }
+        public IExerciseRepository ExerciseRepository { get; }
+        public IExerciseScoreRepository ExerciseScoreRepository { get; }
+        public ITrainingExerciseScoreRepository TrainingExerciseScoreRepository { get; }
+        public ICommandDispatcher CommandDispatcher { get; }
+        public IEloRegistryRepository EloRepository { get; }
+        public IRankService RankService { get; }
+        public IUnitOfWork UnitOfWork { get; }
+        public IReadOnlyCollection<IExerciseEloCalculator> ExerciseEloCalculators { get; }
     }
 }

@@ -130,6 +130,9 @@ public sealed class AppDbContext : DbContext
         {
             entity.ToTable("Exercises");
             entity.Property(e => e.BodyPart).HasConversion<string>();
+            entity.Property(e => e.EloFormula)
+                .HasConversion<string>()
+                .HasDefaultValue(ExerciseEloFormula.Standard);
         });
 
         modelBuilder.Entity<ExerciseTranslation>(entity =>

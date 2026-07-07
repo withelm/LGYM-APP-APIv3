@@ -17,6 +17,7 @@ using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.Supplementation;
 using LgymApi.Application.Features.Training;
+using LgymApi.Application.Common.Training.Elo;
 using LgymApi.Application.Features.TraineeNotes;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.User;
@@ -69,6 +70,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITraineeNoteService, TraineeNoteService>();
         services.AddScoped<ITrainingServiceDependencies, TrainingServiceDependencies>();
         services.AddScoped<ITrainingService, TrainingService>();
+        services.AddScoped<IExerciseEloCalculator, StandardExerciseEloCalculator>();
+        services.AddScoped<IExerciseEloCalculator, StrengthWeightedExerciseEloCalculator>();
+        services.AddScoped<IExerciseEloCalculator, VolumeWeightedExerciseEloCalculator>();
+        services.AddScoped<IExerciseEloCalculator, PullupWeightedExerciseEloCalculator>();
         services.AddScoped<ITrainerRelationshipServiceDependencies, TrainerRelationshipServiceDependencies>();
         services.AddScoped<ITrainerRelationshipService, TrainerRelationshipService>();
         services.AddScoped<IUserServiceDependencies, UserServiceDependencies>();

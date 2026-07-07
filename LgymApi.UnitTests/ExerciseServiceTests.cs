@@ -108,8 +108,9 @@ public sealed class ExerciseServiceTests
             new NoOpExerciseScoreRepository(),
             new NoOpUnitOfWork());
 
+        var currentUser = new User { Id = Id<User>.New(), Name = "CurrentUser", Email = "current@example.com" };
         var input = new UpdateExerciseInput(Id<Exercise>.Empty, "Bench Press", BodyParts.Chest, null, null);
-        var result = await service.UpdateExerciseAsync(input);
+        var result = await service.UpdateExerciseAsync(currentUser, input);
         
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidExerciseError>();

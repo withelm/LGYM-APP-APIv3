@@ -41,7 +41,60 @@ public sealed class ExerciseTests : IntegrationTestBase
         var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Name == "Bench Press" && e.UserId == null);
         exercise.Should().NotBeNull();
         exercise!.BodyPart.ToString().Should().Be("Chest");
+        exercise.EloFormula.Should().Be(ExerciseEloFormula.Standard);
         exercise.IsDeleted.Should().BeFalse();
+    }
+
+    [Test]
+    public async Task AddExerciseWithFormula_AsAuthorizedUser_PersistsFormula()
+    {
+        var user = await SeedAdminAsync();
+        SetAuthorizationHeader(user.Id);
+
+        var request = new
+        {
+            name = "Weighted Pullup",
+            bodyPart = BodyParts.Back.ToString(),
+            eloFormula = ExerciseEloFormula.StrengthWeighted.ToString(),
+            description = "Weighted pullup"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync("/api/exercise/addExerciseWithFormula", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Name == "Weighted Pullup" && e.UserId == null);
+        exercise.Should().NotBeNull();
+        exercise!.EloFormula.Should().Be(ExerciseEloFormula.StrengthWeighted);
+    }
+
+    [Test]
+    public async Task AddUserExerciseWithFormula_AsAuthorizedUser_PersistsFormula()
+    {
+        var user = await SeedAdminAsync();
+        SetAuthorizationHeader(user.Id);
+
+        var request = new
+        {
+            name = "Weighted Pullup User",
+            bodyPart = BodyParts.Back.ToString(),
+            eloFormula = ExerciseEloFormula.VolumeWeighted.ToString(),
+            description = "Weighted pullup user"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{user.Id}/addUserExerciseWithFormula", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Name == "Weighted Pullup User" && e.UserId == user.Id);
+        exercise.Should().NotBeNull();
+        exercise!.EloFormula.Should().Be(ExerciseEloFormula.VolumeWeighted);
     }
 
     [Test]
@@ -173,10 +226,10 @@ public sealed class ExerciseTests : IntegrationTestBase
     }
 
      [Test]
-     public async Task UpdateExercise_WithValidData_UpdatesExercise()
-     {
-         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-         var exercise = await SeedExerciseAsync(user.Id, "Test Exercise", "Chest");
+    public async Task UpdateExercise_WithValidData_UpdatesExercise()
+    {
+        var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
+        var exercise = await SeedExerciseAsync(user.Id, "Test Exercise", "Chest");
         SetAuthorizationHeader(user.Id);
 
         var request = new
@@ -199,6 +252,58 @@ public sealed class ExerciseTests : IntegrationTestBase
         updatedExercise!.Name.Should().Be("New Name");
         updatedExercise.BodyPart.ToString().Should().Be("Back");
         updatedExercise.Description.Should().Be("Updated description");
+        updatedExercise.EloFormula.Should().Be(ExerciseEloFormula.Standard);
+    }
+
+    [Test]
+    public async Task UpdateExerciseWithFormula_AsAuthorizedUser_UpdatesFormula()
+    {
+        var user = await SeedAdminAsync();
+        var exercise = await SeedExerciseAsync(null, "Update Formula", "Chest");
+        SetAuthorizationHeader(user.Id);
+
+        var request = new
+        {
+            _id = exercise.Id.ToString(),
+            name = "Update Formula",
+            bodyPart = BodyParts.Back.ToString(),
+            eloFormula = ExerciseEloFormula.StrengthWeighted.ToString(),
+            description = "Updated with formula"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExerciseWithFormula", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var updatedExercise = await db.Exercises.FirstOrDefaultAsync(e => e.Id == exercise.Id);
+        updatedExercise.Should().NotBeNull();
+        updatedExercise!.EloFormula.Should().Be(ExerciseEloFormula.StrengthWeighted);
+        updatedExercise.BodyPart.ToString().Should().Be("Back");
+        updatedExercise.Description.Should().Be("Updated with formula");
+    }
+
+    [Test]
+    public async Task UpdateExercise_WhenUserIsNotOwnerAndHasNoPermission_ReturnsForbidden()
+    {
+        var owner = await SeedUserAsync(name: "owner", email: "owner@example.com");
+        var otherUser = await SeedUserAsync(name: "other", email: "other@example.com");
+        var exercise = await SeedExerciseAsync(owner.Id, "Owner Exercise", "Chest");
+        SetAuthorizationHeader(otherUser.Id);
+
+        var request = new
+        {
+            _id = exercise.Id.ToString(),
+            name = "Not Allowed",
+            bodyPart = BodyParts.Back.ToString(),
+            description = "Should fail"
+        };
+
+        var response = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
      [Test]
@@ -319,21 +424,27 @@ public sealed class ExerciseTests : IntegrationTestBase
         body.BodyPart!.Name.Should().Be("Chest");
     }
 
-    private async Task<Exercise> SeedExerciseAsync(Id<User>? userId, string name, string bodyPart, bool isDeleted = false)
+    private async Task<Exercise> SeedExerciseAsync(
+        Id<User>? userId,
+        string name,
+        string bodyPart,
+        bool isDeleted = false,
+        ExerciseEloFormula eloFormula = ExerciseEloFormula.Standard)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         Enum.TryParse<BodyParts>(bodyPart, out var bodyPartEnum);
 
-         var exercise = new Exercise
-         {
-             Id = Id<Exercise>.New(),
-             UserId = userId,
-             Name = name,
-             BodyPart = bodyPartEnum,
-             IsDeleted = isDeleted
-         };
+          var exercise = new Exercise
+          {
+              Id = Id<Exercise>.New(),
+              UserId = userId,
+              Name = name,
+              BodyPart = bodyPartEnum,
+              EloFormula = eloFormula,
+              IsDeleted = isDeleted
+          };
 
         db.Exercises.Add(exercise);
         await db.SaveChangesAsync();

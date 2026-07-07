@@ -11,6 +11,8 @@ using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -44,6 +46,22 @@ public sealed class ExerciseController : ControllerBase
         return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
     }
 
+    [HttpPost("exercise/addExerciseWithFormula")]
+    [Authorize(Policy = AuthConstants.Policies.ManageGlobalExercises)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> AddExerciseWithFormula([FromBody] ExerciseExtendedFormDto form, CancellationToken cancellationToken = default)
+    {
+        var result = await _exerciseService.AddExerciseWithFormulaAsync(form.Name, form.BodyPart, form.EloFormula, form.Description, form.Image, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
+    }
+
     [HttpPost("exercise/{id}/addUserExercise")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
@@ -53,6 +71,25 @@ public sealed class ExerciseController : ControllerBase
         var userId = id.ToIdOrEmpty<UserEntity>();
         var input = new AddUserExerciseInput(userId, form.Name, form.BodyPart, form.Description, form.Image);
         var result = await _exerciseService.AddUserExerciseAsync(input, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
+    }
+
+    [HttpPost("exercise/{id}/addUserExerciseWithFormula")]
+    [Authorize(Policy = AuthConstants.Policies.ManageGlobalExercises)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddUserExerciseWithFormula([FromRoute] string id, [FromBody] ExerciseExtendedFormDto form, CancellationToken cancellationToken = default)
+    {
+        var userId = id.ToIdOrEmpty<UserEntity>();
+        var input = new AddUserExerciseWithFormulaInput(userId, form.Name, form.BodyPart, form.EloFormula, form.Description, form.Image);
+        var result = await _exerciseService.AddUserExerciseWithFormulaAsync(input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -90,9 +127,40 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateExercise([FromBody] ExerciseFormDto form, CancellationToken cancellationToken = default)
     {
+        var currentUser = HttpContext.GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
         var exerciseId = form.Id.ToIdOrEmpty<ExerciseEntity>();
         var input = new UpdateExerciseInput(exerciseId, form.Name, form.BodyPart, form.Description, form.Image);
-        var result = await _exerciseService.UpdateExerciseAsync(input, cancellationToken);
+        var result = await _exerciseService.UpdateExerciseAsync(currentUser, input, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
+    }
+
+    [HttpPost("exercise/updateExerciseWithFormula")]
+    [Authorize(Policy = AuthConstants.Policies.ManageGlobalExercises)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateExerciseWithFormula([FromBody] ExerciseExtendedFormDto form, CancellationToken cancellationToken = default)
+    {
+        var currentUser = HttpContext.GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        var exerciseId = form.Id.ToIdOrEmpty<ExerciseEntity>();
+        var input = new UpdateExerciseWithFormulaInput(exerciseId, form.Name, form.BodyPart, form.EloFormula, form.Description, form.Image);
+        var result = await _exerciseService.UpdateExerciseWithFormulaAsync(currentUser, input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

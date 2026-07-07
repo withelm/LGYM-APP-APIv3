@@ -1,5 +1,6 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Common.Training.Elo;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
@@ -43,7 +44,7 @@ public sealed partial class TrainingService
 
         var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds, cancellationToken);
         var exerciseDetailsMap = exerciseDetails.ToDictionary(e => e.Id, e => e.Name);
-
+        var exerciseFormulaMap = exerciseDetails.ToDictionary(e => e.Id, e => e.EloFormula);
         var previousScoresMap = await FetchPreviousScores(user.Id, gym.Id, uniqueExerciseIds, cancellationToken);
 
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -99,7 +100,15 @@ public sealed partial class TrainingService
                 var key = $"{exerciseId}-{exercise.Series}";
                 if (previousScoresMap.TryGetValue(key, out var previousScore))
                 {
-                    var eloGain = CalculateEloPerExercise(scoreEntity, previousScore);
+                    var formula = exerciseFormulaMap.TryGetValue(exerciseId, out var exerciseFormula)
+                        ? exerciseFormula
+                        : ExerciseEloFormula.Standard;
+                    var eloInput = new ExerciseEloCalculationInput(
+                        previousScore.Weight.Value,
+                        previousScore.Reps,
+                        scoreEntity.Weight.Value,
+                        scoreEntity.Reps);
+                    var eloGain = CalculateEloPerExercise(eloInput, formula);
                     totalElo += eloGain;
                 }
             }
@@ -166,43 +175,14 @@ public sealed partial class TrainingService
         }
     }
 
-    private static int CalculateEloPerExercise(ExerciseScore currentScore, ExerciseScore previousScore)
+    private int CalculateEloPerExercise(ExerciseEloCalculationInput input, ExerciseEloFormula formula)
     {
-        return PartElo(previousScore.Weight.Value, previousScore.Reps, currentScore.Weight.Value, currentScore.Reps);
-    }
-
-    private static int PartElo(double prevWeight, double prevReps, double accWeight, double accReps)
-    {
-        const int k = 32;
-
-        double GetWeightedScore(double weight, double reps)
+        if (!_exerciseEloCalculators.TryGetValue(formula, out var calculator))
         {
-            if (weight <= 15)
-            {
-                return weight * 0.3 + reps * 0.7;
-            }
-
-            if (weight <= 80)
-            {
-                return weight * 0.5 + reps * 0.5;
-            }
-
-            return weight * 0.7 + reps * 0.3;
+            calculator = _exerciseEloCalculators[ExerciseEloFormula.Standard];
         }
 
-        var prevScore = GetWeightedScore(prevWeight, prevReps);
-        var accScore = GetWeightedScore(accWeight, accReps);
-        var toleranceThreshold = prevWeight > 80 ? 0.1 * prevScore : 0.05 * prevScore;
-
-        var expectedScore = Math.Abs(accScore - prevScore) <= toleranceThreshold
-            ? 0.5
-            : prevScore / (prevScore + accScore);
-
-        var actualScore = accScore >= prevScore ? 1 : 0;
-        var scoreDifference = (actualScore - expectedScore) * (Math.Abs(accScore - prevScore) < toleranceThreshold ? 0.5 : 1);
-        var points = k * scoreDifference;
-
-        return (int)Math.Round(points);
+        return calculator.Calculate(input);
     }
 
     private async Task<Dictionary<string, ExerciseScore>> FetchPreviousScores(Id<LgymApi.Domain.Entities.User> userId, Id<LgymApi.Domain.Entities.Gym> gymId, List<Id<LgymApi.Domain.Entities.Exercise>> exerciseIds, CancellationToken cancellationToken)

@@ -26,6 +26,30 @@ public sealed class ExerciseFormDto : IDto
     public string? Image { get; set; }
 }
 
+public sealed class ExerciseExtendedFormDto : IDto
+{
+    [JsonPropertyName("_id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("user")]
+    public string? UserId { get; set; }
+
+    [JsonPropertyName("bodyPart")]
+    public BodyParts BodyPart { get; set; }
+
+    [JsonPropertyName("eloFormula")]
+    public ExerciseEloFormula? EloFormula { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("image")]
+    public string? Image { get; set; }
+}
+
 public sealed class ExerciseResponseDto : IResultDto
 {
     [JsonPropertyName("_id")]

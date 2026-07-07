@@ -1,4 +1,5 @@
 using FluentAssertions;
+using LgymApi.Application.Common.Training.Elo;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Domain.Entities;
@@ -143,5 +144,6 @@ public sealed class TrainingServiceBuildComparisonReportTests
         public Application.Repositories.IEloRegistryRepository EloRepository => null!;
         public Application.Services.IRankService RankService => null!;
         public Application.Repositories.IUnitOfWork UnitOfWork => null!;
+        public IReadOnlyCollection<IExerciseEloCalculator> ExerciseEloCalculators => Array.Empty<IExerciseEloCalculator>();
     }
 }
