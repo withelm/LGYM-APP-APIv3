@@ -10,6 +10,7 @@ using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -53,7 +54,8 @@ public sealed class ExerciseController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> AddExerciseWithFormula([FromBody] ExerciseExtendedFormDto form, CancellationToken cancellationToken = default)
     {
-        var result = await _exerciseService.AddExerciseWithFormulaAsync(form.Name, form.BodyPart, form.EloFormula, form.Description, form.Image, cancellationToken);
+        var input = _mapper.Map<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>(form);
+        var result = await _exerciseService.AddExerciseWithFormulaAsync(input, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -88,7 +90,9 @@ public sealed class ExerciseController : ControllerBase
     public async Task<IActionResult> AddUserExerciseWithFormula([FromRoute] string id, [FromBody] ExerciseExtendedFormDto form, CancellationToken cancellationToken = default)
     {
         var userId = id.ToIdOrEmpty<UserEntity>();
-        var input = new AddUserExerciseWithFormulaInput(userId, form.Name, form.BodyPart, form.EloFormula, form.Description, form.Image);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.UserId, userId);
+        var input = mappingContext.Map<ExerciseExtendedFormDto, AddUserExerciseWithFormulaInput>(form);
         var result = await _exerciseService.AddUserExerciseWithFormulaAsync(input, cancellationToken);
         if (result.IsFailure)
         {
@@ -158,8 +162,7 @@ public sealed class ExerciseController : ControllerBase
             return Unauthorized();
         }
 
-        var exerciseId = form.Id.ToIdOrEmpty<ExerciseEntity>();
-        var input = new UpdateExerciseWithFormulaInput(exerciseId, form.Name, form.BodyPart, form.EloFormula, form.Description, form.Image);
+        var input = _mapper.Map<ExerciseExtendedFormDto, UpdateExerciseWithFormulaInput>(form);
         var result = await _exerciseService.UpdateExerciseWithFormulaAsync(currentUser, input, cancellationToken);
         if (result.IsFailure)
         {

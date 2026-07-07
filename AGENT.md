@@ -104,6 +104,7 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 - Register Application services in `LgymApi.Application/ServiceCollectionExtensions.cs` and Infrastructure services and repositories in `LgymApi.Infrastructure/ServiceCollectionExtensions.cs`.
 - `AuthConstants` is the canonical source for roles, permissions, policies, and claim names.
 - Enum-backed front-end choice lists must be returned as lookup items with stable `id` and translated `displayName`; do not expose raw enum values as the UI value source.
+- Enum-backed request values that need conversion to application enums must be mapped in API mapping profiles from lookup `id`/string inputs; controllers should not parse them manually.
 - Do not migrate to ASP.NET Identity unless a new ADR explicitly supersedes ADR-005.
 - Do not remove idempotency or uniqueness constraints in `AppDbContext` without an explicit replacement.
 - Follow the repository's `.editorconfig` and existing code style.

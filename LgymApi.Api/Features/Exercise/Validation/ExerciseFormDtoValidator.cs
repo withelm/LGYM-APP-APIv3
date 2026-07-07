@@ -34,7 +34,7 @@ public sealed class ExerciseExtendedFormDtoValidator : AbstractValidator<Exercis
             .WithMessage(Messages.BodyPartRequired);
 
         RuleFor(x => x.EloFormula)
-            .IsInEnum()
-            .When(x => x.EloFormula.HasValue);
+            .Must(value => string.IsNullOrWhiteSpace(value) || global::System.Enum.TryParse<ExerciseEloFormula>(value, ignoreCase: true, out _))
+            .WithMessage(Messages.InvalidExerciseEloFormula);
     }
 }

@@ -1,9 +1,13 @@
+using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.Enum;
+using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Mapping.Profiles;
 
@@ -12,11 +16,36 @@ public sealed class ExerciseProfile : IMappingProfile
     internal static class Keys
     {
         internal static readonly ContextKey<IReadOnlyDictionary<Id<Exercise>, string>> Translations = new("Exercise.Translations");
+        internal static readonly ContextKey<Id<UserEntity>> UserId = new("Exercise.UserId");
     }
 
     public void Configure(MappingConfiguration configuration)
     {
         configuration.AllowContextKey(Keys.Translations);
+        configuration.AllowContextKey(Keys.UserId);
+
+        configuration.CreateMap<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>((source, _) => new AddExerciseWithFormulaInput(
+            source.Name,
+            source.BodyPart,
+            ParseExerciseEloFormula(source.EloFormula),
+            source.Description,
+            source.Image));
+
+        configuration.CreateMap<ExerciseExtendedFormDto, AddUserExerciseWithFormulaInput>((source, context) => new AddUserExerciseWithFormulaInput(
+            context?.Get(Keys.UserId) ?? default,
+            source.Name,
+            source.BodyPart,
+            ParseExerciseEloFormula(source.EloFormula),
+            source.Description,
+            source.Image));
+
+        configuration.CreateMap<ExerciseExtendedFormDto, UpdateExerciseWithFormulaInput>((source, _) => new UpdateExerciseWithFormulaInput(
+            source.Id.ToIdOrEmpty<Exercise>(),
+            source.Name,
+            source.BodyPart,
+            ParseExerciseEloFormula(source.EloFormula),
+            source.Description,
+            source.Image));
 
         configuration.CreateMap<Exercise, ExerciseResponseDto>((source, context) =>
         {
@@ -69,5 +98,17 @@ public sealed class ExerciseProfile : IMappingProfile
             TrainingName = source.TrainingName,
             SeriesScores = context!.MapList<SeriesScoreResult, SeriesScoreDto>(source.SeriesScores)
         });
+    }
+
+    private static ExerciseEloFormula? ParseExerciseEloFormula(string? eloFormula)
+    {
+        if (string.IsNullOrWhiteSpace(eloFormula))
+        {
+            return null;
+        }
+
+        return global::System.Enum.TryParse<ExerciseEloFormula>(eloFormula, ignoreCase: true, out var parsed)
+            ? parsed
+            : null;
     }
 }

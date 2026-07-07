@@ -16,8 +16,11 @@ public sealed partial class ExerciseService : IExerciseService
     public Task<Result<Unit, AppError>> AddExerciseAsync(string name, BodyParts bodyPart, string? description, string? image, CancellationToken cancellationToken = default)
         => CreateExerciseAsync(name, bodyPart, ExerciseEloFormula.Standard, description, image, null, cancellationToken);
 
-    public Task<Result<Unit, AppError>> AddExerciseWithFormulaAsync(string name, BodyParts bodyPart, ExerciseEloFormula? eloFormula, string? description, string? image, CancellationToken cancellationToken = default)
-        => CreateExerciseAsync(name, bodyPart, eloFormula ?? ExerciseEloFormula.Standard, description, image, null, cancellationToken);
+    public async Task<Result<Unit, AppError>> AddExerciseWithFormulaAsync(AddExerciseWithFormulaInput input, CancellationToken cancellationToken = default)
+    {
+        var (name, bodyPart, eloFormula, description, image) = input;
+        return await CreateExerciseAsync(name, bodyPart, eloFormula ?? ExerciseEloFormula.Standard, description, image, null, cancellationToken);
+    }
 
     public async Task<Result<Unit, AppError>> AddUserExerciseAsync(AddUserExerciseInput input, CancellationToken cancellationToken = default)
     {

@@ -17,3 +17,10 @@ public sealed record AddUserExerciseWithFormulaInput(
     ExerciseEloFormula? EloFormula,
     string? Description,
     string? Image);
+
+public sealed record AddExerciseWithFormulaInput(
+    string Name,
+    BodyParts BodyPart,
+    ExerciseEloFormula? EloFormula,
+    string? Description,
+    string? Image);

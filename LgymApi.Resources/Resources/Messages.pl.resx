@@ -69,6 +69,9 @@
   <data name="BodyPartRequired" xml:space="preserve">
     <value>Partia ciała jest wymagana.</value>
   </data>
+  <data name="InvalidExerciseEloFormula" xml:space="preserve">
+    <value>Nieprawidłowa formuła ELO ćwiczenia.</value>
+  </data>
   <data name="ExerciseIdRequired" xml:space="preserve">
     <value>ID ćwiczenia jest wymagane.</value>
   </data>

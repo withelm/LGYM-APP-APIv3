@@ -7,3 +7,4 @@
 - Exercise read and legacy write contracts stay without `eloFormula`; privileged exercise create/update endpoints use separate DTOs and `ManageGlobalExercises` policy.
 - Enum-backed choice lists must return `LookupItem`-style payloads with stable `id` plus translated display text; do not expose raw enum values in front-end-facing choice lists.
 - Exercise ELO formulas must be sourced from the enum lookup API (`/api/enums/enumType/ExerciseEloFormula`) and must not be hardcoded in the front-end.
+- Lookup-backed request values such as `ExerciseExtendedFormDto.EloFormula` must be mapped in API mapping profiles from lookup ids to application enums; controllers should not parse them.

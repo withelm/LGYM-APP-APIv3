@@ -187,6 +187,7 @@ The solution enforces strict boundaries between API contracts and internal appli
 The boundary is handled at the mapping layer:
 - **API to Application**: Validators or Mapping Profiles translate incoming `string` IDs from DTOs into `Id<TEntity>` for Application Input models.
 - **Application to API**: Mapping Profiles translate `Id<TEntity>` from Domain entities or Application models back into `string` for response DTOs.
+- **Lookup-backed enum inputs**: when a request DTO carries a lookup-backed enum value, the API layer maps the lookup `id`/string to the application enum in a mapping profile. Controllers must not hand-parse enum strings for these cases.
 
 ## 11. Dependency Injection Conventions
 

@@ -41,7 +41,7 @@ public sealed class ExerciseExtendedFormDto : IDto
     public BodyParts BodyPart { get; set; }
 
     [JsonPropertyName("eloFormula")]
-    public ExerciseEloFormula? EloFormula { get; set; }
+    public string? EloFormula { get; set; }
 
     [JsonPropertyName("description")]
     public string? Description { get; set; }

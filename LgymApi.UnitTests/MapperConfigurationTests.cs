@@ -1,8 +1,12 @@
 using FluentAssertions;
+using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api;
 using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Features.Exercise.Models;
+using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.UnitTests;
@@ -54,5 +58,55 @@ public sealed class MapperConfigurationTests
 
         var action = () => configuration.AllowContextKey(key);
         action.Should().Throw<InvalidOperationException>();
+    }
+
+    [Test]
+    public void ExerciseExtendedFormDto_Should_Map_Formula_String_To_Application_Enum()
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+
+        var dto = new ExerciseExtendedFormDto
+        {
+            Name = "Weighted pull-up",
+            BodyPart = BodyParts.Back,
+            EloFormula = ExerciseEloFormula.PullupWeighted.ToString(),
+            Description = "test",
+            Image = "image"
+        };
+
+        var input = mapper.Map<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>(dto);
+
+        input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+    }
+
+    [Test]
+    public void ExerciseExtendedFormDto_Should_Map_User_Id_Through_Context()
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+        var context = mapper.CreateContext();
+        var userId = Id<LgymApi.Domain.Entities.User>.New();
+        context.Set(new ContextKey<Id<LgymApi.Domain.Entities.User>>("Exercise.UserId"), userId);
+
+        var dto = new ExerciseExtendedFormDto
+        {
+            Name = "Weighted pull-up",
+            BodyPart = BodyParts.Back,
+            EloFormula = ExerciseEloFormula.PullupWeighted.ToString(),
+            Description = "test",
+            Image = "image"
+        };
+
+        var input = context.Map<ExerciseExtendedFormDto, AddUserExerciseWithFormulaInput>(dto);
+
+        input.UserId.Should().Be(userId);
+        input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
     }
 }

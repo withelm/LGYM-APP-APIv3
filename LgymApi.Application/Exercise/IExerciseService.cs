@@ -11,7 +11,7 @@ namespace LgymApi.Application.Features.Exercise;
 public interface IExerciseService
 {
     Task<Result<Unit, AppError>> AddExerciseAsync(string name, BodyParts bodyPart, string? description, string? image, CancellationToken cancellationToken = default);
-    Task<Result<Unit, AppError>> AddExerciseWithFormulaAsync(string name, BodyParts bodyPart, ExerciseEloFormula? eloFormula, string? description, string? image, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> AddExerciseWithFormulaAsync(AddExerciseWithFormulaInput input, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> AddUserExerciseAsync(AddUserExerciseInput input, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> AddUserExerciseWithFormulaAsync(AddUserExerciseWithFormulaInput input, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> DeleteExerciseAsync(Id<UserEntity> userId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default);
