@@ -22,7 +22,7 @@ namespace LgymApi.Api.Features.Exercise.Controllers;
 
 [ApiController]
 [Route("api")]
-public sealed class ExerciseController : ControllerBase
+public sealed partial class ExerciseController : ControllerBase
 {
     private readonly IExerciseService _exerciseService;
     private readonly IMapper _mapper;
@@ -289,45 +289,6 @@ public sealed class ExerciseController : ControllerBase
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(ExerciseProfile.Keys.Translations, context.Translations);
         return Ok(_mapper.Map<ExerciseEntity, ExerciseResponseDto>(context.Exercise, mappingContext));
-    }
-
-    [HttpPost("exercise/{id}/getLastExerciseScores")]
-    [ProducesResponseType(typeof(LastExerciseScoresResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetLastExerciseScores([FromRoute] string id, [FromBody] LastExerciseScoresRequestDto request, CancellationToken cancellationToken = default)
-    {
-        var routeUserId = id.ToIdOrEmpty<UserEntity>();
-        var currentUserId = HttpContext.GetCurrentUserId();
-        var exerciseId = request.ExerciseId.ToIdOrEmpty<ExerciseEntity>();
-        var gymId = request.GymId.ToNullableId<LgymApi.Domain.Entities.Gym>();
-
-        var input = new GetLastExerciseScoresInput(routeUserId, currentUserId, exerciseId, request.Series, gymId, request.ExerciseName);
-        var result = await _exerciseService.GetLastExerciseScoresAsync(input, cancellationToken);
-        if (result.IsFailure)
-        {
-            return result.ToActionResult();
-        }
-
-        return Ok(_mapper.Map<LastExerciseScoresResult, LastExerciseScoresResponseDto>(result.Value));
-    }
-
-    [HttpPost("exercise/getExerciseScoresFromTrainingByExercise")]
-    [ProducesResponseType(typeof(List<ExerciseTrainingHistoryItemDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetExerciseScoresFromTrainingByExercise([FromBody] RecordOrPossibleRequestDto request, CancellationToken cancellationToken = default)
-    {
-        var currentUserId = HttpContext.GetCurrentUserId();
-        var exerciseId = request.ExerciseId.ToIdOrEmpty<ExerciseEntity>();
-        var result = await _exerciseService.GetExerciseScoresFromTrainingByExerciseAsync(currentUserId, exerciseId, cancellationToken);
-        if (result.IsFailure)
-        {
-            return result.ToActionResult();
-        }
-
-        var mapped = _mapper.MapList<ExerciseTrainingHistoryItem, ExerciseTrainingHistoryItemDto>(result.Value);
-
-        return Ok(mapped);
     }
 
 }
