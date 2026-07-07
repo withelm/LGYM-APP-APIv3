@@ -140,6 +140,7 @@ Recommended validation path for new modules:
 ## 8. Compatibility and Safety Notes
 
 - Preserve legacy payload contract compatibility (`_id`, `msg`, `req`, route naming patterns) unless a planned API versioning change is approved.
+- For publication-scoped contract versioning work, start with `docs/CONTRACT_VERSIONING_TASK_PLAN.md` and keep version transforms at the API edge instead of duplicating application logic.
 - Avoid direct EF bulk update patterns that bypass UoW semantics; use existing staged update conventions.
 - Keep transaction ownership in services, not repositories.
 - Keep controllers thin: parse inputs, call service, map outputs.
@@ -203,7 +204,7 @@ The solution uses a decentralized registration approach across projects, enforce
 ### Forbidden Patterns
 
 - **Cross-Boundary Registration**: the Infrastructure project **must not** register Application services. This is enforced by a `CrossBoundary` architecture guard.
-- **Untracked Concrete Placements**: every concrete service implementation in `LgymApi.Application/Services` or `LgymApi.Infrastructure/Services` must have a corresponding registration in its respective `ServiceCollectionExtensions`.
+- **Untracked Concrete Placements**: every concrete service implementation in `LgymApi.Application/Services` or `LgymApi.Infrastructure/Services` must have a corresponding registration in its respective `ServiceCollectionExtensions.cs` file.
 - **Implementation Leaks**: avoid registering infrastructure-specific concrete types in the Application layer.
 - **Unsafe Duplicate Assumptions**: do not rely on implicit registrations from other projects; always use the provided `AddApplication()` and `AddInfrastructure()` extensions in `Program.cs`.
 
