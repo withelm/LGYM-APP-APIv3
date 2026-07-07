@@ -7,3 +7,4 @@
 - Training ELO scoring is selected by exercise profile in the training service; legacy exercise create/update methods always use the standard profile while privileged variants can opt into alternate formulas.
 - Training ELO formulas are implemented as one strategy class per `ExerciseEloFormula` under `Application/Common/Training/Elo` and resolved through DI instead of switch logic in `TrainingService`; the pull-up profile rewards lower weight with `PullupWeighted`.
 - Enum lookups are the source of truth for front-end choice lists; `ExerciseEloFormula` is exposed through the enum lookup service and should not be duplicated as a hardcoded UI list.
+- Enum lookup entries should carry a stable `id` and translated `displayName`; front-end choice lists should bind to the lookup `id`, not the raw enum name.

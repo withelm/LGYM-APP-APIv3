@@ -10,6 +10,7 @@ public sealed class EnumProfile : IMappingProfile
     {
         configuration.CreateMap<EnumLookupEntry, EnumLookupDto>((source, _) => new EnumLookupDto
         {
+            Id = source.Id,
             Name = source.Name,
             DisplayName = source.DisplayName
         });
