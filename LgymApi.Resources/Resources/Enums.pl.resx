@@ -69,6 +69,18 @@
   <data name="BodyParts_Glutes" xml:space="preserve">
     <value>Pośladki</value>
   </data>
+  <data name="ExerciseEloFormula_Standard" xml:space="preserve">
+    <value>Standardowa</value>
+  </data>
+  <data name="ExerciseEloFormula_StrengthWeighted" xml:space="preserve">
+    <value>Premia za siĹ‚Ä™</value>
+  </data>
+  <data name="ExerciseEloFormula_VolumeWeighted" xml:space="preserve">
+    <value>Premia za objÄ™toĹ›Ä‡</value>
+  </data>
+  <data name="ExerciseEloFormula_PullupWeighted" xml:space="preserve">
+    <value>PodciÄ…ganie: im mniejszy ciÄ™ĹĽar, tym lepiej</value>
+  </data>
   <data name="WeightUnits_Kilograms" xml:space="preserve">
     <value>kg</value>
   </data>

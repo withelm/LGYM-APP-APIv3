@@ -69,6 +69,18 @@
   <data name="BodyParts_Glutes" xml:space="preserve">
     <value>Glutes</value>
   </data>
+  <data name="ExerciseEloFormula_Standard" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="ExerciseEloFormula_StrengthWeighted" xml:space="preserve">
+    <value>Strength weighted</value>
+  </data>
+  <data name="ExerciseEloFormula_VolumeWeighted" xml:space="preserve">
+    <value>Volume weighted</value>
+  </data>
+  <data name="ExerciseEloFormula_PullupWeighted" xml:space="preserve">
+    <value>Pull-up weighted</value>
+  </data>
   <data name="WeightUnits_Kilograms" xml:space="preserve">
     <value>kg</value>
   </data>
