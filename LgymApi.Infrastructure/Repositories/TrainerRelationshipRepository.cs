@@ -135,6 +135,7 @@ public sealed partial class TrainerRelationshipRepository : ITrainerRelationship
 
         var baseQuery = BuildDashboardBaseQuery(trainerId, now);
         baseQuery = ApplySearch(baseQuery, query.Search);
+        baseQuery = ExcludeNoRelationshipRows(baseQuery);
         baseQuery = ApplyStatusFilter(baseQuery, query.Status, now);
 
         var filterInput = BuildFilterInput(query);
