@@ -115,6 +115,11 @@ public sealed partial class TrainerRelationshipRepository
             : baseQuery.Where(x => EF.Functions.Like(x.Name, pattern) || EF.Functions.Like(x.Email, pattern));
     }
 
+    private static IQueryable<DashboardTraineeProjection> ExcludeNoRelationshipRows(IQueryable<DashboardTraineeProjection> baseQuery)
+    {
+        return baseQuery.Where(x => x.LinkedAt != null || (x.LastInvitationStatus != null && x.LastInvitationStatus != TrainerInvitationStatus.Revoked));
+    }
+
     private static IQueryable<DashboardTraineeProjection> ApplyStatusFilter(
         IQueryable<DashboardTraineeProjection> baseQuery,
         string? status,

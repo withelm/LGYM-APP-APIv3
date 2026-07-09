@@ -89,6 +89,99 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task TrainerDashboardGridifyPagination_DoesNotListRevokedInvitationRowsByDefault()
+    {
+        // Arrange
+        var trainer = await SeedTrainerAsync("trainer-grid-revoked-default", "trainer-grid-revoked-default@example.com");
+        var linked = await SeedDashboardTraineeAsync(trainer.Id, "linked-visible-default", "linked-visible-default@example.com", linked: true, linkedAt: DateTimeOffset.UtcNow.AddDays(-2));
+        var pending = await SeedDashboardTraineeAsync(trainer.Id, "pending-visible-default", "pending-visible-default@example.com", invited: true, invitationStatus: TrainerInvitationStatus.Pending, invitationExpiresAt: DateTimeOffset.UtcNow.AddDays(2));
+        var revoked = await SeedDashboardTraineeAsync(trainer.Id, "revoked-hidden-default", "revoked-hidden-default@example.com", invited: true, invitationStatus: TrainerInvitationStatus.Revoked, invitationExpiresAt: DateTimeOffset.UtcNow.AddDays(-1));
+        SetAuthorizationHeader(trainer.Id);
+
+        // Act
+        var response = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=10");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ParseDashboardResponseAsync(response);
+        body.GetProperty("total").GetInt32().Should().Be(2);
+
+        var items = body.GetProperty("items").EnumerateArray().ToArray();
+        items.Select(x => x.GetProperty("_id").GetString()).Should().Contain(new[] { linked.Id.ToString(), pending.Id.ToString() });
+        items.Select(x => x.GetProperty("_id").GetString()).Should().NotContain(revoked.Id.ToString());
+    }
+
+    [Test]
+    public async Task TrainerDashboardGridifyPagination_DoesNotCountRevokedInvitationRowsForPaging()
+    {
+        // Arrange
+        var trainer = await SeedTrainerAsync("trainer-grid-revoked-page", "trainer-grid-revoked-page@example.com");
+        await SeedDashboardTraineeAsync(trainer.Id, "linked-visible-page", "linked-visible-page@example.com", linked: true, linkedAt: DateTimeOffset.UtcNow.AddDays(-2));
+        await SeedDashboardTraineeAsync(trainer.Id, "pending-visible-page", "pending-visible-page@example.com", invited: true, invitationStatus: TrainerInvitationStatus.Pending, invitationExpiresAt: DateTimeOffset.UtcNow.AddDays(2));
+        var revoked = await SeedDashboardTraineeAsync(trainer.Id, "revoked-hidden-page", "revoked-hidden-page@example.com", invited: true, invitationStatus: TrainerInvitationStatus.Revoked, invitationExpiresAt: DateTimeOffset.UtcNow.AddDays(-1));
+        SetAuthorizationHeader(trainer.Id);
+
+        // Act
+        var response = await Client.GetAsync("/api/trainer/trainees?page=2&pageSize=2");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ParseDashboardResponseAsync(response);
+        body.GetProperty("page").GetInt32().Should().Be(2);
+        body.GetProperty("pageSize").GetInt32().Should().Be(2);
+        body.GetProperty("total").GetInt32().Should().Be(2);
+        body.GetProperty("items").EnumerateArray().Should().NotContain(x => x.GetProperty("_id").GetString() == revoked.Id.ToString());
+        body.GetProperty("items").EnumerateArray().Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task TrainerDashboardGridifyPagination_SearchDoesNotListRevokedInvitationRows()
+    {
+        // Arrange
+        var trainer = await SeedTrainerAsync("trainer-grid-revoked-search", "trainer-grid-revoked-search@example.com");
+        var linked = await SeedDashboardTraineeAsync(trainer.Id, "match linked visible", "match-linked-visible@example.com", linked: true, linkedAt: DateTimeOffset.UtcNow.AddDays(-2));
+        var pending = await SeedDashboardTraineeAsync(trainer.Id, "match pending visible", "match-pending-visible@example.com", invited: true, invitationStatus: TrainerInvitationStatus.Pending, invitationExpiresAt: DateTimeOffset.UtcNow.AddDays(2));
+        var revoked = await SeedDashboardTraineeAsync(trainer.Id, "match revoked hidden", "match-revoked-hidden@example.com", invited: true, invitationStatus: TrainerInvitationStatus.Revoked, invitationExpiresAt: DateTimeOffset.UtcNow.AddDays(-1));
+        SetAuthorizationHeader(trainer.Id);
+
+        // Act
+        var response = await Client.GetAsync("/api/trainer/trainees?search=match&page=1&pageSize=10");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ParseDashboardResponseAsync(response);
+        body.GetProperty("total").GetInt32().Should().Be(2);
+
+        var itemIds = body.GetProperty("items").EnumerateArray().Select(x => x.GetProperty("_id").GetString()).ToArray();
+        itemIds.Should().Contain(new[] { linked.Id.ToString(), pending.Id.ToString() });
+        itemIds.Should().NotContain(revoked.Id.ToString());
+    }
+
+    [Test]
+    public async Task TrainerDashboardGridifyPagination_NoRelationshipStatusReturnsEmptyPage()
+    {
+        // Arrange
+        var trainer = await SeedTrainerAsync("trainer-grid-no-relationship", "trainer-grid-no-relationship@example.com");
+        await SeedDashboardTraineeAsync(trainer.Id, "linked-visible-no-relationship", "linked-visible-no-relationship@example.com", linked: true, linkedAt: DateTimeOffset.UtcNow.AddDays(-2));
+        await SeedDashboardTraineeAsync(trainer.Id, "pending-visible-no-relationship", "pending-visible-no-relationship@example.com", invited: true, invitationStatus: TrainerInvitationStatus.Pending, invitationExpiresAt: DateTimeOffset.UtcNow.AddDays(2));
+        await SeedDashboardTraineeAsync(trainer.Id, "revoked-hidden-no-relationship", "revoked-hidden-no-relationship@example.com", invited: true, invitationStatus: TrainerInvitationStatus.Revoked, invitationExpiresAt: DateTimeOffset.UtcNow.AddDays(-1));
+        SetAuthorizationHeader(trainer.Id);
+
+        // Act
+        var response = await Client.GetAsync("/api/trainer/trainees?status=NoRelationship&page=1&pageSize=10");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ParseDashboardResponseAsync(response);
+        body.GetProperty("total").GetInt32().Should().Be(0);
+        body.GetProperty("items").EnumerateArray().Should().BeEmpty();
+    }
+
+    [Test]
     public async Task TrainerDashboardGridifyPagination_ReturnsEmptyPageBeyondTotal()
     {
         // Arrange

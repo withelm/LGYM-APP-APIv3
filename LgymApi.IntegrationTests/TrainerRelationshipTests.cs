@@ -1121,6 +1121,54 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task UnlinkByTrainer_AndDashboardFetch_ExcludesUnlinkedTrainee()
+    {
+        var trainer = await SeedTrainerAsync("trainer-unlink-dashboard", "trainer-unlink-dashboard@example.com");
+        var trainee = await SeedUserAsync(name: "trainee-unlink-dashboard", email: "trainee-unlink-dashboard@example.com", password: "password123");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+            {
+                Id = Id<TrainerTraineeLink>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id
+            });
+            db.TrainerInvitations.Add(new TrainerInvitation
+            {
+                Id = Id<TrainerInvitation>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                Code = "UNLINKDASHREV",
+                Status = TrainerInvitationStatus.Revoked,
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(-1),
+                RespondedAt = DateTimeOffset.UtcNow.AddHours(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+
+        var beforeUnlinkResponse = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
+        beforeUnlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var beforeUnlink = await beforeUnlinkResponse.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+        beforeUnlink.Should().NotBeNull();
+        beforeUnlink!.Total.Should().Be(1);
+        beforeUnlink.Items.Should().ContainSingle(x => x.Id == trainee.Id.ToString());
+
+        var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
+        unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var afterUnlinkResponse = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
+        afterUnlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var afterUnlink = await afterUnlinkResponse.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
+        afterUnlink.Should().NotBeNull();
+        afterUnlink!.Total.Should().Be(0);
+        afterUnlink.Items.Should().NotContain(x => x.Id == trainee.Id.ToString());
+    }
+
+    [Test]
     public async Task DetachByTrainee_RemovesExistingLink()
     {
         var trainer = await SeedTrainerAsync("trainer-detach", "trainer-detach@example.com");
