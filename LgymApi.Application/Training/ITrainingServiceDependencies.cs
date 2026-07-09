@@ -1,3 +1,4 @@
+using System.Linq;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.BackgroundWorker.Common;
@@ -33,7 +34,7 @@ internal sealed class TrainingServiceDependencies : ITrainingServiceDependencies
         IEloRegistryRepository eloRepository,
         IRankService rankService,
         IUnitOfWork unitOfWork,
-        IReadOnlyCollection<IExerciseEloCalculator> exerciseEloCalculators)
+        IEnumerable<IExerciseEloCalculator> exerciseEloCalculators)
     {
         UserRepository = userRepository;
         GymRepository = gymRepository;
@@ -45,7 +46,7 @@ internal sealed class TrainingServiceDependencies : ITrainingServiceDependencies
         EloRepository = eloRepository;
         RankService = rankService;
         UnitOfWork = unitOfWork;
-        ExerciseEloCalculators = exerciseEloCalculators;
+        ExerciseEloCalculators = exerciseEloCalculators.ToArray();
     }
 
     public IUserRepository UserRepository { get; }
