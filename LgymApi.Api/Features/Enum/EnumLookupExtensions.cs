@@ -31,7 +31,7 @@ public static class EnumLookupExtensions
         return new EnumLookupDto
         {
             Id = enumName,
-            Name = enumName,
+            Name = displayName,
             DisplayName = displayName
         };
     }

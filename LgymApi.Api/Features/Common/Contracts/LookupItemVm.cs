@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using LgymApi.Api.Interfaces;
 using LgymApi.Api.Features.Common.Serialization;

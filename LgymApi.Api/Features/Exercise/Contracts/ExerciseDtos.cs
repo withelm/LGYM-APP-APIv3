@@ -39,6 +39,7 @@ public sealed class ExerciseExtendedFormDto : IDto
     public string? UserId { get; set; }
 
     [JsonPropertyName("bodyPart")]
+    [JsonRequired]
     public BodyParts BodyPart { get; set; }
 
     [JsonPropertyName("eloFormula")]

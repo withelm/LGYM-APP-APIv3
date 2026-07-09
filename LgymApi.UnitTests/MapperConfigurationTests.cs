@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
@@ -108,6 +109,78 @@ public sealed class MapperConfigurationTests
         var input = context.Map<ExerciseExtendedFormDto, AddUserExerciseWithFormulaInput>(dto);
 
         input.UserId.Should().Be(userId);
+        input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+    }
+
+    [Test]
+    public void ExerciseExtendedFormDto_Should_Require_BodyPart_When_Deserialized()
+    {
+        const string json = """
+            {
+              "name": "Weighted pull-up",
+              "eloFormula": { "id": "PullupWeighted", "displayName": "Pull-up weighted" }
+            }
+            """;
+
+        var action = () => JsonSerializer.Deserialize<ExerciseExtendedFormDto>(json);
+
+        action.Should().Throw<JsonException>();
+    }
+
+    [Test]
+    public void ExerciseExtendedFormDto_Should_Deserialize_Legacy_String_Formula()
+    {
+        const string json = """
+            {
+              "name": "Weighted pull-up",
+              "bodyPart": 4,
+              "eloFormula": "PullupWeighted"
+            }
+            """;
+
+        var dto = JsonSerializer.Deserialize<ExerciseExtendedFormDto>(json);
+
+        dto.Should().NotBeNull();
+        dto!.EloFormula.Should().NotBeNull();
+        dto.EloFormula!.Id.Should().Be(ExerciseEloFormula.PullupWeighted.ToString());
+
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+
+        var input = mapper.Map<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>(dto);
+
+        input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+    }
+
+    [Test]
+    public void ExerciseExtendedFormDto_Should_Deserialize_Lookup_Object_Name_As_DisplayName_Fallback()
+    {
+        const string json = """
+            {
+              "name": "Weighted pull-up",
+              "bodyPart": 4,
+              "eloFormula": { "id": "PullupWeighted", "name": "Pull-up weighted" }
+            }
+            """;
+
+        var dto = JsonSerializer.Deserialize<ExerciseExtendedFormDto>(json);
+
+        dto.Should().NotBeNull();
+        dto!.EloFormula.Should().NotBeNull();
+        dto.EloFormula!.Id.Should().Be(ExerciseEloFormula.PullupWeighted.ToString());
+        dto.EloFormula.DisplayName.Should().Be("Pull-up weighted");
+
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+
+        var input = mapper.Map<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>(dto);
+
         input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
     }
 }

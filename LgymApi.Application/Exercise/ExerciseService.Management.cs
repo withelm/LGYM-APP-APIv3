@@ -55,7 +55,7 @@ public sealed partial class ExerciseService : IExerciseService
 
         if (userId.HasValue)
         {
-            var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId.Value, cancellationToken);
+            var user = await _userRepository.FindByIdAsync(userId.Value, cancellationToken);
             if (user == null)
             {
                 return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
@@ -86,7 +86,7 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
         }
 
-        var user = await _userRepository.FindByIdAsync((Id<LgymApi.Domain.Entities.User>)userId, cancellationToken);
+        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
         if (user == null)
         {
             return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
@@ -125,25 +125,22 @@ public sealed partial class ExerciseService : IExerciseService
     public async Task<Result<Unit, AppError>> UpdateExerciseAsync(UserEntity currentUser, UpdateExerciseInput input, CancellationToken cancellationToken = default)
     {
         var (exerciseId, name, bodyPart, description, image) = input;
-        return await UpdateExerciseCoreAsync(currentUser, exerciseId, name, bodyPart, null, description, image, cancellationToken);
+        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, null, description, image), cancellationToken);
     }
 
     public async Task<Result<Unit, AppError>> UpdateExerciseWithFormulaAsync(UserEntity currentUser, UpdateExerciseWithFormulaInput input, CancellationToken cancellationToken = default)
     {
         var (exerciseId, name, bodyPart, eloFormula, description, image) = input;
-        return await UpdateExerciseCoreAsync(currentUser, exerciseId, name, bodyPart, eloFormula, description, image, cancellationToken);
+        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, eloFormula, description, image), cancellationToken);
     }
 
     private async Task<Result<Unit, AppError>> UpdateExerciseCoreAsync(
-        UserEntity currentUser,
-        Id<Domain.Entities.Exercise> exerciseId,
-        string? name,
-        BodyParts bodyPart,
-        ExerciseEloFormula? eloFormula,
-        string? description,
-        string? image,
+        UpdateExerciseRequest request,
         CancellationToken cancellationToken)
     {
+        var currentUser = request.CurrentUser;
+        var exerciseId = request.ExerciseId;
+
         if (currentUser == null || currentUser.Id.IsEmpty || exerciseId.IsEmpty)
         {
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.FieldRequired));
@@ -163,28 +160,37 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
 
-        if (!string.IsNullOrWhiteSpace(name))
+        if (!string.IsNullOrWhiteSpace(request.Name))
         {
-            exercise.Name = name;
+            exercise.Name = request.Name;
         }
 
-        if (bodyPart != BodyParts.Unknown)
+        if (request.BodyPart != BodyParts.Unknown)
         {
-            exercise.BodyPart = bodyPart;
+            exercise.BodyPart = request.BodyPart;
         }
 
-        if (eloFormula.HasValue)
+        if (request.EloFormula.HasValue)
         {
-            exercise.EloFormula = eloFormula.Value;
+            exercise.EloFormula = request.EloFormula.Value;
         }
 
-        exercise.Description = description;
-        exercise.Image = image;
+        exercise.Description = request.Description;
+        exercise.Image = request.Image;
 
         await _exerciseRepository.UpdateAsync(exercise, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
     }
+
+    private sealed record UpdateExerciseRequest(
+        UserEntity CurrentUser,
+        Id<Domain.Entities.Exercise> ExerciseId,
+        string? Name,
+        BodyParts BodyPart,
+        ExerciseEloFormula? EloFormula,
+        string? Description,
+        string? Image);
 
     public async Task<Result<Unit, AppError>> AddGlobalTranslationAsync(UserEntity currentUser, AddGlobalTranslationInput input, CancellationToken cancellationToken = default)
     {

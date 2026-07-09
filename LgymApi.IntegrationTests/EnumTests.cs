@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.IntegrationTests;
 
@@ -24,6 +25,27 @@ public sealed class EnumTests : IntegrationTestBase
         var body = await response.Content.ReadFromJsonAsync<EnumLookupResponse>();
         body.Should().NotBeNull();
         body!.Values.Select(v => v.Name).Should().NotContain("Unknown");
+    }
+
+    [Test]
+    public async Task GetEnumLookup_Returns_Enum_String_Id_And_Translated_Labels()
+    {
+        var (userId, _) = await RegisterUserViaEndpointAsync(
+            name: "enumuser3",
+            email: "enum3@example.com",
+            password: "password123");
+        SetAuthorizationHeader(userId);
+
+        var response = await Client.GetAsync("/api/enums/ExerciseEloFormula");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<EnumLookupResponse>();
+        body.Should().NotBeNull();
+        var pullupWeighted = body!.Values.Single(v => v.Id == ExerciseEloFormula.PullupWeighted.ToString());
+        pullupWeighted.Name.Should().Be(pullupWeighted.DisplayName);
+        pullupWeighted.DisplayName.Should().NotBeNullOrWhiteSpace();
+        pullupWeighted.DisplayName.Should().NotBe(ExerciseEloFormula.PullupWeighted.ToString());
     }
 
     [Test]
@@ -55,6 +77,9 @@ public sealed class EnumTests : IntegrationTestBase
 
     private sealed class EnumLookupValue
     {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
 

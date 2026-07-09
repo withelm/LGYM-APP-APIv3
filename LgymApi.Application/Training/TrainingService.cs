@@ -19,7 +19,7 @@ public sealed partial class TrainingService : ITrainingService
     private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IReadOnlyDictionary<ExerciseEloFormula, IExerciseEloCalculator> _exerciseEloCalculators;
+    private readonly Dictionary<ExerciseEloFormula, IExerciseEloCalculator> _exerciseEloCalculators;
 
     public TrainingService(ITrainingServiceDependencies dependencies)
     {

@@ -48,6 +48,10 @@ internal sealed class LookupItemVmJsonConverter : JsonConverter<LookupItemVm>
         {
             displayName = displayNameProperty.GetString() ?? string.Empty;
         }
+        else if (root.TryGetProperty("name", out var nameProperty))
+        {
+            displayName = nameProperty.GetString() ?? string.Empty;
+        }
 
         return new LookupItemVm
         {
