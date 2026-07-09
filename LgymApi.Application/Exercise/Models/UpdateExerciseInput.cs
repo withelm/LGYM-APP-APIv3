@@ -9,3 +9,11 @@ public sealed record UpdateExerciseInput(
     BodyParts BodyPart,
     string? Description,
     string? Image);
+
+public sealed record UpdateExerciseWithFormulaInput(
+    Id<LgymApi.Domain.Entities.Exercise> ExerciseId,
+    string? Name,
+    BodyParts BodyPart,
+    ExerciseEloFormula? EloFormula,
+    string? Description,
+    string? Image);

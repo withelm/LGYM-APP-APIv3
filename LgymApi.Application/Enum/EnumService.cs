@@ -20,6 +20,7 @@ public sealed class EnumService : IEnumService
     private static readonly Dictionary<string, Type> EnumTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         { nameof(BodyParts), typeof(BodyParts) },
+        { nameof(ExerciseEloFormula), typeof(ExerciseEloFormula) },
         { nameof(MeasurementUnits), typeof(MeasurementUnits) },
         { nameof(WeightUnits), typeof(WeightUnits) },
         { nameof(HeightUnits), typeof(HeightUnits) },
@@ -99,7 +100,8 @@ public sealed class EnumService : IEnumService
 
         return new EnumLookupEntry
         {
-            Name = enumName,
+            Id = enumName,
+            Name = displayName,
             DisplayName = displayName
         };
     }

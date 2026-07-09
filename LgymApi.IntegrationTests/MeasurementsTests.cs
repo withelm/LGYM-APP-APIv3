@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -77,10 +78,24 @@ public sealed class MeasurementsTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await response.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
-        body!.Measurements.Should().HaveCount(2);
-        body.Measurements[0].Value.Should().Be(120.0);
-        body.Measurements[1].Value.Should().Be(110.0);
-        body.Measurements[0].Unit!.Name.Should().Be(MeasurementUnits.Centimeters.ToString());
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            body!.Measurements.Should().HaveCount(2);
+            body.Measurements[0].Value.Should().Be(120.0);
+            body.Measurements[1].Value.Should().Be(110.0);
+            body.Measurements[0].Unit!.Id.Should().Be(MeasurementUnits.Centimeters.ToString());
+            body.Measurements[0].Unit!.Name.Should().Be(LgymApi.Resources.Enums.MeasurementUnits_Centimeters);
+            body.Measurements[0].Unit!.DisplayName.Should().Be(LgymApi.Resources.Enums.MeasurementUnits_Centimeters);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
     }
 
     [Test]
@@ -212,9 +227,30 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<MeasurementTrendsResponse>();
-        body!.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Name == BodyParts.BodyWeight.ToString() && x.Direction == "up");
-        body.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Name == BodyParts.Waist.ToString() && x.Direction == "down");
-        body.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Name == BodyParts.BodyFat.ToString() && x.Direction == "insufficient_data");
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+
+            var bodyWeightTrend = body!.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Id == BodyParts.BodyWeight.ToString() && x.Direction == "up").Which;
+            bodyWeightTrend.BodyPart!.Name.Should().Be(LgymApi.Resources.Enums.BodyParts_BodyWeight);
+            bodyWeightTrend.BodyPart.DisplayName.Should().Be(LgymApi.Resources.Enums.BodyParts_BodyWeight);
+
+            var waistTrend = body.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Id == BodyParts.Waist.ToString() && x.Direction == "down").Which;
+            waistTrend.BodyPart!.Name.Should().Be(LgymApi.Resources.Enums.BodyParts_Waist);
+            waistTrend.BodyPart.DisplayName.Should().Be(LgymApi.Resources.Enums.BodyParts_Waist);
+
+            var bodyFatTrend = body.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Id == BodyParts.BodyFat.ToString() && x.Direction == "insufficient_data").Which;
+            bodyFatTrend.BodyPart!.Name.Should().Be(LgymApi.Resources.Enums.BodyParts_BodyFat);
+            bodyFatTrend.BodyPart.DisplayName.Should().Be(LgymApi.Resources.Enums.BodyParts_BodyFat);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
     }
 
     [Test]
@@ -288,14 +324,26 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
     private sealed class BodyPartLookup
     {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("displayName")]
+        public string DisplayName { get; set; } = string.Empty;
     }
 
     private sealed class UnitLookup
     {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("displayName")]
+        public string DisplayName { get; set; } = string.Empty;
     }
 
     private sealed class MeasurementTrendResponse

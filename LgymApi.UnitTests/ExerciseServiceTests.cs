@@ -108,11 +108,55 @@ public sealed class ExerciseServiceTests
             new NoOpExerciseScoreRepository(),
             new NoOpUnitOfWork());
 
+        var currentUser = new User { Id = Id<User>.New(), Name = "CurrentUser", Email = "current@example.com" };
         var input = new UpdateExerciseInput(Id<Exercise>.Empty, "Bench Press", BodyParts.Chest, null, null);
-        var result = await service.UpdateExerciseAsync(input);
+        var result = await service.UpdateExerciseAsync(currentUser, input);
         
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidExerciseError>();
+    }
+
+    [Test]
+    public async Task UpdateExerciseWithFormulaAsync_WhenUserOwnsExercise_UpdatesExerciseAndFormula()
+    {
+        var userId = Id<User>.New();
+        var exercise = new Exercise
+        {
+            Id = Id<Exercise>.New(),
+            UserId = userId,
+            Name = "Pull-up",
+            BodyPart = BodyParts.Back,
+            EloFormula = ExerciseEloFormula.Standard,
+            Description = "before",
+            Image = "before.png"
+        };
+
+        var unitOfWork = new CountingUnitOfWork();
+        var service = new ExerciseService(
+            new NoOpUserRepository(),
+            new NoOpRoleRepository(),
+            new MutableExerciseRepository(exercise),
+            new NoOpExerciseScoreRepository(),
+            unitOfWork);
+
+        var currentUser = new User { Id = userId, Name = "CurrentUser", Email = "current@example.com" };
+        var input = new UpdateExerciseWithFormulaInput(
+            exercise.Id,
+            "Weighted pull-up",
+            BodyParts.Shoulders,
+            ExerciseEloFormula.PullupWeighted,
+            "after",
+            "after.png");
+
+        var result = await service.UpdateExerciseWithFormulaAsync(currentUser, input);
+
+        result.IsSuccess.Should().BeTrue();
+        exercise.Name.Should().Be("Weighted pull-up");
+        exercise.BodyPart.Should().Be(BodyParts.Shoulders);
+        exercise.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+        exercise.Description.Should().Be("after");
+        exercise.Image.Should().Be("after.png");
+        unitOfWork.SaveChangesCount.Should().Be(1);
     }
 
     [Test]
@@ -209,6 +253,30 @@ public sealed class ExerciseServiceTests
         public Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
+    private sealed class MutableExerciseRepository : IExerciseRepository
+    {
+        private readonly Exercise _exercise;
+
+        public MutableExerciseRepository(Exercise exercise)
+        {
+            _exercise = exercise;
+        }
+
+        public Task<Exercise?> FindByIdAsync(Id<Exercise> id, CancellationToken cancellationToken = default)
+            => Task.FromResult(id == _exercise.Id ? _exercise : null);
+
+        public Task UpdateAsync(Exercise exercise, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<List<Exercise>> GetAllForUserAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Exercise>> GetAllGlobalAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Exercise>> GetUserExercisesAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Exercise>> GetByBodyPartAsync(Id<User> userId, BodyParts bodyPart, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<List<Exercise>> GetByIdsAsync(List<Id<Exercise>> ids, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Dictionary<Id<Exercise>, string>> GetTranslationsAsync(IEnumerable<Id<Exercise>> exerciseIds, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task UpsertTranslationAsync(Id<Exercise> exerciseId, string culture, string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task AddAsync(Exercise exercise, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
     private sealed class NoOpRoleRepository : IRoleRepository
     {
         public Task<List<Role>> GetAllAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
@@ -237,6 +305,20 @@ public sealed class ExerciseServiceTests
     private sealed class NoOpUnitOfWork : IUnitOfWork
     {
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public void DetachEntity<TEntity>(TEntity entity) where TEntity : class => throw new NotSupportedException();
+    }
+
+    private sealed class CountingUnitOfWork : IUnitOfWork
+    {
+        public int SaveChangesCount { get; private set; }
+
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            SaveChangesCount++;
+            return Task.FromResult(1);
+        }
+
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public void DetachEntity<TEntity>(TEntity entity) where TEntity : class => throw new NotSupportedException();
     }

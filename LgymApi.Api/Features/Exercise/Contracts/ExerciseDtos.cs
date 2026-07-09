@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Enum.Contracts;
 using LgymApi.Api.Interfaces;
 using LgymApi.Domain.Enums;
@@ -18,6 +19,31 @@ public sealed class ExerciseFormDto : IDto
 
     [JsonPropertyName("bodyPart")]
     public BodyParts BodyPart { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("image")]
+    public string? Image { get; set; }
+}
+
+public sealed class ExerciseExtendedFormDto : IDto
+{
+    [JsonPropertyName("_id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("user")]
+    public string? UserId { get; set; }
+
+    [JsonPropertyName("bodyPart")]
+    [JsonRequired]
+    public BodyParts BodyPart { get; set; }
+
+    [JsonPropertyName("eloFormula")]
+    public LookupItemVm? EloFormula { get; set; }
 
     [JsonPropertyName("description")]
     public string? Description { get; set; }

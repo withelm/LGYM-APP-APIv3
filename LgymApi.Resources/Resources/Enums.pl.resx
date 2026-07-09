@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -68,6 +68,18 @@
   </data>
   <data name="BodyParts_Glutes" xml:space="preserve">
     <value>Pośladki</value>
+  </data>
+  <data name="ExerciseEloFormula_Standard" xml:space="preserve">
+    <value>Standardowa</value>
+  </data>
+  <data name="ExerciseEloFormula_StrengthWeighted" xml:space="preserve">
+    <value>Premia za siłę</value>
+  </data>
+  <data name="ExerciseEloFormula_VolumeWeighted" xml:space="preserve">
+    <value>Premia za objętość</value>
+  </data>
+  <data name="ExerciseEloFormula_PullupWeighted" xml:space="preserve">
+    <value>Podciąganie: im mniejszy ciężar, tym lepiej</value>
   </data>
   <data name="WeightUnits_Kilograms" xml:space="preserve">
     <value>kg</value>

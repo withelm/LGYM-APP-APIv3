@@ -30,7 +30,8 @@ public static class EnumLookupExtensions
 
         return new EnumLookupDto
         {
-            Name = enumName,
+            Id = enumName,
+            Name = displayName,
             DisplayName = displayName
         };
     }

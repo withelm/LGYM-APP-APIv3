@@ -332,7 +332,10 @@ public abstract class IntegrationTestBase : IDisposable
     /// <summary>
     /// Creates a user-specific exercise via the endpoint and returns the created exercise ID.
     /// </summary>
-    protected async Task<Id<Exercise>> CreateExerciseViaEndpointAsync(Id<User> userId, string name = "Test Exercise", BodyParts bodyPart = BodyParts.Chest)
+    protected async Task<Id<Exercise>> CreateExerciseViaEndpointAsync(
+        Id<User> userId,
+        string name = "Test Exercise",
+        BodyParts bodyPart = BodyParts.Chest)
     {
         SetAuthorizationHeader(userId);
         var request = new { name, bodyPart = bodyPart.ToString(), description = "Test description" };
@@ -352,7 +355,10 @@ public abstract class IntegrationTestBase : IDisposable
     /// <summary>
     /// Creates a global exercise via the endpoint (requires admin authorization) and returns the created exercise ID.
     /// </summary>
-    protected async Task<Id<Exercise>> CreateGlobalExerciseViaEndpointAsync(Id<User> userId, string name = "Global Exercise", BodyParts bodyPart = BodyParts.Chest)
+    protected async Task<Id<Exercise>> CreateGlobalExerciseViaEndpointAsync(
+        Id<User> userId,
+        string name = "Global Exercise",
+        BodyParts bodyPart = BodyParts.Chest)
     {
         SetAuthorizationHeader(userId);
         var request = new { name, bodyPart = bodyPart.ToString(), description = "Global exercise description" };
