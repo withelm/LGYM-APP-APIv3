@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -59,7 +60,7 @@ public sealed class InvitationEmailJobTests
     public async Task TryTransitionToSendingAsync_WhenSending_ReturnsFalse()
     {
         await using var db = CreateDbContext();
-        var message = CreateMessage(EmailNotificationStatus.Sending);
+        var message = CreateMessage(EmailNotificationStatus.Sending, DateTimeOffset.UtcNow);
         db.NotificationMessages.Add(message);
         await db.SaveChangesAsync();
         var repository = new EmailNotificationLogRepository(db);
@@ -69,6 +70,42 @@ public sealed class InvitationEmailJobTests
         claimed.Should().BeFalse();
         var stored = await db.NotificationMessages.FirstOrDefaultAsync(x => x.Id == message.Id);
         stored!.Status.Should().Be(EmailNotificationStatus.Sending);
+    }
+
+    [Test]
+    public async Task TryTransitionToSendingAsync_WhenSendingLeaseMissing_ReturnsTrueAndStampsLease()
+    {
+        await using var db = CreateDbContext();
+        var message = CreateMessage(EmailNotificationStatus.Sending);
+        db.NotificationMessages.Add(message);
+        await db.SaveChangesAsync();
+        var repository = new EmailNotificationLogRepository(db);
+
+        var claimed = await repository.TryTransitionToSendingAsync(message.Id);
+
+        claimed.Should().BeTrue();
+        var stored = await db.NotificationMessages.FirstOrDefaultAsync(x => x.Id == message.Id);
+        stored.Should().NotBeNull();
+        stored!.Status.Should().Be(EmailNotificationStatus.Sending);
+        stored.LastAttemptAt.Should().NotBeNull();
+    }
+
+    [Test]
+    public async Task TryTransitionToSendingAsync_WhenSendingLeaseExpired_ReturnsTrueAndRefreshesLease()
+    {
+        await using var db = CreateDbContext();
+        var staleLease = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var message = CreateMessage(EmailNotificationStatus.Sending, staleLease);
+        db.NotificationMessages.Add(message);
+        await db.SaveChangesAsync();
+        var repository = new EmailNotificationLogRepository(db, new BackgroundCommandOptions { EmailSendLeaseSeconds = 30 });
+
+        var claimed = await repository.TryTransitionToSendingAsync(message.Id);
+
+        claimed.Should().BeTrue();
+        var stored = await db.NotificationMessages.FirstOrDefaultAsync(x => x.Id == message.Id);
+        stored.Should().NotBeNull();
+        stored!.LastAttemptAt.Should().BeAfter(staleLease);
     }
 
     [Test]
@@ -92,14 +129,15 @@ public sealed class InvitationEmailJobTests
         var now = DateTimeOffset.UtcNow;
         var stuck = CreateMessage(EmailNotificationStatus.Sending, now.AddMinutes(-10));
         var fresh = CreateMessage(EmailNotificationStatus.Sending, now);
+        var missingLease = CreateMessage(EmailNotificationStatus.Sending);
         var sent = CreateMessage(EmailNotificationStatus.Sent, now.AddMinutes(-10));
-        db.NotificationMessages.AddRange(stuck, fresh, sent);
+        db.NotificationMessages.AddRange(stuck, fresh, missingLease, sent);
         await db.SaveChangesAsync();
         var repository = new EmailNotificationLogRepository(db);
 
         var result = await repository.GetStuckSendingAsync(emailSendLeaseSeconds: 60);
 
-        result.Should().ContainSingle().Which.Id.Should().Be(stuck.Id);
+        result.Select(x => x.Id).Should().BeEquivalentTo(new[] { stuck.Id, missingLease.Id });
     }
 
     [Test]

@@ -20,12 +20,13 @@ Table: `NotificationMessages`
 - `CorrelationId` (invitation id)
 - `Recipient`
 - `PayloadJson`
-- `Status` (`Pending`, `Sent`, `Failed`)
+- `Status` (`Pending`, `Sending`, `Sent`, `Failed`)
 - `Attempts`
 - `NextAttemptAt`
 - `LastError`
 - `LastAttemptAt`
 - `SentAt`
+- `DeliveredAt`
 - `CreatedAt`
 - `UpdatedAt`
 
@@ -37,10 +38,13 @@ Indexes:
 ## Retry and Idempotency Rules
 
 - Duplicate scheduling for the same `Type + CorrelationId + Recipient + Channel` does not create a second row.
-- Job handler exits immediately when status is already `Sent`.
+- Job handler first atomically claims the row (`Pending -> Sending`) while stamping the send lease in `LastAttemptAt`.
+- A stale or interrupted `Sending` row can be reclaimed when the lease expires, or when an older broken row is missing `LastAttemptAt`.
+- The recurring committed-intent dispatcher re-enqueues stale `Sending` notifications so recovery does not depend on a duplicate business event happening later.
+- Job handler exits immediately when the notification cannot be claimed or is already complete.
 - Hangfire retries failed executions (`1m`, `5m`, `15m`).
 - Attempts and failure details are persisted on each failed run.
-- Successful retry clears `LastError` and sets `SentAt`.
+- Successful retry clears `LastError`, sets `SentAt`, and then best-effort persists `DeliveredAt`.
 
 ## Runtime Topology
 
