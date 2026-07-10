@@ -123,6 +123,38 @@ public sealed class InvitationEmailJobTests
     }
 
     [Test]
+    public async Task TryTransitionToSendingAsync_WhenFailedAndNotDeadLettered_ReturnsTrueAndTransitionsToSending()
+    {
+        await using var db = CreateDbContext();
+        var message = CreateMessage(EmailNotificationStatus.Failed);
+        db.NotificationMessages.Add(message);
+        await db.SaveChangesAsync();
+        var repository = new EmailNotificationLogRepository(db);
+
+        var claimed = await repository.TryTransitionToSendingAsync(message.Id);
+
+        claimed.Should().BeTrue();
+        var stored = await db.NotificationMessages.FirstOrDefaultAsync(x => x.Id == message.Id);
+        stored.Should().NotBeNull();
+        stored!.Status.Should().Be(EmailNotificationStatus.Sending);
+    }
+
+    [Test]
+    public async Task TryTransitionToSendingAsync_WhenFailedAndDeadLettered_ReturnsFalse()
+    {
+        await using var db = CreateDbContext();
+        var message = CreateMessage(EmailNotificationStatus.Failed);
+        message.IsDeadLettered = true;
+        db.NotificationMessages.Add(message);
+        await db.SaveChangesAsync();
+        var repository = new EmailNotificationLogRepository(db);
+
+        var claimed = await repository.TryTransitionToSendingAsync(message.Id);
+
+        claimed.Should().BeFalse();
+    }
+
+    [Test]
     public async Task GetStuckSendingAsync_ReturnsOnlySendingNotificationsOlderThanCutoff()
     {
         await using var db = CreateDbContext();

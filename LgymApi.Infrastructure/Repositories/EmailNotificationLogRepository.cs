@@ -114,6 +114,10 @@ public sealed class EmailNotificationLogRepository : IEmailNotificationLogReposi
     /// or whose lease timestamp was never written, is also reclaimed. This lets a subsequent
     /// dispatcher finish a send that crashed after claim acquisition while a still-fresh Sending
     /// lease (an in-flight concurrent dispatcher) is left untouched so it is not double-claimed.
+    /// Retry: a notification left in the Failed state after a transient send error is also reclaimed
+    /// when it has not been dead-lettered, so a retried job invocation (for example a Hangfire
+    /// AutomaticRetry re-running the handler) can re-send it. Dead-lettered notifications are never
+    /// reclaimed, keeping the terminal poison state intact.
     /// </remarks>
     public async Task<bool> TryTransitionToSendingAsync(Id<NotificationMessage> id, CancellationToken cancellationToken = default)
     {
@@ -126,7 +130,8 @@ public sealed class EmailNotificationLogRepository : IEmailNotificationLogReposi
                             x.Status == EmailNotificationStatus.Pending
                             || (x.Status == EmailNotificationStatus.Sending
                                 && x.DeliveredAt == null
-                                && (x.LastAttemptAt == null || x.LastAttemptAt < leaseCutoff))))
+                                && (x.LastAttemptAt == null || x.LastAttemptAt < leaseCutoff))
+                            || (x.Status == EmailNotificationStatus.Failed && !x.IsDeadLettered)))
             .StageUpdateAsync(
                 _dbContext,
                 x => x.Status,
