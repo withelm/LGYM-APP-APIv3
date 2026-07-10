@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
         var appDefaultsOptions = AppDefaultsOptionsFactory.Resolve(configuration);
         var photoStorageOptions = BuildPhotoStorageOptions(configuration);
         var backgroundCommandOptions = configuration.GetSection("BackgroundCommands").Get<BackgroundCommandOptions>() ?? new BackgroundCommandOptions();
+        backgroundCommandOptions.Validate();
 
         var emailOptions = EmailOptionsFactory.Create(configuration, appDefaultsOptions);
 
@@ -122,7 +123,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReportingRepository, ReportingRepository>();
         services.AddScoped<IRecurringReportAssignmentRepository, RecurringReportAssignmentRepository>();
         services.AddScoped<ISupplementationRepository, SupplementationRepository>();
-        services.AddScoped<IEmailNotificationLogRepository, EmailNotificationLogRepository>();
+        services.AddScoped<IEmailNotificationLogRepository>(sp =>
+            new EmailNotificationLogRepository(
+                sp.GetRequiredService<AppDbContext>(),
+                sp.GetRequiredService<BackgroundCommandOptions>()));
         services.AddScoped<IEmailNotificationSubscriptionRepository, EmailNotificationSubscriptionRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IPlanDayRepository, PlanDayRepository>();

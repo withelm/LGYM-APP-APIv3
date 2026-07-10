@@ -40,4 +40,21 @@ public interface IEmailNotificationLogRepository
     /// Returns the count of deleted records.
     /// </summary>
     Task<int> DeleteSentOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically claims a notification for sending by transitioning it from Pending to Sending.
+    /// The update also stamps the send lease in LastAttemptAt in the same write, so concurrent
+    /// dispatchers cannot double-claim the same notification and interrupted claims do not leave
+    /// unrecoverable Sending rows. Returns true when this call won the claim (the caller now owns
+    /// the send lease).
+    /// </summary>
+    Task<bool> TryTransitionToSendingAsync(Id<NotificationMessage> id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns notifications stranded in the Sending state beyond the configured send lease.
+    /// A notification is stuck when its status is Sending and its last attempt timestamp
+    /// predates (now - emailSendLeaseSeconds), or when the lease timestamp is missing because an
+    /// older claim sequence was interrupted. Used for operational monitoring and recovery.
+    /// </summary>
+    Task<List<NotificationMessage>> GetStuckSendingAsync(int emailSendLeaseSeconds, CancellationToken cancellationToken = default);
 }

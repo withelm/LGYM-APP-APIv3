@@ -113,6 +113,106 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task StaleSendingNotificationMessage_LeaseExpired_RedispatchedByDispatcher()
+    {
+        var originalDispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-10);
+        var originalLastAttemptAt = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
+            Channel = NotificationChannel.Email,
+            Type = EmailNotificationTypes.Welcome,
+            Recipient = "stale-sending@example.com",
+            PayloadJson = "{\"RecipientEmail\":\"stale-sending@example.com\",\"UserName\":\"CrashUser\",\"CultureName\":\"en\"}",
+            Status = EmailNotificationStatus.Sending,
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-15),
+            DispatchedAt = originalDispatchedAt,
+            SchedulerJobId = "stale-sending-job-id",
+            Attempts = 1,
+            LastAttemptAt = originalLastAttemptAt,
+            DeliveredAt = null
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.NotificationMessages.Add(notification);
+            await db.SaveChangesAsync();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var dispatcher = scope.ServiceProvider.GetRequiredService<ICommittedIntentDispatcher>();
+            await dispatcher.DispatchCommittedIntentsAsync(CancellationToken.None);
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var recovered = await db.NotificationMessages.FindAsync(notification.Id);
+
+            recovered.Should().NotBeNull();
+            recovered!.Status.Should().Be(EmailNotificationStatus.Sending,
+                "redispatch should preserve the in-flight Sending state until a worker reclaims and completes it");
+            recovered.DispatchedAt.Should().NotBeNull();
+            recovered.DispatchedAt.Should().BeAfter(originalDispatchedAt,
+                "redispatch should refresh DispatchedAt when a stale Sending notification is re-enqueued");
+            recovered.SchedulerJobId.Should().NotBeNullOrEmpty();
+            recovered.LastAttemptAt.Should().Be(originalLastAttemptAt,
+                "dispatcher should re-enqueue stale Sending notifications without mutating the lease owned by the worker path");
+        }
+    }
+
+    [Test]
+    public async Task FreshSendingNotificationMessage_NotRedispatchedByDispatcher()
+    {
+        var originalDispatchedAt = DateTimeOffset.UtcNow.AddMinutes(-2);
+        var originalLastAttemptAt = DateTimeOffset.UtcNow;
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            CorrelationId = Id<CorrelationScope>.New(),
+            Channel = NotificationChannel.Email,
+            Type = EmailNotificationTypes.Welcome,
+            Recipient = "fresh-sending@example.com",
+            PayloadJson = "{\"RecipientEmail\":\"fresh-sending@example.com\",\"UserName\":\"CrashUser\",\"CultureName\":\"en\"}",
+            Status = EmailNotificationStatus.Sending,
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
+            DispatchedAt = originalDispatchedAt,
+            SchedulerJobId = "fresh-sending-job-id",
+            Attempts = 1,
+            LastAttemptAt = originalLastAttemptAt,
+            DeliveredAt = null
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.NotificationMessages.Add(notification);
+            await db.SaveChangesAsync();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var dispatcher = scope.ServiceProvider.GetRequiredService<ICommittedIntentDispatcher>();
+            await dispatcher.DispatchCommittedIntentsAsync(CancellationToken.None);
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var unchanged = await db.NotificationMessages.FindAsync(notification.Id);
+
+            unchanged.Should().NotBeNull();
+            unchanged!.DispatchedAt.Should().Be(originalDispatchedAt,
+                "dispatcher should not redispatch a fresh Sending notification with an active lease");
+            unchanged.SchedulerJobId.Should().Be("fresh-sending-job-id");
+            unchanged.LastAttemptAt.Should().Be(originalLastAttemptAt);
+        }
+    }
+
+    [Test]
     public async Task AlreadyDispatchedEnvelope_NotRedispatched()
     {
         // Arrange - Create an envelope that was already dispatched

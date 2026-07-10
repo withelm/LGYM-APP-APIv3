@@ -353,6 +353,12 @@ public sealed class InvitationEmailServicesTests
 
         public Task<int> DeleteSentOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
+
+        public Task<bool> TryTransitionToSendingAsync(Id<NotificationMessage> id, CancellationToken cancellationToken = default)
+            => Task.FromResult(ExistingById is { Status: EmailNotificationStatus.Pending });
+
+        public Task<List<NotificationMessage>> GetStuckSendingAsync(int emailSendLeaseSeconds, CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<NotificationMessage>());
     }
 
     private sealed class FakeBackgroundScheduler : IEmailBackgroundScheduler
@@ -487,6 +493,257 @@ public sealed class InvitationEmailServicesTests
             if (logLevel == LogLevel.Critical)
             {
                 CriticalMessages.Add(formatter(state, exception));
+            }
+        }
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose()
+            {
+            }
+        }
+    }
+
+    [Test]
+    public async Task JobHandler_WhenRetrying_SuccessfulSendRecordsRetryAndLogs()
+    {
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Pending,
+            Attempts = 2,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = Id<CorrelationScope>.New(),
+            Recipient = "trainee@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository { ExistingById = notification };
+        var unitOfWork = new FakeUnitOfWork();
+        var sender = new FakeEmailSender();
+        var metrics = new FakeEmailMetrics();
+        var logger = new CapturingInfoLogger<EmailJobHandlerService>();
+        var handler = new EmailJobHandlerService(
+            repository,
+            new FakeTemplateComposerFactory(new PassThroughComposer()),
+            sender,
+            unitOfWork,
+            metrics,
+            logger);
+
+        await handler.ProcessAsync(notification.Id);
+
+        sender.SendCalls.Should().Be(1);
+        metrics.Retried.Should().Be(1);
+        metrics.Sent.Should().Be(1);
+        logger.InformationMessages.Should().Contain(m => m.Contains("Retrying"));
+    }
+
+    [Test]
+    public async Task JobHandler_WhenSenderDisabled_MarksFailedAndRecordsFailure()
+    {
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Pending,
+            Attempts = 0,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = Id<CorrelationScope>.New(),
+            Recipient = "trainee@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository { ExistingById = notification };
+        var unitOfWork = new FakeUnitOfWork();
+        var sender = new DisabledEmailSender();
+        var metrics = new FakeEmailMetrics();
+        var handler = new EmailJobHandlerService(
+            repository,
+            new FakeTemplateComposerFactory(new PassThroughComposer()),
+            sender,
+            unitOfWork,
+            metrics,
+            NullLogger<EmailJobHandlerService>.Instance);
+
+        await handler.ProcessAsync(notification.Id);
+
+        notification.Status.Should().Be(EmailNotificationStatus.Failed);
+        notification.LastError.Should().Be("Email sender is disabled.");
+        sender.SendCalls.Should().Be(1);
+        metrics.Failed.Should().Be(1);
+        metrics.Sent.Should().Be(0);
+    }
+
+    [Test]
+    public async Task JobHandler_WhenSecondSaveFailsAfterSent_LogsWarningAndDoesNotThrow()
+    {
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Pending,
+            Attempts = 0,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = Id<CorrelationScope>.New(),
+            Recipient = "trainee@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository { ExistingById = notification };
+        var unitOfWork = new FakeUnitOfWork { ThrowOnSaveCallNumber = 2 };
+        var sender = new FakeEmailSender();
+        var metrics = new FakeEmailMetrics();
+        var logger = new CapturingWarningLogger<EmailJobHandlerService>();
+        var handler = new EmailJobHandlerService(
+            repository,
+            new FakeTemplateComposerFactory(new PassThroughComposer()),
+            sender,
+            unitOfWork,
+            metrics,
+            logger);
+
+        await handler.ProcessAsync(notification.Id);
+
+        sender.SendCalls.Should().Be(1);
+        metrics.Sent.Should().Be(1);
+        logger.WarningMessages.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task JobHandler_WhenSenderThrows_MarksFailedAndRethrows()
+    {
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Pending,
+            Attempts = 0,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = Id<CorrelationScope>.New(),
+            Recipient = "trainee@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository { ExistingById = notification };
+        var unitOfWork = new FakeUnitOfWork();
+        var sender = new ThrowingEmailSender();
+        var metrics = new FakeEmailMetrics();
+        var handler = new EmailJobHandlerService(
+            repository,
+            new FakeTemplateComposerFactory(new PassThroughComposer()),
+            sender,
+            unitOfWork,
+            metrics,
+            NullLogger<EmailJobHandlerService>.Instance);
+
+        await FluentActions.Invoking(() => handler.ProcessAsync(notification.Id)).Should().ThrowAsync<InvalidOperationException>();
+
+        notification.Status.Should().Be(EmailNotificationStatus.Failed);
+        notification.LastError.Should().StartWith("InvalidOperationException");
+        metrics.Failed.Should().Be(1);
+    }
+
+    [Test]
+    public async Task JobHandler_WhenComposerThrowsLongMultilineError_SanitizesAndTruncatesLastError()
+    {
+        var notification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Pending,
+            Attempts = 0,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = Id<CorrelationScope>.New(),
+            Recipient = "trainee@example.com",
+            PayloadJson = "{}"
+        };
+
+        var repository = new FakeNotificationRepository { ExistingById = notification };
+        var unitOfWork = new FakeUnitOfWork();
+        var metrics = new FakeEmailMetrics();
+        var handler = new EmailJobHandlerService(
+            repository,
+            new FakeTemplateComposerFactory(new LongMessageComposer()),
+            new FakeEmailSender(),
+            unitOfWork,
+            metrics,
+            NullLogger<EmailJobHandlerService>.Instance);
+
+        await FluentActions.Invoking(() => handler.ProcessAsync(notification.Id)).Should().ThrowAsync<InvalidOperationException>();
+
+        notification.Status.Should().Be(EmailNotificationStatus.Failed);
+        notification.LastError.Should().NotContain("\r").And.NotContain("\n");
+        notification.LastError!.Length.Should().BeLessThanOrEqualTo(400);
+        notification.LastError.Should().Contain("First line");
+    }
+
+    private sealed class DisabledEmailSender : IEmailSender
+    {
+        public int SendCalls { get; private set; }
+
+        public Task<bool> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+        {
+            SendCalls += 1;
+            return Task.FromResult(false);
+        }
+    }
+
+    private sealed class ThrowingEmailSender : IEmailSender
+    {
+        public Task<bool> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Smtp transport unavailable");
+    }
+
+    private sealed class LongMessageComposer : IEmailTemplateComposer
+    {
+        public EmailNotificationType NotificationType => EmailNotificationTypes.TrainerInvitation;
+
+        public EmailMessage Compose(string payloadJson)
+            => throw new InvalidOperationException("First line\r\nSecond line " + new string('x', 500));
+    }
+
+    private sealed class CapturingInfoLogger<T> : ILogger<T>
+    {
+        public List<string> InformationMessages { get; } = new();
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull
+            => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel)
+            => logLevel == LogLevel.Information;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == LogLevel.Information)
+            {
+                InformationMessages.Add(formatter(state, exception));
+            }
+        }
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose()
+            {
+            }
+        }
+    }
+
+    private sealed class CapturingWarningLogger<T> : ILogger<T>
+    {
+        public List<string> WarningMessages { get; } = new();
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull
+            => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel)
+            => logLevel == LogLevel.Warning;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == LogLevel.Warning)
+            {
+                WarningMessages.Add(formatter(state, exception));
             }
         }
 

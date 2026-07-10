@@ -19,6 +19,7 @@ public abstract class NotificationMessageBase<TType, TDerived> : EntityBase<TDer
     public string? LastError { get; set; }
     public DateTimeOffset? LastAttemptAt { get; set; }
     public DateTimeOffset? SentAt { get; set; }
+    public DateTimeOffset? DeliveredAt { get; set; }
 
     /// <summary>
     /// Timestamp when the notification was dispatched to the background scheduler.

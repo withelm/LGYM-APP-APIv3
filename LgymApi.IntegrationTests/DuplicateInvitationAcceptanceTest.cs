@@ -53,6 +53,74 @@ public sealed partial class TrainerEmailInvitationTests
             await handler.ProcessAsync(notificationId);
         }
 
+        // Act again: a duplicate dispatch of the same notification must not send a second email.
+        using (var processScope2 = Factory.Services.CreateScope())
+        {
+            var handler = processScope2.ServiceProvider.GetRequiredService<IEmailJobHandler>();
+            await handler.ProcessAsync(notificationId);
+        }
+
+        // Assert
+        Factory.EmailSender.SentMessages.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task AcceptInvitationTwice_CrashBeforeSendRecoversAndSendsSingleEmail()
+    {
+        // Arrange
+        var trainer = await SeedDuplicateAcceptanceTrainerAsync();
+        var trainee = await SeedUserAsync();
+        var invitation = await SeedDuplicateAcceptanceInvitationAsync(trainer.Id, trainee.Email.Value, status: TrainerInvitationStatus.Pending);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var trainerRelationshipService = scope.ServiceProvider.GetRequiredService<ITrainerRelationshipService>();
+            await trainerRelationshipService.AcceptInvitationAsync(trainee, invitation);
+        }
+
+        await ProcessPendingCommandsAsync();
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var trainerRelationshipService = scope.ServiceProvider.GetRequiredService<ITrainerRelationshipService>();
+            await trainerRelationshipService.AcceptInvitationAsync(trainee, invitation);
+        }
+
+        await ProcessPendingCommandsAsync();
+
+        Id<NotificationMessage> notificationId;
+        using (var verifyScope = Factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var correlationId = invitation.Rebind<CorrelationScope>();
+            var notifications = await db.NotificationMessages
+                .Where(x => x.CorrelationId == correlationId)
+                .ToListAsync();
+
+            notifications.Should().ContainSingle();
+            notificationId = notifications.Single().Id;
+        }
+
+        // Simulate the first ProcessAsync claiming the notification (Pending -> Sending) and then
+        // crashing before the SMTP send completed. The notification is left stranded in Sending
+        // with DeliveredAt still null and an already-expired send lease.
+        using (var crashScope = Factory.Services.CreateScope())
+        {
+            var db = crashScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var notification = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
+            notification.Status = EmailNotificationStatus.Sending;
+            notification.DeliveredAt = null;
+            notification.LastAttemptAt = DateTimeOffset.UtcNow.AddMinutes(-5);
+            await db.SaveChangesAsync();
+        }
+
+        // Act: a subsequent dispatcher reclaims the stranded Sending notification (lease expired,
+        // never delivered) and sends it exactly once.
+        using (var processScope = Factory.Services.CreateScope())
+        {
+            var handler = processScope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
+            await handler.ProcessAsync(notificationId);
+        }
+
         // Assert
         Factory.EmailSender.SentMessages.Should().ContainSingle();
     }

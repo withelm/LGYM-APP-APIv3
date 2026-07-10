@@ -38,6 +38,42 @@ public static class ExecuteUpdateExtensions
         return await ExecuteSetBasedUpdateAsync(source, propertySelector, valueExpression, cancellationToken);
     }
 
+    public static async Task<int> StageUpdateAsync<TSource, TProperty1, TProperty2>(
+        this IQueryable<TSource> source,
+        DbContext dbContext,
+        Expression<Func<TSource, TProperty1>> propertySelector1,
+        Expression<Func<TSource, TProperty1>> valueExpression1,
+        Expression<Func<TSource, TProperty2>> propertySelector2,
+        Expression<Func<TSource, TProperty2>> valueExpression2,
+        CancellationToken cancellationToken = default)
+        where TSource : class
+    {
+        if (!CanUseSetBasedUpdate(dbContext))
+        {
+            var entities = await source.ToListAsync(cancellationToken);
+            var propertyInfo1 = GetPropertyInfo(propertySelector1);
+            var propertyInfo2 = GetPropertyInfo(propertySelector2);
+            var valueFunc1 = valueExpression1.Compile();
+            var valueFunc2 = valueExpression2.Compile();
+
+            foreach (var entity in entities)
+            {
+                propertyInfo1.SetValue(entity, valueFunc1(entity));
+                propertyInfo2.SetValue(entity, valueFunc2(entity));
+            }
+
+            return entities.Count;
+        }
+
+        return await ExecuteSetBasedUpdateAsync(
+            source,
+            propertySelector1,
+            valueExpression1,
+            propertySelector2,
+            valueExpression2,
+            cancellationToken);
+    }
+
     [Obsolete("Use StageUpdateAsync for UoW-friendly staged updates.")]
     public static Task<int> ExecuteUpdateAsync<TSource, TProperty>(
         this IQueryable<TSource> source,
@@ -146,6 +182,36 @@ public static class ExecuteUpdateExtensions
 
         return source.ExecuteUpdateAsync(
             setters => setters.SetProperty(propertySelector, valueExpression),
+            cancellationToken);
+    }
+
+    private static Task<int> ExecuteSetBasedUpdateAsync<TSource, TProperty1, TProperty2>(
+        IQueryable<TSource> source,
+        Expression<Func<TSource, TProperty1>> propertySelector1,
+        Expression<Func<TSource, TProperty1>> valueExpression1,
+        Expression<Func<TSource, TProperty2>> propertySelector2,
+        Expression<Func<TSource, TProperty2>> valueExpression2,
+        CancellationToken cancellationToken)
+        where TSource : class
+    {
+        if (IsEntityBase(typeof(TSource))
+            && !IsUpdatedAtProperty(propertySelector1)
+            && !IsUpdatedAtProperty(propertySelector2))
+        {
+            var utcNow = DateTimeOffset.UtcNow;
+            var updatedAtPropertySelector = BuildUpdatedAtSelector<TSource>();
+            return source.ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(propertySelector1, valueExpression1)
+                    .SetProperty(propertySelector2, valueExpression2)
+                    .SetProperty(updatedAtPropertySelector, _ => utcNow),
+                cancellationToken);
+        }
+
+        return source.ExecuteUpdateAsync(
+            setters => setters
+                .SetProperty(propertySelector1, valueExpression1)
+                .SetProperty(propertySelector2, valueExpression2),
             cancellationToken);
     }
 

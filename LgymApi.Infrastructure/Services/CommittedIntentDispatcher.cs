@@ -36,6 +36,7 @@ public sealed class CommittedIntentDispatcher : ICommittedIntentDispatcher
 
         await RecoverStaleProcessingEnvelopesAsync(dbContext, cancellationToken);
         await DispatchCommandEnvelopesAsync(dbContext, actionScheduler, cancellationToken);
+        await RecoverStaleSendingNotificationsAsync(dbContext, emailScheduler, cancellationToken);
         await DispatchNotificationMessagesAsync(dbContext, emailScheduler, cancellationToken);
     }
 
@@ -103,6 +104,42 @@ public sealed class CommittedIntentDispatcher : ICommittedIntentDispatcher
                 _logger.LogWarning(
                     ex,
                     "Failed to dispatch committed notification message {NotificationId}. It remains recoverable as undispatched.",
+                    notification.Id);
+            }
+        }
+    }
+
+    private async Task RecoverStaleSendingNotificationsAsync(
+        AppDbContext dbContext,
+        IEmailBackgroundScheduler scheduler,
+        CancellationToken cancellationToken)
+    {
+        var leaseCutoff = DateTimeOffset.UtcNow.AddSeconds(-_backgroundCommandOptions.EmailSendLeaseSeconds);
+
+        var staleSendingNotifications = await dbContext.NotificationMessages
+            .Where(x => x.Status == EmailNotificationStatus.Sending
+                        && x.DeliveredAt == null
+                        && !x.IsDeadLettered
+                        && (x.LastAttemptAt == null || x.LastAttemptAt < leaseCutoff))
+            .OrderBy(x => x.LastAttemptAt)
+            .ThenBy(x => x.CreatedAt)
+            .Take(BatchSize)
+            .ToListAsync(cancellationToken);
+
+        foreach (var notification in staleSendingNotifications)
+        {
+            try
+            {
+                var schedulerJobId = scheduler.Enqueue(notification.Id);
+                notification.DispatchedAt = DateTimeOffset.UtcNow;
+                notification.SchedulerJobId = schedulerJobId;
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to redispatch stale sending notification message {NotificationId}. It remains recoverable for a later committed-intent dispatch pass.",
                     notification.Id);
             }
         }

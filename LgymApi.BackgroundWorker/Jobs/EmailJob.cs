@@ -16,6 +16,7 @@ public sealed class EmailJob : IEmailJob
     }
 
     [AutomaticRetry(Attempts = 3, DelaysInSeconds = new[] { 60, 300, 900 })]
+    [DisableConcurrentExecution(60)]
     public Task ExecuteAsync(Id<NotificationMessage> notificationId)
     {
         return _handler.ProcessAsync(notificationId);

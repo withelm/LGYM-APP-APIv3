@@ -5,6 +5,8 @@ using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +17,7 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
     private readonly ITrainerRelationshipRepository _invitationRepository;
     private readonly IUserRepository _userRepository;
     private readonly IEmailScheduler<InvitationEmailPayload> _emailScheduler;
+    private readonly IEmailNotificationLogRepository _emailNotificationLogRepository;
     private readonly ILogger<SendInvitationEmailHandler> _logger;
     private readonly IEmailNotificationsFeature _emailNotificationsFeature;
     private readonly AppDefaultsOptions _appDefaultsOptions;
@@ -23,6 +26,7 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         ITrainerRelationshipRepository invitationRepository,
         IUserRepository userRepository,
         IEmailScheduler<InvitationEmailPayload> emailScheduler,
+        IEmailNotificationLogRepository emailNotificationLogRepository,
         IEmailNotificationsFeature emailNotificationsFeature,
         ILogger<SendInvitationEmailHandler> logger,
         AppDefaultsOptions appDefaultsOptions)
@@ -30,6 +34,7 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _emailScheduler = emailScheduler ?? throw new ArgumentNullException(nameof(emailScheduler));
+        _emailNotificationLogRepository = emailNotificationLogRepository ?? throw new ArgumentNullException(nameof(emailNotificationLogRepository));
         _emailNotificationsFeature = emailNotificationsFeature ?? throw new ArgumentNullException(nameof(emailNotificationsFeature));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _appDefaultsOptions = appDefaultsOptions ?? throw new ArgumentNullException(nameof(appDefaultsOptions));
@@ -81,6 +86,34 @@ public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCre
         {
             _logger.LogWarning("Invitation email skipped for Invitation {InvitationId} - no recipient email provided", command.InvitationId);
             return;
+        }
+
+        // Idempotency check: query existing notification before scheduling
+        var existingNotification = await _emailNotificationLogRepository.FindByCorrelationAsync(
+            EmailNotificationTypes.TrainerInvitation,
+            command.InvitationId.Rebind<CorrelationScope>(),
+            recipientEmail,
+            cancellationToken);
+
+        if (existingNotification != null)
+        {
+            if (existingNotification.Status != EmailNotificationStatus.Failed)
+            {
+                // Return early if already sent or in any non-failed status
+                _logger.LogInformation(
+                    "Invitation email already processed for Invitation {InvitationId} (Status: {Status})",
+                    command.InvitationId, existingNotification.Status);
+                return;
+            }
+
+            // Only proceed if failed but retries remain
+            if (existingNotification.Attempts >= 5)
+            {
+                _logger.LogInformation(
+                    "Invitation email max retries reached for Invitation {InvitationId}",
+                    command.InvitationId);
+                return;
+            }
         }
 
         var emailPayload = new InvitationEmailPayload

@@ -12,6 +12,7 @@ using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -23,6 +24,7 @@ public sealed class SendInvitationEmailHandlerTests
     private TestTrainerRelationshipRepository _testInvitationRepository = null!;
     private TestUserRepository _testUserRepository = null!;
     private TestEmailScheduler _testScheduler = null!;
+    private TestEmailNotificationLogRepository _testNotificationLogRepository = null!;
     private TestEmailNotificationsFeature _testEmailNotificationsFeature = null!;
     private TestLogger _testLogger = null!;
     private SendInvitationEmailHandler _handler = null!;
@@ -33,9 +35,10 @@ public sealed class SendInvitationEmailHandlerTests
         _testInvitationRepository = new TestTrainerRelationshipRepository();
         _testUserRepository = new TestUserRepository();
         _testScheduler = new TestEmailScheduler();
+        _testNotificationLogRepository = new TestEmailNotificationLogRepository();
         _testEmailNotificationsFeature = new TestEmailNotificationsFeature();
         _testLogger = new TestLogger();
-        _handler = new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
+        _handler = new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testNotificationLogRepository, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
     }
 
         [Test]
@@ -320,7 +323,7 @@ public sealed class SendInvitationEmailHandlerTests
     public void Constructor_WithNullInvitationRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var action = () => new SendInvitationEmailHandler(null!, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
+        var action = () => new SendInvitationEmailHandler(null!, _testUserRepository, _testScheduler, _testNotificationLogRepository, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
         var ex = action.Should().Throw<ArgumentNullException>().Which;
         ex.ParamName.Should().Be("invitationRepository");
     }
@@ -329,7 +332,7 @@ public sealed class SendInvitationEmailHandlerTests
     public void Constructor_WithNullUserRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var action = () => new SendInvitationEmailHandler(_testInvitationRepository, null!, _testScheduler, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
+        var action = () => new SendInvitationEmailHandler(_testInvitationRepository, null!, _testScheduler, _testNotificationLogRepository, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
         var ex = action.Should().Throw<ArgumentNullException>().Which;
         ex.ParamName.Should().Be("userRepository");
     }
@@ -338,7 +341,7 @@ public sealed class SendInvitationEmailHandlerTests
     public void Constructor_WithNullEmailScheduler_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var action = () => new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, null!, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
+        var action = () => new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, null!, _testNotificationLogRepository, _testEmailNotificationsFeature, _testLogger, new AppDefaultsOptions());
         var ex = action.Should().Throw<ArgumentNullException>().Which;
         ex.ParamName.Should().Be("emailScheduler");
     }
@@ -347,7 +350,7 @@ public sealed class SendInvitationEmailHandlerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var action = () => new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testEmailNotificationsFeature, null!, new AppDefaultsOptions());
+        var action = () => new SendInvitationEmailHandler(_testInvitationRepository, _testUserRepository, _testScheduler, _testNotificationLogRepository, _testEmailNotificationsFeature, null!, new AppDefaultsOptions());
         var ex = action.Should().Throw<ArgumentNullException>().Which;
         ex.ParamName.Should().Be("logger");
     }
@@ -432,6 +435,7 @@ public sealed class SendInvitationEmailHandlerTests
             _testInvitationRepository,
             _testUserRepository,
             _testScheduler,
+            _testNotificationLogRepository,
             _testEmailNotificationsFeature,
             _testLogger,
             new AppDefaultsOptions { PreferredLanguage = "pl-PL", PreferredTimeZone = "UTC" });
@@ -629,6 +633,178 @@ public sealed class SendInvitationEmailHandlerTests
          _testLogger.InformationMessages.Should().HaveCount(0);
     }
 
+    [Test]
+    public async Task ExecuteAsync_WithNoTrainee_UsesInviteeEmailAndConfiguredTimeZone()
+    {
+        var invitationId = Id<TrainerInvitation>.New();
+        var trainerId = Id<User>.New();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+            Code = "INVITEE1",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+            TraineeId = null,
+            InviteeEmail = "invitee@example.com"
+        };
+
+        _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] = new User
+        {
+            Id = (Domain.ValueObjects.Id<User>)trainerId,
+            Name = "Coach"
+        };
+
+        var handler = new SendInvitationEmailHandler(
+            _testInvitationRepository,
+            _testUserRepository,
+            _testScheduler,
+            _testNotificationLogRepository,
+            _testEmailNotificationsFeature,
+            _testLogger,
+            new AppDefaultsOptions { PreferredTimeZone = "UTC" });
+
+        await handler.ExecuteAsync(new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId });
+
+        _testScheduler.ScheduledPayloads.Should().HaveCount(1);
+        var payload = _testScheduler.ScheduledPayloads[0];
+        payload.RecipientEmail.Should().Be("invitee@example.com");
+        payload.PreferredTimeZone.Should().Be("UTC");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenExistingNotificationAlreadyProcessed_SkipsScheduling()
+    {
+        var invitationId = Id<TrainerInvitation>.New();
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+            Code = "IDEMP1",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+            TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
+        };
+
+        _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] = new User
+        {
+            Id = (Domain.ValueObjects.Id<User>)traineeId,
+            Email = "trainee@example.com",
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] = new User
+        {
+            Id = (Domain.ValueObjects.Id<User>)trainerId,
+            Name = "Coach"
+        };
+
+        _testNotificationLogRepository.ExistingNotification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Sent,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = invitationId.Rebind<CorrelationScope>(),
+            Recipient = "trainee@example.com"
+        };
+
+        await _handler.ExecuteAsync(new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId });
+
+        _testScheduler.ScheduledPayloads.Should().BeEmpty();
+        _testLogger.InformationMessages.Should().Contain(m => m.Contains("already processed"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenExistingNotificationFailedAtMaxRetries_SkipsScheduling()
+    {
+        var invitationId = Id<TrainerInvitation>.New();
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+            Code = "IDEMP2",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+            TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
+        };
+
+        _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] = new User
+        {
+            Id = (Domain.ValueObjects.Id<User>)traineeId,
+            Email = "trainee@example.com",
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] = new User
+        {
+            Id = (Domain.ValueObjects.Id<User>)trainerId,
+            Name = "Coach"
+        };
+
+        _testNotificationLogRepository.ExistingNotification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Failed,
+            Attempts = 5,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = invitationId.Rebind<CorrelationScope>(),
+            Recipient = "trainee@example.com"
+        };
+
+        await _handler.ExecuteAsync(new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId });
+
+        _testScheduler.ScheduledPayloads.Should().BeEmpty();
+        _testLogger.InformationMessages.Should().Contain(m => m.Contains("max retries reached"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenExistingNotificationFailedWithRetriesRemaining_ProceedsToSchedule()
+    {
+        var invitationId = Id<TrainerInvitation>.New();
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+
+        _testInvitationRepository.InvitationToReturn = new TrainerInvitation
+        {
+            Id = (Domain.ValueObjects.Id<TrainerInvitation>)invitationId,
+            Code = "IDEMP3",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            TrainerId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)trainerId,
+            TraineeId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)(Domain.ValueObjects.Id<User>)traineeId
+        };
+
+        _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)traineeId] = new User
+        {
+            Id = (Domain.ValueObjects.Id<User>)traineeId,
+            Email = "trainee@example.com",
+            PreferredLanguage = "en-US"
+        };
+
+        _testUserRepository.UsersById[(Domain.ValueObjects.Id<User>)trainerId] = new User
+        {
+            Id = (Domain.ValueObjects.Id<User>)trainerId,
+            Name = "Coach"
+        };
+
+        _testNotificationLogRepository.ExistingNotification = new NotificationMessage
+        {
+            Id = Id<NotificationMessage>.New(),
+            Status = EmailNotificationStatus.Failed,
+            Attempts = 2,
+            Type = EmailNotificationTypes.TrainerInvitation,
+            CorrelationId = invitationId.Rebind<CorrelationScope>(),
+            Recipient = "trainee@example.com"
+        };
+
+        await _handler.ExecuteAsync(new InvitationCreatedCommand { InvitationId = (LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerInvitation>)invitationId });
+
+        _testScheduler.ScheduledPayloads.Should().HaveCount(1);
+    }
+
     // Test doubles
     private sealed class TestTrainerRelationshipRepository : ITrainerRelationshipRepository
     {
@@ -686,6 +862,42 @@ public sealed class SendInvitationEmailHandlerTests
             ReceivedToken = cancellationToken;
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class TestEmailNotificationLogRepository : IEmailNotificationLogRepository
+    {
+        public List<NotificationMessage> NotificationMessages { get; } = new();
+        public NotificationMessage? ExistingNotification { get; set; }
+
+        public Task AddAsync(NotificationMessage message, CancellationToken cancellationToken = default)
+        {
+            NotificationMessages.Add(message);
+            return Task.CompletedTask;
+        }
+
+        public Task<NotificationMessage?> FindByIdAsync(Id<NotificationMessage> id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<NotificationMessage?> FindByCorrelationAsync(EmailNotificationType type, Id<CorrelationScope> correlationId, string recipient, CancellationToken cancellationToken = default)
+        {
+            if (ExistingNotification != null)
+            {
+                return Task.FromResult<NotificationMessage?>(ExistingNotification);
+            }
+
+            return Task.FromResult(
+                NotificationMessages.FirstOrDefault(nm =>
+                    nm.Type == type &&
+                    nm.CorrelationId == correlationId &&
+                    nm.Recipient == recipient));
+        }
+
+        public Task<List<NotificationMessage>> GetPendingUndispatchedAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<List<NotificationMessage>> GetFailedAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<List<NotificationMessage>> GetDeadLetteredAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<int> CountByStatusAsync(EmailNotificationStatus status, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<int> DeleteSentOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<bool> TryTransitionToSendingAsync(Id<NotificationMessage> id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<List<NotificationMessage>> GetStuckSendingAsync(int emailSendLeaseSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
     private sealed class TestCommandDispatcher : ICommandDispatcher

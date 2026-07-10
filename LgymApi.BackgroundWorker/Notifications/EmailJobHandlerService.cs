@@ -35,25 +35,29 @@ public sealed class EmailJobHandlerService : IEmailJobHandler
 
     public async Task ProcessAsync(Id<NotificationMessage> notificationId, CancellationToken cancellationToken = default)
     {
-        var notification = await _notificationLogRepository.FindByIdAsync(notificationId, cancellationToken);
-        if (notification == null)
+        // First step: atomically claim the notification for sending (Pending -> Sending).
+        // The repository guards the transition by the current Pending status, so a concurrent
+        // dispatcher cannot double-claim the same notification. If the claim fails the
+        // notification is already claimed or in a terminal state, so we skip to avoid duplicates.
+        var claimed = await _notificationLogRepository.TryTransitionToSendingAsync(notificationId, cancellationToken);
+        if (!claimed)
         {
-            _logger.LogWarning(
-                "Email notification {NotificationId} was not found. The job will be skipped.",
+            _logger.LogInformation(
+                "Email notification {NotificationId} could not be claimed for sending; skipping to avoid duplicate delivery.",
                 notificationId);
             return;
         }
 
-        if (notification.Status == EmailNotificationStatus.Sent)
+        var notification = await _notificationLogRepository.FindByIdAsync(notificationId, cancellationToken);
+        if (notification == null)
         {
-            _logger.LogInformation(
-                "Email notification {NotificationId} is already sent; skipping duplicate processing.",
+            _logger.LogWarning(
+                "Email notification {NotificationId} was not found after claim. The job will be skipped.",
                 notificationId);
             return;
         }
 
         notification.Attempts += 1;
-        notification.LastAttemptAt = DateTimeOffset.UtcNow;
 
         if (notification.Attempts > 1)
         {
@@ -94,6 +98,8 @@ public sealed class EmailJobHandlerService : IEmailJobHandler
                 return;
             }
 
+            // Crash-safe: persist the Sent transition first so a crash between send and
+            // persistence cannot cause a duplicate send on retry.
             notification.Status = EmailNotificationStatus.Sent;
             notification.SentAt = DateTimeOffset.UtcNow;
             notification.LastError = null;
@@ -112,6 +118,24 @@ public sealed class EmailJobHandlerService : IEmailJobHandler
                         notificationId);
                 }
                 return;
+            }
+
+            // Secondary delivery detail persisted in a separate save. A failure here does not
+            // risk a duplicate send because the Sent transition above is already durable.
+            notification.DeliveredAt = DateTimeOffset.UtcNow;
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception persistenceException)
+            {
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning(
+                        persistenceException,
+                        "Email notification {NotificationId} was delivered and marked Sent, but persisting DeliveredAt failed.",
+                        notificationId);
+                }
             }
 
             _metrics.RecordSent(notification.Type);
