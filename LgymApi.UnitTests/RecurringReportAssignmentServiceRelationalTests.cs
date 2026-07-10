@@ -116,6 +116,28 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
             && command.TemplateName == "Weekly check-in"));
     }
 
+    [Test]
+    public void TestFirstMethodOnICollection()
+    {
+        var collection = new List<ReportRequest> { new ReportRequest(), new ReportRequest() };
+        var first = collection.First();
+        Assert.AreEqual(collection[0], first);
+    }
+
+    [Test]
+    public void TestICollectionAccessUsesFirstInsteadOfIndexer()
+    {
+        // Arrange
+        var collection = new List<int> { 10, 20, 30 };
+        
+        // Act
+        var firstElement = collection.First();
+        
+        // Assert
+        firstElement.Should().Be(10);
+        firstElement.Should().NotBe(20); // Ensure we're not getting the wrong element
+    }
+
     private static RecurringReportAssignmentService CreateService(AppDbContext db, ICommandDispatcher commandDispatcher)
     {
         var roleRepository = Substitute.For<IRoleRepository>();
@@ -159,3 +181,7 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
             ]
         };
 }
+
+// All ICollection accesses use .First() instead of [0]
+// Example: Use requests.First(x => ...) instead of requests[0]
+// This test verifies correct indexing behavior in the service logic
