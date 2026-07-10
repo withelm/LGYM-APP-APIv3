@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LgymApi.IntegrationTests;
 
 [TestFixture]
-public sealed class TrainerEmailInvitationTests : IntegrationTestBase
+public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 {
     [SetUp]
     public void ResetEmailCapture()

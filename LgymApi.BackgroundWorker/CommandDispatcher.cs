@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -55,10 +56,31 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
         var commandType = typeof(TCommand);
         var descriptor = new CommandDescriptor(commandType);
-        var payloadJson = JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current);
 
         // Compute deterministic correlation ID from command type + payload content
-        var correlationId = ComputeDeterministicCorrelationId(descriptor.TypeFullName, payloadJson);
+        // Special handling for InvitationAcceptedCommand to ensure deterministic serialization
+        Id<CorrelationScope> correlationId;
+        string payloadJson;
+        if (commandType == typeof(InvitationAcceptedCommand) && command is InvitationAcceptedCommand invitationCommand)
+        {
+            correlationId = ComputeDeterministicCorrelationIdForInvitationAcceptedCommand(invitationCommand.InvitationId);
+            // Still need payload JSON for envelope storage (use deterministic format)
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("invitationId");
+                writer.WriteStringValue(invitationCommand.InvitationId.ToString());
+                writer.WriteEndObject();
+                writer.Flush();
+                payloadJson = Encoding.UTF8.GetString(stream.ToArray());
+            }
+        }
+        else
+        {
+            payloadJson = JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current);
+            correlationId = ComputeDeterministicCorrelationId(descriptor.TypeFullName, payloadJson);
+        }
 
         _logger.LogInformation(
             "Dispatching command {CommandType} with correlation {CorrelationId}.",
@@ -171,5 +193,33 @@ public sealed class CommandDispatcher : ICommandDispatcher
         var correlationBytes = new byte[16];
         Array.Copy(hashBytes, correlationBytes, 16);
         return Id<CorrelationScope>.FromBytes(correlationBytes);
+    }
+
+    /// <summary>
+    /// Computes a deterministic correlation ID for InvitationAcceptedCommand.
+    /// Uses manual JSON serialization with fixed property order to ensure identical output for identical commands.
+    /// </summary>
+    private static Id<CorrelationScope> ComputeDeterministicCorrelationIdForInvitationAcceptedCommand(Id<TrainerInvitation> invitationId)
+    {
+        // Use deterministic JSON serialization for InvitationAcceptedCommand
+        // The command has a single property: InvitationId
+        // We write JSON manually to guarantee stable property order and format
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("invitationId");
+            writer.WriteStringValue(invitationId.ToString()); // Standard typed ID string format with hyphens
+            writer.WriteEndObject();
+            writer.Flush();
+
+            var jsonBytes = stream.ToArray();
+            var input = $"LgymApi.BackgroundWorker.Common.Commands.InvitationAcceptedCommand|{System.Text.Encoding.UTF8.GetString(jsonBytes)}";
+            var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+
+            var correlationBytes = new byte[16];
+            Array.Copy(hashBytes, correlationBytes, 16);
+            return Id<CorrelationScope>.FromBytes(correlationBytes);
+        }
     }
 }
