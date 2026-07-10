@@ -351,6 +351,8 @@ namespace LgymApi.UnitTests
             public Task<List<NotificationMessage>> GetDeadLetteredAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
             public Task<int> CountByStatusAsync(EmailNotificationStatus status, CancellationToken cancellationToken = default) => throw new NotImplementedException();
             public Task<int> DeleteSentOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+            public Task<bool> TryTransitionToSendingAsync(Id<NotificationMessage> id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+            public Task<List<NotificationMessage>> GetStuckSendingAsync(int emailSendLeaseSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         }
 
         private sealed class TestEmailNotificationsFeature : IEmailNotificationsFeature

@@ -121,15 +121,25 @@ public sealed class RepositoryRegistrationGuardTests
                 continue;
             }
 
-            if (genericName.TypeArgumentList.Arguments.Count < 2)
+            // Handle standard registration: AddScoped<IInterface, Implementation>()
+            if (genericName.TypeArgumentList.Arguments.Count >= 2)
             {
-                continue;
+                var interfaceType = NormalizeType(genericName.TypeArgumentList.Arguments[0]);
+                var implementationType = NormalizeType(genericName.TypeArgumentList.Arguments[1]);
+
+                registrations.Add(new RepositoryDeclaration(interfaceType, implementationType));
             }
-
-            var interfaceType = NormalizeType(genericName.TypeArgumentList.Arguments[0]);
-            var implementationType = NormalizeType(genericName.TypeArgumentList.Arguments[1]);
-
-            registrations.Add(new RepositoryDeclaration(interfaceType, implementationType));
+            // Handle factory registration: AddScoped<IInterface>(sp => new Implementation(...))
+            else if (genericName.TypeArgumentList.Arguments.Count == 1 && invocation.ArgumentList.Arguments.Count >= 1)
+            {
+                var interfaceType = NormalizeType(genericName.TypeArgumentList.Arguments[0]);
+                // For factory registrations the concrete type is created inside the lambda.
+                // Extract it from the `new Implementation(...)` expression when present so the
+                // registration matches the concrete repository declaration. Fall back to a
+                // placeholder when the concrete type cannot be resolved statically.
+                var implementationType = ExtractFactoryImplementation(invocation) ?? "<factory>";
+                registrations.Add(new RepositoryDeclaration(interfaceType, implementationType));
+            }
         }
 
         return registrations;
@@ -141,6 +151,15 @@ public sealed class RepositoryRegistrationGuardTests
             .ToString()
             .Replace("global::", string.Empty, StringComparison.Ordinal)
             .Replace(" ", string.Empty, StringComparison.Ordinal);
+    }
+
+    private static string? ExtractFactoryImplementation(InvocationExpressionSyntax invocation)
+    {
+        var objectCreation = invocation.ArgumentList.Arguments
+            .SelectMany(argument => argument.DescendantNodes().OfType<ObjectCreationExpressionSyntax>())
+            .FirstOrDefault();
+
+        return objectCreation == null ? null : NormalizeType(objectCreation.Type);
     }
 
     private static bool IsInBuildArtifacts(string path)

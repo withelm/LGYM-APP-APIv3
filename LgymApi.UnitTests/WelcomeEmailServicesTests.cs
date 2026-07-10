@@ -271,6 +271,12 @@ public sealed class WelcomeEmailServicesTests
 
         public Task<int> DeleteSentOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
+
+        public Task<bool> TryTransitionToSendingAsync(Id<NotificationMessage> id, CancellationToken cancellationToken = default)
+            => Task.FromResult(ExistingById is { Status: EmailNotificationStatus.Pending });
+
+        public Task<List<NotificationMessage>> GetStuckSendingAsync(int emailSendLeaseSeconds, CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<NotificationMessage>());
     }
 
     private sealed class FakeBackgroundScheduler : IEmailBackgroundScheduler
