@@ -203,6 +203,37 @@ public sealed class CommandDispatcherTests
         _repository.GetAllEnvelopes().Should().HaveCount(1);
     }
 
+    [Test]
+    public async Task EnqueueAsync_SaveChangesDuplicateViolationButEnvelopeMissing_Throws()
+    {
+        // Arrange
+        var invitationId = Id<TrainerInvitation>.New();
+
+        var services = new ServiceCollection();
+        services.AddSingleton<ILogger<CommandDispatcher>>(_ => _logger);
+        services.AddScoped<IBackgroundAction<InvitationAcceptedCommand>, FakeInvitationAcceptedHandler>();
+        _serviceProvider = services.BuildServiceProvider();
+
+        _repository.ReturnNullOnFindByCorrelationId = true;
+        _unitOfWork.SaveChangesException = CreateDuplicateEnvelopeDbUpdateException();
+
+        var dispatcher = new CommandDispatcher(
+            _serviceProvider,
+            _repository,
+            _unitOfWork,
+            CreateTestDbContext(),
+            _logger);
+
+        var command = new InvitationAcceptedCommand { InvitationId = invitationId };
+
+        // Act
+        var act = () => dispatcher.EnqueueAsync(command);
+
+        // Assert - edge case: constraint violation but envelope not found must bubble up
+        await act.Should().ThrowAsync<DbUpdateException>();
+        _unitOfWork.SaveCallCount.Should().Be(1);
+    }
+
     // Test handler
     private sealed class FakeInvitationAcceptedHandler : IBackgroundAction<InvitationAcceptedCommand>
     {
@@ -217,6 +248,7 @@ public sealed class CommandDispatcherTests
     {
         private readonly Dictionary<Id<CommandEnvelope>, CommandEnvelope> _envelopes = new();
         public int UpdateCallCount { get; private set; }
+        public bool ReturnNullOnFindByCorrelationId { get; set; }
 
         public void AddEnvelope(CommandEnvelope envelope)
         {
@@ -237,7 +269,9 @@ public sealed class CommandDispatcherTests
 
         public Task<CommandEnvelope?> FindByCorrelationIdAsync(Id<CorrelationScope> correlationId, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(_envelopes.Values.FirstOrDefault(e => e.CorrelationId == correlationId));
+            return Task.FromResult(ReturnNullOnFindByCorrelationId
+                ? null
+                : _envelopes.Values.FirstOrDefault(e => e.CorrelationId == correlationId));
         }
 
         public Task<List<CommandEnvelope>> GetPendingRetriesAsync(CancellationToken cancellationToken = default)

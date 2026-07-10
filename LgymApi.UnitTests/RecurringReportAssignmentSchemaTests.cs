@@ -69,7 +69,7 @@ public sealed class RecurringReportAssignmentSchemaTests
             .UseSqlite(sqliteConnection)
             .Options);
 
-    private static Task ApplyRecurringAssignmentIndexFixAsync(AppDbContext dbContext)
+    private static Task<int> ApplyRecurringAssignmentIndexFixAsync(AppDbContext dbContext)
         => dbContext.Database.ExecuteSqlRawAsync(
             "DROP INDEX IF EXISTS \"IX_ReportRequests_RecurringReportAssignmentId\"; " +
             "CREATE INDEX \"IX_ReportRequests_RecurringReportAssignmentId\" ON \"ReportRequests\" (\"RecurringReportAssignmentId\");");
