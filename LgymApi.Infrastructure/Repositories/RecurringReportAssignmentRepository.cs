@@ -20,51 +20,83 @@ public sealed class RecurringReportAssignmentRepository : IRecurringReportAssign
         await _dbContext.RecurringReportAssignments.AddAsync(assignment, cancellationToken);
     }
 
-    public Task<RecurringReportAssignment?> FindByIdForTrainerAsync(Id<RecurringReportAssignment> assignmentId, Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
+    public async Task<RecurringReportAssignment?> FindByIdForTrainerAsync(Id<RecurringReportAssignment> assignmentId, Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
     {
-        return BaseQuery()
+        var assignment = await BaseQuery()
             .FirstOrDefaultAsync(
                 x => x.Id == assignmentId && x.TrainerId == trainerId && x.TraineeId == traineeId,
                 cancellationToken);
+
+        return assignment is null ? null : SortIncludedFields(assignment);
     }
 
-    public Task<RecurringReportAssignment?> FindByIdAsync(Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default)
+    public async Task<RecurringReportAssignment?> FindByIdAsync(Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default)
     {
-        return BaseQuery().FirstOrDefaultAsync(x => x.Id == assignmentId, cancellationToken);
+        var assignment = await BaseQuery().FirstOrDefaultAsync(x => x.Id == assignmentId, cancellationToken);
+        return assignment is null ? null : SortIncludedFields(assignment);
     }
 
-    public Task<RecurringReportAssignment?> FindByCurrentReportRequestIdAsync(Id<ReportRequest> reportRequestId, CancellationToken cancellationToken = default)
+    public async Task<RecurringReportAssignment?> FindByCurrentReportRequestIdAsync(Id<ReportRequest> reportRequestId, CancellationToken cancellationToken = default)
     {
-        return BaseQuery().FirstOrDefaultAsync(x => x.CurrentReportRequestId == reportRequestId, cancellationToken);
+        var assignment = await BaseQuery().FirstOrDefaultAsync(x => x.CurrentReportRequestId == reportRequestId, cancellationToken);
+        return assignment is null ? null : SortIncludedFields(assignment);
     }
 
-    public Task<List<RecurringReportAssignment>> GetByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
+    public async Task<List<RecurringReportAssignment>> GetByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
     {
-        return BaseQuery()
+        var assignments = await BaseQuery()
             .AsNoTracking()
             .Where(x => x.TrainerId == trainerId && x.TraineeId == traineeId)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
+
+        return assignments.Select(SortIncludedFields).ToList();
     }
 
-    public Task<List<RecurringReportAssignment>> GetDueAssignmentsAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
+    public async Task<List<RecurringReportAssignment>> GetDueAssignmentsAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
     {
-        return BaseQuery()
-            .Where(x => x.IsActive && x.StartsAt <= now && (!x.EndsAt.HasValue || x.EndsAt >= now))
+        var activeAssignments = await BaseQuery()
+            .Where(x => x.IsActive)
+            .ToListAsync(cancellationToken);
+
+        return activeAssignments
+            .Select(SortIncludedFields)
+            .Where(x => x.StartsAt <= now)
+            .Where(x => !x.EndsAt.HasValue || x.EndsAt.Value >= now)
             .OrderBy(x => x.NextEligibleAt ?? x.StartsAt)
             .ThenBy(x => x.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 
     private IQueryable<RecurringReportAssignment> BaseQuery()
     {
         return _dbContext.RecurringReportAssignments
             .Include(x => x.Template)
-                .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
+                .ThenInclude(x => x.Fields)
             .Include(x => x.CurrentReportRequest)
                 .ThenInclude(x => x.Template)
-                    .ThenInclude(x => x.Fields.OrderBy(f => f.Order).ThenBy(f => f.CreatedAt))
+                    .ThenInclude(x => x.Fields)
             .Include(x => x.CurrentReportRequest)
                 .ThenInclude(x => x.Submission);
+    }
+
+    private static RecurringReportAssignment SortIncludedFields(RecurringReportAssignment assignment)
+    {
+        SortTemplateFields(assignment.Template);
+        SortTemplateFields(assignment.CurrentReportRequest?.Template);
+        return assignment;
+    }
+
+    private static void SortTemplateFields(ReportTemplate? template)
+    {
+        if (template == null)
+        {
+            return;
+        }
+
+        template.Fields = template.Fields
+            .OrderBy(f => f.Order)
+            .ThenBy(f => f.CreatedAt)
+            .ToList();
     }
 }

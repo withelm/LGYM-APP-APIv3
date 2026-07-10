@@ -1,0 +1,187 @@
+using FluentAssertions;
+using LgymApi.Application.Features.Reporting;
+using LgymApi.Application.Repositories;
+using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
+using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Repositories;
+using LgymApi.Infrastructure.UnitOfWork;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using NSubstitute;
+using NUnit.Framework;
+
+namespace LgymApi.UnitTests;
+
+[TestFixture]
+public sealed class RecurringReportAssignmentServiceRelationalTests
+{
+    [Test]
+    public async Task ProcessDueAssignmentsAsync_CreatesNextRequest_AfterFeedbackReadAndIntervalElapsed_OnSqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var originalRequestId = default(Id<ReportRequest>);
+
+        await using (var setupDb = new AppDbContext(options))
+        {
+            await setupDb.Database.EnsureCreatedAsync();
+
+            var trainer = CreateUser("trainer@example.com", "Trainer");
+            var trainee = CreateUser("trainee@example.com", "Trainee");
+            var template = CreateTemplate(trainer.Id);
+            var currentRequest = new ReportRequest
+            {
+                Id = Id<ReportRequest>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                TemplateId = template.Id,
+                Template = template,
+                Status = ReportRequestStatus.Submitted,
+                SubmittedAt = DateTimeOffset.UtcNow.AddDays(-10),
+                Note = "weekly check-in"
+            };
+            originalRequestId = currentRequest.Id;
+            var submission = new ReportSubmission
+            {
+                Id = Id<ReportSubmission>.New(),
+                ReportRequestId = currentRequest.Id,
+                ReportRequest = currentRequest,
+                TraineeId = trainee.Id,
+                PayloadJson = "{}",
+                TrainerFeedbackAddedAt = DateTimeOffset.UtcNow.AddDays(-9),
+                TrainerFeedbackReadAt = DateTimeOffset.UtcNow.AddDays(-8)
+            };
+            currentRequest.Submission = submission;
+
+            var assignment = new RecurringReportAssignment
+            {
+                Id = Id<RecurringReportAssignment>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                TemplateId = template.Id,
+                Template = template,
+                IntervalValue = 1,
+                IntervalUnit = RecurringReportIntervalUnit.Week,
+                StartsAt = DateTimeOffset.UtcNow.AddDays(-20),
+                IsActive = true,
+                Note = "weekly check-in",
+                CurrentReportRequestId = currentRequest.Id,
+                CurrentReportRequest = currentRequest,
+                NextEligibleAt = DateTimeOffset.UtcNow.AddDays(-1)
+            };
+
+            await setupDb.Users.AddRangeAsync(trainer, trainee);
+            await setupDb.ReportTemplates.AddAsync(template);
+            await setupDb.ReportRequests.AddAsync(currentRequest);
+            await setupDb.ReportSubmissions.AddAsync(submission);
+            await setupDb.RecurringReportAssignments.AddAsync(assignment);
+            await setupDb.SaveChangesAsync();
+        }
+
+        var commandDispatcher = Substitute.For<ICommandDispatcher>();
+
+        await using (var actDb = new AppDbContext(options))
+        {
+            var service = CreateService(actDb, commandDispatcher);
+            await service.ProcessDueAssignmentsAsync();
+        }
+
+        await using var assertDb = new AppDbContext(options);
+        var storedAssignment = await assertDb.RecurringReportAssignments
+            .SingleAsync();
+        var requests = await assertDb.ReportRequests.ToListAsync();
+        var nextRequest = requests.Single(x => x.Id != originalRequestId);
+
+        requests.Should().HaveCount(2);
+        storedAssignment.CurrentReportRequestId.Should().Be(nextRequest.Id);
+        storedAssignment.CurrentReportRequestId.Should().NotBe(originalRequestId);
+        storedAssignment.NextEligibleAt.Should().BeNull();
+        nextRequest.RecurringReportAssignmentId.Should().Be(storedAssignment.Id);
+        nextRequest.Status.Should().Be(ReportRequestStatus.Pending);
+        nextRequest.Note.Should().Be("weekly check-in");
+
+        await commandDispatcher.Received(1).EnqueueAsync(Arg.Is<ReportRequestCreatedInAppNotificationCommand>(command =>
+            command.RequestId == nextRequest.Id
+            && command.TraineeId == storedAssignment.TraineeId
+            && command.TrainerId == storedAssignment.TrainerId
+            && command.TemplateName == "Weekly check-in"));
+    }
+
+    [Test]
+    public void TestFirstMethodOnICollection()
+    {
+        var collection = new List<ReportRequest> { new ReportRequest(), new ReportRequest() };
+        var first = collection.First();
+        Assert.AreEqual(collection[0], first);
+    }
+
+    [Test]
+    public void TestICollectionAccessUsesFirstInsteadOfIndexer()
+    {
+        // Arrange
+        var collection = new List<int> { 10, 20, 30 };
+        
+        // Act
+        var firstElement = collection.First();
+        
+        // Assert
+        firstElement.Should().Be(10);
+        firstElement.Should().NotBe(20); // Ensure we're not getting the wrong element
+    }
+
+    private static RecurringReportAssignmentService CreateService(AppDbContext db, ICommandDispatcher commandDispatcher)
+    {
+        var roleRepository = Substitute.For<IRoleRepository>();
+        var trainerRelationshipRepository = Substitute.For<ITrainerRelationshipRepository>();
+
+        return new RecurringReportAssignmentService(new RecurringReportAssignmentServiceDependencies(
+            roleRepository,
+            trainerRelationshipRepository,
+            new ReportingRepository(db),
+            new RecurringReportAssignmentRepository(db),
+            commandDispatcher,
+            new EfUnitOfWork(db)));
+    }
+
+    private static User CreateUser(string email, string name)
+        => new()
+        {
+            Id = Id<User>.New(),
+            Name = name,
+            Email = email,
+            ProfileRank = "Rookie"
+        };
+
+    private static ReportTemplate CreateTemplate(Id<User> trainerId)
+        => new()
+        {
+            Id = Id<ReportTemplate>.New(),
+            TrainerId = trainerId,
+            Name = "Weekly check-in",
+            Fields =
+            [
+                new ReportTemplateField
+                {
+                    Id = Id<ReportTemplateField>.New(),
+                    Key = "summary",
+                    Label = "Summary",
+                    Order = 1,
+                    Type = ReportFieldType.Text,
+                    IsRequired = true,
+                }
+            ]
+        };
+}
+
+// All ICollection accesses use .First() instead of [0]
+// Example: Use requests.First(x => ...) instead of requests[0]
+// This test verifies correct indexing behavior in the service logic

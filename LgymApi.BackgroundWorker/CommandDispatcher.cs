@@ -9,6 +9,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -139,7 +140,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         {
             await _unitOfWork.SaveChangesAsync();
         }
-        catch (DbUpdateException ex)
+        catch (DbUpdateException ex) when (IsExactDuplicateEnvelopeViolation(ex))
         {
             // Conflict: unique constraint violation on CorrelationId (concurrent duplicate insert)
             // This handles the race condition where two concurrent callers passed the read phase
@@ -221,5 +222,14 @@ public sealed class CommandDispatcher : ICommandDispatcher
             Array.Copy(hashBytes, correlationBytes, 16);
             return Id<CorrelationScope>.FromBytes(correlationBytes);
         }
+    }
+
+    private static bool IsExactDuplicateEnvelopeViolation(DbUpdateException exception)
+    {
+        const string commandEnvelopeCorrelationIndex = "IX_CommandEnvelopes_CorrelationId";
+
+        return exception.InnerException is PostgresException postgresException
+            && string.Equals(postgresException.SqlState, PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
+            && string.Equals(postgresException.ConstraintName, commandEnvelopeCorrelationIndex, StringComparison.Ordinal);
     }
 }
