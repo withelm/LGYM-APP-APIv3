@@ -48,6 +48,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMeasurementsService, MeasurementsService>();
         services.AddScoped<IInAppNotificationServiceDependencies, InAppNotificationServiceDependencies>();
         services.AddScoped<IInAppNotificationService, InAppNotificationService>();
+        services.AddScoped<IPushNotificationService, PushNotificationService>();
+        services.AddScoped<IStalePushInstallationCleanupService, StalePushInstallationCleanupService>();
+        services.AddScoped<INotificationEventBridge, NotificationEventBridge>();
         services.AddScoped<PasswordResetServiceDependencies>();
         services.AddScoped<IPasswordResetTokenGenerationService, PasswordResetTokenGenerationService>();
         services.AddScoped<IPasswordResetService, PasswordResetService>();

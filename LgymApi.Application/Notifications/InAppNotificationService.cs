@@ -11,6 +11,8 @@ namespace LgymApi.Application.Notifications;
 
 public sealed class InAppNotificationService : IInAppNotificationService
 {
+    private const int PushSchemaVersion = 1;
+
     private readonly IInAppNotificationServiceDependencies _deps;
     private readonly ILogger<InAppNotificationService> _logger;
 
@@ -22,6 +24,7 @@ public sealed class InAppNotificationService : IInAppNotificationService
 
     public async Task<Result<InAppNotificationResult, AppError>> CreateAsync(CreateInAppNotificationInput input, CancellationToken cancellationToken = default)
     {
+        var isNewNotification = true;
         var notification = new InAppNotification
         {
             Id = Id<InAppNotification>.New(),
@@ -37,31 +40,48 @@ public sealed class InAppNotificationService : IInAppNotificationService
 
         await _deps.InAppNotificationRepository.AddAsync(notification, cancellationToken);
 
+        InAppNotificationResult result;
         try
         {
             await _deps.UnitOfWork.SaveChangesAsync(cancellationToken);
+            result = MapToResult(notification);
         }
         catch (Exception ex)
         {
             var existingResult = await TryResolveDuplicateDeliveryAsync(input, notification, ex, cancellationToken);
             if (existingResult != null)
             {
-                return Result<InAppNotificationResult, AppError>.Success(existingResult);
+                result = existingResult;
+                isNewNotification = false;
             }
-
-            throw;
+            else
+            {
+                throw;
+            }
         }
 
-        var result = MapToResult(notification);
-
-        try
+        if (isNewNotification)
         {
-            await _deps.PushPublisher.PushAsync(result, cancellationToken);
+            try
+            {
+                await _deps.PushPublisher.PushAsync(result, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to push notification for recipient {RecipientId}", input.RecipientId);
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to push notification for recipient {RecipientId}", input.RecipientId);
-        }
+
+        await _deps.NotificationEventBridge.EnqueueAsync(
+            new EnqueueNotificationEventInput(
+                result.RecipientId,
+                PushSchemaVersion,
+                result.Type.Value,
+                result.Id.ToString(),
+                null,
+                result.Id,
+                result.RedirectUrl),
+            cancellationToken);
 
         return Result<InAppNotificationResult, AppError>.Success(result);
     }

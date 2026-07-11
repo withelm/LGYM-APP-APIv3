@@ -4,11 +4,14 @@ using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Jobs;
+using LgymApi.BackgroundWorker.Common.Push;
 using LgymApi.BackgroundWorker.Jobs;
+using LgymApi.BackgroundWorker.Push;
 using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Infrastructure.Jobs;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Application.Notifications;
+using LgymApi.BackgroundWorker.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.BackgroundWorker;
@@ -35,6 +38,15 @@ public static class ServiceProvider
             services.AddScoped<IActionMessageScheduler, HangfireActionMessageScheduler>();
         }
 
+        if (isTesting)
+        {
+            services.AddScoped<IPushBackgroundScheduler, NoOpPushBackgroundScheduler>();
+        }
+        else
+        {
+            services.AddScoped<IPushBackgroundScheduler, HangfirePushBackgroundScheduler>();
+        }
+
         services.AddScoped<IEmailScheduler<InvitationEmailPayload>, EmailSchedulerService<InvitationEmailPayload>>();
         services.AddScoped<IEmailScheduler<InvitationAcceptedEmailPayload>, EmailSchedulerService<InvitationAcceptedEmailPayload>>();
         services.AddScoped<IEmailScheduler<InvitationRevokedEmailPayload>, EmailSchedulerService<InvitationRevokedEmailPayload>>();
@@ -46,18 +58,27 @@ public static class ServiceProvider
         services.AddScoped<IInvitationEmailJob, InvitationEmailJob>();
         services.AddScoped<IWelcomeEmailJob, WelcomeEmailJob>();
         services.AddScoped<IEmailJob, EmailJob>();
+        services.AddScoped<IPushNotificationJob, PushNotificationJob>();
 
         services.AddScoped<InvitationEmailJob>();
         services.AddScoped<WelcomeEmailJob>();
         services.AddScoped<EmailJob>();
+        services.AddScoped<PushNotificationJob>();
         services.AddScoped<IActionMessageJob, ActionMessageJob>();
         services.AddScoped<ActionMessageJob>();
         services.AddScoped<ICommittedIntentDispatchJob, CommittedIntentDispatchJob>();
         services.AddScoped<IExpiredPhotoUploadCleanupJob, ExpiredPhotoUploadCleanupJob>();
         services.AddScoped<IRecurringReportAssignmentProcessingJob, RecurringReportAssignmentProcessingJob>();
+        services.AddScoped<IStalePushInstallationCleanupJob, StalePushInstallationCleanupJob>();
 
         services.AddScoped<BackgroundActionOrchestratorService>();
+        services.AddScoped<PushNotificationJobHandlerService>();
+        services.AddScoped<StalePushInstallationCleanupJob>();
         services.AddNotificationsModule();
+        if (isTesting)
+        {
+            services.AddScoped<INotificationEventBridge, NoOpNotificationEventBridge>();
+        }
 
         // Register typed background action handlers
         services.AddBackgroundAction<UserRegisteredCommand, SendRegistrationEmailHandler>();

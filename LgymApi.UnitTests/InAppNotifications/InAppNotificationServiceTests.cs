@@ -8,6 +8,7 @@ using InAppNotificationService = global::LgymApi.Application.Notifications.InApp
 using IInAppNotificationServiceDependencies = global::LgymApi.Application.Notifications.IInAppNotificationServiceDependencies;
 using IInAppNotificationRepository = global::LgymApi.Application.Notifications.IInAppNotificationRepository;
 using IInAppNotificationPushPublisher = global::LgymApi.Application.Notifications.IInAppNotificationPushPublisher;
+using INotificationEventBridge = global::LgymApi.Application.Notifications.INotificationEventBridge;
 using LgymApi.Application.Notifications.Errors;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Domain.Notifications;
@@ -65,6 +66,49 @@ public sealed class InAppNotificationServiceTests
 
         push.PushCalls.Should().Be(1);
         push.LastPushed!.Message.Should().Be("Push me");
+    }
+
+    [Test]
+    public async Task CreateAsync_ValidInput_EnqueuesRemotePushNotification()
+    {
+        var bridge = new FakeNotificationEventBridge();
+        var service = CreateService(notificationEventBridge: bridge);
+        var userId = Id<User>.New();
+        var input = new CreateInAppNotificationInput(
+            userId,
+            null,
+            null,
+            true,
+            "Report request received",
+            "/trainer/report-requests/request-1",
+            InAppNotificationTypes.ReportRequestReceived);
+
+        var result = await service.CreateAsync(input);
+
+        bridge.EnqueueCalls.Should().Be(1);
+        bridge.LastInput.Should().NotBeNull();
+        bridge.LastInput!.UserId.Should().Be(userId);
+        bridge.LastInput.SchemaVersion.Should().Be(1);
+        bridge.LastInput.Type.Should().Be(InAppNotificationTypes.ReportRequestReceived.Value);
+        bridge.LastInput.EventId.Should().Be(result.Value.Id.ToString());
+        bridge.LastInput.EntityId.Should().BeNull();
+        bridge.LastInput.InAppNotificationId.Should().Be(result.Value.Id);
+        bridge.LastInput.Deeplink.Should().Be("/trainer/report-requests/request-1");
+    }
+
+    [Test]
+    public async Task CreateAsync_RemotePushEnqueueThrows_PropagatesForRetry()
+    {
+        var bridge = new FakeNotificationEventBridge { ThrowOnEnqueue = true };
+        var service = CreateService(notificationEventBridge: bridge);
+        var input = new CreateInAppNotificationInput(
+            Id<User>.New(), null, null, true, "Still ok", null, InAppNotificationTypes.InvitationSent);
+
+        var action = async () => await service.CreateAsync(input);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Remote push enqueue failed");
+        bridge.EnqueueCalls.Should().Be(1);
     }
 
     [Test]
@@ -248,7 +292,7 @@ public sealed class InAppNotificationServiceTests
     }
 
     [Test]
-    public async Task CreateAsync_DuplicateDeliveryKey_ReturnsExistingNotificationWithoutPushingAgain()
+    public async Task CreateAsync_DuplicateDeliveryKey_ReturnsExistingNotificationWithoutSignalRPushAndEnqueuesRemotePush()
     {
         var repo = new FakeInAppNotificationRepository();
         var unitOfWork = new FakeUnitOfWork
@@ -256,12 +300,13 @@ public sealed class InAppNotificationServiceTests
             SaveChangesException = new DbUpdateException("duplicate IX_in_app_notifications_RecipientId_Type_DeliveryKey")
         };
         var push = new FakePushPublisher();
+        var bridge = new FakeNotificationEventBridge();
         var userId = Id<User>.New();
         var existing = AddNotification(repo, userId, "Already there");
         existing.Type = InAppNotificationTypes.InvitationSent;
         existing.DeliveryKey = "trainer-invitation:abc:sent";
 
-        var service = CreateService(repository: repo, unitOfWork: unitOfWork, pushPublisher: push);
+        var service = CreateService(repository: repo, unitOfWork: unitOfWork, pushPublisher: push, notificationEventBridge: bridge);
         var input = new CreateInAppNotificationInput(
             userId,
             null,
@@ -276,6 +321,10 @@ public sealed class InAppNotificationServiceTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Id.Should().Be(existing.Id);
         push.PushCalls.Should().Be(0);
+        bridge.EnqueueCalls.Should().Be(1);
+        bridge.LastInput!.InAppNotificationId.Should().Be(existing.Id);
+        bridge.LastInput.EventId.Should().Be(existing.Id.ToString());
+        unitOfWork.SaveChangesCalls.Should().Be(1);
         repo.DetachCalls.Should().Be(1);
     }
 
@@ -284,12 +333,14 @@ public sealed class InAppNotificationServiceTests
     private static InAppNotificationService CreateService(
         FakeInAppNotificationRepository? repository = null,
         FakeUnitOfWork? unitOfWork = null,
-        FakePushPublisher? pushPublisher = null)
+        FakePushPublisher? pushPublisher = null,
+        FakeNotificationEventBridge? notificationEventBridge = null)
     {
         var deps = new TestDependencies(
             repository ?? new FakeInAppNotificationRepository(),
             unitOfWork ?? new FakeUnitOfWork(),
-            pushPublisher ?? new FakePushPublisher());
+            pushPublisher ?? new FakePushPublisher(),
+            notificationEventBridge ?? new FakeNotificationEventBridge());
         return new InAppNotificationService(deps, NullLogger<InAppNotificationService>.Instance);
     }
 
@@ -325,15 +376,18 @@ public sealed class InAppNotificationServiceTests
         public IInAppNotificationRepository InAppNotificationRepository { get; }
         public IUnitOfWork UnitOfWork { get; }
         public IInAppNotificationPushPublisher PushPublisher { get; }
+        public INotificationEventBridge NotificationEventBridge { get; }
 
         public TestDependencies(
             IInAppNotificationRepository repository,
             IUnitOfWork unitOfWork,
-            IInAppNotificationPushPublisher pushPublisher)
+            IInAppNotificationPushPublisher pushPublisher,
+            INotificationEventBridge notificationEventBridge)
         {
             InAppNotificationRepository = repository;
             UnitOfWork = unitOfWork;
             PushPublisher = pushPublisher;
+            NotificationEventBridge = notificationEventBridge;
         }
     }
 
@@ -478,6 +532,25 @@ public sealed class InAppNotificationServiceTests
             {
                 throw new InvalidOperationException("Push failed");
             }
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeNotificationEventBridge : INotificationEventBridge
+    {
+        public int EnqueueCalls { get; private set; }
+        public EnqueueNotificationEventInput? LastInput { get; private set; }
+        public bool ThrowOnEnqueue { get; set; }
+
+        public Task EnqueueAsync(EnqueueNotificationEventInput input, CancellationToken cancellationToken = default)
+        {
+            EnqueueCalls++;
+            LastInput = input;
+            if (ThrowOnEnqueue)
+            {
+                throw new InvalidOperationException("Remote push enqueue failed");
+            }
+
             return Task.CompletedTask;
         }
     }

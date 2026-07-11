@@ -12,6 +12,7 @@ using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.BackgroundWorker.Common.Push;
 using LgymApi.TestUtils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -204,7 +205,7 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
      }
 
      [Test]
-     public void AddBackgroundWorkerServices_RegistersNoOpScheduler_WhenTesting()
+      public void AddBackgroundWorkerServices_RegistersNoOpScheduler_WhenTesting()
      {
          var services = new ServiceCollection();
          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
@@ -218,9 +219,38 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
          services.AddScoped<IInAppNotificationPushPublisher, FakeInAppNotificationPushPublisher>();
 
          using var provider = services.BuildServiceProvider();
-         var scheduler = provider.GetRequiredService<IActionMessageScheduler>();
-         scheduler.Should().BeOfType<NoOpActionMessageScheduler>();
-     }
+          var scheduler = provider.GetRequiredService<IActionMessageScheduler>();
+          scheduler.Should().BeOfType<NoOpActionMessageScheduler>();
+          provider.GetRequiredService<IPushBackgroundScheduler>().Should().BeOfType<LgymApi.BackgroundWorker.Services.NoOpPushBackgroundScheduler>();
+      }
+
+      [Test]
+      public void AddInfrastructure_Throws_WhenPushSendsEnabledWithoutProjectId()
+       {
+           var services = new ServiceCollection();
+           var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
+           values["PushNotifications:SendEnabled"] = "true";
+           values["PushNotifications:Fcm:CredentialsJson"] = "{ }";
+
+           var action = () => services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true);
+
+          action.Should()
+               .Throw<InvalidOperationException>()
+               .WithMessage("PushNotifications:Fcm:ProjectId is required when push notifications are enabled.");
+       }
+
+      [Test]
+      public void AddInfrastructure_DoesNotRequireFcmCredentials_WhenPushSendsDisabled()
+      {
+          var services = new ServiceCollection();
+          var values = TestConfigurationBuilder.ToDictionary(TestConfigurationBuilder.BuildEnabledEmailConfiguration());
+          values["PushNotifications:SendEnabled"] = "false";
+          values["PushNotifications:StaleTokenCleanupEnabled"] = "true";
+
+          var action = () => services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true);
+
+          action.Should().NotThrow();
+      }
 
      [Test]
      public void AddBackgroundWorkerServices_RegistersHangfireScheduler_WhenNotTesting()

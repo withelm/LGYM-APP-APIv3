@@ -20,6 +20,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using LgymApi.Infrastructure.Configuration;
+using LgymApi.BackgroundWorker.Common.Push;
 using GridifyExecutionServiceContract = LgymApi.Infrastructure.Pagination.IGridifyExecutionService;
 using QueryPaginationFacade = LgymApi.Infrastructure.Pagination.QueryPaginationService;
 
@@ -41,17 +42,21 @@ public static class ServiceCollectionExtensions
         backgroundCommandOptions.Validate();
 
         var emailOptions = EmailOptionsFactory.Create(configuration, appDefaultsOptions);
+        var pushNotificationOptions = PushNotificationOptionsFactory.Create(configuration);
 
         services.AddSingleton(appDefaultsOptions);
         services.AddSingleton(photoStorageOptions);
         services.AddSingleton(backgroundCommandOptions);
         EmailOptionsFactory.Validate(emailOptions);
         services.AddSingleton(emailOptions);
+        PushNotificationOptionsFactory.Validate(pushNotificationOptions);
+        services.AddSingleton(pushNotificationOptions);
         services.AddHttpContextAccessor();
         // Google auth fallback uses Google userinfo over HTTP when the ID token omits profile/email claims.
         services.AddHttpClient();
         services.AddSingleton<IEmailNotificationsFeature, EmailNotificationsFeature>();
         services.AddSingleton<IEmailMetrics, EmailMetrics>();
+        services.AddSingleton<IStalePushInstallationCleanupSettings, PushInstallationCleanupSettings>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
@@ -111,9 +116,12 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<LocalPhotoDevelopmentStore>();
         services.AddSingleton<InMemoryPhotoUploadInitTracker>();
+        services.AddScoped<IPushProviderSender, FcmPushSender>();
         services.AddScoped<IPhotoUploadInitTracker, DbPhotoUploadInitTracker>();
         RegisterPhotoStorageProvider(services, photoStorageOptions, isDevelopmentOrTesting);
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IPushInstallationRepository, PushInstallationRepository>();
+        services.AddScoped<IPushNotificationMessageRepository, PushNotificationMessageRepository>();
         services.AddScoped<IUserExternalLoginRepository, UserExternalLoginRepository>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
