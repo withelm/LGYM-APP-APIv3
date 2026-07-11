@@ -104,72 +104,12 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> Logout(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var sessionId = ParseCurrentSessionId();
+        var rawSessionId = HttpContext.User.FindFirst(AuthConstants.ClaimNames.SessionId)?.Value;
+        var sessionId = !string.IsNullOrWhiteSpace(rawSessionId) && Id<UserSessionEntity>.TryParse(rawSessionId, out var parsedSessionId)
+            ? parsedSessionId
+            : (Id<UserSessionEntity>?)null;
 
         var result = await _userService.LogoutAsync(user, sessionId, cancellationToken);
-        if (result.IsFailure)
-        {
-            return result.ToActionResult();
-        }
-
-        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
-    }
-
-    [HttpPost("push/installations/register")]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> RegisterPushInstallation([FromBody] RegisterPushInstallationRequest request, CancellationToken cancellationToken = default)
-    {
-        var user = HttpContext.GetCurrentUser();
-        var sessionId = ParseCurrentSessionId();
-        var input = new RegisterPushInstallationInput(
-            request.InstallationId,
-            request.Platform,
-            request.FcmToken,
-            request.AppVersion,
-            request.Environment,
-            request.PermissionStatus);
-
-        var result = await _userService.RegisterPushInstallationAsync(user, sessionId, input, cancellationToken);
-        if (result.IsFailure)
-        {
-            return result.ToActionResult();
-        }
-
-        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
-    }
-
-    [HttpPost("push/installations/unregister")]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UnregisterPushInstallation([FromBody] PushInstallationActionRequest request, CancellationToken cancellationToken = default)
-    {
-        var user = HttpContext.GetCurrentUser();
-        var sessionId = ParseCurrentSessionId();
-        var result = await _userService.UnregisterPushInstallationAsync(
-            user,
-            sessionId,
-            new PushInstallationActionInput(request.InstallationId),
-            cancellationToken);
-
-        if (result.IsFailure)
-        {
-            return result.ToActionResult();
-        }
-
-        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
-    }
-
-    [HttpPost("push/installations/disassociate")]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> DisassociatePushInstallation([FromBody] PushInstallationActionRequest request, CancellationToken cancellationToken = default)
-    {
-        var user = HttpContext.GetCurrentUser();
-        var sessionId = ParseCurrentSessionId();
-        var result = await _userService.DisassociatePushInstallationAsync(
-            user,
-            sessionId,
-            new PushInstallationActionInput(request.InstallationId),
-            cancellationToken);
-
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -213,19 +153,6 @@ public sealed class UserController : ControllerBase
             : Id<UserEntity>.Empty;
     }
 
-    private Id<UserSessionEntity>? ParseCurrentSessionId()
-    {
-        var rawSessionId = HttpContext.User.FindFirst(AuthConstants.ClaimNames.SessionId)?.Value;
-        if (string.IsNullOrWhiteSpace(rawSessionId))
-        {
-            return null;
-        }
-
-        return Id<UserSessionEntity>.TryParse(rawSessionId, out var parsedSessionId)
-            ? parsedSessionId
-            : (Id<UserSessionEntity>?)null;
-    }
-
     [HttpGet("deleteAccount")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken = default)
@@ -245,7 +172,8 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> ChangeVisibilityInRanking([FromBody] ChangeVisibilityInRankingRequest request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.ChangeVisibilityInRankingAsync(user, request.IsVisibleInRanking.Value, cancellationToken);
+        var isVisibleInRanking = request.IsVisibleInRanking.GetValueOrDefault();
+        var result = await _userService.ChangeVisibilityInRankingAsync(user, isVisibleInRanking, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

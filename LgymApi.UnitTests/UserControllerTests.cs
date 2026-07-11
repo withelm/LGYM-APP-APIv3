@@ -97,12 +97,12 @@ public sealed class UserControllerTests
     public async Task RegisterPushInstallation_PassesCurrentSessionIdAndRequestPayload()
     {
         var userService = new StubUserService();
-        var controller = CreateController(userService);
+        var controller = CreatePushInstallationController(userService);
         var userId = Id<User>.New();
         var sessionId = Id<UserSession>.New();
         controller.ControllerContext = new ControllerContext { HttpContext = BuildAuthenticatedHttpContext(userId, sessionId) };
 
-        var action = await controller.RegisterPushInstallation(new RegisterPushInstallationRequest
+        var action = await controller.Register(new RegisterPushInstallationRequest
         {
             InstallationId = "device-1",
             Platform = "ios",
@@ -124,12 +124,12 @@ public sealed class UserControllerTests
     public async Task DisassociatePushInstallation_PassesCurrentSessionIdAndInstallationId()
     {
         var userService = new StubUserService();
-        var controller = CreateController(userService);
+        var controller = CreatePushInstallationController(userService);
         var userId = Id<User>.New();
         var sessionId = Id<UserSession>.New();
         controller.ControllerContext = new ControllerContext { HttpContext = BuildAuthenticatedHttpContext(userId, sessionId) };
 
-        var action = await controller.DisassociatePushInstallation(new PushInstallationActionRequest
+        var action = await controller.Disassociate(new PushInstallationActionRequest
         {
             InstallationId = "device-2"
         });
@@ -148,6 +148,15 @@ public sealed class UserControllerTests
         var mapper = provider.GetRequiredService<IMapper>();
         var stubPasswordResetService = new StubPasswordResetService();
         return new UserController(userService, stubPasswordResetService, mapper);
+    }
+
+    private static PushInstallationController CreatePushInstallationController(IUserService userService)
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+        return new PushInstallationController(userService, mapper);
     }
 
     private static DefaultHttpContext BuildAuthenticatedHttpContext(Id<User> userId, Id<UserSession> sessionId)
