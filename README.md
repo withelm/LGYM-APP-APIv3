@@ -39,6 +39,11 @@ Common environment variable overrides:
 - `PhotoStorage__Provider`
 - `PhotoStorage__AccessKeyId`
 - `PhotoStorage__SecretAccessKey`
+- `PushNotifications__SendEnabled`
+- `PushNotifications__StaleTokenCleanupEnabled`
+- `PushNotifications__Fcm__ProjectId`
+- `PushNotifications__Fcm__CredentialsPath`
+- `PushNotifications__Fcm__CredentialsJson`
 
 ## Container runtime contract
 
@@ -55,6 +60,67 @@ Do not bake secrets or site-specific values into the image.
 
 The process runs from `/app` inside the container, so the mounted config and any relative paths must assume `/app` as the content root.
 Avoid launch profile assumptions when testing the image.
+
+## Push rollout and credentials
+
+Push registration and push delivery are separated on purpose.
+
+- `PushNotifications:SendEnabled=false` disables outbound push sends while keeping installation registration and token refresh active.
+- `PushNotifications:StaleTokenCleanupEnabled=true` keeps the recurring stale-token tombstoning job active even when send delivery is disabled.
+- Stale cleanup marks inactive rows with `DisabledAt` and `DisabledReason=InactiveStale`; it does not delete installation rows or historical push message audit data.
+
+### Credentials by environment
+
+Development:
+
+- Keep `PushNotifications:SendEnabled=false` until local Firebase credentials are present.
+- Prefer .NET user secrets or untracked environment variables for `PushNotifications__Fcm__CredentialsJson` or `PushNotifications__Fcm__CredentialsPath`.
+- If you need end-to-end push locally, point `PushNotifications__Fcm__CredentialsPath` at an untracked service-account JSON file outside the repo.
+
+Staging:
+
+- Use a dedicated Firebase project and service account separate from production.
+- Mount the service-account JSON from the host or secret store and set `PushNotifications__Fcm__CredentialsPath` to that mounted path.
+- Keep `PushNotifications__SendEnabled=false` until test devices register successfully and the admin test-event path is verified.
+
+Production:
+
+- Use a production-only Firebase project/service account with least-privilege access for messaging.
+- Prefer mounted secret files or a secret manager over inline JSON in committed config.
+- Rotate credentials outside the repo and restart the API after secret replacement if your host does not support live secret reload.
+
+Do not commit:
+
+- Firebase service-account JSON files
+- raw `PushNotifications__Fcm__CredentialsJson` values
+- APNs `.p8` files, Apple key IDs, or Apple team IDs
+- any environment-specific credentials in tracked `appsettings.*.json`
+
+### Mobile iOS / APNs requirement
+
+LGYM uses FCM tokens on both Android and iOS. iOS delivery still depends on APNs being configured in Firebase.
+
+- Create a separate Firebase iOS app for each dev/staging/prod bundle setup you actually ship.
+- Upload the matching APNs auth key to Firebase Project Settings -> Cloud Messaging.
+- Keep APNs credentials in Apple/Firebase secret storage only; never in this repository.
+
+### Operator runbook
+
+Rollout:
+
+1. Deploy config with `PushNotifications:SendEnabled=false` and stale cleanup enabled.
+2. Confirm mobile native builds register installations successfully in the target environment.
+3. Verify `/api/internal/push/test-event` creates queued/sent rows for a controlled test user.
+4. Turn `PushNotifications:SendEnabled=true` in staging, validate delivery, then repeat in production.
+5. Watch logs for `eventId`, `category`, and `provider status` fields plus disabled-installation counts from the stale cleanup job.
+
+Troubleshooting:
+
+1. Registration works but no push is sent: check `PushNotifications:SendEnabled`, Firebase project ID, and service-account secret mount.
+2. iOS tokens register but devices never receive pushes: verify APNs auth key upload in Firebase and the shipped iOS bundle identifier.
+3. Rows stay `Failed` with `InvalidToken`: the token was tombstoned immediately; wait for the device to re-register on next app open/token refresh.
+4. Old devices should stop receiving pushes: confirm the `push-stale-installation-cleanup` recurring job is present and `StaleTokenCleanupEnabled=true`.
+5. Investigating delivery issues: use `PushNotificationMessages` plus logs, not raw payload dumps; logs intentionally omit sensitive push payload content.
 
 ### Build the image
 
