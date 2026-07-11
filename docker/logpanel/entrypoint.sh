@@ -9,6 +9,8 @@ TLS_CRT=/etc/nginx/tls.crt
 TLS_KEY=/etc/nginx/tls.key
 HTPASSWD=/etc/nginx/.htpasswd
 KIBANA_CONFIG=/opt/kibana/config/kibana.yml
+KIBANA_CONFIG_HOME=/opt/kibana/.config
+KIBANA_CACHE_HOME=/opt/kibana/.cache
 
 # --- TLS: generate a throwaway self-signed cert if none is mounted ----------
 if [ ! -f "$TLS_CRT" ] || [ ! -f "$TLS_KEY" ]; then
@@ -30,7 +32,17 @@ if [ "$LOGPANEL_USER" = "admin" ] && [ "$LOGPANEL_PASSWORD" = "admin12345" ]; th
 fi
 
 htpasswd -bc "$HTPASSWD" "$LOGPANEL_USER" "$LOGPANEL_PASSWORD"
+chown root:www-data "$HTPASSWD"
 chmod 640 "$HTPASSWD"
+
+# --- Kibana writable HOME/XDG paths for Puppeteer/reporting -----------------
+mkdir -p "$KIBANA_CONFIG_HOME" "$KIBANA_CACHE_HOME"
+chown -R kibana:kibana "$KIBANA_CONFIG_HOME" "$KIBANA_CACHE_HOME"
+
+# --- Kibana config cleanup: keep ES security-off, remove Kibana invalid key --
+if grep -q '^xpack.security.enabled:' "$KIBANA_CONFIG"; then
+    sed -i '/^xpack.security.enabled:/d' "$KIBANA_CONFIG"
+fi
 
 # --- Kibana public base URL: runtime-only and optional ----------------------
 LOGPANEL_PUBLIC_BASE_URL="${LOGPANEL_PUBLIC_BASE_URL:-}"
