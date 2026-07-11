@@ -83,8 +83,7 @@ RUN echo 'discovery.type: single-node' >> /opt/elasticsearch/config/elasticsearc
 
 # --- Kibana configuration ---------------------------------------------------
 RUN echo 'server.host: "0.0.0.0"' >> /opt/kibana/config/kibana.yml \
-    && echo 'elasticsearch.hosts: ["http://localhost:9200"]' >> /opt/kibana/config/kibana.yml \
-    && echo 'xpack.security.enabled: false' >> /opt/kibana/config/kibana.yml
+    && echo 'elasticsearch.hosts: ["http://localhost:9200"]' >> /opt/kibana/config/kibana.yml
 
 # --- Supervisor + nginx config ----------------------------------------------
 # NOTE: build context is the repo root (see .github/workflows/logpanel-image.yml),
