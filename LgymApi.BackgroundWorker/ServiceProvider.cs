@@ -13,6 +13,7 @@ using LgymApi.Infrastructure.Services;
 using LgymApi.Application.Notifications;
 using LgymApi.BackgroundWorker.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LgymApi.BackgroundWorker;
 
@@ -40,7 +41,7 @@ public static class ServiceProvider
 
         if (isTesting)
         {
-            services.AddScoped<IPushBackgroundScheduler, NoOpPushBackgroundScheduler>();
+            services.AddScoped<IPushBackgroundScheduler, Services.NoOpPushBackgroundScheduler>();
         }
         else
         {
@@ -77,7 +78,7 @@ public static class ServiceProvider
         services.AddNotificationsModule();
         if (isTesting)
         {
-            services.AddScoped<INotificationEventBridge, NoOpNotificationEventBridge>();
+            services.TryAddScoped<INotificationEventBridge, NoOpNotificationEventBridge>();
         }
 
         // Register typed background action handlers

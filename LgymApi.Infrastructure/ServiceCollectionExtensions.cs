@@ -117,7 +117,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<LocalPhotoDevelopmentStore>();
         services.AddSingleton<InMemoryPhotoUploadInitTracker>();
         services.AddScoped<IPushProviderSender, FcmPushSender>();
-        services.AddScoped<IPushBackgroundScheduler, HangfirePushBackgroundScheduler>();
+        services.AddScoped<IPushBackgroundScheduler, NoOpPushBackgroundScheduler>();
+        if (!isTesting)
+        {
+            services.AddScoped<IPushBackgroundScheduler, HangfirePushBackgroundScheduler>();
+        }
+
         services.AddScoped<IPhotoUploadInitTracker, DbPhotoUploadInitTracker>();
         RegisterPhotoStorageProvider(services, photoStorageOptions, isDevelopmentOrTesting);
         services.AddScoped<IUserRepository, UserRepository>();
