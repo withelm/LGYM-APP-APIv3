@@ -33,7 +33,7 @@ public sealed class PushNotificationAdminApiTests : IntegrationTestBase
                 linkedNotification.Id.ToString(),
                 "/notifications"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
         body.Should().NotBeNull();
         body!.Message.Should().Be("Push test event queued");

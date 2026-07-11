@@ -29,7 +29,7 @@ public sealed class PushNotificationAdminController : ControllerBase
     }
 
     [HttpPost("test-event")]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> EnqueueTestEvent(
         [FromBody] EnqueueTestPushEventRequest request,
@@ -46,6 +46,6 @@ public sealed class PushNotificationAdminController : ControllerBase
 
         await _notificationEventBridge.EnqueueAsync(input, cancellationToken);
 
-        return Accepted(_mapper.Map<string, ResponseMessageDto>("Push test event queued"));
+        return Ok(_mapper.Map<string, ResponseMessageDto>("Push test event queued"));
     }
 }
