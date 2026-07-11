@@ -21,13 +21,13 @@ public sealed class SensitiveDataEnricher : ILogEventEnricher
     {
         try
         {
-            foreach (var key in logEvent.Properties.Keys.ToArray())
+            foreach (var key in logEvent.Properties
+                         .Where(property => IsSensitiveKey(property.Key) || HasSensitiveValue(property.Value))
+                         .Select(property => property.Key)
+                         .ToArray())
             {
-                if (IsSensitiveKey(key) || HasSensitiveValue(logEvent.Properties[key]))
-                {
-                    logEvent.RemovePropertyIfPresent(key);
-                    logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty(key, "***"));
-                }
+                logEvent.RemovePropertyIfPresent(key);
+                logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty(key, "***"));
             }
         }
         catch
@@ -50,7 +50,8 @@ public sealed class SensitiveDataEnricher : ILogEventEnricher
         }
 
         // Rough email: contains '@' and a dot after it.
-        if (value.Contains('@') && value.IndexOf('.', value.IndexOf('@') + 1) > 0)
+        var atIndex = value.IndexOf('@');
+        if (atIndex >= 0 && value.IndexOf('.', atIndex + 1) >= 0)
         {
             return true;
         }

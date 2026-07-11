@@ -15,7 +15,7 @@ public static class SerilogBootstrap
             .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
             .Enrich.With<SensitiveDataEnricher>()
             .WriteTo.Async(a => a.Elasticsearch(
-                new[] { new Uri(builder.Configuration["Elasticsearch:Url"] ?? "http://host.docker.internal:9200") },
+                new[] { new Uri(builder.Configuration["Elasticsearch:Url"] ?? "http://host.docker.internal:9200") }, // NOSONAR: intentional internal auth-disabled Elasticsearch over private Docker/loopback network
                 opts =>
                 {
                     opts.BootstrapMethod = BootstrapMethod.Silent;

@@ -47,33 +47,29 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # --- Base system packages ---------------------------------------------------
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        openjdk-17-jre-headless \
-        nginx \
-        supervisor \
         apache2-utils \
-        openssl \
-        curl \
         ca-certificates \
+        curl \
+        nginx \
+        openjdk-17-jre-headless \
+        openssl \
+        supervisor \
         tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Install Elasticsearch from official tarball ----------------------------
-RUN curl -fsSL "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${ES_VERSION}-linux-x86_64.tar.gz" \
-        -o /tmp/elasticsearch.tar.gz \
-    && tar -xzf /tmp/elasticsearch.tar.gz -C /opt \
-    && mv "/opt/elasticsearch-${ES_VERSION}" /opt/elasticsearch \
-    && rm -f /tmp/elasticsearch.tar.gz \
-    && useradd -r -s /usr/sbin/nologin elasticsearch \
-    && mkdir -p /usr/share/elasticsearch/data \
-    && chown -R elasticsearch:elasticsearch /opt/elasticsearch /usr/share/elasticsearch
+ADD https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${ES_VERSION}-linux-x86_64.tar.gz /tmp/elasticsearch.tar.gz
+ADD https://artifacts.elastic.co/downloads/kibana/kibana-${KIBANA_VERSION}-linux-x86_64.tar.gz /tmp/kibana.tar.gz
 
-# --- Install Kibana from official tarball -----------------------------------
-RUN curl -fsSL "https://artifacts.elastic.co/downloads/kibana/kibana-${KIBANA_VERSION}-linux-x86_64.tar.gz" \
-        -o /tmp/kibana.tar.gz \
+RUN tar -xzf /tmp/elasticsearch.tar.gz -C /opt \
+    && mv "/opt/elasticsearch-${ES_VERSION}" /opt/elasticsearch \
     && tar -xzf /tmp/kibana.tar.gz -C /opt \
     && mv "/opt/kibana-${KIBANA_VERSION}" /opt/kibana \
-    && rm -f /tmp/kibana.tar.gz \
+    && rm -f /tmp/elasticsearch.tar.gz /tmp/kibana.tar.gz \
+    && useradd -r -s /usr/sbin/nologin elasticsearch \
     && useradd -r -s /usr/sbin/nologin kibana \
+    && mkdir -p /usr/share/elasticsearch/data \
+    && chown -R elasticsearch:elasticsearch /opt/elasticsearch /usr/share/elasticsearch \
     && chown -R kibana:kibana /opt/kibana
 
 # --- Elasticsearch configuration --------------------------------------------
@@ -97,7 +93,7 @@ RUN echo 'server.host: "0.0.0.0"' >> /opt/kibana/config/kibana.yml \
 COPY docker/logpanel/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/logpanel/nginx.conf /etc/nginx/nginx.conf
 RUN mkdir -p /var/log/supervisor /var/lib/nginx /var/lib/nginx/body \
-    && chown -R nginx:nginx /var/lib/nginx \
+    && chown -R www-data:www-data /var/lib/nginx \
     && rm -f /etc/nginx/sites-enabled/default
 
 # --- Entrypoint -------------------------------------------------------------
