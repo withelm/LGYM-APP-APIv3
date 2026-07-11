@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using Google.Apis.Auth.OAuth2;
 using LgymApi.BackgroundWorker.Common.Push;
 using LgymApi.BackgroundWorker.Common.Push.Models;
@@ -147,7 +148,7 @@ public sealed class FcmPushSender : IPushProviderSender
             }
         };
 
-        var json = JsonSerializer.Serialize(request);
+        var json = JsonSerializer.Serialize(request, SharedSerializationOptions.Current);
         return new StringContent(json, Encoding.UTF8, "application/json");
     }
 
