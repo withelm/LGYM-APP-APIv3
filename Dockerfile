@@ -32,6 +32,10 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_EnableDiagnostics=0
 
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN mkdir -p /run/config
 
 COPY --from=build /app/publish/ ./
