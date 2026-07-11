@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
@@ -26,6 +27,8 @@ public interface IUserServiceDependencies
 
 internal sealed class UserServiceDependencies : IUserServiceDependencies
 {
+    [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "This type is the existing DI aggregate for UserService dependencies.")]
+    [SuppressMessage("Major Code Smell", "S6672:Generic logger injection should match the enclosing type", Justification = "The aggregate forwards the logger to UserService, which is the actual logging category.")]
     public UserServiceDependencies(
         IPushInstallationRepository pushInstallationRepository,
         IUserRepository userRepository,
