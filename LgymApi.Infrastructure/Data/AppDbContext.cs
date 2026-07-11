@@ -13,6 +13,10 @@ namespace LgymApi.Infrastructure.Data;
 
 public sealed class AppDbContext : DbContext
 {
+    private const string ActiveRowsFilter = "\"IsDeleted\" = FALSE";
+    private const string ActiveShareCodeFilter = ActiveRowsFilter + " AND \"ShareCode\" IS NOT NULL";
+    private const string ActiveDeliveryKeyFilter = ActiveRowsFilter + " AND \"DeliveryKey\" IS NOT NULL";
+
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
@@ -88,10 +92,10 @@ public sealed class AppDbContext : DbContext
                 .HasConversion(email => email.Value, value => new Email(value));
             entity.HasIndex(u => u.Email)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasIndex(u => u.Name)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(u => u.Plan)
                 .WithMany()
                 .HasForeignKey(u => u.PlanId)
@@ -110,7 +114,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.DisabledReason).HasMaxLength(128);
             entity.HasIndex(e => e.InstallationId)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
@@ -139,9 +143,9 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.SchedulerJobId).HasMaxLength(128);
             entity.HasIndex(e => new { e.PushInstallationId, e.Type, e.EventId })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasIndex(e => new { e.Status, e.NextAttemptAt, e.CreatedAt })
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
@@ -161,7 +165,7 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("Plans");
             entity.HasIndex(p => p.ShareCode)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE AND \"ShareCode\" IS NOT NULL");
+                .HasFilter(ActiveShareCodeFilter);
             entity.HasOne(p => p.User)
                 .WithMany(u => u.Plans)
                 .HasForeignKey(p => p.UserId);
@@ -202,7 +206,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.HasIndex(e => new { e.ExerciseId, e.Culture })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(e => e.Exercise)
                 .WithMany(e => e.Translations)
                 .HasForeignKey(e => e.ExerciseId)
@@ -300,7 +304,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.Name).IsRequired();
             entity.HasIndex(e => e.Name)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
         });
 
         modelBuilder.Entity<UserRole>(entity =>
@@ -324,7 +328,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.ClaimValue).IsRequired();
             entity.HasIndex(e => new { e.RoleId, e.ClaimType, e.ClaimValue })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(e => e.Role)
                 .WithMany(r => r.RoleClaims)
                 .HasForeignKey(e => e.RoleId)
@@ -338,7 +342,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.Status).HasConversion<string>();
             entity.HasIndex(e => e.Code)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(e => e.Trainer)
                 .WithMany()
                 .HasForeignKey(e => e.TrainerId)
@@ -355,7 +359,7 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("TrainerTraineeLinks");
             entity.HasIndex(e => e.TraineeId)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasIndex(e => new { e.TrainerId, e.TraineeId });
             entity.HasOne(e => e.Trainer)
                 .WithMany()
@@ -384,7 +388,7 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(e => new { e.Status, e.NextAttemptAt, e.CreatedAt });
             entity.HasIndex(e => new { e.Channel, e.Type, e.CorrelationId, e.Recipient })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
         });
 
         modelBuilder.Entity<EmailNotificationSubscription>(entity =>
@@ -393,7 +397,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.NotificationType).IsRequired();
             entity.HasIndex(e => new { e.UserId, e.NotificationType })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
@@ -421,7 +425,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.Type).HasConversion<string>();
             entity.HasIndex(e => new { e.TemplateId, e.Key })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(e => e.Template)
                 .WithMany(e => e.Fields)
                 .HasForeignKey(e => e.TemplateId)
@@ -466,7 +470,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.TrainerFieldCommentsJson).HasColumnType("text");
             entity.HasIndex(e => e.ReportRequestId)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(e => e.Trainee)
                 .WithMany()
                 .HasForeignKey(e => e.TraineeId)
@@ -537,7 +541,7 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("SupplementIntakeLogs");
             entity.HasIndex(e => new { e.TraineeId, e.PlanItemId, e.IntakeDate })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(e => e.Trainee)
                 .WithMany()
                 .HasForeignKey(e => e.TraineeId)
@@ -655,12 +659,12 @@ public sealed class AppDbContext : DbContext
             // This enforces DB-level duplicate protection for concurrent dispatch attempts
             entity.HasIndex(e => e.CorrelationId)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             // Work retrieval index: (Status, NextAttemptAt) for pending retries
             entity.HasIndex(e => new { e.Status, e.NextAttemptAt })
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasIndex(e => new { e.Status, e.ProcessingStartedAtUtc })
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             // One-to-many relationship with ExecutionLog
             entity.HasMany(e => e.ExecutionLogs)
                 .WithOne(l => l.CommandEnvelope)
@@ -690,13 +694,13 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.Status).HasConversion<string>();
             // Index for finding execution history by envelope and status
             entity.HasIndex(e => new { e.CommandEnvelopeId, e.Status })
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             // Index for finding logs by action type (supports filtering by operation kind)
             entity.HasIndex(e => new { e.CommandEnvelopeId, e.ActionType })
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             // Timestamp index for retrieving recent logs efficiently
             entity.HasIndex(e => e.CreatedAt)
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             // Foreign key is configured by CommandEnvelope HasMany
         });
 
@@ -711,10 +715,10 @@ public sealed class AppDbContext : DbContext
             // Unique index on UserId + TutorialType (enforces one progress per user per tutorial)
             entity.HasIndex(utp => new { utp.UserId, utp.TutorialType })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             // Index on UserId + IsCompleted (for querying completion status)
             entity.HasIndex(utp => new { utp.UserId, utp.IsCompleted })
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
         });
 
         modelBuilder.Entity<UserTutorialStepProgress>(entity =>
@@ -728,7 +732,7 @@ public sealed class AppDbContext : DbContext
             // Unique index on UserTutorialProgressId + TutorialStep (prevents duplicate step completions)
             entity.HasIndex(utsp => new { utsp.UserTutorialProgressId, utsp.TutorialStep })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
          });
 
         modelBuilder.Entity<ApiIdempotencyRecord>(entity =>
@@ -742,10 +746,10 @@ public sealed class AppDbContext : DbContext
             // Enforces one idempotency record per endpoint scope + key combination
             entity.HasIndex(e => new { e.ScopeTuple, e.IdempotencyKey })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             // Lookup index for replay/conflict checks
             entity.HasIndex(e => new { e.ScopeTuple, e.IdempotencyKey, e.RequestFingerprint })
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
         });
 
         modelBuilder.Entity<PasswordResetToken>(entity =>
@@ -754,7 +758,7 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(e => e.TokenHash)
                 .IsUnique();
             entity.HasIndex(e => new { e.UserId, e.IsUsed, e.ExpiresAt })
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
@@ -774,7 +778,7 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(e => new { e.RecipientId, e.CreatedAt, e.Id });
             entity.HasIndex(e => new { e.RecipientId, e.Type, e.DeliveryKey })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE AND \"DeliveryKey\" IS NOT NULL");
+                .HasFilter(ActiveDeliveryKeyFilter);
         });
 
         modelBuilder.Entity<UserSession>(entity =>
@@ -784,7 +788,7 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.Jti)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(e => e.UserId);
@@ -798,10 +802,10 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.ProviderEmail).HasMaxLength(256);
             entity.HasIndex(e => new { e.Provider, e.ProviderKey })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasIndex(e => new { e.UserId, e.Provider })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasOne(e => e.User)
                 .WithMany(u => u.ExternalLogins)
                 .HasForeignKey(e => e.UserId)
@@ -817,7 +821,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.Checksum).IsRequired();
             entity.HasIndex(e => new { e.ReportRequestId, e.ViewType })
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasIndex(e => new { e.OwnerUserId, e.CreatedAt });
             entity.HasOne(e => e.ReportRequest)
                 .WithMany()
@@ -842,7 +846,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(e => e.FailureReason).HasMaxLength(500);
             entity.HasIndex(e => e.StorageKey)
                 .IsUnique()
-                .HasFilter("\"IsDeleted\" = FALSE");
+                .HasFilter(ActiveRowsFilter);
             entity.HasIndex(e => new { e.OwnerUserId, e.CreatedAt });
             entity.HasIndex(e => new { e.ReportRequestId, e.ViewType });
             entity.HasIndex(e => new { e.Status, e.ExpiresAtUtc });
