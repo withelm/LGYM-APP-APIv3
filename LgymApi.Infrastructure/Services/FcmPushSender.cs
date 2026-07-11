@@ -209,6 +209,7 @@ public sealed class FcmPushSender : IPushProviderSender
         }
         catch (JsonException)
         {
+            return null;
         }
 
         return null;

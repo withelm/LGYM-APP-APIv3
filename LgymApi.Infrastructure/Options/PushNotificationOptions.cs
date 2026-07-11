@@ -17,6 +17,6 @@ public sealed class PushNotificationOptions
         public string ProjectId { get; set; } = string.Empty;
         public string? CredentialsPath { get; set; }
         public string? CredentialsJson { get; set; }
-        public string BaseUrl { get; set; } = "https://fcm.googleapis.com";
+        public string BaseUrl { get; set; } = string.Empty;
     }
 }

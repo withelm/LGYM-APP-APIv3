@@ -22,9 +22,7 @@ internal static class PushNotificationOptionsFactory
         options.Fcm.ProjectId = options.Fcm.ProjectId?.Trim() ?? string.Empty;
         options.Fcm.CredentialsPath = NormalizeOptional(options.Fcm.CredentialsPath);
         options.Fcm.CredentialsJson = NormalizeOptional(options.Fcm.CredentialsJson);
-        options.Fcm.BaseUrl = string.IsNullOrWhiteSpace(options.Fcm.BaseUrl)
-            ? "https://fcm.googleapis.com"
-            : options.Fcm.BaseUrl.Trim().TrimEnd('/');
+        options.Fcm.BaseUrl = NormalizeOptional(options.Fcm.BaseUrl)?.TrimEnd('/') ?? string.Empty;
         options.StaleTokenInactivityDays = options.StaleTokenInactivityDays <= 0 ? 45 : options.StaleTokenInactivityDays;
         options.StaleTokenCleanupBatchSize = options.StaleTokenCleanupBatchSize <= 0 ? 500 : options.StaleTokenCleanupBatchSize;
         return options;
@@ -45,6 +43,11 @@ internal static class PushNotificationOptionsFactory
         if (string.IsNullOrWhiteSpace(options.Fcm.CredentialsPath) && string.IsNullOrWhiteSpace(options.Fcm.CredentialsJson))
         {
             throw new InvalidOperationException("PushNotifications:Fcm:CredentialsPath or PushNotifications:Fcm:CredentialsJson is required when push notifications are enabled.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Fcm.BaseUrl))
+        {
+            throw new InvalidOperationException("PushNotifications:Fcm:BaseUrl is required when push notifications are enabled.");
         }
     }
 
