@@ -1,0 +1,108 @@
+name: Logpanel Image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: logpanel-image-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCKERFILE: docker/logpanel/Dockerfile
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || vars.DOCKERHUB_NAMESPACE }}
+      DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+      DOCKERHUB_IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE_NAME || 'lgym-logpanel' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Validate publish ref
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: test "$GITHUB_REF_NAME" = "$DEFAULT_BRANCH"
+
+      - name: Determine next image version
+        id: version
+        run: |
+          latest_tag=$(git tag --list 'v*.*.*' --sort=-version:refname | head -n1)
+
+          if [ -z "$latest_tag" ]; then
+            next_tag='v0.1.0'
+          else
+            version=${latest_tag#v}
+            IFS=. read -r major minor patch <<< "$version"
+            next_tag="v${major}.${minor}.$((patch + 1))"
+          fi
+
+          echo "image_tag=$next_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Docker Hub variables
+        env:
+          IMAGE_TAG: ${{ steps.version.outputs.image_tag }}
+        run: |
+          test -n "$DOCKERHUB_USERNAME"
+          test -n "$DOCKERHUB_NAMESPACE"
+          test -n "$DOCKERHUB_IMAGE_NAME"
+          test -n "$IMAGE_TAG"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ env.DOCKERHUB_IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.image_tag }}
+            type=raw,value=latest
+            type=sha,format=short,prefix=sha-
+
+      - name: Build and push logpanel image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create release tag
+        env:
+          IMAGE_TAG: ${{ steps.version.outputs.image_tag }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag "$IMAGE_TAG"
+          git push origin "$IMAGE_TAG"
+
+      - name: Publish workflow summary
+        env:
+          IMAGE_TAG: ${{ steps.version.outputs.image_tag }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          echo '## Logpanel image publish' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo "Version bump: $IMAGE_TAG" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Published Docker Hub image references:' >> "$GITHUB_STEP_SUMMARY"
+          echo "$IMAGE_TAGS" | tr ',' '\n' | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"

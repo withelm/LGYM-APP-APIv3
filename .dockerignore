@@ -11,6 +11,9 @@
 !LgymApi.Resources/**
 !LgymApi.Resources.Generator/**
 !README.md
+!docker/
+!docker/logpanel/
+!docker/logpanel/**
 
 # Local-only and build-output clutter
 bin/

@@ -21,6 +21,7 @@ using LgymApi.Domain.Security;
 using LgymApi.Api.Constants;
 using Hangfire;
 using LgymApi.Api.Serialization;
+using LgymApi.Api.Logging;
 using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -33,6 +34,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Debugging;
 
 const string TestingEnvironment = "Testing";
 
@@ -43,6 +46,10 @@ ExternalConfigBootstrap.Configure(
     builder.Environment.ContentRootPath,
     builder.Environment.EnvironmentName,
     args);
+
+SelfLog.Enable(msg => Console.Error.WriteLine(msg));
+
+SerilogBootstrap.ConfigureSerilog(builder);
 
 builder.Services
     .AddControllers()
@@ -249,6 +256,7 @@ localizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
 };
 
 var app = builder.Build();
+
 await StartupMigrationBootstrap.ApplyAsync(app, TestingEnvironment);
 
 if (!app.Environment.IsEnvironment(TestingEnvironment))
@@ -267,6 +275,7 @@ if (app.Environment.IsDevelopment())
 ProgramHangfire.ConfigureRecurringJobs(app, TestingEnvironment);
 
 app.UseRequestLocalization(localizationOptions);
+app.UseSerilogRequestLogging();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors();
 app.UseAuthentication();
