@@ -90,8 +90,8 @@ public sealed class InAppNotificationServiceTests
         bridge.LastInput!.UserId.Should().Be(userId);
         bridge.LastInput.SchemaVersion.Should().Be(1);
         bridge.LastInput.Type.Should().Be(InAppNotificationTypes.ReportRequestReceived.Value);
-        bridge.LastInput.EventId.Should().Be(result.Value.Id.ToString());
-        bridge.LastInput.EntityId.Should().BeNull();
+        bridge.LastInput.EventKey.Should().Be(result.Value.Id.ToString());
+        bridge.LastInput.EntityKey.Should().BeNull();
         bridge.LastInput.InAppNotificationId.Should().Be(result.Value.Id);
         bridge.LastInput.Deeplink.Should().Be("/trainer/report-requests/request-1");
     }
@@ -323,7 +323,7 @@ public sealed class InAppNotificationServiceTests
         push.PushCalls.Should().Be(0);
         bridge.EnqueueCalls.Should().Be(1);
         bridge.LastInput!.InAppNotificationId.Should().Be(existing.Id);
-        bridge.LastInput.EventId.Should().Be(existing.Id.ToString());
+        bridge.LastInput.EventKey.Should().Be(existing.Id.ToString());
         unitOfWork.SaveChangesCalls.Should().Be(1);
         repo.DetachCalls.Should().Be(1);
     }

@@ -18,8 +18,8 @@ public sealed class NotificationEventBridge : INotificationEventBridge
                 input.UserId,
                 input.SchemaVersion,
                 input.Type,
-                input.EventId,
-                input.EntityId,
+                input.EventKey,
+                input.EntityKey,
                 input.InAppNotificationId,
                 input.Deeplink),
             cancellationToken);

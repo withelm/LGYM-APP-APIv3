@@ -33,8 +33,8 @@ public sealed class NotificationEventBridgeTests
                 queued.UserId == userId
                 && queued.SchemaVersion == 1
                 && queued.Type == "test.event"
-                && queued.EventId == "event-123"
-                && queued.EntityId == "entity-123"
+                && queued.EventKey == "event-123"
+                && queued.EntityKey == "entity-123"
                 && queued.InAppNotificationId == inAppNotificationId
                 && queued.Deeplink == "/notifications"),
             Arg.Any<CancellationToken>());

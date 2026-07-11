@@ -7,7 +7,7 @@ public sealed record EnqueueNotificationEventInput(
     Id<User> UserId,
     int SchemaVersion,
     string Type,
-    string EventId,
-    string? EntityId,
+    string EventKey,
+    string? EntityKey,
     Id<InAppNotification>? InAppNotificationId,
     string? Deeplink);

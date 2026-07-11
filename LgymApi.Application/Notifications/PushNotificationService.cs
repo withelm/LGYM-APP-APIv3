@@ -43,7 +43,7 @@ public sealed class PushNotificationService : IPushNotificationService
     public async Task EnqueueAsync(EnqueuePushNotificationInput input, CancellationToken cancellationToken = default)
     {
         var normalizedType = NormalizeRequired(input.Type);
-        var normalizedEventId = NormalizeRequired(input.EventId);
+        var normalizedEventId = NormalizeRequired(input.EventKey);
         if (normalizedType == null || normalizedEventId == null || input.SchemaVersion <= 0)
         {
             throw new InvalidOperationException("Push notification input is missing required values.");
@@ -99,7 +99,7 @@ public sealed class PushNotificationService : IPushNotificationService
                 input.SchemaVersion,
                 normalizedType,
                 normalizedEventId,
-                NormalizeOptional(input.EntityId),
+                NormalizeOptional(input.EntityKey),
                 input.InAppNotificationId?.ToString(),
                 NormalizeOptional(input.Deeplink));
 
