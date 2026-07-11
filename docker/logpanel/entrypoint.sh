@@ -8,6 +8,7 @@ set -e
 TLS_CRT=/etc/nginx/tls.crt
 TLS_KEY=/etc/nginx/tls.key
 HTPASSWD=/etc/nginx/.htpasswd
+KIBANA_CONFIG=/opt/kibana/config/kibana.yml
 
 # --- TLS: generate a throwaway self-signed cert if none is mounted ----------
 if [ ! -f "$TLS_CRT" ] || [ ! -f "$TLS_KEY" ]; then
@@ -30,6 +31,17 @@ fi
 
 htpasswd -bc "$HTPASSWD" "$LOGPANEL_USER" "$LOGPANEL_PASSWORD"
 chmod 640 "$HTPASSWD"
+
+# --- Kibana public base URL: runtime-only and optional ----------------------
+LOGPANEL_PUBLIC_BASE_URL="${LOGPANEL_PUBLIC_BASE_URL:-}"
+
+if grep -q '^server.publicBaseUrl:' "$KIBANA_CONFIG"; then
+    sed -i '/^server.publicBaseUrl:/d' "$KIBANA_CONFIG"
+fi
+
+if [ -n "$LOGPANEL_PUBLIC_BASE_URL" ]; then
+    printf '\nserver.publicBaseUrl: "%s"\n' "$LOGPANEL_PUBLIC_BASE_URL" >> "$KIBANA_CONFIG"
+fi
 
 # --- Hand off to supervisord (PID 1) ---------------------------------------
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf

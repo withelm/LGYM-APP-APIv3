@@ -107,6 +107,18 @@ Configure this GitHub repository secret:
 
 - `DOCKERHUB_TOKEN` - Docker Hub access token or password used by the workflow login step
 
+### Logpanel runtime URL
+
+Set `LOGPANEL_PUBLIC_BASE_URL` when the logpanel image needs a public Kibana URL at runtime.
+If the variable is set, the container writes `server.publicBaseUrl: "<value>"` into Kibana config on startup.
+If it is unset or empty, the setting is omitted entirely.
+
+Example:
+
+```bash
+LOGPANEL_PUBLIC_BASE_URL=https://log.lgym.ovh
+```
+
 ### Local development with an external PostgreSQL database
 
 For a local PostgreSQL instance that is not running in Docker, copy the example environment file and update the database password/port/name:
