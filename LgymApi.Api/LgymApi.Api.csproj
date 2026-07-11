@@ -24,6 +24,9 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Elastic.Serilog.Sinks" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.Async" />
   </ItemGroup>
 
   <ItemGroup>

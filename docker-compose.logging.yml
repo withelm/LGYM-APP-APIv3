@@ -1,5 +1,11 @@
 name: lgym-logging
 
+# Backup policy: log data in this stack is INTENTIONALLY NOT BACKED UP.
+# These are operational, non-critical .NET application logs on a single node.
+# The ONLY durability guarantee is the 30-day ILM retention policy
+# (lgym-logs-30d) applied via deploy/es/ilm-policy.json. Do not add snapshots/SLM
+# unless a future, explicit decision changes this scope.
+
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
