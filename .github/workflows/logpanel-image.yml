@@ -36,14 +36,14 @@ jobs:
       - name: Determine next image version
         id: version
         run: |
-          latest_tag=$(git tag --list 'v*.*.*' --sort=-version:refname | head -n1)
+          latest_tag=$(git tag --list 'logpanel-v*.*.*' --sort=-version:refname | head -n1)
 
           if [ -z "$latest_tag" ]; then
-            next_tag='v0.1.0'
+            next_tag='logpanel-v0.1.0'
           else
-            version=${latest_tag#v}
+            version=${latest_tag#logpanel-v}
             IFS=. read -r major minor patch <<< "$version"
-            next_tag="v${major}.${minor}.$((patch + 1))"
+            next_tag="logpanel-v${major}.${minor}.$((patch + 1))"
           fi
 
           echo "image_tag=$next_tag" >> "$GITHUB_OUTPUT"

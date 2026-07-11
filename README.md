@@ -94,7 +94,8 @@ docker pull docker.io/<DOCKERHUB_NAMESPACE>/<DOCKERHUB_IMAGE_NAME>:latest
 
 ### Publish the logpanel image from GitHub Actions
 
-The `.github/workflows/logpanel-image.yml` workflow publishes the logpanel image with the same manual `workflow_dispatch`, default-branch, semver bump, and tag behavior as the API workflow.
+The `.github/workflows/logpanel-image.yml` workflow publishes the logpanel image with the same manual `workflow_dispatch`, default-branch, Docker Hub push, summary output, and release-tag creation behavior as the API workflow.
+It uses its own logpanel-only Git tag namespace (`logpanel-v*.*.*`) so logpanel releases do not share version history with the API image.
 The API workflow still uses `DOCKERHUB_IMAGE_NAME`; the logpanel workflow uses `DOCKERHUB_LOGPANEL_IMAGE_NAME` so the two image names do not collide.
 
 Configure these GitHub repository variables:
@@ -106,6 +107,14 @@ Configure these GitHub repository variables:
 Configure this GitHub repository secret:
 
 - `DOCKERHUB_TOKEN` - Docker Hub access token or password used by the workflow login step
+
+Published logpanel tags include:
+
+- the auto-generated semver tag in the `logpanel-v1.2.4` format
+- `latest`
+- `sha-<short-sha>` for traceability
+
+After publishing the image, the workflow also creates and pushes the matching `logpanel-v*.*.*` Git tag so the next run can derive the next version deterministically without affecting API tags.
 
 ### Logpanel runtime URL
 
