@@ -92,11 +92,11 @@ public sealed class FcmPushSender : IPushProviderSender
         GoogleCredential credential;
         if (!string.IsNullOrWhiteSpace(_options.Fcm.CredentialsJson))
         {
-            credential = GoogleCredential.FromJson(_options.Fcm.CredentialsJson);
+            credential = CreateCredentialFromJson(_options.Fcm.CredentialsJson);
         }
         else if (!string.IsNullOrWhiteSpace(_options.Fcm.CredentialsPath))
         {
-            credential = GoogleCredential.FromFile(_options.Fcm.CredentialsPath);
+            credential = CreateCredentialFromFile(_options.Fcm.CredentialsPath);
         }
         else
         {
@@ -105,6 +105,18 @@ public sealed class FcmPushSender : IPushProviderSender
 
         credential = credential.CreateScoped(MessagingScope);
         return await credential.UnderlyingCredential.GetAccessTokenForRequestAsync(null, cancellationToken);
+    }
+
+    private static GoogleCredential CreateCredentialFromJson(string credentialsJson)
+    {
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(credentialsJson));
+        return CredentialFactory.FromStream<ServiceAccountCredential>(stream).ToGoogleCredential();
+    }
+
+    private static GoogleCredential CreateCredentialFromFile(string credentialsPath)
+    {
+        using var stream = File.OpenRead(credentialsPath);
+        return CredentialFactory.FromStream<ServiceAccountCredential>(stream).ToGoogleCredential();
     }
 
     private StringContent BuildRequestContent(PushInstallation installation, PushEventPayload payload)
