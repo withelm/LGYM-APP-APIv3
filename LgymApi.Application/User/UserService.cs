@@ -12,6 +12,7 @@ namespace LgymApi.Application.Features.User;
 
 public sealed partial class UserService : IUserService
 {
+    private readonly IPushInstallationRepository _pushInstallationRepository;
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IEloRegistryRepository _eloRepository;
@@ -27,6 +28,7 @@ public sealed partial class UserService : IUserService
 
     public UserService(IUserServiceDependencies dependencies)
     {
+        _pushInstallationRepository = dependencies.PushInstallationRepository;
         _userRepository = dependencies.UserRepository;
         _roleRepository = dependencies.RoleRepository;
         _eloRepository = dependencies.EloRepository;

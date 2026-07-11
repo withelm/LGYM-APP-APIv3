@@ -11,6 +11,9 @@ public interface IUserService
 {
     Task<Result<Unit, AppError>> RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> RegisterPushInstallationAsync(UserEntity? currentUser, Id<UserSessionEntity>? sessionId, RegisterPushInstallationInput input, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> UnregisterPushInstallationAsync(UserEntity? currentUser, Id<UserSessionEntity>? sessionId, PushInstallationActionInput input, CancellationToken cancellationToken = default);
+    Task<Result<Unit, AppError>> DisassociatePushInstallationAsync(UserEntity? currentUser, Id<UserSessionEntity>? sessionId, PushInstallationActionInput input, CancellationToken cancellationToken = default);
     Task<Result<LoginResult, AppError>> LoginAsync(string name, string password, CancellationToken cancellationToken = default);
     Task<Result<LoginResult, AppError>> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default);
     Task<bool> IsAdminAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default);

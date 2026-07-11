@@ -60,6 +60,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<PushInstallation> PushInstallations => Set<PushInstallation>();
+    public DbSet<PushNotificationMessage> PushNotificationMessages => Set<PushNotificationMessage>();
     public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<PhotoUploadSession> PhotoUploadSessions => Set<PhotoUploadSession>();
@@ -93,6 +95,64 @@ public sealed class AppDbContext : DbContext
             entity.HasOne(u => u.Plan)
                 .WithMany()
                 .HasForeignKey(u => u.PlanId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PushInstallation>(entity =>
+        {
+            entity.ToTable("PushInstallations");
+            entity.Property(e => e.InstallationId).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Platform).HasMaxLength(32).IsRequired();
+            entity.Property(e => e.FcmToken).HasMaxLength(512).IsRequired();
+            entity.Property(e => e.AppVersion).HasMaxLength(64);
+            entity.Property(e => e.Environment).HasMaxLength(32).IsRequired();
+            entity.Property(e => e.PermissionStatus).HasMaxLength(64);
+            entity.Property(e => e.DisabledReason).HasMaxLength(128);
+            entity.HasIndex(e => e.InstallationId)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne<UserSession>()
+                .WithMany()
+                .HasForeignKey(e => e.SessionId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PushNotificationMessage>(entity =>
+        {
+            entity.ToTable("PushNotificationMessages");
+            entity.Property(e => e.Type).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.EventId).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.EntityId).HasMaxLength(200);
+            entity.Property(e => e.Deeplink).HasMaxLength(500);
+            entity.Property(e => e.PayloadJson).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.FailureKind).HasConversion<string>();
+            entity.Property(e => e.LastError).HasMaxLength(400);
+            entity.Property(e => e.ProviderStatus).HasMaxLength(120);
+            entity.Property(e => e.ProviderMessageId).HasMaxLength(200);
+            entity.Property(e => e.ProviderErrorCode).HasMaxLength(120);
+            entity.Property(e => e.ProviderResponseSummary).HasMaxLength(1000);
+            entity.Property(e => e.SchedulerJobId).HasMaxLength(128);
+            entity.HasIndex(e => new { e.PushInstallationId, e.Type, e.EventId })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasIndex(e => new { e.Status, e.NextAttemptAt, e.CreatedAt })
+                .HasFilter("\"IsDeleted\" = FALSE");
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<PushInstallation>()
+                .WithMany()
+                .HasForeignKey(e => e.PushInstallationId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<InAppNotification>()
+                .WithMany()
+                .HasForeignKey(e => e.InAppNotificationId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 

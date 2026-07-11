@@ -3,5 +3,6 @@ namespace LgymApi.Domain.Enums;
 public enum NotificationChannel
 {
     Email = 0,
-    InApp = 1
+    InApp = 1,
+    Push = 2
 }

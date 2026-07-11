@@ -54,6 +54,33 @@ public sealed class ResetPasswordRequest : IDto
     public string ConfirmPassword { get; set; } = string.Empty;
 }
 
+public sealed class RegisterPushInstallationRequest : IDto
+{
+    [JsonPropertyName("installationId")]
+    public string InstallationId { get; set; } = string.Empty;
+
+    [JsonPropertyName("platform")]
+    public string Platform { get; set; } = string.Empty;
+
+    [JsonPropertyName("fcmToken")]
+    public string FcmToken { get; set; } = string.Empty;
+
+    [JsonPropertyName("appVersion")]
+    public string? AppVersion { get; set; }
+
+    [JsonPropertyName("environment")]
+    public string Environment { get; set; } = string.Empty;
+
+    [JsonPropertyName("permissionStatus")]
+    public string? PermissionStatus { get; set; }
+}
+
+public sealed class PushInstallationActionRequest : IDto
+{
+    [JsonPropertyName("installationId")]
+    public string InstallationId { get; set; } = string.Empty;
+}
+
 public sealed class RankDto : IResultDto
 {
     [JsonPropertyName("name")]
