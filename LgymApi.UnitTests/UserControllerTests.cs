@@ -116,7 +116,7 @@ public sealed class UserControllerTests
         userService.LastPushRegistration.Should().NotBeNull();
         userService.LastPushRegistration!.Value.SessionId.Should().Be(sessionId);
         userService.LastPushRegistration.Value.UserId.Should().Be(userId);
-        userService.LastPushRegistration.Value.Input.InstallationId.Should().Be("device-1");
+        userService.LastPushRegistration.Value.Input.InstallationKey.Should().Be("device-1");
         userService.LastPushRegistration.Value.Input.FcmToken.Should().Be("token-1");
     }
 
@@ -137,7 +137,7 @@ public sealed class UserControllerTests
         action.Should().BeOfType<OkObjectResult>();
         userService.LastPushDisassociate.Should().NotBeNull();
         userService.LastPushDisassociate!.Value.SessionId.Should().Be(sessionId);
-        userService.LastPushDisassociate.Value.Input.InstallationId.Should().Be("device-2");
+        userService.LastPushDisassociate.Value.Input.InstallationKey.Should().Be("device-2");
     }
 
     private static UserController CreateController(IUserService userService)

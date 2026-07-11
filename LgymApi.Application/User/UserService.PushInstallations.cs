@@ -24,7 +24,7 @@ public sealed partial class UserService : IUserService
             return Result<Unit, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
-        var normalizedInstallationId = NormalizeRequiredValue(input.InstallationId);
+        var normalizedInstallationId = NormalizeRequiredValue(input.InstallationKey);
         var normalizedPlatform = NormalizeRequiredValue(input.Platform);
         var normalizedToken = NormalizeRequiredValue(input.FcmToken);
         var normalizedEnvironment = NormalizeRequiredValue(input.Environment);
@@ -131,7 +131,7 @@ public sealed partial class UserService : IUserService
             return Result<PushInstallation?, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
-        var normalizedInstallationId = NormalizeRequiredValue(input.InstallationId);
+        var normalizedInstallationId = NormalizeRequiredValue(input.InstallationKey);
         if (normalizedInstallationId == null)
         {
             return Result<PushInstallation?, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
