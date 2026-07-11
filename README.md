@@ -71,7 +71,7 @@ If no matching tag exists yet, the first published version is `v0.1.0`.
 Configure these GitHub repository variables:
 
 - `DOCKERHUB_NAMESPACE` - Docker Hub namespace, usually your username or organization
-- `DOCKERHUB_IMAGE_NAME` - image name, for example `lgym-api`; optional because the workflow defaults to `lgym-api`
+- `DOCKERHUB_IMAGE_NAME` - API image name, for example `lgym-api`; optional because the workflow defaults to `lgym-api`
 - `DOCKERHUB_USERNAME` - Docker Hub login username; optional if it is the same as `DOCKERHUB_NAMESPACE`
 
 Configure this GitHub repository secret:
@@ -91,6 +91,21 @@ Example image reference:
 ```bash
 docker pull docker.io/<DOCKERHUB_NAMESPACE>/<DOCKERHUB_IMAGE_NAME>:latest
 ```
+
+### Publish the logpanel image from GitHub Actions
+
+The `.github/workflows/logpanel-image.yml` workflow publishes the logpanel image with the same manual `workflow_dispatch`, default-branch, semver bump, and tag behavior as the API workflow.
+The API workflow still uses `DOCKERHUB_IMAGE_NAME`; the logpanel workflow uses `DOCKERHUB_LOGPANEL_IMAGE_NAME` so the two image names do not collide.
+
+Configure these GitHub repository variables:
+
+- `DOCKERHUB_NAMESPACE` - Docker Hub namespace, usually your username or organization
+- `DOCKERHUB_LOGPANEL_IMAGE_NAME` - logpanel image name, for example `lgym-logpanel`; optional because the workflow defaults to `lgym-logpanel`
+- `DOCKERHUB_USERNAME` - Docker Hub login username; optional if it is the same as `DOCKERHUB_NAMESPACE`
+
+Configure this GitHub repository secret:
+
+- `DOCKERHUB_TOKEN` - Docker Hub access token or password used by the workflow login step
 
 ### Local development with an external PostgreSQL database
 
