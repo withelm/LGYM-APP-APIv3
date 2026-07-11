@@ -1,3 +1,4 @@
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using FluentAssertions;
@@ -269,6 +270,80 @@ public sealed class PushNotificationPipelineTests
         message.GetProperty("data").GetProperty("inAppNotificationId").GetString().Should().Be("notification-1");
     }
 
+    [Test]
+    public async Task FcmSender_WhenSendingDisabled_ReturnsSkippedWithoutHttpCall()
+    {
+        var httpClientFactory = new FakeHttpClientFactory();
+        var sender = new FcmPushSender(
+            httpClientFactory,
+            new PushNotificationOptions { SendEnabled = false },
+            NullLogger<FcmPushSender>.Instance);
+        var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
+        var payload = new PushEventPayload(1, "internal.test.push", "event-1", null, null, null);
+
+        var result = await sender.SendAsync(installation, payload);
+
+        result.Outcome.Should().Be(PushSendOutcome.Skipped);
+        result.ProviderStatus.Should().Be("Skipped");
+        result.ProviderErrorCode.Should().Be("push-disabled");
+        httpClientFactory.CreateClientCalls.Should().Be(0);
+    }
+
+    [Test]
+    public void FcmSender_BuildsProjectScopedSendUrl()
+    {
+        var sender = new FcmPushSender(
+            new FakeHttpClientFactory(),
+            new PushNotificationOptions
+            {
+                Fcm = { BaseUrl = "https://fcm.example.test", ProjectId = "lgym-test" }
+            },
+            NullLogger<FcmPushSender>.Instance);
+
+        var url = InvokePrivate<string>(sender, "BuildSendUrl");
+
+        url.Should().Be("https://fcm.example.test/v1/projects/lgym-test/messages:send");
+    }
+
+    [TestCase(HttpStatusCode.BadRequest, "registration-token-not-registered", PushSendOutcome.InvalidToken)]
+    [TestCase(HttpStatusCode.ServiceUnavailable, "provider unavailable", PushSendOutcome.TransientFailure)]
+    [TestCase(HttpStatusCode.BadGateway, "bad gateway", PushSendOutcome.TransientFailure)]
+    [TestCase(HttpStatusCode.BadRequest, "invalid payload", PushSendOutcome.PermanentFailure)]
+    public void FcmSender_ClassifiesProviderFailures(HttpStatusCode statusCode, string summary, PushSendOutcome expectedOutcome)
+    {
+        var outcome = InvokeStaticPrivate<PushSendOutcome>(
+            typeof(FcmPushSender),
+            "ClassifyFailure",
+            statusCode,
+            summary);
+
+        outcome.Should().Be(expectedOutcome);
+    }
+
+    [Test]
+    public void FcmSender_ExtractsProviderValuesFromDirectAndNestedJson()
+    {
+        InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", "{\"name\":\"projects/lgym/messages/1\"}", "name")
+            .Should().Be("projects/lgym/messages/1");
+        InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", "{\"error\":{\"status\":\"UNREGISTERED\"}}", "status")
+            .Should().Be("UNREGISTERED");
+        InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", "not-json", "status")
+            .Should().BeNull();
+        InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", string.Empty, "status")
+            .Should().BeNull();
+    }
+
+    [Test]
+    public void FcmSender_SummarizesProviderResponses()
+    {
+        InvokeStaticPrivate<string>(typeof(FcmPushSender), "Summarize", " first\r\nsecond ")
+            .Should().Be("first  second");
+        InvokeStaticPrivate<string>(typeof(FcmPushSender), "Summarize", new string('x', 1005))
+            .Should().HaveLength(1000);
+        InvokeStaticPrivate<string>(typeof(FcmPushSender), "Summarize", (object?)null)
+            .Should().BeEmpty();
+    }
+
     private static AppDbContext CreateDbContext(string name)
         => new(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"{name}-{Id<PushNotificationPipelineTests>.New():N}")
@@ -299,6 +374,20 @@ public sealed class PushNotificationPipelineTests
             PayloadJson = "{\"schemaVersion\":1,\"type\":\"trainer.note.updated\",\"eventId\":\"event-1\"}",
             Status = PushNotificationStatus.Pending
         };
+
+    private static TResult InvokePrivate<TResult>(object instance, string methodName, params object?[] parameters)
+    {
+        var method = instance.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+        method.Should().NotBeNull();
+        return (TResult)method!.Invoke(instance, parameters)!;
+    }
+
+    private static TResult InvokeStaticPrivate<TResult>(Type type, string methodName, params object?[] parameters)
+    {
+        var method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
+        method.Should().NotBeNull();
+        return (TResult)method!.Invoke(null, parameters)!;
+    }
 
     private sealed class FakePushBackgroundScheduler : IPushBackgroundScheduler
     {
@@ -338,7 +427,13 @@ public sealed class PushNotificationPipelineTests
 
     private sealed class FakeHttpClientFactory : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name) => new();
+        public int CreateClientCalls { get; private set; }
+
+        public HttpClient CreateClient(string name)
+        {
+            CreateClientCalls += 1;
+            return new HttpClient();
+        }
     }
 
     private sealed class FakePushNotificationMessageRepository : IPushNotificationMessageRepository
