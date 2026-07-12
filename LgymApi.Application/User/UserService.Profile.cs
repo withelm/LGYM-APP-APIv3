@@ -85,6 +85,7 @@ public sealed partial class UserService : IUserService
         if (sessionId.HasValue)
         {
             await _userSessionStore.RevokeSessionAsync(sessionId.Value, cancellationToken);
+            await DisassociateInstallationsForSessionAsync(sessionId.Value, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 

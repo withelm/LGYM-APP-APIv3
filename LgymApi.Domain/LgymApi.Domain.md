@@ -6,3 +6,4 @@
 - Boundary: do not reorder or renumber existing enums.
 - `Exercise` now carries `ExerciseEloFormula` with `Standard` as the default profile.
 - `ExerciseEloFormula.PullupWeighted` rewards lower weight for pull-up style exercises where added weight makes the score worse.
+- `PushInstallation` stores installation-scoped FCM registration state with optional user/session binding so logout and account-switch flows can disassociate a device without deleting its installation record.

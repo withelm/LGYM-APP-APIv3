@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
@@ -9,6 +10,7 @@ namespace LgymApi.Application.Features.User;
 
 public interface IUserServiceDependencies
 {
+    IPushInstallationRepository PushInstallationRepository { get; }
     IUserRepository UserRepository { get; }
     IRoleRepository RoleRepository { get; }
     IEloRegistryRepository EloRepository { get; }
@@ -25,7 +27,10 @@ public interface IUserServiceDependencies
 
 internal sealed class UserServiceDependencies : IUserServiceDependencies
 {
+    [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "This type is the existing DI aggregate for UserService dependencies.")]
+    [SuppressMessage("Major Code Smell", "S6672:Generic logger injection should match the enclosing type", Justification = "The aggregate forwards the logger to UserService, which is the actual logging category.")]
     public UserServiceDependencies(
+        IPushInstallationRepository pushInstallationRepository,
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IEloRegistryRepository eloRepository,
@@ -39,6 +44,7 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
         AppDefaultsOptions appDefaultsOptions,
         ITutorialService tutorialService)
     {
+        PushInstallationRepository = pushInstallationRepository;
         UserRepository = userRepository;
         RoleRepository = roleRepository;
         EloRepository = eloRepository;
@@ -53,6 +59,7 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
         TutorialService = tutorialService;
     }
 
+    public IPushInstallationRepository PushInstallationRepository { get; }
     public IUserRepository UserRepository { get; }
     public IRoleRepository RoleRepository { get; }
     public IEloRegistryRepository EloRepository { get; }

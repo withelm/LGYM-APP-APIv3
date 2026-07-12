@@ -105,7 +105,7 @@ public sealed class UserController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var rawSessionId = HttpContext.User.FindFirst(AuthConstants.ClaimNames.SessionId)?.Value;
-        var sessionId = Id<UserSessionEntity>.TryParse(rawSessionId, out var parsedSessionId)
+        var sessionId = !string.IsNullOrWhiteSpace(rawSessionId) && Id<UserSessionEntity>.TryParse(rawSessionId, out var parsedSessionId)
             ? parsedSessionId
             : (Id<UserSessionEntity>?)null;
 
@@ -172,7 +172,8 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> ChangeVisibilityInRanking([FromBody] ChangeVisibilityInRankingRequest request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.ChangeVisibilityInRankingAsync(user, request.IsVisibleInRanking.Value, cancellationToken);
+        var isVisibleInRanking = request.IsVisibleInRanking.GetValueOrDefault();
+        var result = await _userService.ChangeVisibilityInRankingAsync(user, isVisibleInRanking, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

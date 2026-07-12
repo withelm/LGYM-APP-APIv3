@@ -93,6 +93,53 @@ public sealed class UserControllerTests
         ((ResponseMessageDto)objectResult.Value!).Message.Should().Be(message);
     }
 
+    [Test]
+    public async Task RegisterPushInstallation_PassesCurrentSessionIdAndRequestPayload()
+    {
+        var userService = new StubUserService();
+        var controller = CreatePushInstallationController(userService);
+        var userId = Id<User>.New();
+        var sessionId = Id<UserSession>.New();
+        controller.ControllerContext = new ControllerContext { HttpContext = BuildAuthenticatedHttpContext(userId, sessionId) };
+
+        var action = await controller.Register(new RegisterPushInstallationRequest
+        {
+            InstallationId = "device-1",
+            Platform = "ios",
+            FcmToken = "token-1",
+            AppVersion = "1.2.3",
+            Environment = "production",
+            PermissionStatus = "authorized"
+        });
+
+        action.Should().BeOfType<OkObjectResult>();
+        userService.LastPushRegistration.Should().NotBeNull();
+        userService.LastPushRegistration!.Value.SessionId.Should().Be(sessionId);
+        userService.LastPushRegistration.Value.UserId.Should().Be(userId);
+        userService.LastPushRegistration.Value.Input.InstallationKey.Should().Be("device-1");
+        userService.LastPushRegistration.Value.Input.FcmToken.Should().Be("token-1");
+    }
+
+    [Test]
+    public async Task DisassociatePushInstallation_PassesCurrentSessionIdAndInstallationId()
+    {
+        var userService = new StubUserService();
+        var controller = CreatePushInstallationController(userService);
+        var userId = Id<User>.New();
+        var sessionId = Id<UserSession>.New();
+        controller.ControllerContext = new ControllerContext { HttpContext = BuildAuthenticatedHttpContext(userId, sessionId) };
+
+        var action = await controller.Disassociate(new PushInstallationActionRequest
+        {
+            InstallationId = "device-2"
+        });
+
+        action.Should().BeOfType<OkObjectResult>();
+        userService.LastPushDisassociate.Should().NotBeNull();
+        userService.LastPushDisassociate!.Value.SessionId.Should().Be(sessionId);
+        userService.LastPushDisassociate.Value.Input.InstallationKey.Should().Be("device-2");
+    }
+
     private static UserController CreateController(IUserService userService)
     {
         var services = new ServiceCollection();
@@ -101,6 +148,29 @@ public sealed class UserControllerTests
         var mapper = provider.GetRequiredService<IMapper>();
         var stubPasswordResetService = new StubPasswordResetService();
         return new UserController(userService, stubPasswordResetService, mapper);
+    }
+
+    private static PushInstallationController CreatePushInstallationController(IUserService userService)
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+        return new PushInstallationController(userService, mapper);
+    }
+
+    private static DefaultHttpContext BuildAuthenticatedHttpContext(Id<User> userId, Id<UserSession> sessionId)
+    {
+        var context = new DefaultHttpContext();
+        context.Items["User"] = new User { Id = userId, Name = "test-user", Email = "test-user@example.com" };
+        context.User = new System.Security.Claims.ClaimsPrincipal(
+            new System.Security.Claims.ClaimsIdentity(
+            [
+                new System.Security.Claims.Claim("userId", userId.ToString()),
+                new System.Security.Claims.Claim("sid", sessionId.ToString())
+            ],
+            authenticationType: "Test"));
+        return context;
     }
 
     private sealed class StubPasswordResetService : IPasswordResetService
@@ -116,6 +186,8 @@ public sealed class UserControllerTests
     {
         public string? LastPreferredLanguage { get; private set; }
         public Result<Unit, AppError> RegisterResult { get; set; } = Result<Unit, AppError>.Success(Unit.Value);
+        public (Id<User> UserId, Id<UserSession>? SessionId, RegisterPushInstallationInput Input)? LastPushRegistration { get; private set; }
+        public (Id<User> UserId, Id<UserSession>? SessionId, PushInstallationActionInput Input)? LastPushDisassociate { get; private set; }
 
         public Task<Result<Unit, AppError>> RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
         {
@@ -124,6 +196,21 @@ public sealed class UserControllerTests
         }
 
         public Task<Result<Unit, AppError>> RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        public Task<Result<Unit, AppError>> RegisterPushInstallationAsync(User? currentUser, Id<UserSession>? sessionId, RegisterPushInstallationInput input, CancellationToken cancellationToken = default)
+        {
+            LastPushRegistration = (currentUser!.Id, sessionId, input);
+            return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        }
+
+        public Task<Result<Unit, AppError>> UnregisterPushInstallationAsync(User? currentUser, Id<UserSession>? sessionId, PushInstallationActionInput input, CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+
+        public Task<Result<Unit, AppError>> DisassociatePushInstallationAsync(User? currentUser, Id<UserSession>? sessionId, PushInstallationActionInput input, CancellationToken cancellationToken = default)
+        {
+            LastPushDisassociate = (currentUser!.Id, sessionId, input);
+            return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        }
+
         public Task<Result<LoginResult, AppError>> LoginAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(Result<LoginResult, AppError>.Success(new LoginResult()));
         public Task<Result<LoginResult, AppError>> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(Result<LoginResult, AppError>.Success(new LoginResult()));
         public Task<bool> IsAdminAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(false);

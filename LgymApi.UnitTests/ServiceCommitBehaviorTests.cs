@@ -484,6 +484,7 @@ public sealed class ServiceCommitBehaviorTests
             AppDefaultsOptions appDefaultsOptions,
             ITutorialService tutorialService)
         {
+            PushInstallationRepository = NSubstitute.Substitute.For<IPushInstallationRepository>();
             UserRepository = userRepository;
             RoleRepository = roleRepository;
             EloRepository = eloRepository;
@@ -498,6 +499,7 @@ public sealed class ServiceCommitBehaviorTests
             TutorialService = tutorialService;
         }
 
+        public IPushInstallationRepository PushInstallationRepository { get; }
         public IUserRepository UserRepository { get; }
         public IRoleRepository RoleRepository { get; }
         public IEloRegistryRepository EloRepository { get; }
