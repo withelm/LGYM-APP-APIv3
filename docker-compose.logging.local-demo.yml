@@ -1,4 +1,8 @@
 services:
+  kibana:
+    environment:
+      SERVER_PUBLICBASEURL: https://127.0.0.1:8443
+
   logpanel-proxy:
     image: nginx:1.27-alpine
     depends_on:
@@ -6,7 +10,7 @@ services:
         condition: service_healthy
     environment:
       DEMO_BASIC_AUTH_USER: ${DEMO_BASIC_AUTH_USER:-admin}
-      DEMO_BASIC_AUTH_PASSWORD: ${DEMO_BASIC_AUTH_PASSWORD:-admin12345}
+      DEMO_BASIC_AUTH_PASSWORD: ${DEMO_BASIC_AUTH_PASSWORD}
       DEMO_TLS_CN: ${DEMO_TLS_CN:-127.0.0.1}
     ports:
       - "127.0.0.1:8081:80"
@@ -25,20 +29,6 @@ services:
           -out /demo/tls.crt \
           -days 365 \
           -subj "/CN=$${DEMO_TLS_CN}"
-        cat <<'EOF' >/demo/index.html
-        <!doctype html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta http-equiv="refresh" content="0; url=/app/home">
-          <title>LGYM Log Panel Demo</title>
-        </head>
-        <body>
-          <p>Authenticated. Opening Kibana demo...</p>
-          <p><a href="/app/home">Continue to Kibana</a></p>
-        </body>
-        </html>
-        EOF
         exec nginx -g 'daemon off;'
     healthcheck:
       test:

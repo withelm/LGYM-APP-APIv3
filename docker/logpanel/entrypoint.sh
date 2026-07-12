@@ -20,15 +20,13 @@ if [ ! -f "$TLS_CRT" ] || [ ! -f "$TLS_KEY" ]; then
         -subj "/CN=localhost"
 fi
 
-# --- Basic-auth credentials from env (with insecure defaults) ---------------
+# --- Break-glass basic-auth credentials from env ----------------------------
 LOGPANEL_USER="${LOGPANEL_USER:-admin}"
-LOGPANEL_PASSWORD="${LOGPANEL_PASSWORD:-admin12345}"
+LOGPANEL_PASSWORD="${LOGPANEL_PASSWORD:-}"
 
-if [ "$LOGPANEL_USER" = "admin" ] && [ "$LOGPANEL_PASSWORD" = "admin12345" ]; then
-    echo "==================================================================="
-    echo " WARNING: Using INSECURE default credentials (admin / admin12345)."
-    echo "          Override LOGPANEL_USER and LOGPANEL_PASSWORD in production!"
-    echo "==================================================================="
+if [ -z "$LOGPANEL_PASSWORD" ]; then
+    echo "[entrypoint] ERROR: LOGPANEL_PASSWORD is required. Provide a strong operator-managed password or secret before starting the image."
+    exit 1
 fi
 
 htpasswd -bc "$HTPASSWD" "$LOGPANEL_USER" "$LOGPANEL_PASSWORD"
@@ -38,11 +36,6 @@ chmod 640 "$HTPASSWD"
 # --- Kibana writable HOME/XDG paths for Puppeteer/reporting -----------------
 mkdir -p "$KIBANA_CONFIG_HOME" "$KIBANA_CACHE_HOME"
 chown -R kibana:kibana "$KIBANA_CONFIG_HOME" "$KIBANA_CACHE_HOME"
-
-# --- Kibana config cleanup: keep ES security-off, remove Kibana invalid key --
-if grep -q '^xpack.security.enabled:' "$KIBANA_CONFIG"; then
-    sed -i '/^xpack.security.enabled:/d' "$KIBANA_CONFIG"
-fi
 
 # --- Kibana public base URL: runtime-only and optional ----------------------
 LOGPANEL_PUBLIC_BASE_URL="${LOGPANEL_PUBLIC_BASE_URL:-}"

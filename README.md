@@ -128,6 +128,48 @@ Example:
 LOGPANEL_PUBLIC_BASE_URL=https://log.lgym.ovh
 ```
 
+### Logging stack SSO runbook
+
+- Primary browser login is Google OIDC at `https://log.lgym.ovh/login` with Kibana provider `oidc.google_oidc` and the label `Continue with Google`.
+- Break-glass recovery is `https://log.lgym.ovh/admin-login`, which uses nginx HTTP Basic auth and then deep-links to Kibana's native fallback provider `basic.basic1`.
+- The tracked callback and logout endpoints are `https://log.lgym.ovh/api/security/oidc/callback` and `https://log.lgym.ovh/security/logged_out`.
+- Secret injection points are operator-managed, not git-tracked:
+  - `LOGGING_GOOGLE_OIDC_CLIENT_ID` and `LOGGING_GOOGLE_OIDC_GROUPS_CLAIM` are provided to `docker-compose.logging.yml`.
+  - The Google OIDC client secret is stored in the Elasticsearch keystore outside git.
+  - Break-glass htpasswd files are mounted on the proxy host (`/etc/nginx/.htpasswd-log.lgym.ovh` in production, `/demo/.htpasswd` in local demo).
+  - TLS materials are mounted into nginx and the Elastic/Kibana cert paths from runtime secret storage.
+- Rollback is the same recovery path in reverse: restore the last known good tracked `docker-compose.logging.yml`, `kibana.yml`, and `deploy/nginx/*.conf`, keep `/admin-login` available, restart the stack, and confirm `/login` renders Kibana before re-testing Google OIDC.
+- `LOGPANEL_PUBLIC_BASE_URL` only sets Kibana `server.publicBaseUrl`; it does not replace the proxy basic-auth gate.
+
+#### Kibana-to-Elasticsearch credentials
+
+The secured logging stack now bootstraps credentials so Kibana can authenticate to Elasticsearch:
+
+- `docker-compose.logging.yml` reads `LOGGING_ES_PASSWORD` and sets the Elasticsearch `elastic` superuser password (`ELASTIC_PASSWORD`).
+- Kibana reads `LOGGING_ES_KIBANA_USERNAME` (default `elastic`) and `LOGGING_ES_KIBANA_PASSWORD` (default falls back to `LOGGING_ES_PASSWORD`) to authenticate to the secured cluster (`ELASTICSEARCH_USERNAME` / `ELASTICSEARCH_PASSWORD`).
+- For production, prefer a dedicated `kibana_system` password or a Kibana service-account token over the `elastic` superuser; set `LOGGING_ES_KIBANA_USERNAME` and `LOGGING_ES_KIBANA_PASSWORD` accordingly.
+- The all-in-one `docker/logpanel` image reads `LOGPANEL_ES_USERNAME` (default `kibana_system`) and `LOGPANEL_ES_PASSWORD` from its `kibana.yml` (`elasticsearch.username` / `elasticsearch.password`). At runtime the image requires `LOGPANEL_ES_PASSWORD` (and the matching ES-side password, e.g. `LOGGING_ES_PASSWORD` on the compose stack) to be supplied.
+
+#### Required role-mapping step (operator-applied)
+
+Viewer authorization is applied by an operator via the tracked script `deploy/es/apply-role-mapping.sh`, run after the stack is up. This is intentional: group claims are operator-managed and are not baked into git. The script maps the `google_oidc` realm AND the approved viewer group to the Elastic built-in `viewer` role (read-only Kibana access).
+
+Exact command:
+
+```bash
+LOGGING_ES_PASSWORD=... bash deploy/es/apply-role-mapping.sh
+```
+
+Optional overrides: `LOGGING_ES_URL` (default `https://localhost:9200`), `LOGGING_ES_USER` (default `elastic`), `LOGGING_GOOGLE_OIDC_VIEWER_GROUP` (default `kibana-viewers@lgym.ovh`). The script fails closed if `LOGGING_ES_PASSWORD` is unset.
+
+#### Local demo requirements
+
+`docker-compose.logging.local-demo.yml` now REQUIRES `DEMO_BASIC_AUTH_PASSWORD` (the insecure `admin12345` default was removed). `DEMO_BASIC_AUTH_USER` still defaults to `admin`. The local demo boots Elasticsearch with a placeholder OIDC client_id (`__OIDC_DISABLED__`), so it does NOT perform real Google OIDC — it is for testing the nginx proxy and the break-glass path only.
+
+#### Browser validation limitation
+
+Full end-to-end Google OIDC browser validation requires operator-provided Google test accounts and break-glass credentials, which were not available in the automated review environment. The recorded evidence reflects that blocker honestly; the static config and runbook alignment are complete, but live `/login` and `/admin-login` browser QA could not be signed off here.
+
 ### Local development with an external PostgreSQL database
 
 For a local PostgreSQL instance that is not running in Docker, copy the example environment file and update the database password/port/name:

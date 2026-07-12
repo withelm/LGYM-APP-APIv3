@@ -10,10 +10,15 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
     environment:
+      # Operator-managed Google OIDC inputs for the Elasticsearch realm.
+      # The client secret stays in the Elasticsearch keystore outside git.
       - discovery.type=single-node
-      - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms4g -Xmx4g
       - bootstrap.memory_lock=true
+      - LOGGING_GOOGLE_OIDC_CLIENT_ID=${LOGGING_GOOGLE_OIDC_CLIENT_ID}
+      - LOGGING_GOOGLE_OIDC_GROUPS_CLAIM=${LOGGING_GOOGLE_OIDC_GROUPS_CLAIM}
+      # Operator-managed superuser password for the secured cluster.
+      - ELASTIC_PASSWORD=${LOGGING_ES_PASSWORD}
     ulimits:
       memlock:
         soft: -1
@@ -25,10 +30,16 @@ services:
       - "127.0.0.1:9200:9200"
     volumes:
       - es-data:/usr/share/elasticsearch/data
+      - ./deploy/es/elasticsearch.logging.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - ${LOGGING_ES_CERTS_DIR:-./runtime-secrets/logging/elasticsearch}:/usr/share/elasticsearch/config/certs:ro
     networks:
       - logging
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "status=$$(curl --silent --output /dev/null --write-out '%{http_code}' --cacert /usr/share/elasticsearch/config/certs/http/ca.crt https://localhost:9200/_cluster/health || printf '000'); [ \"$$status\" = \"200\" ] || [ \"$$status\" = \"401\" ] || exit 1"
+        ]
       interval: 30s
       timeout: 10s
       retries: 10
@@ -41,11 +52,15 @@ services:
       elasticsearch:
         condition: service_healthy
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=https://elasticsearch:9200
+      # Kibana authenticates to the secured cluster with operator-managed credentials.
+      - ELASTICSEARCH_USERNAME=${LOGGING_ES_KIBANA_USERNAME:-elastic}
+      - ELASTICSEARCH_PASSWORD=${LOGGING_ES_KIBANA_PASSWORD:-${LOGGING_ES_PASSWORD}}
     ports:
       - "127.0.0.1:5601:5601"
     volumes:
       - ./kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+      - ${LOGGING_KIBANA_CERTS_DIR:-./runtime-secrets/logging/kibana}:/usr/share/kibana/config/certs:ro
     networks:
       - logging
     healthcheck:

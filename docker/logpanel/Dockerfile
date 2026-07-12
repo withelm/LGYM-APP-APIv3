@@ -3,15 +3,17 @@
 # lgym-logpanel - all-in-one log viewer image.
 #
 # Bundles inside a SINGLE container:
-#   * nginx  -> auth gate (basic-auth + rate limiting on login + TLS)
-#   * Elasticsearch 8.17.0 (single-node, security OFF)  -> log store
-#   * Kibana 8.17.0                                  -> log viewer
+#   * nginx  -> OIDC-first auth gate with explicit break-glass basic auth
+#              on /admin-login, plus rate limiting and TLS
+#   * Elasticsearch 8.17.0 (single-node, security ON with TLS) -> log store
+#   * Kibana 8.17.0                                         -> log viewer
 # All three processes are supervised by supervisord.
 #
 # This replaces the separate docker-compose.logging.yml + nginx gate with one
 # deployable image. ES/Kibana ports (9200/5601) are NOT published to the host;
 # only 8443 (HTTPS) and 8080 (HTTP->HTTPS redirect) are exposed. nginx is the
-# only externally reachable entrypoint and it enforces basic-auth + rate limits.
+# only externally reachable entrypoint; the primary browser path is Kibana's
+# Google OIDC login and the proxy basic-auth route is reserved for break-glass.
 #
 # ---------------------------------------------------------------------------
 # Runtime volume / env overrides:
@@ -20,14 +22,20 @@
 #   docker run -d --name lgym-logpanel \
 #     -p 8443:8443 -p 8080:8080 \
 #     -v logpanel-data:/usr/share/elasticsearch/data \
+#     -v /host/logpanel-certs/http:/opt/elasticsearch/config/certs/http:ro \
+#     -v /host/logpanel-certs/transport:/opt/elasticsearch/config/certs/transport:ro \
+#     -v /host/logpanel-certs/http:/opt/kibana/config/certs/elasticsearch:ro \
 #     -e ES_JAVA_OPTS="-Xms1g -Xmx1g" \
 #     -e LOGPANEL_USER=admin \
 #     -e LOGPANEL_PASSWORD='<strong-password>' \
 #     lgym-logpanel:latest
 #
 #   ES_JAVA_OPTS        : JVM heap for Elasticsearch (default -Xms1g -Xmx1g).
-#   LOGPANEL_USER       : basic-auth username (default admin).
-#   LOGPANEL_PASSWORD   : basic-auth password (default admin12345 - INSECURE).
+#   LOGPANEL_USER       : break-glass basic-auth username (default admin).
+#   LOGPANEL_PASSWORD   : break-glass basic-auth password (required; no image default).
+#
+#   The Elasticsearch HTTP and transport certificates are runtime-mounted only.
+#   Do not bake certificate private keys or OIDC client secrets into the image.
 #
 #   HOST PREREQUISITE: Elasticsearch needs vm.max_map_count >= 262144.
 #   On Linux hosts set it once: sudo sysctl -w vm.max_map_count=262144
@@ -41,8 +49,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     ES_VERSION=8.17.0 \
     KIBANA_VERSION=8.17.0 \
     ES_JAVA_OPTS="-Xms1g -Xmx1g" \
-    LOGPANEL_USER=admin \
-    LOGPANEL_PASSWORD=admin12345
+    LOGPANEL_USER=admin
 
 # --- Base system packages ---------------------------------------------------
 RUN apt-get update \
@@ -72,18 +79,9 @@ RUN tar -xzf /tmp/elasticsearch.tar.gz -C /opt \
     && chown -R elasticsearch:elasticsearch /opt/elasticsearch /usr/share/elasticsearch \
     && chown -R kibana:kibana /opt/kibana
 
-# --- Elasticsearch configuration --------------------------------------------
-# Single-node, security OFF (nginx is the auth gate), memory_lock OFF to avoid
-# container cap failures, data on the volume-mounted path.
-RUN echo 'discovery.type: single-node' >> /opt/elasticsearch/config/elasticsearch.yml \
-    && echo 'xpack.security.enabled: false' >> /opt/elasticsearch/config/elasticsearch.yml \
-    && echo 'bootstrap.memory_lock: false' >> /opt/elasticsearch/config/elasticsearch.yml \
-    && echo 'http.host: 0.0.0.0' >> /opt/elasticsearch/config/elasticsearch.yml \
-    && echo 'path.data: /usr/share/elasticsearch/data' >> /opt/elasticsearch/config/elasticsearch.yml
-
-# --- Kibana configuration ---------------------------------------------------
-RUN echo 'server.host: "0.0.0.0"' >> /opt/kibana/config/kibana.yml \
-    && echo 'elasticsearch.hosts: ["http://localhost:9200"]' >> /opt/kibana/config/kibana.yml
+# --- Elasticsearch + Kibana configuration -----------------------------------
+COPY docker/logpanel/elasticsearch.yml /opt/elasticsearch/config/elasticsearch.yml
+COPY docker/logpanel/kibana.yml /opt/kibana/config/kibana.yml
 
 # --- Supervisor + nginx config ----------------------------------------------
 # NOTE: build context is the repo root (see .github/workflows/logpanel-image.yml),
