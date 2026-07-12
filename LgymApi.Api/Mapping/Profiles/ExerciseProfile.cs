@@ -66,6 +66,7 @@ public sealed class ExerciseProfile : IMappingProfile
                 Id = source.Id.ToString(),
                 Name = name,
                 BodyPart = source.BodyPart.ToLookup(),
+                EloFormula = ToLookupItem(source.EloFormula),
                 Description = source.Description,
                 Image = source.Image,
                 UserId = source.UserId?.ToString()
@@ -112,5 +113,15 @@ public sealed class ExerciseProfile : IMappingProfile
         return global::System.Enum.TryParse<ExerciseEloFormula>(formulaId, ignoreCase: true, out var parsed)
             ? parsed
             : null;
+    }
+
+    private static LookupItemVm ToLookupItem(ExerciseEloFormula eloFormula)
+    {
+        var lookup = eloFormula.ToLookup();
+        return new LookupItemVm
+        {
+            Id = lookup.Id,
+            DisplayName = lookup.DisplayName
+        };
     }
 }
