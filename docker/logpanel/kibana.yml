@@ -1,0 +1,17 @@
+server.host: "0.0.0.0"
+elasticsearch.hosts: ["https://localhost:9200"]
+elasticsearch.username: "${LOGPANEL_ES_USERNAME:-kibana_system}"
+elasticsearch.password: "${LOGPANEL_ES_PASSWORD}"
+elasticsearch.ssl.certificateAuthorities: ["/opt/kibana/config/certs/elasticsearch/ca.crt"]
+xpack.security.session.idleTimeout: "30m"
+xpack.security.session.lifespan: "12h"
+xpack.security.secureCookies: true
+xpack.security.sameSiteCookies: "Lax"
+# Google OIDC is the primary path; basic.basic1 remains the break-glass fallback.
+xpack.security.authc.providers:
+  oidc.google_oidc:
+    order: 0
+    realm: google_oidc
+    description: "Continue with Google"
+  basic.basic1:
+    order: 1

@@ -1,0 +1,32 @@
+xpack.security.enabled: true
+xpack.security.authc.token.enabled: true
+
+xpack.security.authc.realms.oidc.google_oidc:
+  order: 10
+  rp.client_id: "${LOGGING_GOOGLE_OIDC_CLIENT_ID:-__OIDC_DISABLED__}"
+  rp.response_type: code
+  rp.requested_scopes: ["openid", "email", "profile"]
+  rp.redirect_uri: "https://log.lgym.ovh/api/security/oidc/callback"
+  rp.post_logout_redirect_uri: "https://log.lgym.ovh/security/logged_out"
+  op.issuer: "https://accounts.google.com"
+  op.authorization_endpoint: "https://accounts.google.com/o/oauth2/v2/auth"
+  op.token_endpoint: "https://oauth2.googleapis.com/token"
+  op.userinfo_endpoint: "https://openidconnect.googleapis.com/v1/userinfo"
+  op.jwkset_path: "https://www.googleapis.com/oauth2/v3/certs"
+  claims.principal: email
+  claims.groups: "${LOGGING_GOOGLE_OIDC_GROUPS_CLAIM}"
+
+# OIDC requires TLS on the Elasticsearch HTTP interface.
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.certificate: /usr/share/elasticsearch/config/certs/http/tls.crt
+xpack.security.http.ssl.key: /usr/share/elasticsearch/config/certs/http/tls.key
+xpack.security.http.ssl.certificate_authorities:
+  - /usr/share/elasticsearch/config/certs/http/ca.crt
+
+# Keep the tracked demo stack aligned with a secured production posture.
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.verification_mode: certificate
+xpack.security.transport.ssl.certificate: /usr/share/elasticsearch/config/certs/transport/tls.crt
+xpack.security.transport.ssl.key: /usr/share/elasticsearch/config/certs/transport/tls.key
+xpack.security.transport.ssl.certificate_authorities:
+  - /usr/share/elasticsearch/config/certs/transport/ca.crt

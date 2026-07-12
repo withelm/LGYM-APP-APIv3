@@ -149,3 +149,13 @@ deploy.sh
 .evidence/
 **/.evidence/
 .omo
+
+# Runtime secrets (PRIVATE TLS keys) - NEVER commit to public repos
+runtime-secrets/
+
+# Playwright MCP session artifacts (tool noise, not source)
+.playwright-mcp/
+
+# Ad-hoc QA evidence screenshots/logs (not part of source)
+task-f3-*.png
+task-f3-*.md
