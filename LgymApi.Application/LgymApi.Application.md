@@ -14,3 +14,4 @@
 - `Notifications/InAppNotificationService` is the shared fanout point after a notification is durably saved: it publishes the existing SignalR in-app update and also enqueues a privacy-safe push event with the saved `InAppNotification` id plus `RedirectUrl` as the push deeplink.
 - `Notifications/NotificationEventBridge` is the internal seam for backend event producers and the in-app fanout path; it forwards generic push events with IDs only and links the existing `InAppNotification` id for mobile lookup/routing.
 - `Notifications/StalePushInstallationCleanupService` tombstones inactive installations by `LastSeenAt` and preserves installation/message audit history instead of deleting old rows.
+- Google account unlinking uses `IUserExternalLoginRepository` for active-row lookup plus soft-delete staging so the service layer can tombstone the current Google login without introducing provider-agnostic unlink behavior.
