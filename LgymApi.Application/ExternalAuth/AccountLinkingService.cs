@@ -88,6 +88,26 @@ public sealed class AccountLinkingService : IAccountLinkingService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
+    public async Task<Result<Unit, AppError>> UnlinkGoogleAsync(Id<User> userId, CancellationToken cancellationToken)
+    {
+        var user = await _userRepository.FindByIdAsync(userId, cancellationToken);
+        if (user == null)
+        {
+            return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
+        }
+
+        var googleLogin = await _userExternalLoginRepository.FindActiveGoogleByUserIdAsync(userId, cancellationToken);
+        if (googleLogin == null)
+        {
+            return Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind));
+        }
+
+        await _userExternalLoginRepository.MarkGoogleDeletedAsync(userId, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
     public async Task<Result<IReadOnlyList<ExternalLoginInfo>, AppError>> GetExternalLoginsAsync(Id<User> userId, CancellationToken cancellationToken)
     {
         var user = await _userRepository.FindByIdAsync(userId, cancellationToken);

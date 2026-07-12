@@ -39,6 +39,22 @@ public sealed class AccountController : ControllerBase
         return Ok(_mapper.Map<string, ResponseMessageDto>(LgymApi.Resources.Messages.Updated));
     }
 
+    [HttpPost("unlink-google")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UnlinkGoogle(CancellationToken cancellationToken = default)
+    {
+        var userId = LgymApi.Api.Middleware.HttpContextExtensions.GetCurrentUserId(HttpContext);
+
+        var result = await _accountLinkingService.UnlinkGoogleAsync(userId, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<string, ResponseMessageDto>(LgymApi.Resources.Messages.Updated));
+    }
+
     [HttpGet("external-logins")]
     [ProducesResponseType(typeof(ExternalLoginDto[]), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetExternalLogins(CancellationToken cancellationToken = default)

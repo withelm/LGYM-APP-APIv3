@@ -156,6 +156,73 @@ public sealed class AccountLinkingServiceTests
     }
 
     [Test]
+    public async Task UnlinkGoogle_UserMissing_ReturnsUserNotFoundAndDoesNotQueryGoogleLogin()
+    {
+        _userRepository.FindByIdAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns((User?)null);
+
+        var result = await _service.UnlinkGoogleAsync(Id<User>.New(), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<UserNotFoundError>();
+        result.Error!.Message.Should().Be(Messages.DidntFind);
+        await _userExternalLoginRepository.DidNotReceiveWithAnyArgs().FindActiveGoogleByUserIdAsync(default!, default);
+        await _userExternalLoginRepository.DidNotReceiveWithAnyArgs().MarkGoogleDeletedAsync(default!, default);
+        await _googleTokenValidator.DidNotReceiveWithAnyArgs().ValidateAsync(default!, default, default);
+        _unitOfWork.SaveChangesCalls.Should().Be(0);
+    }
+
+    [Test]
+    public async Task UnlinkGoogle_NoActiveLink_ReturnsNotFoundAndDoesNotSave()
+    {
+        var user = CreateUser();
+
+        _userRepository.FindByIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns(user);
+        _userExternalLoginRepository.FindActiveGoogleByUserIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns((UserExternalLogin?)null);
+
+        var result = await _service.UnlinkGoogleAsync(user.Id, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<NotFoundError>();
+        result.Error!.Message.Should().Be(Messages.DidntFind);
+        await _userRepository.Received(1).FindByIdAsync(user.Id, Arg.Any<CancellationToken>());
+        await _userExternalLoginRepository.Received(1).FindActiveGoogleByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
+        await _userExternalLoginRepository.DidNotReceiveWithAnyArgs().MarkGoogleDeletedAsync(default!, default);
+        await _googleTokenValidator.DidNotReceiveWithAnyArgs().ValidateAsync(default!, default, default);
+        _unitOfWork.SaveChangesCalls.Should().Be(0);
+    }
+
+    [Test]
+    public async Task UnlinkGoogle_Success_MarksGoogleDeletedAndSaves()
+    {
+        var user = CreateUser();
+        var googleLogin = new UserExternalLogin
+        {
+            Id = Id<UserExternalLogin>.New(),
+            UserId = user.Id,
+            Provider = AuthConstants.ExternalProviders.Google,
+            ProviderKey = "sub123",
+            ProviderEmail = "google@example.com"
+        };
+
+        _userRepository.FindByIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns(user);
+        _userExternalLoginRepository.FindActiveGoogleByUserIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns(googleLogin);
+
+        var result = await _service.UnlinkGoogleAsync(user.Id, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _userRepository.Received(1).FindByIdAsync(user.Id, Arg.Any<CancellationToken>());
+        await _userExternalLoginRepository.Received(1).FindActiveGoogleByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
+        await _userExternalLoginRepository.Received(1).MarkGoogleDeletedAsync(user.Id, Arg.Any<CancellationToken>());
+        await _googleTokenValidator.DidNotReceiveWithAnyArgs().ValidateAsync(default!, default, default);
+        _unitOfWork.SaveChangesCalls.Should().Be(1);
+    }
+
+    [Test]
     public async Task GetExternalLogins_ReturnsAllForUser()
     {
         var user = CreateUser();
