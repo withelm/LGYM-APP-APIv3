@@ -1,7 +1,9 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -33,6 +35,19 @@ public sealed class UserExternalLoginRepository : IUserExternalLoginRepository
         return _dbContext.UserExternalLogins
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.UserId == userId && x.Provider == provider, cancellationToken);
+    }
+
+    public Task<UserExternalLogin?> FindActiveGoogleByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.UserExternalLogins
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.Provider == AuthConstants.ExternalProviders.Google, cancellationToken);
+    }
+
+    public async Task MarkGoogleDeletedAsync(Id<User> userId, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.UserExternalLogins
+            .Where(x => x.UserId == userId && x.Provider == AuthConstants.ExternalProviders.Google)
+            .StageUpdateAsync(_dbContext, x => x.IsDeleted, _ => true, cancellationToken);
     }
 
     public Task<List<UserExternalLogin>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)

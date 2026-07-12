@@ -203,6 +203,99 @@ public sealed class GoogleAuthTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task POST_UnlinkGoogle_Authenticated_Success_Returns200_AndSoftDeletesRow()
+    {
+        const string email = "unlink-success@example.com";
+        const string subject = "google-sub-unlink-success";
+
+        var user = await SeedUserAsync(name: "unlinkuser", email: email);
+        await SeedGoogleExternalLoginAsync(user.Id, subject, email);
+        SetAuthorizationHeader(user.Id);
+
+        var response = await _client.PostAsync("/api/account/unlink-google", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var externalLogin = await db.UserExternalLogins.IgnoreQueryFilters().SingleAsync(x => x.UserId == user.Id && x.Provider == AuthConstants.ExternalProviders.Google);
+        externalLogin.IsDeleted.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task POST_UnlinkGoogle_Unauthenticated_Returns401()
+    {
+        var response = await _client.PostAsync("/api/account/unlink-google", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Test]
+    public async Task POST_UnlinkGoogle_WithoutActiveGoogleLink_Returns404()
+    {
+        var user = await SeedUserAsync(name: "unlinkmissinguser", email: "unlink-missing@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await _client.PostAsync("/api/account/unlink-google", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task GET_ExternalLogins_RefreshesAfterUnlink_ReturnsEmptyList()
+    {
+        const string email = "external-refresh@example.com";
+
+        var user = await SeedUserAsync(name: "refreshuser", email: email);
+        await SeedGoogleExternalLoginAsync(user.Id, "google-sub-refresh", email);
+        SetAuthorizationHeader(user.Id);
+
+        var unlinkResponse = await _client.PostAsync("/api/account/unlink-google", content: null);
+        unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await _client.GetAsync("/api/account/external-logins");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<List<ExternalLoginDto>>();
+        body.Should().NotBeNull();
+        body.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task POST_LinkGoogle_AfterUnlink_SameSubject_Returns200()
+    {
+        const string email = "relink@example.com";
+        const string subject = "google-sub-relink";
+
+        var user = await SeedUserAsync(name: "relinkuser", email: email);
+        await SeedGoogleExternalLoginAsync(user.Id, subject, email);
+        SetAuthorizationHeader(user.Id);
+
+        var unlinkResponse = await _client.PostAsync("/api/account/unlink-google", content: null);
+        unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        _googleTokenValidator.ValidateAsync("valid-token", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new GoogleTokenPayload(subject, email, true, "Google Relink", null));
+
+        var response = await _client.PostAsJsonAsync("/api/account/link-google", new { idToken = "valid-token" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var logins = await db.UserExternalLogins.IgnoreQueryFilters()
+            .Where(x => x.UserId == user.Id && x.Provider == AuthConstants.ExternalProviders.Google)
+            .ToListAsync();
+
+        logins.Should().HaveCount(2);
+        logins.Should().ContainSingle(x => !x.IsDeleted && x.ProviderKey == subject && x.ProviderEmail == email);
+        logins.Should().ContainSingle(x => x.IsDeleted && x.ProviderKey == subject && x.ProviderEmail == email);
+    }
+
+    [Test]
     public async Task GET_ExternalLogins_Authenticated_ReturnsProviders()
     {
         const string email = "external-list@example.com";

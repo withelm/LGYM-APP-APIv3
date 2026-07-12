@@ -9,3 +9,4 @@
 - Push installations are persisted as installation-scoped rows with a unique `InstallationId`, optional `UserId` and `SessionId`, mutable FCM token/app metadata, and disablement metadata used for unregister/logout/account-switch flows.
 - Push delivery now persists `PushNotificationMessage` rows with payload metadata (`schemaVersion`, `type`, `eventId`, optional entity linkage), provider response summaries, retry timestamps, and failure classification; the FCM sender is configured through `PushNotifications:Fcm:*` without committed credentials.
 - Push infrastructure now separates `PushNotifications:SendEnabled` from registration and uses `LastSeenAt` plus recurring cleanup thresholds to mark stale installations as disabled without deleting audit rows.
+- `UserExternalLoginRepository` keeps Google unlinking on the existing soft-delete path: it can load the active Google login for a user and stage `IsDeleted=true` so the provider subject can be linked again later.
