@@ -66,6 +66,9 @@ public sealed class ExerciseResponseDto : IResultDto
     [JsonPropertyName("bodyPart")]
     public EnumLookupDto BodyPart { get; set; } = new();
 
+    [JsonPropertyName("eloFormula")]
+    public LookupItemVm? EloFormula { get; set; }
+
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 

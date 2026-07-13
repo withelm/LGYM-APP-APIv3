@@ -1,4 +1,5 @@
 using LgymApi.Api.Features.Enum.Contracts;
+using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Application.Features.Enum.Models;
 using LgymApi.Application.Mapping.Core;
 
@@ -12,6 +13,12 @@ public sealed class EnumProfile : IMappingProfile
         {
             Id = source.Id,
             Name = source.Name,
+            DisplayName = source.DisplayName
+        });
+
+        configuration.CreateMap<EnumLookupDto, LookupItemVm>((source, _) => new LookupItemVm
+        {
+            Id = source.Id,
             DisplayName = source.DisplayName
         });
 

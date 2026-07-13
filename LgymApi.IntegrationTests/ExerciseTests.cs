@@ -410,7 +410,16 @@ public sealed class ExerciseTests : IntegrationTestBase
      public async Task GetExercise_WithValidId_ReturnsExercise()
      {
          var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
-         var exercise = await SeedExerciseAsync(user.Id, "Test Exercise", "Chest");
+         var exercise = await SeedExerciseAsync(user.Id, "Test Exercise", "Chest", eloFormula: ExerciseEloFormula.StrengthWeighted);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var seededExercise = await db.Exercises.FirstAsync(e => e.Id == exercise.Id);
+            seededExercise.Description = "Detailed description";
+            seededExercise.Image = "https://cdn.example.com/exercise.png";
+            await db.SaveChangesAsync();
+        }
+
         SetAuthorizationHeader(user.Id);
 
         var response = await Client.GetAsync($"/api/exercise/{exercise.Id}/getExercise");
@@ -422,6 +431,10 @@ public sealed class ExerciseTests : IntegrationTestBase
         body!.Name.Should().Be("Test Exercise");
         body.BodyPart.Should().NotBeNull();
         body.BodyPart!.Name.Should().Be("Chest");
+        body.Description.Should().Be("Detailed description");
+        body.Image.Should().Be("https://cdn.example.com/exercise.png");
+        body.EloFormula.Should().NotBeNull();
+        body.EloFormula!.Id.Should().Be(ExerciseEloFormula.StrengthWeighted.ToString());
     }
 
     private async Task<Exercise> SeedExerciseAsync(
@@ -469,6 +482,9 @@ public sealed class ExerciseTests : IntegrationTestBase
         [JsonPropertyName("bodyPart")]
         public BodyPartLookup? BodyPart { get; set; }
 
+        [JsonPropertyName("eloFormula")]
+        public LookupItemResponse? EloFormula { get; set; }
+
         [JsonPropertyName("description")]
         public string? Description { get; set; }
 
@@ -483,6 +499,15 @@ public sealed class ExerciseTests : IntegrationTestBase
     {
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("displayName")]
+        public string DisplayName { get; set; } = string.Empty;
+    }
+
+    private sealed class LookupItemResponse
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
 
         [JsonPropertyName("displayName")]
         public string DisplayName { get; set; } = string.Empty;
