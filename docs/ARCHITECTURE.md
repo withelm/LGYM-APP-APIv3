@@ -233,3 +233,20 @@ For module `FeatureX`, add:
 - `LgymApi.IntegrationTests/FeatureXTests.cs`
 
 Then register service/repository in both service collection extension files and add migration if persistence changed.
+
+## 13. Modular monolith direction
+
+### Source of truth
+
+- `#311` is the constraint authority for the modular-monolith direction.
+- `#375` is the factual baseline and inventory source.
+- `docs/adr/006-lgym-evolves-as-modular-monolith.md` records the decision.
+
+### Issue #376 links
+
+- `docs/adr/006-lgym-evolves-as-modular-monolith.md`
+- `docs/modular-monolith/issue-376-module-context-map.md`
+- `docs/modular-monolith/issue-376-ownership-map.md`
+
+The current layered runtime stays in place until a later change explicitly alters it.
+The compatibility, persistence, and Unit of Work guidance elsewhere in this guide continues to apply and is not restated here.
