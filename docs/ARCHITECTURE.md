@@ -88,7 +88,9 @@ Use this checklist for a new feature module (for example: `Achievements`, `Notif
    - Add new entity/enums in `LgymApi.Domain` if needed.
 
 2. **Infrastructure Data Model**
-   - Add `DbSet<T>` and relation/config mapping in `AppDbContext`.
+   - Add `DbSet<T>` in `AppDbContext` when the module introduces a new aggregate root that must be queried directly from the context.
+   - Add relation/config mapping in a module-owned `Data/Configurations/<Module>/*EntityTypeConfiguration.cs` class.
+   - Register the new configuration explicitly in `Data/Configurations/AppDbContextEntityTypeConfigurationRegistrar` and preserve the existing fixed order; do not use assembly scanning.
    - Create and verify EF migration.
 
 3. **Application Contracts**
