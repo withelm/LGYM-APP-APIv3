@@ -60,11 +60,6 @@ public sealed class FileLengthGuardTests
         }
 
         var fileName = Path.GetFileName(path);
-        if (fileName.Equals("AppDbContext.cs", StringComparison.Ordinal))
-        {
-            return true;
-        }
-
         if (fileName.EndsWith(".Designer.cs", StringComparison.Ordinal))
         {
             return true;
