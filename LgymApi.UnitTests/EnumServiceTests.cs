@@ -28,7 +28,7 @@ public sealed class EnumServiceTests
         var values = service.GetLookup<ExerciseEloFormula>(CultureInfo.GetCultureInfo("en"));
 
         var pullupWeighted = values.Single(v => v.Id == ExerciseEloFormula.PullupWeighted.ToString());
-        pullupWeighted.Name.Should().Be("Pull-up weighted");
+        pullupWeighted.Name.Should().Be(ExerciseEloFormula.PullupWeighted.ToString());
         pullupWeighted.DisplayName.Should().Be("Pull-up weighted");
     }
 }
