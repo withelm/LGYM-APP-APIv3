@@ -70,7 +70,7 @@ public sealed class GoogleTokenValidator : IGoogleTokenValidator
         }
         catch (InvalidJwtException ex)
         {
-            _logger.LogWarning(ex, "Google token validation failed.");
+            _logger.LogWarning(ex, "Google token validation failed for the configured web/server audience. The token was not logged.");
             return null;
         }
     }
