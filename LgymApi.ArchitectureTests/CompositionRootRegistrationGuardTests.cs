@@ -8,9 +8,28 @@ public sealed class CompositionRootRegistrationGuardTests
 {
     private static readonly string[] RequiredCompositionMethods =
     {
-        "AddApplicationServices",
-        "AddInfrastructure",
+        "AddIdentityModule",
+        "AddTrainingPlanningModule",
+        "AddWorkoutAndProgressModule",
+        "AddCoachingModule",
+        "AddNutritionModule",
+        "AddReportingModule",
+        "AddPlatformServices",
+        "AddIdentityInfrastructure",
+        "AddTrainingPlanningInfrastructure",
+        "AddWorkoutProgressInfrastructure",
+        "AddCoachingInfrastructure",
+        "AddNutritionInfrastructure",
+        "AddReportingInfrastructure",
+        "AddNotificationsModule",
+        "AddBackgroundWorkerServices",
         "AddApplicationMapping"
+    };
+
+    private static readonly string[] LegacyCompositionMethods =
+    {
+        "AddApplicationServices",
+        "AddInfrastructure"
     };
 
     [Test]
@@ -38,11 +57,24 @@ public sealed class CompositionRootRegistrationGuardTests
             .Where(method => !invocations.Contains(method))
             .ToList();
 
-        Assert.That(
-            missing,
-            Is.Empty,
-            $"Program.cs must call the following composition methods: {string.Join(", ", RequiredCompositionMethods)}. " +
-            $"Missing: {string.Join(", ", missing)}");
+        var legacyCalls = LegacyCompositionMethods
+            .Where(method => invocations.Contains(method))
+            .ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                missing,
+                Is.Empty,
+                $"Program.cs must call the following composition methods: {string.Join(", ", RequiredCompositionMethods)}. " +
+                $"Missing: {string.Join(", ", missing)}");
+
+            Assert.That(
+                legacyCalls,
+                Is.Empty,
+                $"Program.cs must not call the removed composition shims: {string.Join(", ", LegacyCompositionMethods)}. " +
+                $"Found: {string.Join(", ", legacyCalls)}");
+        });
     }
 
     /// <summary>

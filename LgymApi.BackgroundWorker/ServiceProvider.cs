@@ -39,15 +39,6 @@ public static class ServiceProvider
             services.AddScoped<IActionMessageScheduler, HangfireActionMessageScheduler>();
         }
 
-        if (isTesting)
-        {
-            services.AddScoped<IPushBackgroundScheduler, Services.NoOpPushBackgroundScheduler>();
-        }
-        else
-        {
-            services.AddScoped<IPushBackgroundScheduler, HangfirePushBackgroundScheduler>();
-        }
-
         services.AddScoped<IEmailScheduler<InvitationEmailPayload>, EmailSchedulerService<InvitationEmailPayload>>();
         services.AddScoped<IEmailScheduler<InvitationAcceptedEmailPayload>, EmailSchedulerService<InvitationAcceptedEmailPayload>>();
         services.AddScoped<IEmailScheduler<InvitationRevokedEmailPayload>, EmailSchedulerService<InvitationRevokedEmailPayload>>();
@@ -75,10 +66,14 @@ public static class ServiceProvider
         services.AddScoped<BackgroundActionOrchestratorService>();
         services.AddScoped<PushNotificationJobHandlerService>();
         services.AddScoped<StalePushInstallationCleanupJob>();
-        services.AddNotificationsModule();
+        services.AddNotificationApplicationServices();
         if (isTesting)
         {
-            services.TryAddScoped<INotificationEventBridge, NoOpNotificationEventBridge>();
+            services.AddScoped<INotificationEventBridge, NoOpNotificationEventBridge>();
+        }
+        else
+        {
+            services.AddScoped<INotificationEventBridge, NotificationEventBridge>();
         }
 
         // Register typed background action handlers

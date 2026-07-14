@@ -63,6 +63,48 @@ public static class ArchitectureTestHelpers
     }
 
     /// <summary>
+    /// Enumerates all source files for a project tree, excluding build artifacts.
+    /// </summary>
+    public static IReadOnlyList<string> EnumerateProjectSourceFiles(string projectRelativePath, string searchPattern = "*.cs")
+    {
+        var repoRoot = ResolveRepositoryRoot();
+        var projectRoot = Path.Combine(repoRoot, projectRelativePath);
+
+        return Directory
+            .EnumerateFiles(projectRoot, searchPattern, SearchOption.AllDirectories)
+            .Where(path => !IsInBuildArtifacts(path))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Resolves the module name for a ServiceCollectionExtensions file.
+    /// Returns null for the project-root composition shims.
+    /// </summary>
+    public static string? GetServiceCollectionModuleName(string serviceCollectionExtensionsPath)
+    {
+        var fileName = Path.GetFileName(serviceCollectionExtensionsPath);
+        const string suffix = "ServiceCollectionExtensions.cs";
+
+        if (!fileName.EndsWith(suffix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        if (!fileName.Equals(suffix, StringComparison.Ordinal))
+        {
+            return fileName[..^suffix.Length];
+        }
+
+        var parentDirectory = Path.GetFileName(Path.GetDirectoryName(serviceCollectionExtensionsPath));
+        if (string.IsNullOrWhiteSpace(parentDirectory))
+        {
+            return null;
+        }
+
+        return parentDirectory is "LgymApi.Application" or "LgymApi.Infrastructure" ? null : parentDirectory;
+    }
+
+    /// <summary>
     /// Parses all C# source files in a given project directory and returns their syntax trees.
     /// Filters out build artifacts automatically.
     /// </summary>
@@ -70,14 +112,9 @@ public static class ArchitectureTestHelpers
     /// <returns>A list of SyntaxTree objects for all source files in the project.</returns>
     public static List<SyntaxTree> ParseProjectSources(string projectRelativePath)
     {
-        var repoRoot = ResolveRepositoryRoot();
-        var projectRoot = Path.Combine(repoRoot, projectRelativePath);
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
 
-        var sourceFiles = Directory
-            .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsInBuildArtifacts(path))
-            .ToList();
+        var sourceFiles = EnumerateProjectSourceFiles(projectRelativePath);
 
         var syntaxTrees = sourceFiles
             .Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), options: parseOptions, path: path))

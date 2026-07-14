@@ -1,9 +1,11 @@
 # LgymApi.Infrastructure.csproj
 
 - Purpose: technical implementations.
-- Contains: EF Core `DbContext`, migrations, repositories, Unit of Work, storage, email, auth/external services, Hangfire persistence, and infrastructure DI.
+- Contains: EF Core `DbContext`, migrations, repositories, Unit of Work, storage, email, auth/external services, Hangfire persistence, and module-owned infrastructure DI helpers.
 - Rules: repositories must not call `SaveChangesAsync` or own transactions.
 - Boundary: do not register Application services here.
+- DI ownership: feature helpers own repositories, adapters, and module-local factories; `AddPlatformServices(...)` keeps shared roots like `AppDbContext`, Hangfire bootstrap, mapper registry, pagination, UoW, and shared email infrastructure.
+- Composition: host-facing module helpers are exposed here so the API can wire modules and platform services without a centralized registration root.
 - Exercise persistence maps the ELO profile as a string column with `Standard` as the database default for new rows.
 - **Persistence Updates**: Added `EmailNotificationStatus.Sending = 3` (explicit numeric value) to support exactly-once delivery guards. Added `NotificationMessage.DeliveredAt` (nullable DateTimeOffset) for crash-safe delivery tracking. Notification send claims now stamp `Status=Sending` and `LastAttemptAt` in one atomic update so interrupted claims do not leave unrecoverable `Sending` rows.
 - Push installations are persisted as installation-scoped rows with a unique `InstallationId`, optional `UserId` and `SessionId`, mutable FCM token/app metadata, and disablement metadata used for unregister/logout/account-switch flows.
