@@ -193,22 +193,25 @@ The boundary is handled at the mapping layer:
 
 ## 11. Dependency Injection Conventions
 
-The solution uses a decentralized registration approach across projects, enforced by architecture guards in unit tests.
+The solution uses module-owned registration helpers composed by the host, enforced by architecture guards in unit tests.
 
-- **Application Services**: register in `LgymApi.Application/ServiceCollectionExtensions.cs`.
-- **Infrastructure Dependencies**: register in `LgymApi.Infrastructure/ServiceCollectionExtensions.cs`.
+- **Application services**: register in module-owned helpers under `LgymApi.Application`.
+- **Infrastructure dependencies**: register in module-owned helpers under `LgymApi.Infrastructure`.
+- **Shared platform roots**: keep cross-cutting services in `AddPlatformServices(...)`.
+- **Host composition**: `Program.cs` composes module and platform helpers only, plus host-only wiring.
 
 ### Registration Ownership
 
-1. **Application Layer**: Owns its interfaces and implementation classes. Any service defined under `LgymApi.Application/Services` must be registered within the Application project's `ServiceCollectionExtensions`.
-2. **Infrastructure Layer**: Owns repository implementations, external client adapters (Email, SMS), and technical services (Persistence, Caching). These are registered within the Infrastructure project's `ServiceCollectionExtensions`.
+1. **Application Layer**: owns its interfaces, implementation classes, and module-specific business-service helpers.
+2. **Infrastructure Layer**: owns repository implementations, external client adapters, and module-specific technical helpers.
+3. **Platform carve-out**: shared roots that multiple modules consume stay in `AddPlatformServices(...)` instead of being forced into one feature module.
 
-### Forbidden Patterns
+### Forbidden Patterns 
 
 - **Cross-Boundary Registration**: the Infrastructure project **must not** register Application services. This is enforced by a `CrossBoundary` architecture guard.
-- **Untracked Concrete Placements**: every concrete service implementation in `LgymApi.Application/Services` or `LgymApi.Infrastructure/Services` must have a corresponding registration in its respective `ServiceCollectionExtensions`.
+- **Untracked Concrete Placements**: every concrete service implementation in `LgymApi.Application` or `LgymApi.Infrastructure` must have a corresponding owner helper.
 - **Implementation Leaks**: avoid registering infrastructure-specific concrete types in the Application layer.
-- **Unsafe Duplicate Assumptions**: do not rely on implicit registrations from other projects; always use the provided `AddApplication()` and `AddInfrastructure()` extensions in `Program.cs`.
+- **Unsafe Duplicate Assumptions**: do not rely on implicit registrations from other projects; use the named module helpers and `AddPlatformServices(...)` in `Program.cs`.
 
 ### Intentional Exceptions
 

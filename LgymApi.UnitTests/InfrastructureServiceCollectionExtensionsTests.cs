@@ -7,6 +7,7 @@ using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Application.Options;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
+using LgymApi.Application.Repositories;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
@@ -218,11 +219,51 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
          services.AddBackgroundWorkerServices(isTesting: true);
          services.AddScoped<IInAppNotificationPushPublisher, FakeInAppNotificationPushPublisher>();
 
-         using var provider = services.BuildServiceProvider();
-          var scheduler = provider.GetRequiredService<IActionMessageScheduler>();
-          scheduler.Should().BeOfType<NoOpActionMessageScheduler>();
-          provider.GetRequiredService<IPushBackgroundScheduler>().Should().BeOfType<LgymApi.BackgroundWorker.Services.NoOpPushBackgroundScheduler>();
+       using var provider = services.BuildServiceProvider();
+        var scheduler = provider.GetRequiredService<IActionMessageScheduler>();
+        scheduler.Should().BeOfType<NoOpActionMessageScheduler>();
+        provider.GetRequiredService<IPushBackgroundScheduler>().Should().BeOfType<LgymApi.Infrastructure.Services.NoOpPushBackgroundScheduler>();
+        provider.GetRequiredService<INotificationEventBridge>().GetType().Name.Should().Be("NoOpNotificationEventBridge");
       }
+
+      [Test]
+      public void AddBackgroundWorkerServices_DoesNotDuplicateNotificationInfrastructureRegistrations()
+      {
+          var services = new ServiceCollection();
+          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
+          {
+              ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+          });
+
+          services.AddLogging();
+          services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+          services.AddBackgroundWorkerServices(isTesting: true);
+          services.AddScoped<IInAppNotificationPushPublisher, FakeInAppNotificationPushPublisher>();
+
+           services.Count(descriptor => descriptor.ServiceType == typeof(IPushInstallationRepository)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(IPushNotificationMessageRepository)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(IInAppNotificationRepository)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(IPushBackgroundScheduler)).Should().Be(1);
+       }
+
+      [Test]
+      public void AddNotificationsModule_RegistersHostFacingNotificationCompositionOnce()
+      {
+          var services = new ServiceCollection();
+          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
+          {
+              ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+          });
+
+          services.AddNotificationsModule(configuration, isTesting: true);
+
+          services.Count(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(INotificationEventBridge)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(IPushInstallationRepository)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(IPushNotificationMessageRepository)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(IInAppNotificationRepository)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(IPushBackgroundScheduler)).Should().Be(1);
+       }
 
       [Test]
       public void AddInfrastructure_Throws_WhenPushSendsEnabledWithoutProjectId()
