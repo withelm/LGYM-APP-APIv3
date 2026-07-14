@@ -43,7 +43,6 @@ public sealed class EnumTests : IntegrationTestBase
         var body = await response.Content.ReadFromJsonAsync<EnumLookupResponse>();
         body.Should().NotBeNull();
         var pullupWeighted = body!.Values.Single(v => v.Id == ExerciseEloFormula.PullupWeighted.ToString());
-        pullupWeighted.Name.Should().Be(pullupWeighted.DisplayName);
         pullupWeighted.DisplayName.Should().NotBeNullOrWhiteSpace();
         pullupWeighted.DisplayName.Should().NotBe(ExerciseEloFormula.PullupWeighted.ToString());
     }

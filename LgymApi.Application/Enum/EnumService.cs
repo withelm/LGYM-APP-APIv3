@@ -101,7 +101,7 @@ public sealed class EnumService : IEnumService
         return new EnumLookupEntry
         {
             Id = enumName,
-            Name = displayName,
+            Name = enumName,
             DisplayName = displayName
         };
     }
