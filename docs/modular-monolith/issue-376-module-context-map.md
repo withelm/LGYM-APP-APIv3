@@ -102,6 +102,18 @@ The #375 baseline already shows these as the current feature-level dependency cl
 - Exposes coach-trainee relationship, invitation, and dashboard contracts that other modules can query or react to.
 - Publishes coaching relationship changes and request flows, while delegating actual workout, plan, or report behavior to the owning module.
 
+## Nutrition
+
+### Responsibility boundary
+
+- Owns diet plans, meals, supplement plans, plan history, and intake logs.
+- Does not own identity, training planning, workout execution, reporting, or notification business flows beyond the shared events and contracts it consumes.
+
+### Public contract surface
+
+- Exposes diet-plan, meal, supplement-plan, and intake contracts that other modules can read or react to.
+- Publishes nutrition data and nutrition events while keeping nutrition write rules internal.
+
 ## Allowed dependencies
 
 The #375 baseline shows the current clusters already depend on shared platform, identity, and infrastructure roots. #311 narrows that into a contract-first module policy.
@@ -115,6 +127,7 @@ The #375 baseline shows the current clusters already depend on shared platform, 
 | Training Planning | Platform / Reference Data; Identity & Accounts public contracts | Internal persistence or private services from Notifications, Reporting, Workout & Progress, or Coaching |
 | Workout & Progress | Platform / Reference Data; Identity & Accounts public contracts; Training Planning plan contracts | Internal persistence or private services from Notifications, Reporting, or Coaching |
 | Coaching | Platform / Reference Data; Identity & Accounts public contracts; Training Planning; Workout & Progress; Notifications public contracts | Internal persistence or private services from Reporting |
+| Nutrition | Platform / Reference Data; Identity & Accounts public contracts | Internal persistence or private services from Notifications, Reporting, Training Planning, Workout & Progress, or Coaching |
 
 ## Platform / Reference Data hosting rules
 
@@ -157,7 +170,7 @@ Extraction is justified only when all of these conditions are true:
 - the module no longer needs direct access to another module's repositories, entities, or private services;
 - the dependency matrix can remain valid after extraction without adding a boundary-bypass path.
 
-The seven-module catalog is the current baseline for those checks, and any later split must stay compatible with the #311 constraints.
+The eight-module catalog is the current baseline for those checks, and any later split must stay compatible with the #311 constraints.
 
 ## Links
 

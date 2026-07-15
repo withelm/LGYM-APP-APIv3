@@ -34,7 +34,7 @@ The modular-monolith decision changes how the system is described and governed, 
 
 ## Consequences
 
-1. Later issue-376 docs must stay consistent with the seven-module catalog, the ownership map, and the dependency policy matrix.
+1. Later issue-376 docs must stay consistent with the eight-module catalog, the ownership map, and the dependency policy matrix.
 2. Ownership rules remain one-owner-per-artifact, with no shared write ownership hidden behind the one production `AppDbContext`.
 3. The current layered runtime remains the implementation baseline; this ADR does not authorize any change to the current deployment or persistence shape.
 4. The single migration stream remains the only migration history for the current production system.
