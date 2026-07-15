@@ -69,11 +69,11 @@ public static class ServiceProvider
         services.AddNotificationApplicationServices();
         if (isTesting)
         {
-            services.AddScoped<INotificationEventBridge, NoOpNotificationEventBridge>();
+            services.TryAddScoped<INotificationEventBridge, NoOpNotificationEventBridge>();
         }
         else
         {
-            services.AddScoped<INotificationEventBridge, NotificationEventBridge>();
+            services.TryAddScoped<INotificationEventBridge, NotificationEventBridge>();
         }
 
         // Register typed background action handlers

@@ -85,8 +85,15 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 | Service contract | `IExerciseScoresService` | `Coaching` | Coaching workflows aggregate exercise scores for trainer relations. | Non-owners consume it through coaching services or read models. |
 | Service contract | `IEloRegistryService` | `Coaching` | Coaching workflows use ELO registry state to support trainer relations. | Non-owners reach it through the coaching service boundary only. |
 | Service contract | `IMainRecordsService` | `Coaching` | Main record coordination belongs to the coaching workflow that consumes it. | Non-owners use the coaching service or read model only. |
+| Repository contract | `MainRecordRepository / IMainRecordRepository` | `Coaching` | The current main-record repository contract is exposed through the coaching-owned main-record workflow and is treated as coaching-owned modular-boundary debt until the underlying ownership is extracted behind a cleaner published contract. | Non-owners use the coaching service or published read model only. |
 | Table | `TrainerInvitations` | `Coaching` | Trainer invitations are owned by coaching. | Non-owners do not mutate invitations directly. |
 | Table | `TrainerTraineeLinks` | `Coaching` | Trainer to trainee links are owned by coaching. | Non-owners do not mutate links directly. |
+| Table | `DietPlans` | `Nutrition` | Diet plan rows are owned by nutrition. | Non-owners do not write diet plans directly. |
+| Table | `DietMeals` | `Nutrition` | Diet meal rows are owned by nutrition. | Non-owners do not write diet meals directly. |
+| Table | `DietPlanHistories` | `Nutrition` | Diet plan history rows are owned by nutrition. | Non-owners do not write diet plan history directly. |
+| Table | `SupplementPlans` | `Nutrition` | Supplement plan rows are owned by nutrition. | Non-owners do not write supplement plans directly. |
+| Table | `SupplementPlanItems` | `Nutrition` | Supplement plan item rows are owned by nutrition. | Non-owners do not write supplement plan items directly. |
+| Table | `SupplementIntakeLogs` | `Nutrition` | Supplement intake log rows are owned by nutrition. | Non-owners do not write supplement intake logs directly. |
 
 ## Notes
 

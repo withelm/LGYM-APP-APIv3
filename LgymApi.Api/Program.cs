@@ -9,6 +9,7 @@ using LgymApi.Application.Coaching;
 using LgymApi.Application.Identity;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Nutrition;
+using LgymApi.Application.Platform;
 using LgymApi.Application.Reporting;
 using LgymApi.Application.TrainingPlanning;
 using LgymApi.Application.WorkoutProgress;
@@ -112,7 +113,8 @@ builder.Services
     .AddWorkoutAndProgressModule()
     .AddCoachingModule()
     .AddNutritionModule()
-    .AddReportingModule();
+    .AddReportingModule()
+    .AddPlatformModule();
 
 builder.Services.AddPlatformServices(
     builder.Configuration,
