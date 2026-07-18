@@ -2,7 +2,7 @@ using LgymApi.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace LgymApi.Infrastructure.Data.Configurations.WorkoutProgress;
+namespace LgymApi.Infrastructure.Data.Configurations.Platform;
 
 internal sealed class AppConfigEntityTypeConfiguration : IEntityTypeConfiguration<AppConfig>
 {

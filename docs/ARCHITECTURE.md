@@ -36,6 +36,16 @@ The project uses explicit Unit of Work semantics.
 
 If you add a repository method that mutates data, make it stage-only and ensure the caller service commits once, at the use-case boundary.
 
+### Persistence ownership and identifier contract
+
+The production system has one `AppDbContext`, one database, and one migration stream. Each of the 48 persisted entities still has exactly one module owner. `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable ownership source of truth, and `docs/modular-monolith/issue-376-ownership-map.md` is its tested documentation view.
+
+Known internal entity references use `Id<T>`. EF Core stores their provider values in PostgreSQL `uuid` columns, while HTTP and JSON UUID values remain strings. The only polymorphic string ID exceptions are `PushNotificationMessage.EntityId` and `PushEventPayload.EntityId`.
+
+Architecture debt is no-growth. An allowlist entry may be re-keyed only for an owner change with the same source and target identities. New entries, wildcard exemptions, and source or target changes are not permitted. Remove stale entries.
+
+Application services own the transaction proof: a staged write becomes visible only after `IUnitOfWork` commits, and a forced failure in a multi-step service transaction must leave no write after rollback. PostgreSQL transaction integration tests enforce both outcomes.
+
 ## 4. Mapping Approach
 
 The solution uses a custom mapping system (not AutoMapper):

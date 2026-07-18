@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LgymApi.Api;
+using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Controllers;
 using LgymApi.Application.Common.Errors;
@@ -10,6 +11,7 @@ using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Resources;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,7 +79,7 @@ public sealed class TrainerReportingPhotoControllerTests
     public async Task GetPhotoSignedReadUrl_ForwardsPhotoIdAndReturnsOk()
     {
         var reportingService = Substitute.For<IReportingService>();
-        const string photoId = "photo-123";
+        var photoId = Id<Photo>.New();
 
         reportingService
             .GetSignedReadUrlAsync(Arg.Any<User>(), photoId, Arg.Any<CancellationToken>())
@@ -89,10 +91,40 @@ public sealed class TrainerReportingPhotoControllerTests
 
         var controller = CreateController(reportingService);
 
-        var result = await controller.GetPhotoSignedReadUrl(photoId);
+        var result = await controller.GetPhotoSignedReadUrl(photoId.ToString());
 
         result.Should().BeOfType<OkObjectResult>();
-        ((OkObjectResult)result).Value.Should().BeOfType<GetSignedReadUrlResponse>();
+        var response = ((OkObjectResult)result).Value.Should().BeOfType<GetSignedReadUrlResponse>().Subject;
+        response.ReadUrl.Should().Be("https://read.example.com");
+        await reportingService.Received(1).GetSignedReadUrlAsync(Arg.Any<User>(), photoId, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetPhotoSignedReadUrl_WithMalformedPhotoId_ReturnsExistingBadRequestPayload()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var controller = CreateController(reportingService);
+
+        var result = await controller.GetPhotoSignedReadUrl("not-a-guid");
+
+        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        objectResult.Value.Should().BeOfType<ResponseMessageDto>().Which.Message.Should().Be("Invalid photo ID format");
+        await reportingService.DidNotReceive().GetSignedReadUrlAsync(Arg.Any<User>(), Arg.Any<Id<Photo>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetPhotoSignedReadUrl_WithEmptyPhotoId_ReturnsResourceBackedBadRequestPayload()
+    {
+        var reportingService = Substitute.For<IReportingService>();
+        var controller = CreateController(reportingService);
+
+        var result = await controller.GetPhotoSignedReadUrl(string.Empty);
+
+        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        objectResult.Value.Should().BeOfType<ResponseMessageDto>().Which.Message.Should().Be(Messages.FieldRequired);
+        await reportingService.DidNotReceive().GetSignedReadUrlAsync(Arg.Any<User>(), Arg.Any<Id<Photo>>(), Arg.Any<CancellationToken>());
     }
 
     [Test]

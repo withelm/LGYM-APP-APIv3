@@ -2,6 +2,7 @@ using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Plan;
+using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
@@ -102,10 +103,9 @@ public sealed class ServiceCommitBehaviorTests
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
-        var service = new UserService(new UserServiceDependenciesStub(
+        var userService = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
-            eloRepository,
             tokenService,
             legacyPasswordService,
             rankService,
@@ -115,14 +115,15 @@ public sealed class ServiceCommitBehaviorTests
             NullLogger<UserService>.Instance,
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
+        var service = new EloRegistryService(eloRepository, userService, unitOfWork);
 
-        var registerResult = await service.RegisterAsync(new RegisterUserInput(
+        var registerResult = await service.RegisterUserAsync(new RegisterUserInput(
             "newuser",
             "newuser@example.com",
             "password123",
             "password123",
             true,
-            PreferredLanguage: null));
+            PreferredLanguage: null), trainer: false);
 
         registerResult.IsSuccess.Should().BeTrue();
 
@@ -154,7 +155,6 @@ public sealed class ServiceCommitBehaviorTests
 
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IRoleRepository roleRepository = CreateRoleRepository(dbContext);
-        IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
@@ -165,7 +165,6 @@ public sealed class ServiceCommitBehaviorTests
         var service = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
-            eloRepository,
             tokenService,
             legacyPasswordService,
             rankService,
@@ -211,7 +210,6 @@ public sealed class ServiceCommitBehaviorTests
 
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IRoleRepository roleRepository = CreateRoleRepository(dbContext);
-        IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
@@ -223,7 +221,6 @@ public sealed class ServiceCommitBehaviorTests
         var service = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
-            eloRepository,
             tokenService,
             legacyPasswordService,
             rankService,
@@ -286,7 +283,6 @@ public sealed class ServiceCommitBehaviorTests
 
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IRoleRepository roleRepository = CreateRoleRepository(dbContext);
-        IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
@@ -297,7 +293,6 @@ public sealed class ServiceCommitBehaviorTests
         var service = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
-            eloRepository,
             tokenService,
             legacyPasswordService,
             rankService,
@@ -351,7 +346,6 @@ public sealed class ServiceCommitBehaviorTests
 
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IRoleRepository roleRepository = CreateRoleRepository(dbContext);
-        IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
         ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
         IRankService rankService = new RankService();
@@ -362,7 +356,6 @@ public sealed class ServiceCommitBehaviorTests
         var service = new UserService(new UserServiceDependenciesStub(
             userRepository,
             roleRepository,
-            eloRepository,
             tokenService,
             legacyPasswordService,
             rankService,
@@ -473,7 +466,6 @@ public sealed class ServiceCommitBehaviorTests
         public UserServiceDependenciesStub(
             IUserRepository userRepository,
             IRoleRepository roleRepository,
-            IEloRegistryRepository eloRepository,
             ITokenService tokenService,
             ILegacyPasswordService legacyPasswordService,
             IRankService rankService,
@@ -487,7 +479,6 @@ public sealed class ServiceCommitBehaviorTests
             PushInstallationRepository = NSubstitute.Substitute.For<IPushInstallationRepository>();
             UserRepository = userRepository;
             RoleRepository = roleRepository;
-            EloRepository = eloRepository;
             TokenService = tokenService;
             LegacyPasswordService = legacyPasswordService;
             RankService = rankService;
@@ -502,7 +493,6 @@ public sealed class ServiceCommitBehaviorTests
         public IPushInstallationRepository PushInstallationRepository { get; }
         public IUserRepository UserRepository { get; }
         public IRoleRepository RoleRepository { get; }
-        public IEloRegistryRepository EloRepository { get; }
         public ITokenService TokenService { get; }
         public ILegacyPasswordService LegacyPasswordService { get; }
         public IRankService RankService { get; }

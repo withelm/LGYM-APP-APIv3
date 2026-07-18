@@ -18,7 +18,6 @@ public sealed partial class UserService : IUserService
         }
 
         var nextRank = _rankService.GetNextRank(currentUser.ProfileRank);
-        var elo = await _eloRepository.GetLatestEloAsync(currentUser.Id, cancellationToken) ?? 1000;
         var roles = await _roleRepository.GetRoleNamesByUserIdAsync(currentUser.Id, cancellationToken);
         var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(currentUser.Id, cancellationToken);
         var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(currentUser.Id, cancellationToken);
@@ -33,7 +32,7 @@ public sealed partial class UserService : IUserService
             PreferredTimeZone = string.IsNullOrWhiteSpace(currentUser.PreferredTimeZone) ? _appDefaultsOptions.PreferredTimeZone : currentUser.PreferredTimeZone,
             CreatedAt = currentUser.CreatedAt.UtcDateTime,
             UpdatedAt = currentUser.UpdatedAt.UtcDateTime,
-            Elo = elo,
+            Elo = 1000,
             NextRank = nextRank == null ? null : new RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
             IsDeleted = currentUser.IsDeleted,
             IsVisibleInRanking = currentUser.IsVisibleInRanking,
@@ -43,21 +42,6 @@ public sealed partial class UserService : IUserService
         });
     }
 
-    public async Task<Result<int, AppError>> GetUserEloAsync(Id<UserEntity> userId, CancellationToken cancellationToken = default)
-    {
-        if (userId.IsEmpty)
-        {
-            return Result<int, AppError>.Failure(new InvalidUserError(Messages.DidntFind));
-        }
-
-        var result = await _eloRepository.GetLatestEloAsync(userId, cancellationToken);
-        if (!result.HasValue)
-        {
-            return Result<int, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
-        }
-
-        return Result<int, AppError>.Success(result.Value);
-    }
 
     public async Task<Result<Unit, AppError>> DeleteAccountAsync(UserEntity? currentUser, CancellationToken cancellationToken = default)
     {

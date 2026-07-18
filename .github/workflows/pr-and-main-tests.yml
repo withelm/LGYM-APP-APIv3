@@ -19,6 +19,20 @@ jobs:
   tests:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
 
     steps:
       - name: Checkout
@@ -46,8 +60,13 @@ jobs:
       - name: Run architecture tests
         run: dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=architecture-tests.trx" --results-directory ./TestResults/Architecture
 
-      - name: Run integration tests
-        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=integration-tests.trx" --results-directory ./TestResults/Integration
+      - name: Run InMemory integration tests
+        run: dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build --filter "TestCategory!=PostgreSql" --verbosity normal --logger "trx;LogFileName=inmemory-integration-tests.trx" --results-directory ./TestResults/Integration
+
+      - name: Run PostgreSQL integration tests
+        env:
+          LGYM_CI_POSTGRES_ADMIN: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres;Pooling=false;Timeout=5;Command Timeout=30
+        run: pwsh -File scripts/run-postgresql-integration-tests.ps1 -ConnectionString "$env:LGYM_CI_POSTGRES_ADMIN" -ResultsDirectory ./TestResults/PostgreSql -NoBuild
 
       - name: Run DataSeeder tests
         run: dotnet test LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=dataseeder-tests.trx" --results-directory ./TestResults/DataSeeder
@@ -58,6 +77,14 @@ jobs:
         with:
           name: test-reports-${{ github.run_number }}
           path: TestResults/**/*.trx
+          if-no-files-found: warn
+
+      - name: Upload PostgreSQL integration test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgresql-integration-test-reports-${{ github.run_number }}
+          path: TestResults/PostgreSql/**/*.trx
           if-no-files-found: warn
 
       - name: Publish unit test summary
@@ -76,6 +103,15 @@ jobs:
         with:
           name: Integration Tests
           path: TestResults/Integration/*.trx
+          reporter: dotnet-trx
+
+      - name: Publish PostgreSQL integration test summary
+        if: always()
+        continue-on-error: true
+        uses: dorny/test-reporter@v1
+        with:
+          name: PostgreSQL Integration Tests
+          path: TestResults/PostgreSql/**/*.trx
           reporter: dotnet-trx
 
       - name: Publish DataSeeder test summary

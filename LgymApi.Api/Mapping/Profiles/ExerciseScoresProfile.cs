@@ -14,7 +14,7 @@ public sealed class ExerciseScoresProfile : IMappingProfile
             Value = source.Value,
             Date = source.Date,
             ExerciseName = source.ExerciseName,
-            ExerciseId = source.ExerciseId
+            ExerciseId = source.ExerciseId.ToString()
         });
     }
 }

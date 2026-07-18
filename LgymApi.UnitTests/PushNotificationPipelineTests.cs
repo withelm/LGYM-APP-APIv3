@@ -7,6 +7,7 @@ using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common.Push;
 using LgymApi.BackgroundWorker.Common.Push.Models;
+using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.BackgroundWorker.Push;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -24,6 +25,36 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class PushNotificationPipelineTests
 {
+    [Test]
+    public void PushEventPayload_InAppNotificationId_IsTypedInternally()
+    {
+        var property = typeof(PushEventPayload).GetProperty(nameof(PushEventPayload.InAppNotificationId));
+
+        property.Should().NotBeNull();
+        property!.PropertyType.Should().Be(typeof(Id<InAppNotification>?));
+    }
+
+    [Test]
+    public void PushEventPayload_InAppNotificationId_PreservesLegacyUuidStringJson()
+    {
+        var notificationId = Id<InAppNotification>.New();
+        var payload = new PushEventPayload(1, "internal.test.push", "event-1", null, notificationId, null);
+        var legacyJson = $$"""
+            {"schemaVersion":1,"type":"internal.test.push","eventId":"event-1","entityId":null,"inAppNotificationId":"{{notificationId}}","deeplink":null}
+            """;
+
+        var json = JsonSerializer.Serialize(payload, SharedSerializationOptions.Current);
+        using var document = JsonDocument.Parse(json);
+        var roundtrip = JsonSerializer.Deserialize<PushEventPayload>(json, SharedSerializationOptions.Current);
+        var legacyPayload = JsonSerializer.Deserialize<PushEventPayload>(legacyJson, SharedSerializationOptions.Current);
+
+        document.RootElement.GetProperty("inAppNotificationId").GetString().Should().Be(notificationId.ToString());
+        roundtrip.Should().NotBeNull();
+        roundtrip!.InAppNotificationId.Should().Be(notificationId);
+        legacyPayload.Should().NotBeNull();
+        legacyPayload!.InAppNotificationId.Should().Be(notificationId);
+    }
+
     [Test]
     public async Task EnqueueAsync_WhenRepeated_DoesNotCreateDuplicateRowsOrReschedule()
     {
@@ -247,12 +278,13 @@ public sealed class PushNotificationPipelineTests
             new PushNotificationOptions(),
             NullLogger<FcmPushSender>.Instance);
         var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
+        var notificationId = Id<InAppNotification>.New();
         var payload = new PushEventPayload(
             1,
             "internal.test.push",
             "event-1",
             "entity-1",
-            "notification-1",
+            notificationId,
             "/notifications");
 
         var method = typeof(FcmPushSender).GetMethod("BuildRequestContent", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -267,7 +299,7 @@ public sealed class PushNotificationPipelineTests
         message.GetProperty("notification").GetProperty("body").GetString().Should().Be("You have a new notification.");
         message.GetProperty("android").GetProperty("priority").GetString().Should().Be("HIGH");
         message.GetProperty("data").GetProperty("deeplink").GetString().Should().Be("/notifications");
-        message.GetProperty("data").GetProperty("inAppNotificationId").GetString().Should().Be("notification-1");
+        message.GetProperty("data").GetProperty("inAppNotificationId").GetString().Should().Be(notificationId.ToString());
     }
 
     [Test]
@@ -494,6 +526,80 @@ public sealed class PushNotificationPipelineTests
         public Task AddAsync(PushInstallation installation, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task UpdateAsync(PushInstallation installation, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task UpsertForUserSessionAsync(PushInstallationRegistration registration, CancellationToken cancellationToken = default)
+        {
+            var installation = _installations.FirstOrDefault(entity => entity.InstallationId == registration.InstallationId);
+            if (installation == null)
+            {
+                installation = new PushInstallation { Id = Id<PushInstallation>.New() };
+                _installations.Add(installation);
+            }
+
+            installation.UserId = registration.UserId;
+            installation.SessionId = registration.SessionId;
+            installation.InstallationId = registration.InstallationId;
+            installation.Platform = registration.Platform;
+            installation.FcmToken = registration.FcmToken;
+            installation.AppVersion = registration.AppVersion;
+            installation.Environment = registration.Environment;
+            installation.PermissionStatus = registration.PermissionStatus;
+            installation.LastSeenAt = registration.LastSeenAt;
+            installation.DisabledAt = null;
+            installation.DisabledReason = null;
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> DisableBoundForUserOrSessionAsync(
+            string installationId,
+            Id<User> userId,
+            Id<UserSession> sessionId,
+            DateTimeOffset disabledAt,
+            string disabledReason,
+            CancellationToken cancellationToken = default)
+        {
+            var installation = _installations.FirstOrDefault(entity => entity.InstallationId == installationId && (entity.UserId == userId || entity.SessionId == sessionId));
+            if (installation == null)
+            {
+                return Task.FromResult(false);
+            }
+
+            installation.DisabledAt = disabledAt;
+            installation.DisabledReason = disabledReason;
+            installation.LastSeenAt = disabledAt;
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DisassociateBoundForUserOrSessionAsync(
+            string installationId,
+            Id<User> userId,
+            Id<UserSession> sessionId,
+            DateTimeOffset lastSeenAt,
+            CancellationToken cancellationToken = default)
+        {
+            var installation = _installations.FirstOrDefault(entity => entity.InstallationId == installationId && (entity.UserId == userId || entity.SessionId == sessionId));
+            if (installation == null)
+            {
+                return Task.FromResult(false);
+            }
+
+            installation.UserId = null;
+            installation.SessionId = null;
+            installation.LastSeenAt = lastSeenAt;
+            return Task.FromResult(true);
+        }
+
+        public Task DisassociateForSessionAsync(Id<UserSession> sessionId, DateTimeOffset lastSeenAt, CancellationToken cancellationToken = default)
+        {
+            foreach (var installation in _installations.Where(entity => entity.SessionId == sessionId))
+            {
+                installation.UserId = null;
+                installation.SessionId = null;
+                installation.LastSeenAt = lastSeenAt;
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

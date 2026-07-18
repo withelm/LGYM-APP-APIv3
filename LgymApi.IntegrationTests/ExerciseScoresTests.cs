@@ -73,6 +73,15 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         var body = await response.Content.ReadFromJsonAsync<List<ChartDataEntry>>();
         body.Should().NotBeNull();
         body.Should().HaveCountGreaterThanOrEqualTo(1);
+        body!.Select(entry => entry.ExerciseId).Should().OnlyContain(id => id == exerciseId.ToString());
+
+        var repeatResponse = await Client.PostAsJsonAsync($"/api/exerciseScores/{userId}/getExerciseScoresChartData", chartRequest);
+        repeatResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var repeatBody = await repeatResponse.Content.ReadFromJsonAsync<List<ChartDataEntry>>();
+        repeatBody.Should().NotBeNull();
+        repeatBody!.Select(entry => entry.Id).Should().Equal(body.Select(entry => entry.Id));
+        repeatBody.Select(entry => entry.ExerciseId).Should().Equal(body.Select(entry => entry.ExerciseId));
+        TestContext.Progress.WriteLine(System.Text.Json.JsonSerializer.Serialize(body));
     }
 
     [Test]
@@ -97,6 +106,25 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{otherUserId}/getExerciseScoresChartData", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task GetExerciseScoresChartData_WithMalformedExerciseId_ReturnsBadRequest()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "chart-invalid-exercise",
+            email: "chart-invalid-exercise@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{userId}/getExerciseScoresChartData", new
+        {
+            exerciseId = "not-a-uuid"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -282,6 +310,9 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
 
         [JsonPropertyName("date")]
         public string Date { get; set; } = string.Empty;
+
+        [JsonPropertyName("exerciseId")]
+        public string ExerciseId { get; set; } = string.Empty;
     }
 
     private sealed class LastExerciseScoresResponse

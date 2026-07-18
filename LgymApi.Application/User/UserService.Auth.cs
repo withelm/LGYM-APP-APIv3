@@ -20,7 +20,7 @@ namespace LgymApi.Application.Features.User;
 
 public sealed partial class UserService : IUserService
 {
-    public async Task<Result<Unit, AppError>> RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
+    public async Task<Result<Id<UserEntity>, AppError>> RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
     {
         return await RegisterCoreAsync(
             input,
@@ -28,7 +28,7 @@ public sealed partial class UserService : IUserService
             cancellationToken);
     }
 
-    public async Task<Result<Unit, AppError>> RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
+    public async Task<Result<Id<UserEntity>, AppError>> RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
     {
         var trainerInput = input with { IsVisibleInRanking = false, PreferredLanguage = null };
 
@@ -48,7 +48,7 @@ public sealed partial class UserService : IUserService
         return await LoginCoreAsync(name, password, AuthConstants.Roles.Trainer, cancellationToken);
     }
 
-    private async Task<Result<Unit, AppError>> RegisterCoreAsync(
+    private async Task<Result<Id<UserEntity>, AppError>> RegisterCoreAsync(
         RegisterUserInput input,
         IReadOnlyCollection<string> roleNames,
         CancellationToken cancellationToken)
@@ -60,23 +60,23 @@ public sealed partial class UserService : IUserService
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.NameIsRequired));
+            return Result<Id<UserEntity>, AppError>.Failure(new InvalidUserError(Messages.NameIsRequired));
         }
 
         var normalizedEmail = email?.Trim().ToLowerInvariant();
         if (!new EmailAddressAttribute().IsValid(normalizedEmail))
         {
-            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.EmailInvalid));
+            return Result<Id<UserEntity>, AppError>.Failure(new InvalidUserError(Messages.EmailInvalid));
         }
 
         if (password.Length < 6)
         {
-            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.PasswordMin));
+            return Result<Id<UserEntity>, AppError>.Failure(new InvalidUserError(Messages.PasswordMin));
         }
 
         if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
         {
-            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.SamePassword));
+            return Result<Id<UserEntity>, AppError>.Failure(new InvalidUserError(Messages.SamePassword));
         }
 
         var existingUser = await _userRepository.FindByNameOrEmailAsync(name, normalizedEmail!, cancellationToken);
@@ -84,10 +84,10 @@ public sealed partial class UserService : IUserService
         {
             if (string.Equals(existingUser.Name, name, StringComparison.Ordinal))
             {
-                return Result<Unit, AppError>.Failure(new ConflictError(Messages.UserWithThatName));
+                return Result<Id<UserEntity>, AppError>.Failure(new ConflictError(Messages.UserWithThatName));
             }
 
-            return Result<Unit, AppError>.Failure(new ConflictError(Messages.UserWithThatEmail));
+            return Result<Id<UserEntity>, AppError>.Failure(new ConflictError(Messages.UserWithThatEmail));
         }
 
         var passwordData = _legacyPasswordService.Create(password);
@@ -112,18 +112,10 @@ public sealed partial class UserService : IUserService
         var rolesToAssign = await _roleRepository.GetByNamesAsync(roleNames, cancellationToken);
         if (rolesToAssign.Count != roleNames.Count)
         {
-            return Result<Unit, AppError>.Failure(new InternalServerError(Messages.DefaultRoleMissing));
+            return Result<Id<UserEntity>, AppError>.Failure(new InternalServerError(Messages.DefaultRoleMissing));
         }
 
         await _roleRepository.AddUserRolesAsync(user.Id, rolesToAssign.Select(r => r.Id).ToList(), cancellationToken);
-
-        await _eloRepository.AddAsync(new global::LgymApi.Domain.Entities.EloRegistry
-        {
-            Id = Id<LgymApi.Domain.Entities.EloRegistry>.New(),
-            UserId = user.Id,
-            Date = DateTimeOffset.UtcNow,
-            Elo = 1000
-        }, cancellationToken);
 
         await _commandDispatcher.EnqueueAsync(new UserRegisteredCommand { UserId = user.Id });
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -141,7 +133,7 @@ public sealed partial class UserService : IUserService
                 user.Id);
         }
 
-        return Result<Unit, AppError>.Success(Unit.Value);
+        return Result<Id<UserEntity>, AppError>.Success(user.Id);
     }
 
 
@@ -183,7 +175,6 @@ public sealed partial class UserService : IUserService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var token = _tokenService.CreateToken(user.Id, session.Id, session.Jti, roles, permissionClaims);
-        var elo = await _eloRepository.GetLatestEloAsync(user.Id, cancellationToken) ?? 1000;
         var nextRank = _rankService.GetNextRank(user.ProfileRank);
         var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(user.Id, cancellationToken);
 
@@ -201,7 +192,7 @@ public sealed partial class UserService : IUserService
                 PreferredTimeZone = string.IsNullOrWhiteSpace(user.PreferredTimeZone) ? _appDefaultsOptions.PreferredTimeZone : user.PreferredTimeZone,
                 CreatedAt = user.CreatedAt.UtcDateTime,
                 UpdatedAt = user.UpdatedAt.UtcDateTime,
-                Elo = elo,
+                Elo = 1000,
                 NextRank = nextRank == null ? null : new RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
                 IsDeleted = user.IsDeleted,
                 IsVisibleInRanking = user.IsVisibleInRanking,

@@ -1,8 +1,9 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Infrastructure.Data.Configurations.TrainingPlanning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace LgymApi.Infrastructure.Data.Configurations.TrainingPlanning;
+namespace LgymApi.Infrastructure.Data.Configurations.WorkoutProgress;
 
 internal sealed class ExerciseTranslationEntityTypeConfiguration : IEntityTypeConfiguration<ExerciseTranslation>
 {

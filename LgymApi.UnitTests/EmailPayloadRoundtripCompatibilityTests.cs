@@ -320,7 +320,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
             {
                 new()
                 {
-                    ExerciseId = "ex1",
+                    ExerciseId = ParseTestId<LgymApi.Domain.Entities.Exercise>("d50e8400-e29b-41d4-a716-446655440001"),
                     ExerciseName = "Bench Press",
                     Series = 1,
                     Reps = 8,
@@ -364,7 +364,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
             {
                 new()
                 {
-                    ExerciseId = "ex1",
+                    ExerciseId = ParseTestId<LgymApi.Domain.Entities.Exercise>("d50e8400-e29b-41d4-a716-446655440002"),
                     ExerciseName = "Bench Press",
                     Series = 1,
                     Reps = 8,
@@ -373,7 +373,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
                 },
                 new()
                 {
-                    ExerciseId = "ex2",
+                    ExerciseId = ParseTestId<LgymApi.Domain.Entities.Exercise>("d50e8400-e29b-41d4-a716-446655440003"),
                     ExerciseName = "Squat",
                     Series = 2,
                     Reps = 6,
@@ -394,7 +394,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
          // Verify first exercise
          var firstExercise = deserialized.Exercises.First();
-         firstExercise.ExerciseId.Should().Be("ex1");
+         firstExercise.ExerciseId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Exercise>("d50e8400-e29b-41d4-a716-446655440002"));
          firstExercise.ExerciseName.Should().Be("Bench Press");
          firstExercise.Series.Should().Be(1);
          firstExercise.Reps.Should().Be(8);
@@ -403,7 +403,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
 
          // Verify second exercise
          var secondExercise = deserialized.Exercises.Skip(1).First();
-         secondExercise.ExerciseId.Should().Be("ex2");
+         secondExercise.ExerciseId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Exercise>("d50e8400-e29b-41d4-a716-446655440003"));
          secondExercise.ExerciseName.Should().Be("Squat");
          secondExercise.Series.Should().Be(2);
          secondExercise.Reps.Should().Be(6);
@@ -460,7 +460,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
             {
                 new()
                 {
-                    ExerciseId = "ex1",
+                    ExerciseId = ParseTestId<LgymApi.Domain.Entities.Exercise>("d50e8400-e29b-41d4-a716-446655440004"),
                     ExerciseName = "Test Exercise",
                     Series = 1,
                     Reps = 10,
@@ -490,6 +490,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         // Arrange - simulate legacy payload with PascalCase property names
         const string legacyUserId = "c50e8400-e29b-41d4-a716-446655440003";
         const string legacyTrainingId = "c50e8400-e29b-41d4-a716-446655440004";
+        const string legacyExerciseId = "d50e8400-e29b-41d4-a716-446655440005";
         var trainingDate = DateTimeOffset.UtcNow;
         var legacyJson = "{\"UserId\":\"" + legacyUserId + "\"," +
                          "\"TrainingId\":\"" + legacyTrainingId + "\"," +
@@ -498,7 +499,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
                          "\"PreferredTimeZone\":\"Europe/Berlin\"," +
                          "\"PlanDayName\":\"Legacy Day\"," +
                          "\"TrainingDate\":\"" + trainingDate.ToString("O") + "\"," +
-                         "\"Exercises\":[{\"ExerciseId\":\"ex1\"," +
+                         "\"Exercises\":[{\"ExerciseId\":\"" + legacyExerciseId + "\"," +
                          "\"ExerciseName\":\"Legacy Exercise\"," +
                          "\"Series\":1," +
                          "\"Reps\":5," +
@@ -512,6 +513,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         deserialized.Should().NotBeNull();
         deserialized!.UserId.Should().Be(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId));
         deserialized.TrainingId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId));
+        deserialized.Exercises.First().ExerciseId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Exercise>(legacyExerciseId));
         deserialized.RecipientEmail.Should().Be("legacy@example.com");
         deserialized.Exercises.Count.Should().Be(1);
         deserialized.Exercises.First().ExerciseName.Should().Be("Legacy Exercise");
@@ -524,6 +526,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         // This represents payloads serialized before string enum enforcement
         const string legacyUserId = "c50e8400-e29b-41d4-a716-446655440005";
         const string legacyTrainingId = "c50e8400-e29b-41d4-a716-446655440006";
+        const string legacyExerciseId = "d50e8400-e29b-41d4-a716-446655440006";
         var trainingDate = DateTimeOffset.UtcNow;
         var legacyJson = "{\"UserId\":\"" + legacyUserId + "\"," +
                          "\"TrainingId\":\"" + legacyTrainingId + "\"," +
@@ -532,7 +535,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
                          "\"PreferredTimeZone\":\"UTC\"," +
                          "\"PlanDayName\":\"Ancient Day\"," +
                          "\"TrainingDate\":\"" + trainingDate.ToString("O") + "\"," +
-                         "\"Exercises\":[{\"ExerciseId\":\"ex1\"," +
+                         "\"Exercises\":[{\"ExerciseId\":\"" + legacyExerciseId + "\"," +
                          "\"ExerciseName\":\"Ancient Exercise\"," +
                          "\"Series\":1," +
                          "\"Reps\":8," +
@@ -546,6 +549,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         deserialized.Should().NotBeNull();
         deserialized!.UserId.Should().Be(ParseTestId<LgymApi.Domain.Entities.User>(legacyUserId));
         deserialized.TrainingId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Training>(legacyTrainingId));
+        deserialized.Exercises.First().ExerciseId.Should().Be(ParseTestId<LgymApi.Domain.Entities.Exercise>(legacyExerciseId));
         deserialized.RecipientEmail.Should().Be("ancient@example.com");
         deserialized.Exercises.Count.Should().Be(1);
         deserialized.Exercises.First().ExerciseName.Should().Be("Ancient Exercise");
@@ -573,7 +577,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
             {
                 new()
                 {
-                    ExerciseId = "ex1",
+                    ExerciseId = ParseTestId<LgymApi.Domain.Entities.Exercise>("d50e8400-e29b-41d4-a716-446655440007"),
                     ExerciseName = "Full Bench",
                     Series = 3,
                     Reps = 8,
@@ -702,7 +706,7 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
             {
                 new()
                 {
-                    ExerciseId = "comp1",
+                    ExerciseId = ParseTestId<LgymApi.Domain.Entities.Exercise>("d50e8400-e29b-41d4-a716-446655440008"),
                     ExerciseName = "Composer Exercise",
                     Series = 1,
                     Reps = 8,
@@ -722,6 +726,38 @@ public sealed class EmailPayloadRoundtripCompatibilityTests
         deserializedPayload!.PlanDayName.Should().Be("Composer Training");
         deserializedPayload.Exercises.Count.Should().Be(1);
         deserializedPayload.Exercises.First().ExerciseName.Should().Be("Composer Exercise");
+    }
+
+    [Test]
+    public void TrainingCompletedEmailPayload_ExerciseId_RemainsUuidStringInJson()
+    {
+        const string exerciseIdValue = "d50e8400-e29b-41d4-a716-446655440009";
+        var payload = new TrainingCompletedEmailPayload
+        {
+            UserId = Id<LgymApi.Domain.Entities.User>.New(),
+            TrainingId = Id<LgymApi.Domain.Entities.Training>.New(),
+            Exercises =
+            [
+                new TrainingExerciseSummary
+                {
+                    ExerciseId = ParseTestId<LgymApi.Domain.Entities.Exercise>(exerciseIdValue),
+                    ExerciseName = "Bench Press"
+                }
+            ]
+        };
+
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(payload, SharedSerializationOptions.Current));
+
+        document.RootElement.GetProperty("exercises")[0].GetProperty("exerciseId").GetString().Should().Be(exerciseIdValue);
+    }
+
+    [Test]
+    public void TrainingCompletedEmailPayload_InvalidLegacyExerciseId_ThrowsJsonException()
+    {
+        const string legacyJson = "{\"exercises\":[{\"exerciseId\":\"not-a-uuid\"}]}";
+
+        FluentActions.Invoking(() => JsonSerializer.Deserialize<TrainingCompletedEmailPayload>(legacyJson, SharedSerializationOptions.Current))
+            .Should().Throw<JsonException>();
     }
 
     #endregion

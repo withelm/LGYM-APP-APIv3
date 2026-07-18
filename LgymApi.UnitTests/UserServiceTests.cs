@@ -28,15 +28,6 @@ public sealed class UserServiceTests
     }
 
     [Test]
-    public async Task Should_ReturnInvalidUserError_When_UserIdIsEmpty()
-    {
-        var result = await _service.GetUserEloAsync(Id<User>.Empty);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidUserError>();
-    }
-
-    [Test]
     public async Task RegisterPushInstallation_WhenUnauthenticated_ReturnsUnauthorizedError()
     {
         var result = await _service.RegisterPushInstallationAsync(
@@ -66,8 +57,21 @@ public sealed class UserServiceTests
         };
         var currentUser = new User { Id = userId, Name = "user", Email = "user@example.com" };
 
-        _deps.PushInstallationRepository.FindByInstallationIdAsync("device-1", Arg.Any<CancellationToken>())
-            .Returns(installation);
+        _deps.PushInstallationRepository.UpsertForUserSessionAsync(Arg.Any<PushInstallationRegistration>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var registration = callInfo.Arg<PushInstallationRegistration>();
+                installation.UserId = registration.UserId;
+                installation.SessionId = registration.SessionId;
+                installation.Platform = registration.Platform;
+                installation.FcmToken = registration.FcmToken;
+                installation.AppVersion = registration.AppVersion;
+                installation.Environment = registration.Environment;
+                installation.PermissionStatus = registration.PermissionStatus;
+                installation.DisabledAt = null;
+                installation.DisabledReason = null;
+                return Task.CompletedTask;
+            });
 
         var result = await _service.RegisterPushInstallationAsync(
             currentUser,
@@ -104,8 +108,13 @@ public sealed class UserServiceTests
             Environment = "production"
         };
 
-        _deps.PushInstallationRepository.GetBySessionIdAsync(sessionId, Arg.Any<CancellationToken>())
-            .Returns([installation]);
+        _deps.PushInstallationRepository.DisassociateForSessionAsync(sessionId, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                installation.UserId = null;
+                installation.SessionId = null;
+                return Task.CompletedTask;
+            });
 
         var result = await _service.LogoutAsync(currentUser, sessionId);
 

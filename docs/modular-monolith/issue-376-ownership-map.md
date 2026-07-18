@@ -31,14 +31,14 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 | Dependency bag | `IUserServiceDependencies` | `Identity & Accounts` | The dependency bag belongs to the same user boundary as the service family it feeds. | Non-owners do not construct the bag. They use the user service contract instead. |
 | Repository contract | `IUserRepository` | `Identity & Accounts` | User lookup and account ownership sit inside the identity boundary. | Non-owners query users through the identity service or a read contract, not by direct repository access. |
 | Repository contract | `IRoleRepository` | `Identity & Accounts` | Roles are part of the account and authorization surface. | Non-owners read role data through service contracts only. |
-| Repository contract | `IEloRegistryRepository` | `Identity & Accounts` | ELO registry data is tied to user identity and ranking state. | Non-owners use the owning services or read models instead of direct repository calls. |
+| Repository contract | `IEloRegistryRepository` | `Workout & Progress` | ELO registry persistence and ranking progress belong to the workout boundary. | Non-owners use the owning services or read models instead of direct repository calls. |
 | Service contract | `ITokenService` | `Identity & Accounts` | Token creation and validation are part of authentication. | Non-owners consume tokens through the auth flow, not by calling internals. |
 | Service contract | `ILegacyPasswordService` | `Identity & Accounts` | Legacy password verification is an auth boundary concern. | Non-owners use the identity service flow rather than calling password internals. |
 | Service contract | `IRankService` | `Identity & Accounts` | Rank calculation is exposed with the account surface and user state. | Non-owners request rank data through the identity service or read models. |
 | Service contract | `IUserSessionStore` | `Identity & Accounts` | Session state belongs to the user boundary and its auth lifecycle. | Non-owners use the public auth flow and session contracts only. |
 | Service contract | `ITutorialService` | `Identity & Accounts` | Onboarding and tutorial state are part of the user experience owned by identity. | Non-owners consume the public tutorial flow, not the persistence layer. |
 | Table | `Users` | `Identity & Accounts` | The user table is the root account record for the identity boundary. | Non-owners read it through user-facing services and never write it directly. |
-| Table | `EloRegistries` | `Identity & Accounts` | ELO registry rows track account ranking state. | Non-owners use the owning services or read models only. |
+| Table | `EloRegistries` | `Workout & Progress` | ELO registry rows track workout-progress ranking state. | Non-owners use the owning services or read models only. |
 | Seed constant | `RoleSeedDataConfiguration.TesterRoleSeedId` | `Identity & Accounts` | The tester role seed identifier supports account bootstrap and user lookup rules. | Non-owners consume it only through the identity seed path and tests. |
 | Service family | `InAppNotificationService*` | `Notifications` | In-app notification persistence and fan-out are notification concerns. | Non-owners call the notification service or published contracts only. |
 | Dependency bag | `IInAppNotificationServiceDependencies` | `Notifications` | The dependency bag belongs to the in-app notification service family. | Non-owners do not construct the bag or bypass the service. |
@@ -85,7 +85,7 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 | Service contract | `IExerciseScoresService` | `Coaching` | Coaching workflows aggregate exercise scores for trainer relations. | Non-owners consume it through coaching services or read models. |
 | Service contract | `IEloRegistryService` | `Coaching` | Coaching workflows use ELO registry state to support trainer relations. | Non-owners reach it through the coaching service boundary only. |
 | Service contract | `IMainRecordsService` | `Coaching` | Main record coordination belongs to the coaching workflow that consumes it. | Non-owners use the coaching service or read model only. |
-| Repository contract | `MainRecordRepository / IMainRecordRepository` | `Coaching` | The current main-record repository contract is exposed through the coaching-owned main-record workflow and is treated as coaching-owned modular-boundary debt until the underlying ownership is extracted behind a cleaner published contract. | Non-owners use the coaching service or published read model only. |
+| Repository contract | `MainRecordRepository / IMainRecordRepository` | `Workout & Progress` | Main-record persistence belongs to workout progress, even when coaching workflows consume the resulting records. | Non-owners use the owning service or published read model only. |
 | Table | `TrainerInvitations` | `Coaching` | Trainer invitations are owned by coaching. | Non-owners do not mutate invitations directly. |
 | Table | `TrainerTraineeLinks` | `Coaching` | Trainer to trainee links are owned by coaching. | Non-owners do not mutate links directly. |
 | Table | `DietPlans` | `Nutrition` | Diet plan rows are owned by nutrition. | Non-owners do not write diet plans directly. |
@@ -101,6 +101,63 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 - The owner choice is deterministic, not advisory.
 - If an artifact can be used by another module, that module uses the owner service, contract, or read model.
 - A non-owner never gets write authority just because the solution still uses one production `AppDbContext`.
+
+## Persisted Entity Ownership Catalog
+
+`LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable source of truth for persisted-entity ownership. This table is a verified documentation view of that compiled catalog, not an independent authority. `PersistedEntityOwnershipDocumentationTests` parses these rows and fails if a row is missing, duplicated, or names an entity outside the catalog.
+
+| Persisted entity | Owner module |
+| --- | --- |
+| `User` | `Identity & Accounts` |
+| `Role` | `Identity & Accounts` |
+| `UserRole` | `Identity & Accounts` |
+| `RoleClaim` | `Identity & Accounts` |
+| `PasswordResetToken` | `Identity & Accounts` |
+| `UserExternalLogin` | `Identity & Accounts` |
+| `UserSession` | `Identity & Accounts` |
+| `UserTutorialProgress` | `Identity & Accounts` |
+| `UserTutorialStepProgress` | `Identity & Accounts` |
+| `NotificationMessage` | `Notifications` |
+| `EmailNotificationSubscription` | `Notifications` |
+| `PushInstallation` | `Notifications` |
+| `PushNotificationMessage` | `Notifications` |
+| `InAppNotification` | `Notifications` |
+| `ReportTemplate` | `Reporting` |
+| `ReportTemplateField` | `Reporting` |
+| `ReportRequest` | `Reporting` |
+| `ReportSubmission` | `Reporting` |
+| `RecurringReportAssignment` | `Reporting` |
+| `Photo` | `Reporting` |
+| `PhotoUploadSession` | `Reporting` |
+| `Plan` | `Training Planning` |
+| `PlanDay` | `Training Planning` |
+| `PlanDayExercise` | `Training Planning` |
+| `Exercise` | `Workout & Progress` |
+| `ExerciseTranslation` | `Workout & Progress` |
+| `Training` | `Workout & Progress` |
+| `TrainingExerciseScore` | `Workout & Progress` |
+| `ExerciseScore` | `Workout & Progress` |
+| `Measurement` | `Workout & Progress` |
+| `MainRecord` | `Workout & Progress` |
+| `Gym` | `Workout & Progress` |
+| `Address` | `Workout & Progress` |
+| `EloRegistry` | `Workout & Progress` |
+| `TrainerInvitation` | `Coaching` |
+| `TrainerTraineeLink` | `Coaching` |
+| `TraineeNote` | `Coaching` |
+| `TraineeNoteHistory` | `Coaching` |
+| `DietPlan` | `Nutrition` |
+| `DietMeal` | `Nutrition` |
+| `DietPlanHistory` | `Nutrition` |
+| `SupplementPlan` | `Nutrition` |
+| `SupplementPlanItem` | `Nutrition` |
+| `SupplementIntakeLog` | `Nutrition` |
+| `AppConfig` | `Platform / Reference Data` |
+| `ActionExecutionLog` | `Platform / Reference Data` |
+| `CommandEnvelope` | `Platform / Reference Data` |
+| `ApiIdempotencyRecord` | `Platform / Reference Data` |
+
+Totals are fixed: Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 10, Coaching 4, Nutrition 6, and Platform / Reference Data 4.
 
 ## Ownership tie-breaker
 

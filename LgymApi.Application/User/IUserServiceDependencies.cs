@@ -13,7 +13,6 @@ public interface IUserServiceDependencies
     IPushInstallationRepository PushInstallationRepository { get; }
     IUserRepository UserRepository { get; }
     IRoleRepository RoleRepository { get; }
-    IEloRegistryRepository EloRepository { get; }
     ITokenService TokenService { get; }
     ILegacyPasswordService LegacyPasswordService { get; }
     IRankService RankService { get; }
@@ -33,7 +32,6 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
         IPushInstallationRepository pushInstallationRepository,
         IUserRepository userRepository,
         IRoleRepository roleRepository,
-        IEloRegistryRepository eloRepository,
         ITokenService tokenService,
         ILegacyPasswordService legacyPasswordService,
         IRankService rankService,
@@ -47,7 +45,6 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
         PushInstallationRepository = pushInstallationRepository;
         UserRepository = userRepository;
         RoleRepository = roleRepository;
-        EloRepository = eloRepository;
         TokenService = tokenService;
         LegacyPasswordService = legacyPasswordService;
         RankService = rankService;
@@ -62,7 +59,6 @@ internal sealed class UserServiceDependencies : IUserServiceDependencies
     public IPushInstallationRepository PushInstallationRepository { get; }
     public IUserRepository UserRepository { get; }
     public IRoleRepository RoleRepository { get; }
-    public IEloRegistryRepository EloRepository { get; }
     public ITokenService TokenService { get; }
     public ILegacyPasswordService LegacyPasswordService { get; }
     public IRankService RankService { get; }

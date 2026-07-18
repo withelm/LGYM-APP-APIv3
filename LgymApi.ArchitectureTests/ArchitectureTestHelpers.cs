@@ -87,7 +87,6 @@ public static class ArchitectureTestHelpers
         "/LgymApi.Application/Identity/",
         "/LgymApi.Application/User/",
         "/LgymApi.Application/Role/",
-        "/LgymApi.Application/EloRegistry/",
         "/LgymApi.Application/ExternalAuth/",
         "/LgymApi.Application/Features/AdminManagement/",
         "/LgymApi.Application/Features/Tutorial/",
@@ -109,6 +108,8 @@ public static class ArchitectureTestHelpers
         "/LgymApi.Application/ExerciseScores/",
         "/LgymApi.Application/Gym/",
         "/LgymApi.Application/Measurements/",
+        "/LgymApi.Application/EloRegistry/",
+        "/LgymApi.Application/MainRecords/",
         "/LgymApi.Application/Common/Training/Elo/"
     };
 
@@ -116,8 +117,7 @@ public static class ArchitectureTestHelpers
     {
         "/LgymApi.Application/Coaching/",
         "/LgymApi.Application/TrainerRelationships/",
-        "/LgymApi.Application/Features/TraineeNotes/",
-        "/LgymApi.Application/MainRecords/"
+        "/LgymApi.Application/Features/TraineeNotes/"
     };
 
     private static readonly string[] NutritionApplicationPathMarkers =
@@ -169,7 +169,7 @@ public static class ArchitectureTestHelpers
         ["/LgymApi.Application/Repositories/IUserExternalLoginRepository.cs"] = IdentityModuleName,
         ["/LgymApi.Application/Repositories/IPasswordResetTokenRepository.cs"] = IdentityModuleName,
         ["/LgymApi.Application/Repositories/IRoleRepository.cs"] = IdentityModuleName,
-        ["/LgymApi.Application/Repositories/IEloRegistryRepository.cs"] = IdentityModuleName,
+        ["/LgymApi.Application/Repositories/IEloRegistryRepository.cs"] = WorkoutProgressModuleName,
         ["/LgymApi.Application/Repositories/ITutorialProgressRepository.cs"] = IdentityModuleName,
         ["/LgymApi.Application/Repositories/IInAppNotificationRepository.cs"] = NotificationsModuleName,
         ["/LgymApi.Application/Repositories/IPushInstallationRepository.cs"] = NotificationsModuleName,
@@ -187,14 +187,14 @@ public static class ArchitectureTestHelpers
         ["/LgymApi.Application/Repositories/IMeasurementRepository.cs"] = WorkoutProgressModuleName,
         ["/LgymApi.Application/Repositories/ITrainerRelationshipRepository.cs"] = CoachingModuleName,
         ["/LgymApi.Application/Repositories/ITraineeNoteRepository.cs"] = CoachingModuleName,
-        ["/LgymApi.Application/Repositories/IMainRecordRepository.cs"] = CoachingModuleName,
+        ["/LgymApi.Application/Repositories/IMainRecordRepository.cs"] = WorkoutProgressModuleName,
         ["/LgymApi.Application/Repositories/IDietPlanRepository.cs"] = NutritionModuleName,
         ["/LgymApi.Application/Repositories/ISupplementationRepository.cs"] = NutritionModuleName,
         ["/LgymApi.Application/Repositories/IAppConfigRepository.cs"] = PlatformModuleName,
         ["/LgymApi.Application/Repositories/ICommandEnvelopeRepository.cs"] = PlatformModuleName,
         ["/LgymApi.Application/Repositories/IApiIdempotencyRecordRepository.cs"] = PlatformModuleName,
-        ["/LgymApi.Application/Repositories/IEmailNotificationLogRepository.cs"] = PlatformModuleName,
-        ["/LgymApi.Application/Repositories/IEmailNotificationSubscriptionRepository.cs"] = PlatformModuleName,
+        ["/LgymApi.Application/Repositories/IEmailNotificationLogRepository.cs"] = NotificationsModuleName,
+        ["/LgymApi.Application/Repositories/IEmailNotificationSubscriptionRepository.cs"] = NotificationsModuleName,
         ["/LgymApi.Application/Repositories/IUnitOfWork.cs"] = PlatformModuleName,
         ["/LgymApi.Application/Abstractions/Storage/IPhotoStorageProvider.cs"] = ReportingModuleName
     };
@@ -214,7 +214,7 @@ public static class ArchitectureTestHelpers
         ["/LgymApi.Infrastructure/Repositories/UserExternalLoginRepository.cs"] = IdentityModuleName,
         ["/LgymApi.Infrastructure/Repositories/PasswordResetTokenRepository.cs"] = IdentityModuleName,
         ["/LgymApi.Infrastructure/Repositories/RoleRepository.cs"] = IdentityModuleName,
-        ["/LgymApi.Infrastructure/Repositories/EloRegistryRepository.cs"] = IdentityModuleName,
+        ["/LgymApi.Infrastructure/Repositories/EloRegistryRepository.cs"] = WorkoutProgressModuleName,
         ["/LgymApi.Infrastructure/Repositories/TutorialProgressRepository.cs"] = IdentityModuleName,
         ["/LgymApi.Infrastructure/Repositories/PlanRepository.cs"] = TrainingPlanningModuleName,
         ["/LgymApi.Infrastructure/Repositories/PlanRepository.Clone.cs"] = TrainingPlanningModuleName,
@@ -230,7 +230,7 @@ public static class ArchitectureTestHelpers
         ["/LgymApi.Infrastructure/Repositories/TrainerRelationshipRepository.Links.cs"] = CoachingModuleName,
         ["/LgymApi.Infrastructure/Repositories/TrainerRelationshipRepository.DashboardQueries.cs"] = CoachingModuleName,
         ["/LgymApi.Infrastructure/Repositories/TraineeNoteRepository.cs"] = CoachingModuleName,
-        ["/LgymApi.Infrastructure/Repositories/MainRecordRepository.cs"] = CoachingModuleName,
+        ["/LgymApi.Infrastructure/Repositories/MainRecordRepository.cs"] = WorkoutProgressModuleName,
         ["/LgymApi.Infrastructure/Repositories/DietPlanRepository.cs"] = NutritionModuleName,
         ["/LgymApi.Infrastructure/Repositories/SupplementationRepository.cs"] = NutritionModuleName,
         ["/LgymApi.Infrastructure/Repositories/ReportingRepository.cs"] = ReportingModuleName,
@@ -241,8 +241,8 @@ public static class ArchitectureTestHelpers
         ["/LgymApi.Infrastructure/Repositories/AppConfigRepository.cs"] = PlatformModuleName,
         ["/LgymApi.Infrastructure/Repositories/CommandEnvelopeRepository.cs"] = PlatformModuleName,
         ["/LgymApi.Infrastructure/Repositories/ApiIdempotencyRecordRepository.cs"] = PlatformModuleName,
-        ["/LgymApi.Infrastructure/Repositories/EmailNotificationLogRepository.cs"] = PlatformModuleName,
-        ["/LgymApi.Infrastructure/Repositories/EmailNotificationSubscriptionRepository.cs"] = PlatformModuleName,
+        ["/LgymApi.Infrastructure/Repositories/EmailNotificationLogRepository.cs"] = NotificationsModuleName,
+        ["/LgymApi.Infrastructure/Repositories/EmailNotificationSubscriptionRepository.cs"] = NotificationsModuleName,
         ["/LgymApi.Infrastructure/Services/TokenService.cs"] = IdentityModuleName,
         ["/LgymApi.Infrastructure/Services/GoogleTokenValidator.cs"] = IdentityModuleName,
         ["/LgymApi.Infrastructure/Services/LegacyPasswordService.cs"] = IdentityModuleName,
@@ -330,6 +330,50 @@ public static class ArchitectureTestHelpers
     }
 
     public static IReadOnlyList<string> GetCanonicalModuleCatalog() => CanonicalModuleCatalog;
+
+    public static bool TryGetPersistedEntityOwner(Type entityType, out string ownerModule)
+    {
+        ArgumentNullException.ThrowIfNull(entityType);
+
+        return TryGetPersistedEntityOwner(entry => entry.EntityType == entityType, out ownerModule);
+    }
+
+    public static bool TryGetPersistedEntityOwner(string entityTypeName, out string ownerModule)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(entityTypeName);
+
+        var normalizedEntityTypeName = entityTypeName.Replace("global::", string.Empty, StringComparison.Ordinal);
+        return TryGetPersistedEntityOwner(
+            entry => string.Equals(entry.EntityType.FullName, normalizedEntityTypeName, StringComparison.Ordinal) ||
+                     string.Equals(entry.EntityType.Name, normalizedEntityTypeName, StringComparison.Ordinal),
+            out ownerModule);
+    }
+
+    public static bool TryGetPersistedEntityOwner(INamedTypeSymbol entityType, out string ownerModule)
+    {
+        ArgumentNullException.ThrowIfNull(entityType);
+
+        var metadataName = entityType.OriginalDefinition
+            .ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+            .Replace("global::", string.Empty, StringComparison.Ordinal);
+        return TryGetPersistedEntityOwner(entry =>
+            string.Equals(entry.EntityType.FullName, metadataName, StringComparison.Ordinal), out ownerModule);
+    }
+
+    private static bool TryGetPersistedEntityOwner(
+        Func<PersistedEntityOwnership, bool> matchesEntity,
+        out string ownerModule)
+    {
+        var ownership = PersistedEntityOwnershipCatalog.Entries.SingleOrDefault(matchesEntity);
+        if (ownership == null)
+        {
+            ownerModule = string.Empty;
+            return false;
+        }
+
+        ownerModule = ownership.Owner;
+        return true;
+    }
 
     public static bool IsApiFeatureLeafFilePath(string path, string expectedLeafFolder)
     {

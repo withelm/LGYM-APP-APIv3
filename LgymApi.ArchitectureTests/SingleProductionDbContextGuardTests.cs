@@ -1,276 +1,175 @@
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Reflection;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.ArchitectureTests;
 
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private static readonly string[] ProductionProjectRoots =
-    [
-        "LgymApi.Api",
-        "LgymApi.Application",
-        "LgymApi.Domain",
-        "LgymApi.Infrastructure",
-        "LgymApi.BackgroundWorker",
-        "LgymApi.BackgroundWorker.Common",
-        "LgymApi.DataSeeder",
-        "LgymApi.Resources",
-        "LgymApi.Resources.Generator"
-    ];
+    private const int PersistedEntityCount = 48;
+    private const string MigrationRoot = "LgymApi.Infrastructure/Migrations";
 
     [Test]
-    public void Production_Should_Expose_Exactly_One_DbContext_One_Migration_Stream_And_No_Schema_Split()
+    public void Current_Production_Topology_Should_Have_One_Context_Model_And_Migration_Stream()
     {
         var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
-        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
-
-        var productionFiles = ProductionProjectRoots
-            .SelectMany(project => ArchitectureTestHelpers.EnumerateProjectSourceFiles(project))
-            .ToList();
-
-        var dbContexts = CollectProductionDbContexts(productionFiles, parseOptions);
-        var migrationRoots = CollectMigrationRoots(repoRoot, ProductionProjectRoots);
-        var schemaSplitViolations = CollectSchemaSplitViolations(repoRoot, productionFiles, parseOptions);
-
-        Assert.That(
-            dbContexts,
-            Has.Count.EqualTo(1),
-            BuildDbContextFailureMessage(dbContexts));
-
-        Assert.That(
-            dbContexts.Single().ContextType,
-            Is.EqualTo("AppDbContext"),
-            BuildDbContextFailureMessage(dbContexts));
-
-        Assert.That(
-            migrationRoots,
-            Has.Count.EqualTo(1),
-            BuildMigrationFailureMessage(migrationRoots));
-
-        Assert.That(
-            migrationRoots.Single(),
-            Is.EqualTo("LgymApi.Infrastructure/Migrations"),
-            BuildMigrationFailureMessage(migrationRoots));
-
-        Assert.That(
-            schemaSplitViolations,
-            Is.Empty,
-            "A schema-per-module production convention is not allowed. Violations:" + Environment.NewLine +
-            string.Join(Environment.NewLine, schemaSplitViolations));
-
-        var alternateRootMessage = BuildMigrationFailureMessage(["LgymApi.Infrastructure/Migrations", "LgymApi.Reporting/Migrations"]);
-        Assert.That(alternateRootMessage, Does.Contain("alternate migration root"));
-    }
-
-    [Test]
-    public void Guard_Message_Should_Name_Alternate_DbContext_And_Migration_Root_Details()
-    {
-        var message = BuildDbContextFailureMessage(
-            new[]
-            {
-                new DbContextDeclaration("AppDbContext", "LgymApi.Infrastructure/Data/AppDbContext.cs"),
-                new DbContextDeclaration("AlternateProductionDbContext", "LgymApi.Reporting/Data/AlternateProductionDbContext.cs")
-            });
-
-        var migrationMessage = BuildMigrationFailureMessage(
-            new[]
-            {
-                "LgymApi.Infrastructure/Migrations",
-                "LgymApi.Reporting/Migrations"
-            });
+        var sources = PersistenceTopologyGuardTestHelpers.LoadProductionSources(repoRoot);
+        var topology = PersistenceTopologyGuardTestHelpers.Analyze(sources);
+        var dbSetEntities = GetPublicDbSetEntityTypes();
+        var expectedEntities = dbSetEntities.Select(type => type.Name).OrderBy(name => name, StringComparer.Ordinal).ToList();
+        var configurationViolations = FindMultiplicityViolations(topology.Configurations.Select(item => item.EntityType), expectedEntities);
+        var registrarViolations = FindMultiplicityViolations(topology.RegistrarEntries.Select(item => item.EntityType), expectedEntities);
 
         Assert.Multiple(() =>
         {
-            Assert.That(message, Does.Contain("AlternateProductionDbContext"));
-            Assert.That(message, Does.Contain("LgymApi.Reporting/Data/AlternateProductionDbContext.cs"));
-            Assert.That(message, Does.Contain("AppDbContext"));
-
-            Assert.That(migrationMessage, Does.Contain("LgymApi.Reporting/Migrations"));
-            Assert.That(migrationMessage, Does.Contain("alternate migration root"));
+            Assert.That(sources.Select(source => source.Path), Does.Contain("LgymApi.Infrastructure/Data/AppDbContext.cs"));
+            Assert.That(topology.DbContexts, Has.Count.EqualTo(1), Describe(topology.DbContexts));
+            Assert.That(topology.DbContexts.Single().TypeName, Is.EqualTo(nameof(AppDbContext)), Describe(topology.DbContexts));
+            Assert.That(topology.DbContexts.Single().SourcePath, Is.EqualTo("LgymApi.Infrastructure/Data/AppDbContext.cs"));
+            Assert.That(dbSetEntities, Has.Count.EqualTo(PersistedEntityCount));
+            Assert.That(topology.DbSets.Select(item => item.EntityType).Distinct(), Is.EquivalentTo(expectedEntities));
+            Assert.That(configurationViolations, Is.Empty, string.Join(Environment.NewLine, configurationViolations));
+            Assert.That(registrarViolations, Is.Empty, string.Join(Environment.NewLine, registrarViolations));
+            Assert.That(topology.MigrationStreams, Has.Count.EqualTo(1), Describe(topology.MigrationStreams));
+            Assert.That(topology.MigrationStreams.Single().Root, Is.EqualTo(MigrationRoot));
+            Assert.That(topology.MigrationStreams.Single().SnapshotTypeNames, Is.EqualTo(new[] { "AppDbContextModelSnapshot" }));
+            Assert.That(topology.MigrationStreams.Single().ContextTypeNames, Is.EqualTo(new[] { nameof(AppDbContext) }));
+            Assert.That(topology.EnsureCreatedViolations, Is.Empty, Describe(topology.EnsureCreatedViolations));
+            Assert.That(topology.SchemaSplitViolations, Is.Empty, Describe(topology.SchemaSplitViolations));
         });
     }
 
-    private static List<DbContextDeclaration> CollectProductionDbContexts(IEnumerable<string> sourceFiles, CSharpParseOptions parseOptions)
+    [Test]
+    public void Npgsql_Runtime_Model_Should_Match_The_Compiled_Snapshot_Without_A_Database_Connection()
     {
-        var declarations = new List<DbContextDeclaration>();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql("Host=127.0.0.1;Port=1;Database=topology_guard;Username=guard;Password=guard")
+            .Options;
 
-        foreach (var file in sourceFiles)
-        {
-            var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(file), parseOptions, file);
-            var root = tree.GetCompilationUnitRoot();
+        using var context = new AppDbContext(options);
 
-            foreach (var typeDeclaration in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
-            {
-                if (!IsDbContextDeclaration(typeDeclaration))
-                {
-                    continue;
-                }
-
-                declarations.Add(new DbContextDeclaration(typeDeclaration.Identifier.ValueText, file));
-            }
-        }
-
-        return declarations;
+        Assert.That(context.Database.ProviderName, Is.EqualTo("Npgsql.EntityFrameworkCore.PostgreSQL"));
+        PersistenceTopologyGuardTestHelpers.EnsureNoPendingModelChanges(context.Database.HasPendingModelChanges());
     }
 
-    private static List<string> CollectMigrationRoots(string repoRoot, IEnumerable<string> projectRoots)
+    [Test]
+    public void Semantic_Fixture_Should_Detect_A_Second_Production_DbContext()
     {
-        var migrationFiles = projectRoots
-            .SelectMany(project => ArchitectureTestHelpers.EnumerateProjectSourceFiles(project))
-            .Where(path => ArchitectureTestHelpers.NormalizePath(path).Contains("/Migrations/", StringComparison.OrdinalIgnoreCase))
+        var topology = AnalyzeFixture(
+            "LgymApi.Reporting/Data/ReportingDbContext.cs",
+            """
+            using Microsoft.EntityFrameworkCore;
+            sealed class AppDbContext : DbContext { }
+            sealed class ReportingDbContext : DbContext { }
+            """);
+
+        Assert.That(topology.DbContexts.Select(item => item.TypeName), Is.EquivalentTo(new[] { "AppDbContext", "ReportingDbContext" }));
+    }
+
+    [Test]
+    public void Semantic_Fixtures_Should_Detect_Duplicate_And_Missing_Configurations()
+    {
+        var duplicate = AnalyzeFixture("LgymApi.Infrastructure/Data/Configurations/Duplicate.cs", ConfigurationFixture("UserConfiguration", "SecondUserConfiguration"));
+        var missing = AnalyzeFixture("LgymApi.Infrastructure/Data/Configurations/Missing.cs", ConfigurationFixture());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(duplicate.Configurations.Count(item => item.EntityType == "User"), Is.EqualTo(2));
+            Assert.That(missing.Configurations.Where(item => item.EntityType == "User"), Is.Empty);
+        });
+    }
+
+    [Test]
+    public void Semantic_Fixtures_Should_Detect_Duplicate_And_Missing_Registrar_Entries()
+    {
+        var duplicate = AnalyzeFixture("LgymApi.Infrastructure/Data/Configurations/AppDbContextEntityTypeConfigurationRegistrar.cs", RegistrarFixture("Register(new UserConfiguration()); Register(new UserConfiguration());"));
+        var missing = AnalyzeFixture("LgymApi.Infrastructure/Data/Configurations/AppDbContextEntityTypeConfigurationRegistrar.cs", RegistrarFixture(string.Empty));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(duplicate.RegistrarEntries.Count(item => item.EntityType == "User"), Is.EqualTo(2));
+            Assert.That(missing.RegistrarEntries.Where(item => item.EntityType == "User"), Is.Empty);
+        });
+    }
+
+    [Test]
+    public void Project_Path_Fixture_Should_Detect_A_Second_Migration_Stream()
+    {
+        var topology = PersistenceTopologyGuardTestHelpers.Analyze(
+        [
+            new TopologySource("LgymApi.Infrastructure/Migrations/Initial.cs", MigrationFixture("Initial")),
+            new TopologySource("LgymApi.Reporting/Migrations/Initial.cs", MigrationFixture("ReportingInitial"))
+        ]);
+
+        Assert.That(topology.MigrationStreams.Select(item => item.Root), Is.EquivalentTo(new[] { MigrationRoot, "LgymApi.Reporting/Migrations" }));
+    }
+
+    [Test]
+    public void Semantic_Fixtures_Should_Reject_Production_EnsureCreated_And_Preserve_NonRelational_Test_Setup()
+    {
+        var production = AnalyzeFixture(
+            "LgymApi.Infrastructure/Data/Bootstrap.cs",
+            "using Microsoft.EntityFrameworkCore; sealed class Bootstrap : DbContext { void Run() => Database.EnsureCreated(); }");
+        var nonRelational = AnalyzeFixture(
+            "LgymApi.DataSeeder/SeedOrchestrator.cs",
+            "using Microsoft.EntityFrameworkCore; sealed class SeedContext : DbContext { void Run() { if (!Database.IsRelational()) { Database.EnsureCreated(); } } }");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(production.EnsureCreatedViolations, Has.Count.EqualTo(1));
+            Assert.That(nonRelational.EnsureCreatedViolations, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void Snapshot_Drift_Fixture_Should_Be_Rejected()
+    {
+        Assert.That(
+            () => PersistenceTopologyGuardTestHelpers.EnsureNoPendingModelChanges(true),
+            Throws.InvalidOperationException.With.Message.Contains("AppDbContextModelSnapshot"));
+    }
+
+    private static PersistenceTopologyAnalysis AnalyzeFixture(string path, string source)
+    {
+        return PersistenceTopologyGuardTestHelpers.Analyze([new TopologySource(path, source)]);
+    }
+
+    private static IReadOnlyList<Type> GetPublicDbSetEntityTypes()
+    {
+        return typeof(AppDbContext).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(property => property.PropertyType.IsGenericType && property.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+            .Select(property => property.PropertyType.GenericTypeArguments[0])
+            .OrderBy(type => type.FullName, StringComparer.Ordinal)
             .ToList();
+    }
 
-        return migrationFiles
-            .Select(path =>
-            {
-                var relative = ArchitectureTestHelpers.NormalizePath(Path.GetRelativePath(repoRoot, path));
-                var migrationIndex = relative.IndexOf("/Migrations/", StringComparison.OrdinalIgnoreCase);
-                return migrationIndex < 0 ? relative : relative[..migrationIndex] + "/Migrations";
-            })
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(path => path, StringComparer.Ordinal)
+    private static List<string> FindMultiplicityViolations(IEnumerable<string> actualEntities, IReadOnlyCollection<string> expectedEntities)
+    {
+        var counts = actualEntities.GroupBy(entity => entity, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        return expectedEntities.Where(entity => !counts.TryGetValue(entity, out var count) || count != 1)
+            .Concat(counts.Keys.Where(entity => !expectedEntities.Contains(entity, StringComparer.Ordinal)))
+            .OrderBy(entity => entity, StringComparer.Ordinal)
+            .Select(entity => $"{entity}: found {counts.GetValueOrDefault(entity, 0)} entries")
             .ToList();
     }
 
-    private static List<string> CollectSchemaSplitViolations(string repoRoot, IEnumerable<string> sourceFiles, CSharpParseOptions parseOptions)
+    private static string Describe<T>(IEnumerable<T> values) => string.Join(Environment.NewLine, values);
+
+    private static string ConfigurationFixture(params string[] configurationTypes)
     {
-        var violations = new List<string>();
-
-        foreach (var file in sourceFiles)
-        {
-            var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(file), parseOptions, file);
-            var root = tree.GetCompilationUnitRoot();
-
-            foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
-            {
-                if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
-                {
-                    continue;
-                }
-
-                var methodName = GetMethodName(memberAccess.Name);
-                if (methodName is not ("HasDefaultSchema" or "MigrationsHistoryTable" or "ToTable"))
-                {
-                    continue;
-                }
-
-                if (methodName == "HasDefaultSchema" && !HasNonNullSchemaArgument(invocation))
-                {
-                    continue;
-                }
-
-                if (methodName is "MigrationsHistoryTable" or "ToTable" && !HasExplicitSchemaArgument(invocation))
-                {
-                    continue;
-                }
-
-                var lineSpan = invocation.GetLocation().GetLineSpan();
-                var lineNumber = lineSpan.StartLinePosition.Line + 1;
-                var relativePath = ArchitectureTestHelpers.NormalizePath(Path.GetRelativePath(repoRoot, file));
-
-                violations.Add($"{relativePath}:{lineNumber} -> {invocation}");
-            }
-        }
-
-        return violations;
+        var configurations = string.Join(Environment.NewLine, configurationTypes.Select(name =>
+            $"sealed class {name} : IEntityTypeConfiguration<User> {{ public void Configure(EntityTypeBuilder<User> builder) {{ }} }}"));
+        return $"using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Metadata.Builders; class User {{ }} sealed class AppDbContext : DbContext {{ public DbSet<User> Users => Set<User>(); }} {configurations}";
     }
 
-    private static bool HasNonNullSchemaArgument(InvocationExpressionSyntax invocation)
+    private static string RegistrarFixture(string registrations)
     {
-        if (invocation.ArgumentList.Arguments.Count == 0)
-        {
-            return false;
-        }
-
-        if (invocation.ArgumentList.Arguments.Count == 1)
-        {
-            return !IsNullSchemaExpression(invocation.ArgumentList.Arguments[0].Expression);
-        }
-
-        var schemaArgument = invocation.ArgumentList.Arguments[1].Expression;
-        return !IsNullSchemaExpression(schemaArgument);
+        return $"using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Metadata.Builders; class User {{ }} sealed class UserConfiguration : IEntityTypeConfiguration<User> {{ public void Configure(EntityTypeBuilder<User> builder) {{ }} }} static class AppDbContextEntityTypeConfigurationRegistrar {{ static void Register<T>(IEntityTypeConfiguration<T> configuration) {{ }} static void Apply() {{ {registrations} }} }}";
     }
 
-    private static bool HasExplicitSchemaArgument(InvocationExpressionSyntax invocation)
+    private static string MigrationFixture(string typeName)
     {
-        if (invocation.ArgumentList.Arguments.Count <= 1)
-        {
-            return false;
-        }
-
-        var schemaArgument = invocation.ArgumentList.Arguments[1].Expression;
-        return !IsNullSchemaExpression(schemaArgument);
-    }
-
-    private static bool IsNullSchemaExpression(ExpressionSyntax expression)
-    {
-        if (expression.IsKind(SyntaxKind.NullLiteralExpression))
-        {
-            return true;
-        }
-
-        if (expression is CastExpressionSyntax castExpression && castExpression.Expression.IsKind(SyntaxKind.NullLiteralExpression))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool IsDbContextDeclaration(ClassDeclarationSyntax typeDeclaration)
-    {
-        if (typeDeclaration.BaseList == null)
-        {
-            return false;
-        }
-
-        return typeDeclaration.BaseList.Types
-            .OfType<SimpleBaseTypeSyntax>()
-            .Select(baseType => NormalizeType(baseType.Type))
-            .Any(baseTypeName => baseTypeName.Equals("DbContext", StringComparison.Ordinal) || baseTypeName.EndsWith(".DbContext", StringComparison.Ordinal));
-    }
-
-    private static string BuildDbContextFailureMessage(IEnumerable<DbContextDeclaration> dbContexts)
-    {
-        return "Production DbContext guard failed. Exactly one production DbContext must exist and it must be AppDbContext." + Environment.NewLine +
-               $"Rule: {nameof(SingleProductionDbContextGuardTests)}" + Environment.NewLine +
-               string.Join(Environment.NewLine + Environment.NewLine, dbContexts.Select(context => context.ToDisplayString()));
-    }
-
-    private static string BuildMigrationFailureMessage(IEnumerable<string> migrationRoots)
-    {
-        return "Production migration stream guard failed. A second alternate migration root was detected when the solution must keep one shared production migration stream." + Environment.NewLine +
-               $"Rule: {nameof(SingleProductionDbContextGuardTests)}" + Environment.NewLine +
-               string.Join(Environment.NewLine + Environment.NewLine, migrationRoots.Select(root =>
-                   $"Source file/path: {root}{Environment.NewLine}Detail: alternate migration root"));
-    }
-
-    private static string GetMethodName(SimpleNameSyntax methodNameSyntax)
-    {
-        return methodNameSyntax switch
-        {
-            GenericNameSyntax genericName => genericName.Identifier.ValueText,
-            IdentifierNameSyntax identifierName => identifierName.Identifier.ValueText,
-            _ => methodNameSyntax.ToString()
-        };
-    }
-
-    private static string NormalizeType(TypeSyntax typeSyntax)
-    {
-        return typeSyntax
-            .ToString()
-            .Replace("global::", string.Empty, StringComparison.Ordinal)
-            .Replace(" ", string.Empty, StringComparison.Ordinal);
-    }
-
-    private sealed record DbContextDeclaration(string ContextType, string SourceFile)
-    {
-        public string ToDisplayString()
-        {
-            return $"Source file: {SourceFile}{Environment.NewLine}" +
-                   $"Source symbol: {ContextType}";
-        }
+        return $"using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Infrastructure; using Microsoft.EntityFrameworkCore.Migrations; sealed class AppDbContext : DbContext {{ }} [DbContext(typeof(AppDbContext))] sealed class {typeName} : Migration {{ protected override void Up(MigrationBuilder builder) {{ }} protected override void Down(MigrationBuilder builder) {{ }} }}";
     }
 }

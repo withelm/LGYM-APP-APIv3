@@ -1,3 +1,6 @@
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
+
 namespace LgymApi.BackgroundWorker.Common.Push.Models;
 
 public sealed record PushEventPayload(
@@ -5,5 +8,5 @@ public sealed record PushEventPayload(
     string Type,
     string EventId,
     string? EntityId,
-    string? InAppNotificationId,
+    Id<InAppNotification>? InAppNotificationId,
     string? Deeplink);

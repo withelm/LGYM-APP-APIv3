@@ -99,11 +99,6 @@ public static partial class ServiceCollectionExtensions
                 ? sp.GetRequiredService<DummyEmailSender>()
                 : sp.GetRequiredService<SmtpEmailSender>();
         });
-        services.AddScoped<IEmailNotificationLogRepository>(sp =>
-            new EmailNotificationLogRepository(
-                sp.GetRequiredService<AppDbContext>(),
-                sp.GetRequiredService<BackgroundCommandOptions>()));
-        services.AddScoped<IEmailNotificationSubscriptionRepository, EmailNotificationSubscriptionRepository>();
         services.AddScoped<GridifyExecutionService>();
         services.AddScoped<GridifyExecutionServiceContract>(sp => sp.GetRequiredService<GridifyExecutionService>());
         services.AddScoped<IQueryPaginationService, QueryPaginationFacade>();

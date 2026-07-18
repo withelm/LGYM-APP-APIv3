@@ -6,6 +6,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.PasswordReset;
+using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
@@ -23,12 +24,18 @@ namespace LgymApi.Api.Features.User.Controllers;
 public sealed class UserController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IEloRegistryService _eloRegistryService;
     private readonly IPasswordResetService _passwordResetService;
     private readonly IMapper _mapper;
 
-    public UserController(IUserService userService, IPasswordResetService passwordResetService, IMapper mapper)
+    public UserController(
+        IUserService userService,
+        IEloRegistryService eloRegistryService,
+        IPasswordResetService passwordResetService,
+        IMapper mapper)
     {
         _userService = userService;
+        _eloRegistryService = eloRegistryService;
         _passwordResetService = passwordResetService;
         _mapper = mapper;
     }
@@ -51,7 +58,7 @@ public sealed class UserController : ControllerBase
             request.IsVisibleInRanking,
             preferredLanguage);
 
-        var result = await _userService.RegisterAsync(input, cancellationToken);
+        var result = await _eloRegistryService.RegisterUserAsync(input, trainer: false, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -71,6 +78,7 @@ public sealed class UserController : ControllerBase
             return result.ToActionResult();
         }
 
+        await _eloRegistryService.PopulateLatestEloAsync(result.Value.User, cancellationToken);
         var mapped = _mapper.Map<LoginResult, LoginResponseDto>(result.Value);
         return Ok(mapped);
     }
@@ -95,6 +103,7 @@ public sealed class UserController : ControllerBase
             return result.ToActionResult();
         }
 
+        await _eloRegistryService.PopulateLatestEloAsync(result.Value, cancellationToken);
         var mapped = _mapper.Map<UserInfoResult, UserInfoDto>(result.Value);
         return Ok(mapped);
     }
@@ -137,7 +146,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> GetUserElo([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = ParseUserId(id);
-        var result = await _userService.GetUserEloAsync(userId, cancellationToken);
+        var result = await _eloRegistryService.GetUserEloAsync(userId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

@@ -789,6 +789,8 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainee = await SeedUserAsync(name: "trainee-read-progress", email: "trainee-read-progress@example.com", password: "password123");
 
         Id<Exercise> exerciseId;
+        Id<EloRegistry> firstEloRegistryId;
+        Id<EloRegistry> secondEloRegistryId;
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -837,9 +839,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             };
 
             db.ExerciseScores.AddRange(scoreA, scoreB);
-             db.EloRegistries.AddRange(
-                 new EloRegistry { Id = Id<EloRegistry>.New(), UserId = trainee.Id, Date = dayA, Elo = 1010 },
-                 new EloRegistry { Id = Id<EloRegistry>.New(), UserId = trainee.Id, Date = dayB, Elo = 1030 });
+            firstEloRegistryId = Id<EloRegistry>.New();
+            secondEloRegistryId = Id<EloRegistry>.New();
+            db.EloRegistries.AddRange(
+                 new EloRegistry { Id = firstEloRegistryId, UserId = trainee.Id, Date = dayA, Elo = 1010 },
+                 new EloRegistry { Id = secondEloRegistryId, UserId = trainee.Id, Date = dayB, Elo = 1030 });
 
             await db.SaveChangesAsync();
         }
@@ -855,12 +859,20 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         progress.Should().NotBeNull();
         progress!.Count.Should().Be(2);
         progress.Select(x => x.ExerciseId).Should().OnlyContain(x => x == exerciseId.ToString());
+        progress.Select(x => x.ExerciseId).Should().OnlyContain(id => IsCanonicalId<Exercise>(id));
 
         var eloResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/elo/chart");
         eloResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var elo = await eloResponse.Content.ReadFromJsonAsync<List<EloRegistryChartResponse>>();
         elo.Should().NotBeNull();
         elo!.Count.Should().BeGreaterThanOrEqualTo(3);
+        elo.Select(x => x.Id).Should().Contain(firstEloRegistryId.ToString(), secondEloRegistryId.ToString());
+        elo.Select(x => x.Id).Should().OnlyContain(id => IsCanonicalId<EloRegistry>(id));
+    }
+
+    private static bool IsCanonicalId<TEntity>(string value)
+    {
+        return Id<TEntity>.TryParse(value, out var id) && id.ToString() == value;
     }
 
     [Test]
@@ -1468,6 +1480,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
     private sealed class EloRegistryChartResponse
     {
+        [JsonPropertyName("_id")]
+        public string Id { get; set; } = string.Empty;
+
         [JsonPropertyName("value")]
         public int Value { get; set; }
     }

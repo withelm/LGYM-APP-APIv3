@@ -2,6 +2,8 @@ namespace LgymApi.ArchitectureTests;
 
 public static class ModuleBoundaryDebtAllowlistRegistry
 {
+    public const int MaximumAllowedEntryCount = 435;
+
     private static readonly IReadOnlyList<ModuleBoundaryDebtEntry> Entries =
     [
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -155,13 +157,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Coaching",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "AddHistoryEntryAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "AssignTraineePlanAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -170,13 +165,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             sourceModule: "Coaching",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "AssignTraineePlanAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "ChangedByUserId",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -400,20 +388,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Coaching",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "Id",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "LastUpdatedByUserId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "LgymApi.Application/Features/TraineeNotes/ITraineeNoteService.cs",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -498,34 +472,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Coaching",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "MapHistory",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "MapInvitation",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "MapNote",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "NotifyNoteUpdatedAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "RejectInvitationAsync",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -542,20 +488,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "RoleRepository",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IRoleRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "TraineeId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "TrainerId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -652,13 +584,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Coaching",
             targetModule: "Training Planning",
-            sourceSymbolOrPath: "AssignTraineePlanAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Plan",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Training Planning",
             sourceSymbolOrPath: "CreateTraineePlanAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IPlanRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -675,13 +600,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             targetModule: "Training Planning",
             sourceSymbolOrPath: "DeleteTraineePlanAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IPlanRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Training Planning",
-            sourceSymbolOrPath: "DeleteTraineePlanAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Plan",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -696,13 +614,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             targetModule: "Training Planning",
             sourceSymbolOrPath: "GetTraineePlansAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IPlanRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Training Planning",
-            sourceSymbolOrPath: "Id",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Plan",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -771,22 +682,8 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Coaching",
             targetModule: "Training Planning",
-            sourceSymbolOrPath: "UpdateTraineePlanAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Plan",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Training Planning",
             sourceSymbolOrPath: "_planRepository",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IPlanRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "GetTraineeExerciseScoresChartDataAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -825,237 +722,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "AddNewRecordAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "AddNewRecordAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "AddNewRecordAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "DeleteMainRecordAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "ExerciseMap",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "ExerciseRepository",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "ExerciseScoreRepository",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseScoreRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "GetBestRecord",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "GetLastMainRecordsAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "GetLastMainRecordsAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "GetLastMainRecordsAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "GetMainRecordsHistoryAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "GetRecordOrPossibleRecordInExerciseAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseScoreRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "GetRecordOrPossibleRecordInExerciseAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "GetRecordOrPossibleRecordInExerciseAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application.Features.MainRecords.Models.AddMainRecordInput",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application.Features.MainRecords.Models.UpdateMainRecordInput",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application.Features.MainRecords.Models.UpdateMainRecordInput",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application/MainRecords/IMainRecordsService.cs",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application/MainRecords/MainRecordsService.cs",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application/MainRecords/MainRecordsService.cs",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application/MainRecords/Models/MainRecordsLastContext.cs",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application/MainRecords/Models/MainRecordsLastContext.cs",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "MainRecordsServiceDependencies",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "MainRecordsServiceDependencies",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseScoreRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "MainRecordsService",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "MainRecordsService",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseScoreRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "Records",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "UpdateMainRecordAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "UpdateMainRecordAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "UpdateMainRecordAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "_exerciseRepository",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "_exerciseScoreRepository",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseScoreRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
             sourceModule: "Identity & Accounts",
             targetModule: "Notifications",
             sourceSymbolOrPath: "DisassociateInstallationsForSessionAsync",
@@ -1066,13 +732,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             sourceModule: "Identity & Accounts",
             targetModule: "Notifications",
             sourceSymbolOrPath: "DisassociatePushInstallationAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "GetBoundInstallationAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -1156,13 +815,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Nutrition",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "AddHistoryEntryAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Nutrition",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "AssignTraineePlanAsync",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -1170,21 +822,7 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Nutrition",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "ChangedByUserId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Nutrition",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "CheckOffIntakeAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Nutrition",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "CreateHistoryEntry",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -1338,43 +976,8 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Nutrition",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "MapHistory",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Nutrition",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "MapPlan",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Nutrition",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "NotifyDietPlanUpdatedAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Nutrition",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "SupplementationService",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IRoleRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Nutrition",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "TraineeId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Nutrition",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "TrainerId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -1457,21 +1060,7 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Reporting",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "BuildStorageKeyPrefix",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "CompletePhotoUploadAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "CountRecentUploadInitsAsync",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -1562,13 +1151,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Reporting",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GenerateStorageKey",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "GetForTraineeAsync",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -1633,13 +1215,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             sourceModule: "Reporting",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "InitiatePhotoUploadAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "InitiatedByUserId",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -1744,42 +1319,7 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Reporting",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "MapAssignment",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "MapRequest",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "MapSubmission",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "MapTemplate",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "MarkTrainerFeedbackAsReadAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "OwnerUserId",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -1849,20 +1389,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Reporting",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "TraineeId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "TrainerId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "UpdateAsync",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -1885,13 +1411,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             sourceModule: "Reporting",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "ValidateCompletePhotoUploadRequestAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "ValidateDeveloperLimitsAsync",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -1949,13 +1468,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             targetModule: "Workout & Progress",
             sourceSymbolOrPath: "StageMeasurementsAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IMeasurementRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "StageMeasurementsAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Measurement",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2220,13 +1732,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Training Planning",
             targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "ExerciseId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Training Planning",
-            targetModule: "Workout & Progress",
             sourceSymbolOrPath: "ExerciseMap",
             targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -2325,13 +1830,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Training Planning",
             targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "Translations",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Exercise",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Training Planning",
-            targetModule: "Workout & Progress",
             sourceSymbolOrPath: "_exerciseRepository",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IExerciseRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -2414,24 +1912,10 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
+            sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "AddNewRecordAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "AddNewRecordAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "AddTrainingAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IEloRegistryRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2439,34 +1923,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "AddTrainingAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "AddTrainingAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.EloRegistry",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "AddTrainingAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "AddUserExerciseAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "AddUserExerciseWithFormulaAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2474,13 +1930,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "CreateExerciseAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "CreateExerciseAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2500,29 +1949,8 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "DeleteExerciseAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "DeleteGymAsync",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "DeleteMainRecordAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "EloRepository",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IEloRegistryRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2549,22 +1977,8 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "FetchPreviousScores",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "GetAllExercisesAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetAllExercisesAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2577,13 +1991,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetAllUserExercisesAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "GetExerciseByBodyPartAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -2591,29 +1998,8 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetExerciseByBodyPartAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "GetExerciseScoresChartDataAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetExerciseScoresChartDataAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetExerciseScoresFromTrainingByExerciseAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2633,22 +2019,8 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetLastExerciseScoresAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "GetLastMainRecordsAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetLastMainRecordsAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2661,22 +2033,8 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetLastTrainingAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "GetMainRecordsHistoryAsync",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetMainRecordsHistoryAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2722,13 +2080,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetRecordOrPossibleRecordInExerciseAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "GetTrainingByDateAsync",
@@ -2738,63 +2089,7 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetTrainingByDateAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "GetTrainingDatesAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "LgymApi.Application.Features.Exercise.ExerciseService.UpdateExerciseRequest",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "LgymApi.Application.Features.Exercise.Models.AddGlobalTranslationInput",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "LgymApi.Application.Features.Exercise.Models.AddUserExerciseInput",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "LgymApi.Application.Features.Exercise.Models.AddUserExerciseWithFormulaInput",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "LgymApi.Application.Features.Exercise.Models.GetLastExerciseScoresInput",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "LgymApi.Application.Features.MainRecords.Models.AddMainRecordInput",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "LgymApi.Application.Features.MainRecords.Models.UpdateMainRecordInput",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -2862,14 +2157,14 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
+            sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "MainRecordsServiceDependencies",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
+            sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "MainRecordsService",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
@@ -2900,21 +2195,7 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "TrainingServiceDependencies",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IEloRegistryRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "TrainingServiceDependencies",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "TrainingService",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IEloRegistryRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
@@ -2960,13 +2241,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Coaching",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "UpdateMainRecordAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "UserRepository",
@@ -2990,13 +2264,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "_eloRepository",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IEloRegistryRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "_roleRepository",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IRoleRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -3011,21 +2278,7 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Workout & Progress",
             targetModule: "Training Planning",
-            sourceSymbolOrPath: "AddTrainingAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.PlanDay",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Training Planning",
             sourceSymbolOrPath: "GetTrainingByDateAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.PlanDay",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Training Planning",
-            sourceSymbolOrPath: "LgymApi.Application.Features.Training.Models.AddTrainingInput",
             targetSymbolOrPath: "LgymApi.Domain.Entities.PlanDay",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -3042,19 +2295,20 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             sourceSymbolOrPath: "PlanDay",
             targetSymbolOrPath: "LgymApi.Domain.Entities.PlanDay",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Workout & Progress",
-            targetModule: "Training Planning",
-            sourceSymbolOrPath: "TypePlanDayId",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.PlanDay",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced."))
     ];
 
-    public static IReadOnlyList<ModuleBoundaryDebtEntry> AllEntries => Entries;
+    public static IReadOnlyList<ModuleBoundaryDebtEntry> AllEntries
+    {
+        get
+        {
+            AssertRegistryDoesNotGrow();
+            return Entries;
+        }
+    }
 
     public static IReadOnlyList<ModuleBoundaryDebtEntry> GetEntriesForGuard(string guardId)
     {
+        AssertRegistryDoesNotGrow();
         var normalizedGuardId = ModuleBoundaryDebtKey.NormalizeRequiredValue(guardId, nameof(guardId));
 
         return Entries
@@ -3081,6 +2335,17 @@ public static class ModuleBoundaryDebtAllowlistRegistry
         }
 
         throw new AssertionException(evaluation.BuildFailureMessage());
+    }
+
+    private static void AssertRegistryDoesNotGrow()
+    {
+        if (Entries.Count <= MaximumAllowedEntryCount)
+        {
+            return;
+        }
+
+        throw new AssertionException(
+            $"Module-boundary debt allowlist contains {Entries.Count} entries, but the approved baseline is {MaximumAllowedEntryCount}; debt must not grow.");
     }
 }
 
@@ -3120,6 +2385,25 @@ public static class ModuleBoundaryDebtAllowlistEvaluator
 
     private static void ValidateEntries(IReadOnlyCollection<ModuleBoundaryDebtEntry> entries, string normalizedGuardId)
     {
+        if (entries.Count > ModuleBoundaryDebtAllowlistRegistry.MaximumAllowedEntryCount)
+        {
+            throw new AssertionException(
+                $"Module-boundary debt allowlist for guard '{normalizedGuardId}' contains {entries.Count} entries, but the approved baseline is {ModuleBoundaryDebtAllowlistRegistry.MaximumAllowedEntryCount}; debt must not grow.");
+        }
+
+        var broadEntries = entries
+            .Where(entry => entry.Key.ContainsWildcardIdentityValue())
+            .Select(entry => entry.Key.ToDisplayString())
+            .OrderBy(entry => entry, StringComparer.Ordinal)
+            .ToList();
+
+        if (broadEntries.Count > 0)
+        {
+            throw new AssertionException(
+                $"Module-boundary debt allowlist for guard '{normalizedGuardId}' contains wildcard entries. Allowlist entries must identify one exact current violation:{Environment.NewLine}" +
+                string.Join(Environment.NewLine, broadEntries));
+        }
+
         var duplicateEntryKeys = entries
             .GroupBy(entry => entry.Key.NormalizedKey, StringComparer.Ordinal)
             .Where(group => group.Count() > 1)
@@ -3284,11 +2568,11 @@ public sealed record ModuleBoundaryDebtKey(
         string rationale)
     {
         return new ModuleBoundaryDebtKey(
-            NormalizeRequiredValue(guardId, nameof(guardId)),
-            NormalizeRequiredValue(sourceModule, nameof(sourceModule)),
-            NormalizeRequiredValue(targetModule, nameof(targetModule)),
-            NormalizeRequiredPathOrSymbol(sourceSymbolOrPath, nameof(sourceSymbolOrPath)),
-            NormalizeRequiredPathOrSymbol(targetSymbolOrPath, nameof(targetSymbolOrPath)),
+            NormalizeRequiredExactIdentityValue(guardId, nameof(guardId)),
+            NormalizeRequiredExactIdentityValue(sourceModule, nameof(sourceModule)),
+            NormalizeRequiredExactIdentityValue(targetModule, nameof(targetModule)),
+            NormalizeRequiredExactPathOrSymbol(sourceSymbolOrPath, nameof(sourceSymbolOrPath)),
+            NormalizeRequiredExactPathOrSymbol(targetSymbolOrPath, nameof(targetSymbolOrPath)),
             NormalizeRequiredValue(rationale, nameof(rationale)));
     }
 
@@ -3301,11 +2585,11 @@ public sealed record ModuleBoundaryDebtKey(
     {
         return string.Join(
             "|",
-            $"guard:{NormalizeRequiredValue(guardId, nameof(guardId))}",
-            $"source-module:{NormalizeRequiredValue(sourceModule, nameof(sourceModule))}",
-            $"target-module:{NormalizeRequiredValue(targetModule, nameof(targetModule))}",
-            $"source:{NormalizeRequiredPathOrSymbol(sourceSymbolOrPath, nameof(sourceSymbolOrPath))}",
-            $"target:{NormalizeRequiredPathOrSymbol(targetSymbolOrPath, nameof(targetSymbolOrPath))}");
+            $"guard:{NormalizeRequiredExactIdentityValue(guardId, nameof(guardId))}",
+            $"source-module:{NormalizeRequiredExactIdentityValue(sourceModule, nameof(sourceModule))}",
+            $"target-module:{NormalizeRequiredExactIdentityValue(targetModule, nameof(targetModule))}",
+            $"source:{NormalizeRequiredExactPathOrSymbol(sourceSymbolOrPath, nameof(sourceSymbolOrPath))}",
+            $"target:{NormalizeRequiredExactPathOrSymbol(targetSymbolOrPath, nameof(targetSymbolOrPath))}");
     }
 
     public static string NormalizeRequiredPathOrSymbol(string value, string paramName)
@@ -3313,9 +2597,106 @@ public sealed record ModuleBoundaryDebtKey(
         return NormalizeRequiredValue(ArchitectureTestHelpers.NormalizePath(value), paramName);
     }
 
+    internal bool ContainsWildcardIdentityValue()
+    {
+        return ContainsWildcard(GuardId) ||
+               ContainsWildcard(SourceModule) ||
+               ContainsWildcard(TargetModule) ||
+               ContainsWildcard(SourceSymbolOrPath) ||
+               ContainsWildcard(TargetSymbolOrPath);
+    }
+
+    private static string NormalizeRequiredExactPathOrSymbol(string value, string paramName)
+    {
+        return NormalizeRequiredExactIdentityValue(ArchitectureTestHelpers.NormalizePath(value), paramName);
+    }
+
+    private static string NormalizeRequiredExactIdentityValue(string value, string paramName)
+    {
+        var normalizedValue = NormalizeRequiredValue(value, paramName);
+        if (ContainsWildcard(normalizedValue))
+        {
+            throw new ArgumentException($"{paramName} must identify one exact violation and cannot contain wildcards.", paramName);
+        }
+
+        return normalizedValue;
+    }
+
+    private static bool ContainsWildcard(string value)
+    {
+        return value.Contains('*') || value.Contains('?');
+    }
+
     public static string NormalizeRequiredValue(string value, string paramName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value, paramName);
         return value.Trim();
+    }
+}
+
+public sealed class ModuleBoundaryDebtOwnerRekey
+{
+    private readonly ModuleBoundaryDebtEntry _existingEntry;
+    private readonly string _sourceModule;
+    private readonly string _targetModule;
+
+    private ModuleBoundaryDebtOwnerRekey(
+        ModuleBoundaryDebtEntry existingEntry,
+        string sourceModule,
+        string targetModule)
+    {
+        _existingEntry = existingEntry;
+        _sourceModule = sourceModule;
+        _targetModule = targetModule;
+    }
+
+    public static ModuleBoundaryDebtOwnerRekey FromCurrentViolation(
+        ModuleBoundaryDebtEntry existingEntry,
+        ModuleBoundaryObservedViolation currentViolation)
+    {
+        ArgumentNullException.ThrowIfNull(existingEntry);
+        ArgumentNullException.ThrowIfNull(currentViolation);
+
+        AssertUnchanged(
+            ModuleBoundaryDebtKey.NormalizeRequiredValue(existingEntry.Key.GuardId, nameof(existingEntry.Key.GuardId)),
+            ModuleBoundaryDebtKey.NormalizeRequiredValue(currentViolation.GuardId, nameof(currentViolation.GuardId)),
+            "kind");
+        AssertUnchanged(
+            ModuleBoundaryDebtKey.NormalizeRequiredPathOrSymbol(existingEntry.Key.SourceSymbolOrPath, nameof(existingEntry.Key.SourceSymbolOrPath)),
+            ModuleBoundaryDebtKey.NormalizeRequiredPathOrSymbol(currentViolation.SourceSymbolOrPath, nameof(currentViolation.SourceSymbolOrPath)),
+            "source symbol/path");
+        AssertUnchanged(
+            ModuleBoundaryDebtKey.NormalizeRequiredPathOrSymbol(existingEntry.Key.TargetSymbolOrPath, nameof(existingEntry.Key.TargetSymbolOrPath)),
+            ModuleBoundaryDebtKey.NormalizeRequiredPathOrSymbol(currentViolation.TargetSymbolOrPath, nameof(currentViolation.TargetSymbolOrPath)),
+            "target symbol/path");
+
+        return new ModuleBoundaryDebtOwnerRekey(
+            existingEntry,
+            ModuleBoundaryDebtKey.NormalizeRequiredValue(currentViolation.SourceModule, nameof(currentViolation.SourceModule)),
+            ModuleBoundaryDebtKey.NormalizeRequiredValue(currentViolation.TargetModule, nameof(currentViolation.TargetModule)));
+    }
+
+    public ModuleBoundaryDebtEntry ToEntry()
+    {
+        return _existingEntry with
+        {
+            Key = ModuleBoundaryDebtKey.Create(
+                _existingEntry.Key.GuardId,
+                _sourceModule,
+                _targetModule,
+                _existingEntry.Key.SourceSymbolOrPath,
+                _existingEntry.Key.TargetSymbolOrPath,
+                _existingEntry.Key.Rationale)
+        };
+    }
+
+    private static void AssertUnchanged(string existingValue, string currentValue, string fieldName)
+    {
+        if (existingValue.Equals(currentValue, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        throw new AssertionException($"A module-boundary debt re-key may only change owner metadata; the {fieldName} changed.");
     }
 }

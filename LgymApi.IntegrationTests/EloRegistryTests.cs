@@ -48,6 +48,15 @@ public sealed class EloRegistryTests : IntegrationTestBase
         body.Should().NotBeNull();
         body.Should().HaveCountGreaterThanOrEqualTo(1);
         body![0].Value.Should().Be(1000);
+        Id<LgymApi.Domain.Entities.EloRegistry>.TryParse(body[0].Id, out var parsedId).Should().BeTrue();
+        parsedId.ToString().Should().Be(body[0].Id);
+
+        var repeatResponse = await Client.GetAsync($"/api/eloRegistry/{userId}/getEloRegistryChart");
+        repeatResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var repeatBody = await repeatResponse.Content.ReadFromJsonAsync<List<EloChartEntry>>();
+        repeatBody.Should().NotBeNull();
+        repeatBody!.Select(entry => entry.Id).Should().Equal(body.Select(entry => entry.Id));
+        TestContext.Progress.WriteLine(System.Text.Json.JsonSerializer.Serialize(body));
     }
 
     [Test]

@@ -2,7 +2,7 @@ using LgymApi.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace LgymApi.Infrastructure.Data.Configurations.Platform;
+namespace LgymApi.Infrastructure.Data.Configurations.Identity;
 
 internal sealed class UserTutorialProgressEntityTypeConfiguration : IEntityTypeConfiguration<UserTutorialProgress>
 {
@@ -19,8 +19,8 @@ internal sealed class UserTutorialProgressEntityTypeConfiguration : IEntityTypeC
 
         builder.HasIndex(utp => new { utp.UserId, utp.TutorialType })
             .IsUnique()
-            .HasFilter(PlatformConfigurationFilters.ActiveRowsFilter);
+            .HasFilter(IdentityConfigurationFilters.ActiveRowsFilter);
         builder.HasIndex(utp => new { utp.UserId, utp.IsCompleted })
-            .HasFilter(PlatformConfigurationFilters.ActiveRowsFilter);
+            .HasFilter(IdentityConfigurationFilters.ActiveRowsFilter);
     }
 }

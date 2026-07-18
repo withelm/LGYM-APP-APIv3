@@ -12,5 +12,6 @@
 - Push installation endpoints live under `/api/push/installations/*`, rely on middleware-authenticated `User` plus `sid` claims, and never trust client-supplied user identity for device registration or disassociation.
 - Push sender configuration follows the existing `appsettings.json` convention under `PushNotifications:*`; the API host composes the enqueue service and background worker pieces but does not send push notifications synchronously inside controllers.
 - Notifications composition is host-facing: the API uses `AddNotificationsModule(...)`, while the worker uses the application-only notifications helper to avoid duplicate infrastructure registration.
+- Elasticsearch logging is optional: a non-blank `Elasticsearch:Url` enables the existing asynchronous sink; missing or blank configuration leaves that sink unregistered while preserving Serilog provider registration and sensitive-data enrichment.
 - The only API-level push bridge path is the admin-only test endpoint at `/api/internal/push/test-event`; it accepts privacy-safe IDs only and exists to prove generic enqueue wiring without auto-converting all in-app notifications to push.
 - Rollout guardrails rely on `PushNotifications:SendEnabled` for send-only disablement plus the recurring `push-stale-installation-cleanup` Hangfire job for inactive-token tombstoning.

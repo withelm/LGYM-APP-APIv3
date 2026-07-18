@@ -15,7 +15,6 @@ public sealed partial class UserService : IUserService
     private readonly IPushInstallationRepository _pushInstallationRepository;
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
-    private readonly IEloRegistryRepository _eloRepository;
     private readonly ITokenService _tokenService;
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
@@ -31,7 +30,6 @@ public sealed partial class UserService : IUserService
         _pushInstallationRepository = dependencies.PushInstallationRepository;
         _userRepository = dependencies.UserRepository;
         _roleRepository = dependencies.RoleRepository;
-        _eloRepository = dependencies.EloRepository;
         _tokenService = dependencies.TokenService;
         _legacyPasswordService = dependencies.LegacyPasswordService;
         _rankService = dependencies.RankService;

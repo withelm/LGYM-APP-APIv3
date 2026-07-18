@@ -8,6 +8,8 @@ public static partial class ServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkoutProgressInfrastructure(this IServiceCollection services)
     {
+        services.AddScoped<IEloRegistryRepository, EloRegistryRepository>();
+        services.AddScoped<IMainRecordRepository, MainRecordRepository>();
         services.AddScoped<IExerciseRepository, ExerciseRepository>();
         services.AddScoped<ITrainingRepository, TrainingRepository>();
         services.AddScoped<ITrainingExerciseScoreRepository, TrainingExerciseScoreRepository>();

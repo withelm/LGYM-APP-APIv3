@@ -1,6 +1,7 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
@@ -37,35 +38,18 @@ public sealed partial class UserService : IUserService
             return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
         }
 
-        var installation = await _pushInstallationRepository.FindByInstallationIdAsync(normalizedInstallationId, cancellationToken);
-        var isNewInstallation = installation == null;
-        if (installation == null)
-        {
-            installation = new PushInstallation
-            {
-                Id = Id<PushInstallation>.New(),
-                InstallationId = normalizedInstallationId
-            };
-
-            await _pushInstallationRepository.AddAsync(installation, cancellationToken);
-        }
-
-        installation.UserId = currentUser.Id;
-        installation.SessionId = sessionId.Value;
-        installation.InstallationId = normalizedInstallationId;
-        installation.Platform = normalizedPlatform;
-        installation.FcmToken = normalizedToken;
-        installation.AppVersion = NormalizeOptionalValue(input.AppVersion);
-        installation.Environment = normalizedEnvironment;
-        installation.PermissionStatus = NormalizeOptionalValue(input.PermissionStatus);
-        installation.LastSeenAt = DateTimeOffset.UtcNow;
-        installation.DisabledAt = null;
-        installation.DisabledReason = null;
-
-        if (!isNewInstallation)
-        {
-            await _pushInstallationRepository.UpdateAsync(installation, cancellationToken);
-        }
+        await _pushInstallationRepository.UpsertForUserSessionAsync(
+            new PushInstallationRegistration(
+                normalizedInstallationId,
+                normalizedPlatform,
+                normalizedToken,
+                NormalizeOptionalValue(input.AppVersion),
+                normalizedEnvironment,
+                NormalizeOptionalValue(input.PermissionStatus),
+                currentUser.Id,
+                sessionId.Value,
+                DateTimeOffset.UtcNow),
+            cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
@@ -77,22 +61,24 @@ public sealed partial class UserService : IUserService
         PushInstallationActionInput input,
         CancellationToken cancellationToken = default)
     {
-        var installation = await GetBoundInstallationAsync(currentUser, sessionId, input, cancellationToken);
-        if (installation.IsFailure)
+        if (currentUser == null || !sessionId.HasValue)
         {
-            return Result<Unit, AppError>.Failure(installation.Error);
+            return Result<Unit, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
-        if (installation.Value == null)
+        var normalizedInstallationId = NormalizeRequiredValue(input.InstallationKey);
+        if (normalizedInstallationId == null)
         {
-            return Result<Unit, AppError>.Success(Unit.Value);
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
         }
 
-        installation.Value.DisabledAt = DateTimeOffset.UtcNow;
-        installation.Value.DisabledReason = UnregisteredDisabledReason;
-        installation.Value.LastSeenAt = DateTimeOffset.UtcNow;
-
-        await _pushInstallationRepository.UpdateAsync(installation.Value, cancellationToken);
+        await _pushInstallationRepository.DisableBoundForUserOrSessionAsync(
+            normalizedInstallationId,
+            currentUser.Id,
+            sessionId.Value,
+            DateTimeOffset.UtcNow,
+            UnregisteredDisabledReason,
+            cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
     }
@@ -103,63 +89,30 @@ public sealed partial class UserService : IUserService
         PushInstallationActionInput input,
         CancellationToken cancellationToken = default)
     {
-        var installation = await GetBoundInstallationAsync(currentUser, sessionId, input, cancellationToken);
-        if (installation.IsFailure)
-        {
-            return Result<Unit, AppError>.Failure(installation.Error);
-        }
-
-        if (installation.Value == null)
-        {
-            return Result<Unit, AppError>.Success(Unit.Value);
-        }
-
-        DisassociateInstallation(installation.Value);
-        await _pushInstallationRepository.UpdateAsync(installation.Value, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result<Unit, AppError>.Success(Unit.Value);
-    }
-
-    private async Task<Result<PushInstallation?, AppError>> GetBoundInstallationAsync(
-        UserEntity? currentUser,
-        Id<UserSessionEntity>? sessionId,
-        PushInstallationActionInput input,
-        CancellationToken cancellationToken)
-    {
         if (currentUser == null || !sessionId.HasValue)
         {
-            return Result<PushInstallation?, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
+            return Result<Unit, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
         var normalizedInstallationId = NormalizeRequiredValue(input.InstallationKey);
         if (normalizedInstallationId == null)
         {
-            return Result<PushInstallation?, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
+            return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
         }
 
-        var installation = await _pushInstallationRepository.FindBoundToUserOrSessionAsync(
+        await _pushInstallationRepository.DisassociateBoundForUserOrSessionAsync(
             normalizedInstallationId,
             currentUser.Id,
             sessionId.Value,
+            DateTimeOffset.UtcNow,
             cancellationToken);
-
-        return Result<PushInstallation?, AppError>.Success(installation);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
     private async Task DisassociateInstallationsForSessionAsync(Id<UserSessionEntity> sessionId, CancellationToken cancellationToken)
     {
-        var installations = await _pushInstallationRepository.GetBySessionIdAsync(sessionId, cancellationToken);
-        foreach (var installation in installations)
-        {
-            DisassociateInstallation(installation);
-        }
-    }
-
-    private static void DisassociateInstallation(PushInstallation installation)
-    {
-        installation.UserId = null;
-        installation.SessionId = null;
-        installation.LastSeenAt = DateTimeOffset.UtcNow;
+        await _pushInstallationRepository.DisassociateForSessionAsync(sessionId, DateTimeOffset.UtcNow, cancellationToken);
     }
 
     private static string? NormalizeRequiredValue(string? value)

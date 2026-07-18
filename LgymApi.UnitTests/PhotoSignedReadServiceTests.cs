@@ -5,6 +5,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Resources;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -31,7 +32,7 @@ public sealed class PhotoSignedReadServiceTests
         storageProvider.GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns("https://storage.example.com/read-url");
 
         var service = PhotoServiceTestFactory.CreateService(reportingRepository: repo, photoStorageProvider: storageProvider);
-        var result = await service.GetSignedReadUrlAsync(currentUser, photoId.ToString());
+        var result = await service.GetSignedReadUrlAsync(currentUser, photoId);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.ReadUrl.Should().Be("https://storage.example.com/read-url");
@@ -47,24 +48,22 @@ public sealed class PhotoSignedReadServiceTests
         repo.FindPhotoByIdAsync(photoId, Arg.Any<CancellationToken>()).Returns((Photo?)null);
 
         var service = PhotoServiceTestFactory.CreateService(reportingRepository: repo);
-        var result = await service.GetSignedReadUrlAsync(currentUser, photoId.ToString());
+        var result = await service.GetSignedReadUrlAsync(currentUser, photoId);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ReportingNotFoundError>();
     }
 
     [Test]
-    public async Task GetSignedReadUrlAsync_WhenPhotoIdMissingOrInvalid_ReturnsInvalidError()
+    public async Task GetSignedReadUrlAsync_WhenPhotoIdIsEmpty_ReturnsResourceBackedInvalidError()
     {
         var currentUser = PhotoServiceTestFactory.CreateUser(Id<User>.New(), "user@example.com");
         var service = PhotoServiceTestFactory.CreateService();
 
-        var missingResult = await service.GetSignedReadUrlAsync(currentUser, " ");
-        var invalidResult = await service.GetSignedReadUrlAsync(currentUser, "not-a-guid");
+        var result = await service.GetSignedReadUrlAsync(currentUser, default);
 
-        missingResult.IsFailure.Should().BeTrue();
-        invalidResult.IsFailure.Should().BeTrue();
-        missingResult.Error.Should().BeOfType<InvalidReportingError>();
-        invalidResult.Error.Should().BeOfType<InvalidReportingError>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+        result.Error.Message.Should().Be(Messages.FieldRequired);
     }
 }
