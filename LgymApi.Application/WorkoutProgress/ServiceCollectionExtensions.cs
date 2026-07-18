@@ -1,5 +1,6 @@
 using LgymApi.Application.Common.Training.Elo;
 using LgymApi.Application.Features.Exercise;
+using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.Gym;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Training;
@@ -12,6 +13,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddWorkoutAndProgressModule(this IServiceCollection services)
     {
         services.AddScoped<IExerciseService, ExerciseService>();
+        services.AddScoped<IEloRegistryService, EloRegistryService>();
         services.AddScoped<IGymService, GymService>();
         services.AddScoped<IMeasurementsServiceDependencies, MeasurementsServiceDependencies>();
         services.AddScoped<IMeasurementsService, MeasurementsService>();

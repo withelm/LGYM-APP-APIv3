@@ -99,7 +99,7 @@ public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<Tra
                 var score = exerciseScores.FirstOrDefault(es => es.Id == te.ExerciseScoreId);
                 return new TrainingExerciseSummary
                 {
-                    ExerciseId = score?.ExerciseId.ToString() ?? string.Empty,
+                    ExerciseId = score?.ExerciseId ?? Id<Domain.Entities.Exercise>.Empty,
                     ExerciseName = score?.Exercise?.Name ?? string.Empty,
                     Series = score?.Series ?? 0,
                     Reps = score?.Reps ?? 0,

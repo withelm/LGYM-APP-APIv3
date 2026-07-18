@@ -100,7 +100,7 @@ public sealed class PushNotificationService : IPushNotificationService
                 normalizedType,
                 normalizedEventId,
                 NormalizeOptional(input.EntityKey),
-                input.InAppNotificationId?.ToString(),
+                input.InAppNotificationId,
                 NormalizeOptional(input.Deeplink));
 
             var message = new PushNotificationMessage

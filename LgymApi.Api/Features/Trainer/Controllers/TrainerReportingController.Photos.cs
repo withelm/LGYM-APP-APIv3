@@ -6,6 +6,7 @@ using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Mvc;
+using PhotoEntity = LgymApi.Domain.Entities.Photo;
 using ReportRequestEntity = LgymApi.Domain.Entities.ReportRequest;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -48,8 +49,18 @@ public sealed partial class TrainerReportingController
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetPhotoSignedReadUrl([FromRoute] string photoId, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(photoId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        if (!Id<PhotoEntity>.TryParse(photoId, out var parsedPhotoId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>("Invalid photo ID format"));
+        }
+
         var currentUser = HttpContext.GetCurrentUser();
-        var result = await _reportingService.GetSignedReadUrlAsync(currentUser!, photoId, cancellationToken);
+        var result = await _reportingService.GetSignedReadUrlAsync(currentUser!, parsedPhotoId, cancellationToken);
 
         if (result.IsFailure)
         {

@@ -4,6 +4,7 @@ using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.User;
+using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Security;
@@ -17,11 +18,13 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 public sealed class TrainerAuthController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IEloRegistryService _eloRegistryService;
     private readonly IMapper _mapper;
 
-    public TrainerAuthController(IUserService userService, IMapper mapper)
+    public TrainerAuthController(IUserService userService, IEloRegistryService eloRegistryService, IMapper mapper)
     {
         _userService = userService;
+        _eloRegistryService = eloRegistryService;
         _mapper = mapper;
     }
 
@@ -39,7 +42,7 @@ public sealed class TrainerAuthController : ControllerBase
             IsVisibleInRanking: null,
             PreferredLanguage: null);
 
-        var result = await _userService.RegisterTrainerAsync(input, cancellationToken);
+        var result = await _eloRegistryService.RegisterUserAsync(input, trainer: true, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -59,6 +62,7 @@ public sealed class TrainerAuthController : ControllerBase
             return result.ToActionResult();
         }
 
+        await _eloRegistryService.PopulateLatestEloAsync(result.Value.User, cancellationToken);
         return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.LoginResult, LoginResponseDto>(result.Value));
     }
 
@@ -74,6 +78,7 @@ public sealed class TrainerAuthController : ControllerBase
             return result.ToActionResult();
         }
 
+        await _eloRegistryService.PopulateLatestEloAsync(result.Value, cancellationToken);
         return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.UserInfoResult, UserInfoDto>(result.Value));
     }
 }

@@ -37,6 +37,28 @@ public sealed class ModuleDependencyGuardTests
         ArchitectureTestHelpers.AssertNoUnexpectedModuleBoundaryViolations(GuardId, observedViolations);
     }
 
+    [Test]
+    public void Main_Record_Repository_Should_Belong_To_Workout_And_Progress()
+    {
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+        var repositoryPath = Path.Combine(repoRoot, "LgymApi.Application", "Repositories", "IMainRecordRepository.cs");
+
+        Assert.That(
+            ResolveDependencyGuardModule(repositoryPath, repoRoot),
+            Is.EqualTo(ArchitectureTestHelpers.WorkoutProgressModuleName));
+    }
+
+    [Test]
+    public void Elo_Registry_Repository_Should_Belong_To_Workout_And_Progress()
+    {
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+        var repositoryPath = Path.Combine(repoRoot, "LgymApi.Application", "Repositories", "IEloRegistryRepository.cs");
+
+        Assert.That(
+            ResolveDependencyGuardModule(repositoryPath, repoRoot),
+            Is.EqualTo(ArchitectureTestHelpers.WorkoutProgressModuleName));
+    }
+
     private static Dictionary<INamedTypeSymbol, OwnedType> CollectOwnedTypeMap(
         Compilation compilation,
         IEnumerable<SyntaxTreeModule> treeModules)
@@ -159,7 +181,6 @@ public sealed class ModuleDependencyGuardTests
             "LgymApi.Application/Repositories/IUserExternalLoginRepository.cs" or
             "LgymApi.Application/Repositories/IPasswordResetTokenRepository.cs" or
             "LgymApi.Application/Repositories/IRoleRepository.cs" or
-            "LgymApi.Application/Repositories/IEloRegistryRepository.cs" or
             "LgymApi.Application/Repositories/ITutorialProgressRepository.cs"
                 => ArchitectureTestHelpers.IdentityModuleName,
             "LgymApi.Application/Repositories/IInAppNotificationRepository.cs" or
@@ -179,11 +200,12 @@ public sealed class ModuleDependencyGuardTests
             "LgymApi.Application/Repositories/IExerciseRepository.cs" or
             "LgymApi.Application/Repositories/IExerciseScoreRepository.cs" or
             "LgymApi.Application/Repositories/ITrainingExerciseScoreRepository.cs" or
-            "LgymApi.Application/Repositories/IMeasurementRepository.cs"
+            "LgymApi.Application/Repositories/IMeasurementRepository.cs" or
+            "LgymApi.Application/Repositories/IEloRegistryRepository.cs" or
+            "LgymApi.Application/Repositories/IMainRecordRepository.cs"
                 => ArchitectureTestHelpers.WorkoutProgressModuleName,
             "LgymApi.Application/Repositories/ITrainerRelationshipRepository.cs" or
-            "LgymApi.Application/Repositories/ITraineeNoteRepository.cs" or
-            "LgymApi.Application/Repositories/IMainRecordRepository.cs"
+            "LgymApi.Application/Repositories/ITraineeNoteRepository.cs"
                 => ArchitectureTestHelpers.CoachingModuleName,
             "LgymApi.Application/Repositories/IDietPlanRepository.cs" or
             "LgymApi.Application/Repositories/ISupplementationRepository.cs"

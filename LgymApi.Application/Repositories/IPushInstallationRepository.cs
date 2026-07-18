@@ -13,4 +13,19 @@ public interface IPushInstallationRepository
     Task<List<PushInstallation>> GetStaleActiveAsync(DateTimeOffset lastSeenBefore, int limit, CancellationToken cancellationToken = default);
     Task AddAsync(PushInstallation installation, CancellationToken cancellationToken = default);
     Task UpdateAsync(PushInstallation installation, CancellationToken cancellationToken = default);
+    Task UpsertForUserSessionAsync(PushInstallationRegistration registration, CancellationToken cancellationToken = default);
+    Task<bool> DisableBoundForUserOrSessionAsync(string installationId, Id<User> userId, Id<UserSession> sessionId, DateTimeOffset disabledAt, string disabledReason, CancellationToken cancellationToken = default);
+    Task<bool> DisassociateBoundForUserOrSessionAsync(string installationId, Id<User> userId, Id<UserSession> sessionId, DateTimeOffset lastSeenAt, CancellationToken cancellationToken = default);
+    Task DisassociateForSessionAsync(Id<UserSession> sessionId, DateTimeOffset lastSeenAt, CancellationToken cancellationToken = default);
 }
+
+public sealed record PushInstallationRegistration(
+    string InstallationId,
+    string Platform,
+    string FcmToken,
+    string? AppVersion,
+    string Environment,
+    string? PermissionStatus,
+    Id<User> UserId,
+    Id<UserSession> SessionId,
+    DateTimeOffset LastSeenAt);

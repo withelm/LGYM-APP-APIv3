@@ -1,3 +1,4 @@
+using LgymApi.Domain.Entities;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,6 +13,14 @@ public sealed class ModulePersistenceOwnershipGuardTests
         "AddScoped",
         "AddSingleton",
         "AddTransient"
+    };
+
+    private static readonly CanonicalRepositoryRegistration[] CanonicalRepositoryRegistrations =
+    {
+        new("IEloRegistryRepository", "EloRegistryRepository", "WorkoutProgress"),
+        new("IMainRecordRepository", "MainRecordRepository", "WorkoutProgress"),
+        new("IEmailNotificationLogRepository", "EmailNotificationLogRepository", "Notifications"),
+        new("IEmailNotificationSubscriptionRepository", "EmailNotificationSubscriptionRepository", "Notifications")
     };
 
     [Test]
@@ -74,6 +83,16 @@ public sealed class ModulePersistenceOwnershipGuardTests
             "Duplicate repository registrations were found across module-owned helper files." + Environment.NewLine +
             string.Join(Environment.NewLine, duplicateRegistrations.Select(registration => registration.ToString())));
 
+        var canonicalRepositoryRegistrationViolations = FindCanonicalRepositoryRegistrationViolations(
+            registrations,
+            CanonicalRepositoryRegistrations);
+
+        Assert.That(
+            canonicalRepositoryRegistrationViolations,
+            Is.Empty,
+            "Canonical repository registrations must be scoped exactly once in their owning module." + Environment.NewLine +
+            string.Join(Environment.NewLine, canonicalRepositoryRegistrationViolations.Select(violation => violation.ToString())));
+
         var missingRepositories = repositoryDeclarations
             .Where(declaration => !registrations.Any(registration =>
                 registration.Interface == declaration.Interface &&
@@ -97,6 +116,16 @@ public sealed class ModulePersistenceOwnershipGuardTests
             Is.Empty,
             "EF Core configuration files must stay under Data/Configurations/<Module>/ and not leak into alternate roots." + Environment.NewLine +
             string.Join(Environment.NewLine, unownedConfigurations.Select(configuration => configuration.ToString())));
+
+        var configurationsWithoutCatalogOwners = configurationDeclarations
+            .Where(configuration => configuration.CatalogOwner is null)
+            .ToList();
+
+        Assert.That(
+            configurationsWithoutCatalogOwners,
+            Is.Empty,
+            "EF Core configuration entities must resolve through PersistedEntityOwnershipCatalog." + Environment.NewLine +
+            string.Join(Environment.NewLine, configurationsWithoutCatalogOwners.Select(configuration => configuration.ToString())));
 
         var staleRegistrarEntries = registeredConfigurations
             .Where(typeName => !configurationDeclarations.Any(configuration =>
@@ -142,6 +171,99 @@ public sealed class ModulePersistenceOwnershipGuardTests
         });
     }
 
+    [TestCaseSource(nameof(InvalidCanonicalRepositoryRegistrationFixtures))]
+    public void Canonical_Repository_Registration_Guard_Should_Reject_Invalid_Fixtures(
+        object fixtureValue)
+    {
+        var fixture = (CanonicalRepositoryRegistrationFixture)fixtureValue;
+        var violations = FindCanonicalRepositoryRegistrationViolations(
+            fixture.Registrations,
+            new[] { fixture.ExpectedRegistration });
+
+        Assert.That(violations, Has.Count.EqualTo(1));
+        Assert.That(violations.Single().ToString(), Is.EqualTo(fixture.ExpectedDiagnostic));
+    }
+
+    [TestCaseSource(nameof(CanonicalConfigurationCases))]
+    public void Configuration_Should_Reside_Under_Its_Catalog_Owner(string configurationType, Type entityType)
+    {
+        var infrastructureFiles = ArchitectureTestHelpers.EnumerateProjectSourceFiles("LgymApi.Infrastructure");
+        var configurationFiles = infrastructureFiles.Where(path =>
+            ArchitectureTestHelpers.NormalizePath(path).Contains("/Data/Configurations/", StringComparison.OrdinalIgnoreCase) &&
+            Path.GetFileName(path).EndsWith("EntityTypeConfiguration.cs", StringComparison.Ordinal));
+        var configurations = CollectConfigurationDeclarations(
+            configurationFiles,
+            CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest));
+        var configuration = configurations.Single(item => item.ConfigurationType == configurationType);
+        var expectedOwner = PersistedEntityOwnershipCatalog.Entries.Single(entry => entry.EntityType == entityType).Owner;
+        var expectedModule = GetConfigurationModule(expectedOwner);
+
+        Assert.That(configuration.Module, Is.EqualTo(expectedModule), $"{configuration}; catalog owner: {expectedOwner}");
+    }
+
+    private static IEnumerable<TestCaseData> CanonicalConfigurationCases()
+    {
+        yield return new TestCaseData("UserSessionEntityTypeConfiguration", typeof(UserSession));
+        yield return new TestCaseData("UserTutorialProgressEntityTypeConfiguration", typeof(UserTutorialProgress));
+        yield return new TestCaseData("UserTutorialStepProgressEntityTypeConfiguration", typeof(UserTutorialStepProgress));
+        yield return new TestCaseData("AppConfigEntityTypeConfiguration", typeof(AppConfig));
+        yield return new TestCaseData("ExerciseEntityTypeConfiguration", typeof(Exercise));
+        yield return new TestCaseData("ExerciseTranslationEntityTypeConfiguration", typeof(ExerciseTranslation));
+    }
+
+    private static IEnumerable<TestCaseData> InvalidCanonicalRepositoryRegistrationFixtures()
+    {
+        var eloRegistration = new CanonicalRepositoryRegistration(
+            "IEloRegistryRepository",
+            "EloRegistryRepository",
+            "WorkoutProgress");
+
+        yield return new TestCaseData(new CanonicalRepositoryRegistrationFixture(
+                eloRegistration,
+                new[]
+                {
+                    new InfrastructureRegistration(
+                        "IEloRegistryRepository",
+                        "EloRegistryRepository",
+                        "Identity",
+                        "AddScoped",
+                        "IdentityServiceCollectionExtensions.cs")
+                },
+                "IEloRegistryRepository -> EloRegistryRepository: expected AddScoped in WorkoutProgress; actual AddScoped in Identity."))
+            .SetName("Canonical_Repository_Registration_Guard_Should_Reject_Old_Module_Fixture");
+
+        yield return new TestCaseData(new CanonicalRepositoryRegistrationFixture(
+                eloRegistration,
+                new[]
+                {
+                    new InfrastructureRegistration(
+                        "IEloRegistryRepository",
+                        "EloRegistryRepository",
+                        "WorkoutProgress",
+                        "AddScoped",
+                        "WorkoutProgressServiceCollectionExtensions.cs"),
+                    new InfrastructureRegistration(
+                        "IEloRegistryRepository",
+                        "EloRegistryRepository",
+                        "WorkoutProgress",
+                        "AddScoped",
+                        "DuplicateWorkoutProgressServiceCollectionExtensions.cs")
+                },
+                "IEloRegistryRepository -> EloRegistryRepository: expected exactly one AddScoped registration in WorkoutProgress; found 2 registrations in WorkoutProgress."))
+            .SetName("Canonical_Repository_Registration_Guard_Should_Reject_Duplicate_Fixture");
+    }
+
+    private static string GetConfigurationModule(string catalogOwner)
+    {
+        return catalogOwner switch
+        {
+            PersistedEntityOwnershipCatalog.IdentityModuleName => "Identity",
+            PersistedEntityOwnershipCatalog.PlatformModuleName => "Platform",
+            PersistedEntityOwnershipCatalog.WorkoutProgressModuleName => "WorkoutProgress",
+            _ => throw new InvalidOperationException($"No physical configuration-folder mapping exists for catalog owner '{catalogOwner}'.")
+        };
+    }
+
     private static List<RepositoryDeclaration> CollectRepositoryDeclarations(IEnumerable<string> repositoryFiles, CSharpParseOptions parseOptions)
     {
         var declarations = new List<RepositoryDeclaration>();
@@ -169,6 +291,44 @@ public sealed class ModulePersistenceOwnershipGuardTests
         }
 
         return declarations;
+    }
+
+    private static List<CanonicalRepositoryRegistrationViolation> FindCanonicalRepositoryRegistrationViolations(
+        IEnumerable<InfrastructureRegistration> registrations,
+        IEnumerable<CanonicalRepositoryRegistration> expectedRegistrations)
+    {
+        var violations = new List<CanonicalRepositoryRegistrationViolation>();
+
+        foreach (var expected in expectedRegistrations)
+        {
+            var matches = registrations
+                .Where(registration =>
+                    registration.Interface == expected.Interface &&
+                    registration.Implementation == expected.Implementation)
+                .ToList();
+
+            if (matches.Count != 1)
+            {
+                var actualModules = matches.Count == 0
+                    ? "no module"
+                    : string.Join(
+                        ", ",
+                        matches
+                            .Select(registration => registration.Module ?? "root")
+                            .Distinct(StringComparer.Ordinal)
+                            .OrderBy(module => module, StringComparer.Ordinal));
+                violations.Add(CanonicalRepositoryRegistrationViolation.ForCount(expected, matches.Count, actualModules));
+                continue;
+            }
+
+            var registration = matches.Single();
+            if (registration.Module != expected.Module || registration.RegistrationMethod != "AddScoped")
+            {
+                violations.Add(CanonicalRepositoryRegistrationViolation.ForPlacement(expected, registration));
+            }
+        }
+
+        return violations;
     }
 
     private static List<InfrastructureRegistration> CollectRegistrations(IEnumerable<string> serviceExtensionFiles, CSharpParseOptions parseOptions)
@@ -199,6 +359,7 @@ public sealed class ModulePersistenceOwnershipGuardTests
                         NormalizeType(genericName.TypeArgumentList.Arguments[0]),
                         NormalizeType(genericName.TypeArgumentList.Arguments[1]),
                         module,
+                        genericName.Identifier.ValueText,
                         file));
                     continue;
                 }
@@ -209,7 +370,12 @@ public sealed class ModulePersistenceOwnershipGuardTests
                     var factoryImplementation = ExtractFactoryImplementation(invocation);
                     if (factoryImplementation != null)
                     {
-                        registrations.Add(new InfrastructureRegistration(interfaceType, factoryImplementation, module, file));
+                        registrations.Add(new InfrastructureRegistration(
+                            interfaceType,
+                            factoryImplementation,
+                            module,
+                            genericName.Identifier.ValueText,
+                            file));
                     }
                 }
             }
@@ -235,7 +401,20 @@ public sealed class ModulePersistenceOwnershipGuardTests
                     continue;
                 }
 
-                declarations.Add(new ConfigurationDeclaration(module, typeDeclaration.Identifier.ValueText, file));
+                var configuredEntity = ResolveConfiguredEntityType(typeDeclaration);
+                string? catalogOwner = null;
+                if (configuredEntity != null &&
+                    ArchitectureTestHelpers.TryGetPersistedEntityOwner(configuredEntity, out var resolvedCatalogOwner))
+                {
+                    catalogOwner = resolvedCatalogOwner;
+                }
+
+                declarations.Add(new ConfigurationDeclaration(
+                    module,
+                    typeDeclaration.Identifier.ValueText,
+                    configuredEntity,
+                    catalogOwner,
+                    file));
             }
         }
 
@@ -283,6 +462,16 @@ public sealed class ModulePersistenceOwnershipGuardTests
         return !typeDeclaration.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.AbstractKeyword));
     }
 
+    private static string? ResolveConfiguredEntityType(ClassDeclarationSyntax configurationType)
+    {
+        return configurationType.BaseList?.Types
+            .Select(baseType => baseType.Type)
+            .OfType<GenericNameSyntax>()
+            .SingleOrDefault(type => type.Identifier.ValueText == "IEntityTypeConfiguration")
+            ?.TypeArgumentList.Arguments.SingleOrDefault()
+            ?.ToString();
+    }
+
     private static string? ResolveRepositoryInterface(ClassDeclarationSyntax typeDeclaration)
     {
         if (typeDeclaration.BaseList == null)
@@ -324,13 +513,53 @@ public sealed class ModulePersistenceOwnershipGuardTests
         public override string ToString() => $"{SourceFile}: {Interface} -> {Implementation}";
     }
 
-    private sealed record InfrastructureRegistration(string Interface, string Implementation, string? Module, string SourceFile)
+    private sealed record CanonicalRepositoryRegistration(string Interface, string Implementation, string Module);
+
+    private sealed record CanonicalRepositoryRegistrationFixture(
+        CanonicalRepositoryRegistration ExpectedRegistration,
+        IReadOnlyList<InfrastructureRegistration> Registrations,
+        string ExpectedDiagnostic);
+
+    private sealed record CanonicalRepositoryRegistrationViolation(string Diagnostic)
     {
-        public override string ToString() => $"{SourceFile} [{Module ?? "root"}]: {Interface} -> {Implementation}";
+        public static CanonicalRepositoryRegistrationViolation ForCount(
+            CanonicalRepositoryRegistration expected,
+            int count,
+            string actualModules)
+        {
+            return new CanonicalRepositoryRegistrationViolation(
+                $"{expected.Interface} -> {expected.Implementation}: expected exactly one AddScoped registration in {expected.Module}; found {count} registrations in {actualModules}.");
+        }
+
+        public static CanonicalRepositoryRegistrationViolation ForPlacement(
+            CanonicalRepositoryRegistration expected,
+            InfrastructureRegistration actual)
+        {
+            return new CanonicalRepositoryRegistrationViolation(
+                $"{expected.Interface} -> {expected.Implementation}: expected AddScoped in {expected.Module}; actual {actual.RegistrationMethod} in {actual.Module ?? "root"}.");
+        }
+
+        public override string ToString() => Diagnostic;
     }
 
-    private sealed record ConfigurationDeclaration(string? Module, string ConfigurationType, string SourceFile)
+    private sealed record InfrastructureRegistration(
+        string Interface,
+        string Implementation,
+        string? Module,
+        string RegistrationMethod,
+        string SourceFile)
     {
-        public override string ToString() => $"{SourceFile} [{Module ?? "root"}]: {ConfigurationType}";
+        public override string ToString() => $"{SourceFile} [{Module ?? "root"}; {RegistrationMethod}]: {Interface} -> {Implementation}";
+    }
+
+    private sealed record ConfigurationDeclaration(
+        string? Module,
+        string ConfigurationType,
+        string? ConfiguredEntity,
+        string? CatalogOwner,
+        string SourceFile)
+    {
+        public override string ToString()
+            => $"{SourceFile} [{Module ?? "root"}; catalog owner: {CatalogOwner ?? "unmapped"}]: {ConfigurationType} -> {ConfiguredEntity ?? "unresolved entity"}";
     }
 }

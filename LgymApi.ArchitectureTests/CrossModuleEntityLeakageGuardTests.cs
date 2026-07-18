@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using LgymApi.Domain.Entities;
 
 namespace LgymApi.ArchitectureTests;
 
@@ -9,53 +10,11 @@ public sealed class CrossModuleEntityLeakageGuardTests
 {
     private const string GuardId = "CrossModuleEntityLeakage";
 
-    private static readonly IReadOnlyDictionary<string, string> EntityOwnerByMetadataName = new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-        ["LgymApi.Domain.Entities.User"] = "Identity & Accounts",
-        ["LgymApi.Domain.Entities.Role"] = "Identity & Accounts",
-        ["LgymApi.Domain.Entities.EloRegistry"] = "Identity & Accounts",
-        ["LgymApi.Domain.Entities.UserSession"] = "Identity & Accounts",
-        ["LgymApi.Domain.Entities.UserExternalLogin"] = "Identity & Accounts",
-        ["LgymApi.Domain.Entities.UserTutorialProgress"] = "Identity & Accounts",
-        ["LgymApi.Domain.Entities.UserTutorialStepProgress"] = "Identity & Accounts",
-        ["LgymApi.Domain.Entities.InAppNotification"] = "Notifications",
-        ["LgymApi.Domain.Entities.PushInstallation"] = "Notifications",
-        ["LgymApi.Domain.Entities.PushNotificationMessage"] = "Notifications",
-        ["LgymApi.Domain.Entities.ReportTemplate"] = "Reporting",
-        ["LgymApi.Domain.Entities.ReportTemplateField"] = "Reporting",
-        ["LgymApi.Domain.Entities.ReportRequest"] = "Reporting",
-        ["LgymApi.Domain.Entities.ReportSubmission"] = "Reporting",
-        ["LgymApi.Domain.Entities.RecurringReportAssignment"] = "Reporting",
-        ["LgymApi.Domain.Entities.Photo"] = "Reporting",
-        ["LgymApi.Domain.Entities.PhotoUploadSession"] = "Reporting",
-        ["LgymApi.Domain.Entities.Plan"] = "Training Planning",
-        ["LgymApi.Domain.Entities.PlanDay"] = "Training Planning",
-        ["LgymApi.Domain.Entities.PlanDayExercise"] = "Training Planning",
-        ["LgymApi.Domain.Entities.Training"] = "Workout & Progress",
-        ["LgymApi.Domain.Entities.Gym"] = "Workout & Progress",
-        ["LgymApi.Domain.Entities.Exercise"] = "Workout & Progress",
-        ["LgymApi.Domain.Entities.ExerciseTranslation"] = "Workout & Progress",
-        ["LgymApi.Domain.Entities.ExerciseScore"] = "Workout & Progress",
-        ["LgymApi.Domain.Entities.TrainingExerciseScore"] = "Workout & Progress",
-        ["LgymApi.Domain.Entities.MainRecord"] = "Workout & Progress",
-        ["LgymApi.Domain.Entities.Measurement"] = "Workout & Progress",
-        ["LgymApi.Domain.Entities.TrainerInvitation"] = "Coaching",
-        ["LgymApi.Domain.Entities.TrainerTraineeLink"] = "Coaching",
-        ["LgymApi.Domain.Entities.TraineeNote"] = "Coaching",
-        ["LgymApi.Domain.Entities.TraineeNoteHistory"] = "Coaching",
-        ["LgymApi.Domain.Entities.DietPlan"] = "Nutrition",
-        ["LgymApi.Domain.Entities.DietMeal"] = "Nutrition",
-        ["LgymApi.Domain.Entities.DietPlanHistory"] = "Nutrition",
-        ["LgymApi.Domain.Entities.SupplementPlan"] = "Nutrition",
-        ["LgymApi.Domain.Entities.SupplementPlanItem"] = "Nutrition",
-        ["LgymApi.Domain.Entities.SupplementIntakeLog"] = "Nutrition"
-    };
-
     private static readonly IReadOnlyDictionary<string, string> RepositoryOwnerByMetadataName = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["LgymApi.Application.Repositories.IUserRepository"] = "Identity & Accounts",
         ["LgymApi.Application.Repositories.IRoleRepository"] = "Identity & Accounts",
-        ["LgymApi.Application.Repositories.IEloRegistryRepository"] = "Identity & Accounts",
+        ["LgymApi.Application.Repositories.IEloRegistryRepository"] = "Workout & Progress",
         ["LgymApi.Application.Repositories.IInAppNotificationRepository"] = "Notifications",
         ["LgymApi.Application.Repositories.IPushInstallationRepository"] = "Notifications",
         ["LgymApi.Application.Repositories.IPushNotificationMessageRepository"] = "Notifications",
@@ -69,7 +28,7 @@ public sealed class CrossModuleEntityLeakageGuardTests
         ["LgymApi.Application.Repositories.IExerciseRepository"] = "Workout & Progress",
         ["LgymApi.Application.Repositories.IExerciseScoreRepository"] = "Workout & Progress",
         ["LgymApi.Application.Repositories.ITrainingExerciseScoreRepository"] = "Workout & Progress",
-        ["LgymApi.Application.Repositories.IMainRecordRepository"] = "Coaching",
+        ["LgymApi.Application.Repositories.IMainRecordRepository"] = "Workout & Progress",
         ["LgymApi.Application.Repositories.IMeasurementRepository"] = "Workout & Progress",
         ["LgymApi.Application.Repositories.ITrainerRelationshipRepository"] = "Coaching",
         ["LgymApi.Application.Repositories.ITraineeNoteRepository"] = "Coaching",
@@ -77,10 +36,95 @@ public sealed class CrossModuleEntityLeakageGuardTests
         ["LgymApi.Application.Repositories.ISupplementationRepository"] = "Nutrition"
     };
 
+    [TestCase("LgymApi.Application.Repositories.IEloRegistryRepository", "Workout & Progress")]
+    [TestCase("LgymApi.Application.Repositories.IMainRecordRepository", "Workout & Progress")]
+    public void Moved_Repositories_Should_Use_Canonical_Owners(string metadataName, string expectedOwner)
+    {
+        Assert.That(RepositoryOwnerByMetadataName[metadataName], Is.EqualTo(expectedOwner));
+    }
+
+    [TestCase("LgymApi.Application/EloRegistry/EloRegistryService.cs", "Workout & Progress")]
+    [TestCase("LgymApi.Application/MainRecords/MainRecordsService.cs", "Workout & Progress")]
+    public void Moved_Application_Paths_Should_Use_Canonical_Owners(string path, string expectedOwner)
+    {
+        Assert.That(TryGetApplicationModuleName(path), Is.EqualTo(expectedOwner));
+    }
+
+    [Test]
+    public void Direct_Foreign_Entity_Exposure_Should_Fail_While_Typed_Ids_Are_Allowed()
+    {
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+        var applicationTree = CSharpSyntaxTree.ParseText("""
+            using LgymApi.Domain.Entities;
+            using LgymApi.Domain.ValueObjects;
+
+            namespace LgymApi.Application.Features.Reporting;
+
+            public sealed class ForeignEntityExposure
+            {
+                public User ForeignUser { get; init; }
+                public Id<User> ForeignUserId { get; init; }
+                public Id<LgymApi.Domain.Entities.User> FullyQualifiedForeignUserId { get; init; }
+
+                public User ReturnForeignUser() => default;
+
+                public void AcceptForeignUser(User user)
+                {
+                }
+            }
+            """, path: Path.Combine(repoRoot, "LgymApi.Application", "Features", "Reporting", "ForeignEntityExposure.cs"));
+        var compilation = CSharpCompilation.Create(
+            "CrossModuleEntityLeakageFixture",
+            [applicationTree],
+            [
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(User).Assembly.Location)
+            ],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var expectedOwner = PersistedEntityOwnershipCatalog.Entries
+            .Single(entry => entry.EntityType == typeof(User))
+            .Owner;
+        var violations = CollectViolations(
+            compilation,
+            [applicationTree],
+            repoRoot);
+
+        TestContext.Progress.WriteLine(
+            $"Typed fixture source 'ForeignUserId' must not expose '{typeof(User).FullName}'; expected direct owner: {expectedOwner}.");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(violations.Select(violation => violation.SourceSymbolOrPath), Has.Some.Contains("ForeignUser"));
+            Assert.That(violations.Select(violation => violation.SourceSymbolOrPath), Has.Some.Contains("ReturnForeignUser"));
+            Assert.That(violations.Select(violation => violation.SourceSymbolOrPath), Has.Some.Contains("AcceptForeignUser"));
+            Assert.That(violations.Select(violation => violation.SourceSymbolOrPath), Has.None.Contains("ForeignUserId"));
+            Assert.That(violations.Select(violation => violation.SourceSymbolOrPath), Has.None.Contains("FullyQualifiedForeignUserId"));
+            Assert.That(violations.All(violation => violation.TargetModule == expectedOwner), Is.True);
+        });
+    }
+
     [Test]
     public void Application_Modules_Should_Not_Use_Other_Modules_Domain_Entities_Or_Repositories_Directly()
     {
         var (repoRoot, compilation, syntaxTrees) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
+        var violations = CollectViolations(compilation, syntaxTrees, repoRoot);
+
+        Assert.Multiple(() =>
+        {
+            ArchitectureTestHelpers.AssertNoUnexpectedModuleBoundaryViolations(GuardId, violations);
+
+            Assert.That(
+                violations.Any(v => v.TargetSymbolOrPath.Contains("Features.", StringComparison.Ordinal)),
+                Is.False,
+                "Cross-module leakage guard must stay focused on direct entity/repository usage and must not block published contracts/read models/events.");
+        });
+    }
+
+    private static IReadOnlyList<ModuleBoundaryObservedViolation> CollectViolations(
+        CSharpCompilation compilation,
+        IEnumerable<SyntaxTree> syntaxTrees,
+        string repoRoot)
+    {
         var observedViolations = new Dictionary<string, ModuleBoundaryObservedViolation>(StringComparer.Ordinal);
 
         foreach (var tree in syntaxTrees)
@@ -102,6 +146,11 @@ public sealed class CrossModuleEntityLeakageGuardTests
 
             foreach (var typeSyntax in root.DescendantNodes().OfType<TypeSyntax>())
             {
+                if (IsTypedEntityIdArgument(typeSyntax, semanticModel))
+                {
+                    continue;
+                }
+
                 var symbol = semanticModel.GetTypeInfo(typeSyntax).Type;
                 if (symbol == null)
                 {
@@ -128,17 +177,7 @@ public sealed class CrossModuleEntityLeakageGuardTests
             }
         }
 
-        var violations = observedViolations.Values.OrderBy(v => v.IdentityKey, StringComparer.Ordinal).ToList();
-
-        Assert.Multiple(() =>
-        {
-            ArchitectureTestHelpers.AssertNoUnexpectedModuleBoundaryViolations(GuardId, violations);
-
-            Assert.That(
-                violations.Any(v => v.TargetSymbolOrPath.Contains("Features.", StringComparison.Ordinal)),
-                Is.False,
-                "Cross-module leakage guard must stay focused on direct entity/repository usage and must not block published contracts/read models/events.");
-        });
+        return observedViolations.Values.OrderBy(violation => violation.IdentityKey, StringComparer.Ordinal).ToList();
     }
 
     private static IEnumerable<INamedTypeSymbol> EnumerateRelevantNamedTypes(ITypeSymbol symbol)
@@ -154,6 +193,11 @@ public sealed class CrossModuleEntityLeakageGuardTests
         if (symbol is INamedTypeSymbol namedType)
         {
             yield return namedType;
+
+            if (IsTypedEntityId(namedType))
+            {
+                yield break;
+            }
 
             foreach (var typeArgument in namedType.TypeArguments)
             {
@@ -183,12 +227,12 @@ public sealed class CrossModuleEntityLeakageGuardTests
 
     private static bool TryResolveTargetOwner(INamedTypeSymbol symbol, out string ownerModule)
     {
-        var metadataName = symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", string.Empty, StringComparison.Ordinal);
-
-        if (EntityOwnerByMetadataName.TryGetValue(metadataName, out ownerModule!))
+        if (ArchitectureTestHelpers.TryGetPersistedEntityOwner(symbol, out ownerModule))
         {
             return true;
         }
+
+        var metadataName = symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", string.Empty, StringComparison.Ordinal);
 
         if (RepositoryOwnerByMetadataName.TryGetValue(metadataName, out ownerModule!))
         {
@@ -197,6 +241,22 @@ public sealed class CrossModuleEntityLeakageGuardTests
 
         ownerModule = string.Empty;
         return false;
+    }
+
+    private static bool IsTypedEntityIdArgument(TypeSyntax typeSyntax, SemanticModel semanticModel)
+    {
+        return typeSyntax.Ancestors()
+            .OfType<TypeArgumentListSyntax>()
+            .Any(typeArgumentList =>
+                typeArgumentList.Parent is GenericNameSyntax genericName &&
+                semanticModel.GetTypeInfo(genericName).Type is INamedTypeSymbol type &&
+                IsTypedEntityId(type));
+    }
+
+    private static bool IsTypedEntityId(INamedTypeSymbol type)
+    {
+        return type.OriginalDefinition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ==
+            "global::LgymApi.Domain.ValueObjects.Id<TEntity>";
     }
 
     private static string? GetEnclosingSourceSymbol(SemanticModel semanticModel, SyntaxNode node)
@@ -234,7 +294,6 @@ public sealed class CrossModuleEntityLeakageGuardTests
         {
             var path when path.StartsWith("LgymApi.Application/User/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/Role/", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("LgymApi.Application/EloRegistry/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/ExternalAuth/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/Features/Tutorial/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/Features/PasswordReset/", StringComparison.OrdinalIgnoreCase)
@@ -248,15 +307,17 @@ public sealed class CrossModuleEntityLeakageGuardTests
                 || path.StartsWith("LgymApi.Application/PlanDay/", StringComparison.OrdinalIgnoreCase)
                 => "Training Planning",
             var path when path.StartsWith("LgymApi.Application/Training/", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("LgymApi.Application/EloRegistry/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/Exercise/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/ExerciseScores/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/Gym/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/Measurements/", StringComparison.OrdinalIgnoreCase)
                 => "Workout & Progress",
             var path when path.StartsWith("LgymApi.Application/TrainerRelationships/", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("LgymApi.Application/MainRecords/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/Features/TraineeNotes/", StringComparison.OrdinalIgnoreCase)
                 => "Coaching",
+            var path when path.StartsWith("LgymApi.Application/MainRecords/", StringComparison.OrdinalIgnoreCase)
+                => "Workout & Progress",
             var path when path.StartsWith("LgymApi.Application/Features/DietPlans/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/Features/Supplementation/", StringComparison.OrdinalIgnoreCase)
                 => "Nutrition",

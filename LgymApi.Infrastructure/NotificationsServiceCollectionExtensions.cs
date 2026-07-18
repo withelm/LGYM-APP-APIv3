@@ -1,7 +1,9 @@
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common.Push;
 using LgymApi.Infrastructure.Configuration;
+using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
@@ -48,6 +50,11 @@ public static partial class ServiceCollectionExtensions
         services.AddScoped<IPushInstallationRepository, PushInstallationRepository>();
         services.AddScoped<IPushNotificationMessageRepository, PushNotificationMessageRepository>();
         services.AddScoped<IInAppNotificationRepository, InAppNotificationRepository>();
+        services.AddScoped<IEmailNotificationLogRepository>(sp =>
+            new EmailNotificationLogRepository(
+                sp.GetRequiredService<AppDbContext>(),
+                sp.GetRequiredService<BackgroundCommandOptions>()));
+        services.AddScoped<IEmailNotificationSubscriptionRepository, EmailNotificationSubscriptionRepository>();
 
         return services;
     }

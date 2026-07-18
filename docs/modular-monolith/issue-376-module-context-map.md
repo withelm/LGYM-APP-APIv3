@@ -160,6 +160,16 @@ Non-owner modules may read published views or call published contracts, but they
 The solution still uses one production AppDbContext, and the production deployment still uses one database; those shared technical roots do not create shared write ownership.
 Shared platform/reference data may be read by all modules, but only the owning module can change it.
 
+## Persistence and identifier rules
+
+The monolith has one production `AppDbContext`, one database, and one EF Core migration stream. Those technical roots do not loosen the one-owner write rule. The executable ownership catalog is `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs`; its verified documentation view is in `issue-376-ownership-map.md`.
+
+Internal known entity IDs use `Id<T>`. EF Core writes their provider values as PostgreSQL `uuid` columns. HTTP and JSON UUID values remain strings at the API boundary. The only polymorphic string ID exceptions are `PushNotificationMessage.EntityId` and `PushEventPayload.EntityId`.
+
+Architecture-debt allowlists are no-growth. A recorded violation may only be re-keyed when its owner changes and its source and target identities stay exactly the same. New violations, wildcard exemptions, and re-keying to a different source or target are forbidden. Remove stale entries instead of preserving debt that is no longer observed.
+
+Repositories stage writes. Application services own `IUnitOfWork.SaveChangesAsync()` and, for multi-step writes, the explicit transaction commit or rollback. The PostgreSQL transaction tests prove visibility only after commit and prove rollback leaves no persisted write after a forced failure.
+
 ## Extraction criteria
 
 Extraction is justified only when all of these conditions are true:

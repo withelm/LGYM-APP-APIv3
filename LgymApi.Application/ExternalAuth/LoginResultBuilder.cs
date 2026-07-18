@@ -12,7 +12,6 @@ namespace LgymApi.Application.ExternalAuth;
 
 public sealed class LoginResultBuilder : ILoginResultBuilder
 {
-    private readonly IEloRegistryRepository _eloRepository;
     private readonly IRankService _rankService;
     private readonly ITokenService _tokenService;
     private readonly ITutorialService _tutorialService;
@@ -23,14 +22,12 @@ public sealed class LoginResultBuilder : ILoginResultBuilder
         IUserRepository userRepository,
         IUserSessionStore userSessionStore,
         ITokenService tokenService,
-        IEloRegistryRepository eloRepository,
         IRankService rankService,
         ITutorialService tutorialService)
     {
         _userRepository = userRepository;
         _userSessionStore = userSessionStore;
         _tokenService = tokenService;
-        _eloRepository = eloRepository;
         _rankService = rankService;
         _tutorialService = tutorialService;
     }
@@ -55,7 +52,6 @@ public sealed class LoginResultBuilder : ILoginResultBuilder
         var session = await _userSessionStore.CreateSessionAsync(userWithRoles.Id, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
 
         var token = _tokenService.CreateToken(userWithRoles.Id, session.Id, session.Jti, roles, permissionClaims);
-        var elo = await _eloRepository.GetLatestEloAsync(userWithRoles.Id, cancellationToken) ?? 1000;
         var nextRank = _rankService.GetNextRank(userWithRoles.ProfileRank);
         var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(userWithRoles.Id, cancellationToken);
 
@@ -73,7 +69,7 @@ public sealed class LoginResultBuilder : ILoginResultBuilder
                 PreferredTimeZone = string.IsNullOrWhiteSpace(userWithRoles.PreferredTimeZone) ? preferredTimeZone : userWithRoles.PreferredTimeZone,
                 CreatedAt = userWithRoles.CreatedAt.UtcDateTime,
                 UpdatedAt = userWithRoles.UpdatedAt.UtcDateTime,
-                Elo = elo,
+                Elo = 1000,
                 NextRank = nextRank == null ? null : new RankInfo { Name = nextRank.Name, NeedElo = nextRank.NeedElo },
                 IsDeleted = userWithRoles.IsDeleted,
                 IsVisibleInRanking = userWithRoles.IsVisibleInRanking,

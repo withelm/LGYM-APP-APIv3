@@ -10,7 +10,7 @@ public sealed class EloRegistryProfile : IMappingProfile
     {
         configuration.CreateMap<EloRegistryChartEntry, EloRegistryBaseChartDto>((source, _) => new EloRegistryBaseChartDto
         {
-            Id = source.Id,
+            Id = source.Id.ToString(),
             Value = source.Value,
             Date = source.Date
         });

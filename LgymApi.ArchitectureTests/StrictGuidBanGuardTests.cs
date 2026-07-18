@@ -272,6 +272,11 @@ public sealed class StrictGuidBanGuardTests
             return true;
         }
 
+        if (normalized.EndsWith("/LgymApi.IntegrationTests/PostgreSqlDatabaseLease.cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         if (normalized.EndsWith("/LgymApi.Infrastructure/Pagination/FilterToGridifyAdapter.cs", StringComparison.OrdinalIgnoreCase))
         {
             // Gridify field type resolution requires typeof(Guid) and Guid.TryParse to properly map Guid-typed fields

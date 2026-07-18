@@ -2,7 +2,7 @@ using LgymApi.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace LgymApi.Infrastructure.Data.Configurations.Platform;
+namespace LgymApi.Infrastructure.Data.Configurations.Identity;
 
 internal sealed class UserSessionEntityTypeConfiguration : IEntityTypeConfiguration<UserSession>
 {
@@ -15,7 +15,7 @@ internal sealed class UserSessionEntityTypeConfiguration : IEntityTypeConfigurat
         builder.HasIndex(e => e.UserId);
         builder.HasIndex(e => e.Jti)
             .IsUnique()
-            .HasFilter(PlatformConfigurationFilters.ActiveRowsFilter);
+            .HasFilter(IdentityConfigurationFilters.ActiveRowsFilter);
 
         builder.HasOne<User>()
             .WithMany()

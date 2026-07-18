@@ -18,7 +18,6 @@ public static partial class ServiceCollectionExtensions
         services.AddScoped<IUserExternalLoginRepository, UserExternalLoginRepository>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
-        services.AddScoped<IEloRegistryRepository, EloRegistryRepository>();
         services.AddScoped<ITutorialProgressRepository, TutorialProgressRepository>();
 
         return services;

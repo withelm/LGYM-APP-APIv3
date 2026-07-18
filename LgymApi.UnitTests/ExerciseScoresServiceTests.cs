@@ -7,6 +7,7 @@ using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
@@ -40,6 +41,78 @@ public sealed class ExerciseScoresServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidExerciseScoreError>();
+    }
+
+    [Test]
+    public async Task GetExerciseScoresChartDataAsync_WhenScoresShareATraining_ReturnsBestScoresInFirstTrainingOrder()
+    {
+        var userId = Id<User>.New();
+        var exerciseId = Id<Exercise>.New();
+        var firstTrainingId = Id<Training>.New();
+        var secondTrainingId = Id<Training>.New();
+        var firstTraining = new Training
+        {
+            Id = firstTrainingId,
+            CreatedAt = new DateTimeOffset(2026, 1, 2, 8, 0, 0, TimeSpan.Zero)
+        };
+        var secondTraining = new Training
+        {
+            Id = secondTrainingId,
+            CreatedAt = new DateTimeOffset(2026, 1, 3, 8, 0, 0, TimeSpan.Zero)
+        };
+        var exercise = new Exercise { Id = exerciseId, Name = "Squat" };
+        var scores = new List<ExerciseScore>
+        {
+            new()
+            {
+                Id = Id<ExerciseScore>.New(),
+                UserId = userId,
+                ExerciseId = exerciseId,
+                TrainingId = secondTrainingId,
+                Reps = 5,
+                Weight = 80,
+                Exercise = exercise,
+                Training = secondTraining,
+                CreatedAt = new DateTimeOffset(2026, 1, 3, 8, 0, 0, TimeSpan.Zero)
+            },
+            new()
+            {
+                Id = Id<ExerciseScore>.New(),
+                UserId = userId,
+                ExerciseId = exerciseId,
+                TrainingId = firstTrainingId,
+                Reps = 5,
+                Weight = 100,
+                Exercise = exercise,
+                Training = firstTraining,
+                CreatedAt = new DateTimeOffset(2026, 1, 2, 8, 0, 0, TimeSpan.Zero)
+            },
+            new()
+            {
+                Id = Id<ExerciseScore>.New(),
+                UserId = userId,
+                ExerciseId = exerciseId,
+                TrainingId = firstTrainingId,
+                Reps = 5,
+                Weight = 150,
+                Exercise = exercise,
+                Training = firstTraining,
+                CreatedAt = new DateTimeOffset(2026, 1, 2, 9, 0, 0, TimeSpan.Zero)
+            }
+        };
+        var userRepository = Substitute.For<IUserRepository>();
+        var scoreRepository = Substitute.For<IExerciseScoreRepository>();
+        userRepository.FindByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(new User { Id = userId });
+        scoreRepository.GetByUserAndExerciseAsync(userId, exerciseId, Arg.Any<CancellationToken>()).Returns(scores);
+        var service = new ExerciseScoresService(userRepository, scoreRepository);
+
+        var result = await service.GetExerciseScoresChartDataAsync(userId, exerciseId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Select(entry => entry.Id).Should().Equal($"{exerciseId}-{firstTrainingId}", $"{exerciseId}-{secondTrainingId}");
+        result.Value.Select(entry => entry.Value).Should().Equal(173, 92);
+        result.Value.Select(entry => entry.Date).Should().Equal("01/02", "01/03");
+        result.Value.Select(entry => entry.ExerciseId).Should().OnlyContain(id => id == exerciseId);
     }
 
     private sealed class NoOpUserRepository : IUserRepository

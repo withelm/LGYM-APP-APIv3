@@ -24,7 +24,7 @@ public interface IReportingService
     Task<Result<List<ReportSubmissionResult>, AppError>> GetTraineeSubmissionsAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken = default);
 
     Task<Result<InitiatePhotoUploadResult, AppError>> InitiatePhotoUploadAsync(UserEntity currentUser, InitiatePhotoUploadCommand command, CancellationToken cancellationToken = default);
-    Task<Result<SignedReadUrlResult, AppError>> GetSignedReadUrlAsync(UserEntity currentUser, string photoId, CancellationToken cancellationToken = default);
+    Task<Result<SignedReadUrlResult, AppError>> GetSignedReadUrlAsync(UserEntity currentUser, Id<Photo> photoId, CancellationToken cancellationToken = default);
     Task<Result<CompletePhotoUploadResult, AppError>> CompletePhotoUploadAsync(UserEntity currentUser, CompletePhotoUploadCommand command, CancellationToken cancellationToken = default);
     Task<Result<List<PhotoHistoryItemResult>, AppError>> GetPhotoHistoryAsync(UserEntity currentUser, GetPhotoHistoryCommand command, CancellationToken cancellationToken = default);
 }

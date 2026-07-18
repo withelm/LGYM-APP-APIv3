@@ -1,4 +1,3 @@
-using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.ExerciseScores;
 using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.TraineeNotes;
@@ -11,7 +10,6 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddCoachingModule(this IServiceCollection services)
     {
-        services.AddScoped<IEloRegistryService, EloRegistryService>();
         services.AddScoped<IExerciseScoresService, ExerciseScoresService>();
         services.AddScoped<IMainRecordsServiceDependencies, MainRecordsServiceDependencies>();
         services.AddScoped<IMainRecordsService, MainRecordsService>();

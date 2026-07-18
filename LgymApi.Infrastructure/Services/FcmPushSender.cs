@@ -142,7 +142,7 @@ public sealed class FcmPushSender : IPushProviderSender
                     ["type"] = payload.Type,
                     ["eventId"] = payload.EventId,
                     ["entityId"] = payload.EntityId ?? string.Empty,
-                    ["inAppNotificationId"] = payload.InAppNotificationId ?? string.Empty,
+                    ["inAppNotificationId"] = payload.InAppNotificationId?.ToString() ?? string.Empty,
                     ["deeplink"] = payload.Deeplink ?? string.Empty
                 }
             }

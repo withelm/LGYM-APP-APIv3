@@ -10,7 +10,6 @@ public static partial class ServiceCollectionExtensions
     {
         services.AddScoped<ITrainerRelationshipRepository, TrainerRelationshipRepository>();
         services.AddScoped<ITraineeNoteRepository, TraineeNoteRepository>();
-        services.AddScoped<IMainRecordRepository, MainRecordRepository>();
 
         return services;
     }

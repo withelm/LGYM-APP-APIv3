@@ -55,7 +55,7 @@ public sealed class ExerciseScoresService : IExerciseScoresService
                     Value = oneRepMax,
                     Date = trainingDate,
                     ExerciseName = score.Exercise.Name,
-                    ExerciseId = score.ExerciseId.ToString()
+                    ExerciseId = score.ExerciseId
                 };
             }
         }

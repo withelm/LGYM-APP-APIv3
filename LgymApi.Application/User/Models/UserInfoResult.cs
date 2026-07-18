@@ -10,7 +10,7 @@ public sealed class UserInfoResult
     public string PreferredTimeZone { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
-    public int Elo { get; init; }
+    public int Elo { get; set; }
     public RankInfo? NextRank { get; init; }
     public bool IsDeleted { get; init; }
     public bool IsVisibleInRanking { get; init; }

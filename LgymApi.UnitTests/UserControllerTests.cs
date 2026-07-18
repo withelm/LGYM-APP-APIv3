@@ -6,6 +6,8 @@ using LgymApi.Api.Features.User.Controllers;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.PasswordReset;
+using LgymApi.Application.Features.EloRegistry;
+using LgymApi.Application.Features.EloRegistry.Models;
 using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping;
@@ -26,7 +28,8 @@ public sealed class UserControllerTests
     public async Task Register_PassesAcceptLanguageHeader_WhenPresent()
     {
         var userService = new StubUserService();
-        var controller = CreateController(userService);
+        var eloRegistryService = new StubEloRegistryService();
+        var controller = CreateController(userService, eloRegistryService);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
         controller.Request.Headers["Accept-Language"] = "pl-PL,pl;q=0.9";
 
@@ -39,7 +42,7 @@ public sealed class UserControllerTests
             IsVisibleInRanking = true
         });
 
-        userService.LastPreferredLanguage.Should().Be("pl-PL,pl;q=0.9");
+        eloRegistryService.LastPreferredLanguage.Should().Be("pl-PL,pl;q=0.9");
         action.Should().BeOfType<OkObjectResult>();
         var dto = ((OkObjectResult)action).Value as ResponseMessageDto;
         dto.Should().NotBeNull();
@@ -49,7 +52,8 @@ public sealed class UserControllerTests
     public async Task Register_PassesNullPreferredLanguage_WhenHeaderMissing()
     {
         var userService = new StubUserService();
-        var controller = CreateController(userService);
+        var eloRegistryService = new StubEloRegistryService();
+        var controller = CreateController(userService, eloRegistryService);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
         var action = await controller.Register(new RegisterUserRequest
@@ -61,7 +65,7 @@ public sealed class UserControllerTests
             IsVisibleInRanking = true
         });
 
-        userService.LastPreferredLanguage.Should().BeNull();
+        eloRegistryService.LastPreferredLanguage.Should().BeNull();
         action.Should().BeOfType<OkObjectResult>();
     }
 
@@ -69,12 +73,13 @@ public sealed class UserControllerTests
     public async Task Register_WhenServiceFails_ReturnsErrorActionResult()
     {
         const string message = "invalid registration";
-        var userService = new StubUserService
+        var userService = new StubUserService();
+        var eloRegistryService = new StubEloRegistryService
         {
             RegisterResult = Result<Unit, AppError>.Failure(new BadRequestError(message))
         };
 
-        var controller = CreateController(userService);
+        var controller = CreateController(userService, eloRegistryService);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
         var action = await controller.Register(new RegisterUserRequest
@@ -140,14 +145,20 @@ public sealed class UserControllerTests
         userService.LastPushDisassociate.Value.Input.InstallationKey.Should().Be("device-2");
     }
 
-    private static UserController CreateController(IUserService userService)
+    private static UserController CreateController(
+        IUserService userService,
+        IEloRegistryService? eloRegistryService = null)
     {
         var services = new ServiceCollection();
         services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
         using var provider = services.BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var stubPasswordResetService = new StubPasswordResetService();
-        return new UserController(userService, stubPasswordResetService, mapper);
+        return new UserController(
+            userService,
+            eloRegistryService ?? new StubEloRegistryService(),
+            stubPasswordResetService,
+            mapper);
     }
 
     private static PushInstallationController CreatePushInstallationController(IUserService userService)
@@ -184,18 +195,14 @@ public sealed class UserControllerTests
 
     private sealed class StubUserService : IUserService
     {
-        public string? LastPreferredLanguage { get; private set; }
-        public Result<Unit, AppError> RegisterResult { get; set; } = Result<Unit, AppError>.Success(Unit.Value);
         public (Id<User> UserId, Id<UserSession>? SessionId, RegisterPushInstallationInput Input)? LastPushRegistration { get; private set; }
         public (Id<User> UserId, Id<UserSession>? SessionId, PushInstallationActionInput Input)? LastPushDisassociate { get; private set; }
 
-        public Task<Result<Unit, AppError>> RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
-        {
-            LastPreferredLanguage = input.PreferredLanguage;
-            return Task.FromResult(RegisterResult);
-        }
+        public Task<Result<Id<User>, AppError>> RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<Id<User>, AppError>.Success(Id<User>.New()));
 
-        public Task<Result<Unit, AppError>> RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+        public Task<Result<Id<User>, AppError>> RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<Id<User>, AppError>.Success(Id<User>.New()));
         public Task<Result<Unit, AppError>> RegisterPushInstallationAsync(User? currentUser, Id<UserSession>? sessionId, RegisterPushInstallationInput input, CancellationToken cancellationToken = default)
         {
             LastPushRegistration = (currentUser!.Id, sessionId, input);
@@ -216,11 +223,31 @@ public sealed class UserControllerTests
         public Task<bool> IsAdminAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<Result<UserInfoResult, AppError>> CheckTokenAsync(User? currentUser, CancellationToken cancellationToken = default) => Task.FromResult(Result<UserInfoResult, AppError>.Success(new UserInfoResult()));
         public Task<Result<List<RankingEntry>, AppError>> GetUsersRankingAsync(CancellationToken cancellationToken = default) => Task.FromResult(Result<List<RankingEntry>, AppError>.Success(new List<RankingEntry>()));
-        public Task<Result<int, AppError>> GetUserEloAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(Result<int, AppError>.Success(0));
         public Task<Result<Unit, AppError>> LogoutAsync(User? currentUser, Id<UserSession>? sessionId, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
         public Task<Result<Unit, AppError>> DeleteAccountAsync(User? currentUser, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
         public Task<Result<Unit, AppError>> ChangeVisibilityInRankingAsync(User? currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
         public Task<Result<Unit, AppError>> UpdateTimeZoneAsync(User? currentUser, string preferredTimeZone, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
         public Task<Result<Unit, AppError>> UpdateUserRolesAsync(Id<User> targetUserId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+    }
+
+    private sealed class StubEloRegistryService : IEloRegistryService
+    {
+        public string? LastPreferredLanguage { get; private set; }
+        public Result<Unit, AppError> RegisterResult { get; set; } = Result<Unit, AppError>.Success(Unit.Value);
+
+        public Task<Result<Unit, AppError>> RegisterUserAsync(RegisterUserInput input, bool trainer, CancellationToken cancellationToken = default)
+        {
+            LastPreferredLanguage = input.PreferredLanguage;
+            return Task.FromResult(RegisterResult);
+        }
+
+        public Task PopulateLatestEloAsync(UserInfoResult userInfo, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<Result<int, AppError>> GetUserEloAsync(Id<User> userId, CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<int, AppError>.Success(0));
+
+        public Task<Result<List<EloRegistryChartEntry>, AppError>> GetChartAsync(Id<User> userId, CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<List<EloRegistryChartEntry>, AppError>.Success([]));
     }
 }
