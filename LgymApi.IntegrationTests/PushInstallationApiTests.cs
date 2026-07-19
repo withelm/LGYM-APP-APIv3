@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Infrastructure.Data;
@@ -12,6 +13,155 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class PushInstallationApiTests : IntegrationTestBase
 {
+    [Test]
+    public async Task PushInstallationEndpoints_UseLegacyRoutesJsonFieldsAndMessageResponse()
+    {
+        var user = await SeedUserAsync(name: "push-wire", email: "push-wire@example.com", password: "push-pass-123");
+        SetAuthorizationHeader(user.Id);
+
+        var registerResponse = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-wire",
+            platform = "android",
+            fcmToken = "token-wire",
+            appVersion = "1.0.0",
+            environment = "development",
+            permissionStatus = "authorized"
+        });
+        await AssertLegacyMessageResponseAsync(registerResponse);
+
+        var unregisterResponse = await Client.PostAsJsonAsync("/api/push/installations/unregister", new
+        {
+            installationId = "device-wire"
+        });
+        await AssertLegacyMessageResponseAsync(unregisterResponse);
+
+        var disassociateResponse = await Client.PostAsJsonAsync("/api/push/installations/disassociate", new
+        {
+            installationId = "device-wire"
+        });
+        await AssertLegacyMessageResponseAsync(disassociateResponse);
+    }
+
+    [Test]
+    public async Task PushInstallationEndpoints_RejectBlankAndAlternateInstallationIdentifiers()
+    {
+        var user = await SeedUserAsync(name: "push-validation", email: "push-validation@example.com", password: "push-pass-123");
+        SetAuthorizationHeader(user.Id);
+
+        var blankRegistration = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "",
+            platform = "android",
+            fcmToken = "token-validation",
+            environment = "development"
+        });
+        blankRegistration.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var alternateRegistration = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationKey = "device-validation",
+            platform = "android",
+            fcmToken = "token-validation",
+            environment = "development"
+        });
+        alternateRegistration.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-validation",
+            platform = "android",
+            fcmToken = "token-validation",
+            environment = "development"
+        });
+
+        var blankUnregister = await Client.PostAsJsonAsync("/api/push/installations/unregister", new { installationId = "" });
+        var alternateUnregister = await Client.PostAsJsonAsync("/api/push/installations/unregister", new { installationKey = "device-validation" });
+        var blankDisassociate = await Client.PostAsJsonAsync("/api/push/installations/disassociate", new { installationId = "" });
+        var alternateDisassociate = await Client.PostAsJsonAsync("/api/push/installations/disassociate", new { installationKey = "device-validation" });
+
+        blankUnregister.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        alternateUnregister.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        blankDisassociate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        alternateDisassociate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var installation = await db.PushInstallations.SingleAsync(x => x.InstallationId == "device-validation");
+        installation.UserId.Should().Be(user.Id);
+        installation.SessionId.Should().NotBeNull();
+        installation.DisabledAt.Should().BeNull();
+    }
+
+    [Test]
+    public async Task PushInstallationActions_CannotMutateAnotherUsersInstallation()
+    {
+        var owner = await SeedUserAsync(name: "push-owner", email: "push-owner@example.com", password: "push-pass-123");
+        var otherUser = await SeedUserAsync(name: "push-other", email: "push-other@example.com", password: "push-pass-123");
+        SetAuthorizationHeader(owner.Id);
+
+        await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-owner",
+            platform = "ios",
+            fcmToken = "token-owner",
+            environment = "production"
+        });
+
+        using var ownerScope = Factory.Services.CreateScope();
+        var ownerDb = ownerScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var ownerInstallation = await ownerDb.PushInstallations.SingleAsync(x => x.InstallationId == "device-owner");
+        var ownerSessionId = ownerInstallation.SessionId;
+
+        SetAuthorizationHeader(otherUser.Id);
+        var unregisterResponse = await Client.PostAsJsonAsync("/api/push/installations/unregister", new { installationId = "device-owner" });
+        var disassociateResponse = await Client.PostAsJsonAsync("/api/push/installations/disassociate", new { installationId = "device-owner" });
+
+        unregisterResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        disassociateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var assertionScope = Factory.Services.CreateScope();
+        var assertionDb = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var installation = await assertionDb.PushInstallations.SingleAsync(x => x.InstallationId == "device-owner");
+        installation.UserId.Should().Be(owner.Id);
+        installation.SessionId.Should().Be(ownerSessionId);
+        installation.DisabledAt.Should().BeNull();
+    }
+
+    [Test]
+    public async Task RegisterPushInstallation_AfterUnregister_ReactivatesTheSameInstallation()
+    {
+        var user = await SeedUserAsync(name: "push-reactivate", email: "push-reactivate@example.com", password: "push-pass-123");
+        SetAuthorizationHeader(user.Id);
+
+        await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-reactivate",
+            platform = "android",
+            fcmToken = "token-old",
+            environment = "development"
+        });
+        await Client.PostAsJsonAsync("/api/push/installations/unregister", new { installationId = "device-reactivate" });
+        var reregisterResponse = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-reactivate",
+            platform = "android",
+            fcmToken = "token-new",
+            environment = "development"
+        });
+
+        await AssertLegacyMessageResponseAsync(reregisterResponse);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var installations = await db.PushInstallations.Where(x => x.InstallationId == "device-reactivate").ToListAsync();
+        installations.Should().ContainSingle();
+        installations[0].UserId.Should().Be(user.Id);
+        installations[0].FcmToken.Should().Be("token-new");
+        installations[0].DisabledAt.Should().BeNull();
+        installations[0].DisabledReason.Should().BeNull();
+    }
+
     [Test]
     public async Task RegisterPushInstallation_WithAuthenticatedUser_CreatesInstallationRow()
     {
@@ -201,6 +351,16 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
         body.Should().NotBeNull();
         return body!;
+    }
+
+    private static async Task AssertLegacyMessageResponseAsync(HttpResponseMessage response)
+    {
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        document.RootElement.TryGetProperty("msg", out var message).Should().BeTrue();
+        message.ValueKind.Should().Be(JsonValueKind.String);
+        document.RootElement.TryGetProperty("message", out _).Should().BeFalse();
     }
 
     private sealed class LoginResponse

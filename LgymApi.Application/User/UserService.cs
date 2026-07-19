@@ -1,4 +1,5 @@
 using LgymApi.Application.Options;
+using LgymApi.Application.Notifications;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -12,13 +13,13 @@ namespace LgymApi.Application.Features.User;
 
 public sealed partial class UserService : IUserService
 {
-    private readonly IPushInstallationRepository _pushInstallationRepository;
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly ITokenService _tokenService;
     private readonly ILegacyPasswordService _legacyPasswordService;
     private readonly IRankService _rankService;
     private readonly IUserSessionStore _userSessionStore;
+    private readonly IPushInstallationSessionDisassociationService _pushInstallationSessionDisassociationService;
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserService> _logger;
@@ -27,13 +28,13 @@ public sealed partial class UserService : IUserService
 
     public UserService(IUserServiceDependencies dependencies)
     {
-        _pushInstallationRepository = dependencies.PushInstallationRepository;
         _userRepository = dependencies.UserRepository;
         _roleRepository = dependencies.RoleRepository;
         _tokenService = dependencies.TokenService;
         _legacyPasswordService = dependencies.LegacyPasswordService;
         _rankService = dependencies.RankService;
         _userSessionStore = dependencies.UserSessionStore;
+        _pushInstallationSessionDisassociationService = dependencies.PushInstallationSessionDisassociationService;
         _commandDispatcher = dependencies.CommandDispatcher;
         _unitOfWork = dependencies.UnitOfWork;
         _logger = dependencies.Logger;

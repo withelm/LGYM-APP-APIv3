@@ -2,7 +2,7 @@ namespace LgymApi.ArchitectureTests;
 
 public static class ModuleBoundaryDebtAllowlistRegistry
 {
-    public const int MaximumAllowedEntryCount = 435;
+    public const int MaximumAllowedEntryCount = 428;
 
     private static readonly IReadOnlyList<ModuleBoundaryDebtEntry> Entries =
     [
@@ -11,22 +11,22 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             sourceModule: "Identity & Accounts",
             targetModule: "Notifications",
             sourceSymbolOrPath: "LgymApi.Application.Features.User.IUserServiceDependencies @ LgymApi.Application/User/IUserServiceDependencies.cs",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository @ LgymApi.Application/Repositories/IPushInstallationRepository.cs",
-            rationale: "Current modular-boundary debt: identity user-session flows still depend on notifications push-installation persistence contracts.")),
+            targetSymbolOrPath: "LgymApi.Application.Notifications.IPushInstallationSessionDisassociationService @ LgymApi.Application/Notifications/IPushInstallationSessionDisassociationService.cs",
+            rationale: "Current modular-boundary debt: identity logout composes the Notifications-owned session-disassociation contract.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "ModuleDependencyGuardTests",
             sourceModule: "Identity & Accounts",
             targetModule: "Notifications",
             sourceSymbolOrPath: "LgymApi.Application.Features.User.UserService @ LgymApi.Application/User/UserService.cs",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository @ LgymApi.Application/Repositories/IPushInstallationRepository.cs",
-            rationale: "Current modular-boundary debt: identity user-session flows still depend on notifications push-installation persistence contracts.")),
+            targetSymbolOrPath: "LgymApi.Application.Notifications.IPushInstallationSessionDisassociationService @ LgymApi.Application/Notifications/IPushInstallationSessionDisassociationService.cs",
+            rationale: "Current modular-boundary debt: identity logout composes the Notifications-owned session-disassociation contract.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "ModuleDependencyGuardTests",
             sourceModule: "Identity & Accounts",
             targetModule: "Notifications",
             sourceSymbolOrPath: "LgymApi.Application.Features.User.UserServiceDependencies @ LgymApi.Application/User/IUserServiceDependencies.cs",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository @ LgymApi.Application/Repositories/IPushInstallationRepository.cs",
-            rationale: "Current modular-boundary debt: identity user-session flows still depend on notifications push-installation persistence contracts.")),
+            targetSymbolOrPath: "LgymApi.Application.Notifications.IPushInstallationSessionDisassociationService @ LgymApi.Application/Notifications/IPushInstallationSessionDisassociationService.cs",
+            rationale: "Current modular-boundary debt: identity logout composes the Notifications-owned session-disassociation contract.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "ModuleDependencyGuardTests",
             sourceModule: "Nutrition",
@@ -719,62 +719,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             targetModule: "Workout & Progress",
             sourceSymbolOrPath: "LgymApi.Application/TrainerRelationships/TrainerRelationshipService.Dashboard.cs",
             targetSymbolOrPath: "LgymApi.Domain.Entities.MainRecord",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "DisassociateInstallationsForSessionAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "DisassociatePushInstallationAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "PushInstallationRepository",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "RegisterPushInstallationAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "UnregisterPushInstallationAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "UserServiceDependencies",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "UserService",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "_pushInstallationRepository",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IPushInstallationRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",

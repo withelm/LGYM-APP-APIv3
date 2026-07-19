@@ -4,8 +4,8 @@ using System.Text;
 using System.Text.Json;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Platform.Contracts.Serialization;
+using LgymApi.Infrastructure.Notifications.Push;
 using Google.Apis.Auth.OAuth2;
-using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Options;
 using Microsoft.Extensions.Logging;
 
@@ -32,7 +32,7 @@ public sealed class FcmPushSender : IPushProviderSender
     }
 
     public async Task<PushSendAttemptResult> SendAsync(
-        PushInstallation installation,
+        PushDeliveryTarget target,
         PushEventPayload payload,
         CancellationToken cancellationToken = default)
     {
@@ -49,7 +49,7 @@ public sealed class FcmPushSender : IPushProviderSender
         var accessToken = await GetAccessTokenAsync(cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Post, BuildSendUrl())
         {
-            Content = BuildRequestContent(installation, payload)
+            Content = BuildRequestContent(target, payload)
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -73,7 +73,7 @@ public sealed class FcmPushSender : IPushProviderSender
         var outcome = ClassifyFailure(response.StatusCode, summary);
         _logger.LogWarning(
             "FCM send failed for installation {InstallationId}, event {EventId}, category {Category} with provider status {ProviderStatus} and outcome {Outcome}.",
-            installation.InstallationId,
+            target.InstallationId,
             payload.EventId,
             payload.Type,
             response.StatusCode,
@@ -119,13 +119,13 @@ public sealed class FcmPushSender : IPushProviderSender
         return CredentialFactory.FromStream<ServiceAccountCredential>(stream).ToGoogleCredential();
     }
 
-    private StringContent BuildRequestContent(PushInstallation installation, PushEventPayload payload)
+    private StringContent BuildRequestContent(PushDeliveryTarget target, PushEventPayload payload)
     {
         var request = new
         {
             message = new
             {
-                token = installation.FcmToken,
+                token = target.DeviceToken,
                 notification = new
                 {
                     title = NotificationTitle,

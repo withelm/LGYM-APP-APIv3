@@ -1,26 +1,36 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
-using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Notifications.Models;
+using LgymApi.Application.Notifications.Repositories;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
-using UserEntity = LgymApi.Domain.Entities.User;
-using UserSessionEntity = LgymApi.Domain.Entities.UserSession;
 
-namespace LgymApi.Application.Features.User;
+namespace LgymApi.Application.Notifications;
 
-public sealed partial class UserService : IUserService
+internal sealed class PushInstallationLifecycleService : IPushInstallationLifecycleService, IPushInstallationSessionDisassociationService
 {
     private const string UnregisteredDisabledReason = "Unregistered";
 
-    public async Task<Result<Unit, AppError>> RegisterPushInstallationAsync(
-        UserEntity? currentUser,
-        Id<UserSessionEntity>? sessionId,
+    private readonly IPushInstallationRepository _pushInstallationRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public PushInstallationLifecycleService(
+        IPushInstallationRepository pushInstallationRepository,
+        IUnitOfWork unitOfWork)
+    {
+        _pushInstallationRepository = pushInstallationRepository;
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<Result<Unit, AppError>> RegisterAsync(
+        Id<User>? currentUserId,
+        Id<UserSession>? sessionId,
         RegisterPushInstallationInput input,
         CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || !sessionId.HasValue)
+        if (!currentUserId.HasValue || !sessionId.HasValue)
         {
             return Result<Unit, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
@@ -46,7 +56,7 @@ public sealed partial class UserService : IUserService
                 NormalizeOptionalValue(input.AppVersion),
                 normalizedEnvironment,
                 NormalizeOptionalValue(input.PermissionStatus),
-                currentUser.Id,
+                currentUserId.Value,
                 sessionId.Value,
                 DateTimeOffset.UtcNow),
             cancellationToken);
@@ -55,13 +65,13 @@ public sealed partial class UserService : IUserService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<Result<Unit, AppError>> UnregisterPushInstallationAsync(
-        UserEntity? currentUser,
-        Id<UserSessionEntity>? sessionId,
+    public async Task<Result<Unit, AppError>> UnregisterAsync(
+        Id<User>? currentUserId,
+        Id<UserSession>? sessionId,
         PushInstallationActionInput input,
         CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || !sessionId.HasValue)
+        if (!currentUserId.HasValue || !sessionId.HasValue)
         {
             return Result<Unit, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
@@ -74,7 +84,7 @@ public sealed partial class UserService : IUserService
 
         await _pushInstallationRepository.DisableBoundForUserOrSessionAsync(
             normalizedInstallationId,
-            currentUser.Id,
+            currentUserId.Value,
             sessionId.Value,
             DateTimeOffset.UtcNow,
             UnregisteredDisabledReason,
@@ -83,13 +93,13 @@ public sealed partial class UserService : IUserService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    public async Task<Result<Unit, AppError>> DisassociatePushInstallationAsync(
-        UserEntity? currentUser,
-        Id<UserSessionEntity>? sessionId,
+    public async Task<Result<Unit, AppError>> DisassociateAsync(
+        Id<User>? currentUserId,
+        Id<UserSession>? sessionId,
         PushInstallationActionInput input,
         CancellationToken cancellationToken = default)
     {
-        if (currentUser == null || !sessionId.HasValue)
+        if (!currentUserId.HasValue || !sessionId.HasValue)
         {
             return Result<Unit, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
@@ -102,7 +112,7 @@ public sealed partial class UserService : IUserService
 
         await _pushInstallationRepository.DisassociateBoundForUserOrSessionAsync(
             normalizedInstallationId,
-            currentUser.Id,
+            currentUserId.Value,
             sessionId.Value,
             DateTimeOffset.UtcNow,
             cancellationToken);
@@ -110,9 +120,11 @@ public sealed partial class UserService : IUserService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
-    private async Task DisassociateInstallationsForSessionAsync(Id<UserSessionEntity> sessionId, CancellationToken cancellationToken)
+    public Task StageDisassociateForSessionAsync(
+        Id<UserSession> sessionId,
+        CancellationToken cancellationToken = default)
     {
-        await _pushInstallationRepository.DisassociateForSessionAsync(sessionId, DateTimeOffset.UtcNow, cancellationToken);
+        return _pushInstallationRepository.DisassociateForSessionAsync(sessionId, DateTimeOffset.UtcNow, cancellationToken);
     }
 
     private static string? NormalizeRequiredValue(string? value)

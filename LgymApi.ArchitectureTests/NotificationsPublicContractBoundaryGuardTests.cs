@@ -64,10 +64,20 @@ public sealed class NotificationsPublicContractBoundaryGuardTests
             "Notifications persisted entity",
             "LgymApi.Domain.Entities.PushInstallation"),
         CreateRejectedCase(
+            "PersistedEntityProviderSender.cs",
+            "public interface IPersistedEntityProviderSender { void Send(LgymApi.Domain.Entities.PushInstallation installation); }",
+            "Notifications persisted entity",
+            "LgymApi.Domain.Entities.PushInstallation"),
+        CreateRejectedCase(
             "ProviderMemberNamePayload.cs",
             "public sealed record ProviderMemberNamePayload(string FcmToken);",
             "FCM provider",
-            "FcmToken")
+            "FcmToken"),
+        CreateRejectedCase(
+            "TransitiveProviderTokenSender.cs",
+            "public interface ITransitiveProviderTokenSender { void Send(LgymApi.Application.Notifications.Models.PushDeliveryTarget target); }",
+            "raw token",
+            "DeviceToken")
     };
 
     [Test]
@@ -126,22 +136,6 @@ public sealed class NotificationsPublicContractBoundaryGuardTests
                     string? EntityId,
                     Id<InAppNotification>? InAppNotificationId,
                     string? Deeplink);
-                """),
-            new SourceFixture(
-                $"{ContractsPath}Push/IPushProviderSender.cs",
-                """
-                namespace LgymApi.Application.Notifications.Contracts.Push;
-
-                public interface IPushProviderSender
-                {
-                    PushSendAttemptResult Send(PushEventPayload payload);
-                }
-
-                public sealed record PushSendAttemptResult(
-                    string ProviderStatus,
-                    string? ProviderMessageId,
-                    string? ProviderErrorCode,
-                    string? ProviderResponseSummary);
                 """),
             new SourceFixture(
                 $"{ContractsPath}Push/IPushBackgroundScheduler.cs",
@@ -217,6 +211,7 @@ public sealed class NotificationsPublicContractBoundaryGuardTests
             namespace LgymApi.BackgroundWorker.Common.Jobs { public interface IPushNotificationJob {} }
             namespace Microsoft.EntityFrameworkCore { public class DbContext {} }
             namespace LgymApi.Application.Repositories { public interface IPushNotificationMessageRepository {} }
+            namespace LgymApi.Application.Notifications.Models { public sealed record PushDeliveryTarget(string DeviceToken); }
             """);
         yield return new SourceFixture(
             path,
@@ -318,7 +313,6 @@ public sealed class NotificationsPublicContractBoundaryGuardTests
                 AddTypeViolation(violations, path, typeDisplayName, exposedType, rejectPersistedEntity: false);
             }
 
-            var rejectPersistedEntity = type.TypeKind != TypeKind.Interface;
             foreach (var member in type.GetMembers().Where(IsPublicSurfaceMember))
             {
                 var memberDisplayName = GetDisplayName(member);
@@ -331,7 +325,7 @@ public sealed class NotificationsPublicContractBoundaryGuardTests
 
                 foreach (var exposedType in GetMemberTypes(member))
                 {
-                    AddTypeViolation(violations, path, memberDisplayName, exposedType, rejectPersistedEntity);
+                    AddTypeViolation(violations, path, memberDisplayName, exposedType, rejectPersistedEntity: true);
                 }
             }
         }
@@ -411,12 +405,63 @@ public sealed class NotificationsPublicContractBoundaryGuardTests
 
         foreach (var namedType in EnumerateNamedTypes(exposedType))
         {
-            var dependency = GetDisplayName(namedType);
-            if (TryClassifyText(dependency, out var category)
-                || TryClassifyNotificationRepository(namedType, out category)
-                || (rejectPersistedEntity && TryClassifyPersistedEntity(namedType, out category)))
+            AddNamedTypeViolation(violations, path, sourceSymbol, namedType, rejectPersistedEntity);
+            AddTransitiveNotificationMemberViolations(
+                violations,
+                path,
+                sourceSymbol,
+                namedType,
+                rejectPersistedEntity,
+                new HashSet<string>(StringComparer.Ordinal));
+        }
+    }
+
+    private static void AddNamedTypeViolation(
+        IDictionary<string, NotificationsContractViolation> violations,
+        string path,
+        string sourceSymbol,
+        INamedTypeSymbol namedType,
+        bool rejectPersistedEntity)
+    {
+        var dependency = GetDisplayName(namedType);
+        if (TryClassifyText(dependency, out var category)
+            || TryClassifyNotificationRepository(namedType, out category)
+            || (rejectPersistedEntity && TryClassifyPersistedEntity(namedType, out category)))
+        {
+            AddViolation(violations, new NotificationsContractViolation(path, sourceSymbol, category, dependency));
+        }
+    }
+
+    private static void AddTransitiveNotificationMemberViolations(
+        IDictionary<string, NotificationsContractViolation> violations,
+        string path,
+        string sourceSymbol,
+        INamedTypeSymbol namedType,
+        bool rejectPersistedEntity,
+        ISet<string> visitedTypes)
+    {
+        if (!IsNotificationsType(namedType) || !visitedTypes.Add(GetMetadataName(namedType.OriginalDefinition)))
+        {
+            return;
+        }
+
+        foreach (var member in namedType.GetMembers().Where(IsPublicSurfaceMember))
+        {
+            AddTextViolation(violations, path, sourceSymbol, member.Name);
+
+            foreach (var memberType in GetMemberTypes(member))
             {
-                AddViolation(violations, new NotificationsContractViolation(path, sourceSymbol, category, dependency));
+                foreach (var nestedType in EnumerateNamedTypes(memberType))
+                {
+                    AddNamedTypeViolation(violations, path, sourceSymbol, nestedType, rejectPersistedEntity);
+                    AddTransitiveNotificationMemberViolations(
+                        violations,
+                        path,
+                        sourceSymbol,
+                        nestedType,
+                        rejectPersistedEntity,
+                        visitedTypes);
+                }
             }
         }
     }
@@ -534,8 +579,21 @@ public sealed class NotificationsPublicContractBoundaryGuardTests
             return true;
         }
 
+        if (value.Contains("DeviceToken", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("RegistrationToken", StringComparison.OrdinalIgnoreCase))
+        {
+            category = "raw token";
+            return true;
+        }
+
         category = string.Empty;
         return false;
+    }
+
+    private static bool IsNotificationsType(INamedTypeSymbol type)
+    {
+        return type.ContainingNamespace.ToDisplayString()
+            .StartsWith("LgymApi.Application.Notifications", StringComparison.Ordinal);
     }
 
     private static bool IsContractSurfacePath(string path)

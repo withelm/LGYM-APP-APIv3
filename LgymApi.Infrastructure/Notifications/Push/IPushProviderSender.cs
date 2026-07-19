@@ -1,11 +1,11 @@
-using LgymApi.Domain.Entities;
+using LgymApi.Application.Notifications.Contracts.Push;
 
-namespace LgymApi.Application.Notifications.Contracts.Push;
+namespace LgymApi.Infrastructure.Notifications.Push;
 
 public interface IPushProviderSender
 {
     Task<PushSendAttemptResult> SendAsync(
-        PushInstallation installation,
+        PushDeliveryTarget target,
         PushEventPayload payload,
         CancellationToken cancellationToken = default);
 }

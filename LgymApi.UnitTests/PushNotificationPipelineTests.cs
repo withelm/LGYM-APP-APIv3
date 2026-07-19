@@ -5,6 +5,7 @@ using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Notifications.Models;
+using LgymApi.Application.Notifications.Repositories;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.BackgroundWorker.Push;
@@ -12,6 +13,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Notifications.Push;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
@@ -197,10 +199,11 @@ public sealed class PushNotificationPipelineTests
         var repository = new FakePushNotificationMessageRepository(message);
         var installationRepository = new FakePushInstallationRepository(installation);
         var scheduler = new FakePushBackgroundScheduler();
+        var sender = new FakePushProviderSender(new PushSendAttemptResult(PushSendOutcome.InvalidToken, "BadRequest", null, "UNREGISTERED", "registration-token-not-registered"));
         var handler = new PushNotificationJobHandlerService(
             repository,
             installationRepository,
-            new FakePushProviderSender(new PushSendAttemptResult(PushSendOutcome.InvalidToken, "BadRequest", null, "UNREGISTERED", "registration-token-not-registered")),
+            sender,
             scheduler,
             new FakeUnitOfWork(),
             new PushNotificationOptions(),
@@ -213,6 +216,9 @@ public sealed class PushNotificationPipelineTests
         message.NextAttemptAt.Should().BeNull();
         installation.DisabledReason.Should().Be("InvalidFcmToken");
         installation.DisabledAt.Should().NotBeNull();
+        sender.LastTarget.Should().NotBeNull();
+        sender.LastTarget!.InstallationId.Should().Be(installation.InstallationId);
+        sender.LastTarget.DeviceToken.Should().Be(installation.FcmToken);
         scheduler.ScheduledRetries.Should().BeEmpty();
     }
 
@@ -329,6 +335,7 @@ public sealed class PushNotificationPipelineTests
             new PushNotificationOptions(),
             NullLogger<FcmPushSender>.Instance);
         var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
+        var target = new PushDeliveryTarget(installation.InstallationId, installation.FcmToken);
         var notificationId = Id<InAppNotification>.New();
         var payload = new PushEventPayload(
             1,
@@ -341,11 +348,12 @@ public sealed class PushNotificationPipelineTests
         var method = typeof(FcmPushSender).GetMethod("BuildRequestContent", BindingFlags.Instance | BindingFlags.NonPublic);
         method.Should().NotBeNull();
 
-        using var content = (StringContent)method!.Invoke(sender, [installation, payload])!;
+        using var content = (StringContent)method!.Invoke(sender, [target, payload])!;
         var json = await content.ReadAsStringAsync();
         using var document = JsonDocument.Parse(json);
         var message = document.RootElement.GetProperty("message");
 
+        message.GetProperty("token").GetString().Should().Be(target.DeviceToken);
         message.GetProperty("notification").GetProperty("title").GetString().Should().Be("LGYM");
         message.GetProperty("notification").GetProperty("body").GetString().Should().Be("You have a new notification.");
         message.GetProperty("android").GetProperty("priority").GetString().Should().Be("HIGH");
@@ -362,9 +370,10 @@ public sealed class PushNotificationPipelineTests
             new PushNotificationOptions { SendEnabled = false },
             NullLogger<FcmPushSender>.Instance);
         var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
+        var target = new PushDeliveryTarget(installation.InstallationId, installation.FcmToken);
         var payload = new PushEventPayload(1, "internal.test.push", "event-1", null, null, null);
 
-        var result = await sender.SendAsync(installation, payload);
+        var result = await sender.SendAsync(target, payload);
 
         result.Outcome.Should().Be(PushSendOutcome.Skipped);
         result.ProviderStatus.Should().Be("Skipped");
@@ -501,9 +510,12 @@ public sealed class PushNotificationPipelineTests
 
         public int SendCalls { get; private set; }
 
-        public Task<PushSendAttemptResult> SendAsync(PushInstallation installation, PushEventPayload payload, CancellationToken cancellationToken = default)
+        public PushDeliveryTarget? LastTarget { get; private set; }
+
+        public Task<PushSendAttemptResult> SendAsync(PushDeliveryTarget target, PushEventPayload payload, CancellationToken cancellationToken = default)
         {
             SendCalls += 1;
+            LastTarget = target;
             return Task.FromResult(_result);
         }
     }

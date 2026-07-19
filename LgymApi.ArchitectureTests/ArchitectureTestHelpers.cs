@@ -173,7 +173,7 @@ public static class ArchitectureTestHelpers
         ["/LgymApi.Application/Repositories/IEloRegistryRepository.cs"] = WorkoutProgressModuleName,
         ["/LgymApi.Application/Repositories/ITutorialProgressRepository.cs"] = IdentityModuleName,
         ["/LgymApi.Application/Repositories/IInAppNotificationRepository.cs"] = NotificationsModuleName,
-        ["/LgymApi.Application/Repositories/IPushInstallationRepository.cs"] = NotificationsModuleName,
+        ["/LgymApi.Application/Notifications/Repositories/IPushInstallationRepository.cs"] = NotificationsModuleName,
         ["/LgymApi.Application/Repositories/IPushNotificationMessageRepository.cs"] = NotificationsModuleName,
         ["/LgymApi.Application/Repositories/IReportingRepository.cs"] = ReportingModuleName,
         ["/LgymApi.Application/Repositories/IRecurringReportAssignmentRepository.cs"] = ReportingModuleName,
