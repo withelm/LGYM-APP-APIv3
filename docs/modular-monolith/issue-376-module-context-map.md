@@ -6,8 +6,9 @@ Draft
 ## Source precedence
 
 - `#311` defines the constraints and allowed direction.
-- `#375` provides the factual baseline for current module clusters.
-- `docs/ARCHITECTURE.md` is the reader-facing integration guide.
+- `#375` provides the historical baseline for module clusters.
+- `#380` provides the current background-contract ownership and project-reference graph.
+- `docs/ARCHITECTURE.md` is the reader-facing integration guide for the current maps.
 - ADR-006 explains why the modular-monolith direction exists.
 
 ## Scope
@@ -135,6 +136,14 @@ Platform / Reference Data may host application startup, composition-root wiring,
 
 It must not absorb feature-specific commands, business workflows, or module-owned write models, because those belong to the fixed feature modules and stay under their own contract surfaces.
 
+### Background-contract path rules
+
+Platform owns `LgymApi.Application/Platform/Contracts/BackgroundCommands/` and `LgymApi.Application/Platform/Contracts/Serialization/`. Feature commands belong only under `LgymApi.Application/Identity/Contracts/BackgroundCommands/`, `LgymApi.Application/WorkoutProgress/Contracts/BackgroundCommands/`, `LgymApi.Application/Coaching/Contracts/BackgroundCommands/`, `LgymApi.Application/Reporting/Contracts/BackgroundCommands/`, and `LgymApi.Application/Nutrition/Contracts/BackgroundCommands/`. Notifications owns `LgymApi.Application/Notifications/Contracts/Push/`. Identity owns `LgymApi.Application/Features/PasswordReset/Contracts/`.
+
+Worker runtime concerns belong under `LgymApi.BackgroundWorker/Runtime/` and Worker adapters, including `LgymApi.BackgroundWorker/Notifications/PasswordRecoveryEmailSchedulerAdapter.cs`. `LgymApi.BackgroundWorker.Common/Jobs/` and `LgymApi.BackgroundWorker.Common/Notifications/` remain the bounded persisted job and email wire seam. Common has no commands, serializers, push contracts, or Application-facing scheduling ports.
+
+Application has no dependency on either Worker project or any `LgymApi.BackgroundWorker*` namespace. Its only relationship to legacy `LgymApi.BackgroundWorker.Common.Commands.*` names is persisted canonical command-ID data. The Worker resolves Application CLR names as read aliases but writes only those legacy IDs.
+
 ## Forbidden dependencies
 
 No module may skip its published contract and reach into another module's private state or implementation.
@@ -186,3 +195,5 @@ The eight-module catalog is the current baseline for those checks, and any later
 
 - `docs/adr/006-lgym-evolves-as-modular-monolith.md`
 - `docs/modular-monolith/issue-376-ownership-map.md`
+- `docs/modular-monolith/issue-380-background-contract-ownership.md`
+- `docs/modular-monolith/issue-380-project-reference-graph.md`

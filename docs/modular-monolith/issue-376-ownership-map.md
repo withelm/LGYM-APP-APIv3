@@ -6,8 +6,9 @@ Complete
 ## Source precedence
 
 - `#311` is the authority for ownership rules.
-- `#375` is the factual inventory source for current artifacts.
-- `docs/ARCHITECTURE.md` is the integration guide that will point to the final map.
+- `#375` is the historical inventory source.
+- `#380` is the current source for background-contract ownership and project references.
+- `docs/ARCHITECTURE.md` is the integration guide that links the current maps.
 - ADR-006 states the modular-monolith decision this map serves.
 
 ## Scope
@@ -25,6 +26,12 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 | Shared persistence root | `AppDbContext` | `Platform / Reference Data` | The single production EF Core context is the shared persistence root for the current monolith. | Non-owners only reach it through owner repositories and owner services. They do not create alternate context roots. |
 | Shared contract | `IUnitOfWork` | `Platform / Reference Data` | Commit timing is a shared runtime rule that stays outside feature ownership. | Non-owner modules receive it only at service boundaries. Repositories do not own commits. |
 | Shared contract | `ICommandDispatcher` | `Platform / Reference Data` | Command dispatch is a cross-feature runtime concern used by several modules. | Non-owners dispatch commands through the interface only. They do not embed dispatch logic in repositories or controllers. |
+| Shared contract path | `LgymApi.Application/Platform/Contracts/BackgroundCommands/` and `LgymApi.Application/Platform/Contracts/Serialization/` | `Platform / Reference Data` | Platform owns the dispatcher ports and persisted-payload serialization contracts used across modules. | Feature modules consume the dispatcher and serializer. They do not place feature commands in Platform. |
+| Module command paths | `LgymApi.Application/Identity/Contracts/BackgroundCommands/`, `LgymApi.Application/WorkoutProgress/Contracts/BackgroundCommands/`, `LgymApi.Application/Coaching/Contracts/BackgroundCommands/`, `LgymApi.Application/Reporting/Contracts/BackgroundCommands/`, `LgymApi.Application/Nutrition/Contracts/BackgroundCommands/` | Respective feature module | A command belongs to the module that owns the business event it describes. | Producers dispatch through the Platform port. Worker handlers implement the contracts without moving command ownership to Worker or Common. |
+| Password scheduling path | `LgymApi.Application/Features/PasswordReset/Contracts/` | `Identity & Accounts` | Password recovery is an Identity workflow. Its Application request and scheduler port are not Common email types. | The Worker password-recovery adapter maps the request to the retained Common payload. |
+| Push contract path | `LgymApi.Application/Notifications/Contracts/Push/` | `Notifications` | Push payloads, outcomes, scheduler, and provider ports describe notification delivery. | Worker selects and implements scheduling, Infrastructure implements FCM, and Common retains only the persisted push job interface. |
+| Worker runtime path | `LgymApi.BackgroundWorker/Runtime/` and Worker adapters | `Platform / Reference Data` runtime | Registry, handler registration, dispatch execution, Hangfire adapters, and password scheduling adapters are Worker runtime concerns. | Application exposes ports and commands only. Application must not reference Worker projects or namespaces. |
+| Common bounded seam | `LgymApi.BackgroundWorker.Common/Jobs/` and `LgymApi.BackgroundWorker.Common/Notifications/` | `BackgroundWorker.Common` | Common exists only for persisted job identities, scheduler bridges, idempotency policy, and email wire contracts. | It must not contain Application-facing commands, serialization, push delivery contracts, or Worker runtime contracts. |
 | Shared contract | `IGridifyExecutionService` | `Platform / Reference Data` | Query paging and filtering support is shared technical infrastructure. | Non-owner modules call it through the public interface. They do not own its registration or implementation. |
 | Shared contract | `IMapperRegistry` | `Platform / Reference Data` | Mapper registration is a shared technical concern that supports the current mapping system. | Non-owner modules consume registered mappings only. They do not create competing registries. |
 | Service family | `UserService*` | `Identity & Accounts` | User login, logout, profile, ranking, and onboarding flows belong to the identity boundary. | Other modules call the user service or its public contracts. They do not touch user state directly. |
@@ -167,3 +174,5 @@ If an artifact appears to touch more than one module, the owner is the module th
 
 - `docs/adr/006-lgym-evolves-as-modular-monolith.md`
 - `docs/modular-monolith/issue-376-module-context-map.md`
+- `docs/modular-monolith/issue-380-background-contract-ownership.md`
+- `docs/modular-monolith/issue-380-project-reference-graph.md`

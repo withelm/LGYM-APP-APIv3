@@ -3,13 +3,14 @@ using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
-public sealed class TraineeNoteUpdatedInAppNotificationCommandHandler : global::LgymApi.BackgroundWorker.Common.IBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand>
+public sealed partial class TraineeNoteUpdatedInAppNotificationCommandHandler : IBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand>
 {
     private readonly IInAppNotificationService _notificationService;
     private readonly IUserRepository _userRepository;

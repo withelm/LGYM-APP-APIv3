@@ -7,7 +7,7 @@ using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;

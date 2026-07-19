@@ -12,12 +12,13 @@ internal static class TypedEntityIdBoundaryGuard
     private static readonly HashSet<string> ExactPolymorphicEntityIdExceptions = new(StringComparer.Ordinal)
     {
         "LgymApi.Domain.Entities.PushNotificationMessage.EntityId",
-        "LgymApi.BackgroundWorker.Common.Push.Models.PushEventPayload.EntityId"
+        "LgymApi.Application.Notifications.Contracts.Push.PushEventPayload.EntityId"
     };
 
     internal static IReadOnlyList<TypedEntityIdViolation> Collect(
         CSharpCompilation compilation,
-        IReadOnlyList<SyntaxTree> syntaxTrees)
+        IReadOnlyList<SyntaxTree> syntaxTrees,
+        IReadOnlySet<string>? exactPolymorphicEntityIdExceptions = null)
     {
         var typedIdDefinition = compilation.GetTypeByMetadataName(TypedIdMetadataName);
         var entityBaseDefinition = compilation.GetTypeByMetadataName(EntityBaseMetadataName);
@@ -26,6 +27,7 @@ internal static class TypedEntityIdBoundaryGuard
         Assert.That(entityBaseDefinition, Is.Not.Null, $"Unable to resolve '{EntityBaseMetadataName}'.");
 
         var entities = GetEntityTypes(compilation, entityBaseDefinition!);
+        var polymorphicEntityIdExceptions = exactPolymorphicEntityIdExceptions ?? ExactPolymorphicEntityIdExceptions;
         var violations = new List<TypedEntityIdViolation>();
 
         foreach (var tree in syntaxTrees.Where(tree => IsScopedInternalPath(tree.FilePath)))
@@ -35,20 +37,20 @@ internal static class TypedEntityIdBoundaryGuard
 
             foreach (var property in root.DescendantNodes().OfType<PropertyDeclarationSyntax>())
             {
-                AddViolationIfNeeded(semanticModel.GetDeclaredSymbol(property), property.Type, semanticModel, typedIdDefinition!, entities, violations);
+                AddViolationIfNeeded(semanticModel.GetDeclaredSymbol(property), property.Type, semanticModel, typedIdDefinition!, entities, polymorphicEntityIdExceptions, violations);
             }
 
             foreach (var field in root.DescendantNodes().OfType<FieldDeclarationSyntax>())
             {
                 foreach (var variable in field.Declaration.Variables)
                 {
-                    AddViolationIfNeeded(semanticModel.GetDeclaredSymbol(variable), field.Declaration.Type, semanticModel, typedIdDefinition!, entities, violations);
+                    AddViolationIfNeeded(semanticModel.GetDeclaredSymbol(variable), field.Declaration.Type, semanticModel, typedIdDefinition!, entities, polymorphicEntityIdExceptions, violations);
                 }
             }
 
             foreach (var parameter in root.DescendantNodes().OfType<ParameterSyntax>())
             {
-                AddViolationIfNeeded(GetParameterMemberSymbol(semanticModel.GetDeclaredSymbol(parameter)), parameter.Type, semanticModel, typedIdDefinition!, entities, violations);
+                AddViolationIfNeeded(GetParameterMemberSymbol(semanticModel.GetDeclaredSymbol(parameter)), parameter.Type, semanticModel, typedIdDefinition!, entities, polymorphicEntityIdExceptions, violations);
             }
         }
 
@@ -64,9 +66,10 @@ internal static class TypedEntityIdBoundaryGuard
         SemanticModel semanticModel,
         INamedTypeSymbol typedIdDefinition,
         IReadOnlyDictionary<string, INamedTypeSymbol> entities,
+        IReadOnlySet<string> exactPolymorphicEntityIdExceptions,
         List<TypedEntityIdViolation> violations)
     {
-        if (symbol == null || typeSyntax == null || IsExactPolymorphicEntityIdException(symbol))
+        if (symbol == null || typeSyntax == null || IsExactPolymorphicEntityIdException(symbol, exactPolymorphicEntityIdExceptions))
         {
             return;
         }
@@ -198,9 +201,9 @@ internal static class TypedEntityIdBoundaryGuard
             && string.Equals(type.ContainingNamespace.ToDisplayString(), "System", StringComparison.Ordinal);
     }
 
-    private static bool IsExactPolymorphicEntityIdException(ISymbol symbol)
+    private static bool IsExactPolymorphicEntityIdException(ISymbol symbol, IReadOnlySet<string> exactPolymorphicEntityIdExceptions)
     {
-        return ExactPolymorphicEntityIdExceptions.Contains(GetFullyQualifiedSymbolName(symbol));
+        return exactPolymorphicEntityIdExceptions.Contains(GetFullyQualifiedSymbolName(symbol));
     }
 
     private static string FormatExpectedType(INamedTypeSymbol? entity)

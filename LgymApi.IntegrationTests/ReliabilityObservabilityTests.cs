@@ -41,7 +41,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var pendingUndispatched = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Pending,
             DispatchedAt = null  // Key: not dispatched
         };
@@ -49,7 +49,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var pendingDispatched = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Pending,
             DispatchedAt = DateTimeOffset.UtcNow  // Dispatched but still Pending
         };
@@ -57,7 +57,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var completed = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Completed,
             DispatchedAt = null
         };
@@ -65,7 +65,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var failed = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Failed,
             DispatchedAt = null
         };
@@ -96,7 +96,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var failed1 = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Failed,
             LastAttemptAt = DateTimeOffset.UtcNow.AddMinutes(-1)
         };
@@ -104,7 +104,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var failed2 = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.TrainingCompletedCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand",
             Status = ActionExecutionStatus.Failed,
             LastAttemptAt = DateTimeOffset.UtcNow.AddMinutes(-5)
         };
@@ -112,7 +112,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var completed = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Completed
         };
         
@@ -141,7 +141,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var deadLettered = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.DeadLettered,
             LastAttemptAt = DateTimeOffset.UtcNow
         };
@@ -149,7 +149,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var failed = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Failed
         };
         
@@ -181,7 +181,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
                 Id = Id<CommandEnvelope>.New(),
                 CorrelationId = Id<CorrelationScope>.New(),
                 PayloadJson = "{}",
-                CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+                CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
                 Status = ActionExecutionStatus.Pending
             });
         }
@@ -193,7 +193,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
                 Id = Id<CommandEnvelope>.New(),
                 CorrelationId = Id<CorrelationScope>.New(),
                 PayloadJson = "{}",
-                CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+                CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
                 Status = ActionExecutionStatus.Failed
             });
         }
@@ -203,7 +203,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
             Id = Id<CommandEnvelope>.New(),
             CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = "{}",
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.DeadLettered
         });
         
@@ -214,7 +214,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
                 Id = Id<CommandEnvelope>.New(),
                 CorrelationId = Id<CorrelationScope>.New(),
                 PayloadJson = "{}",
-                CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+                CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
                 Status = ActionExecutionStatus.Completed
             });
         }
@@ -450,7 +450,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var oldCompleted1 = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Completed,
             CompletedAt = cutoffTime.AddDays(-1)
         };
@@ -458,7 +458,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var oldCompleted2 = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.TrainingCompletedCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.TrainingCompletedCommand",
             Status = ActionExecutionStatus.Completed,
             CompletedAt = cutoffTime.AddDays(-10)
         };
@@ -467,7 +467,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var recentCompleted = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Completed,
             CompletedAt = cutoffTime.AddDays(1)
         };
@@ -476,7 +476,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var oldFailed = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Failed,
             CompletedAt = cutoffTime.AddDays(-5)
         };
@@ -484,7 +484,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var oldPending = new CommandEnvelope
         {
             Id = Id<CommandEnvelope>.New(),
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             Status = ActionExecutionStatus.Pending,
             CompletedAt = null
         };

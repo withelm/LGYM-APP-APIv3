@@ -3,7 +3,7 @@ using LgymApi.Application.Features.ExerciseScores;
 using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using System;
 using Microsoft.Extensions.Logging;
 

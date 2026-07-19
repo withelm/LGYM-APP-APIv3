@@ -52,6 +52,11 @@ public sealed class CommandEnvelopeRepository : ICommandEnvelopeRepository
         return Task.CompletedTask;
     }
 
+    public void Detach(CommandEnvelope envelope)
+    {
+        _dbContext.Entry(envelope).State = EntityState.Detached;
+    }
+
     /// <summary>
     /// Adds a command envelope or returns the existing one if duplicate.
     /// 

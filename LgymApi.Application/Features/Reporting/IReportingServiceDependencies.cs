@@ -1,7 +1,7 @@
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Features.Reporting;

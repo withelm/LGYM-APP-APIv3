@@ -1,8 +1,7 @@
 # LgymApi.BackgroundWorker.Common.csproj
 
-- Purpose: shared contracts for background work.
-- Contains: job contracts, serialization helpers, DI abstractions, and notification/job models.
-- Rules: put cross-boundary worker contracts here, not HTTP/controller code.
-- Boundary: keep this module reusable from worker and application sides.
-- Shared push contracts now live here too: the generic payload DTO, provider-sender abstractions, and Hangfire job/scheduler interfaces are worker-safe cross-boundary contracts rather than API-layer types.
-- `PushEventPayload.InAppNotificationId` is typed as `Id<InAppNotification>?` internally; shared JSON serialization preserves the legacy nullable UUID-string property on the worker wire contract. Only its polymorphic `EntityId` remains a raw string exception.
+- Purpose: exact bounded Worker/Infrastructure seam for persisted jobs and email wire contracts.
+- Contains: nine persisted job interfaces, two scheduler bridges, the idempotency policy, email interfaces/message, and six email payloads.
+- Rules: preserve this closed surface and its typed-ID job signatures. Do not add HTTP/controller code, Application-facing contracts, commands, serialization, or push delivery types.
+- Boundary: this project references Domain only. Application does not reference it.
+- The unchanged job interfaces, including `IPushNotificationJob`, and their scheduler expression targets retain their persisted Hangfire identities. The Worker owns implementations.

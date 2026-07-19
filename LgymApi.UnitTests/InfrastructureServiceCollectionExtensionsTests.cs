@@ -1,23 +1,26 @@
 using FluentAssertions;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Application.Options;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using LgymApi.BackgroundWorker.Actions;
+using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.Application.Abstractions.Storage;
-using LgymApi.BackgroundWorker.Common.Push;
 using LgymApi.TestUtils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
+using ApplicationCommandDispatcher = LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandDispatcher;
+using IActionMessageScheduler = LgymApi.BackgroundWorker.Common.IActionMessageScheduler;
+using IEmailBackgroundScheduler = LgymApi.BackgroundWorker.Common.IEmailBackgroundScheduler;
 
 namespace LgymApi.UnitTests;
 
@@ -201,12 +204,12 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
              configuration,
              isTesting: true,
              includeBackgroundWorker: true);
-         var dispatcher = provider.GetRequiredService<ICommandDispatcher>();
+         var dispatcher = provider.GetRequiredService<ApplicationCommandDispatcher>();
          dispatcher.Should().BeOfType<CommandDispatcher>();
      }
 
      [Test]
-      public void AddBackgroundWorkerServices_RegistersNoOpScheduler_WhenTesting()
+      public void AddBackgroundWorkerServices_RegistersNoOpSchedulersAndRetainsApplicationBridge_WhenTesting()
      {
          var services = new ServiceCollection();
          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
@@ -216,14 +219,15 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
 
          services.AddLogging();
          services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+         services.AddNotificationsModule(configuration);
          services.AddBackgroundWorkerServices(isTesting: true);
          services.AddScoped<IInAppNotificationPushPublisher, FakeInAppNotificationPushPublisher>();
 
        using var provider = services.BuildServiceProvider();
         var scheduler = provider.GetRequiredService<IActionMessageScheduler>();
         scheduler.Should().BeOfType<NoOpActionMessageScheduler>();
-        provider.GetRequiredService<IPushBackgroundScheduler>().Should().BeOfType<LgymApi.Infrastructure.Services.NoOpPushBackgroundScheduler>();
-        provider.GetRequiredService<INotificationEventBridge>().GetType().Name.Should().Be("NoOpNotificationEventBridge");
+        provider.GetRequiredService<IPushBackgroundScheduler>().Should().BeOfType<LgymApi.BackgroundWorker.Services.NoOpPushBackgroundScheduler>();
+         provider.GetRequiredService<INotificationEventBridge>().Should().BeOfType<NotificationEventBridge>();
       }
 
       [Test]
@@ -244,10 +248,11 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
            services.Count(descriptor => descriptor.ServiceType == typeof(IPushNotificationMessageRepository)).Should().Be(1);
            services.Count(descriptor => descriptor.ServiceType == typeof(IInAppNotificationRepository)).Should().Be(1);
            services.Count(descriptor => descriptor.ServiceType == typeof(IPushBackgroundScheduler)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(IPushProviderSender)).Should().Be(1);
        }
 
       [Test]
-      public void AddNotificationsModule_RegistersHostFacingNotificationCompositionOnce()
+      public void AddNotificationsModule_RegistersApplicationAndInfrastructureWithoutWorkerScheduler()
       {
           var services = new ServiceCollection();
           var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
@@ -255,15 +260,68 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
               ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
           });
 
-          services.AddNotificationsModule(configuration, isTesting: true);
+          services.AddNotificationsModule(configuration);
 
           services.Count(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService)).Should().Be(1);
            services.Count(descriptor => descriptor.ServiceType == typeof(INotificationEventBridge)).Should().Be(1);
            services.Count(descriptor => descriptor.ServiceType == typeof(IPushInstallationRepository)).Should().Be(1);
            services.Count(descriptor => descriptor.ServiceType == typeof(IPushNotificationMessageRepository)).Should().Be(1);
            services.Count(descriptor => descriptor.ServiceType == typeof(IInAppNotificationRepository)).Should().Be(1);
-           services.Count(descriptor => descriptor.ServiceType == typeof(IPushBackgroundScheduler)).Should().Be(1);
+           services.Count(descriptor => descriptor.ServiceType == typeof(IPushBackgroundScheduler)).Should().Be(0);
        }
+
+       [TestCase(true)]
+       [TestCase(false)]
+       public void FullHostComposition_RetainsApplicationNotificationBridge(bool isTesting)
+      {
+          var services = new ServiceCollection();
+          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
+          {
+              ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+          });
+
+          services.AddNotificationsModule(configuration);
+          services.AddBackgroundWorkerServices(isTesting);
+
+          services.Count(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService)).Should().Be(1);
+          var bridge = services
+              .Where(descriptor => descriptor.ServiceType == typeof(INotificationEventBridge))
+              .Should()
+              .ContainSingle()
+              .Which;
+           bridge.ImplementationType.Should().Be(typeof(NotificationEventBridge));
+      }
+
+      [TestCaseSource(nameof(FullHostPushCompositionManifest))]
+      public void FullHostPushComposition_CharacterizesCurrentDescriptorsAndKeepsFutureOwnershipManifest(PushCompositionManifest expectation)
+      {
+          var services = new ServiceCollection();
+          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
+          {
+              ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+          });
+
+          services.AddNotificationsModule(configuration);
+          services.AddBackgroundWorkerServices(expectation.IsTesting);
+
+          var schedulerDescriptor = services
+              .Where(descriptor => descriptor.ServiceType == typeof(IPushBackgroundScheduler))
+              .Should()
+              .ContainSingle()
+              .Which;
+          var providerDescriptor = services
+              .Where(descriptor => descriptor.ServiceType == typeof(IPushProviderSender))
+              .Should()
+              .ContainSingle()
+              .Which;
+
+          schedulerDescriptor.Lifetime.Should().Be(ServiceLifetime.Scoped);
+          schedulerDescriptor.ImplementationType.Should().Be(expectation.CurrentSchedulerImplementation);
+          providerDescriptor.Lifetime.Should().Be(ServiceLifetime.Scoped);
+          providerDescriptor.ImplementationType.Should().Be(expectation.CurrentProviderImplementation);
+          expectation.FutureSchedulerSelector.Should().Be("Worker");
+          expectation.FutureProviderImplementationOwner.Should().Be("Infrastructure");
+      }
 
       [Test]
       public void AddInfrastructure_Throws_WhenPushSendsEnabledWithoutProjectId()
@@ -370,6 +428,7 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
 
          services.AddLogging();
          services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
+         services.AddNotificationsModule(configuration);
          services.AddBackgroundWorkerServices(isTesting: true);
          services.AddScoped<IInAppNotificationPushPublisher, FakeInAppNotificationPushPublisher>();
 
@@ -449,15 +508,38 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
              .WithMessage("LocalPhotoStorageProvider cannot be used outside Development.");
      }
 
-     private sealed class FakeInAppNotificationPushPublisher : IInAppNotificationPushPublisher
+      private sealed class FakeInAppNotificationPushPublisher : IInAppNotificationPushPublisher
      {
-         public Task PushAsync(InAppNotificationResult notification, CancellationToken ct = default)
-         {
-             return Task.CompletedTask;
-         }
-     }
+          public Task PushAsync(InAppNotificationResult notification, CancellationToken ct = default)
+          {
+              return Task.CompletedTask;
+          }
+      }
 
-     [Test]
+      private static IEnumerable<TestCaseData> FullHostPushCompositionManifest()
+      {
+          yield return new TestCaseData(new PushCompositionManifest(
+              true,
+              typeof(LgymApi.BackgroundWorker.Services.NoOpPushBackgroundScheduler),
+              typeof(FcmPushSender),
+              "Worker",
+              "Infrastructure"));
+          yield return new TestCaseData(new PushCompositionManifest(
+              false,
+              typeof(LgymApi.BackgroundWorker.Services.HangfirePushBackgroundScheduler),
+              typeof(FcmPushSender),
+              "Worker",
+              "Infrastructure"));
+      }
+
+      public sealed record PushCompositionManifest(
+          bool IsTesting,
+          Type CurrentSchedulerImplementation,
+          Type CurrentProviderImplementation,
+          string FutureSchedulerSelector,
+          string FutureProviderImplementationOwner);
+
+      [Test]
      public void AddInfrastructure_FallsBackAppDefaults_WhenConfigurationInvalid()
      {
          var services = new ServiceCollection();

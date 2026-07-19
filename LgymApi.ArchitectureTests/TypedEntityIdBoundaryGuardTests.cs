@@ -7,6 +7,12 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class TypedEntityIdBoundaryGuardTests
 {
+    private static readonly IReadOnlySet<string> FutureExactPolymorphicEntityIdExceptions = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "LgymApi.Domain.Entities.PushNotificationMessage.EntityId",
+        "LgymApi.Application.Notifications.Contracts.Push.PushEventPayload.EntityId"
+    };
+
     [Test]
     public void Raw_Known_Entity_Id_Fixtures_Are_Rejected_When_Types_Are_String_Guid_Or_Nullable_Guid()
     {
@@ -68,8 +74,8 @@ public sealed class TypedEntityIdBoundaryGuardTests
                     public string? EntityId { get; init; }
                 }
                 """),
-            ("LgymApi.BackgroundWorker.Common/Push/Models/PushEventPayload.cs", """
-                namespace LgymApi.BackgroundWorker.Common.Push.Models;
+            ("LgymApi.Application/Notifications/Contracts/Push/PushEventPayload.cs", """
+                namespace LgymApi.Application.Notifications.Contracts.Push;
 
                 public sealed record PushEventPayload(string? EntityId);
                 """),
@@ -86,6 +92,45 @@ public sealed class TypedEntityIdBoundaryGuardTests
 
         Assert.That(violations, Has.Count.EqualTo(1));
         AssertViolation(compilation, violations, "OtherPayload", "EntityId", "Id<TEntity>");
+    }
+
+    [Test]
+    public void Future_Polymorphic_EntityId_Exception_Fixture_Rejects_Stale_Common_Metadata()
+    {
+        var compilation = CreateFixtureCompilation(
+            ("LgymApi.Domain/Entities/PushNotificationMessage.cs", """
+                namespace LgymApi.Domain.Entities;
+
+                public sealed class PushNotificationMessage : EntityBase<PushNotificationMessage>
+                {
+                    public string? EntityId { get; init; }
+                }
+                """),
+            ("LgymApi.Application/Notifications/Contracts/Push/PushEventPayload.cs", """
+                namespace LgymApi.Application.Notifications.Contracts.Push;
+
+                public sealed record PushEventPayload(string? EntityId);
+                """),
+            ("LgymApi.BackgroundWorker.Common/Push/Models/PushEventPayload.cs", """
+                namespace LgymApi.BackgroundWorker.Common.Push.Models;
+
+                public sealed record PushEventPayload(string? EntityId);
+                """));
+
+        var violations = TypedEntityIdBoundaryGuard.Collect(
+            compilation,
+            compilation.SyntaxTrees.ToList(),
+            FutureExactPolymorphicEntityIdExceptions);
+        var stalePushEntityId = GetCompiledPropertySymbol(
+            compilation,
+            "LgymApi.BackgroundWorker.Common.Push.Models.PushEventPayload",
+            "EntityId");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(violations, Has.Count.EqualTo(1));
+            AssertViolation(violations, stalePushEntityId, "Id<TEntity>");
+        });
     }
 
     [Test]
@@ -138,7 +183,7 @@ public sealed class TypedEntityIdBoundaryGuardTests
         var reportingPhotoIdParameter = GetParameterSymbol(compilation, "IReportingService.cs", "GetSignedReadUrlAsync", "photoId");
         var pushNotificationId = GetCompiledPropertySymbol(
             compilation,
-            "LgymApi.BackgroundWorker.Common.Push.Models.PushEventPayload",
+            "LgymApi.Application.Notifications.Contracts.Push.PushEventPayload",
             "InAppNotificationId");
 
         Assert.That(

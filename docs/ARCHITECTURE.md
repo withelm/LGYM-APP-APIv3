@@ -216,6 +216,16 @@ The solution uses module-owned registration helpers composed by the host, enforc
 2. **Infrastructure Layer**: owns repository implementations, external client adapters, and module-specific technical helpers.
 3. **Platform carve-out**: shared roots that multiple modules consume stay in `AddPlatformServices(...)` instead of being forced into one feature module.
 
+Notification delivery follows the same ownership rule: Application owns password and push ports, Worker owns command runtime plus environment-selected password/push scheduling adapters, Infrastructure owns FCM, and `Program.cs` composes those helpers in module-before-Worker order without direct adapter bindings.
+
+### Background Contract Ownership
+
+Application owns the Platform dispatcher ports at `LgymApi.Application/Platform/Contracts/BackgroundCommands/`, persisted-payload serialization at `LgymApi.Application/Platform/Contracts/Serialization/`, module commands at `LgymApi.Application/Identity/Contracts/BackgroundCommands/`, `LgymApi.Application/WorkoutProgress/Contracts/BackgroundCommands/`, `LgymApi.Application/Coaching/Contracts/BackgroundCommands/`, `LgymApi.Application/Reporting/Contracts/BackgroundCommands/`, and `LgymApi.Application/Nutrition/Contracts/BackgroundCommands/`, Notifications push contracts at `LgymApi.Application/Notifications/Contracts/Push/`, and the Identity password-recovery port at `LgymApi.Application/Features/PasswordReset/Contracts/`.
+
+`LgymApi.BackgroundWorker/Runtime/` owns the closed command registry and runtime-only execution contracts. `LgymApi.BackgroundWorker/Notifications/PasswordRecoveryEmailSchedulerAdapter.cs` maps the Identity request to the retained Common email wire payload. `LgymApi.BackgroundWorker.Common/Jobs/` and `LgymApi.BackgroundWorker.Common/Notifications/` are the bounded persisted job and email wire seam only. Common must not regain commands, serialization, push contracts, or Application-facing ports.
+
+Application must not reference either `LgymApi.BackgroundWorker` project or any `LgymApi.BackgroundWorker*` namespace. Canonical persisted command IDs retain their legacy `LgymApi.BackgroundWorker.Common.Commands.*` strings, while Application CLR names are read aliases only. The Worker writes the legacy IDs and owns Hangfire-facing runtime behavior.
+
 ### Forbidden Patterns 
 
 - **Cross-Boundary Registration**: the Infrastructure project **must not** register Application services. This is enforced by a `CrossBoundary` architecture guard.
@@ -254,7 +264,8 @@ Then register service/repository in both service collection extension files and 
 ### Source of truth
 
 - `#311` is the constraint authority for the modular-monolith direction.
-- `#375` is the factual baseline and inventory source.
+- `#375` is the historical baseline and inventory source.
+- `#380` is the current background-contract ownership and project-reference source.
 - `docs/adr/006-lgym-evolves-as-modular-monolith.md` records the decision.
 
 ### Issue #376 links
@@ -262,6 +273,8 @@ Then register service/repository in both service collection extension files and 
 - `docs/adr/006-lgym-evolves-as-modular-monolith.md`
 - `docs/modular-monolith/issue-376-module-context-map.md`
 - `docs/modular-monolith/issue-376-ownership-map.md`
+- `docs/modular-monolith/issue-380-background-contract-ownership.md`
+- `docs/modular-monolith/issue-380-project-reference-graph.md`
 
 The current layered runtime stays in place until a later change explicitly alters it.
 The compatibility, persistence, and Unit of Work guidance elsewhere in this guide continues to apply and is not restated here.

@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -327,6 +328,36 @@ public static class ArchitectureTestHelpers
     public static string NormalizePath(string path)
     {
         return path.Replace('\\', '/');
+    }
+
+    public static IReadOnlyList<ProjectReferenceEdge> ParseProjectReferences(string projectFilePath)
+    {
+        return ParseProjectReferences(projectFilePath, XDocument.Load(projectFilePath));
+    }
+
+    public static IReadOnlyList<ProjectReferenceEdge> ParseProjectReferences(string projectFilePath, string projectXml)
+    {
+        return ParseProjectReferences(projectFilePath, XDocument.Parse(projectXml));
+    }
+
+    private static IReadOnlyList<ProjectReferenceEdge> ParseProjectReferences(string projectFilePath, XDocument document)
+    {
+        var normalizedProjectPath = NormalizePath(Path.GetFullPath(projectFilePath));
+        var sourceProject = Path.GetFileNameWithoutExtension(normalizedProjectPath);
+        var projectDirectory = Path.GetDirectoryName(normalizedProjectPath)!;
+
+        return document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "ProjectReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .Where(include => !string.IsNullOrWhiteSpace(include))
+            .Select(include => NormalizePath(Path.GetFullPath(include!, projectDirectory)))
+            .Select(targetPath => new ProjectReferenceEdge(
+                sourceProject,
+                Path.GetFileNameWithoutExtension(targetPath),
+                normalizedProjectPath,
+                targetPath))
+            .ToList();
     }
 
     public static IReadOnlyList<string> GetCanonicalModuleCatalog() => CanonicalModuleCatalog;
@@ -860,3 +891,9 @@ public sealed record ModuleBoundaryFileClassification(
 
     public bool IsProductionCode => !IsExcluded;
 }
+
+public sealed record ProjectReferenceEdge(
+    string SourceProject,
+    string TargetProject,
+    string SourceProjectPath,
+    string TargetProjectPath);

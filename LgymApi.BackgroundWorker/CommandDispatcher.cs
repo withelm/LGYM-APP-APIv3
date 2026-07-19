@@ -2,51 +2,49 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
-using LgymApi.BackgroundWorker.Common.Serialization;
+using LgymApi.BackgroundWorker.Runtime;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Infrastructure.Data;
 using Npgsql;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ApplicationInvitationAcceptedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.InvitationAcceptedCommand;
 
 namespace LgymApi.BackgroundWorker;
 
 /// <summary>
-/// Concrete typed dispatcher implementation for background action commands.
-/// Validates exact-type handler availability, performs idempotency checks, persists durable envelope,
-/// and enqueues orchestration job via scheduler.
+/// Concrete typed command dispatcher.
+/// Validates exact-type handler availability, performs idempotency checks, and persists a durable envelope.
 /// </summary>
 public sealed class CommandDispatcher : ICommandDispatcher
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IBackgroundActionResolver _backgroundActionResolver;
+    private readonly CommandContractRegistry _commandContractRegistry;
     private readonly ICommandEnvelopeRepository _commandEnvelopeRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly AppDbContext _dbContext;
     private readonly ILogger<CommandDispatcher> _logger;
 
     public CommandDispatcher(
-        IServiceProvider serviceProvider,
+        IBackgroundActionResolver backgroundActionResolver,
+        CommandContractRegistry commandContractRegistry,
         ICommandEnvelopeRepository commandEnvelopeRepository,
         IUnitOfWork unitOfWork,
-        AppDbContext dbContext,
         ILogger<CommandDispatcher> logger)
     {
-        _serviceProvider = serviceProvider;
+        _backgroundActionResolver = backgroundActionResolver;
+        _commandContractRegistry = commandContractRegistry;
         _commandEnvelopeRepository = commandEnvelopeRepository;
         _unitOfWork = unitOfWork;
-        _dbContext = dbContext;
         _logger = logger;
     }
 
     /// <summary>
-    /// Enqueues a strongly-typed command for background action execution asynchronously.
-    /// Validates exact-type handler availability (1:1), checks idempotency, persists envelope, and enqueues orchestration job.
-    /// Zero-handler path short-circuits safely with warning and no enqueue.
+    /// Persists a strongly-typed command for background action execution asynchronously.
+    /// Validates exact-type handler availability (1:1), checks idempotency, and persists an envelope.
+    /// Zero-handler path short-circuits safely with warning and no persistence.
     /// </summary>
     public async Task EnqueueAsync<TCommand>(TCommand command) where TCommand : class, IActionCommand
     {
@@ -56,58 +54,32 @@ public sealed class CommandDispatcher : ICommandDispatcher
         }
 
         var commandType = typeof(TCommand);
-        var descriptor = new CommandDescriptor(commandType);
-
-        // Compute deterministic correlation ID from command type + payload content
-        // Special handling for InvitationAcceptedCommand to ensure deterministic serialization
-        Id<CorrelationScope> correlationId;
-        string payloadJson;
-        if (commandType == typeof(InvitationAcceptedCommand) && command is InvitationAcceptedCommand invitationCommand)
-        {
-            correlationId = ComputeDeterministicCorrelationIdForInvitationAcceptedCommand(invitationCommand.InvitationId);
-            // Still need payload JSON for envelope storage (use deterministic format)
-            using var stream = new MemoryStream();
-            using (var writer = new Utf8JsonWriter(stream))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("invitationId");
-                writer.WriteStringValue(invitationCommand.InvitationId.ToString());
-                writer.WriteEndObject();
-                writer.Flush();
-                payloadJson = Encoding.UTF8.GetString(stream.ToArray());
-            }
-        }
-        else
-        {
-            payloadJson = JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current);
-            correlationId = ComputeDeterministicCorrelationId(descriptor.TypeFullName, payloadJson);
-        }
-
-        _logger.LogInformation(
-            "Dispatching command {CommandType} with correlation {CorrelationId}.",
-            commandType.FullName,
-            correlationId);
 
         // Validate exact-type handler availability (1:1 matching, no polymorphism)
-        var handlerType = typeof(IBackgroundAction<>).MakeGenericType(commandType);
-        int handlerCount;
-        using (var tempScope = _serviceProvider.CreateScope())
-        {
-            handlerCount = tempScope.ServiceProvider.GetServices(handlerType).Count();
-        }
+        var handlerCount = _backgroundActionResolver.GetHandlerTypeNames(commandType).Count;
 
         if (handlerCount == 0)
         {
             _logger.LogWarning(
-                "No handlers registered for command type {CommandType}. Short-circuiting dispatch without enqueue.",
-                commandType.FullName);
-            return; // Zero-handler path: safe no-op, no failure, no enqueue
+                "No handlers registered for command. Skipping durable envelope persistence.");
+            return; // Zero-handler path: safe no-op, no failure, no persistence
         }
 
+        var descriptor = _commandContractRegistry.DescribeForDispatch(commandType);
+        var payloadJson = descriptor.CanonicalId == CommandContractRegistry.InvitationAcceptedCanonicalId
+            ? SerializeInvitationAcceptedCommand(command)
+            : JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current);
+        var correlationId = ComputeDeterministicCorrelationId(descriptor.CanonicalId, payloadJson);
+
         _logger.LogInformation(
-            "Found {HandlerCount} handler(s) for command type {CommandType}.",
+                "Persisting command {CommandId} with correlation {CorrelationId}.",
+            descriptor.CanonicalId,
+            correlationId);
+
+        _logger.LogInformation(
+            "Found {HandlerCount} handler(s) for command {CommandId}.",
             handlerCount,
-            commandType.FullName);
+            descriptor.CanonicalId);
 
         // Check idempotency: attempt to add envelope with unique CorrelationId
         // Uses DB-level uniqueness constraint (IX_CommandEnvelopes_CorrelationId) for atomic duplicate detection
@@ -117,22 +89,22 @@ public sealed class CommandDispatcher : ICommandDispatcher
             Id = Id<CommandEnvelope>.New(),
             CorrelationId = correlationId,
             PayloadJson = payloadJson,
-            CommandTypeFullName = descriptor.TypeFullName,
+            CommandTypeFullName = descriptor.CanonicalId,
             Status = ActionExecutionStatus.Pending,
             NextAttemptAt = DateTimeOffset.UtcNow
         };
 
-        // AddOrGetExistingAsync stages envelope for insert or returns existing if already present
+        // AddOrGetExistingAsync records the envelope or returns an existing one.
         var envelopeResult = await _commandEnvelopeRepository.AddOrGetExistingAsync(envelope);
 
         if (!ReferenceEquals(envelopeResult, envelope))
         {
             // Duplicate detected during read phase (existing envelope found by CorrelationId)
             _logger.LogInformation(
-                "Command envelope already exists for correlation {CorrelationId} (envelope {EnvelopeId}). Skipping duplicate enqueue.",
+                "Command envelope already exists for correlation {CorrelationId} (envelope {EnvelopeId}). Skipping duplicate persistence.",
                 correlationId,
                 envelopeResult.Id);
-            return; // Idempotent path: no duplicate enqueue
+            return; // Idempotent path: no duplicate persistence
         }
 
         // Persist new envelope - DB unique constraint will enforce duplicate protection atomically
@@ -152,7 +124,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 correlationId);
 
             // Detach the failed envelope to avoid tracking conflicts
-            _dbContext.Entry(envelope).State = EntityState.Detached;
+            _commandEnvelopeRepository.Detach(envelope);
 
             // Fetch the winning envelope that was persisted by concurrent caller
             var existing = await _commandEnvelopeRepository.FindByCorrelationIdAsync(correlationId);
@@ -168,11 +140,11 @@ public sealed class CommandDispatcher : ICommandDispatcher
             }
 
             _logger.LogInformation(
-                "Concurrent duplicate resolved: using existing envelope {EnvelopeId} for correlation {CorrelationId}. Skipping enqueue.",
+                "Concurrent duplicate resolved: using existing envelope {EnvelopeId} for correlation {CorrelationId}. Skipping persistence.",
                 existing.Id,
                 correlationId);
             
-            return; // Idempotent path: conflict resolved, skip enqueue
+            return; // Idempotent path: conflict resolved, skip persistence
         }
 
         _logger.LogInformation(
@@ -182,12 +154,12 @@ public sealed class CommandDispatcher : ICommandDispatcher
     }
 
     /// <summary>
-    /// Computes a deterministic correlation ID from command type and payload.
+    /// Computes a deterministic correlation ID from the canonical command ID and payload.
     /// Uses SHA256 hash to ensure identical commands produce identical correlation IDs for idempotency.
     /// </summary>
-    private static Id<CorrelationScope> ComputeDeterministicCorrelationId(string typeFullName, string payloadJson)
+    private static Id<CorrelationScope> ComputeDeterministicCorrelationId(string canonicalCommandId, string payloadJson)
     {
-        var input = $"{typeFullName}|{payloadJson}";
+        var input = $"{canonicalCommandId}|{payloadJson}";
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
 
         // Use first 16 bytes of SHA256 hash as typed correlation ID (deterministic)
@@ -197,31 +169,28 @@ public sealed class CommandDispatcher : ICommandDispatcher
     }
 
     /// <summary>
-    /// Computes a deterministic correlation ID for InvitationAcceptedCommand.
-    /// Uses manual JSON serialization with fixed property order to ensure identical output for identical commands.
+    /// Serializes InvitationAcceptedCommand manually to preserve its fixed durable bytes.
     /// </summary>
-    private static Id<CorrelationScope> ComputeDeterministicCorrelationIdForInvitationAcceptedCommand(Id<TrainerInvitation> invitationId)
+    private static string SerializeInvitationAcceptedCommand(object command)
     {
-        // Use deterministic JSON serialization for InvitationAcceptedCommand
-        // The command has a single property: InvitationId
-        // We write JSON manually to guarantee stable property order and format
+        var invitationId = command switch
+        {
+            ApplicationInvitationAcceptedCommand applicationCommand => applicationCommand.InvitationId,
+            _ => throw new InvalidOperationException(
+                $"Command '{command.GetType()}' is registered with the InvitationAccepted canonical ID but has incompatible metadata.")
+        };
+
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream))
         {
             writer.WriteStartObject();
             writer.WritePropertyName("invitationId");
-            writer.WriteStringValue(invitationId.ToString()); // Standard typed ID string format with hyphens
+            writer.WriteStringValue(invitationId.ToString());
             writer.WriteEndObject();
             writer.Flush();
-
-            var jsonBytes = stream.ToArray();
-            var input = $"LgymApi.BackgroundWorker.Common.Commands.InvitationAcceptedCommand|{System.Text.Encoding.UTF8.GetString(jsonBytes)}";
-            var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
-
-            var correlationBytes = new byte[16];
-            Array.Copy(hashBytes, correlationBytes, 16);
-            return Id<CorrelationScope>.FromBytes(correlationBytes);
         }
+
+        return Encoding.UTF8.GetString(stream.ToArray());
     }
 
     private static bool IsExactDuplicateEnvelopeViolation(DbUpdateException exception)

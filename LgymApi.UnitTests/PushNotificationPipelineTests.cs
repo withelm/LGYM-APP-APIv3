@@ -3,11 +3,10 @@ using System.Reflection;
 using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common.Push;
-using LgymApi.BackgroundWorker.Common.Push.Models;
-using LgymApi.BackgroundWorker.Common.Serialization;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.BackgroundWorker.Push;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -166,6 +165,31 @@ public sealed class PushNotificationPipelineTests
     }
 
     [Test]
+    public async Task EnqueueAsync_WhenNoActiveInstallation_DoesNotPersistOrSchedule()
+    {
+        await using var db = CreateDbContext("push-enqueue-no-active-installation");
+        var scheduler = new FakePushBackgroundScheduler();
+        var service = new PushNotificationService(
+            new PushInstallationRepository(db),
+            new PushNotificationMessageRepository(db),
+            scheduler,
+            new EfUnitOfWork(db),
+            NullLogger<PushNotificationService>.Instance);
+
+        await service.EnqueueAsync(new EnqueuePushNotificationInput(
+            Id<User>.New(),
+            1,
+            "trainer.note.updated",
+            "event-no-installation",
+            null,
+            null,
+            null));
+
+        db.PushNotificationMessages.Should().BeEmpty();
+        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
+    }
+
+    [Test]
     public async Task ProcessAsync_WhenInvalidToken_DisablesInstallationWithoutRetry()
     {
         var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
@@ -190,6 +214,33 @@ public sealed class PushNotificationPipelineTests
         installation.DisabledReason.Should().Be("InvalidFcmToken");
         installation.DisabledAt.Should().NotBeNull();
         scheduler.ScheduledRetries.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task ProcessAsync_WhenInstallationMissing_PersistsPermanentFailureWithoutSending()
+    {
+        var message = CreateMessage(Id<PushInstallation>.New());
+        var repository = new FakePushNotificationMessageRepository(message);
+        var sender = new FakePushProviderSender(new PushSendAttemptResult(PushSendOutcome.Sent, "OK", "message-1", null, "ok"));
+        var unitOfWork = new FakeUnitOfWork();
+        var handler = new PushNotificationJobHandlerService(
+            repository,
+            new FakePushInstallationRepository(),
+            sender,
+            new FakePushBackgroundScheduler(),
+            unitOfWork,
+            new PushNotificationOptions(),
+            NullLogger<PushNotificationJobHandlerService>.Instance);
+
+        await handler.ProcessAsync(message.Id);
+
+        message.Status.Should().Be(PushNotificationStatus.Failed);
+        message.FailureKind.Should().Be(PushNotificationFailureKind.Permanent);
+        message.ProviderStatus.Should().Be("InstallationMissing");
+        message.LastError.Should().Be("Push installation no longer exists.");
+        message.Attempts.Should().Be(0);
+        sender.SendCalls.Should().Be(0);
+        unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
     [Test]

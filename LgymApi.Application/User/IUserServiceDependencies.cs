@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using Microsoft.Extensions.Logging;
 using LgymApi.Application.Features.Tutorial;
 

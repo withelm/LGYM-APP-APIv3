@@ -46,9 +46,9 @@ No new regression is claimed here. The only non-green command is classified as e
 
 ## Project-reference graph summary
 
-The current solution has 14 tracked projects. `LgymApi.Resources.Generator` is the only project with zero outgoing `ProjectReference` edges.
+The issue #375 snapshot had 14 tracked projects. `LgymApi.Resources.Generator` was the only project with zero outgoing `ProjectReference` edges.
 
-The companion graph doc contains the full current-state edge list and Mermaid graph, derived only from tracked `.csproj` references.
+The companion graph doc contains the full historical edge list and Mermaid graph, derived only from tracked `.csproj` references. The current graph is published in `docs/modular-monolith/issue-380-project-reference-graph.md`.
 
 - Companion file: `docs/modular-monolith/issue-375-project-reference-graph.md`
 - Evidence: `.sisyphus/evidence/task-2-project-reference-edges.md`

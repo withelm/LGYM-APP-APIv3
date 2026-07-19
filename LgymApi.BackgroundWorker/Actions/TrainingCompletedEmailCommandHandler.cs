@@ -1,6 +1,6 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;
@@ -14,7 +14,7 @@ namespace LgymApi.BackgroundWorker.Actions;
 /// Background action handler that schedules training completed email notifications.
 /// Triggered when a training session is completed.
 /// </summary>
-public sealed class TrainingCompletedEmailCommandHandler : IBackgroundAction<TrainingCompletedCommand>
+public sealed partial class TrainingCompletedEmailCommandHandler : global::LgymApi.BackgroundWorker.Actions.Contracts.IBackgroundAction<TrainingCompletedCommand>
 {
     private readonly IUserRepository _userRepository;
     private readonly ITrainingRepository _trainingRepository;

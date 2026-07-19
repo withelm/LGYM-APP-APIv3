@@ -1,5 +1,5 @@
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 
 namespace LgymApi.Application.Features.Reporting;
 

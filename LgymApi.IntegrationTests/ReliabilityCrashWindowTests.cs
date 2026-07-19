@@ -28,7 +28,7 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
         {
             Id = Id<CommandEnvelope>.New(),
             CorrelationId = correlationId,
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             PayloadJson = "{\"UserId\":\"00000000-0000-0000-0000-000000000001\",\"Email\":\"crash-test@example.com\"}",
             Status = ActionExecutionStatus.Pending,
             CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
@@ -221,7 +221,7 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
         {
             Id = Id<CommandEnvelope>.New(),
             CorrelationId = correlationId,
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             PayloadJson = "{\"UserId\":\"00000000-0000-0000-0000-000000000002\",\"Email\":\"already-dispatched@example.com\"}",
             Status = ActionExecutionStatus.Pending,
             CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
@@ -269,7 +269,7 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
         {
             Id = Id<CommandEnvelope>.New(),
             CorrelationId = correlationId,
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             PayloadJson = "{\"UserId\":\"00000000-0000-0000-0000-000000000003\",\"Email\":\"processing@example.com\"}",
             Status = ActionExecutionStatus.Processing,
             CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
@@ -312,7 +312,7 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
         {
             Id = Id<CommandEnvelope>.New(),
             CorrelationId = correlationId,
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             PayloadJson = "{\"UserId\":\"00000000-0000-0000-0000-000000000005\",\"Email\":\"stale-processing@example.com\"}",
             Status = ActionExecutionStatus.Processing,
             CreatedAt = DateTimeOffset.UtcNow.AddHours(-1).AddMinutes(-5),
@@ -358,7 +358,7 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
         {
             Id = Id<CommandEnvelope>.New(),
             CorrelationId = correlationId,
-            CommandTypeFullName = "LgymApi.BackgroundWorker.Actions.UserRegisteredCommand",
+            CommandTypeFullName = "LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand",
             PayloadJson = "{\"UserId\":\"00000000-0000-0000-0000-000000000004\",\"Email\":\"completed@example.com\"}",
             Status = ActionExecutionStatus.Completed,
             CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-10),

@@ -14,7 +14,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.Enums;
@@ -522,10 +522,6 @@ public sealed class ServiceCommitBehaviorTests
 
     private sealed class NoOpCommandDispatcher : ICommandDispatcher
     {
-        public Task DispatchAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default) where TCommand : IActionCommand
-        {
-            return Task.CompletedTask;
-        }
         public Task EnqueueAsync<TCommand>(TCommand command) where TCommand : class, IActionCommand
         {
             return Task.CompletedTask;
