@@ -2,7 +2,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Application.Common.Training.Elo;
 using LgymApi.Application.Units;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Features.Training;

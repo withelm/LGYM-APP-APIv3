@@ -77,6 +77,64 @@ public sealed class CompositionRootRegistrationGuardTests
         });
     }
 
+    [Test]
+    public void Program_Should_Not_Directly_RegisterPasswordRecoverySchedulers()
+    {
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+        var programPath = Path.Combine(repoRoot, "LgymApi.Api", "Program.cs");
+        var programContent = File.ReadAllText(programPath);
+        var root = CSharpSyntaxTree.ParseText(programContent).GetCompilationUnitRoot();
+
+        var directPasswordRegistrations = root
+            .DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Where(invocation => ExtractMethodName(invocation) == "AddScoped")
+            .Where(invocation => invocation.ToString().Contains("PasswordRecoveryEmail", StringComparison.Ordinal))
+            .Select(invocation => invocation.ToString())
+            .ToArray();
+
+        Assert.That(
+            directPasswordRegistrations,
+            Is.Empty,
+            "Program.cs must obtain password recovery scheduler registrations from AddBackgroundWorkerServices().");
+    }
+
+    [Test]
+    public void InfrastructureNotifications_Should_RegisterFcmOnlyAndHaveNoEnvironmentSchedulerSelection()
+    {
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+        var sourcePath = Path.Combine(repoRoot, "LgymApi.Infrastructure", "NotificationsServiceCollectionExtensions.cs");
+        var sourceContent = File.ReadAllText(sourcePath);
+        var root = CSharpSyntaxTree.ParseText(sourceContent).GetCompilationUnitRoot();
+        var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>().ToArray();
+
+        var pushSchedulerRegistrations = root
+            .DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Where(invocation => invocation.ToString().Contains("IPushBackgroundScheduler", StringComparison.Ordinal))
+            .Select(invocation => invocation.ToString())
+            .ToArray();
+        var fcmRegistrations = root
+            .DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Where(invocation => invocation.ToString().Contains("IPushProviderSender", StringComparison.Ordinal)
+                && invocation.ToString().Contains("FcmPushSender", StringComparison.Ordinal))
+            .ToArray();
+        var environmentParameters = methods
+            .Where(method => method.Identifier.ValueText is "AddNotificationsModule" or "AddNotificationsInfrastructure")
+            .SelectMany(method => method.ParameterList.Parameters)
+            .Where(parameter => parameter.Type?.ToString() == "bool")
+            .Select(parameter => parameter.Identifier.ValueText)
+            .ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pushSchedulerRegistrations, Is.Empty);
+            Assert.That(fcmRegistrations, Has.Length.EqualTo(1));
+            Assert.That(environmentParameters, Is.Empty);
+        });
+    }
+
     /// <summary>
     /// Extracts the method name from an invocation expression.
     /// Handles both direct method calls (e.g., AddApplication()) and chained calls (e.g., builder.Services.AddApplication()).

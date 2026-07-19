@@ -140,7 +140,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
         public Application.Repositories.IExerciseRepository ExerciseRepository => null!;
         public Application.Repositories.IExerciseScoreRepository ExerciseScoreRepository => null!;
         public Application.Repositories.ITrainingExerciseScoreRepository TrainingExerciseScoreRepository => null!;
-        public BackgroundWorker.Common.ICommandDispatcher CommandDispatcher => null!;
+        public Application.Platform.Contracts.BackgroundCommands.ICommandDispatcher CommandDispatcher => null!;
         public Application.Repositories.IEloRegistryRepository EloRepository => null!;
         public Application.Services.IRankService RankService => null!;
         public Application.Repositories.IUnitOfWork UnitOfWork => null!;

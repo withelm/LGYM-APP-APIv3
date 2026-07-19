@@ -1,7 +1,7 @@
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;

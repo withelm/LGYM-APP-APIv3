@@ -1,11 +1,16 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.Application.Identity.Contracts.BackgroundCommands;
+using LgymApi.Application.Nutrition.Contracts.BackgroundCommands;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
+using LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.BackgroundWorker.Actions.Contracts;
+using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +29,7 @@ public sealed class CommandDispatcherTests
     private FakeCommandEnvelopeRepository _repository = null!;
     private FakeUnitOfWork _unitOfWork = null!;
     private Microsoft.Extensions.DependencyInjection.ServiceProvider _serviceProvider = null!;
+    private CommandContractRegistry _commandContractRegistry = null!;
     private FakeLogger _logger = null!;
 
     [SetUp]
@@ -32,6 +38,7 @@ public sealed class CommandDispatcherTests
         _repository = new FakeCommandEnvelopeRepository();
         _unitOfWork = new FakeUnitOfWork();
         _logger = new FakeLogger();
+        _commandContractRegistry = CommandContractRegistry.CreateDefault();
     }
 
     [TearDown]
@@ -52,10 +59,10 @@ public sealed class CommandDispatcherTests
         _serviceProvider = services.BuildServiceProvider();
 
         var dispatcher = new CommandDispatcher(
-            _serviceProvider,
+            CreateActionResolver(),
+            _commandContractRegistry,
             _repository,
             _unitOfWork,
-            CreateTestDbContext(),
             _logger);
 
         // Act - Enqueue the same command 100 times
@@ -92,10 +99,10 @@ public sealed class CommandDispatcherTests
         _serviceProvider = services.BuildServiceProvider();
 
         var dispatcher = new CommandDispatcher(
-            _serviceProvider,
+            CreateActionResolver(),
+            _commandContractRegistry,
             _repository,
             _unitOfWork,
-            CreateTestDbContext(),
             _logger);
 
         // Act - Enqueue commands with different InvitationIds
@@ -123,10 +130,10 @@ public sealed class CommandDispatcherTests
         _serviceProvider = services.BuildServiceProvider();
 
         var dispatcher = new CommandDispatcher(
-            _serviceProvider,
+            CreateActionResolver(),
+            _commandContractRegistry,
             _repository,
             _unitOfWork,
-            CreateTestDbContext(),
             _logger);
 
         // Act - Create two separate command instances with the same InvitationId
@@ -155,10 +162,10 @@ public sealed class CommandDispatcherTests
         _unitOfWork.SaveChangesException = CreateDuplicateEnvelopeDbUpdateException();
 
         var dispatcher = new CommandDispatcher(
-            _serviceProvider,
+            CreateActionResolver(),
+            _commandContractRegistry,
             _repository,
             _unitOfWork,
-            CreateTestDbContext(),
             _logger);
 
         var command = new InvitationAcceptedCommand { InvitationId = invitationId };
@@ -186,10 +193,10 @@ public sealed class CommandDispatcherTests
         _unitOfWork.SaveChangesException = new DbUpdateException("boom", new InvalidOperationException("not postgres"));
 
         var dispatcher = new CommandDispatcher(
-            _serviceProvider,
+            CreateActionResolver(),
+            _commandContractRegistry,
             _repository,
             _unitOfWork,
-            CreateTestDbContext(),
             _logger);
 
         var command = new InvitationAcceptedCommand { InvitationId = invitationId };
@@ -218,10 +225,10 @@ public sealed class CommandDispatcherTests
         _unitOfWork.SaveChangesException = CreateDuplicateEnvelopeDbUpdateException();
 
         var dispatcher = new CommandDispatcher(
-            _serviceProvider,
+            CreateActionResolver(),
+            _commandContractRegistry,
             _repository,
             _unitOfWork,
-            CreateTestDbContext(),
             _logger);
 
         var command = new InvitationAcceptedCommand { InvitationId = invitationId };
@@ -232,6 +239,69 @@ public sealed class CommandDispatcherTests
         // Assert - edge case: constraint violation but envelope not found must bubble up
         await act.Should().ThrowAsync<DbUpdateException>();
         _unitOfWork.SaveCallCount.Should().Be(1);
+    }
+
+    [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
+    public async Task EnqueueAsync_PersistsLegacyGoldenVector(LegacyCommandContract contract)
+    {
+        // Given
+        var services = new ServiceCollection();
+        services.AddSingleton<ILogger<CommandDispatcher>>(_ => _logger);
+        services.AddScoped(typeof(IBackgroundAction<>), typeof(LegacyNoOpBackgroundAction<>));
+        _serviceProvider = services.BuildServiceProvider();
+        var dispatcher = new CommandDispatcher(
+            CreateActionResolver(),
+            _commandContractRegistry,
+            _repository,
+            _unitOfWork,
+            _logger);
+
+        // When
+        await EnqueueLegacyCommandAsync(dispatcher, contract.Command);
+        var envelope = _repository.GetAllEnvelopes().Single();
+        var actual = new PersistedCommandVector(
+            envelope.CommandTypeFullName,
+            envelope.PayloadJson,
+            $"{envelope.CommandTypeFullName}|{envelope.PayloadJson}",
+            envelope.CorrelationId.ToString());
+
+        // Then
+        actual.Should().Be(new PersistedCommandVector(
+            contract.CanonicalId,
+            contract.PayloadJson,
+            contract.CorrelationInput,
+            contract.CorrelationId));
+    }
+
+    private static Task EnqueueLegacyCommandAsync(CommandDispatcher dispatcher, IActionCommand command) => command switch
+    {
+        UserRegisteredCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        TrainingCompletedCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        InvitationCreatedCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        InvitationAcceptedCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        InvitationRevokedCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        DietPlanUpdatedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        TraineeNoteUpdatedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        ReportSubmissionCreatedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        ReportRequestCreatedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        ReportFeedbackAddedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        TrainerInvitationAcceptedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        TrainerInvitationCreatedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        TrainerInvitationRejectedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        TrainerRelationshipEndedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        _ => throw new ArgumentOutOfRangeException(nameof(command), command.GetType(), "Command is absent from the legacy manifest.")
+    };
+
+    private sealed record PersistedCommandVector(
+        string CanonicalId,
+        string PayloadJson,
+        string CorrelationInput,
+        string CorrelationId);
+
+    private sealed class LegacyNoOpBackgroundAction<TCommand> : IBackgroundAction<TCommand>
+        where TCommand : IActionCommand
+    {
+        public Task ExecuteAsync(TCommand command, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     // Test handler
@@ -286,6 +356,8 @@ public sealed class CommandDispatcherTests
             UpdateCallCount++;
             return Task.CompletedTask;
         }
+
+        public void Detach(CommandEnvelope envelope) { }
 
         public Task<CommandEnvelope> AddOrGetExistingAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
         {
@@ -351,12 +423,8 @@ public sealed class CommandDispatcherTests
         public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
     }
 
-    private AppDbContext CreateTestDbContext()
-    {
-        return new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase("TestDb_" + Id<CommandEnvelope>.New().ToString())
-            .Options);
-    }
+    private IBackgroundActionResolver CreateActionResolver() =>
+        new BackgroundActionResolver(_serviceProvider.GetRequiredService<IServiceScopeFactory>());
 
     private static DbUpdateException CreateDuplicateEnvelopeDbUpdateException()
     {

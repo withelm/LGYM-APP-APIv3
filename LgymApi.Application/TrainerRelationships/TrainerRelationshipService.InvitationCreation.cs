@@ -2,7 +2,7 @@ using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Pagination;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;

@@ -10,6 +10,7 @@ using LgymApi.Application.Identity;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Nutrition;
 using LgymApi.Application.Platform;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Application.Reporting;
 using LgymApi.Application.TrainingPlanning;
 using LgymApi.Application.WorkoutProgress;
@@ -29,12 +30,7 @@ using LgymApi.Api.Constants;
 using Hangfire;
 using LgymApi.Api.Serialization;
 using LgymApi.Api.Logging;
-using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.BackgroundWorker.Common.Jobs;
-using LgymApi.BackgroundWorker.Common.Notifications.Models;
-using LgymApi.BackgroundWorker.Common.Notifications;
-using LgymApi.BackgroundWorker.Notifications;
-using LgymApi.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http.Json;
@@ -131,11 +127,8 @@ builder.Services
     .AddCoachingInfrastructure()
     .AddNutritionInfrastructure()
     .AddReportingInfrastructure(builder.Configuration, isDevelopmentOrTesting)
-    .AddNotificationsModule(builder.Configuration, isTesting);
-builder.Services.AddBackgroundWorkerServices(builder.Environment.IsEnvironment(TestingEnvironment));
-
-// Register password recovery email scheduler in Api layer (allowed scope per plan guardrail)
-builder.Services.AddScoped<IEmailScheduler<PasswordRecoveryEmailPayload>, EmailSchedulerService<PasswordRecoveryEmailPayload>>();
+    .AddNotificationsModule(builder.Configuration);
+builder.Services.AddBackgroundWorkerServices(isTesting);
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IUserIdProvider, LgymApi.Api.Hubs.NotificationHubUserIdProvider>();

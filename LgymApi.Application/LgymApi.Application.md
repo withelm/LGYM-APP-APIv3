@@ -3,9 +3,14 @@
 - Purpose: use-case and business orchestration layer.
 - Contains: services, service interfaces, repository abstractions, application models, mapping core, notification abstractions, and module-owned app DI helpers.
 - Rules: own business rules, authorization checks, transactions, and UoW commits here.
-- Boundary: do not reference infrastructure implementations.
+- Boundary: do not reference infrastructure implementations or either `LgymApi.BackgroundWorker*` project or namespace.
+- Platform background-command ports: `IActionCommand` and `ICommandDispatcher` live under `Platform/Contracts/BackgroundCommands`; the 14 feature commands stay in their owning module `Contracts/BackgroundCommands` folders. Worker runtime types must not leak through these contracts.
+- Platform serialization contracts: the canonical persisted-payload `JsonSerializerOptions` and typed-ID converters live under `Platform/Contracts/Serialization`; API HTTP JSON reuses the typed-ID converter but keeps its stricter enum input policy.
+- Durable command serialization writes the legacy `LgymApi.BackgroundWorker.Common.Commands.*` canonical ID and byte-compatible JSON. Application CLR full names are read aliases only; `CommandEnvelope.CommandTypeFullName` retains its legacy name while storing the canonical ID.
+- `ICommandEnvelopeRepository.Detach` clears a failed pending insert before the dispatcher reloads the winning correlation-id row after a uniqueness conflict.
 - DI ownership: feature helpers live here for business services only, and the platform/reference-data helper keeps shared app-level roots such as enum conversion and config services.
-- Notifications: the application-side notifications helper is the worker-facing seam; the API host uses the host-facing notifications module that includes infrastructure wiring.
+- Notifications: Application owns module-facing password scheduling and push contracts. Worker supplies scheduling adapters, while Infrastructure supplies FCM delivery.
+- Notifications push delivery contracts are canonical under `Notifications/Contracts/Push`; Worker scheduling and Infrastructure FCM implement these Application-owned ports.
 - Training ELO scoring is selected by exercise profile in the training service; legacy exercise create/update methods always use the standard profile while privileged variants can opt into alternate formulas.
 - Training ELO formulas are implemented as one strategy class per `ExerciseEloFormula` under `Application/Common/Training/Elo` and resolved through DI instead of switch logic in `TrainingService`; the pull-up profile rewards lower weight with `PullupWeighted`.
 - Enum lookups are the source of truth for front-end choice lists; `ExerciseEloFormula` is exposed through the enum lookup service and should not be duplicated as a hardcoded UI list.
@@ -17,3 +22,4 @@
 - `Notifications/NotificationEventBridge` is the internal seam for backend event producers and the in-app fanout path; it forwards generic push events with IDs only and links the existing `InAppNotification` id for mobile lookup/routing.
 - `Notifications/StalePushInstallationCleanupService` tombstones inactive installations by `LastSeenAt` and preserves installation/message audit history instead of deleting old rows.
 - Google account unlinking uses `IUserExternalLoginRepository` for active-row lookup plus soft-delete staging so the service layer can tombstone the current Google login without introducing provider-agnostic unlink behavior.
+- Identity password recovery owns and consumes `IPasswordRecoveryEmailScheduler` and its seven-value typed request under `Features/PasswordReset/Contracts`; Worker/Common payloads remain outside that Application port, and the service supplies an explicit empty `ResetUrl`.

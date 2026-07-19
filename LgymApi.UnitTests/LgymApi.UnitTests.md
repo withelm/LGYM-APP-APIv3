@@ -6,3 +6,4 @@
 - Rules: use shared helpers from `LgymApi.TestUtils` when they already fit the test.
 - Rules: prefer `LgymApi.Resources` accessors over hardcoded translated/user-facing strings when the resource value is the source of truth.
 - Boundary: keep tests isolated and fast.
+- Composition guards assert one canonical registry/dispatcher/password adapter, Infrastructure FCM ownership, environment-selected Worker push scheduling, and exact 14-row/15-handler startup validation.

@@ -1,7 +1,7 @@
 using System.Linq;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Common.Training.Elo;
 
 namespace LgymApi.Application.Features.Training;

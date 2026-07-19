@@ -1,7 +1,7 @@
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
-public sealed class SendInvitationEmailHandler : IBackgroundAction<InvitationCreatedCommand>
+public sealed partial class SendInvitationEmailHandler : global::LgymApi.BackgroundWorker.Actions.Contracts.IBackgroundAction<InvitationCreatedCommand>
 {
     private readonly ITrainerRelationshipRepository _invitationRepository;
     private readonly IUserRepository _userRepository;

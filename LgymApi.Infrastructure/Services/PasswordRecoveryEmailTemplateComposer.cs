@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
-using LgymApi.BackgroundWorker.Common.Serialization;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Infrastructure.Options;
 using EmailNotificationType = LgymApi.Domain.Notifications.EmailNotificationType;
 using EmailNotificationTypes = LgymApi.Domain.Notifications.EmailNotificationTypes;

@@ -1,7 +1,6 @@
 using FluentAssertions;
 using LgymApi.Application.Notifications;
-using LgymApi.BackgroundWorker.Common.Push;
-using LgymApi.BackgroundWorker.Common.Push.Models;
+using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.BackgroundWorker.Push;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;

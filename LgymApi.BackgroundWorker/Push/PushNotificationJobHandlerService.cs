@@ -1,8 +1,7 @@
 using System.Text.Json;
+using LgymApi.Application.Notifications.Contracts.Push;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common.Push;
-using LgymApi.BackgroundWorker.Common.Push.Models;
-using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;

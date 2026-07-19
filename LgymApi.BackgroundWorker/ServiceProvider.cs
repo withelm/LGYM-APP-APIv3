@@ -1,19 +1,34 @@
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.BackgroundWorker.Common.Jobs;
-using LgymApi.BackgroundWorker.Common.Push;
 using LgymApi.BackgroundWorker.Jobs;
 using LgymApi.BackgroundWorker.Push;
+using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.BackgroundWorker.Notifications;
+using LgymApi.Application.Features.PasswordReset.Contracts;
 using LgymApi.Infrastructure.Jobs;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.BackgroundWorker.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using ApplicationCommandDispatcher = LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandDispatcher;
+using UserRegisteredCommand = LgymApi.Application.Identity.Contracts.BackgroundCommands.UserRegisteredCommand;
+using TrainingCompletedCommand = LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands.TrainingCompletedCommand;
+using InvitationCreatedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.InvitationCreatedCommand;
+using InvitationAcceptedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.InvitationAcceptedCommand;
+using InvitationRevokedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.InvitationRevokedCommand;
+using DietPlanUpdatedInAppNotificationCommand = LgymApi.Application.Nutrition.Contracts.BackgroundCommands.DietPlanUpdatedInAppNotificationCommand;
+using TraineeNoteUpdatedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TraineeNoteUpdatedInAppNotificationCommand;
+using ReportSubmissionCreatedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionCreatedInAppNotificationCommand;
+using ReportRequestCreatedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportRequestCreatedInAppNotificationCommand;
+using ReportFeedbackAddedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackAddedInAppNotificationCommand;
+using TrainerInvitationAcceptedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationAcceptedInAppNotificationCommand;
+using TrainerInvitationCreatedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationCreatedInAppNotificationCommand;
+using TrainerInvitationRejectedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationRejectedInAppNotificationCommand;
+using TrainerRelationshipEndedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerRelationshipEndedInAppNotificationCommand;
 
 namespace LgymApi.BackgroundWorker;
 
@@ -21,6 +36,9 @@ public static class ServiceProvider
 {
     public static IServiceCollection AddBackgroundWorkerServices(this IServiceCollection services, bool isTesting)
     {
+        var commandContractRegistry = CommandContractRegistry.CreateDefault();
+        services.AddSingleton(commandContractRegistry);
+
         if (isTesting)
         {
             services.AddScoped<IEmailBackgroundScheduler, NoOpEmailBackgroundScheduler>();
@@ -39,13 +57,25 @@ public static class ServiceProvider
             services.AddScoped<IActionMessageScheduler, HangfireActionMessageScheduler>();
         }
 
+        if (isTesting)
+        {
+            services.AddScoped<IPushBackgroundScheduler, Services.NoOpPushBackgroundScheduler>();
+        }
+        else
+        {
+            services.AddScoped<IPushBackgroundScheduler, Services.HangfirePushBackgroundScheduler>();
+        }
+
         services.AddScoped<IEmailScheduler<InvitationEmailPayload>, EmailSchedulerService<InvitationEmailPayload>>();
         services.AddScoped<IEmailScheduler<InvitationAcceptedEmailPayload>, EmailSchedulerService<InvitationAcceptedEmailPayload>>();
         services.AddScoped<IEmailScheduler<InvitationRevokedEmailPayload>, EmailSchedulerService<InvitationRevokedEmailPayload>>();
         services.AddScoped<IEmailScheduler<TrainingCompletedEmailPayload>, EmailSchedulerService<TrainingCompletedEmailPayload>>();
         services.AddScoped<IEmailScheduler<WelcomeEmailPayload>, EmailSchedulerService<WelcomeEmailPayload>>();
+        services.AddScoped<IEmailScheduler<PasswordRecoveryEmailPayload>, EmailSchedulerService<PasswordRecoveryEmailPayload>>();
+        services.AddScoped<IPasswordRecoveryEmailScheduler, PasswordRecoveryEmailSchedulerAdapter>();
         services.AddScoped<IEmailJobHandler, EmailJobHandlerService>();
-        services.AddScoped<ICommandDispatcher, CommandDispatcher>();
+        services.AddScoped<ApplicationCommandDispatcher, CommandDispatcher>();
+        services.AddScoped<Runtime.IBackgroundActionResolver, BackgroundActionResolver>();
 
         services.AddScoped<IInvitationEmailJob, InvitationEmailJob>();
         services.AddScoped<IWelcomeEmailJob, WelcomeEmailJob>();
@@ -66,15 +96,6 @@ public static class ServiceProvider
         services.AddScoped<BackgroundActionOrchestratorService>();
         services.AddScoped<PushNotificationJobHandlerService>();
         services.AddScoped<StalePushInstallationCleanupJob>();
-        services.AddNotificationApplicationServices();
-        if (isTesting)
-        {
-            services.TryAddScoped<INotificationEventBridge, NoOpNotificationEventBridge>();
-        }
-        else
-        {
-            services.TryAddScoped<INotificationEventBridge, NotificationEventBridge>();
-        }
 
         // Register typed background action handlers
         services.AddBackgroundAction<UserRegisteredCommand, SendRegistrationEmailHandler>();
@@ -93,7 +114,7 @@ public static class ServiceProvider
         services.AddBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand, TraineeNoteUpdatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TrainerRelationshipEndedInAppNotificationCommand, TrainerRelationshipEndedInAppNotificationCommandHandler>();
 
-
+        BackgroundActionRegistrationValidator.Validate(services, commandContractRegistry);
         return services;
     }
 
@@ -107,11 +128,11 @@ public static class ServiceProvider
     /// <param name="services">The service collection.</param>
     /// <returns>The service collection for fluent chaining.</returns>
     public static IServiceCollection AddBackgroundAction<TCommand, TAction>(this IServiceCollection services)
-        where TCommand : IActionCommand
-        where TAction : class, IBackgroundAction<TCommand>
+        where TCommand : LgymApi.Application.Platform.Contracts.BackgroundCommands.IActionCommand
+        where TAction : class, Actions.Contracts.IBackgroundAction<TCommand>
     {
         // Register typed handler for resolution by orchestrator
-        services.AddScoped<IBackgroundAction<TCommand>, TAction>();
+        services.AddScoped<Actions.Contracts.IBackgroundAction<TCommand>, TAction>();
 
         // Register concrete implementation for dependency graph
         services.AddScoped<TAction>();

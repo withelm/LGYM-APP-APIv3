@@ -3,7 +3,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
 using LgymApi.Application.Models;
 using LgymApi.BackgroundWorker.Actions;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;

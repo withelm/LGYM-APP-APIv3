@@ -37,6 +37,11 @@ public interface ICommandEnvelopeRepository
     Task UpdateAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Stops tracking a failed insert so the same unit of work can load the winning duplicate envelope.
+    /// </summary>
+    void Detach(CommandEnvelope envelope);
+
+    /// <summary>
     /// Attempts to add a command envelope atomically, preventing duplicate correlation IDs.
     /// If an envelope with the same correlation ID already exists, returns the existing envelope.
     /// If the new envelope is successfully added, returns the newly created envelope.

@@ -1,7 +1,7 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;

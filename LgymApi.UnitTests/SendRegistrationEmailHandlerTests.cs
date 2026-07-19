@@ -6,7 +6,7 @@ using LgymApi.Application.Models;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Pagination;
 using LgymApi.BackgroundWorker.Actions;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Identity.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;

@@ -2,11 +2,9 @@ using System.Security.Cryptography;
 using System.Text;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Features.PasswordReset.Contracts;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Notifications;
-using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
@@ -23,7 +21,7 @@ public sealed class PasswordResetService : IPasswordResetService
     private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
     private readonly IPasswordResetTokenGenerationService _tokenGenerationService;
     private readonly ILegacyPasswordService _legacyPasswordService;
-    private readonly IEmailScheduler<PasswordRecoveryEmailPayload> _passwordRecoveryEmailScheduler;
+    private readonly IPasswordRecoveryEmailScheduler _passwordRecoveryEmailScheduler;
     private readonly IUserSessionStore _userSessionStore;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -69,15 +67,16 @@ public sealed class PasswordResetService : IPasswordResetService
         await _passwordResetTokenRepository.AddAsync(resetToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _passwordRecoveryEmailScheduler.ScheduleAsync(new PasswordRecoveryEmailPayload
-        {
-            UserId = user.Id,
-            TokenId = resetToken.Id,
-            UserName = user.Name,
-            RecipientEmail = user.Email.Value,
-            ResetToken = generatedToken.PlainTextToken,
-            CultureName = cultureName
-        }, cancellationToken);
+        await _passwordRecoveryEmailScheduler.ScheduleAsync(
+            new PasswordRecoveryEmailRequest(
+                user.Id,
+                resetToken.Id,
+                user.Name,
+                user.Email.Value,
+                generatedToken.PlainTextToken,
+                ResetUrl: string.Empty,
+                cultureName),
+            cancellationToken);
 
         return Result.Success(Unit.Value);
     }

@@ -1,6 +1,6 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Identity.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;
@@ -13,7 +13,7 @@ namespace LgymApi.BackgroundWorker.Actions;
 /// Background action handler that schedules welcome email notifications after user registration.
 /// Triggered when a new user successfully completes registration.
 /// </summary>
-public sealed class SendRegistrationEmailHandler : IBackgroundAction<UserRegisteredCommand>
+public sealed partial class SendRegistrationEmailHandler : global::LgymApi.BackgroundWorker.Actions.Contracts.IBackgroundAction<UserRegisteredCommand>
 {
     private readonly IUserRepository _userRepository;
     private readonly IEmailScheduler<WelcomeEmailPayload> _emailScheduler;

@@ -1,7 +1,7 @@
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common.Push;
 using LgymApi.Infrastructure.Configuration;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Options;
@@ -16,19 +16,17 @@ public static partial class ServiceCollectionExtensions
 {
     public static IServiceCollection AddNotificationsModule(
         this IServiceCollection services,
-        IConfiguration configuration,
-        bool isTesting)
+        IConfiguration configuration)
     {
         services.AddNotificationsModule();
-        services.AddNotificationsInfrastructure(configuration, isTesting);
+        services.AddNotificationsInfrastructure(configuration);
 
         return services;
     }
 
     public static IServiceCollection AddNotificationsInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration,
-        bool isTesting)
+        IConfiguration configuration)
     {
         var pushNotificationOptions = PushNotificationOptionsFactory.Create(configuration);
 
@@ -37,15 +35,6 @@ public static partial class ServiceCollectionExtensions
         services.AddSingleton(pushNotificationOptions);
         services.AddSingleton<IStalePushInstallationCleanupSettings, PushInstallationCleanupSettings>();
         services.AddScoped<IPushProviderSender, FcmPushSender>();
-
-        if (isTesting)
-        {
-            services.AddScoped<IPushBackgroundScheduler, NoOpPushBackgroundScheduler>();
-        }
-        else
-        {
-            services.AddScoped<IPushBackgroundScheduler, HangfirePushBackgroundScheduler>();
-        }
 
         services.AddScoped<IPushInstallationRepository, PushInstallationRepository>();
         services.AddScoped<IPushNotificationMessageRepository, PushNotificationMessageRepository>();

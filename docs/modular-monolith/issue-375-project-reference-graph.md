@@ -1,6 +1,6 @@
-# Issue #375 — Current Project-Reference Graph
+# Issue #375: Historical Project-Reference Graph
 
-This document captures the current solution-state graph only. It uses tracked `.csproj` `ProjectReference` items and does not infer dependencies from namespaces, folders, or runtime behavior.
+This historical capture records the solution-state graph at issue #375. It uses tracked `.csproj` `ProjectReference` items and does not infer dependencies from namespaces, folders, or runtime behavior. The current graph is [issue-380-project-reference-graph.md](issue-380-project-reference-graph.md).
 
 ## Solution projects
 

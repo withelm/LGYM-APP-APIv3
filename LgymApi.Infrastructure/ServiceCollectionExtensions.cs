@@ -21,7 +21,7 @@ public static partial class ServiceCollectionExtensions
         services.AddCoachingInfrastructure();
         services.AddNutritionInfrastructure();
         services.AddReportingInfrastructure(configuration, isDevelopmentOrTesting);
-        services.AddNotificationsInfrastructure(configuration, isTesting);
+        services.AddNotificationsInfrastructure(configuration);
 
         return services;
     }

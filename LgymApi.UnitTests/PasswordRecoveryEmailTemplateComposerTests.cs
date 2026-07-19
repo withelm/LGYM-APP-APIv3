@@ -182,6 +182,27 @@ public sealed class PasswordRecoveryEmailTemplateComposerTests
          message.Body.Should().NotBeEmpty();
     }
 
+    [Test]
+    public void ComposePasswordRecovery_DerivesUrlFromConfiguredBaseUrlAndResetToken()
+    {
+        var composer = CreateComposer();
+        var payload = new PasswordRecoveryEmailPayload
+        {
+            UserId = Id<User>.New(),
+            TokenId = Id<PasswordResetToken>.New(),
+            UserName = "Configured URL",
+            RecipientEmail = "configured-url@example.com",
+            ResetToken = "raw token/with?chars",
+            ResetUrl = "https://request-sentinel.example.test/ignored",
+            CultureName = "en-US"
+        };
+
+        var message = composer.ComposePasswordRecovery(payload);
+
+        message.Body.Should().Contain("https://app.example.com/reset?token=raw%20token%2Fwith%3Fchars");
+        message.Body.Should().NotContain("https://request-sentinel.example.test/ignored");
+    }
+
     private static PasswordRecoveryEmailTemplateComposer CreateComposer()
     {
         var emailOptions = new EmailOptions

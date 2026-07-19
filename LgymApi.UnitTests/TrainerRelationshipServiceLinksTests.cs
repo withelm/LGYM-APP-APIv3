@@ -5,8 +5,8 @@ using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -25,7 +25,14 @@ public sealed class TrainerRelationshipServiceLinksTests
         var trainee = CreateUser();
         var link = new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id };
         var deps = CreateDependencies();
+        var operations = new List<string>();
         deps.TrainerRelationshipRepository.FindActiveLinkByTraineeIdAsync(trainee.Id, Arg.Any<CancellationToken>()).Returns(link);
+        deps.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(1))
+            .AndDoes(_ => operations.Add("commit"));
+        deps.CommandDispatcher.EnqueueAsync(Arg.Any<TrainerRelationshipEndedInAppNotificationCommand>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => operations.Add("enqueue"));
         var service = new TrainerRelationshipService(deps);
 
         var result = await service.DetachFromTrainerAsync(trainee);
@@ -35,6 +42,7 @@ public sealed class TrainerRelationshipServiceLinksTests
         await deps.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await deps.CommandDispatcher.Received(1).EnqueueAsync(Arg.Is<TrainerRelationshipEndedInAppNotificationCommand>(command =>
             command.TrainerId == trainer.Id && command.TraineeId == trainee.Id));
+        operations.Should().Equal("commit", "enqueue");
     }
 
     [Test]

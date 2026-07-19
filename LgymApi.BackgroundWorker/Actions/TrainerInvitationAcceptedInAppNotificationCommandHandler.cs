@@ -1,11 +1,12 @@
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging;
 using NotificationsApp = global::LgymApi.Application.Notifications;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
-public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandler : global::LgymApi.BackgroundWorker.Common.IBackgroundAction<TrainerInvitationAcceptedInAppNotificationCommand>
+public sealed partial class TrainerInvitationAcceptedInAppNotificationCommandHandler : IBackgroundAction<TrainerInvitationAcceptedInAppNotificationCommand>
 {
     private readonly NotificationsApp.IInAppNotificationService _notificationService;
     private readonly ILogger<TrainerInvitationAcceptedInAppNotificationCommandHandler> _logger;

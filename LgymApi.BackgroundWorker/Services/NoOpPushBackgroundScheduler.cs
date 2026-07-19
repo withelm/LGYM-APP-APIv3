@@ -1,4 +1,4 @@
-using LgymApi.BackgroundWorker.Common.Push;
+using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 

@@ -1,4 +1,5 @@
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Notifications;
 using LgymApi.Resources;
@@ -7,7 +8,7 @@ using NotificationsApp = global::LgymApi.Application.Notifications;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
-public sealed class TrainerInvitationCreatedInAppNotificationCommandHandler : global::LgymApi.BackgroundWorker.Common.IBackgroundAction<TrainerInvitationCreatedInAppNotificationCommand>
+public sealed partial class TrainerInvitationCreatedInAppNotificationCommandHandler : IBackgroundAction<TrainerInvitationCreatedInAppNotificationCommand>
 {
     private readonly NotificationsApp.IInAppNotificationService _notificationService;
     private readonly IUserRepository _userRepository;

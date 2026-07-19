@@ -5,8 +5,8 @@ using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Services;
@@ -296,6 +296,14 @@ public sealed class TrainingServiceAddTrainingTests
             .Returns(new List<ExerciseScore> { previousScore });
         _eloRepository.GetLatestEntryAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
             .Returns(new EloRegistry { Id = Id<EloRegistry>.New(), UserId = userId, Date = DateTimeOffset.UtcNow, Elo = 1000 });
+        var operationOrder = new List<string>();
+        _commandDispatcher.EnqueueAsync(Arg.Any<TrainingCompletedCommand>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => operationOrder.Add("enqueue"));
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(1))
+            .AndDoes(_ => operationOrder.Add("commit"));
+
         async Task<int> RunProfileAsync(ExerciseEloFormula formula)
         {
             var transaction = Substitute.For<IUnitOfWorkTransaction>();
@@ -341,11 +349,6 @@ public sealed class TrainingServiceAddTrainingTests
                 .Returns(Task.CompletedTask);
             _userRepository.UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
                 .Returns(Task.CompletedTask);
-            _commandDispatcher.EnqueueAsync(Arg.Any<TrainingCompletedCommand>())
-                .Returns(Task.CompletedTask);
-            _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-                .Returns(Task.FromResult(1));
-
             var result = await service.AddTrainingAsync(userId, input);
 
             result.IsSuccess.Should().BeTrue();
@@ -359,6 +362,9 @@ public sealed class TrainingServiceAddTrainingTests
 
         strengthGain.Should().BeLessThan(standardGain);
         standardGain.Should().BeLessThan(volumeGain);
+        await _commandDispatcher.Received(3).EnqueueAsync(Arg.Is<TrainingCompletedCommand>(command =>
+            command.UserId == userId && !command.TrainingId.IsEmpty));
+        operationOrder.Should().Equal("enqueue", "commit", "enqueue", "commit", "enqueue", "commit");
     }
 
     [Test]
