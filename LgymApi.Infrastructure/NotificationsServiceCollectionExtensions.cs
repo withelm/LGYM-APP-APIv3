@@ -36,6 +36,7 @@ public static partial class ServiceCollectionExtensions
 
         services.AddSingleton(pushNotificationOptions);
         services.AddSingleton<IStalePushInstallationCleanupSettings, PushInstallationCleanupSettings>();
+        services.AddSingleton<IPushNotificationDeliveryRetrySettings, PushNotificationDeliveryRetrySettings>();
         services.AddScoped<IPushProviderSender, FcmPushSender>();
 
         services.AddScoped<IPushInstallationRepository, PushInstallationRepository>();

@@ -5,7 +5,6 @@ using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.BackgroundWorker.Runtime;
-using LgymApi.Infrastructure.Notifications.Push;
 using LgymApi.BackgroundWorker.Services;
 using LgymApi.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;

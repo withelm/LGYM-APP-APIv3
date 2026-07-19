@@ -10,7 +10,6 @@ using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Notifications.Repositories;
 using LgymApi.Application.Repositories;
 using LgymApi.Infrastructure;
-using LgymApi.Infrastructure.Notifications.Push;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using LgymApi.BackgroundWorker.Actions;

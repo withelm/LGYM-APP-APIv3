@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IInAppNotificationServiceDependencies, InAppNotificationServiceDependencies>();
         services.AddScoped<IInAppNotificationService, InAppNotificationService>();
         services.AddScoped<IPushNotificationService, PushNotificationService>();
+        services.AddScoped<IPushNotificationDeliveryService, PushNotificationDeliveryService>();
         services.AddScoped<IStalePushInstallationCleanupService, StalePushInstallationCleanupService>();
         services.AddScoped<IPushInstallationLifecycleService, PushInstallationLifecycleService>();
         services.AddScoped<IPushInstallationSessionDisassociationService, PushInstallationLifecycleService>();

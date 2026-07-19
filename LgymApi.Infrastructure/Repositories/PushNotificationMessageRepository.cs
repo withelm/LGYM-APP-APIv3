@@ -22,6 +22,11 @@ public sealed class PushNotificationMessageRepository : IPushNotificationMessage
         return _dbContext.PushNotificationMessages.AddAsync(message, cancellationToken).AsTask();
     }
 
+    public void Detach(PushNotificationMessage message)
+    {
+        _dbContext.Entry(message).State = EntityState.Detached;
+    }
+
     public Task<PushNotificationMessage?> FindByIdAsync(Id<PushNotificationMessage> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.PushNotificationMessages.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -36,6 +41,40 @@ public sealed class PushNotificationMessageRepository : IPushNotificationMessage
         return _dbContext.PushNotificationMessages.FirstOrDefaultAsync(
             x => x.PushInstallationId == installationId && x.Type == type && x.EventId == eventId,
             cancellationToken);
+    }
+
+    public async Task<bool> TryReserveSchedulingAsync(
+        Id<PushNotificationMessage> id,
+        string reservationId,
+        CancellationToken cancellationToken = default)
+    {
+        var reserved = await _dbContext.PushNotificationMessages
+            .Where(x => x.Id == id
+                        && x.SchedulerJobId == null
+                        && (x.Status == PushNotificationStatus.Pending
+                            || (x.Status == PushNotificationStatus.Failed
+                                && x.FailureKind == PushNotificationFailureKind.Transient)))
+            .StageUpdateAsync(
+                _dbContext,
+                x => x.SchedulerJobId,
+                _ => reservationId,
+                cancellationToken);
+
+        return reserved > 0;
+    }
+
+    public Task ClearSchedulingReservationAsync(
+        Id<PushNotificationMessage> id,
+        string reservationId,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.PushNotificationMessages
+            .Where(x => x.Id == id && x.SchedulerJobId == reservationId)
+            .StageUpdateAsync(
+                _dbContext,
+                x => x.SchedulerJobId,
+                _ => null,
+                cancellationToken);
     }
 
     public async Task<bool> TryTransitionToSendingAsync(Id<PushNotificationMessage> id, CancellationToken cancellationToken = default)

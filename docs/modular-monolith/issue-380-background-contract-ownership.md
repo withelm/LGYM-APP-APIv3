@@ -73,7 +73,7 @@ The retained seam is limited to `LgymApi.BackgroundWorker.Common/Jobs/`, `LgymAp
 
 ## Runtime ownership and composition
 
-Worker `AddBackgroundWorkerServices` is the single registration owner for the command registry, Application `ICommandDispatcher`, Worker action scope provider, all 15 command handlers, the password-recovery adapter, generic email scheduling, and the environment-selected push scheduler. The registry and runtime-only execution contracts live at `LgymApi.BackgroundWorker/Runtime/`; the password adapter lives at `LgymApi.BackgroundWorker/Notifications/PasswordRecoveryEmailSchedulerAdapter.cs`. Infrastructure owns `IPushProviderSender` and notification persistence. `Program.cs` composes modules in module-before-Worker order and has no direct adapter binding.
+Worker `AddBackgroundWorkerServices` is the single registration owner for the command registry, Application `ICommandDispatcher`, Worker action scope provider, all 15 command handlers, the password-recovery adapter, generic email scheduling, and the environment-selected push scheduler. The registry and runtime-only execution contracts live at `LgymApi.BackgroundWorker/Runtime/`; the password adapter lives at `LgymApi.BackgroundWorker/Notifications/PasswordRecoveryEmailSchedulerAdapter.cs`. Application owns the provider-neutral `IPushProviderSender` port; Infrastructure implements it with private FCM and notification-persistence dependencies. `Program.cs` composes modules in module-before-Worker order and has no direct adapter binding.
 
 Recurring jobs and scheduled jobs remain Worker-owned runtime behavior. The Common job interfaces are the stable persisted target types. Application does not reference Hangfire or Common to schedule work.
 

@@ -54,6 +54,7 @@ public sealed class PushNotificationContractCompatibilityTests
     private const string WireInAppNotificationId = "01234567-89ab-cdef-0123-456789abcdef";
     private const string WireDeeplink = "/notifications/event-contract-1";
     private const string ExpectedWirePayloadJson = "{\"schemaVersion\":1,\"type\":\"trainer.note.updated\",\"eventId\":\"event-contract-1\",\"entityId\":\"entity-contract-1\",\"inAppNotificationId\":\"01234567-89ab-cdef-0123-456789abcdef\",\"deeplink\":\"/notifications/event-contract-1\"}";
+    private const string ExpectedMetadataOnlyPayloadJson = "{\"schemaVersion\":1,\"type\":\"trainer.note.updated\",\"eventId\":\"event-contract-1\"}";
 
     private const int PersistedSchemaVersion = 7;
     private const string PersistedType = "trainer.note.updated";
@@ -85,6 +86,30 @@ public sealed class PushNotificationContractCompatibilityTests
 
         var deserializedLegacyPayload = JsonSerializer.Deserialize<PushEventPayload>(ExpectedWirePayloadJson, SharedSerializationOptions.Current);
         deserializedLegacyPayload.Should().Be(payload);
+    }
+
+    [Test]
+    public void PushEventPayload_OmitsNullFieldsAndRetainsOnlyPrivacySafeMetadata()
+    {
+        var payload = new PushEventPayload(
+            WireSchemaVersion,
+            WireType,
+            WireEventId,
+            null,
+            null,
+            null);
+
+        var json = JsonSerializer.Serialize(payload, SharedSerializationOptions.Current);
+
+        json.Should().Be(ExpectedMetadataOnlyPayloadJson);
+        JsonSerializer.Deserialize<PushEventPayload>(json, SharedSerializationOptions.Current).Should().Be(payload);
+
+        using var document = JsonDocument.Parse(json);
+        var serializedFieldNames = document.RootElement.EnumerateObject().Select(property => property.Name).ToArray();
+        serializedFieldNames.Should().Equal("schemaVersion", "type", "eventId");
+        new[] { "message", "title", "body", "fcmToken", "deviceToken", "providerMessageId" }
+            .Any(forbiddenField => PayloadJsonFieldNames.Contains(forbiddenField, StringComparer.Ordinal))
+            .Should().BeFalse();
     }
 
     [Test]

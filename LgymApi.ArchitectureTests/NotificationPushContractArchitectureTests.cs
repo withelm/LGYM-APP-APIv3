@@ -14,6 +14,8 @@ public sealed class NotificationPushContractArchitectureTests
     private static readonly string[] ExpectedFiles =
     [
         "IPushBackgroundScheduler.cs",
+        "IPushNotificationDeliveryRetrySettings.cs",
+        "IPushProviderSender.cs",
         "PushEventPayload.cs",
         "PushSendAttemptResult.cs"
     ];
@@ -52,7 +54,7 @@ public sealed class NotificationPushContractArchitectureTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(contractTypes, Has.Length.EqualTo(4));
+            Assert.That(contractTypes, Has.Length.EqualTo(6));
             Assert.That(contractTypes, Is.All.Matches<Type>(type => type.Assembly == applicationAssembly && type.IsPublic));
             Assert.That(payloadProperties.Single(property => property.Name == "EntityId").PropertyType, Is.EqualTo(typeof(string)));
             Assert.That(

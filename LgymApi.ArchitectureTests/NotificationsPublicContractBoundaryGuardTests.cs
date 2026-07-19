@@ -151,6 +151,38 @@ public sealed class NotificationsPublicContractBoundaryGuardTests
                 }
                 """),
             new SourceFixture(
+                $"{ContractsPath}Push/IPushProviderSender.cs",
+                """
+                using LgymApi.Domain.Entities;
+                using LgymApi.Domain.ValueObjects;
+
+                namespace LgymApi.Application.Notifications.Contracts.Push;
+
+                public interface IPushProviderSender
+                {
+                    Task<PushSendAttemptResult> SendAsync(
+                        Id<PushInstallation> installationId,
+                        PushEventPayload payload,
+                        CancellationToken cancellationToken = default);
+                }
+
+                public sealed record PushSendAttemptResult(
+                    PushSendOutcome Outcome,
+                    string ProviderStatus,
+                    string? ProviderMessageId,
+                    string? ProviderErrorCode,
+                    string? ProviderResponseSummary);
+
+                public enum PushSendOutcome
+                {
+                    Sent = 0,
+                    TransientFailure = 1,
+                    InvalidToken = 2,
+                    PermanentFailure = 3,
+                    Skipped = 4
+                }
+                """),
+            new SourceFixture(
                 EventInputPath,
                 """
                 using LgymApi.Domain.Entities;
