@@ -216,7 +216,7 @@ The solution uses module-owned registration helpers composed by the host, enforc
 2. **Infrastructure Layer**: owns repository implementations, external client adapters, and module-specific technical helpers.
 3. **Platform carve-out**: shared roots that multiple modules consume stay in `AddPlatformServices(...)` instead of being forced into one feature module.
 
-Notification delivery follows the same ownership rule: Application owns password plus provider-neutral push event/result/scheduling contracts, Worker owns command runtime plus environment-selected password/push scheduling adapters, Infrastructure owns the private FCM provider seam and raw tokens, and `Program.cs` composes those helpers in module-before-Worker order without direct adapter bindings.
+Notification delivery follows the same ownership rule: Application owns password plus provider-neutral push event/result/scheduling contracts, delivery claims, state transitions, retry policy, and UoW commits. Worker owns command runtime plus environment-selected password/push scheduling adapters. Infrastructure owns the private FCM implementation and raw tokens, and `Program.cs` composes those helpers in module-before-Worker order without direct adapter bindings.
 
 ### Background Contract Ownership
 

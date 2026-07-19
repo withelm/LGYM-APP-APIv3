@@ -5,7 +5,9 @@ using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using ApplicationPushBackgroundScheduler = LgymApi.Application.Notifications.Contracts.Push.IPushBackgroundScheduler;
+using ApplicationPushDeliveryRetrySettings = LgymApi.Application.Notifications.Contracts.Push.IPushNotificationDeliveryRetrySettings;
 using ApplicationPushEventPayload = LgymApi.Application.Notifications.Contracts.Push.PushEventPayload;
+using ApplicationPushProviderSender = LgymApi.Application.Notifications.Contracts.Push.IPushProviderSender;
 using ApplicationPushSendAttemptResult = LgymApi.Application.Notifications.Contracts.Push.PushSendAttemptResult;
 using ApplicationPushSendOutcome = LgymApi.Application.Notifications.Contracts.Push.PushSendOutcome;
 
@@ -49,6 +51,8 @@ public sealed class ApplicationPushContractCompatibilityTests
 
         contractTypes.Select(type => type.FullName).Should().Equal(
             $"{PushContractsNamespace}.IPushBackgroundScheduler",
+            $"{PushContractsNamespace}.IPushNotificationDeliveryRetrySettings",
+            $"{PushContractsNamespace}.IPushProviderSender",
             $"{PushContractsNamespace}.PushEventPayload",
             $"{PushContractsNamespace}.PushSendAttemptResult",
             $"{PushContractsNamespace}.PushSendOutcome");
@@ -79,6 +83,37 @@ public sealed class ApplicationPushContractCompatibilityTests
         var nullability = new NullabilityInfoContext();
         nullability.Create(schedulerMethods[0].ReturnParameter).ReadState.Should().Be(NullabilityState.Nullable);
         nullability.Create(schedulerMethods[1].ReturnParameter).ReadState.Should().Be(NullabilityState.Nullable);
+    }
+
+    [Test]
+    public void ApplicationPushProviderPort_AndRetrySettings_RemainProviderNeutral()
+    {
+        AssertInterfaceShape(typeof(ApplicationPushProviderSender), expectedMethodCount: 1);
+        var sendMethod = typeof(ApplicationPushProviderSender).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Single();
+        AssertMethod(
+            sendMethod,
+            "SendAsync",
+            typeof(Task<ApplicationPushSendAttemptResult>),
+            ("installationId", typeof(Id<PushInstallation>), false),
+            ("payload", typeof(ApplicationPushEventPayload), false),
+            ("cancellationToken", typeof(CancellationToken), true));
+
+        var retrySettingsType = typeof(ApplicationPushDeliveryRetrySettings);
+        retrySettingsType.IsPublic.Should().BeTrue();
+        retrySettingsType.IsInterface.Should().BeTrue();
+        retrySettingsType.IsGenericType.Should().BeFalse();
+        retrySettingsType.GetInterfaces().Should().BeEmpty();
+        retrySettingsType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Select(method => method.Name)
+            .Should().Equal("get_RetryDelaysSeconds");
+        retrySettingsType.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Should().BeEmpty();
+        var retryDelays = retrySettingsType
+            .GetProperty(nameof(ApplicationPushDeliveryRetrySettings.RetryDelaysSeconds));
+        retryDelays.Should().NotBeNull();
+        retryDelays!.PropertyType.Should().Be(typeof(IReadOnlyList<int>));
+        retrySettingsType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Select(property => property.Name)
+            .Should().Equal(nameof(ApplicationPushDeliveryRetrySettings.RetryDelaysSeconds));
     }
 
     [Test]

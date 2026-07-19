@@ -11,7 +11,6 @@ using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.BackgroundWorker.Services;
 using LgymApi.Infrastructure;
-using LgymApi.Infrastructure.Notifications.Push;
 using LgymApi.TestUtils;
 using Microsoft.Extensions.DependencyInjection;
 using FcmPushSender = LgymApi.Infrastructure.Services.FcmPushSender;

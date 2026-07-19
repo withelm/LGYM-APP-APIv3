@@ -2,7 +2,7 @@
 
 ## Status
 
-Current boundary definition for the Notifications module. This document records responsibility and write ownership for the current modular monolith. It does not move implementation code or change runtime behavior.
+Current boundary definition for the Notifications module. This document records responsibility, write ownership, and compatibility constraints for the current modular monolith.
 
 ## Source precedence
 
@@ -20,7 +20,7 @@ When this document is more specific, it clarifies the Notifications boundary wit
 
 Notifications owns notification decisions and writes, including in-app persistence, delivery intent, channel policy, push installation lifecycle, delivery status, and notification maintenance. Source modules own the business facts that cause notification requests.
 
-This issue defines documentation and architecture fixtures only. It does not authorize moving all code, replacing Hangfire, adding a new `DbContext`, adding a new migration stream, creating a schema per module, introducing microservices, changing endpoints, or changing current payloads, job identities, providers, schedulers, persistence, or retry behavior.
+This boundary does not authorize moving all code, replacing Hangfire, adding a new `DbContext`, adding a new migration stream, creating a schema per module, introducing microservices, or changing endpoints, payloads, job identities, providers, schedulers, or persistence roots.
 
 The current system remains one deployable application with one production database, one `AppDbContext`, and one migration stream. Existing physical layers remain in place.
 
@@ -43,8 +43,8 @@ The following catalog is the stable ownership surface for #381. The `Artifact ID
 | `notifications.artifact.email-subscription` | `EmailNotificationSubscription` | Notifications | Owns durable email subscription and preference state used by notification policy. Other modules request behavior through contracts. |
 | `notifications.artifact.push-installation` | `PushInstallation` | Notifications | Owns installation registration, refresh, disablement, and stale-installation lifecycle. Raw installation tokens are private to the notification implementation. |
 | `notifications.artifact.push-message` | `PushNotificationMessage` | Notifications | Owns push delivery records, status, deduplication, and retry claims. Other modules may receive provider-neutral status views. |
-| `notifications.artifact.delivery-status-retry-policy` | Notification delivery status/retry policy | Notifications | Defines delivery state transitions, retry eligibility, failure ownership, and idempotency inputs across channels. Runtime executors apply the policy. |
-| `notifications.artifact.delivery-jobs-cleanup` | Notification delivery jobs and cleanup jobs | Notifications | Owns the intent and sequencing of delivery and stale-data cleanup work. Worker provides runtime job execution and scheduling adapters. |
+| `notifications.artifact.delivery-status-retry-policy` | Notification delivery status/retry policy | Notifications | `PushNotificationDeliveryService` claims durable work, applies provider outcomes, persists state and bounded post-claim recovery, decides retry eligibility, and owns UoW commits. |
+| `notifications.artifact.delivery-jobs-cleanup` | Notification delivery jobs and cleanup jobs | Notifications | Owns the intent and sequencing of delivery and stale-data cleanup work. Worker provides ID-only job execution and scheduler adapters. |
 | `notifications.artifact.provider-adapters` | Email/push provider adapters | Notifications | Owns the provider boundary and provider-private mapping. Infrastructure implements external delivery details without exposing them to other modules. |
 | `notifications.artifact.event-bridge` | Notification event bridge | Notifications | Owns translation from published business events or notification intents into notification workflows. Producers retain ownership of their business events. |
 
@@ -88,7 +88,7 @@ Notification payloads and logs use stable identifiers, event categories, type ke
 
 Each channel keeps its current deduplication and correlation meaning. In-app delivery retains its `DeliveryKey` behavior and duplicate resolution. Push delivery retains the `(installation, type, eventId)` identity, with `PushEventPayload.EntityId` remaining a polymorphic string exception. Email retains its current notification type, recipient, and correlation based idempotency inputs. Retry and failure status remain Notifications-owned, while Worker and Infrastructure runtime executors only apply the documented policy and record provider outcomes.
 
-Retries must be bounded by the delivery policy and must not create a second logical notification. Existing pending or transiently failed work may be rescheduled through its existing durable identity, not recreated under a new event identity. Invalid or stale installations are disabled according to the existing lifecycle rules. Cleanup is idempotent and does not delete historical delivery audit data unless an approved retention rule says otherwise. Existing canonical persisted command IDs remain unchanged.
+Retries must be bounded by the delivery policy and must not create a second logical notification. Existing pending or transiently failed work may be rescheduled through its existing durable identity, not recreated under a new event identity. After a successful claim, exceptions and cancellation persist a recoverable transient state with a bounded exception-type marker before cancellation propagates. Invalid or stale installations are disabled according to the existing lifecycle rules. Cleanup is idempotent and does not delete historical delivery audit data unless an approved retention rule says otherwise. Existing canonical persisted command IDs remain unchanged.
 
 ## Compatibility adapters during migration
 
@@ -110,7 +110,7 @@ The sequence preserves the current monolith and its compatibility contracts.
 | --- | --- | --- | --- |
 | `notifications.migration.381` | Publish this boundary document and architecture fixtures | Stable Notifications ownership and provider-neutral contract rules become auditable | Documentation and guards only. No implementation movement. |
 | `notifications.migration.382` | Refine push installation registration, refresh, disablement, and stale lifecycle behind the Notifications boundary | Notifications owns installation writes and lifecycle policy; Infrastructure retains persistence implementation | First preserve current registration endpoints, installation identifiers, permission state, entity location, and token privacy. Introduce or verify provider-neutral registration and lifecycle ports without exposing tokens or provider credentials. Do not remove the current adapter until API and worker consumers are covered. |
-| `notifications.migration.383` | Refine notification intent translation, enqueueing, delivery claims, retries, and cleanup behind the Notifications boundary | Notifications owns channel policy, durable status, deduplication, and retry eligibility; Worker and Infrastructure retain runtime execution and provider roles | Preserve `PushEventPayload` serialization and field meanings, in-app `DeliveryKey`, push `(installation,type,eventId)`, email correlation and idempotency, retry/failure status, scheduler job identities, and provider configuration. Validate duplicate enqueue, transient retry, permanent failure, invalid token, and cleanup behavior before adapter removal. |
+| `notifications.migration.383` | Consolidate notification intent translation, enqueueing, delivery claims, retries, and cleanup behind the Notifications boundary | Notifications owns channel policy, durable status, deduplication, and retry eligibility; Worker and Infrastructure retain runtime execution and provider roles | Preserve `PushEventPayload` serialization and field meanings, in-app `DeliveryKey`, push `(installation,type,eventId)`, email correlation and idempotency, retry/failure status, scheduler job identities, and provider configuration. Validate duplicate enqueue, transient retry, permanent failure, invalid token, and cleanup behavior before adapter removal. |
 | `notifications.migration.adapter-removal` | Remove a compatibility adapter only after all consumers use the stable provider-neutral contract | Ownership is explicit before physical cleanup | Requires a separately approved change, consumer inventory, serialized payload evidence, durable identity evidence, and rollback or coexistence criteria. #381 does not remove, rename, or replace current command types. |
 
 ## Guard coverage
