@@ -8,6 +8,7 @@ using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Features.Tutorial.Models;
 using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Notifications;
 using LgymApi.Application.Options;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
@@ -476,13 +477,13 @@ public sealed class ServiceCommitBehaviorTests
             AppDefaultsOptions appDefaultsOptions,
             ITutorialService tutorialService)
         {
-            PushInstallationRepository = NSubstitute.Substitute.For<IPushInstallationRepository>();
             UserRepository = userRepository;
             RoleRepository = roleRepository;
             TokenService = tokenService;
             LegacyPasswordService = legacyPasswordService;
             RankService = rankService;
             UserSessionStore = userSessionStore;
+            PushInstallationSessionDisassociationService = new NoOpPushInstallationSessionDisassociationService();
             CommandDispatcher = commandDispatcher;
             UnitOfWork = unitOfWork;
             Logger = logger;
@@ -490,18 +491,26 @@ public sealed class ServiceCommitBehaviorTests
             TutorialService = tutorialService;
         }
 
-        public IPushInstallationRepository PushInstallationRepository { get; }
         public IUserRepository UserRepository { get; }
         public IRoleRepository RoleRepository { get; }
         public ITokenService TokenService { get; }
         public ILegacyPasswordService LegacyPasswordService { get; }
         public IRankService RankService { get; }
         public IUserSessionStore UserSessionStore { get; }
+        public IPushInstallationSessionDisassociationService PushInstallationSessionDisassociationService { get; }
         public ICommandDispatcher CommandDispatcher { get; }
         public IUnitOfWork UnitOfWork { get; }
         public ILogger<UserService> Logger { get; }
         public AppDefaultsOptions AppDefaultsOptions { get; }
         public ITutorialService TutorialService { get; }
+    }
+
+    private sealed class NoOpPushInstallationSessionDisassociationService : IPushInstallationSessionDisassociationService
+    {
+        public Task StageDisassociateForSessionAsync(Id<UserSession> sessionId, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class NoOpTokenService : ITokenService

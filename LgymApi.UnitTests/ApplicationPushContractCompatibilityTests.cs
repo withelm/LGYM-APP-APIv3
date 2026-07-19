@@ -6,7 +6,6 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using ApplicationPushBackgroundScheduler = LgymApi.Application.Notifications.Contracts.Push.IPushBackgroundScheduler;
 using ApplicationPushEventPayload = LgymApi.Application.Notifications.Contracts.Push.PushEventPayload;
-using ApplicationPushProviderSender = LgymApi.Application.Notifications.Contracts.Push.IPushProviderSender;
 using ApplicationPushSendAttemptResult = LgymApi.Application.Notifications.Contracts.Push.PushSendAttemptResult;
 using ApplicationPushSendOutcome = LgymApi.Application.Notifications.Contracts.Push.PushSendOutcome;
 
@@ -50,7 +49,6 @@ public sealed class ApplicationPushContractCompatibilityTests
 
         contractTypes.Select(type => type.FullName).Should().Equal(
             $"{PushContractsNamespace}.IPushBackgroundScheduler",
-            $"{PushContractsNamespace}.IPushProviderSender",
             $"{PushContractsNamespace}.PushEventPayload",
             $"{PushContractsNamespace}.PushSendAttemptResult",
             $"{PushContractsNamespace}.PushSendOutcome");
@@ -58,7 +56,7 @@ public sealed class ApplicationPushContractCompatibilityTests
     }
 
     [Test]
-    public void ApplicationPushSchedulerAndProvider_KeepExactPublicMethodSignatures()
+    public void ApplicationPushScheduler_KeepsExactPublicMethodSignatures()
     {
         AssertInterfaceShape(typeof(ApplicationPushBackgroundScheduler), expectedMethodCount: 2);
         var schedulerMethods = typeof(ApplicationPushBackgroundScheduler)
@@ -77,18 +75,6 @@ public sealed class ApplicationPushContractCompatibilityTests
             typeof(string),
             ("notificationId", typeof(Id<PushNotificationMessage>), false),
             ("delay", typeof(TimeSpan), false));
-
-        AssertInterfaceShape(typeof(ApplicationPushProviderSender), expectedMethodCount: 1);
-        var sendAsync = typeof(ApplicationPushProviderSender)
-            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single();
-        AssertMethod(
-            sendAsync,
-            "SendAsync",
-            typeof(Task<ApplicationPushSendAttemptResult>),
-            ("installation", typeof(PushInstallation), false),
-            ("payload", typeof(ApplicationPushEventPayload), false),
-            ("cancellationToken", typeof(CancellationToken), true));
 
         var nullability = new NullabilityInfoContext();
         nullability.Create(schedulerMethods[0].ReturnParameter).ReadState.Should().Be(NullabilityState.Nullable);

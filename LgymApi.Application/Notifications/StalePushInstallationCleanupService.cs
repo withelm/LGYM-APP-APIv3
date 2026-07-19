@@ -1,4 +1,5 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Notifications.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Notifications;

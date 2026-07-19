@@ -184,7 +184,7 @@ public sealed class ModuleDependencyGuardTests
             "LgymApi.Application/Repositories/ITutorialProgressRepository.cs"
                 => ArchitectureTestHelpers.IdentityModuleName,
             "LgymApi.Application/Repositories/IInAppNotificationRepository.cs" or
-            "LgymApi.Application/Repositories/IPushInstallationRepository.cs" or
+            "LgymApi.Application/Notifications/Repositories/IPushInstallationRepository.cs" or
             "LgymApi.Application/Repositories/IPushNotificationMessageRepository.cs"
                 => ArchitectureTestHelpers.NotificationsModuleName,
             "LgymApi.Application/Repositories/IReportingRepository.cs" or

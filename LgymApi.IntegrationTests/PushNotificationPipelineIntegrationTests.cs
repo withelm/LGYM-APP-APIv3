@@ -6,6 +6,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Notifications.Push;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -121,6 +122,10 @@ public sealed class PushNotificationPipelineIntegrationTests
             await handler.ProcessAsync(notificationId);
         }
 
+        fakeSender.LastTarget.Should().NotBeNull();
+        fakeSender.LastTarget!.InstallationId.Should().Be("device-invalid");
+        fakeSender.LastTarget.DeviceToken.Should().Be("token-invalid");
+
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -136,8 +141,11 @@ public sealed class PushNotificationPipelineIntegrationTests
 
     private sealed class InvalidTokenPushProviderSender : IPushProviderSender
     {
-        public Task<PushSendAttemptResult> SendAsync(PushInstallation installation, PushEventPayload payload, CancellationToken cancellationToken = default)
+        public PushDeliveryTarget? LastTarget { get; private set; }
+
+        public Task<PushSendAttemptResult> SendAsync(PushDeliveryTarget target, PushEventPayload payload, CancellationToken cancellationToken = default)
         {
+            LastTarget = target;
             return Task.FromResult(new PushSendAttemptResult(
                 PushSendOutcome.InvalidToken,
                 "BadRequest",

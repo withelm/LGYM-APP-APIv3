@@ -1,4 +1,5 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Notifications.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;

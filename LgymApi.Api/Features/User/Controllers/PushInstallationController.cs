@@ -3,9 +3,9 @@ using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Common.Results;
-using LgymApi.Application.Features.User;
-using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Models;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
@@ -18,12 +18,12 @@ namespace LgymApi.Api.Features.User.Controllers;
 [Route("api/push/installations")]
 public sealed class PushInstallationController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IPushInstallationLifecycleService _pushInstallationLifecycleService;
     private readonly IMapper _mapper;
 
-    public PushInstallationController(IUserService userService, IMapper mapper)
+    public PushInstallationController(IPushInstallationLifecycleService pushInstallationLifecycleService, IMapper mapper)
     {
-        _userService = userService;
+        _pushInstallationLifecycleService = pushInstallationLifecycleService;
         _mapper = mapper;
     }
 
@@ -39,8 +39,8 @@ public sealed class PushInstallationController : ControllerBase
             request.Environment,
             request.PermissionStatus);
 
-        var result = await _userService.RegisterPushInstallationAsync(
-            HttpContext.GetCurrentUser(),
+        var result = await _pushInstallationLifecycleService.RegisterAsync(
+            HttpContext.GetCurrentUser()?.Id,
             ParseCurrentSessionId(),
             input,
             cancellationToken);
@@ -56,8 +56,8 @@ public sealed class PushInstallationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Unregister([FromBody] PushInstallationActionRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await _userService.UnregisterPushInstallationAsync(
-            HttpContext.GetCurrentUser(),
+        var result = await _pushInstallationLifecycleService.UnregisterAsync(
+            HttpContext.GetCurrentUser()?.Id,
             ParseCurrentSessionId(),
             new PushInstallationActionInput(request.InstallationId),
             cancellationToken);
@@ -73,8 +73,8 @@ public sealed class PushInstallationController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Disassociate([FromBody] PushInstallationActionRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await _userService.DisassociatePushInstallationAsync(
-            HttpContext.GetCurrentUser(),
+        var result = await _pushInstallationLifecycleService.DisassociateAsync(
+            HttpContext.GetCurrentUser()?.Id,
             ParseCurrentSessionId(),
             new PushInstallationActionInput(request.InstallationId),
             cancellationToken);

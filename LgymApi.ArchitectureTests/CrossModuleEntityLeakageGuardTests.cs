@@ -16,7 +16,7 @@ public sealed class CrossModuleEntityLeakageGuardTests
         ["LgymApi.Application.Repositories.IRoleRepository"] = "Identity & Accounts",
         ["LgymApi.Application.Repositories.IEloRegistryRepository"] = "Workout & Progress",
         ["LgymApi.Application.Repositories.IInAppNotificationRepository"] = "Notifications",
-        ["LgymApi.Application.Repositories.IPushInstallationRepository"] = "Notifications",
+        ["LgymApi.Application.Notifications.Repositories.IPushInstallationRepository"] = "Notifications",
         ["LgymApi.Application.Repositories.IPushNotificationMessageRepository"] = "Notifications",
         ["LgymApi.Application.Repositories.IReportingRepository"] = "Reporting",
         ["LgymApi.Application.Repositories.IRecurringReportAssignmentRepository"] = "Reporting",

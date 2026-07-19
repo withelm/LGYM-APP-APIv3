@@ -1,10 +1,12 @@
 using System.Text.Json;
 using LgymApi.Application.Notifications.Contracts.Push;
+using LgymApi.Application.Notifications.Repositories;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Infrastructure.Notifications.Push;
 using Microsoft.Extensions.Logging;
 using LgymApi.Infrastructure.Options;
 
@@ -73,7 +75,8 @@ public sealed class PushNotificationJobHandlerService
         var payload = JsonSerializer.Deserialize<PushEventPayload>(message.PayloadJson, SharedSerializationOptions.Current)
             ?? throw new InvalidOperationException($"Failed to deserialize push payload for notification {notificationId}.");
 
-        var result = await _pushProviderSender.SendAsync(installation, payload, cancellationToken);
+        var target = new PushDeliveryTarget(installation.InstallationId, installation.FcmToken);
+        var result = await _pushProviderSender.SendAsync(target, payload, cancellationToken);
         ApplyProviderResult(message, installation, result);
         _logger.LogInformation(
             "Processed push notification {NotificationId} for installation {InstallationId}, event {EventId}, category {Category} with provider status {ProviderStatus} and outcome {Outcome}.",

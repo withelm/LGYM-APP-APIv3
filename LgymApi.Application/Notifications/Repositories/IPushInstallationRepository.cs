@@ -1,7 +1,7 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 
-namespace LgymApi.Application.Repositories;
+namespace LgymApi.Application.Notifications.Repositories;
 
 public interface IPushInstallationRepository
 {
