@@ -8,6 +8,7 @@ Draft
 - `#311` defines the constraints and allowed direction.
 - `#375` provides the historical baseline for module clusters.
 - `#380` provides the current background-contract ownership and project-reference graph.
+- `#381` defines the Notifications write-ownership boundary and provider-neutral contract surface.
 - `docs/ARCHITECTURE.md` is the reader-facing integration guide for the current maps.
 - ADR-006 explains why the modular-monolith direction exists.
 
@@ -49,6 +50,7 @@ The #375 baseline already shows these as the current feature-level dependency cl
 
 - Owns in-app notifications, push registration, push delivery lifecycle, and stale-installation cleanup.
 - Does not own the business event that triggered the message, only the delivery and audit of that message.
+- Owns module responsibility and writes, not a physical relocation of notification entities, projects, or runtime adapters; see `issue-381-notifications-boundary.md`.
 
 ### Public contract surface
 
@@ -197,3 +199,4 @@ The eight-module catalog is the current baseline for those checks, and any later
 - `docs/modular-monolith/issue-376-ownership-map.md`
 - `docs/modular-monolith/issue-380-background-contract-ownership.md`
 - `docs/modular-monolith/issue-380-project-reference-graph.md`
+- `docs/modular-monolith/issue-381-notifications-boundary.md`

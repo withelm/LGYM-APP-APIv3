@@ -11,6 +11,8 @@
 - DI ownership: feature helpers live here for business services only, and the platform/reference-data helper keeps shared app-level roots such as enum conversion and config services.
 - Notifications: Application owns module-facing password scheduling and push contracts. Worker supplies scheduling adapters, while Infrastructure supplies FCM delivery.
 - Notifications push delivery contracts are canonical under `Notifications/Contracts/Push`; Worker scheduling and Infrastructure FCM implement these Application-owned ports.
+- Notifications boundary: provider-neutral public contracts and event or intent models let source modules request or observe notification behavior without exposing entities, repositories, FCM, Hangfire, Worker, or Common types. Application has no Worker/Common dependency; see [`issue-381-notifications-boundary.md`](../docs/modular-monolith/issue-381-notifications-boundary.md).
+- #381 documents ownership only: it does not change project references, endpoints, providers, schedulers, jobs, physical entity locations, the `AppDbContext`, or the migration stream.
 - Training ELO scoring is selected by exercise profile in the training service; legacy exercise create/update methods always use the standard profile while privileged variants can opt into alternate formulas.
 - Training ELO formulas are implemented as one strategy class per `ExerciseEloFormula` under `Application/Common/Training/Elo` and resolved through DI instead of switch logic in `TrainingService`; the pull-up profile rewards lower weight with `PullupWeighted`.
 - Enum lookups are the source of truth for front-end choice lists; `ExerciseEloFormula` is exposed through the enum lookup service and should not be duplicated as a hardcoded UI list.
