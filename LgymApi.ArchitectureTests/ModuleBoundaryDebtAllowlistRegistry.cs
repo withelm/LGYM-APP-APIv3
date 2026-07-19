@@ -2,31 +2,10 @@ namespace LgymApi.ArchitectureTests;
 
 public static class ModuleBoundaryDebtAllowlistRegistry
 {
-    public const int MaximumAllowedEntryCount = 428;
+    public const int MaximumAllowedEntryCount = 425;
 
     private static readonly IReadOnlyList<ModuleBoundaryDebtEntry> Entries =
     [
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "ModuleDependencyGuardTests",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "LgymApi.Application.Features.User.IUserServiceDependencies @ LgymApi.Application/User/IUserServiceDependencies.cs",
-            targetSymbolOrPath: "LgymApi.Application.Notifications.IPushInstallationSessionDisassociationService @ LgymApi.Application/Notifications/IPushInstallationSessionDisassociationService.cs",
-            rationale: "Current modular-boundary debt: identity logout composes the Notifications-owned session-disassociation contract.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "ModuleDependencyGuardTests",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "LgymApi.Application.Features.User.UserService @ LgymApi.Application/User/UserService.cs",
-            targetSymbolOrPath: "LgymApi.Application.Notifications.IPushInstallationSessionDisassociationService @ LgymApi.Application/Notifications/IPushInstallationSessionDisassociationService.cs",
-            rationale: "Current modular-boundary debt: identity logout composes the Notifications-owned session-disassociation contract.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "ModuleDependencyGuardTests",
-            sourceModule: "Identity & Accounts",
-            targetModule: "Notifications",
-            sourceSymbolOrPath: "LgymApi.Application.Features.User.UserServiceDependencies @ LgymApi.Application/User/IUserServiceDependencies.cs",
-            targetSymbolOrPath: "LgymApi.Application.Notifications.IPushInstallationSessionDisassociationService @ LgymApi.Application/Notifications/IPushInstallationSessionDisassociationService.cs",
-            rationale: "Current modular-boundary debt: identity logout composes the Notifications-owned session-disassociation contract.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "ModuleDependencyGuardTests",
             sourceModule: "Nutrition",

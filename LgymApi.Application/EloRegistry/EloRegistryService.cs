@@ -2,8 +2,8 @@ using System.Globalization;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.EloRegistry.Models;
-using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Identity.Contracts.Registration;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
@@ -13,16 +13,16 @@ namespace LgymApi.Application.Features.EloRegistry;
 public sealed class EloRegistryService : IEloRegistryService
 {
     private readonly IEloRegistryRepository _eloRepository;
-    private readonly IUserService _userService;
+    private readonly IUserRegistrationService _userRegistrationService;
     private readonly IUnitOfWork _unitOfWork;
 
     public EloRegistryService(
         IEloRegistryRepository eloRepository,
-        IUserService userService,
+        IUserRegistrationService userRegistrationService,
         IUnitOfWork unitOfWork)
     {
         _eloRepository = eloRepository;
-        _userService = userService;
+        _userRegistrationService = userRegistrationService;
         _unitOfWork = unitOfWork;
     }
 
@@ -56,8 +56,8 @@ public sealed class EloRegistryService : IEloRegistryService
     {
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         var registration = trainer
-            ? await _userService.RegisterTrainerAsync(input, cancellationToken)
-            : await _userService.RegisterAsync(input, cancellationToken);
+            ? await _userRegistrationService.RegisterTrainerAsync(input, cancellationToken)
+            : await _userRegistrationService.RegisterAsync(input, cancellationToken);
 
         if (registration.IsFailure)
         {

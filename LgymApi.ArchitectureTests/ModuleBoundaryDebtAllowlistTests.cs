@@ -183,7 +183,7 @@ public sealed class ModuleBoundaryDebtAllowlistTests
     [Test]
     public void Allowlist_Evaluation_Fails_When_Entries_Grow_Beyond_The_Approved_Baseline()
     {
-        var entries = Enumerable.Range(0, 436)
+        var entries = Enumerable.Range(0, ModuleBoundaryDebtAllowlistRegistry.MaximumAllowedEntryCount + 1)
             .Select(index => new ModuleBoundaryDebtEntry(
                 ModuleBoundaryDebtKey.Create(
                     GuardId,

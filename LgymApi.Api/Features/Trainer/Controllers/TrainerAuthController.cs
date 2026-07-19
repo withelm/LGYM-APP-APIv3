@@ -3,9 +3,10 @@ using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Identity.Contracts.Authentication;
+using LgymApi.Application.Identity.Contracts.Profile;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -17,13 +18,19 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 [Route("api/trainer")]
 public sealed class TrainerAuthController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IUserCredentialLoginService _userCredentialLoginService;
+    private readonly IUserProfileService _userProfileService;
     private readonly IEloRegistryService _eloRegistryService;
     private readonly IMapper _mapper;
 
-    public TrainerAuthController(IUserService userService, IEloRegistryService eloRegistryService, IMapper mapper)
+    public TrainerAuthController(
+        IUserCredentialLoginService userCredentialLoginService,
+        IUserProfileService userProfileService,
+        IEloRegistryService eloRegistryService,
+        IMapper mapper)
     {
-        _userService = userService;
+        _userCredentialLoginService = userCredentialLoginService;
+        _userProfileService = userProfileService;
         _eloRegistryService = eloRegistryService;
         _mapper = mapper;
     }
@@ -56,7 +63,7 @@ public sealed class TrainerAuthController : ControllerBase
     [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await _userService.LoginTrainerAsync(request.Name, request.Password, cancellationToken);
+        var result = await _userCredentialLoginService.LoginTrainerAsync(request.Name, request.Password, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -72,7 +79,7 @@ public sealed class TrainerAuthController : ControllerBase
     public async Task<IActionResult> CheckToken(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.CheckTokenAsync(user, cancellationToken);
+        var result = await _userProfileService.CheckTokenAsync(user, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

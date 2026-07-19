@@ -8,6 +8,10 @@ using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Features.Tutorial.Models;
 using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Identity.Authentication;
+using LgymApi.Application.Identity.Profile;
+using LgymApi.Application.Identity.Registration;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Options;
 using LgymApi.Application.Pagination;
@@ -30,6 +34,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
+using NSubstitute;
 
 namespace LgymApi.UnitTests;
 
@@ -97,26 +102,20 @@ public sealed class ServiceCommitBehaviorTests
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IRoleRepository roleRepository = CreateRoleRepository(dbContext);
         IEloRegistryRepository eloRepository = new EloRegistryRepository(dbContext);
-        ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
-        IRankService rankService = new RankService();
-        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
-        var userService = new UserService(new UserServiceDependenciesStub(
+        var userRegistrationService = new UserRegistrationService(new UserRegistrationServiceDependencies(
             userRepository,
             roleRepository,
-            tokenService,
             legacyPasswordService,
-            rankService,
-            userSessionStore,
             commandDispatcher,
             unitOfWork,
-            NullLogger<UserService>.Instance,
+            NullLogger<UserRegistrationService>.Instance,
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
-        var service = new EloRegistryService(eloRepository, userService, unitOfWork);
+        var service = new EloRegistryService(eloRepository, userRegistrationService, unitOfWork);
 
         var registerResult = await service.RegisterUserAsync(new RegisterUserInput(
             "newuser",
@@ -156,23 +155,17 @@ public sealed class ServiceCommitBehaviorTests
 
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IRoleRepository roleRepository = CreateRoleRepository(dbContext);
-        ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
-        IRankService rankService = new RankService();
-        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
-        var service = new UserService(new UserServiceDependenciesStub(
+        var service = new UserRegistrationService(new UserRegistrationServiceDependencies(
             userRepository,
             roleRepository,
-            tokenService,
             legacyPasswordService,
-            rankService,
-            userSessionStore,
             commandDispatcher,
             unitOfWork,
-            NullLogger<UserService>.Instance,
+            NullLogger<UserRegistrationService>.Instance,
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
 
@@ -211,24 +204,18 @@ public sealed class ServiceCommitBehaviorTests
 
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IRoleRepository roleRepository = CreateRoleRepository(dbContext);
-        ITokenService tokenService = new NoOpTokenService();
         ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
-        IRankService rankService = new RankService();
-        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
         ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
         var defaults = new AppDefaultsOptions { PreferredLanguage = "de-DE", PreferredTimeZone = "UTC" };
 
-        var service = new UserService(new UserServiceDependenciesStub(
+        var service = new UserRegistrationService(new UserRegistrationServiceDependencies(
             userRepository,
             roleRepository,
-            tokenService,
             legacyPasswordService,
-            rankService,
-            userSessionStore,
             commandDispatcher,
             unitOfWork,
-            NullLogger<UserService>.Instance,
+            NullLogger<UserRegistrationService>.Instance,
             defaults,
             new NoOpTutorialService()));
 
@@ -284,25 +271,16 @@ public sealed class ServiceCommitBehaviorTests
 
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IRoleRepository roleRepository = CreateRoleRepository(dbContext);
-        ITokenService tokenService = new NoOpTokenService();
-        ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
-        IRankService rankService = new RankService();
-        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
-        ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
-        var service = new UserService(new UserServiceDependenciesStub(
+        var service = new UserProfileService(new UserProfileServiceDependencies(
             userRepository,
             roleRepository,
-            tokenService,
-            legacyPasswordService,
-            rankService,
-            userSessionStore,
-            commandDispatcher,
+            new RankService(),
             unitOfWork,
-            NullLogger<UserService>.Instance,
             new AppDefaultsOptions(),
-            new NoOpTutorialService()));
+            new NoOpTutorialService(),
+            Substitute.For<IMapper>()));
 
         var updateTimeZoneResult = await service.UpdateTimeZoneAsync(user, "Europe/Paris");
         updateTimeZoneResult.IsSuccess.Should().BeTrue();
@@ -347,25 +325,16 @@ public sealed class ServiceCommitBehaviorTests
 
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IRoleRepository roleRepository = CreateRoleRepository(dbContext);
-        ITokenService tokenService = new NoOpTokenService();
-        ILegacyPasswordService legacyPasswordService = new LegacyPasswordService();
-        IRankService rankService = new RankService();
-        IUserSessionStore userSessionStore = new FakeUserSessionStore();
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
-        ICommandDispatcher commandDispatcher = new NoOpCommandDispatcher();
 
-        var service = new UserService(new UserServiceDependenciesStub(
+        var service = new UserProfileService(new UserProfileServiceDependencies(
             userRepository,
             roleRepository,
-            tokenService,
-            legacyPasswordService,
-            rankService,
-            userSessionStore,
-            commandDispatcher,
+            new RankService(),
             unitOfWork,
-            NullLogger<UserService>.Instance,
             new AppDefaultsOptions(),
-            new NoOpTutorialService()));
+            new NoOpTutorialService(),
+            Substitute.For<IMapper>()));
 
         var updateTimeZoneResult = await service.UpdateTimeZoneAsync(user, "Not/ARealTimeZone");
         updateTimeZoneResult.IsFailure.Should().BeTrue();
@@ -461,65 +430,6 @@ public sealed class ServiceCommitBehaviorTests
 
     private static RoleRepository CreateRoleRepository(AppDbContext db) =>
         new(db, null!, new MapperRegistry());
-
-    private sealed class UserServiceDependenciesStub : IUserServiceDependencies
-    {
-        public UserServiceDependenciesStub(
-            IUserRepository userRepository,
-            IRoleRepository roleRepository,
-            ITokenService tokenService,
-            ILegacyPasswordService legacyPasswordService,
-            IRankService rankService,
-            IUserSessionStore userSessionStore,
-            ICommandDispatcher commandDispatcher,
-            IUnitOfWork unitOfWork,
-            ILogger<UserService> logger,
-            AppDefaultsOptions appDefaultsOptions,
-            ITutorialService tutorialService)
-        {
-            UserRepository = userRepository;
-            RoleRepository = roleRepository;
-            TokenService = tokenService;
-            LegacyPasswordService = legacyPasswordService;
-            RankService = rankService;
-            UserSessionStore = userSessionStore;
-            PushInstallationSessionDisassociationService = new NoOpPushInstallationSessionDisassociationService();
-            CommandDispatcher = commandDispatcher;
-            UnitOfWork = unitOfWork;
-            Logger = logger;
-            AppDefaultsOptions = appDefaultsOptions;
-            TutorialService = tutorialService;
-        }
-
-        public IUserRepository UserRepository { get; }
-        public IRoleRepository RoleRepository { get; }
-        public ITokenService TokenService { get; }
-        public ILegacyPasswordService LegacyPasswordService { get; }
-        public IRankService RankService { get; }
-        public IUserSessionStore UserSessionStore { get; }
-        public IPushInstallationSessionDisassociationService PushInstallationSessionDisassociationService { get; }
-        public ICommandDispatcher CommandDispatcher { get; }
-        public IUnitOfWork UnitOfWork { get; }
-        public ILogger<UserService> Logger { get; }
-        public AppDefaultsOptions AppDefaultsOptions { get; }
-        public ITutorialService TutorialService { get; }
-    }
-
-    private sealed class NoOpPushInstallationSessionDisassociationService : IPushInstallationSessionDisassociationService
-    {
-        public Task StageDisassociateForSessionAsync(Id<UserSession> sessionId, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class NoOpTokenService : ITokenService
-    {
-        public string CreateToken(Id<User> userId, Id<UserSession> sessionId, string jti, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissionClaims)
-        {
-            return userId.ToString();
-        }
-    }
 
     private sealed class NoOpWelcomeEmailScheduler : IEmailScheduler<WelcomeEmailPayload>
     {
