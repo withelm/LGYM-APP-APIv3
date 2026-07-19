@@ -8,8 +8,12 @@ using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.PasswordReset;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.EloRegistry.Models;
-using LgymApi.Application.Features.User;
 using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Identity.Contracts.Administration;
+using LgymApi.Application.Identity.Contracts.Authentication;
+using LgymApi.Application.Identity.Contracts.Profile;
+using LgymApi.Application.Identity.Contracts.Ranking;
+using LgymApi.Application.Identity.Contracts.Sessions;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Notifications;
@@ -20,6 +24,7 @@ using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
@@ -30,9 +35,8 @@ public sealed class UserControllerTests
     [Test]
     public async Task Register_PassesAcceptLanguageHeader_WhenPresent()
     {
-        var userService = new StubUserService();
         var eloRegistryService = new StubEloRegistryService();
-        var controller = CreateController(userService, eloRegistryService);
+        var controller = CreateController(eloRegistryService);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
         controller.Request.Headers["Accept-Language"] = "pl-PL,pl;q=0.9";
 
@@ -54,9 +58,8 @@ public sealed class UserControllerTests
     [Test]
     public async Task Register_PassesNullPreferredLanguage_WhenHeaderMissing()
     {
-        var userService = new StubUserService();
         var eloRegistryService = new StubEloRegistryService();
-        var controller = CreateController(userService, eloRegistryService);
+        var controller = CreateController(eloRegistryService);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
         var action = await controller.Register(new RegisterUserRequest
@@ -76,13 +79,12 @@ public sealed class UserControllerTests
     public async Task Register_WhenServiceFails_ReturnsErrorActionResult()
     {
         const string message = "invalid registration";
-        var userService = new StubUserService();
         var eloRegistryService = new StubEloRegistryService
         {
             RegisterResult = Result<Unit, AppError>.Failure(new BadRequestError(message))
         };
 
-        var controller = CreateController(userService, eloRegistryService);
+        var controller = CreateController(eloRegistryService);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
         var action = await controller.Register(new RegisterUserRequest
@@ -271,9 +273,7 @@ public sealed class UserControllerTests
         ((ResponseMessageDto)objectResult.Value!).Message.Should().Be(message);
     }
 
-    private static UserController CreateController(
-        IUserService userService,
-        IEloRegistryService? eloRegistryService = null)
+    private static UserController CreateController(IEloRegistryService? eloRegistryService = null)
     {
         var services = new ServiceCollection();
         services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
@@ -281,7 +281,11 @@ public sealed class UserControllerTests
         var mapper = provider.GetRequiredService<IMapper>();
         var stubPasswordResetService = new StubPasswordResetService();
         return new UserController(
-            userService,
+            Substitute.For<IUserCredentialLoginService>(),
+            Substitute.For<IUserSessionTerminationService>(),
+            Substitute.For<IUserProfileService>(),
+            Substitute.For<IUserRankingService>(),
+            Substitute.For<IUserAdminAccessService>(),
             eloRegistryService ?? new StubEloRegistryService(),
             stubPasswordResetService,
             mapper);
@@ -321,25 +325,6 @@ public sealed class UserControllerTests
 
         public Task<Result<Unit, AppError>> ResetPasswordAsync(string plainTextToken, string newPassword, CancellationToken ct) =>
             Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
-    }
-
-    private sealed class StubUserService : IUserService
-    {
-        public Task<Result<Id<User>, AppError>> RegisterAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
-            => Task.FromResult(Result<Id<User>, AppError>.Success(Id<User>.New()));
-
-        public Task<Result<Id<User>, AppError>> RegisterTrainerAsync(RegisterUserInput input, CancellationToken cancellationToken = default)
-            => Task.FromResult(Result<Id<User>, AppError>.Success(Id<User>.New()));
-        public Task<Result<LoginResult, AppError>> LoginAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(Result<LoginResult, AppError>.Success(new LoginResult()));
-        public Task<Result<LoginResult, AppError>> LoginTrainerAsync(string name, string password, CancellationToken cancellationToken = default) => Task.FromResult(Result<LoginResult, AppError>.Success(new LoginResult()));
-        public Task<bool> IsAdminAsync(Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<Result<UserInfoResult, AppError>> CheckTokenAsync(User? currentUser, CancellationToken cancellationToken = default) => Task.FromResult(Result<UserInfoResult, AppError>.Success(new UserInfoResult()));
-        public Task<Result<List<RankingEntry>, AppError>> GetUsersRankingAsync(CancellationToken cancellationToken = default) => Task.FromResult(Result<List<RankingEntry>, AppError>.Success(new List<RankingEntry>()));
-        public Task<Result<Unit, AppError>> LogoutAsync(User? currentUser, Id<UserSession>? sessionId, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
-        public Task<Result<Unit, AppError>> DeleteAccountAsync(User? currentUser, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
-        public Task<Result<Unit, AppError>> ChangeVisibilityInRankingAsync(User? currentUser, bool isVisibleInRanking, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
-        public Task<Result<Unit, AppError>> UpdateTimeZoneAsync(User? currentUser, string preferredTimeZone, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
-        public Task<Result<Unit, AppError>> UpdateUserRolesAsync(Id<User> targetUserId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default) => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
     }
 
     private sealed class StubPushInstallationLifecycleService : IPushInstallationLifecycleService

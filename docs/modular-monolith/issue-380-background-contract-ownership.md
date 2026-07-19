@@ -28,7 +28,7 @@ The former Common command CLR names remain canonical durable command-ID strings.
 
 ## Former Application consumer file inventory
 
-This is the exhaustive 22-file source inventory for the former Application to Common dependency. Each row names one source consumer that was changed by the cutover. Family rows above describe contracts, but do not replace this file-level evidence.
+This is the exhaustive 21-file source inventory for the former Application to Common dependency. Each row names one source consumer that was changed by the cutover. Family rows above describe contracts, but do not replace this file-level evidence.
 
 | Former Application consumer | Former Common concern | Final dependency and owner | Ownership rule |
 | --- | --- | --- | --- |
@@ -51,9 +51,8 @@ This is the exhaustive 22-file source inventory for the former Application to Co
 | `LgymApi.Application/Training/ITrainingServiceDependencies.cs` | `ICommandDispatcher` | `LgymApi.Application/Platform/Contracts/BackgroundCommands/ICommandDispatcher.cs`, Platform / Reference Data | Accepts the shared dispatcher port only. Workout command types remain under the WorkoutProgress contract path. |
 | `LgymApi.Application/Training/TrainingService.AddTraining.cs` | Training-completed background command | `LgymApi.Application/WorkoutProgress/Contracts/BackgroundCommands/TrainingCompletedCommand.cs`, Workout & Progress | Produces the Workout & Progress command through the Platform dispatcher. |
 | `LgymApi.Application/Training/TrainingService.cs` | `ICommandDispatcher` | `LgymApi.Application/Platform/Contracts/BackgroundCommands/ICommandDispatcher.cs`, Platform / Reference Data | Holds the shared dispatcher dependency. Workout command types stay module-owned. |
-| `LgymApi.Application/User/IUserServiceDependencies.cs` | `ICommandDispatcher` | `LgymApi.Application/Platform/Contracts/BackgroundCommands/ICommandDispatcher.cs`, Platform / Reference Data | Accepts the shared dispatcher port only. Identity command types remain under the Identity contract path. |
-| `LgymApi.Application/User/UserService.Auth.cs` | User-registered background command | `LgymApi.Application/Identity/Contracts/BackgroundCommands/UserRegisteredCommand.cs`, Identity & Accounts | Produces the Identity command through the Platform dispatcher. |
-| `LgymApi.Application/User/UserService.cs` | `ICommandDispatcher` | `LgymApi.Application/Platform/Contracts/BackgroundCommands/ICommandDispatcher.cs`, Platform / Reference Data | Holds the shared dispatcher dependency. Identity command types stay module-owned. |
+| `LgymApi.Application/Identity/Registration/UserRegistrationServiceDependencies.cs` | `ICommandDispatcher` | `LgymApi.Application/Platform/Contracts/BackgroundCommands/ICommandDispatcher.cs`, Platform / Reference Data | Exposes the shared dispatcher port only to the focused registration service. Identity command types remain under the Identity contract path. |
+| `LgymApi.Application/Identity/Registration/UserRegistrationService.cs` | `ICommandDispatcher` and user-registered background command | `LgymApi.Application/Platform/Contracts/BackgroundCommands/ICommandDispatcher.cs` and `LgymApi.Application/Identity/Contracts/BackgroundCommands/UserRegisteredCommand.cs`, Platform / Reference Data and Identity & Accounts | Produces the Identity command through the Platform dispatcher; no monolithic user-service dependency aggregate remains. |
 
 The Application project has no `LgymApi.BackgroundWorker*` project reference or namespace dependency. The legacy `LgymApi.BackgroundWorker.Common.Commands.*` values are canonical persisted command IDs, not Application CLR type dependencies. The Worker registry accepts Application CLR names only as read aliases and writes only the legacy IDs.
 

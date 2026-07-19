@@ -9,9 +9,6 @@ public sealed class ApplicationCommandProducerContractTests
 {
     public static IEnumerable<TestCaseData> ProducerContractCases()
     {
-        yield return CreateCase("User/UserService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
-        yield return CreateCase("User/UserService.Auth.cs", "LgymApi.Application.Identity.Contracts.BackgroundCommands");
-        yield return CreateCase("User/IUserServiceDependencies.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
         yield return CreateCase("Training/TrainingService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
         yield return CreateCase("Training/TrainingService.AddTraining.cs", "LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands");
         yield return CreateCase("Training/ITrainingServiceDependencies.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");

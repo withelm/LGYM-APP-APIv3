@@ -183,6 +183,7 @@ public sealed class RoleServiceTests
          result.IsFailure.Should().BeTrue();
          result.Error.Should().BeOfType<RoleNotFoundError>();
          result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.NotFound);
+         _unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
     [Test]
@@ -196,6 +197,7 @@ public sealed class RoleServiceTests
          result.IsFailure.Should().BeTrue();
          result.Error.Should().BeOfType<InvalidRoleError>();
          result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+         _unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
     [Test]

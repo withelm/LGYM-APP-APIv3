@@ -64,6 +64,36 @@ public sealed class RoleControllerTests
     }
 
     [Test]
+    public async Task UpdateUserRoles_DelegatesParsedRequestAndCancellationTokenToRoleService()
+    {
+        var userId = Id<User>.New();
+        var request = new UpdateUserRolesRequest { Roles = ["Coach", "Analyst"] };
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = cancellationTokenSource.Token;
+        var observedUserId = Id<User>.Empty;
+        IReadOnlyCollection<string>? observedRoleNames = null;
+        var observedCancellationToken = default(CancellationToken);
+        var fakeService = new StubRoleService
+        {
+            UpdateUserRolesHandler = (receivedUserId, receivedRoleNames, receivedCancellationToken) =>
+            {
+                observedUserId = receivedUserId;
+                observedRoleNames = receivedRoleNames;
+                observedCancellationToken = receivedCancellationToken;
+                return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+            }
+        };
+        var controller = new RoleController(fakeService, BuildMapper());
+
+        var action = await controller.UpdateUserRoles($"{userId:N}", request, cancellationToken);
+
+        action.Should().BeOfType<OkObjectResult>();
+        observedUserId.Should().Be(userId);
+        observedRoleNames.Should().Equal(request.Roles);
+        observedCancellationToken.Should().Be(cancellationToken);
+    }
+
+    [Test]
     public void Routes_UseGetAndPostOnly_ForRoleManagement()
     {
         var type = typeof(RoleController);
@@ -75,10 +105,13 @@ public sealed class RoleControllerTests
         delete.Should().NotBeNull();
         updateUserRoles.Should().NotBeNull();
 
+        var controllerRoute = type.GetCustomAttribute<RouteAttribute>();
         var updateHttpPost = update!.GetCustomAttribute<HttpPostAttribute>();
         var deleteHttpPost = delete!.GetCustomAttribute<HttpPostAttribute>();
         var updateUserRolesHttpPost = updateUserRoles!.GetCustomAttribute<HttpPostAttribute>();
 
+        controllerRoute.Should().NotBeNull();
+        controllerRoute!.Template.Should().Be("api/roles");
         updateHttpPost.Should().NotBeNull();
         updateHttpPost!.Template.Should().Be("{id}/update");
         deleteHttpPost.Should().NotBeNull();
@@ -94,6 +127,7 @@ public sealed class RoleControllerTests
     private sealed class StubRoleService : IRoleService
     {
         public Func<string, string?, IReadOnlyCollection<string>, Task<Result<RoleResult, AppError>>>? CreateRoleHandler { get; init; }
+        public Func<Id<Domain.Entities.User>, IReadOnlyCollection<string>, CancellationToken, Task<Result<Unit, AppError>>>? UpdateUserRolesHandler { get; init; }
 
         public Task<Result<List<RoleResult>, AppError>> GetRolesAsync(CancellationToken cancellationToken = default) 
             => Task.FromResult(Result<List<RoleResult>, AppError>.Success(new List<RoleResult>()));
@@ -115,7 +149,8 @@ public sealed class RoleControllerTests
             => new();
 
         public Task<Result<Unit, AppError>> UpdateUserRolesAsync(Id<Domain.Entities.User> userId, IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default)
-            => Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
+            => UpdateUserRolesHandler?.Invoke(userId, roleNames, cancellationToken)
+               ?? Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
 
         public Task<Result<Pagination<RoleResult>, AppError>> GetRolesPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default)
             => Task.FromResult(Result<Pagination<RoleResult>, AppError>.Success(new Pagination<RoleResult>()));
