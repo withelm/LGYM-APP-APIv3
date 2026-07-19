@@ -266,6 +266,7 @@ Then register service/repository in both service collection extension files and 
 - `#311` is the constraint authority for the modular-monolith direction.
 - `#375` is the historical baseline and inventory source.
 - `#380` is the current background-contract ownership and project-reference source.
+- `#381` defines the Notifications write-ownership boundary and provider-neutral public contract surface; it does not move projects, entities, or runtime behavior.
 - `docs/adr/006-lgym-evolves-as-modular-monolith.md` records the decision.
 
 ### Issue #376 links
@@ -275,6 +276,7 @@ Then register service/repository in both service collection extension files and 
 - `docs/modular-monolith/issue-376-ownership-map.md`
 - `docs/modular-monolith/issue-380-background-contract-ownership.md`
 - `docs/modular-monolith/issue-380-project-reference-graph.md`
+- `docs/modular-monolith/issue-381-notifications-boundary.md`
 
 The current layered runtime stays in place until a later change explicitly alters it.
 The compatibility, persistence, and Unit of Work guidance elsewhere in this guide continues to apply and is not restated here.

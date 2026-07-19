@@ -8,6 +8,7 @@ Complete
 - `#311` is the authority for ownership rules.
 - `#375` is the historical inventory source.
 - `#380` is the current source for background-contract ownership and project references.
+- `#381` clarifies Notifications write ownership and provider-neutral contracts without relocating physical artifacts.
 - `docs/ARCHITECTURE.md` is the integration guide that links the current maps.
 - ADR-006 states the modular-monolith decision this map serves.
 
@@ -108,6 +109,7 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 - The owner choice is deterministic, not advisory.
 - If an artifact can be used by another module, that module uses the owner service, contract, or read model.
 - A non-owner never gets write authority just because the solution still uses one production `AppDbContext`.
+- The Notifications rows define module/write responsibility; #381 does not move their entities from `LgymApi.Domain/Entities` or create a separate persistence root.
 
 ## Persisted Entity Ownership Catalog
 
@@ -176,3 +178,4 @@ If an artifact appears to touch more than one module, the owner is the module th
 - `docs/modular-monolith/issue-376-module-context-map.md`
 - `docs/modular-monolith/issue-380-background-contract-ownership.md`
 - `docs/modular-monolith/issue-380-project-reference-graph.md`
+- `docs/modular-monolith/issue-381-notifications-boundary.md`

@@ -8,6 +8,8 @@ Current contract inventory after removal of the `LgymApi.Application` to `LgymAp
 
 `LgymApi.Application` owns feature commands, shared command ports, canonical cross-module serialization, notification push ports, and the Identity password-recovery scheduling port. `LgymApi.BackgroundWorker` owns command dispatch, handler registration, Hangfire adapters, recurring-job registration, and job implementations. `LgymApi.BackgroundWorker.Common` is the narrow worker wire seam for persisted job expressions and email payloads.
 
+The Notifications boundary in [issue-381-notifications-boundary.md](issue-381-notifications-boundary.md) keeps Application contracts provider-neutral while preserving these runtime owners: Worker selects schedulers and executes jobs, and Common remains the closed persisted-job and email wire seam. #381 assigns module/write responsibility only; it does not relocate contracts, entities, or adapters.
+
 The former Common command CLR names remain canonical durable command-ID strings. They are data in the Worker `CommandContractRegistry`, not Application type dependencies. Reads also accept the fixed Application CLR aliases. Writes continue to emit only the legacy IDs.
 
 ## Former Application to Common ownership inventory
