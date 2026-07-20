@@ -1,19 +1,36 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Plan.Models;
+using LgymApi.Resources;
 
 namespace LgymApi.Application.TrainingPlanning.Plan.GetPlanConfig;
 
 internal sealed class GetPlanConfigUseCase : IGetPlanConfigUseCase
 {
-    private readonly Func<GetPlanConfigQuery, CancellationToken, Task<Result<PlanReadModel, AppError>>> _executeAsync;
+    private readonly IPlanRepository _planRepository;
 
-    public GetPlanConfigUseCase(Func<GetPlanConfigQuery, CancellationToken, Task<Result<PlanReadModel, AppError>>> executeAsync)
+    public GetPlanConfigUseCase(IPlanRepository planRepository)
     {
-        ArgumentNullException.ThrowIfNull(executeAsync);
-        _executeAsync = executeAsync;
+        ArgumentNullException.ThrowIfNull(planRepository);
+        _planRepository = planRepository;
     }
 
-    public Task<Result<PlanReadModel, AppError>> ExecuteAsync(GetPlanConfigQuery input, CancellationToken cancellationToken = default)
-        => _executeAsync(input, cancellationToken);
+    public async Task<Result<PlanReadModel, AppError>> ExecuteAsync(GetPlanConfigQuery input, CancellationToken cancellationToken = default)
+    {
+        if (input.CurrentUserId.IsEmpty || input.RouteUserId.IsEmpty)
+        {
+            return Result<PlanReadModel, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+        }
+
+        if (input.CurrentUserId != input.RouteUserId)
+        {
+            return Result<PlanReadModel, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
+        }
+
+        var plan = await _planRepository.FindActiveReadModelByUserIdAsync(input.CurrentUserId, cancellationToken);
+        return plan is null
+            ? Result<PlanReadModel, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind))
+            : Result<PlanReadModel, AppError>.Success(plan);
+    }
 }
