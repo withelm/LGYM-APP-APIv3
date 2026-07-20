@@ -175,7 +175,7 @@ public sealed class NoHostDependencyGuardTests
                 => "Notifications",
             var path when path.StartsWith("LgymApi.Application/Features/Reporting/", StringComparison.OrdinalIgnoreCase)
                 => "Reporting",
-            var path when path.StartsWith("LgymApi.Application/Plan/", StringComparison.OrdinalIgnoreCase)
+            var path when path.StartsWith("LgymApi.Application/TrainingPlanning/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/PlanDay/", StringComparison.OrdinalIgnoreCase)
                 => "Training Planning",
             var path when path.StartsWith("LgymApi.Application/Training/", StringComparison.OrdinalIgnoreCase)

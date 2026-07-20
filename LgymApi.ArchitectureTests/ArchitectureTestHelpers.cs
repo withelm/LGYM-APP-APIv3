@@ -97,7 +97,6 @@ public static class ArchitectureTestHelpers
     private static readonly string[] TrainingPlanningApplicationPathMarkers =
     {
         "/LgymApi.Application/TrainingPlanning/",
-        "/LgymApi.Application/Plan/",
         "/LgymApi.Application/PlanDay/"
     };
 
