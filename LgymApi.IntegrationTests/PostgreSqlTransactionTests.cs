@@ -2,6 +2,8 @@ using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Repositories;
+using LgymApi.Application.TrainingPlanning;
+using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -66,11 +68,16 @@ internal sealed class PostgreSqlTransactionTests : PostgreSqlIntegrationTestBase
                         new InvalidOperationException("Forced post-save failure."));
                 });
 
-            var service = new PlanService(
-                Substitute.For<IUserRepository>(),
-                planRepository,
-                Substitute.For<IPlanDayRepository>(),
-                new EfUnitOfWork(database));
+            var facadeServices = new ServiceCollection();
+            facadeServices.AddTrainingPlanningModule();
+            facadeServices.AddScoped<IPlanRepository>(_ => planRepository);
+            facadeServices.AddScoped<IPlanDayRepository>(_ => Substitute.For<IPlanDayRepository>());
+            facadeServices.AddScoped<IActivePlanPointerStore>(_ => Substitute.For<IActivePlanPointerStore>());
+            facadeServices.AddScoped<IUnitOfWork>(_ => new EfUnitOfWork(database));
+
+            using var facadeProvider = facadeServices.BuildServiceProvider();
+            using var facadeScope = facadeProvider.CreateScope();
+            var service = facadeScope.ServiceProvider.GetRequiredService<IPlanService>();
 
             var result = await service.CopyPlanAsync(currentUser, "missing-share-code");
 
