@@ -1,8 +1,6 @@
 using System.Text.Json;
 using LgymApi.Application.Notifications.Contracts.Push;
-using LgymApi.Application.Notifications.Repositories;
 using LgymApi.Application.Platform.Contracts.Serialization;
-using LgymApi.Application.Repositories;
 using LgymApi.Domain.Constants;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -15,40 +13,21 @@ public sealed class PushNotificationDeliveryService : IPushNotificationDeliveryS
 {
     private const int MaximumExceptionTypeLength = 128;
 
-    private readonly IPushNotificationMessageRepository _pushNotificationMessageRepository;
-    private readonly IPushInstallationRepository _pushInstallationRepository;
-    private readonly IPushProviderSender _pushProviderSender;
-    private readonly IPushBackgroundScheduler _pushBackgroundScheduler;
-    private readonly IPushNotificationDeliveryRetrySettings _retrySettings;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<PushNotificationDeliveryService> _logger;
+    private readonly IPushNotificationDeliveryServiceDependencies _dependencies;
 
-    public PushNotificationDeliveryService(
-        IPushNotificationMessageRepository pushNotificationMessageRepository,
-        IPushInstallationRepository pushInstallationRepository,
-        IPushProviderSender pushProviderSender,
-        IPushBackgroundScheduler pushBackgroundScheduler,
-        IPushNotificationDeliveryRetrySettings retrySettings,
-        IUnitOfWork unitOfWork,
-        ILogger<PushNotificationDeliveryService> logger)
+    public PushNotificationDeliveryService(IPushNotificationDeliveryServiceDependencies dependencies)
     {
-        _pushNotificationMessageRepository = pushNotificationMessageRepository;
-        _pushInstallationRepository = pushInstallationRepository;
-        _pushProviderSender = pushProviderSender;
-        _pushBackgroundScheduler = pushBackgroundScheduler;
-        _retrySettings = retrySettings;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _dependencies = dependencies ?? throw new ArgumentNullException(nameof(dependencies));
     }
 
     public async Task ProcessAsync(
         Id<PushNotificationMessage> notificationId,
         CancellationToken cancellationToken = default)
     {
-        var claimed = await _pushNotificationMessageRepository.TryTransitionToSendingAsync(notificationId, cancellationToken);
+        var claimed = await _dependencies.PushNotificationMessageRepository.TryTransitionToSendingAsync(notificationId, cancellationToken);
         if (!claimed)
         {
-            _logger.LogInformation(
+            _dependencies.Logger.LogInformation(
                 "Push notification {NotificationId} could not be claimed for sending; skipping duplicate work.",
                 notificationId);
             return;
@@ -59,21 +38,21 @@ public sealed class PushNotificationDeliveryService : IPushNotificationDeliveryS
         TimeSpan? retryDelay = null;
         try
         {
-            message = await _pushNotificationMessageRepository.FindByIdAsync(notificationId, cancellationToken);
+            message = await _dependencies.PushNotificationMessageRepository.FindByIdAsync(notificationId, cancellationToken);
             if (message == null)
             {
-                _logger.LogWarning("Push notification {NotificationId} was not found after claim.", notificationId);
+                _dependencies.Logger.LogWarning("Push notification {NotificationId} was not found after claim.", notificationId);
                 return;
             }
 
-            var installation = await _pushInstallationRepository.FindByIdAsync(message.PushInstallationId, cancellationToken);
+            var installation = await _dependencies.PushInstallationRepository.FindByIdAsync(message.PushInstallationId, cancellationToken);
             if (installation == null)
             {
                 message.Status = PushNotificationStatus.Failed;
                 message.FailureKind = PushNotificationFailureKind.Permanent;
                 message.ProviderStatus = "InstallationMissing";
                 message.LastError = "Push installation no longer exists.";
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _dependencies.UnitOfWork.SaveChangesAsync(cancellationToken);
                 return;
             }
 
@@ -82,12 +61,12 @@ public sealed class PushNotificationDeliveryService : IPushNotificationDeliveryS
             var payload = JsonSerializer.Deserialize<PushEventPayload>(message.PayloadJson, SharedSerializationOptions.Current)
                 ?? throw new InvalidOperationException($"Failed to deserialize push payload for notification {notificationId}.");
 
-            var result = await _pushProviderSender.SendAsync(message.PushInstallationId, payload, cancellationToken);
+            var result = await _dependencies.PushProviderSender.SendAsync(message.PushInstallationId, payload, cancellationToken);
             retryDelay = result.Outcome == PushSendOutcome.TransientFailure
                 ? ResolveRetryDelay(message.Attempts)
                 : null;
             ApplyProviderResult(message, installation, result, retryDelay);
-            _logger.LogInformation(
+            _dependencies.Logger.LogInformation(
                 "Processed push notification {NotificationId} for installation {InstallationId}, event {EventId}, category {Category} with provider status {ProviderStatus} and outcome {Outcome}.",
                 message.Id,
                 installation.InstallationId,
@@ -96,7 +75,7 @@ public sealed class PushNotificationDeliveryService : IPushNotificationDeliveryS
                 result.ProviderStatus,
                 result.Outcome);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _dependencies.UnitOfWork.SaveChangesAsync(cancellationToken);
 
         }
         catch (OperationCanceledException)
@@ -115,12 +94,12 @@ public sealed class PushNotificationDeliveryService : IPushNotificationDeliveryS
             try
             {
                 ScheduleRetryIfAvailable(message, retryDelay);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _dependencies.UnitOfWork.SaveChangesAsync(cancellationToken);
             }
             catch (Exception exception)
             {
                 message.SchedulerJobId = null;
-                _logger.LogWarning(
+                _dependencies.Logger.LogWarning(
                     "Retry scheduling failed for push notification {NotificationId} with {ExceptionType}; the due delivery remains unscheduled.",
                     message.Id,
                     GetSafeExceptionType(exception));
@@ -187,14 +166,14 @@ public sealed class PushNotificationDeliveryService : IPushNotificationDeliveryS
     {
         if (retryDelay == null)
         {
-            _logger.LogWarning(
+            _dependencies.Logger.LogWarning(
                 "Transient push notification {NotificationId} exhausted retry attempts at attempt {Attempt}.",
                 message.Id,
                 message.Attempts);
             return;
         }
 
-        message.SchedulerJobId = _pushBackgroundScheduler.ScheduleRetry(message.Id, retryDelay.Value);
+        message.SchedulerJobId = _dependencies.PushBackgroundScheduler.ScheduleRetry(message.Id, retryDelay.Value);
     }
 
     private async Task RecoverFromPostClaimFailureAsync(
@@ -203,10 +182,10 @@ public sealed class PushNotificationDeliveryService : IPushNotificationDeliveryS
         bool deliveryAttemptStarted,
         Exception exception)
     {
-        message ??= await _pushNotificationMessageRepository.FindByIdAsync(notificationId, CancellationToken.None);
+        message ??= await _dependencies.PushNotificationMessageRepository.FindByIdAsync(notificationId, CancellationToken.None);
         if (message == null)
         {
-            _logger.LogWarning("Push notification {NotificationId} was not found during post-claim recovery.", notificationId);
+            _dependencies.Logger.LogWarning("Push notification {NotificationId} was not found during post-claim recovery.", notificationId);
             return;
         }
 
@@ -225,27 +204,27 @@ public sealed class PushNotificationDeliveryService : IPushNotificationDeliveryS
         message.NextAttemptAt = retryDelay is { } delay ? DateTimeOffset.UtcNow.Add(delay) : null;
         message.SchedulerJobId = null;
 
-        await _unitOfWork.SaveChangesAsync(CancellationToken.None);
+        await _dependencies.UnitOfWork.SaveChangesAsync(CancellationToken.None);
         var retryScheduled = false;
         try
         {
             ScheduleRetryIfAvailable(message, retryDelay);
             if (retryDelay != null)
             {
-                await _unitOfWork.SaveChangesAsync(CancellationToken.None);
+                await _dependencies.UnitOfWork.SaveChangesAsync(CancellationToken.None);
                 retryScheduled = true;
             }
         }
         catch (Exception schedulingException)
         {
             message.SchedulerJobId = null;
-            _logger.LogWarning(
+            _dependencies.Logger.LogWarning(
                 "Retry scheduling failed during recovery for push notification {NotificationId} with {ExceptionType}; the due delivery remains unscheduled.",
                 message.Id,
                 GetSafeExceptionType(schedulingException));
         }
 
-        _logger.LogWarning(
+        _dependencies.Logger.LogWarning(
             "Push notification {NotificationId} failed after claim with {ExceptionType}; retry scheduled: {RetryScheduled}.",
             message.Id,
             exceptionType,
@@ -273,11 +252,11 @@ public sealed class PushNotificationDeliveryService : IPushNotificationDeliveryS
 
     private TimeSpan? ResolveRetryDelay(int attempts)
     {
-        if (attempts <= 0 || attempts > _retrySettings.RetryDelaysSeconds.Count)
+        if (attempts <= 0 || attempts > _dependencies.RetrySettings.RetryDelaysSeconds.Count)
         {
             return null;
         }
 
-        return TimeSpan.FromSeconds(_retrySettings.RetryDelaysSeconds[attempts - 1]);
+        return TimeSpan.FromSeconds(_dependencies.RetrySettings.RetryDelaysSeconds[attempts - 1]);
     }
 }

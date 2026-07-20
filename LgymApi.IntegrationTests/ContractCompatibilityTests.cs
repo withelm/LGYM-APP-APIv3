@@ -209,6 +209,124 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Plan_UpdatePlan_ReturnsLegacyMsgField()
+    {
+        var user = await SeedUserAsync(name: "contract_plan_update", email: "contract_plan_update@example.com");
+        var planId = await CreatePlanViaEndpointAsync(user.Id, "Contract Plan");
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{user.Id}/updatePlan", new
+        {
+            _id = planId.ToString(),
+            name = "Updated Contract Plan"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        AssertLegacyMsgFieldPresent(json, "updatePlan endpoint must return msg field for backward compatibility");
+        json.RootElement.GetProperty("msg").GetString().Should().Be("Updated");
+    }
+
+    [Test]
+    public async Task Plan_GetPlanConfig_ReturnsLegacyPlanFormShape()
+    {
+        var user = await SeedUserAsync(name: "contract_plan_config", email: "contract_plan_config@example.com");
+        var planId = await CreatePlanViaEndpointAsync(user.Id, "Configured Plan");
+
+        var response = await Client.GetAsync($"/api/{user.Id}/getPlanConfig");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        AssertLegacyIdFieldPresent(json, "getPlanConfig must return the legacy _id field");
+        json.RootElement.GetProperty("_id").GetString().Should().Be(planId.ToString());
+        json.RootElement.GetProperty("name").GetString().Should().Be("Configured Plan");
+        json.RootElement.GetProperty("isActive").GetBoolean().Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Plan_CheckIsUserHavePlan_WithPlanWithoutDays_ReturnsBooleanFalsePayload()
+    {
+        var user = await SeedUserAsync(name: "contract_plan_check", email: "contract_plan_check@example.com");
+        await CreatePlanViaEndpointAsync(user.Id, "Existing Plan");
+
+        var response = await Client.GetAsync($"/api/{user.Id}/checkIsUserHavePlan");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        json.RootElement.ValueKind.Should().Be(JsonValueKind.False);
+    }
+
+    [Test]
+    public async Task Plan_SetNewActivePlan_ReturnsLegacyMsgField()
+    {
+        var user = await SeedUserAsync(name: "contract_plan_active", email: "contract_plan_active@example.com");
+        await CreatePlanViaEndpointAsync(user.Id, "First Plan");
+        var planId = await CreatePlanViaEndpointAsync(user.Id, "Second Plan");
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{user.Id}/setNewActivePlan", new
+        {
+            _id = planId.ToString()
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        AssertLegacyMsgFieldPresent(json, "setNewActivePlan endpoint must return msg field for backward compatibility");
+        json.RootElement.GetProperty("msg").GetString().Should().Be("Updated");
+    }
+
+    [Test]
+    public async Task Plan_CopyPlan_ReturnsPlanDtoShape()
+    {
+        var sourceUser = await SeedUserAsync(name: "contract_plan_copy_source", email: "contract_plan_copy_source@example.com");
+        var sourcePlanId = await CreatePlanViaEndpointAsync(sourceUser.Id, "Copy Source Plan");
+
+        var shareResponse = await Client.PostAsync($"/api/{sourcePlanId}/share", null);
+        shareResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var shareJson = await ReadJsonAsync(shareResponse);
+        var shareCode = shareJson.RootElement.GetProperty("shareCode").GetString();
+
+        var destinationUser = await SeedUserAsync(name: "contract_plan_copy_destination", email: "contract_plan_copy_destination@example.com");
+        SetAuthorizationHeader(destinationUser.Id);
+        var response = await Client.PostAsJsonAsync("/api/copy", new { shareCode });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var json = await ReadJsonAsync(response);
+        json.RootElement.GetProperty("id").GetString().Should().NotBeNullOrWhiteSpace();
+        json.RootElement.TryGetProperty("_id", out _).Should().BeFalse("copyPlan returns PlanDto, which uses id rather than legacy _id");
+        json.RootElement.GetProperty("name").GetString().Should().Be("Copy Source Plan");
+        json.RootElement.GetProperty("isActive").GetBoolean().Should().BeTrue();
+        json.RootElement.GetProperty("userId").GetString().Should().Be(destinationUser.Id.ToString());
+    }
+
+    [Test]
+    public async Task Plan_GenerateShareCode_ReturnsShareCodeShape()
+    {
+        var user = await SeedUserAsync(name: "contract_plan_share", email: "contract_plan_share@example.com");
+        var planId = await CreatePlanViaEndpointAsync(user.Id, "Share Plan");
+
+        var response = await Client.PostAsync($"/api/{planId}/share", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        json.RootElement.TryGetProperty("shareCode", out var shareCode).Should().BeTrue("share endpoint must return shareCode");
+        shareCode.GetString().Should().HaveLength(10);
+        json.RootElement.TryGetProperty("code", out _).Should().BeFalse("share endpoint must retain the shareCode property name");
+    }
+
+    [Test]
+    public async Task Plan_DeletePlan_ReturnsLegacyMsgField()
+    {
+        var user = await SeedUserAsync(name: "contract_plan_delete", email: "contract_plan_delete@example.com");
+        var planId = await CreatePlanViaEndpointAsync(user.Id, "Delete Plan");
+
+        var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        AssertLegacyMsgFieldPresent(json, "deletePlan endpoint must return msg field for backward compatibility");
+        json.RootElement.GetProperty("msg").GetString().Should().Be("Deleted.");
+    }
+
+    [Test]
     public async Task Exercise_AddUserExercise_ReturnsLegacyMsgField()
     {
         var user = await SeedUserAsync(name: "contract_exercise", email: "contract_exercise@example.com");

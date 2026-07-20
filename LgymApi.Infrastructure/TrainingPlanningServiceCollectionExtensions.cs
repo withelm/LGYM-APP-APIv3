@@ -1,4 +1,5 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,6 +12,7 @@ public static partial class ServiceCollectionExtensions
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IPlanDayRepository, PlanDayRepository>();
         services.AddScoped<IPlanDayExerciseRepository, PlanDayExerciseRepository>();
+        services.AddScoped<IActivePlanPointerStore, ActivePlanPointerStore>();
 
         return services;
     }

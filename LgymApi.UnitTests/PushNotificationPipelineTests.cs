@@ -840,13 +840,14 @@ public sealed class PushNotificationPipelineTests
     {
         return new PushNotificationJobHandlerService(
             new PushNotificationDeliveryService(
-                messageRepository,
-                installationRepository,
-                sender,
-                scheduler,
-                new PushNotificationDeliveryRetrySettings(options),
-                unitOfWork,
-                NullLogger<PushNotificationDeliveryService>.Instance));
+                new PushNotificationDeliveryServiceDependencies(
+                    messageRepository,
+                    installationRepository,
+                    sender,
+                    scheduler,
+                    new PushNotificationDeliveryRetrySettings(options),
+                    unitOfWork,
+                    NullLogger<PushNotificationDeliveryService>.Instance)));
     }
 
     private static TResult InvokePrivate<TResult>(object instance, string methodName, params object?[] parameters)

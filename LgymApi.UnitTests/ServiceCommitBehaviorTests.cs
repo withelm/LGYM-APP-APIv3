@@ -1,7 +1,6 @@
 using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
-using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
@@ -17,6 +16,8 @@ using LgymApi.Application.Options;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
+using LgymApi.Application.TrainingPlanning.Plan.CreatePlan;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -65,14 +66,14 @@ public sealed class ServiceCommitBehaviorTests
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
-        IUserRepository userRepository = CreateUserRepository(dbContext);
         IPlanRepository planRepository = new PlanRepository(dbContext);
-        IPlanDayRepository planDayRepository = new PlanDayRepository(dbContext);
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
+        IActivePlanPointerStore activePlanPointerStore = new ActivePlanPointerStore(dbContext);
+        var useCase = new CreatePlanUseCase(planRepository, activePlanPointerStore, unitOfWork);
 
-        var service = new PlanService(userRepository, planRepository, planDayRepository, unitOfWork);
+        var result = await useCase.ExecuteAsync(new CreatePlanCommand(user.Id, user.Id, "UoW Plan"));
 
-        await service.CreatePlanAsync(user, user.Id, "UoW Plan");
+        result.IsSuccess.Should().BeTrue();
 
         var savedPlan = await dbContext.Plans.FirstOrDefaultAsync(p => p.UserId == user.Id && p.Name == "UoW Plan");
         savedPlan.Should().NotBeNull();

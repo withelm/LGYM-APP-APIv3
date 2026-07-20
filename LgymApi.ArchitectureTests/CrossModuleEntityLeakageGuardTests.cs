@@ -55,20 +55,20 @@ public sealed class CrossModuleEntityLeakageGuardTests
     {
         var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
         var applicationTree = CSharpSyntaxTree.ParseText("""
-            using LgymApi.Domain.Entities;
             using LgymApi.Domain.ValueObjects;
+            using UserEntity = LgymApi.Domain.Entities.User;
 
             namespace LgymApi.Application.Features.Reporting;
 
             public sealed class ForeignEntityExposure
             {
-                public User ForeignUser { get; init; }
-                public Id<User> ForeignUserId { get; init; }
+                public UserEntity ForeignUser { get; init; }
+                public Id<UserEntity> ForeignUserId { get; init; }
                 public Id<LgymApi.Domain.Entities.User> FullyQualifiedForeignUserId { get; init; }
 
-                public User ReturnForeignUser() => default;
+                public UserEntity ReturnForeignUser() => default;
 
-                public void AcceptForeignUser(User user)
+                public void AcceptForeignUser(UserEntity user)
                 {
                 }
             }
@@ -146,7 +146,8 @@ public sealed class CrossModuleEntityLeakageGuardTests
 
             foreach (var typeSyntax in root.DescendantNodes().OfType<TypeSyntax>())
             {
-                if (IsTypedEntityIdArgument(typeSyntax, semanticModel))
+                if (IsTypedEntityIdArgument(typeSyntax, semanticModel)
+                    || IsTypedEntityIdAliasDeclaration(typeSyntax, semanticModel, root, sourceFile.RelativePath))
                 {
                     continue;
                 }
@@ -249,8 +250,34 @@ public sealed class CrossModuleEntityLeakageGuardTests
             .OfType<TypeArgumentListSyntax>()
             .Any(typeArgumentList =>
                 typeArgumentList.Parent is GenericNameSyntax genericName &&
-                semanticModel.GetTypeInfo(genericName).Type is INamedTypeSymbol type &&
-                IsTypedEntityId(type));
+                semanticModel.GetTypeInfo(genericName).Type is INamedTypeSymbol type
+                && IsTypedEntityId(type));
+    }
+
+    private static bool IsTypedEntityIdAliasDeclaration(
+        TypeSyntax typeSyntax,
+        SemanticModel semanticModel,
+        CompilationUnitSyntax root,
+        string relativePath)
+    {
+        if (!relativePath.StartsWith("LgymApi.Application/TrainingPlanning/Plan/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var usingDirective = typeSyntax.AncestorsAndSelf().OfType<UsingDirectiveSyntax>().FirstOrDefault();
+        if (usingDirective?.Alias == null || semanticModel.GetDeclaredSymbol(usingDirective) is not IAliasSymbol aliasSymbol)
+        {
+            return false;
+        }
+
+        var aliasUsages = root
+            .DescendantNodes()
+            .OfType<IdentifierNameSyntax>()
+            .Where(identifier => SymbolEqualityComparer.Default.Equals(semanticModel.GetAliasInfo(identifier), aliasSymbol))
+            .ToList();
+
+        return aliasUsages.Count > 0 && aliasUsages.All(aliasUsage => IsTypedEntityIdArgument(aliasUsage, semanticModel));
     }
 
     private static bool IsTypedEntityId(INamedTypeSymbol type)
@@ -303,7 +330,7 @@ public sealed class CrossModuleEntityLeakageGuardTests
                 => "Notifications",
             var path when path.StartsWith("LgymApi.Application/Features/Reporting/", StringComparison.OrdinalIgnoreCase)
                 => "Reporting",
-            var path when path.StartsWith("LgymApi.Application/Plan/", StringComparison.OrdinalIgnoreCase)
+            var path when path.StartsWith("LgymApi.Application/TrainingPlanning/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/PlanDay/", StringComparison.OrdinalIgnoreCase)
                 => "Training Planning",
             var path when path.StartsWith("LgymApi.Application/Training/", StringComparison.OrdinalIgnoreCase)

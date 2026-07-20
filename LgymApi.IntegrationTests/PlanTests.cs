@@ -62,6 +62,17 @@ public sealed class PlanTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreatePlan_WithMalformedRouteUserId_ReturnsNotFound()
+    {
+        var user = await SeedUserAsync(name: "invalidcreateplanuser", email: "invalidcreateplan@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/not-an-id/createPlan", new { name = "Plan" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
     public async Task UpdatePlan_WithValidData_UpdatesPlanName()
     {
         var user = await SeedUserAsync(name: "planuser", email: "plan@example.com");
@@ -84,6 +95,37 @@ public sealed class PlanTests : IntegrationTestBase
         var updatedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == plan.Id);
         updatedPlan.Should().NotBeNull();
         updatedPlan!.Name.Should().Be("New Name");
+    }
+
+    [Test]
+    public async Task UpdatePlan_WithMalformedRouteUserId_ReturnsNotFound()
+    {
+        var user = await SeedUserAsync(name: "invalidupdateplanuser", email: "invalidupdateplan@example.com");
+        var plan = await SeedPlanAsync(user.Id, "Plan");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync("/api/not-an-id/updatePlan", new
+        {
+            _id = plan.Id.ToString(),
+            name = "Updated"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task UpdatePlan_WithMalformedBodyPlanId_ReturnsNotFound()
+    {
+        var user = await SeedUserAsync(name: "invalidupdatebodyuser", email: "invalidupdatebody@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{user.Id}/updatePlan", new
+        {
+            _id = "not-an-id",
+            name = "Updated"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Test]
@@ -187,6 +229,35 @@ public sealed class PlanTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SetNewActivePlan_WithMalformedRouteUserId_ReturnsNotFound()
+    {
+        var user = await SeedUserAsync(name: "invalidactiveplanuser", email: "invalidactiveplan@example.com");
+        var plan = await SeedPlanAsync(user.Id, "Plan");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync("/api/not-an-id/setNewActivePlan", new
+        {
+            _id = plan.Id.ToString()
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task SetNewActivePlan_WithMalformedBodyPlanId_ReturnsNotFound()
+    {
+        var user = await SeedUserAsync(name: "invalidactivebodyuser", email: "invalidactivebody@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{user.Id}/setNewActivePlan", new
+        {
+            _id = "not-an-id"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
     public async Task DeletePlan_WithValidId_SoftDeletesPlanAndAllPlanDays()
     {
         var user = await SeedUserAsync(name: "deleteplanuser", email: "deleteplan@example.com");
@@ -266,6 +337,17 @@ public sealed class PlanTests : IntegrationTestBase
         var unchangedPlanDays = await db.PlanDays.Where(pd => pd.PlanId == plan.Id).ToListAsync();
         unchangedPlanDays.Should().HaveCount(2);
         unchangedPlanDays.All(pd => !pd.IsDeleted).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task DeletePlan_WithMalformedRoutePlanId_ReturnsNotFound()
+    {
+        var user = await SeedUserAsync(name: "invaliddeleteplanuser", email: "invaliddeleteplan@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.PostAsync("/api/not-an-id/deletePlan", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Test]
@@ -583,6 +665,17 @@ public sealed class PlanTests : IntegrationTestBase
 
         var nonExistentPlanId = Id<Plan>.New();
         var response = await Client.PostAsync($"/api/{nonExistentPlanId}/share", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task GenerateShareCode_WithMalformedRoutePlanId_ReturnsNotFound()
+    {
+        var user = await SeedUserAsync(name: "invalidshareplanuser", email: "invalidshareplan@example.com");
+        SetAuthorizationHeader(user.Id);
+
+        var response = await Client.PostAsync("/api/not-an-id/share", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
