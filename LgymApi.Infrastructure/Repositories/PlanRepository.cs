@@ -1,4 +1,5 @@
 using LgymApi.Application.Repositories;
+using LgymApi.Application.TrainingPlanning.Plan.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -44,6 +45,15 @@ public sealed partial class PlanRepository : IPlanRepository
         return _dbContext.Plans.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId && p.IsActive && !p.IsDeleted, cancellationToken);
     }
 
+    public Task<PlanReadModel?> FindActiveReadModelByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Plans
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.IsActive && !p.IsDeleted)
+            .Select(p => new PlanReadModel(p.Id, p.UserId, p.Name, p.IsActive, p.ShareCode))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public Task<Plan?> FindLastActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Plans
@@ -56,6 +66,15 @@ public sealed partial class PlanRepository : IPlanRepository
     public Task<List<Plan>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Plans.AsNoTracking().Where(p => p.UserId == userId && !p.IsDeleted).ToListAsync(cancellationToken);
+    }
+
+    public Task<List<PlanReadModel>> GetReadModelsByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Plans
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && !p.IsDeleted)
+            .Select(p => new PlanReadModel(p.Id, p.UserId, p.Name, p.IsActive, p.ShareCode))
+            .ToListAsync(cancellationToken);
     }
 
     public Task AddAsync(Plan plan, CancellationToken cancellationToken = default)
