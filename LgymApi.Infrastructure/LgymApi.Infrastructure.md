@@ -21,3 +21,4 @@
 - Persistence ownership is defined by the executable `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs`. The single `AppDbContext`, database, and migration stream remain technical composition roots, not shared write ownership.
 - Known internal entity IDs use `Id<T>` and are stored through EF Core as PostgreSQL `uuid` provider columns. HTTP and JSON UUID values remain strings. Only `PushNotificationMessage.EntityId` and `PushEventPayload.EntityId` are polymorphic string ID exceptions.
 - Repositories stage changes only. Application services own `SaveChangesAsync()` and explicit transaction commit or rollback; PostgreSQL transaction tests prove both commit visibility and rollback cleanup from fresh contexts.
+- `ActivePlanPointerStore` implements the Training Planning typed-ID active-plan-pointer seam by tracking `User.PlanId` through `AppDbContext`; it stages no save or transaction.
