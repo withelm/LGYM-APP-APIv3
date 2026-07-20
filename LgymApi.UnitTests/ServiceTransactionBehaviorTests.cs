@@ -74,6 +74,35 @@ public sealed class ServiceTransactionBehaviorTests
           unitOfWork.Transaction.RollbackCalls.Should().Be(1);
       }
 
+      [Test]
+      public async Task DeletePlanAsync_WhenPlanDayDeletionFails_RollsBackWithoutSavingOrCommitting()
+      {
+          var userId = Id<User>.New();
+          var planId = Id<Plan>.New();
+          var unitOfWork = new RecordingUnitOfWork();
+          var planDayRepository = new PlanDayRepositoryStub
+          {
+              MarkDeletedException = new InvalidOperationException("plan day deletion failed")
+          };
+          var service = new PlanService(
+              new UserRepositoryStub(),
+              new PlanRepositoryStub
+              {
+                  PlanToReturn = new Plan { Id = planId, UserId = userId }
+              },
+              planDayRepository,
+              unitOfWork);
+
+          Func<Task> action = () => service.DeletePlanAsync(new User { Id = userId }, planId, CancellationToken.None);
+
+          await action.Should().ThrowAsync<InvalidOperationException>();
+
+          planDayRepository.MarkDeletedCalls.Should().Be(1);
+          unitOfWork.SaveChangesCalls.Should().Be(0);
+          unitOfWork.Transaction.CommitCalls.Should().Be(0);
+          unitOfWork.Transaction.RollbackCalls.Should().Be(1);
+      }
+
        [Test]
        public async Task UpdatePlanDayAsync_WhenSuccessful_CommitsTransaction()
        {
@@ -428,7 +457,9 @@ public sealed class ServiceTransactionBehaviorTests
     private sealed class PlanDayRepositoryStub : IPlanDayRepository
     {
         public PlanDay? PlanDayToReturn { get; set; }
+        public Exception? MarkDeletedException { get; set; }
         public int UpdateCalls { get; private set; }
+        public int MarkDeletedCalls { get; private set; }
 
         public Task<PlanDay?> FindByIdAsync(Id<PlanDay> id, CancellationToken cancellationToken = default)
         {
@@ -444,7 +475,16 @@ public sealed class ServiceTransactionBehaviorTests
         public Task<List<PlanDay>> GetByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAsync(PlanDay planDay, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task MarkDeletedAsync(Id<PlanDay> planDayId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task MarkDeletedByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task MarkDeletedByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default)
+        {
+            MarkDeletedCalls++;
+            if (MarkDeletedException is not null)
+            {
+                throw MarkDeletedException;
+            }
+
+            return Task.CompletedTask;
+        }
         public Task<bool> AnyByPlanIdAsync(Id<Plan> planId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
