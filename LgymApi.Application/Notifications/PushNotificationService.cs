@@ -179,7 +179,7 @@ public sealed class PushNotificationService : IPushNotificationService
 
             foreach (var (message, installation) in scheduleCandidates)
             {
-                var reservationId = $"scheduling-{Guid.NewGuid():N}";
+                var reservationId = $"scheduling-{Id<PushNotificationMessage>.New().ToString().Replace("-", string.Empty, StringComparison.Ordinal)}";
                 if (!await _pushNotificationMessageRepository.TryReserveSchedulingAsync(message.Id, reservationId, cancellationToken))
                 {
                     continue;
