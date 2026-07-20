@@ -1,4 +1,3 @@
-using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.PlanDay;
 using LgymApi.Application.TrainingPlanning.Plan.CheckIsUserHavePlan;
 using LgymApi.Application.TrainingPlanning.Plan.CopyPlan;
@@ -26,7 +25,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICopyPlanUseCase, CopyPlanUseCase>();
         services.AddScoped<IGenerateShareCodeUseCase, GenerateShareCodeUseCase>();
         services.AddScoped<ICheckIsUserHavePlanUseCase, CheckIsUserHavePlanUseCase>();
-        services.AddScoped<IPlanService, PlanService>();
         services.AddScoped<IPlanDayServiceDependencies, PlanDayServiceDependencies>();
         services.AddScoped<IPlanDayService, PlanDayService>();
 

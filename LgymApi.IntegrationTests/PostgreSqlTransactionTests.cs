@@ -1,9 +1,9 @@
 using FluentAssertions;
 using LgymApi.Application.Common.Errors;
-using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
+using LgymApi.Application.TrainingPlanning.Plan.CopyPlan;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -77,9 +77,9 @@ internal sealed class PostgreSqlTransactionTests : PostgreSqlIntegrationTestBase
 
             using var facadeProvider = facadeServices.BuildServiceProvider();
             using var facadeScope = facadeProvider.CreateScope();
-            var service = facadeScope.ServiceProvider.GetRequiredService<IPlanService>();
+            var copyPlanUseCase = facadeScope.ServiceProvider.GetRequiredService<ICopyPlanUseCase>();
 
-            var result = await service.CopyPlanAsync(currentUser, "missing-share-code");
+            var result = await copyPlanUseCase.ExecuteAsync(new CopyPlanCommand(currentUser.Id, "missing-share-code"));
 
             result.IsFailure.Should().BeTrue();
             result.Error.Should().BeOfType<PlanNotFoundError>();

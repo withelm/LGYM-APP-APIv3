@@ -2,7 +2,6 @@ using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.AdminManagement.Models;
-using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.PlanDay;
 using LgymApi.Application.Features.PlanDay.Models;
 using LgymApi.Application.Features.TrainerRelationships.Models;
@@ -313,18 +312,16 @@ public sealed class ServiceTransactionBehaviorTests
        public async Task GetPlanConfigAsync_WhenRouteUserIdEmpty_ReturnsInvalidPlanError()
        {
            var currentUser = new User { Id = Id<User>.New() };
-            var service = CreatePlanFacade(
-                new GetPlanConfigUseCase(new PlanRepositoryStub()),
-                new CheckIsUserHavePlanUseCase(new PlanRepositoryStub(), new PlanDayRepositoryStub()));
+            var useCase = new GetPlanConfigUseCase(new PlanRepositoryStub());
 
-           var result = await service.GetPlanConfigAsync(currentUser, Id<User>.Empty, CancellationToken.None);
+           var result = await useCase.ExecuteAsync(new GetPlanConfigQuery(currentUser.Id, Id<User>.Empty), CancellationToken.None);
 
            result.IsFailure.Should().BeTrue();
            result.Error.Should().BeOfType<InvalidPlanError>();
        }
 
         [Test]
-        public void TrainingPlanningModule_ResolvesFocusedPlanUseCasesAndLegacyFacade()
+        public void TrainingPlanningModule_ResolvesFocusedPlanUseCases()
         {
             var services = new ServiceCollection();
             services.AddTrainingPlanningModule();
@@ -346,18 +343,15 @@ public sealed class ServiceTransactionBehaviorTests
             serviceProvider.GetRequiredService<ICopyPlanUseCase>().Should().NotBeNull();
             serviceProvider.GetRequiredService<IGenerateShareCodeUseCase>().Should().NotBeNull();
             serviceProvider.GetRequiredService<ICheckIsUserHavePlanUseCase>().Should().NotBeNull();
-            serviceProvider.GetRequiredService<IPlanService>().Should().NotBeNull();
         }
 
        [Test]
        public async Task CheckIsUserHavePlanAsync_WhenRouteUserIdEmpty_ReturnsPlanFlagBadRequestErrorWithFalsePayload()
        {
            var currentUser = new User { Id = Id<User>.New() };
-            var service = CreatePlanFacade(
-                new GetPlanConfigUseCase(new PlanRepositoryStub()),
-                new CheckIsUserHavePlanUseCase(new PlanRepositoryStub(), new PlanDayRepositoryStub()));
+            var useCase = new CheckIsUserHavePlanUseCase(new PlanRepositoryStub(), new PlanDayRepositoryStub());
 
-           var result = await service.CheckIsUserHavePlanAsync(currentUser, Id<User>.Empty, CancellationToken.None);
+           var result = await useCase.ExecuteAsync(new CheckIsUserHavePlanQuery(currentUser.Id, Id<User>.Empty), CancellationToken.None);
 
             result.IsFailure.Should().BeTrue();
             result.Error.Should().BeAssignableTo<BadRequestError>();
@@ -406,22 +400,6 @@ public sealed class ServiceTransactionBehaviorTests
            result.IsFailure.Should().BeTrue();
            result.Error.Should().BeOfType<InvalidPlanDayError>();
        }
-
-    private static PlanService CreatePlanFacade(
-        IGetPlanConfigUseCase getPlanConfigUseCase,
-        ICheckIsUserHavePlanUseCase checkIsUserHavePlanUseCase)
-    {
-        return new PlanService(
-            Substitute.For<ICreatePlanUseCase>(),
-            Substitute.For<IUpdatePlanUseCase>(),
-            Substitute.For<IDeletePlanUseCase>(),
-            getPlanConfigUseCase,
-            Substitute.For<IGetPlansListUseCase>(),
-            Substitute.For<ISetActivePlanUseCase>(),
-            Substitute.For<ICopyPlanUseCase>(),
-            Substitute.For<IGenerateShareCodeUseCase>(),
-            checkIsUserHavePlanUseCase);
-    }
 
      private sealed class PlanDayServiceDependenciesStub : IPlanDayServiceDependencies
     {

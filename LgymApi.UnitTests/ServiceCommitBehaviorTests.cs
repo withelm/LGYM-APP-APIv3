@@ -1,7 +1,6 @@
 using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
-using LgymApi.Application.Features.Plan;
 using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.Role;
 using LgymApi.Application.Features.User;
