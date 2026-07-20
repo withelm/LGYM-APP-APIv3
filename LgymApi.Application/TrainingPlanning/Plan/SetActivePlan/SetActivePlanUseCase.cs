@@ -1,18 +1,63 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Repositories;
+using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
+using LgymApi.Resources;
 
 namespace LgymApi.Application.TrainingPlanning.Plan.SetActivePlan;
 
 internal sealed class SetActivePlanUseCase : ISetActivePlanUseCase
 {
-    private readonly Func<SetActivePlanCommand, CancellationToken, Task<Result<Unit, AppError>>> _executeAsync;
+    private readonly IPlanRepository _planRepository;
+    private readonly IActivePlanPointerStore _activePlanPointerStore;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public SetActivePlanUseCase(Func<SetActivePlanCommand, CancellationToken, Task<Result<Unit, AppError>>> executeAsync)
+    public SetActivePlanUseCase(
+        IPlanRepository planRepository,
+        IActivePlanPointerStore activePlanPointerStore,
+        IUnitOfWork unitOfWork)
     {
-        ArgumentNullException.ThrowIfNull(executeAsync);
-        _executeAsync = executeAsync;
+        _planRepository = planRepository;
+        _activePlanPointerStore = activePlanPointerStore;
+        _unitOfWork = unitOfWork;
     }
 
-    public Task<Result<Unit, AppError>> ExecuteAsync(SetActivePlanCommand input, CancellationToken cancellationToken = default)
-        => _executeAsync(input, cancellationToken);
+    public async Task<Result<Unit, AppError>> ExecuteAsync(SetActivePlanCommand input, CancellationToken cancellationToken = default)
+    {
+        if (input is null || input.CurrentUserId.IsEmpty || input.RouteUserId.IsEmpty || input.PlanId.IsEmpty)
+        {
+            return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.InvalidId));
+        }
+
+        if (input.CurrentUserId != input.RouteUserId)
+        {
+            return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
+        }
+
+        var plan = await _planRepository.FindByIdAsync(input.PlanId, cancellationToken);
+        if (plan is null)
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
+        }
+
+        if (plan.UserId != input.CurrentUserId)
+        {
+            return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
+        }
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await _planRepository.SetActivePlanAsync(input.CurrentUserId, input.PlanId, cancellationToken);
+            await _activePlanPointerStore.StageActivePlanIdAsync(input.CurrentUserId, input.PlanId, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return Result<Unit, AppError>.Success(Unit.Value);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
 }
