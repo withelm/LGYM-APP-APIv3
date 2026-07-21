@@ -14,6 +14,16 @@ public sealed class ServiceRegistrationGuardTests
         "AddTransient"
     };
 
+    private static readonly CanonicalServiceRegistration[] WorkoutProgressContractRegistrations =
+    {
+        new("IWorkoutProgressReadWriteService", "WorkoutProgressReadWriteService", "WorkoutProgress"),
+        new("IWorkoutProgressDashboardReadService", "WorkoutProgressDashboardReadService", "WorkoutProgress"),
+        new("IWorkoutProgressRankingReadService", "WorkoutProgressRankingReadService", "WorkoutProgress"),
+        new("ICompleteTrainingUseCase", "CompleteTrainingUseCase", "WorkoutProgress"),
+        new("ITrainingHistoryReadService", "TrainingHistoryReadService", "WorkoutProgress"),
+        new("IRankingAccountProfileReadService", "RankingAccountProfileReadService", "Identity")
+    };
+
     [Test]
     public void Feature_Services_Should_Be_Registered_In_ServiceCollection()
     {
@@ -68,6 +78,30 @@ public sealed class ServiceRegistrationGuardTests
             Is.Empty,
             "Every feature service must be registered in ServiceCollectionExtensions." + Environment.NewLine +
             string.Join(Environment.NewLine, missing.Select(m => m.ToString())));
+    }
+
+    [Test]
+    public void Workout_Progress_Public_Contracts_Should_Be_Registered_Exactly_Once_By_Their_Owning_Module()
+    {
+        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
+        var applicationFiles = ArchitectureTestHelpers.EnumerateProjectSourceFiles("LgymApi.Application");
+        var registrations = CollectRegistrations(
+            applicationFiles.Where(path => Path.GetFileName(path).EndsWith("ServiceCollectionExtensions.cs", StringComparison.Ordinal)),
+            parseOptions);
+
+        var violations = WorkoutProgressContractRegistrations
+            .Select(expected => new
+            {
+                Expected = expected,
+                Matches = registrations.Where(registration =>
+                    registration.Interface == expected.Interface &&
+                    registration.Implementation == expected.Implementation).ToList()
+            })
+            .Where(entry => entry.Matches.Count != 1 || entry.Matches.Single().Module != entry.Expected.Module)
+            .Select(entry => $"{entry.Expected.Interface} -> {entry.Expected.Implementation}: expected exactly one registration in {entry.Expected.Module}.")
+            .ToList();
+
+        Assert.That(violations, Is.Empty, string.Join(Environment.NewLine, violations));
     }
 
     private static List<ServiceDeclaration> CollectServiceDeclarations(IEnumerable<string> sourceFiles, CSharpParseOptions parseOptions)
@@ -212,4 +246,6 @@ public sealed class ServiceRegistrationGuardTests
         public override string ToString()
             => $"{SourceFile} [{Module ?? "root"}]: {Interface} -> {Implementation}";
     }
+
+    private sealed record CanonicalServiceRegistration(string Interface, string Implementation, string Module);
 }
