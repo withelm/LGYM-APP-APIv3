@@ -5,6 +5,8 @@ using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Identity.Contracts.Registration;
 using LgymApi.Application.Repositories;
+using LgymApi.Application.WorkoutProgress.ProgressData;
+using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using NSubstitute;
@@ -18,8 +20,10 @@ public sealed class EloRegistryServiceTests
     [Test]
     public async Task GetChartAsync_WithEmptyUserId_ReturnsInvalidEloRegistryError()
     {
+        var progress = Substitute.For<IWorkoutProgressReadWriteService>();
+        progress.GetEloChartAsync(Id<User>.Empty, Arg.Any<CancellationToken>()).Returns(Result<List<EloChartPoint>, AppError>.Failure(new InvalidEloRegistryError("invalid")));
         var service = new EloRegistryService(
-            new NoOpEloRegistryRepository(),
+            progress,
             Substitute.For<IUserRegistrationService>(),
             Substitute.For<IUnitOfWork>());
 
@@ -32,8 +36,10 @@ public sealed class EloRegistryServiceTests
     [Test]
     public async Task GetUserEloAsync_WithEmptyUserId_ReturnsInvalidUserError()
     {
+        var progress = Substitute.For<IWorkoutProgressReadWriteService>();
+        progress.GetLatestEloAsync(Id<User>.Empty, Arg.Any<CancellationToken>()).Returns(Result<int, AppError>.Failure(new InvalidUserError("invalid")));
         var service = new EloRegistryService(
-            new NoOpEloRegistryRepository(),
+            progress,
             Substitute.For<IUserRegistrationService>(),
             Substitute.For<IUnitOfWork>());
 
@@ -64,10 +70,10 @@ public sealed class EloRegistryServiceTests
                 Date = new DateTimeOffset(2026, 1, 10, 8, 0, 0, TimeSpan.Zero)
             }
         };
-        var eloRepository = Substitute.For<IEloRegistryRepository>();
-        eloRepository.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(entries);
+        var progress = Substitute.For<IWorkoutProgressReadWriteService>();
+        progress.GetEloChartAsync(userId, Arg.Any<CancellationToken>()).Returns(Result<List<EloChartPoint>, AppError>.Success(entries.Select(entry => new EloChartPoint(entry.Id, entry.Elo, entry.Date.UtcDateTime.ToString("MM/dd", System.Globalization.CultureInfo.InvariantCulture))).ToList()));
         var service = new EloRegistryService(
-            eloRepository,
+            progress,
             Substitute.For<IUserRegistrationService>(),
             Substitute.For<IUnitOfWork>());
 
@@ -87,22 +93,22 @@ public sealed class EloRegistryServiceTests
         var userId = Id<User>.New();
         var input = new RegisterUserInput("new-user", "new@example.com", "password123", "password123", true, null);
         var userRegistrationService = Substitute.For<IUserRegistrationService>();
-        var eloRepository = Substitute.For<IEloRegistryRepository>();
+        var progress = Substitute.For<IWorkoutProgressReadWriteService>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var transaction = Substitute.For<IUnitOfWorkTransaction>();
         userRegistrationService.RegisterAsync(input, cancellationToken).Returns(Task.FromResult(Result<Id<User>, AppError>.Success(userId)));
-        eloRepository.CreateInitialForUserAsync(userId, cancellationToken).Returns(Task.CompletedTask);
+        progress.InitializeEloAsync(userId, cancellationToken).Returns(Task.CompletedTask);
         unitOfWork.BeginTransactionAsync(cancellationToken).Returns(Task.FromResult<IUnitOfWorkTransaction>(transaction));
         unitOfWork.SaveChangesAsync(cancellationToken).Returns(Task.FromResult(1));
         transaction.CommitAsync(cancellationToken).Returns(Task.CompletedTask);
 
-        var result = await new EloRegistryService(eloRepository, userRegistrationService, unitOfWork).RegisterUserAsync(input, trainer: false, cancellationToken);
+        var result = await new EloRegistryService(progress, userRegistrationService, unitOfWork).RegisterUserAsync(input, trainer: false, cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         Received.InOrder(() =>
         {
             userRegistrationService.RegisterAsync(input, cancellationToken);
-            eloRepository.CreateInitialForUserAsync(userId, cancellationToken);
+            progress.InitializeEloAsync(userId, cancellationToken);
             unitOfWork.SaveChangesAsync(cancellationToken);
             transaction.CommitAsync(cancellationToken);
         });
@@ -114,16 +120,16 @@ public sealed class EloRegistryServiceTests
         var input = new RegisterUserInput("trainer", "trainer@example.com", "password123", "password123", false, null);
         var userId = Id<User>.New();
         var userRegistrationService = Substitute.For<IUserRegistrationService>();
-        var eloRepository = Substitute.For<IEloRegistryRepository>();
+        var progress = Substitute.For<IWorkoutProgressReadWriteService>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var transaction = Substitute.For<IUnitOfWorkTransaction>();
         userRegistrationService.RegisterTrainerAsync(input, Arg.Any<CancellationToken>()).Returns(Result<Id<User>, AppError>.Success(userId));
-        eloRepository.CreateInitialForUserAsync(userId, Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        progress.InitializeEloAsync(userId, Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>()).Returns(transaction);
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
         transaction.CommitAsync(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
 
-        var result = await new EloRegistryService(eloRepository, userRegistrationService, unitOfWork).RegisterUserAsync(input, trainer: true);
+        var result = await new EloRegistryService(progress, userRegistrationService, unitOfWork).RegisterUserAsync(input, trainer: true);
 
         result.IsSuccess.Should().BeTrue();
         await userRegistrationService.Received(1).RegisterTrainerAsync(input, Arg.Any<CancellationToken>());
@@ -135,28 +141,20 @@ public sealed class EloRegistryServiceTests
     {
         var input = new RegisterUserInput("user", "user@example.com", "password123", "password123", true, null);
         var userRegistrationService = Substitute.For<IUserRegistrationService>();
-        var eloRepository = Substitute.For<IEloRegistryRepository>();
+        var progress = Substitute.For<IWorkoutProgressReadWriteService>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var transaction = Substitute.For<IUnitOfWorkTransaction>();
         userRegistrationService.RegisterAsync(input, Arg.Any<CancellationToken>()).Returns(Result<Id<User>, AppError>.Failure(new InvalidUserError("invalid")));
         unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>()).Returns(transaction);
         transaction.RollbackAsync(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
 
-        var result = await new EloRegistryService(eloRepository, userRegistrationService, unitOfWork).RegisterUserAsync(input, trainer: false);
+        var result = await new EloRegistryService(progress, userRegistrationService, unitOfWork).RegisterUserAsync(input, trainer: false);
 
         result.IsFailure.Should().BeTrue();
         await transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
-        await eloRepository.DidNotReceive().CreateInitialForUserAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>());
+        await progress.DidNotReceive().InitializeEloAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
         await transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
     }
 
-    private sealed class NoOpEloRegistryRepository : IEloRegistryRepository
-    {
-        public Task<List<EloRegistry>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task AddAsync(EloRegistry eloRegistry, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task CreateInitialForUserAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<int?> GetLatestEloAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<EloRegistry?> GetLatestEntryAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-    }
 }

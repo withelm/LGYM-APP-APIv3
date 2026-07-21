@@ -6,10 +6,14 @@ using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Units;
+using LgymApi.Application.Coaching.Contracts;
+using LgymApi.Application.Identity.Contracts.Access;
+using LgymApi.Application.WorkoutProgress.ProgressData;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using NUnit.Framework;
+using NSubstitute;
 
 namespace LgymApi.UnitTests;
 
@@ -255,26 +259,24 @@ public sealed class MeasurementsServiceTests
         var measurementRepository = repository ?? new CapturingMeasurementRepository();
         measurementRepository.FindByIdHandler = findById ?? ((_, _) => Task.FromResult<Measurement?>(null));
         measurementRepository.GetByUserHandler = getByUser ?? ((_, _, _) => Task.FromResult(new List<Measurement>()));
-        var roleRepository = new StubRoleRepository
-        {
-            UserHasRoleHandler = userHasRole ?? ((_, _, _) => Task.FromResult(false))
-        };
-        var trainerRelationshipRepository = new StubTrainerRelationshipRepository
-        {
-            FindActiveLinkByTrainerAndTraineeHandler = hasTrainerTraineeLink ?? ((_, _, _) => Task.FromResult<TrainerTraineeLink?>(null))
-        };
-
         var heightConverter = new StubHeightUnitConverter();
         var weightConverter = new StubWeightUnitConverter();
         var unitOfWork = new StubUnitOfWork();
-
-        return new MeasurementsService(new StubMeasurementsServiceDependencies(
+        var userAccess = Substitute.For<IUserAccessReadService>();
+        userAccess.IsTrainerAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>()).Returns(call => (userHasRole ?? ((_, _, _) => Task.FromResult(false)))(call.Arg<Id<User>>(), string.Empty, call.Arg<CancellationToken>()));
+        var roleRepository = new StubRoleRepository { UserHasRoleHandler = userHasRole ?? ((_, _, _) => Task.FromResult(false)) };
+        var trainerRelationshipRepository = new StubTrainerRelationshipRepository { FindActiveLinkByTrainerAndTraineeHandler = hasTrainerTraineeLink ?? ((_, _, _) => Task.FromResult<TrainerTraineeLink?>(null)) };
+        var progress = new WorkoutProgressReadWriteService(new WorkoutProgressReadWriteServiceDependencies(
+            Substitute.For<IExerciseRepository>(),
+            Substitute.For<IExerciseScoreRepository>(),
             measurementRepository,
-            roleRepository,
-            trainerRelationshipRepository,
+            Substitute.For<IMainRecordRepository>(),
+            Substitute.For<IEloRegistryRepository>(),
+            userAccess,
             heightConverter,
             weightConverter,
             unitOfWork));
+        return new MeasurementsService(progress, roleRepository, trainerRelationshipRepository);
     }
 
     private sealed class StubMeasurementsServiceDependencies : IMeasurementsServiceDependencies

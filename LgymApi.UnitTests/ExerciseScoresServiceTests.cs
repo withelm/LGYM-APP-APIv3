@@ -1,10 +1,13 @@
 using FluentAssertions;
 using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.ExerciseScores;
 using LgymApi.Application.Models;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
+using LgymApi.Application.WorkoutProgress.ProgressData;
+using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using NSubstitute;
@@ -18,9 +21,9 @@ public sealed class ExerciseScoresServiceTests
     [Test]
     public async Task GetExerciseScoresChartDataAsync_WithEmptyUserId_ReturnsInvalidExerciseScoreError()
     {
-        var service = new ExerciseScoresService(
-            new NoOpUserRepository(),
-            new NoOpExerciseScoreRepository());
+        var progress = Substitute.For<IWorkoutProgressReadWriteService>();
+        progress.GetExerciseScoreChartAsync(Id<User>.Empty, Arg.Any<Id<Exercise>>(), Arg.Any<CancellationToken>()).Returns(Result<List<ExerciseScoreChartPoint>, AppError>.Failure(new InvalidExerciseScoreError("invalid")));
+        var service = new ExerciseScoresService(progress);
 
         var exerciseId = Id<Exercise>.New();
         var result = await service.GetExerciseScoresChartDataAsync(Id<User>.Empty, exerciseId);
@@ -32,9 +35,9 @@ public sealed class ExerciseScoresServiceTests
     [Test]
     public async Task GetExerciseScoresChartDataAsync_WithEmptyExerciseId_ReturnsInvalidExerciseScoreError()
     {
-        var service = new ExerciseScoresService(
-            new NoOpUserRepository(),
-            new NoOpExerciseScoreRepository());
+        var progress = Substitute.For<IWorkoutProgressReadWriteService>();
+        progress.GetExerciseScoreChartAsync(Arg.Any<Id<User>>(), Id<Exercise>.Empty, Arg.Any<CancellationToken>()).Returns(Result<List<ExerciseScoreChartPoint>, AppError>.Failure(new InvalidExerciseScoreError("invalid")));
+        var service = new ExerciseScoresService(progress);
 
         var userId = Id<User>.New();
         var result = await service.GetExerciseScoresChartDataAsync(userId, Id<Exercise>.Empty);
@@ -100,11 +103,11 @@ public sealed class ExerciseScoresServiceTests
                 CreatedAt = new DateTimeOffset(2026, 1, 2, 9, 0, 0, TimeSpan.Zero)
             }
         };
-        var userRepository = Substitute.For<IUserRepository>();
-        var scoreRepository = Substitute.For<IExerciseScoreRepository>();
-        userRepository.FindByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(new User { Id = userId });
-        scoreRepository.GetByUserAndExerciseAsync(userId, exerciseId, Arg.Any<CancellationToken>()).Returns(scores);
-        var service = new ExerciseScoresService(userRepository, scoreRepository);
+        var progress = Substitute.For<IWorkoutProgressReadWriteService>();
+        progress.GetExerciseScoreChartAsync(userId, exerciseId, Arg.Any<CancellationToken>()).Returns(Result<List<ExerciseScoreChartPoint>, AppError>.Success([
+            new ExerciseScoreChartPoint($"{exerciseId}-{firstTrainingId}", 173, "01/02", "Squat", exerciseId),
+            new ExerciseScoreChartPoint($"{exerciseId}-{secondTrainingId}", 92, "01/03", "Squat", exerciseId)]));
+        var service = new ExerciseScoresService(progress);
 
         var result = await service.GetExerciseScoresChartDataAsync(userId, exerciseId);
 

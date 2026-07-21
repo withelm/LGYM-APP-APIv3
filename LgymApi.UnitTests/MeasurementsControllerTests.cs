@@ -8,6 +8,7 @@ using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Measurements.Models;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -104,47 +105,35 @@ public sealed class MeasurementsControllerTests
             return Task.FromResult(Result<Unit, AppError>.Success(Unit.Value));
         }
 
-        public Task<Result<Measurement, AppError>> GetMeasurementDetailAsync(User currentUser, Id<Measurement> measurementId, CancellationToken cancellationToken = default)
+        public Task<Result<MeasurementReadModel, AppError>> GetMeasurementDetailAsync(User currentUser, Id<Measurement> measurementId, CancellationToken cancellationToken = default)
         {
             LastMeasurementId = measurementId;
-            return Task.FromResult(Result<Measurement, AppError>.Success(new Measurement
-            {
-                Id = Id<Measurement>.New(),
-                UserId = Id<User>.New(),
-                BodyPart = BodyParts.Chest,
-                Unit = MeasurementUnits.Centimeters.ToString(),
-                Value = 10
-            }));
+            return Task.FromResult(Result<MeasurementReadModel, AppError>.Success(new(
+                Id<Measurement>.New(), Id<User>.New(), BodyParts.Chest, MeasurementUnits.Centimeters, 10, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
         }
 
-        public Task<Result<List<Measurement>, AppError>> GetMeasurementsListAsync(User currentUser, Id<User> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default)
+        public Task<Result<List<MeasurementReadModel>, AppError>> GetMeasurementsListAsync(User currentUser, Id<User> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default)
         {
             LastRouteUserId = routeUserId;
-            return Task.FromResult(Result<List<Measurement>, AppError>.Success(new List<Measurement>()));
+            return Task.FromResult(Result<List<MeasurementReadModel>, AppError>.Success([]));
         }
 
-        public Task<Result<List<Measurement>, AppError>> GetMeasurementsHistoryAsync(User currentUser, Id<User> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default)
+        public Task<Result<List<MeasurementReadModel>, AppError>> GetMeasurementsHistoryAsync(User currentUser, Id<User> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default)
         {
             LastRouteUserId = routeUserId;
-            return Task.FromResult(Result<List<Measurement>, AppError>.Success(new List<Measurement>()));
+            return Task.FromResult(Result<List<MeasurementReadModel>, AppError>.Success([]));
         }
 
-        public Task<Result<MeasurementTrendResult, AppError>> GetMeasurementsTrendAsync(User currentUser, Id<User> routeUserId, BodyParts bodyPart, MeasurementUnits unit, CancellationToken cancellationToken = default)
+        public Task<Result<MeasurementTrendReadModel, AppError>> GetMeasurementsTrendAsync(User currentUser, Id<User> routeUserId, BodyParts bodyPart, MeasurementUnits unit, CancellationToken cancellationToken = default)
         {
             LastRouteUserId = routeUserId;
-            return Task.FromResult(Result<MeasurementTrendResult, AppError>.Success(new MeasurementTrendResult
-            {
-                BodyPart = bodyPart,
-                Unit = unit,
-                Direction = "same",
-                Points = 2
-            }));
+            return Task.FromResult(Result<MeasurementTrendReadModel, AppError>.Success(new(bodyPart, unit, null, null, null, null, null, null, null, null, null, "same", 2)));
         }
 
-        public Task<Result<List<MeasurementTrendResult>, AppError>> GetMeasurementsTrendsAsync(User currentUser, Id<User> routeUserId, CancellationToken cancellationToken = default)
+        public Task<Result<List<MeasurementTrendReadModel>, AppError>> GetMeasurementsTrendsAsync(User currentUser, Id<User> routeUserId, CancellationToken cancellationToken = default)
         {
             LastRouteUserId = routeUserId;
-            return Task.FromResult(Result<List<MeasurementTrendResult>, AppError>.Success(new List<MeasurementTrendResult>()));
+            return Task.FromResult(Result<List<MeasurementTrendReadModel>, AppError>.Success([]));
         }
     }
 }

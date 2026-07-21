@@ -7,6 +7,7 @@ using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.MainRecords.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 namespace LgymApi.Api.Features.MainRecords.Controllers;
@@ -55,7 +56,7 @@ public sealed class MainRecordsController : ControllerBase
             return result.ToActionResult();
         }
 
-        var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(result.Value);
+        var mappedRecords = _mapper.MapList<MainRecordReadModel, MainRecordResponseDto>(result.Value);
         return Ok(mappedRecords);
     }
 
@@ -73,10 +74,7 @@ public sealed class MainRecordsController : ControllerBase
             return result.ToActionResult();
         }
 
-        var context = result.Value;
-        var mappingContext = _mapper.CreateContext();
-        mappingContext.Set(MainRecordProfile.Keys.ExerciseMap, context.ExerciseMap);
-        var mapped = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordsLastDto>(context.Records, mappingContext);
+        var mapped = _mapper.MapList<MainRecordBestReadModel, MainRecordsLastDto>(result.Value);
         return Ok(mapped);
     }
 
@@ -129,6 +127,6 @@ public sealed class MainRecordsController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.Map<PossibleRecordResult, PossibleRecordForExerciseDto>(result.Value));
+        return Ok(_mapper.Map<PossibleRecordReadModel, PossibleRecordForExerciseDto>(result.Value));
     }
 }
