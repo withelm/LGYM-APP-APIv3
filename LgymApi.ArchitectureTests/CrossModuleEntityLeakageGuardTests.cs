@@ -45,6 +45,7 @@ public sealed class CrossModuleEntityLeakageGuardTests
 
     [TestCase("LgymApi.Application/EloRegistry/EloRegistryService.cs", "Workout & Progress")]
     [TestCase("LgymApi.Application/MainRecords/MainRecordsService.cs", "Workout & Progress")]
+    [TestCase("LgymApi.Application/WorkoutProgress/Contracts/WorkoutProgressContract.cs", "Workout & Progress")]
     public void Moved_Application_Paths_Should_Use_Canonical_Owners(string path, string expectedOwner)
     {
         Assert.That(TryGetApplicationModuleName(path), Is.EqualTo(expectedOwner));
@@ -333,7 +334,8 @@ public sealed class CrossModuleEntityLeakageGuardTests
             var path when path.StartsWith("LgymApi.Application/TrainingPlanning/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/PlanDay/", StringComparison.OrdinalIgnoreCase)
                 => "Training Planning",
-            var path when path.StartsWith("LgymApi.Application/Training/", StringComparison.OrdinalIgnoreCase)
+            var path when path.StartsWith("LgymApi.Application/WorkoutProgress/", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("LgymApi.Application/Training/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/EloRegistry/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/Exercise/", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("LgymApi.Application/ExerciseScores/", StringComparison.OrdinalIgnoreCase)
