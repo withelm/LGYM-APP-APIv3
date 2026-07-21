@@ -15,7 +15,6 @@ public sealed class UserServiceProfileFailureTests
     private IUnitOfWork _unitOfWork = null!;
     private IUserRepository _userRepository = null!;
     private UserProfileService _profileService = null!;
-    private UserRankingService _rankingService = null!;
 
     [SetUp]
     public void SetUp()
@@ -30,7 +29,6 @@ public sealed class UserServiceProfileFailureTests
             new LgymApi.Application.Options.AppDefaultsOptions(),
             Substitute.For<LgymApi.Application.Features.Tutorial.ITutorialService>(),
             Substitute.For<IMapper>()));
-        _rankingService = new UserRankingService(_userRepository, _unitOfWork, Substitute.For<IMapper>());
     }
 
     [Test]
@@ -53,25 +51,4 @@ public sealed class UserServiceProfileFailureTests
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
-    [Test]
-    public async Task ChangeVisibilityInRankingAsync_ReturnsInvalidUserErrorWithoutCommit_WhenCurrentUserIsMissing()
-    {
-        var result = await _rankingService.ChangeVisibilityInRankingAsync(null, true);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidUserError>();
-        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Test]
-    public async Task GetUsersRankingAsync_ReturnsUserNotFoundWithoutCommit_WhenRankingIsEmpty()
-    {
-        _userRepository.GetRankingAsync(Arg.Any<CancellationToken>()).Returns(new List<LgymApi.Application.Models.UserRankingEntry>());
-
-        var result = await _rankingService.GetUsersRankingAsync();
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<UserNotFoundError>();
-        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
 }

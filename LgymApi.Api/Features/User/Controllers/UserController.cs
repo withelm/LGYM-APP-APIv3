@@ -14,6 +14,8 @@ using LgymApi.Application.Identity.Contracts.Profile;
 using LgymApi.Application.Identity.Contracts.Ranking;
 using LgymApi.Application.Identity.Contracts.Sessions;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.WorkoutProgress.Ranking;
+using LgymApi.Application.WorkoutProgress.Ranking.Models;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
@@ -31,6 +33,7 @@ public sealed class UserController : ControllerBase
     private readonly IUserSessionTerminationService _userSessionTerminationService;
     private readonly IUserProfileService _userProfileService;
     private readonly IUserRankingService _userRankingService;
+    private readonly IWorkoutProgressRankingReadService _workoutProgressRankingReadService;
     private readonly IUserAdminAccessService _userAdminAccessService;
     private readonly IEloRegistryService _eloRegistryService;
     private readonly IPasswordResetService _passwordResetService;
@@ -41,6 +44,7 @@ public sealed class UserController : ControllerBase
         IUserSessionTerminationService userSessionTerminationService,
         IUserProfileService userProfileService,
         IUserRankingService userRankingService,
+        IWorkoutProgressRankingReadService workoutProgressRankingReadService,
         IUserAdminAccessService userAdminAccessService,
         IEloRegistryService eloRegistryService,
         IPasswordResetService passwordResetService,
@@ -50,6 +54,7 @@ public sealed class UserController : ControllerBase
         _userSessionTerminationService = userSessionTerminationService;
         _userProfileService = userProfileService;
         _userRankingService = userRankingService;
+        _workoutProgressRankingReadService = workoutProgressRankingReadService;
         _userAdminAccessService = userAdminAccessService;
         _eloRegistryService = eloRegistryService;
         _passwordResetService = passwordResetService;
@@ -147,13 +152,13 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(List<UserBaseInfoDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUsersRanking(CancellationToken cancellationToken = default)
     {
-        var result = await _userRankingService.GetUsersRankingAsync(cancellationToken);
+        var result = await _workoutProgressRankingReadService.GetUsersRankingAsync(cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        var mapped = _mapper.MapList<RankingEntry, UserBaseInfoDto>(result.Value);
+        var mapped = _mapper.MapList<RankingReadModel, UserBaseInfoDto>(result.Value);
         return Ok(mapped);
     }
 

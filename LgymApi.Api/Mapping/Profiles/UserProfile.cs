@@ -2,6 +2,7 @@ using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Models;
+using LgymApi.Application.WorkoutProgress.Ranking.Models;
 
 namespace LgymApi.Api.Mapping.Profiles;
 
@@ -44,6 +45,14 @@ public sealed class UserProfile : IMappingProfile
         });
 
         configuration.CreateMap<RankingEntry, UserBaseInfoDto>((source, _) => new UserBaseInfoDto
+        {
+            Name = source.Name,
+            Avatar = source.Avatar,
+            Elo = source.Elo,
+            ProfileRank = source.ProfileRank
+        });
+
+        configuration.CreateMap<RankingReadModel, UserBaseInfoDto>((source, _) => new UserBaseInfoDto
         {
             Name = source.Name,
             Avatar = source.Avatar,

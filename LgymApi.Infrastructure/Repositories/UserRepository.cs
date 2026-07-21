@@ -1,5 +1,5 @@
 using LgymApi.Application.Features.AdminManagement.Models;
-using LgymApi.Application.Models;
+using LgymApi.Application.Identity.Contracts.Ranking;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -68,27 +68,18 @@ public sealed class UserRepository : IUserRepository
         return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Name == name || u.Email == email, cancellationToken);
     }
 
-    public async Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default)
+    public Task<List<RankingAccountProfile>> GetRankingEligibleAccountProfilesAsync(CancellationToken cancellationToken = default)
     {
-        var rankedUsers = await _dbContext.Users
+        return _dbContext.Users
             .AsNoTracking()
-            .Where(u => !u.IsDeleted && u.IsVisibleInRanking)
-            .Where(u => !u.UserRoles.Any(ur => ur.RoleId == RoleSeedDataConfiguration.TesterRoleSeedId))
-            .Select(u => new
-            {
-                User = u,
-                Elo = _dbContext.EloRegistries
-                    .Where(e => e.UserId == u.Id)
-                    .OrderByDescending(e => e.Date)
-                    .Select(e => (int?)e.Elo)
-                    .FirstOrDefault()
-            })
+            .Where(user => !user.IsDeleted && user.IsVisibleInRanking)
+            .Where(user => !user.UserRoles.Any(role => role.RoleId == RoleSeedDataConfiguration.TesterRoleSeedId))
+            .Select(user => new RankingAccountProfile(
+                user.Id,
+                user.Name,
+                user.Avatar,
+                user.ProfileRank))
             .ToListAsync(cancellationToken);
-
-        return rankedUsers
-            .Select(entry => new UserRankingEntry(entry.User, entry.Elo ?? 1000))
-            .OrderByDescending(entry => entry.Elo)
-            .ToList();
     }
 
     public Task AddAsync(User user, CancellationToken cancellationToken = default)
