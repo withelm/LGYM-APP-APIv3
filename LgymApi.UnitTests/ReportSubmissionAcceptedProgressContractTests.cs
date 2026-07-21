@@ -36,6 +36,13 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
     }
 
     [Test]
+    public void Event_UsesStableSchemaVersionOne()
+    {
+        ReportSubmissionAcceptedProgressEvent.CurrentSchemaVersion.Should().Be(1);
+        CreateValidEvent().SchemaVersion.Should().Be(ReportSubmissionAcceptedProgressEvent.CurrentSchemaVersion);
+    }
+
+    [Test]
     public void IdempotencyKeys_AreDeterministicAndMeasurementKeyUsesCanonicalObservedInstant()
     {
         var @event = CreateValidEvent();
@@ -65,13 +72,22 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
             .Should().Equal(0, 1, 2, 3, 4);
     }
 
-    [TestCase("not-an-id")]
-    [TestCase("")]
-    public void Event_RejectsMalformedOrEmptyStableIdentifiers(string eventId)
+    [Test]
+    public void Event_RejectsMalformedOrEmptyStableIdentifiers()
     {
-        var validation = (CreateValidEvent() with { EventId = eventId }).Validate();
+        var @event = CreateValidEvent();
+        var validations = new[]
+        {
+            @event with { EventId = "not-an-id" },
+            @event with { EventId = string.Empty },
+            @event with { ReportSubmissionId = "not-an-id" },
+            @event with { CorrelationId = "not-an-id" },
+            @event with { CausationId = "not-an-id" },
+            @event with { TraineeId = default }
+        }.Select(invalidEvent => invalidEvent.Validate());
 
-        validation.Outcome.Should().Be(ReportSubmissionAcceptedProgressValidationOutcome.Invalid);
+        validations.Should().OnlyContain(validation =>
+            validation.Outcome == ReportSubmissionAcceptedProgressValidationOutcome.Invalid);
     }
 
     [TestCase(double.NaN)]

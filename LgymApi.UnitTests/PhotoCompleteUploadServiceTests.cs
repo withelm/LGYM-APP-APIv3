@@ -56,13 +56,27 @@ public sealed class PhotoCompleteUploadServiceTests
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         storageProvider.GetMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new PhotoMetadata { ContentType = "image/jpeg", SizeBytes = 4096, ETag = "etag", UploadedAt = DateTimeOffset.UtcNow });
         var pendingUpload = new PendingPhotoUpload { StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", InitiatedByUserId = traineeId, OwnerUserId = traineeId, ReportRequestId = requestId, ViewType = PhotoViewType.Front.ToString(), DeclaredContentType = "image/jpeg", DeclaredSizeBytes = 2048, CreatedAtUtc = DateTimeOffset.UtcNow, ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(10) };
+        var tracker = Substitute.For<IPhotoUploadInitTracker>();
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        var repo = Substitute.For<IReportingRepository>();
+        repo.FindRequestByIdAsync(requestId, Arg.Any<CancellationToken>()).Returns(request);
 
-        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), photoStorageProvider: storageProvider, pendingUpload: pendingUpload);
+        var service = PhotoServiceTestFactory.CreateService(
+            reportingRepository: repo,
+            photoStorageProvider: storageProvider,
+            pendingUpload: pendingUpload,
+            photoUploadInitTracker: tracker,
+            unitOfWork: unitOfWork);
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "etag" });
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidReportingError>();
         result.Error.Message.Should().Contain("size");
+        await storageProvider.Received(1).GetMetadataAsync(pendingUpload.StorageKey, Arg.Any<CancellationToken>());
+        await storageProvider.Received(1).DeleteAsync(pendingUpload.StorageKey, Arg.Any<CancellationToken>());
+        await tracker.Received(1).MarkFailedAsync(pendingUpload.StorageKey, Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await repo.DidNotReceive().SavePhotoAsync(Arg.Any<Photo>(), Arg.Any<CancellationToken>());
+        await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]

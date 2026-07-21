@@ -907,6 +907,32 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
+    public async Task UpdateTrainerFeedbackAsync_WhenTrainerDoesNotOwnTrainee_ReturnsNotFoundWithoutReadingSubmission()
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var submissionLookupCalled = false;
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainer: (_, _, _, _) =>
+            {
+                submissionLookupCalled = true;
+                return Task.FromResult<ReportSubmission?>(null);
+            },
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: false);
+
+        var result = await service.UpdateTrainerFeedbackAsync(
+            CreateUser(trainerId),
+            traineeId,
+            Id<ReportSubmission>.New(),
+            new UpdateReportSubmissionFeedbackCommand());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        submissionLookupCalled.Should().BeFalse();
+    }
+
+    [Test]
     public async Task UpdateTrainerFeedbackAsync_WhenSubmissionIdEmpty_ReturnsFailure()
     {
         var result = await CreateReportingService(userHasTrainerRole: true, hasActiveTrainerLink: true).UpdateTrainerFeedbackAsync(
@@ -997,6 +1023,25 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
+    public async Task MarkTrainerFeedbackAsReadAsync_WhenSubmissionBelongsToAnotherTrainee_ReturnsNotFound()
+    {
+        var currentTrainee = CreateUser(Id<User>.New());
+        var queriedTraineeId = Id<User>.Empty;
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainee: (_, traineeId, _) =>
+            {
+                queriedTraineeId = traineeId;
+                return Task.FromResult<ReportSubmission?>(null);
+            });
+
+        var result = await service.MarkTrainerFeedbackAsReadAsync(currentTrainee, Id<ReportSubmission>.New());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        queriedTraineeId.Should().Be(currentTrainee.Id);
+    }
+
+    [Test]
     public async Task MarkTrainerFeedbackAsReadAsync_WhenFeedbackNotAdded_ReturnsFailure()
     {
         var traineeId = Id<User>.New();
@@ -1017,6 +1062,26 @@ public sealed class ReportingServiceTests
         var result = await CreateReportingService(userHasTrainerRole: false).GetTraineeSubmissionsAsync(CreateUser(Id<User>.New()), Id<User>.New());
 
         result.IsFailure.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task GetTraineeSubmissionsAsync_WhenTrainerDoesNotOwnTrainee_ReturnsNotFoundWithoutReadingSubmissions()
+    {
+        var submissionsLookupCalled = false;
+        var service = CreateReportingService(
+            getSubmissionsByTrainerAndTrainee: (_, _, _) =>
+            {
+                submissionsLookupCalled = true;
+                return Task.FromResult(new List<ReportSubmission>());
+            },
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: false);
+
+        var result = await service.GetTraineeSubmissionsAsync(CreateUser(Id<User>.New()), Id<User>.New());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        submissionsLookupCalled.Should().BeFalse();
     }
 
     [Test]
