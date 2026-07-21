@@ -82,10 +82,7 @@ public sealed class TrainerRelationshipServiceTraineeProfileTests
         dependencies.TrainerRelationshipRepository.Returns(Substitute.For<ITrainerRelationshipRepository>());
         dependencies.PlanRepository.Returns(Substitute.For<IPlanRepository>());
         dependencies.CommandDispatcher.Returns(Substitute.For<ICommandDispatcher>());
-        dependencies.TrainingService.Returns(Substitute.For<ITrainingService>());
-        dependencies.ExerciseScoresService.Returns(Substitute.For<IExerciseScoresService>());
-        dependencies.EloRegistryService.Returns(Substitute.For<IEloRegistryService>());
-        dependencies.MainRecordsService.Returns(Substitute.For<IMainRecordsService>());
+        dependencies.WorkoutProgressDashboardReadService.Returns(Substitute.For<LgymApi.Application.WorkoutProgress.Dashboard.IWorkoutProgressDashboardReadService>());
         dependencies.UnitOfWork.Returns(Substitute.For<IUnitOfWork>());
         dependencies.Logger.Returns(Substitute.For<ILogger<TrainerRelationshipService>>());
         return dependencies;

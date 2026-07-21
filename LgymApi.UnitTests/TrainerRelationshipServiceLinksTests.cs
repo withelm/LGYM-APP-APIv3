@@ -75,10 +75,7 @@ public sealed class TrainerRelationshipServiceLinksTests
         deps.TrainerRelationshipRepository.Returns(Substitute.For<ITrainerRelationshipRepository>());
         deps.PlanRepository.Returns(Substitute.For<IPlanRepository>());
         deps.CommandDispatcher.Returns(Substitute.For<ICommandDispatcher>());
-        deps.TrainingService.Returns(Substitute.For<ITrainingService>());
-        deps.ExerciseScoresService.Returns(Substitute.For<IExerciseScoresService>());
-        deps.EloRegistryService.Returns(Substitute.For<IEloRegistryService>());
-        deps.MainRecordsService.Returns(Substitute.For<IMainRecordsService>());
+        deps.WorkoutProgressDashboardReadService.Returns(Substitute.For<LgymApi.Application.WorkoutProgress.Dashboard.IWorkoutProgressDashboardReadService>());
         deps.UnitOfWork.Returns(Substitute.For<IUnitOfWork>());
         deps.Logger.Returns(Substitute.For<ILogger<TrainerRelationshipService>>());
         return deps;
