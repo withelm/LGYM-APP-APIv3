@@ -22,12 +22,17 @@ public sealed class PhotoHistoryServiceTests
         var requestId = Id<ReportRequest>.New();
         var otherUser = PhotoServiceTestFactory.CreateUser(otherUserId, "other@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
-        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), userHasRole: (_, _, _) => Task.FromResult(false));
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            userHasRole: (_, _, _) => Task.FromResult(false),
+            photoStorageProvider: storageProvider);
 
         var result = await service.GetPhotoHistoryAsync(otherUser, new GetPhotoHistoryCommand { TraineeId = traineeId, RequestId = requestId });
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ReportingForbiddenError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -38,12 +43,18 @@ public sealed class PhotoHistoryServiceTests
         var requestId = Id<ReportRequest>.New();
         var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "non-assigned-trainer@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
-        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), userHasRole: (_, _, _) => Task.FromResult(true), hasTrainerTraineeLink: (_, _, _) => Task.FromResult<TrainerTraineeLink?>(null));
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            userHasRole: (_, _, _) => Task.FromResult(true),
+            hasTrainerTraineeLink: (_, _, _) => Task.FromResult<TrainerTraineeLink?>(null),
+            photoStorageProvider: storageProvider);
 
         var result = await service.GetPhotoHistoryAsync(trainer, new GetPhotoHistoryCommand { TraineeId = traineeId, RequestId = requestId });
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
     [Test]

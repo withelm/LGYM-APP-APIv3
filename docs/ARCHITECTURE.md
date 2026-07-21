@@ -282,6 +282,7 @@ Then register service/repository in both service collection extension files and 
 - `docs/modular-monolith/issue-380-background-contract-ownership.md`
 - `docs/modular-monolith/issue-380-project-reference-graph.md`
 - `docs/modular-monolith/issue-381-notifications-boundary.md`
+- `docs/modular-monolith/issue-392-reporting-boundary.md`
 
 The current layered runtime stays in place until a later change explicitly alters it.
 The compatibility, persistence, and Unit of Work guidance elsewhere in this guide continues to apply and is not restated here.

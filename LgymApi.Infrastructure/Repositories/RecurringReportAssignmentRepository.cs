@@ -32,7 +32,10 @@ public sealed class RecurringReportAssignmentRepository : IRecurringReportAssign
 
     public async Task<RecurringReportAssignment?> FindByIdAsync(Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default)
     {
-        var assignment = await BaseQuery().FirstOrDefaultAsync(x => x.Id == assignmentId, cancellationToken);
+        var assignment = await BaseQuery()
+            .IgnoreQueryFilters()
+            .Where(x => !x.IsDeleted)
+            .FirstOrDefaultAsync(x => x.Id == assignmentId, cancellationToken);
         return assignment is null ? null : SortIncludedFields(assignment);
     }
 
@@ -56,6 +59,8 @@ public sealed class RecurringReportAssignmentRepository : IRecurringReportAssign
     public async Task<List<RecurringReportAssignment>> GetDueAssignmentsAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         var activeAssignments = await BaseQuery()
+            .IgnoreQueryFilters()
+            .Where(x => !x.IsDeleted)
             .Where(x => x.IsActive)
             .ToListAsync(cancellationToken);
 
