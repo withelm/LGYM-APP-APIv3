@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -38,6 +39,18 @@ public sealed class SingleProductionDbContextGuardTests
             Assert.That(topology.EnsureCreatedViolations, Is.Empty, Describe(topology.EnsureCreatedViolations));
             Assert.That(topology.SchemaSplitViolations, Is.Empty, Describe(topology.SchemaSplitViolations));
         });
+    }
+
+    [Test]
+    public void Issue391_Worktree_Should_Not_Change_Production_Migrations()
+    {
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+        var changedFiles = RunGit(repoRoot, ["diff", "--name-only", "HEAD", "--", MigrationRoot])
+            .Concat(RunGit(repoRoot, ["ls-files", "--others", "--exclude-standard", "--", MigrationRoot]))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Assert.That(changedFiles, Is.Empty, string.Join(Environment.NewLine, changedFiles));
     }
 
     [Test]
@@ -106,6 +119,16 @@ public sealed class SingleProductionDbContextGuardTests
     }
 
     [Test]
+    public void Semantic_Fixture_Should_Detect_A_Production_Schema_Split()
+    {
+        var topology = AnalyzeFixture(
+            "LgymApi.Infrastructure/Data/SchemaConfiguration.cs",
+            "using Microsoft.EntityFrameworkCore; sealed class SchemaConfiguration { void Apply(ModelBuilder modelBuilder) => modelBuilder.HasDefaultSchema(\"workouts\"); }");
+
+        Assert.That(topology.SchemaSplitViolations, Has.Count.EqualTo(1));
+    }
+
+    [Test]
     public void Semantic_Fixtures_Should_Reject_Production_EnsureCreated_And_Preserve_NonRelational_Test_Setup()
     {
         var production = AnalyzeFixture(
@@ -155,6 +178,36 @@ public sealed class SingleProductionDbContextGuardTests
     }
 
     private static string Describe<T>(IEnumerable<T> values) => string.Join(Environment.NewLine, values);
+
+    private static IReadOnlyList<string> RunGit(string repoRoot, IReadOnlyList<string> arguments)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "git",
+            WorkingDirectory = repoRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        foreach (var argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start git.");
+        if (!process.WaitForExit(10_000))
+        {
+            process.Kill(entireProcessTree: true);
+            throw new TimeoutException($"git {string.Join(' ', arguments)} did not finish within 10 seconds.");
+        }
+
+        var output = process.StandardOutput.ReadToEnd();
+        var error = process.StandardError.ReadToEnd();
+        Assert.That(process.ExitCode, Is.Zero, error);
+        return output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
 
     private static string ConfigurationFixture(params string[] configurationTypes)
     {

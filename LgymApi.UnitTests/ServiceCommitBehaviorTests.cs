@@ -10,14 +10,18 @@ using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Identity.Authentication;
 using LgymApi.Application.Identity.Profile;
 using LgymApi.Application.Identity.Registration;
+using LgymApi.Application.Identity.Contracts.Access;
+using LgymApi.Application.Coaching.Contracts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Options;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
+using LgymApi.Application.Units;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Application.TrainingPlanning.Plan.CreatePlan;
+using LgymApi.Application.WorkoutProgress.ProgressData;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -116,7 +120,17 @@ public sealed class ServiceCommitBehaviorTests
             NullLogger<UserRegistrationService>.Instance,
             new AppDefaultsOptions(),
             new NoOpTutorialService()));
-        var service = new EloRegistryService(eloRepository, userRegistrationService, unitOfWork);
+        var progress = new WorkoutProgressReadWriteService(new WorkoutProgressReadWriteServiceDependencies(
+            Substitute.For<IExerciseRepository>(),
+            Substitute.For<IExerciseScoreRepository>(),
+            Substitute.For<IMeasurementRepository>(),
+            Substitute.For<IMainRecordRepository>(),
+            eloRepository,
+            Substitute.For<IUserAccessReadService>(),
+            Substitute.For<IUnitConverter<HeightUnits>>(),
+            Substitute.For<IUnitConverter<WeightUnits>>(),
+            unitOfWork));
+        var service = new EloRegistryService(progress, userRegistrationService, unitOfWork);
 
         var registerResult = await service.RegisterUserAsync(new RegisterUserInput(
             "newuser",

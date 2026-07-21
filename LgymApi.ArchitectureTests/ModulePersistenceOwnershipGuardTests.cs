@@ -17,6 +17,12 @@ public sealed class ModulePersistenceOwnershipGuardTests
 
     private static readonly CanonicalRepositoryRegistration[] CanonicalRepositoryRegistrations =
     {
+        new("IExerciseRepository", "ExerciseRepository", "WorkoutProgress"),
+        new("ITrainingRepository", "TrainingRepository", "WorkoutProgress"),
+        new("ITrainingExerciseScoreRepository", "TrainingExerciseScoreRepository", "WorkoutProgress"),
+        new("IExerciseScoreRepository", "ExerciseScoreRepository", "WorkoutProgress"),
+        new("IMeasurementRepository", "MeasurementRepository", "WorkoutProgress"),
+        new("IGymRepository", "GymRepository", "WorkoutProgress"),
         new("IEloRegistryRepository", "EloRegistryRepository", "WorkoutProgress"),
         new("IMainRecordRepository", "MainRecordRepository", "WorkoutProgress"),
         new("IEmailNotificationLogRepository", "EmailNotificationLogRepository", "Notifications"),
@@ -126,6 +132,16 @@ public sealed class ModulePersistenceOwnershipGuardTests
             Is.Empty,
             "EF Core configuration entities must resolve through PersistedEntityOwnershipCatalog." + Environment.NewLine +
             string.Join(Environment.NewLine, configurationsWithoutCatalogOwners.Select(configuration => configuration.ToString())));
+
+        var configurationsOutsideCatalogOwners = configurationDeclarations
+            .Where(configuration => configuration.CatalogOwner is not null && configuration.Module != GetConfigurationModule(configuration.CatalogOwner))
+            .ToList();
+
+        Assert.That(
+            configurationsOutsideCatalogOwners,
+            Is.Empty,
+            "EF Core configurations must remain under their persisted entity catalog owner module." + Environment.NewLine +
+            string.Join(Environment.NewLine, configurationsOutsideCatalogOwners.Select(configuration => configuration.ToString())));
 
         var staleRegistrarEntries = registeredConfigurations
             .Where(typeName => !configurationDeclarations.Any(configuration =>
@@ -258,8 +274,13 @@ public sealed class ModulePersistenceOwnershipGuardTests
         return catalogOwner switch
         {
             PersistedEntityOwnershipCatalog.IdentityModuleName => "Identity",
+            PersistedEntityOwnershipCatalog.NotificationsModuleName => "Notifications",
+            PersistedEntityOwnershipCatalog.ReportingModuleName => "Reporting",
+            PersistedEntityOwnershipCatalog.TrainingPlanningModuleName => "TrainingPlanning",
             PersistedEntityOwnershipCatalog.PlatformModuleName => "Platform",
             PersistedEntityOwnershipCatalog.WorkoutProgressModuleName => "WorkoutProgress",
+            PersistedEntityOwnershipCatalog.CoachingModuleName => "Coaching",
+            PersistedEntityOwnershipCatalog.NutritionModuleName => "Nutrition",
             _ => throw new InvalidOperationException($"No physical configuration-folder mapping exists for catalog owner '{catalogOwner}'.")
         };
     }

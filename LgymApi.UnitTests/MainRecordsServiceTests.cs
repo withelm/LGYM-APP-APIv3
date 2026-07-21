@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.MainRecords.Models;
@@ -7,10 +8,12 @@ using LgymApi.Application.Models;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
+using LgymApi.Application.WorkoutProgress.ProgressData;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using NUnit.Framework;
+using NSubstitute;
 
 namespace LgymApi.UnitTests;
 
@@ -87,7 +90,14 @@ public sealed class MainRecordsServiceTests
 
     private static MainRecordsService CreateService()
     {
-        return new MainRecordsService(new NoOpMainRecordsServiceDependencies());
+        var progress = NSubstitute.Substitute.For<IWorkoutProgressReadWriteService>();
+        progress.AddMainRecordAsync(NSubstitute.Arg.Any<LgymApi.Application.WorkoutProgress.ProgressData.Models.MainRecordCreateWriteModel>(), NSubstitute.Arg.Any<CancellationToken>()).Returns(LgymApi.Application.Common.Results.Result<Unit, AppError>.Failure(new InvalidMainRecordsError("invalid")));
+        progress.GetMainRecordHistoryAsync(Id<User>.Empty, NSubstitute.Arg.Any<CancellationToken>()).Returns(LgymApi.Application.Common.Results.Result<List<LgymApi.Application.WorkoutProgress.ProgressData.Models.MainRecordReadModel>, AppError>.Failure(new InvalidMainRecordsError("invalid")));
+        progress.GetBestMainRecordsAsync(Id<User>.Empty, NSubstitute.Arg.Any<CancellationToken>()).Returns(LgymApi.Application.Common.Results.Result<List<LgymApi.Application.WorkoutProgress.ProgressData.Models.MainRecordBestReadModel>, AppError>.Failure(new InvalidMainRecordsError("invalid")));
+        progress.DeleteMainRecordAsync(Id<User>.Empty, NSubstitute.Arg.Any<Id<MainRecord>>(), NSubstitute.Arg.Any<CancellationToken>()).Returns(LgymApi.Application.Common.Results.Result<Unit, AppError>.Failure(new InvalidMainRecordsError("invalid")));
+        progress.UpdateMainRecordAsync(NSubstitute.Arg.Any<LgymApi.Application.WorkoutProgress.ProgressData.Models.MainRecordUpdateWriteModel>(), NSubstitute.Arg.Any<CancellationToken>()).Returns(LgymApi.Application.Common.Results.Result<Unit, AppError>.Failure(new InvalidMainRecordsError("invalid")));
+        progress.GetRecordOrPossibleRecordAsync(Id<User>.Empty, NSubstitute.Arg.Any<Id<Exercise>>(), NSubstitute.Arg.Any<CancellationToken>()).Returns(LgymApi.Application.Common.Results.Result<LgymApi.Application.WorkoutProgress.ProgressData.Models.PossibleRecordReadModel, AppError>.Failure(new InvalidMainRecordsError("invalid")));
+        return new MainRecordsService(progress);
     }
 
     private sealed class NoOpMainRecordsServiceDependencies : IMainRecordsServiceDependencies

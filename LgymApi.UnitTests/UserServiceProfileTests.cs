@@ -25,10 +25,8 @@ public sealed class UserServiceProfileTests
     private ITutorialService _tutorialService = null!;
     private IUnitOfWork _unitOfWork = null!;
     private IUserRepository _userRepository = null!;
-    private IMapper _mapper = null!;
     private IRankService _rankService = null!;
     private UserProfileService _profileService = null!;
-    private UserRankingService _rankingService = null!;
 
     [SetUp]
     public void SetUp()
@@ -37,7 +35,6 @@ public sealed class UserServiceProfileTests
         _tutorialService = Substitute.For<ITutorialService>();
         _unitOfWork = Substitute.For<IUnitOfWork>();
         _userRepository = Substitute.For<IUserRepository>();
-        _mapper = BuildMapper();
         _rankService = Substitute.For<IRankService>();
         _userRepository.UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(1));
@@ -48,8 +45,7 @@ public sealed class UserServiceProfileTests
             _unitOfWork,
             new AppDefaultsOptions { PreferredTimeZone = "UTC" },
             _tutorialService,
-            _mapper));
-        _rankingService = new UserRankingService(_userRepository, _unitOfWork, _mapper);
+            BuildMapper()));
     }
 
     [Test]
@@ -103,19 +99,6 @@ public sealed class UserServiceProfileTests
     }
 
     [Test]
-    public async Task ChangeVisibilityInRankingAsync_UpdatesVisibilityAndCommits()
-    {
-        var user = CreateUser();
-
-        var result = await _rankingService.ChangeVisibilityInRankingAsync(user, false);
-
-        result.IsSuccess.Should().BeTrue();
-        user.IsVisibleInRanking.Should().BeFalse();
-        await _userRepository.Received(1).UpdateAsync(user, Arg.Any<CancellationToken>());
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Test]
     public async Task UpdateTimeZoneAsync_ReturnsInvalidUserErrorWithoutUpdateOrCommit_WhenTimeZoneIsInvalid()
     {
         var user = CreateUser();
@@ -126,27 +109,6 @@ public sealed class UserServiceProfileTests
         result.Error.Should().BeOfType<InvalidUserError>();
         await _userRepository.DidNotReceive().UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Test]
-    public async Task GetUsersRankingAsync_MapsRepositoryRankingEntries()
-    {
-        using var cancellationSource = new CancellationTokenSource();
-        var cancellationToken = cancellationSource.Token;
-        var user = CreateUser();
-        user.Avatar = "avatar";
-        user.ProfileRank = "Senior 1";
-        _userRepository.GetRankingAsync(cancellationToken).Returns([new UserRankingEntry(user, 1450)]);
-
-        var result = await _rankingService.GetUsersRankingAsync(cancellationToken);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle();
-        result.Value[0].Name.Should().Be(user.Name);
-        result.Value[0].Avatar.Should().Be("avatar");
-        result.Value[0].Elo.Should().Be(1450);
-        result.Value[0].ProfileRank.Should().Be("Senior 1");
-        await _userRepository.Received(1).GetRankingAsync(cancellationToken);
     }
 
     private static User CreateUser() => new()

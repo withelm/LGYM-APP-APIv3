@@ -1,12 +1,9 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
-using LgymApi.Application.Features.EloRegistry;
-using LgymApi.Application.Features.ExerciseScores;
-using LgymApi.Application.Features.MainRecords;
 using LgymApi.Application.Features.TrainerRelationships.Models;
-using LgymApi.Application.Features.Training;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.WorkoutProgress.Dashboard;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
@@ -24,10 +21,7 @@ public sealed partial class TrainerRelationshipService : ITrainerRelationshipSer
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IPlanRepository _planRepository;
     private readonly ICommandDispatcher _commandDispatcher;
-    private readonly ITrainingService _trainingService;
-    private readonly IExerciseScoresService _exerciseScoresService;
-    private readonly IEloRegistryService _eloRegistryService;
-    private readonly IMainRecordsService _mainRecordsService;
+    private readonly IWorkoutProgressDashboardReadService _workoutProgressDashboardReadService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<TrainerRelationshipService> _logger;
 
@@ -38,10 +32,7 @@ public sealed partial class TrainerRelationshipService : ITrainerRelationshipSer
         _trainerRelationshipRepository = dependencies.TrainerRelationshipRepository;
         _planRepository = dependencies.PlanRepository;
         _commandDispatcher = dependencies.CommandDispatcher;
-        _trainingService = dependencies.TrainingService;
-        _exerciseScoresService = dependencies.ExerciseScoresService;
-        _eloRegistryService = dependencies.EloRegistryService;
-        _mainRecordsService = dependencies.MainRecordsService;
+        _workoutProgressDashboardReadService = dependencies.WorkoutProgressDashboardReadService;
         _unitOfWork = dependencies.UnitOfWork;
         _logger = dependencies.Logger;
     }

@@ -38,7 +38,11 @@ If you add a repository method that mutates data, make it stage-only and ensure 
 
 ### Persistence ownership and identifier contract
 
-The production system has one `AppDbContext`, one database, and one migration stream. Each of the 48 persisted entities still has exactly one module owner. `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable ownership source of truth, and `docs/modular-monolith/issue-376-ownership-map.md` is its tested documentation view.
+The production system has one `AppDbContext`, one database, and one migration stream. Each of the 48 persisted entities still has exactly one module owner. This is logical write ownership only; it does not introduce a physical database, `DbContext`, schema, or migration-stream split. `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable ownership source of truth, and `docs/modular-monolith/issue-376-ownership-map.md` is its tested documentation view.
+
+Workout execution and completed-training history belong to `Workout & Progress`. `Training.TypePlanDayId` may reference the `Training Planning` definition used to perform a workout, but that reference does not give Training Planning write ownership over the completed `Training` row.
+
+Workout & Progress exposes its cross-module surface through `ProgressData`, dashboard, ranking, and training execution/history contracts with explicit read/write models. Foreign modules must not consume its entities, repositories, or implementation classes directly. Existing legacy routes and payloads remain unchanged. The `#386` Reporting integration surface is contract-only and deliberately unwired from production reporting flows.
 
 Known internal entity references use `Id<T>`. EF Core stores their provider values in PostgreSQL `uuid` columns, while HTTP and JSON UUID values remain strings. The only polymorphic string ID exceptions are `PushNotificationMessage.EntityId` and `PushEventPayload.EntityId`.
 
@@ -267,6 +271,7 @@ Then register service/repository in both service collection extension files and 
 - `#375` is the historical baseline and inventory source.
 - `#380` is the current background-contract ownership and project-reference source.
 - `#381` defines the Notifications write-ownership boundary and provider-neutral public contract surface; it does not move projects, entities, or runtime behavior.
+- `#391` codifies Workout & Progress logical ownership and path classification without changing the shared persistence topology or legacy API contracts.
 - `docs/adr/006-lgym-evolves-as-modular-monolith.md` records the decision.
 
 ### Issue #376 links

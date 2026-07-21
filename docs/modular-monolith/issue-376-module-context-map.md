@@ -9,6 +9,7 @@ Draft
 - `#375` provides the historical baseline for module clusters.
 - `#380` provides the current background-contract ownership and project-reference graph.
 - `#381` defines the Notifications write-ownership boundary and provider-neutral contract surface.
+- `#391` codifies Workout & Progress logical ownership and application-path classification without a persistence or API split.
 - `docs/ARCHITECTURE.md` is the reader-facing integration guide for the current maps.
 - ADR-006 explains why the modular-monolith direction exists.
 
@@ -87,11 +88,14 @@ The #375 baseline already shows these as the current feature-level dependency cl
 
 - Owns workout sessions, exercise progress, score calculation, ELO or rank updates, and the history needed to track progress over time.
 - Does not own planning, account identity, or coaching links, even when those inputs are needed to validate a workout action.
+- Owns completed `Training` rows even when `Training.TypePlanDayId` references the `Training Planning` definition used for the performed workout. That reference does not transfer completed-training write ownership to Training Planning.
+- `LgymApi.Application/WorkoutProgress/` and the legacy `Training`, `Exercise`, `ExerciseScores`, `Gym`, `Measurements`, `MainRecords`, and `EloRegistry` application folders are classified as this module until physical moves or wrappers replace the legacy paths.
 
 ### Public contract surface
 
 - Exposes workout entry, history, scoring, and progress contracts for the UI and neighboring modules.
 - Publishes progress summaries, workout events, and score updates, while keeping calculation details internal.
+- The explicit neighboring-module surface is `ProgressData` read/write models, dashboard and ranking reads, training execution/history contracts, and the contract-only `#386` Reporting integration contracts. It does not expose entities, repositories, or service implementations; `#386` remains unwired from production Reporting flows and does not change legacy routes.
 
 ## Coaching
 
@@ -173,7 +177,7 @@ Shared platform/reference data may be read by all modules, but only the owning m
 
 ## Persistence and identifier rules
 
-The monolith has one production `AppDbContext`, one database, and one EF Core migration stream. Those technical roots do not loosen the one-owner write rule. The executable ownership catalog is `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs`; its verified documentation view is in `issue-376-ownership-map.md`.
+The monolith has one production `AppDbContext`, one database, and one EF Core migration stream. Ownership is logical only: there is no physical database, context, schema, or migration-stream split. Those technical roots do not loosen the one-owner write rule. The executable ownership catalog is `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs`; its verified documentation view is in `issue-376-ownership-map.md`.
 
 Internal known entity IDs use `Id<T>`. EF Core writes their provider values as PostgreSQL `uuid` columns. HTTP and JSON UUID values remain strings at the API boundary. The only polymorphic string ID exceptions are `PushNotificationMessage.EntityId` and `PushEventPayload.EntityId`.
 

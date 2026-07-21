@@ -13,6 +13,7 @@ using LgymApi.Application.Identity.Contracts.Authentication;
 using LgymApi.Application.Identity.Contracts.Profile;
 using LgymApi.Application.Identity.Contracts.Ranking;
 using LgymApi.Application.Identity.Contracts.Sessions;
+using LgymApi.Application.WorkoutProgress.Ranking;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 using Microsoft.AspNetCore.Http;
@@ -235,6 +236,7 @@ public sealed class AuthenticationControllerContractTests
             Substitute.For<IUserSessionTerminationService>(),
             userProfileService ?? Substitute.For<IUserProfileService>(),
             Substitute.For<IUserRankingService>(),
+            Substitute.For<IWorkoutProgressRankingReadService>(),
             Substitute.For<IUserAdminAccessService>(),
             eloRegistryService,
             Substitute.For<IPasswordResetService>(),

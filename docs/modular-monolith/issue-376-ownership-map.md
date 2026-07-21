@@ -9,6 +9,7 @@ Complete
 - `#375` is the historical inventory source.
 - `#380` is the current source for background-contract ownership and project references.
 - `#381` clarifies Notifications write ownership and provider-neutral contracts without relocating physical artifacts.
+- `#391` codifies Workout & Progress logical ownership and application-path classification without changing persistence topology or API contracts.
 - `docs/ARCHITECTURE.md` is the integration guide that links the current maps.
 - ADR-006 states the modular-monolith decision this map serves.
 
@@ -111,10 +112,15 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 - If an artifact can be used by another module, that module uses the owner service, contract, or read model.
 - A non-owner never gets write authority just because the solution still uses one production `AppDbContext`.
 - The Notifications rows define module/write responsibility; #381 does not move their entities from `LgymApi.Domain/Entities` or create a separate persistence root.
+- All owner rows describe logical write ownership only. They do not create a physical database, `DbContext`, schema, or migration-stream split.
+- Completed `Training` rows remain `Workout & Progress`-owned. `Training.TypePlanDayId` references the `Training Planning` definition used for a performed workout; it does not grant Training Planning write ownership over completed training.
+- Workout & Progress publishes `ProgressData`, dashboard, ranking, training execution/history, and the contract-only `#386` Reporting integration surface as explicit contracts/read models. Foreign modules do not reference its entities, repositories, or implementation classes. `#386` is not a production Reporting cutover, and legacy API routes remain unchanged.
 
 ## Persisted Entity Ownership Catalog
 
 `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable source of truth for persisted-entity ownership. This table is a verified documentation view of that compiled catalog, not an independent authority. `PersistedEntityOwnershipDocumentationTests` parses these rows and fails if a row is missing, duplicated, or names an entity outside the catalog.
+
+Application files under `LgymApi.Application/WorkoutProgress/` classify as `Workout & Progress`. Until physical moves or wrappers replace them, the legacy `Training`, `Exercise`, `ExerciseScores`, `Gym`, `Measurements`, `MainRecords`, and `EloRegistry` application folders classify the same way.
 
 | Persisted entity | Owner module |
 | --- | --- |

@@ -14,6 +14,7 @@ using LgymApi.Application.Identity.Contracts.Authentication;
 using LgymApi.Application.Identity.Contracts.Profile;
 using LgymApi.Application.Identity.Contracts.Ranking;
 using LgymApi.Application.Identity.Contracts.Sessions;
+using LgymApi.Application.WorkoutProgress.Ranking;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Notifications;
@@ -285,6 +286,7 @@ public sealed class UserControllerTests
             Substitute.For<IUserSessionTerminationService>(),
             Substitute.For<IUserProfileService>(),
             Substitute.For<IUserRankingService>(),
+            Substitute.For<IWorkoutProgressRankingReadService>(),
             Substitute.For<IUserAdminAccessService>(),
             eloRegistryService ?? new StubEloRegistryService(),
             stubPasswordResetService,

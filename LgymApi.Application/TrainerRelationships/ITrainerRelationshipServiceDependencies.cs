@@ -1,9 +1,6 @@
-using LgymApi.Application.Features.EloRegistry;
-using LgymApi.Application.Features.ExerciseScores;
-using LgymApi.Application.Features.MainRecords;
-using LgymApi.Application.Features.Training;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.WorkoutProgress.Dashboard;
 using System;
 using Microsoft.Extensions.Logging;
 
@@ -16,10 +13,7 @@ public interface ITrainerRelationshipServiceDependencies
     ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
     IPlanRepository PlanRepository { get; }
     ICommandDispatcher CommandDispatcher { get; }
-    ITrainingService TrainingService { get; }
-    IExerciseScoresService ExerciseScoresService { get; }
-    IEloRegistryService EloRegistryService { get; }
-    IMainRecordsService MainRecordsService { get; }
+    IWorkoutProgressDashboardReadService WorkoutProgressDashboardReadService { get; }
     IUnitOfWork UnitOfWork { get; }
     IServiceProvider ServiceProvider { get; }
     ILogger<TrainerRelationshipService> Logger { get; }
@@ -33,10 +27,7 @@ internal sealed class TrainerRelationshipServiceDependencies : ITrainerRelations
         ITrainerRelationshipRepository trainerRelationshipRepository,
         IPlanRepository planRepository,
         ICommandDispatcher commandDispatcher,
-        ITrainingService trainingService,
-        IExerciseScoresService exerciseScoresService,
-        IEloRegistryService eloRegistryService,
-        IMainRecordsService mainRecordsService,
+        IWorkoutProgressDashboardReadService workoutProgressDashboardReadService,
         IUnitOfWork unitOfWork,
         IServiceProvider serviceProvider,
         ILogger<TrainerRelationshipService> logger)
@@ -46,10 +37,7 @@ internal sealed class TrainerRelationshipServiceDependencies : ITrainerRelations
         TrainerRelationshipRepository = trainerRelationshipRepository;
         PlanRepository = planRepository;
         CommandDispatcher = commandDispatcher;
-        TrainingService = trainingService;
-        ExerciseScoresService = exerciseScoresService;
-        EloRegistryService = eloRegistryService;
-        MainRecordsService = mainRecordsService;
+        WorkoutProgressDashboardReadService = workoutProgressDashboardReadService;
         UnitOfWork = unitOfWork;
         ServiceProvider = serviceProvider;
         Logger = logger;
@@ -60,10 +48,7 @@ internal sealed class TrainerRelationshipServiceDependencies : ITrainerRelations
     public ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
     public IPlanRepository PlanRepository { get; }
     public ICommandDispatcher CommandDispatcher { get; }
-    public ITrainingService TrainingService { get; }
-    public IExerciseScoresService ExerciseScoresService { get; }
-    public IEloRegistryService EloRegistryService { get; }
-    public IMainRecordsService MainRecordsService { get; }
+    public IWorkoutProgressDashboardReadService WorkoutProgressDashboardReadService { get; }
     public IUnitOfWork UnitOfWork { get; }
     public IServiceProvider ServiceProvider { get; }
     public ILogger<TrainerRelationshipService> Logger { get; }

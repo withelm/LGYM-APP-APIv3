@@ -938,9 +938,14 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         }
 
         SetAuthorizationHeader(trainerA.Id);
-        var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/trainings/dates");
+        var responses = await Task.WhenAll(
+            Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/trainings/dates"),
+            Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/trainings/by-date", new { createdAt = DateTime.UtcNow }),
+            Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/exercise-scores/chart", new { exerciseId = Id<Exercise>.New().ToString() }),
+            Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/elo/chart"),
+            Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/main-records/history"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.NotFound);
     }
 
     [Test]

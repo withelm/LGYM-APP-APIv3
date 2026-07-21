@@ -8,10 +8,9 @@ using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
-using LgymApi.Application.Features.EloRegistry.Models;
-using LgymApi.Application.Features.ExerciseScores.Models;
-using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Features.TrainerRelationships.Models;
+using LgymApi.Application.WorkoutProgress.Dashboard.Models;
+using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
@@ -81,7 +80,7 @@ public sealed partial class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return Result<List<TrainingByDateDetails>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
+            return Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
@@ -91,7 +90,7 @@ public sealed partial class TrainerRelationshipController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result.Value));
+        return Ok(_mapper.MapList<WorkoutProgressDashboardTrainingReadModel, TrainingByDateDetailsDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/exercise-scores/chart")]
@@ -102,22 +101,22 @@ public sealed partial class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return Result<List<ExerciseScoresChartData>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
+            return Result<List<ExerciseScoreChartPoint>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         if (!Id<ExerciseEntity>.TryParse(request.ExerciseId, out var parsedExerciseId))
         {
-            return Result<List<ExerciseScoresChartData>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.ExerciseIdRequired)).ToActionResult();
+            return Result<List<ExerciseScoreChartPoint>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.ExerciseIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, parsedTraineeId, parsedExerciseId, cancellationToken);
+        var result = await _trainerRelationshipService.GetTraineeExerciseScoresChartDataAsync(trainer!, parsedTraineeId, parsedExerciseId.ToString(), cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.MapList<ExerciseScoresChartData, ExerciseScoresChartDataDto>(result.Value));
+        return Ok(_mapper.MapList<ExerciseScoreChartPoint, ExerciseScoresChartDataDto>(result.Value));
     }
 
     [HttpGet("trainees/{traineeId}/elo/chart")]
@@ -128,7 +127,7 @@ public sealed partial class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return Result<List<EloRegistryChartEntry>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
+            return Result<List<EloChartPoint>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
@@ -138,7 +137,7 @@ public sealed partial class TrainerRelationshipController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.MapList<EloRegistryChartEntry, EloRegistryBaseChartDto>(result.Value));
+        return Ok(_mapper.MapList<EloChartPoint, EloRegistryBaseChartDto>(result.Value));
     }
 
     [HttpGet("trainees/{traineeId}/main-records/history")]
@@ -149,7 +148,7 @@ public sealed partial class TrainerRelationshipController : ControllerBase
     {
         if (!Id<UserEntity>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return Result<List<LgymApi.Domain.Entities.MainRecord>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
+            return Result<List<MainRecordReadModel>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
         var trainer = HttpContext.GetCurrentUser();
@@ -159,7 +158,7 @@ public sealed partial class TrainerRelationshipController : ControllerBase
             return result.ToActionResult();
         }
 
-        var mappedRecords = _mapper.MapList<LgymApi.Domain.Entities.MainRecord, MainRecordResponseDto>(result.Value);
+        var mappedRecords = _mapper.MapList<MainRecordReadModel, MainRecordResponseDto>(result.Value);
         return Ok(mappedRecords);
     }
 
