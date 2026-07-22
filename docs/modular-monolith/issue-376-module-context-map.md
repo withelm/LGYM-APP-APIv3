@@ -62,13 +62,13 @@ The #375 baseline already shows these as the current feature-level dependency cl
 
 ### Responsibility boundary
 
-- Owns report templates, report requests, report submissions, submission measurements, and report-photo workflows.
+- Owns report templates, report requests, report submissions, and report-photo workflows. Accepted-progress measurement persistence belongs to Workout & Progress.
 - Does not own training plans, workout scoring, or coaching relationships, except where those inputs are required to validate reporting access.
 
 ### Public contract surface
 
 - Exposes report request, submission, template, and photo-upload contracts to the rest of the system.
-- Publishes reporting statuses, submission views, and report-related commands or events without leaking storage concerns.
+- Publishes reporting statuses, submission views, and the Reporting-owned accepted-progress command without leaking storage concerns.
 
 ## Training Planning
 
@@ -95,7 +95,7 @@ The #375 baseline already shows these as the current feature-level dependency cl
 
 - Exposes workout entry, history, scoring, and progress contracts for the UI and neighboring modules.
 - Publishes progress summaries, workout events, and score updates, while keeping calculation details internal.
-- The explicit neighboring-module surface is `ProgressData` read/write models, dashboard and ranking reads, training execution/history contracts, and the contract-only `#386` Reporting integration contracts. It does not expose entities, repositories, or service implementations; `#386` remains unwired from production Reporting flows and does not change legacy routes.
+- The explicit neighboring-module surface is `ProgressData` read/write models, dashboard and ranking reads, training execution/history contracts, and the production `#386` accepted-progress consumer contract. It does not expose entities, repositories, or service implementations. Reporting stages the accepted-progress command, while Workout & Progress validates and owns measurement persistence.
 
 ## Coaching
 
@@ -155,6 +155,10 @@ Application has no dependency on either Worker project or any `LgymApi.Backgroun
 No module may skip its published contract and reach into another module's private state or implementation.
 No module may use direct access to another module's repositories or direct access to another module's entities instead of the published contract surface.
 No module may create a catch-all boundary or a side channel that replaces the owning module's contract.
+
+## Accepted progress communication
+
+For #386, Reporting stages a `ReportSubmissionAcceptedProgressCommand` in the existing `CommandEnvelope` outbox before its submission commit. The committed intent is dispatched through the existing Worker `ActionMessage` infrastructure, and the Worker action invokes the Workout & Progress consumer. This is a published contract flow, not a direct repository write or direct consumer call. Invalid or poison deliveries are sanitized and bounded for retry or dead-letter handling, while unexpected persistence failures remain retryable.
 
 ## Cross-module communication rules
 

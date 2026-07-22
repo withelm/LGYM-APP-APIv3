@@ -39,7 +39,10 @@ public sealed partial class ReportingService : IReportingService
         }
 
         var normalizedAnswers = NormalizeAnswers(command.Answers);
-        var validationResult = ValidateAnswersAgainstTemplate(request.Template, normalizedAnswers);
+        var validationAnswers = _reportSubmissionAcceptedProgressCommandFactory.FilterInvalidMeasurementAnswers(
+            request.Template,
+            normalizedAnswers);
+        var validationResult = ValidateAnswersAgainstTemplate(request.Template, validationAnswers);
         if (validationResult.IsFailure)
         {
             return Result<ReportSubmissionResult, AppError>.Failure(validationResult.Error);
@@ -65,12 +68,17 @@ public sealed partial class ReportingService : IReportingService
         request.Status = ReportRequestStatus.Submitted;
 
         await _reportingRepository.AddSubmissionAsync(submission, cancellationToken);
-        await _reportSubmissionMeasurementWriter.StageMeasurementsAsync(
-            currentTrainee,
+        var acceptedProgressCommand = _reportSubmissionAcceptedProgressCommandFactory.Create(
             request.Template,
             normalizedAnswers,
-            submittedAtUtc,
-            cancellationToken);
+            submission.Id,
+            request.Id,
+            currentTrainee.Id,
+            submittedAtUtc);
+        if (acceptedProgressCommand != null)
+        {
+            await _commandOutboxWriter.StageAsync(acceptedProgressCommand, cancellationToken);
+        }
 
         try
         {

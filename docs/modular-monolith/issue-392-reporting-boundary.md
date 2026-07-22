@@ -26,7 +26,7 @@ Reporting application ownership includes:
 - `IRecurringReportAssignmentService` and the `RecurringReportAssignmentService*` implementation family for recurring assignment lifecycle and due assignment processing.
 - `IReportingRepository` and `IRecurringReportAssignmentRepository` as the application persistence ports.
 - `IPhotoStorageProvider` and `IPhotoUploadInitTracker` as the application abstractions for provider access and pending upload tracking.
-- `ReportSubmissionMeasurementWriter` and `IReportSubmissionMeasurementWriter` as the explicitly temporary measurement compatibility seam described below.
+- `ReportSubmissionAcceptedProgressCommand` as the Reporting-owned accepted-progress command staged through the shared platform outbox port.
 
 Infrastructure implements the Reporting repository ports in `LgymApi.Infrastructure/Repositories/ReportingRepository.cs` and `LgymApi.Infrastructure/Repositories/RecurringReportAssignmentRepository.cs`. Reporting entity mappings remain under `LgymApi.Infrastructure/Data/Configurations/Reporting/`. Repositories stage changes only. Application services own authorization, transaction boundaries, and `IUnitOfWork.SaveChangesAsync()`.
 
@@ -44,13 +44,13 @@ Reporting owns recurring assignment business rules through `IRecurringReportAssi
 
 `ExpiredPhotoUploadCleanupService` is the Reporting application service for expired evidence upload cleanup. Its Worker job and scheduler wiring, where present, are runtime adapters. The Worker executes the job, while Reporting remains responsible for the lifecycle policy and state transitions. No repository owns a commit or transaction.
 
-## Measurement Compatibility Debt
+## Accepted progress outbox flow
 
-`ReportSubmissionMeasurementWriter` and `IReportSubmissionMeasurementWriter` are a temporary compatibility adapter at the Reporting to Workout & Progress boundary. During report submission, the adapter stages compatible measurement rows through the existing measurement repository behavior. It is the only intentional direct measurement persistence exception in the Reporting application path.
+Issue #386 is production wiring. Reporting accepts the submission, derives valid measurement triples through its persistence-neutral factory, and stages a Reporting-owned `ReportSubmissionAcceptedProgressCommand` in the existing `CommandEnvelope` outbox before `IUnitOfWork.SaveChangesAsync()`. Reporting does not write Workout & Progress measurement rows, call its repositories, or call its consumer directly. The temporary measurement adapter was removed.
 
-This adapter is shrink-only debt. Issue #386 is the removal path: after the contract-only accepted-submission integration is implemented as a production delivery flow, the direct measurement write can be removed or replaced according to that issue's approved design. Issue #392 does not remove the current business outcome or broaden the adapter.
+The committed envelope is delivered through the existing committed-intent and `ActionMessage` infrastructure. The Worker handler invokes the Workout & Progress `ReportSubmissionAcceptedProgressConsumer`, which validates before persistence, deduplicates by body part over the `ObservedAt` UTC day, stages only missing measurements, and commits once when rows are staged. `Applied` and `Duplicate` are successful outcomes. Invalid, unsupported-schema, and poison outcomes become sanitized, bounded failures for the existing retry/dead-letter path. Unexpected persistence exceptions propagate and remain retryable.
 
-`ReportSubmissionAcceptedProgressEvent`, its consumer contract, and related idempotency contracts remain contract-only preparation for #386. Issue #392 does not add a production producer, outbox writer, dispatcher, consumer, delivery job, or Progress wiring.
+Operational records and logs expose event ID, report submission ID, correlation ID, causation ID, schema version, outcome, retry or dead-letter state, and counts. They must not expose raw answer JSON, photos, device tokens, or payload dumps.
 
 ## API Compatibility Guard
 
@@ -58,6 +58,6 @@ Reporting API routes, HTTP verbs, action aliases, DTO type and property names, `
 
 ## Persistence and Deployment Boundary
 
-Reporting uses the current shared persistence composition. The production system has one `AppDbContext`, one PostgreSQL database, and one migration stream. Logical write ownership does not create a physical database, schema, context, migration stream, service, or deployment split. Existing tables, migrations, worker identities, routes, and payload shapes remain compatible.
+Reporting uses the current shared persistence composition. The production system has one `AppDbContext`, one PostgreSQL database, and one migration stream. Logical write ownership does not create a physical database, schema, context, migration stream, service, or deployment split. There is no broker. Existing tables, migrations, worker identities, routes, and payload shapes remain compatible.
 
 For the broader ownership matrix and cross-module rules, see [`issue-376-ownership-map.md`](issue-376-ownership-map.md). The durable API contract guard is maintained in `LgymApi.ArchitectureTests/ReportingApiContractImmutabilityGuardTests.cs`.

@@ -5,9 +5,11 @@ using LgymApi.Application.Nutrition.Contracts.BackgroundCommands;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands;
+using LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration;
 using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using NUnit.Framework;
 using System.Text.Json;
@@ -18,7 +20,7 @@ namespace LgymApi.UnitTests;
 public sealed class CommandContractManifestTests
 {
     [Test]
-    public void LegacyCommandManifest_ContainsExactlyFourteenCommands()
+    public void LegacyCommandManifest_ContainsExactlyFifteenCommands()
     {
         // Given
         var manifest = LegacyCommandContractManifest.All;
@@ -27,7 +29,7 @@ public sealed class CommandContractManifestTests
         var commandCount = manifest.Count;
 
         // Then
-        commandCount.Should().Be(14);
+        commandCount.Should().Be(15);
     }
 
     [Test]
@@ -44,7 +46,7 @@ public sealed class CommandContractManifestTests
             .Should().Equal(LegacyCommandContractManifest.ExpectedFutureClrNameReadAliases)
             .And.OnlyHaveUniqueItems();
         LegacyCommandContractManifest.All.Sum(contract => contract.HandlerTypeFullNames.Count)
-            .Should().Be(15);
+            .Should().Be(16);
     }
 
     [TestCaseSource(nameof(InvalidManifestCases))]
@@ -105,7 +107,7 @@ public sealed class CommandContractManifestTests
 
         yield return new TestCaseData(
                 manifest[..^1],
-                "The durable command manifest must contain exactly 14 rows.")
+                "The durable command manifest must contain exactly 15 rows.")
             .SetName("Missing_command_row_is_rejected");
 
         yield return new TestCaseData(
@@ -115,7 +117,7 @@ public sealed class CommandContractManifestTests
                     CanonicalId = "Unexpected.Command",
                     FutureClrNameReadAlias = "Unexpected.Application.Command"
                 }).ToArray(),
-                "The durable command manifest must contain exactly 14 rows.")
+                "The durable command manifest must contain exactly 15 rows.")
             .SetName("Extra_command_row_is_rejected");
 
         yield return new TestCaseData(
@@ -162,6 +164,7 @@ public static class LegacyCommandContractManifest
         typeof(DietPlanUpdatedInAppNotificationCommand),
         typeof(TraineeNoteUpdatedInAppNotificationCommand),
         typeof(ReportSubmissionCreatedInAppNotificationCommand),
+        typeof(ReportSubmissionAcceptedProgressCommand),
         typeof(ReportRequestCreatedInAppNotificationCommand),
         typeof(ReportFeedbackAddedInAppNotificationCommand),
         typeof(TrainerInvitationAcceptedInAppNotificationCommand),
@@ -180,6 +183,7 @@ public static class LegacyCommandContractManifest
         "LgymApi.Application.Nutrition.Contracts.BackgroundCommands.DietPlanUpdatedInAppNotificationCommand",
         "LgymApi.Application.Coaching.Contracts.BackgroundCommands.TraineeNoteUpdatedInAppNotificationCommand",
         "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionCreatedInAppNotificationCommand",
+        "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand",
         "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportRequestCreatedInAppNotificationCommand",
         "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackAddedInAppNotificationCommand",
         "LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationAcceptedInAppNotificationCommand",
@@ -203,6 +207,7 @@ public static class LegacyCommandContractManifest
             [typeof(DietPlanUpdatedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.DietPlanUpdatedInAppNotificationCommandHandler"],
             [typeof(TraineeNoteUpdatedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.TraineeNoteUpdatedInAppNotificationCommandHandler"],
             [typeof(ReportSubmissionCreatedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.ReportSubmissionCreatedInAppNotificationCommandHandler"],
+            [typeof(ReportSubmissionAcceptedProgressCommand)] = ["LgymApi.BackgroundWorker.Actions.ReportSubmissionAcceptedProgressCommandHandler"],
             [typeof(ReportRequestCreatedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.ReportRequestCreatedInAppNotificationCommandHandler"],
             [typeof(ReportFeedbackAddedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.ReportFeedbackAddedInAppNotificationCommandHandler"],
             [typeof(TrainerInvitationAcceptedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.TrainerInvitationAcceptedInAppNotificationCommandHandler"],
@@ -321,6 +326,28 @@ public static class LegacyCommandContractManifest
             "2b262cf9-4ff2-5b6f-b692-a9fb262b094c",
             ["LgymApi.BackgroundWorker.Actions.ReportSubmissionCreatedInAppNotificationCommandHandler"]),
         new(
+            "ReportSubmissionAcceptedProgress",
+            typeof(ReportSubmissionAcceptedProgressCommand),
+            new ReportSubmissionAcceptedProgressCommand
+            {
+                Event = new ReportSubmissionAcceptedProgressEvent(
+                    1,
+                    "00000000-0000-0000-0000-000000000033",
+                    "00000000-0000-0000-0000-000000000034",
+                    "00000000-0000-0000-0000-000000000035",
+                    "00000000-0000-0000-0000-000000000036",
+                    ParseId<User>("00000000-0000-0000-0000-000000000037"),
+                    new DateTimeOffset(2026, 7, 20, 8, 30, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 7, 20, 8, 31, 0, TimeSpan.Zero),
+                    [new ReportSubmissionAcceptedMeasurement(BodyParts.Chest, 101.5, MeasurementUnits.Centimeters)])
+            },
+            "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand",
+            "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand",
+            "{\"event\":{\"schemaVersion\":1,\"eventId\":\"00000000-0000-0000-0000-000000000033\",\"reportSubmissionId\":\"00000000-0000-0000-0000-000000000034\",\"correlationId\":\"00000000-0000-0000-0000-000000000035\",\"causationId\":\"00000000-0000-0000-0000-000000000036\",\"traineeId\":\"00000000-0000-0000-0000-000000000037\",\"observedAt\":\"2026-07-20T08:30:00+00:00\",\"acceptedAt\":\"2026-07-20T08:31:00+00:00\",\"measurements\":[{\"bodyPart\":\"Chest\",\"value\":101.5,\"unit\":\"Centimeters\"}]}}",
+            "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand|{\"event\":{\"schemaVersion\":1,\"eventId\":\"00000000-0000-0000-0000-000000000033\",\"reportSubmissionId\":\"00000000-0000-0000-0000-000000000034\",\"correlationId\":\"00000000-0000-0000-0000-000000000035\",\"causationId\":\"00000000-0000-0000-0000-000000000036\",\"traineeId\":\"00000000-0000-0000-0000-000000000037\",\"observedAt\":\"2026-07-20T08:30:00+00:00\",\"acceptedAt\":\"2026-07-20T08:31:00+00:00\",\"measurements\":[{\"bodyPart\":\"Chest\",\"value\":101.5,\"unit\":\"Centimeters\"}]}}",
+            "0f45be81-891d-1caa-f843-d1f8308f2da7",
+            ["LgymApi.BackgroundWorker.Actions.ReportSubmissionAcceptedProgressCommandHandler"]),
+        new(
             "ReportRequestCreatedInAppNotification",
             typeof(ReportRequestCreatedInAppNotificationCommand),
             new ReportRequestCreatedInAppNotificationCommand
@@ -421,9 +448,9 @@ public static class LegacyCommandContractManifest
 
     public static void Validate(IReadOnlyList<LegacyCommandContract> manifest)
     {
-        if (manifest.Count != 14)
+        if (manifest.Count != 15)
         {
-            throw new InvalidOperationException("The durable command manifest must contain exactly 14 rows.");
+            throw new InvalidOperationException("The durable command manifest must contain exactly 15 rows.");
         }
 
         if (manifest.Select(contract => contract.CanonicalId).Distinct(StringComparer.Ordinal).Count() != manifest.Count)
@@ -450,14 +477,14 @@ public static class LegacyCommandContractManifest
 
         if (!manifest.Select(contract => contract.CommandType).ToHashSet().SetEquals(ExpectedRuntimeTypes))
         {
-            throw new InvalidOperationException("Runtime command types must exactly match the fixed 14-command membership.");
+            throw new InvalidOperationException("Runtime command types must exactly match the fixed 15-command membership.");
         }
 
 
         if (!manifest.Select(contract => contract.FutureClrNameReadAlias)
             .SequenceEqual(ExpectedFutureClrNameReadAliases, StringComparer.Ordinal))
         {
-            throw new InvalidOperationException("Future CLR-name read aliases must exactly match the fixed 14-command membership.");
+            throw new InvalidOperationException("Future CLR-name read aliases must exactly match the fixed 15-command membership.");
         }
 
         if (manifest.Any(contract => contract.Command.GetType() != contract.CommandType))
@@ -471,9 +498,9 @@ public static class LegacyCommandContractManifest
             throw new InvalidOperationException("Every command except TrainingCompletedCommand must declare exactly one handler.");
         }
 
-        if (manifest.Sum(contract => contract.HandlerTypeFullNames.Count) != 15)
+        if (manifest.Sum(contract => contract.HandlerTypeFullNames.Count) != 16)
         {
-            throw new InvalidOperationException("The durable command manifest must declare exactly 15 handlers.");
+            throw new InvalidOperationException("The durable command manifest must declare exactly 16 handlers.");
         }
 
         foreach (var contract in manifest)

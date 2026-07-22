@@ -1325,7 +1325,9 @@ public sealed class ReportingServiceTests
         var uploadInitTracker = Substitute.For<IPhotoUploadInitTracker>();
         uploadInitTracker.CountRecentUploadInitsAsync(Arg.Any<Id<User>>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns(0);
-        var reportSubmissionMeasurementWriter = Substitute.For<IReportSubmissionMeasurementWriter>();
+        var commandOutboxWriter = Substitute.For<ICommandOutboxWriter>();
+        commandOutboxWriter.StageAsync(Arg.Any<ReportSubmissionAcceptedProgressCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommandEnvelopeStageResult(null, false)));
         var roleRepository = Substitute.For<IRoleRepository>();
         roleRepository.UserHasRoleAsync(Arg.Any<Id<User>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(userHasTrainerRole);
@@ -1344,7 +1346,8 @@ public sealed class ReportingServiceTests
         dependencies.ReportingRepository.Returns(repository);
         dependencies.UnitOfWork.Returns(unitOfWork);
         dependencies.CommandDispatcher.Returns(commandDispatcher);
-        dependencies.ReportSubmissionMeasurementWriter.Returns(reportSubmissionMeasurementWriter);
+        dependencies.CommandOutboxWriter.Returns(commandOutboxWriter);
+        dependencies.ReportSubmissionAcceptedProgressCommandFactory.Returns(new ReportSubmissionAcceptedProgressCommandFactory());
         dependencies.RoleRepository.Returns(roleRepository);
         dependencies.TrainerRelationshipRepository.Returns(trainerRelationshipRepository);
         dependencies.RecurringReportAssignmentRepository.Returns(recurringRepository);

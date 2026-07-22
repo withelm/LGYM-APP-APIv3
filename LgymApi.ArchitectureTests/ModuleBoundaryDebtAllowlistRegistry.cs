@@ -2,10 +2,38 @@ namespace LgymApi.ArchitectureTests;
 
 public static class ModuleBoundaryDebtAllowlistRegistry
 {
-    public const int MaximumAllowedEntryCount = 425;
+    public const int MaximumAllowedEntryCount = 421;
 
     private static readonly IReadOnlyList<ModuleBoundaryDebtEntry> Entries =
     [
+        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
+            guardId: "ModuleDependencyGuardTests",
+            sourceModule: "Reporting",
+            targetModule: "Workout & Progress",
+            sourceSymbolOrPath: "LgymApi.Application.Features.Reporting.ReportSubmissionAcceptedProgressCommandFactory @ LgymApi.Application/Features/Reporting/ReportSubmissionAcceptedProgressCommandFactory.cs",
+            targetSymbolOrPath: "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedMeasurement @ LgymApi.Application/WorkoutProgress/Contracts/ReportingIntegration/ReportSubmissionAcceptedProgressEvent.cs",
+            rationale: "Reporting may construct the explicit accepted-progress publication contract but must not consume or persist Workout & Progress data.")),
+        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
+            guardId: "ModuleDependencyGuardTests",
+            sourceModule: "Reporting",
+            targetModule: "Workout & Progress",
+            sourceSymbolOrPath: "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand @ LgymApi.Application/Reporting/Contracts/BackgroundCommands/ReportSubmissionAcceptedProgressCommand.cs",
+            targetSymbolOrPath: "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedProgressEvent @ LgymApi.Application/WorkoutProgress/Contracts/ReportingIntegration/ReportSubmissionAcceptedProgressEvent.cs",
+            rationale: "Reporting may publish the explicit accepted-progress event contract but must not consume or persist Workout & Progress data.")),
+        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
+            guardId: "ModuleDependencyGuardTests",
+            sourceModule: "Reporting",
+            targetModule: "Workout & Progress",
+            sourceSymbolOrPath: "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand @ LgymApi.Application/Reporting/Contracts/BackgroundCommands/ReportSubmissionAcceptedProgressCommand.cs",
+            targetSymbolOrPath: "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedProgressValidationResult @ LgymApi.Application/WorkoutProgress/Contracts/ReportingIntegration/ReportSubmissionAcceptedProgressEvent.cs",
+            rationale: "Reporting may validate the explicit accepted-progress event contract before publication but must not consume or persist Workout & Progress data.")),
+        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
+            guardId: "CrossModuleEntityLeakage",
+            sourceModule: "Reporting",
+            targetModule: "Identity & Accounts",
+            sourceSymbolOrPath: "LgymApi.Application/Features/Reporting/ReportSubmissionAcceptedProgressCommandFactory.cs",
+            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
+            rationale: "Reporting constructs the accepted-progress publication using the established trainee typed ID required by the explicit event contract.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "ModuleDependencyGuardTests",
             sourceModule: "Nutrition",
@@ -34,13 +62,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             sourceSymbolOrPath: "LgymApi.Application.AppConfig.AppConfigService @ LgymApi.Application/AppConfig/AppConfigService.cs",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IUserRepository @ LgymApi.Application/Repositories/IUserRepository.cs",
             rationale: "Current modular-boundary debt: platform app-config reads still query identity-owned user data directly.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "ModuleDependencyGuardTests",
-            sourceModule: "Reporting",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application.Features.Reporting.ReportSubmissionMeasurementWriter @ LgymApi.Application/Features/Reporting/ReportSubmissionMeasurementWriter.cs",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IMeasurementRepository @ LgymApi.Application/Repositories/IMeasurementRepository.cs",
-            rationale: "Current modular-boundary debt: report submission still writes workout/progress measurements through direct repository access.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "ModuleDependencyGuardTests",
             sourceModule: "Training Planning",
@@ -1116,13 +1137,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Reporting",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "LgymApi.Application/Features/Reporting/IReportSubmissionMeasurementWriter.cs",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "LgymApi.Application/Features/Reporting/IReportingService.cs",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -1138,13 +1152,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             sourceModule: "Reporting",
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "LgymApi.Application/Features/Reporting/RecurringReportAssignmentService.cs",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "LgymApi.Application/Features/Reporting/ReportSubmissionMeasurementWriter.cs",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
@@ -1263,13 +1270,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             guardId: "CrossModuleEntityLeakage",
             sourceModule: "Reporting",
             targetModule: "Identity & Accounts",
-            sourceSymbolOrPath: "StageMeasurementsAsync",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.User",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "SubmitReportRequestAsync",
             targetSymbolOrPath: "LgymApi.Domain.Entities.User",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
@@ -1335,34 +1335,6 @@ public static class ModuleBoundaryDebtAllowlistRegistry
             targetModule: "Identity & Accounts",
             sourceSymbolOrPath: "_roleRepository",
             targetSymbolOrPath: "LgymApi.Application.Repositories.IRoleRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "LgymApi.Application/Features/Reporting/ReportSubmissionMeasurementWriter.cs",
-            targetSymbolOrPath: "LgymApi.Domain.Entities.Measurement",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "ReportSubmissionMeasurementWriter",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IMeasurementRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "StageMeasurementsAsync",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IMeasurementRepository",
-            rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
-        new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
-            guardId: "CrossModuleEntityLeakage",
-            sourceModule: "Reporting",
-            targetModule: "Workout & Progress",
-            sourceSymbolOrPath: "_measurementRepository",
-            targetSymbolOrPath: "LgymApi.Application.Repositories.IMeasurementRepository",
             rationale: "Pre-existing cross-module entity/repository coupling tracked as shrink-only debt while explicit contracts/read models/events are introduced.")),
         new ModuleBoundaryDebtEntry(ModuleBoundaryDebtKey.Create(
             guardId: "CrossModuleEntityLeakage",

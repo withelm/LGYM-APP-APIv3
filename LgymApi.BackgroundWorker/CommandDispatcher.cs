@@ -1,17 +1,10 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
-using LgymApi.Application.Platform.Contracts.Serialization;
-using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using ApplicationInvitationAcceptedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.InvitationAcceptedCommand;
 
 namespace LgymApi.BackgroundWorker;
 
@@ -65,34 +58,20 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return; // Zero-handler path: safe no-op, no failure, no persistence
         }
 
-        var descriptor = _commandContractRegistry.DescribeForDispatch(commandType);
-        var payloadJson = descriptor.CanonicalId == CommandContractRegistry.InvitationAcceptedCanonicalId
-            ? SerializeInvitationAcceptedCommand(command)
-            : JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current);
-        var correlationId = ComputeDeterministicCorrelationId(descriptor.CanonicalId, payloadJson);
+        var envelope = CommandEnvelopeFactory.Create(command, _commandContractRegistry);
 
         _logger.LogInformation(
                 "Persisting command {CommandId} with correlation {CorrelationId}.",
-            descriptor.CanonicalId,
-            correlationId);
+            envelope.CommandTypeFullName,
+            envelope.CorrelationId);
 
         _logger.LogInformation(
             "Found {HandlerCount} handler(s) for command {CommandId}.",
             handlerCount,
-            descriptor.CanonicalId);
+            envelope.CommandTypeFullName);
 
         // Check idempotency: attempt to add envelope with unique CorrelationId
         // Uses DB-level uniqueness constraint (IX_CommandEnvelopes_CorrelationId) for atomic duplicate detection
-
-        var envelope = new CommandEnvelope
-        {
-            Id = Id<CommandEnvelope>.New(),
-            CorrelationId = correlationId,
-            PayloadJson = payloadJson,
-            CommandTypeFullName = descriptor.CanonicalId,
-            Status = ActionExecutionStatus.Pending,
-            NextAttemptAt = DateTimeOffset.UtcNow
-        };
 
         // AddOrGetExistingAsync records the envelope or returns an existing one.
         var envelopeResult = await _commandEnvelopeRepository.AddOrGetExistingAsync(envelope);
@@ -102,7 +81,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
             // Duplicate detected during read phase (existing envelope found by CorrelationId)
             _logger.LogInformation(
                 "Command envelope already exists for correlation {CorrelationId} (envelope {EnvelopeId}). Skipping duplicate persistence.",
-                correlationId,
+                envelope.CorrelationId,
                 envelopeResult.Id);
             return; // Idempotent path: no duplicate persistence
         }
@@ -121,13 +100,13 @@ public sealed class CommandDispatcher : ICommandDispatcher
             _logger.LogInformation(
                 ex,
                 "Unique constraint violation on CorrelationId {CorrelationId}. Concurrent duplicate detected. Fetching existing envelope.",
-                correlationId);
+                envelope.CorrelationId);
 
             // Detach the failed envelope to avoid tracking conflicts
             _commandEnvelopeRepository.Detach(envelope);
 
             // Fetch the winning envelope that was persisted by concurrent caller
-            var existing = await _commandEnvelopeRepository.FindByCorrelationIdAsync(correlationId);
+            var existing = await _commandEnvelopeRepository.FindByCorrelationIdAsync(envelope.CorrelationId);
             
             if (existing == null)
             {
@@ -135,14 +114,14 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 // This indicates soft-delete race or unexpected DB state
                 _logger.LogError(
                     "Unique constraint violation but existing envelope not found for correlation {CorrelationId}. Re-throwing exception.",
-                    correlationId);
+                    envelope.CorrelationId);
                 throw;
             }
 
             _logger.LogInformation(
                 "Concurrent duplicate resolved: using existing envelope {EnvelopeId} for correlation {CorrelationId}. Skipping persistence.",
                 existing.Id,
-                correlationId);
+                envelope.CorrelationId);
             
             return; // Idempotent path: conflict resolved, skip persistence
         }
@@ -150,7 +129,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         _logger.LogInformation(
             "Command envelope {EnvelopeId} persisted for correlation {CorrelationId}.",
             envelope.Id,
-            correlationId);
+            envelope.CorrelationId);
     }
 
     /// <summary>
@@ -159,13 +138,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
     /// </summary>
     private static Id<CorrelationScope> ComputeDeterministicCorrelationId(string canonicalCommandId, string payloadJson)
     {
-        var input = $"{canonicalCommandId}|{payloadJson}";
-        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
-
-        // Use first 16 bytes of SHA256 hash as typed correlation ID (deterministic)
-        var correlationBytes = new byte[16];
-        Array.Copy(hashBytes, correlationBytes, 16);
-        return Id<CorrelationScope>.FromBytes(correlationBytes);
+        return CommandEnvelopeFactory.ComputeDeterministicCorrelationId(canonicalCommandId, payloadJson);
     }
 
     /// <summary>
@@ -173,24 +146,10 @@ public sealed class CommandDispatcher : ICommandDispatcher
     /// </summary>
     private static string SerializeInvitationAcceptedCommand(object command)
     {
-        var invitationId = command switch
-        {
-            ApplicationInvitationAcceptedCommand applicationCommand => applicationCommand.InvitationId,
-            _ => throw new InvalidOperationException(
-                $"Command '{command.GetType()}' is registered with the InvitationAccepted canonical ID but has incompatible metadata.")
-        };
-
-        using var stream = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream))
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName("invitationId");
-            writer.WriteStringValue(invitationId.ToString());
-            writer.WriteEndObject();
-            writer.Flush();
-        }
-
-        return Encoding.UTF8.GetString(stream.ToArray());
+        return CommandEnvelopeFactory.Serialize(
+            command,
+            command.GetType(),
+            CommandContractRegistry.InvitationAcceptedCanonicalId);
     }
 
     private static bool IsExactDuplicateEnvelopeViolation(DbUpdateException exception)

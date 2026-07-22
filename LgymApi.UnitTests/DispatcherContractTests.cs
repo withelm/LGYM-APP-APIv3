@@ -14,6 +14,10 @@ public sealed class DispatcherContractTests
         $"{PlatformBackgroundCommandsNamespace}.IActionCommand";
     private const string ApplicationCommandDispatcherTypeName =
         $"{PlatformBackgroundCommandsNamespace}.ICommandDispatcher";
+    private const string ApplicationCommandOutboxWriterTypeName =
+        $"{PlatformBackgroundCommandsNamespace}.ICommandOutboxWriter";
+    private const string CommandEnvelopeStageResultTypeName =
+        $"{PlatformBackgroundCommandsNamespace}.CommandEnvelopeStageResult";
 
     [Test]
     public void ApplicationICommandDispatcher_HasExactLegacyPublicShape()
@@ -58,8 +62,10 @@ public sealed class DispatcherContractTests
             .ToArray();
 
         portTypes.Select(type => type.FullName).Should().Equal(
+            CommandEnvelopeStageResultTypeName,
             ApplicationActionCommandTypeName,
-            ApplicationCommandDispatcherTypeName);
+            ApplicationCommandDispatcherTypeName,
+            ApplicationCommandOutboxWriterTypeName);
 
         var exposedSignatureTypes = portTypes
             .SelectMany(GetExposedSignatureTypes)

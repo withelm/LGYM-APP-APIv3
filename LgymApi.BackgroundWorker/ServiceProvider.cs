@@ -15,6 +15,7 @@ using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.BackgroundWorker.Services;
 using Microsoft.Extensions.DependencyInjection;
 using ApplicationCommandDispatcher = LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandDispatcher;
+using ApplicationCommandOutboxWriter = LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandOutboxWriter;
 using UserRegisteredCommand = LgymApi.Application.Identity.Contracts.BackgroundCommands.UserRegisteredCommand;
 using TrainingCompletedCommand = LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands.TrainingCompletedCommand;
 using InvitationCreatedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.InvitationCreatedCommand;
@@ -23,6 +24,7 @@ using InvitationRevokedCommand = LgymApi.Application.Coaching.Contracts.Backgrou
 using DietPlanUpdatedInAppNotificationCommand = LgymApi.Application.Nutrition.Contracts.BackgroundCommands.DietPlanUpdatedInAppNotificationCommand;
 using TraineeNoteUpdatedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TraineeNoteUpdatedInAppNotificationCommand;
 using ReportSubmissionCreatedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionCreatedInAppNotificationCommand;
+using ReportSubmissionAcceptedProgressCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand;
 using ReportRequestCreatedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportRequestCreatedInAppNotificationCommand;
 using ReportFeedbackAddedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackAddedInAppNotificationCommand;
 using TrainerInvitationAcceptedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationAcceptedInAppNotificationCommand;
@@ -75,6 +77,7 @@ public static class ServiceProvider
         services.AddScoped<IPasswordRecoveryEmailScheduler, PasswordRecoveryEmailSchedulerAdapter>();
         services.AddScoped<IEmailJobHandler, EmailJobHandlerService>();
         services.AddScoped<ApplicationCommandDispatcher, CommandDispatcher>();
+        services.AddScoped<ApplicationCommandOutboxWriter, CommandOutboxWriter>();
         services.AddScoped<Runtime.IBackgroundActionResolver, BackgroundActionResolver>();
 
         services.AddScoped<IInvitationEmailJob, InvitationEmailJob>();
@@ -109,6 +112,7 @@ public static class ServiceProvider
         services.AddBackgroundAction<TrainerInvitationRejectedInAppNotificationCommand, TrainerInvitationRejectedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportRequestCreatedInAppNotificationCommand, ReportRequestCreatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportSubmissionCreatedInAppNotificationCommand, ReportSubmissionCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<ReportSubmissionAcceptedProgressCommand, ReportSubmissionAcceptedProgressCommandHandler>();
         services.AddBackgroundAction<ReportFeedbackAddedInAppNotificationCommand, ReportFeedbackAddedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<DietPlanUpdatedInAppNotificationCommand, DietPlanUpdatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand, TraineeNoteUpdatedInAppNotificationCommandHandler>();

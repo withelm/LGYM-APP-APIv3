@@ -7,16 +7,8 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ReportingProgressCompatibilityAdapterGuardTests
 {
-    private const string CompatibilityAdapterFileName = "ReportSubmissionMeasurementWriter.cs";
-    private const string CompatibilityAdapterInterfaceFileName = "IReportSubmissionMeasurementWriter.cs";
-
-    private static readonly IReadOnlySet<string> AllowedMeasurementUtilityMetadataNames = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "LgymApi.Application.Features.Measurements.MeasurementUnitResolver"
-    };
-
     [Test]
-    public void Reporting_Feature_Files_Should_Keep_Workout_Progress_Persistence_Behind_The_Compatibility_Adapter()
+    public void Reporting_Feature_Files_Should_Not_Depend_On_Workout_Progress_Persistence_Or_The_Legacy_Adapter()
     {
         var (repoRoot, compilation, syntaxTrees) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
         var reportingDirectory = Path.Combine(repoRoot, "LgymApi.Application", "Features", "Reporting");
@@ -28,60 +20,51 @@ public sealed class ReportingProgressCompatibilityAdapterGuardTests
             .Where(tree => reportingSourcePaths.Contains(NormalizeFullPath(tree.FilePath)))
             .OrderBy(tree => NormalizeFullPath(tree.FilePath), StringComparer.Ordinal)
             .ToArray();
-        var compatibilityAdapterPath = NormalizeFullPath(Path.Combine(reportingDirectory, CompatibilityAdapterFileName));
 
         Assert.Multiple(() =>
         {
             Assert.That(reportingSourceFiles, Is.Not.Empty);
-            Assert.That(reportingSourceFiles.Select(NormalizeFullPath), Does.Contain(compatibilityAdapterPath));
+            Assert.That(
+                reportingSourceFiles.Select(Path.GetFileName),
+                Has.None.EqualTo("IReportSubmissionMeasurementWriter.cs"));
+            Assert.That(
+                reportingSourceFiles.Select(Path.GetFileName),
+                Has.None.EqualTo("ReportSubmissionMeasurementWriter.cs"));
             Assert.That(
                 reportingSyntaxTrees.Select(tree => NormalizeFullPath(tree.FilePath)),
                 Is.EqualTo(reportingSourceFiles.Select(NormalizeFullPath)));
         });
 
-        var violations = CollectViolations(
-            compilation,
-            reportingSyntaxTrees.Where(tree => !NormalizeFullPath(tree.FilePath).Equals(compatibilityAdapterPath, StringComparison.OrdinalIgnoreCase)),
-            repoRoot);
+        var violations = CollectViolations(compilation, reportingSyntaxTrees, repoRoot);
 
         Assert.That(violations, Is.Empty, BuildViolationMessage(violations));
     }
 
     [Test]
-    public void Report_Submission_Measurement_Writer_Interface_Should_Remain_Type_Neutral()
-    {
-        var (repoRoot, compilation, syntaxTrees) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
-        var interfaceTree = syntaxTrees.Single(tree => Path.GetFileName(tree.FilePath)
-            .Equals(CompatibilityAdapterInterfaceFileName, StringComparison.Ordinal));
-        var violations = CollectViolations(compilation, [interfaceTree], repoRoot);
-
-        Assert.That(
-            violations,
-            Is.Empty,
-            "IReportSubmissionMeasurementWriter must not expose Measurement entities or Workout & Progress repositories. " +
-            "#386 owns the future cutover from this temporary Reporting compatibility adapter.\n" +
-            BuildViolationMessage(violations));
-    }
-
-    [Test]
-    public void New_Reporting_Measurement_Repository_Dependency_Should_Be_Rejected()
+    public void New_Reporting_Measurement_Repository_Or_Entity_Dependency_Should_Be_Rejected()
     {
         var (repoRoot, compilation, _) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
         var fixture = CSharpSyntaxTree.ParseText("""
             using LgymApi.Application.Repositories;
+            using MeasurementEntity = LgymApi.Domain.Entities.Measurement;
 
             namespace LgymApi.Application.Features.Reporting;
 
             public sealed class NewReportingMeasurementPersistenceDependency
             {
                 public IMeasurementRepository MeasurementRepository { get; init; } = default!;
+                public MeasurementEntity Measurement { get; init; } = default!;
             }
             """, path: Path.Combine(repoRoot, "LgymApi.Application", "Features", "Reporting", "NewReportingMeasurementPersistenceDependency.cs"));
         var violations = CollectViolations(compilation.AddSyntaxTrees(fixture), [fixture], repoRoot);
 
         Assert.That(
             violations.Select(violation => violation.TargetMetadataName),
-            Is.EquivalentTo(["LgymApi.Application.Repositories.IMeasurementRepository"]),
+            Is.EquivalentTo(
+            [
+                "LgymApi.Application.Repositories.IMeasurementRepository",
+                "LgymApi.Domain.Entities.Measurement"
+            ]),
             BuildViolationMessage(violations));
     }
 
@@ -147,14 +130,8 @@ public sealed class ReportingProgressCompatibilityAdapterGuardTests
             return true;
         }
 
-        if (type.Name.EndsWith("Repository", StringComparison.Ordinal) &&
-            ArchitectureTestHelpers.GetCanonicalModuleNameForSymbol(type) == ArchitectureTestHelpers.WorkoutProgressModuleName)
-        {
-            return true;
-        }
-
-        return type.ContainingNamespace.ToDisplayString() == "LgymApi.Application.Features.Measurements" &&
-               !AllowedMeasurementUtilityMetadataNames.Contains(GetMetadataName(type));
+        return type.Name.EndsWith("Repository", StringComparison.Ordinal) &&
+               ArchitectureTestHelpers.GetCanonicalModuleNameForSymbol(type) == ArchitectureTestHelpers.WorkoutProgressModuleName;
     }
 
     private static string GetMetadataName(INamedTypeSymbol type)
@@ -171,11 +148,10 @@ public sealed class ReportingProgressCompatibilityAdapterGuardTests
     private static string BuildViolationMessage(IReadOnlyList<Violation> violations)
     {
         var details = violations.Count == 0
-            ? "No direct Workout & Progress persistence dependencies were found."
+            ? "No direct Workout & Progress persistence or legacy adapter dependencies were found."
             : string.Join(Environment.NewLine, violations.Select(violation => violation.ToString()));
 
-        return "Only ReportSubmissionMeasurementWriter.cs may use the temporary Reporting-to-Progress persistence compatibility path. " +
-               "#386 owns the cutover; do not add Reporting dependencies on Measurement or other Workout & Progress persistence types.\n" +
+        return "Reporting may publish the accepted-progress contract but must not persist Workout & Progress data or retain the temporary measurement writer.\n" +
                details;
     }
 
