@@ -12,6 +12,7 @@ using LgymApi.Application.WorkoutProgress.ProgressData;
 using LgymApi.Application.WorkoutProgress.Dashboard;
 using LgymApi.Application.WorkoutProgress.Ranking;
 using LgymApi.Application.WorkoutProgress.TrainingExecution;
+using LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using CompleteTrainingDependencies = LgymApi.Application.WorkoutProgress.TrainingExecution.TrainingServiceDependencies;
@@ -27,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWorkoutProgressReadWriteService, WorkoutProgressReadWriteService>();
         services.AddScoped<IWorkoutProgressDashboardReadService, WorkoutProgressDashboardReadService>();
         services.AddScoped<IWorkoutProgressRankingReadService, WorkoutProgressRankingReadService>();
+        services.AddScoped<IReportSubmissionAcceptedProgressConsumer, ReportSubmissionAcceptedProgressConsumer>();
         services.AddScoped<IExerciseService, ExerciseService>();
         services.AddScoped<IExerciseScoresService, ExerciseScoresService>();
         services.AddScoped<IEloRegistryService, EloRegistryService>();

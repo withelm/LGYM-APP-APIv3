@@ -182,19 +182,19 @@ public sealed partial class CommandContractRegistry
 
         if (contracts.Count != expectedContracts.Length)
         {
-            throw new InvalidOperationException("The default command registry must contain exactly 14 rows.");
+            throw new InvalidOperationException("The default command registry must contain exactly 15 rows.");
         }
 
         if (contracts.Sum(contract => contract.ExpectedHandlerTypes.Count)
             != expectedContracts.Sum(contract => contract.ExpectedHandlerTypes.Count))
         {
-            throw new InvalidOperationException("The default command registry must declare exactly 15 handlers.");
+            throw new InvalidOperationException("The default command registry must declare exactly 16 handlers.");
         }
 
         if (!contracts.Select(contract => contract.CanonicalId).ToHashSet(StringComparer.Ordinal)
             .SetEquals(expectedContracts.Select(contract => contract.CanonicalId)))
         {
-            throw new InvalidOperationException("Default canonical command IDs must match the fixed 14-command contract.");
+            throw new InvalidOperationException("Default canonical command IDs must match the fixed 15-command contract.");
         }
 
         foreach (var expectedContract in expectedContracts)

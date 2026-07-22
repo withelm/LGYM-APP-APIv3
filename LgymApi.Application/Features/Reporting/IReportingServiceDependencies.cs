@@ -12,8 +12,9 @@ public interface IReportingServiceDependencies
     ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
     IReportingRepository ReportingRepository { get; }
     IRecurringReportAssignmentRepository RecurringReportAssignmentRepository { get; }
-    IReportSubmissionMeasurementWriter ReportSubmissionMeasurementWriter { get; }
+    IReportSubmissionAcceptedProgressCommandFactory ReportSubmissionAcceptedProgressCommandFactory { get; }
     ICommandDispatcher CommandDispatcher { get; }
+    ICommandOutboxWriter CommandOutboxWriter { get; }
     IUnitOfWork UnitOfWork { get; }
     IPhotoStorageProvider PhotoStorageProvider { get; }
     IPhotoUploadInitTracker PhotoUploadInitTracker { get; }
@@ -28,8 +29,9 @@ internal sealed class ReportingServiceDependencies : IReportingServiceDependenci
     ITrainerRelationshipRepository trainerRelationshipRepository,
     IReportingRepository reportingRepository,
     IRecurringReportAssignmentRepository recurringReportAssignmentRepository,
-    IReportSubmissionMeasurementWriter reportSubmissionMeasurementWriter,
+        IReportSubmissionAcceptedProgressCommandFactory reportSubmissionAcceptedProgressCommandFactory,
         ICommandDispatcher commandDispatcher,
+        ICommandOutboxWriter commandOutboxWriter,
         IUnitOfWork unitOfWork,
         IPhotoStorageProvider photoStorageProvider,
         IPhotoUploadInitTracker photoUploadInitTracker,
@@ -40,8 +42,9 @@ internal sealed class ReportingServiceDependencies : IReportingServiceDependenci
     TrainerRelationshipRepository = trainerRelationshipRepository;
     ReportingRepository = reportingRepository;
     RecurringReportAssignmentRepository = recurringReportAssignmentRepository;
-    ReportSubmissionMeasurementWriter = reportSubmissionMeasurementWriter;
+        ReportSubmissionAcceptedProgressCommandFactory = reportSubmissionAcceptedProgressCommandFactory;
         CommandDispatcher = commandDispatcher;
+        CommandOutboxWriter = commandOutboxWriter;
         UnitOfWork = unitOfWork;
         PhotoStorageProvider = photoStorageProvider;
         PhotoUploadInitTracker = photoUploadInitTracker;
@@ -53,8 +56,9 @@ internal sealed class ReportingServiceDependencies : IReportingServiceDependenci
     public ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
     public IReportingRepository ReportingRepository { get; }
     public IRecurringReportAssignmentRepository RecurringReportAssignmentRepository { get; }
-    public IReportSubmissionMeasurementWriter ReportSubmissionMeasurementWriter { get; }
+    public IReportSubmissionAcceptedProgressCommandFactory ReportSubmissionAcceptedProgressCommandFactory { get; }
     public ICommandDispatcher CommandDispatcher { get; }
+    public ICommandOutboxWriter CommandOutboxWriter { get; }
     public IUnitOfWork UnitOfWork { get; }
     public IPhotoStorageProvider PhotoStorageProvider { get; }
     public IPhotoUploadInitTracker PhotoUploadInitTracker { get; }

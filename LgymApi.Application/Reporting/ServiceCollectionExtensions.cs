@@ -8,7 +8,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddReportingModule(this IServiceCollection services)
     {
         services.AddScoped<IReportingServiceDependencies, ReportingServiceDependencies>();
-        services.AddScoped<IReportSubmissionMeasurementWriter, ReportSubmissionMeasurementWriter>();
+        services.AddSingleton<IReportSubmissionAcceptedProgressCommandFactory, ReportSubmissionAcceptedProgressCommandFactory>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IRecurringReportAssignmentServiceDependencies, RecurringReportAssignmentServiceDependencies>();
         services.AddScoped<IRecurringReportAssignmentService, RecurringReportAssignmentService>();

@@ -23,8 +23,9 @@ public sealed partial class ReportingService : IReportingService
     private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
     private readonly IReportingRepository _reportingRepository;
     private readonly IRecurringReportAssignmentRepository _recurringReportAssignmentRepository;
-    private readonly IReportSubmissionMeasurementWriter _reportSubmissionMeasurementWriter;
+    private readonly IReportSubmissionAcceptedProgressCommandFactory _reportSubmissionAcceptedProgressCommandFactory;
     private readonly ICommandDispatcher _commandDispatcher;
+    private readonly ICommandOutboxWriter _commandOutboxWriter;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPhotoStorageProvider _photoStorageProvider;
     private readonly IPhotoUploadInitTracker _photoUploadInitTracker;
@@ -37,8 +38,9 @@ public sealed partial class ReportingService : IReportingService
         _trainerRelationshipRepository = dependencies.TrainerRelationshipRepository;
         _reportingRepository = dependencies.ReportingRepository;
         _recurringReportAssignmentRepository = dependencies.RecurringReportAssignmentRepository;
-        _reportSubmissionMeasurementWriter = dependencies.ReportSubmissionMeasurementWriter;
+        _reportSubmissionAcceptedProgressCommandFactory = dependencies.ReportSubmissionAcceptedProgressCommandFactory;
         _commandDispatcher = dependencies.CommandDispatcher;
+        _commandOutboxWriter = dependencies.CommandOutboxWriter;
         _unitOfWork = dependencies.UnitOfWork;
         _photoStorageProvider = dependencies.PhotoStorageProvider;
         _photoUploadInitTracker = dependencies.PhotoUploadInitTracker;

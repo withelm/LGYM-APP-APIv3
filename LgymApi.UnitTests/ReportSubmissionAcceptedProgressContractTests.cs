@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.Serialization;
+using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -40,6 +41,22 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
     {
         ReportSubmissionAcceptedProgressEvent.CurrentSchemaVersion.Should().Be(1);
         CreateValidEvent().SchemaVersion.Should().Be(ReportSubmissionAcceptedProgressEvent.CurrentSchemaVersion);
+    }
+
+    [Test]
+    public void Command_NestsTheValidatedEventAndRejectsMissingPayload()
+    {
+        var @event = CreateValidEvent();
+        var command = new ReportSubmissionAcceptedProgressCommand { Event = @event };
+
+        command.Validate().IsValid.Should().BeTrue();
+        JsonSerializer.Serialize(command, SharedSerializationOptions.Current).Should().Be(
+            $"{{\"event\":{JsonSerializer.Serialize(@event, SharedSerializationOptions.Current)}}}");
+        var deserializeMissingEvent = () => JsonSerializer.Deserialize<ReportSubmissionAcceptedProgressCommand>(
+            "{}",
+            SharedSerializationOptions.Current);
+
+        deserializeMissingEvent.Should().Throw<JsonException>();
     }
 
     [Test]

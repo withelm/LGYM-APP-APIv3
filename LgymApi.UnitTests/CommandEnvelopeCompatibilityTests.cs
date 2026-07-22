@@ -10,7 +10,7 @@ namespace LgymApi.UnitTests;
 public sealed class CommandEnvelopeCompatibilityTests
 {
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
-    public void OldFixture_ToNewReader_ResolvesAllFourteenCanonicalIds(LegacyCommandContract contract)
+    public void OldFixture_ToNewReader_ResolvesAllFifteenCanonicalIds(LegacyCommandContract contract)
     {
         var resolvedDescriptor = CommandContractRegistry.CreateDefault().Resolve(contract.CanonicalId);
         var command = JsonSerializer.Deserialize(

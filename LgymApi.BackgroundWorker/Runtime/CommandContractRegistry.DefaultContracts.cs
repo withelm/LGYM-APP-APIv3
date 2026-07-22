@@ -6,6 +6,7 @@ using ApplicationInvitationCreatedCommand = LgymApi.Application.Coaching.Contrac
 using ApplicationInvitationRevokedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.InvitationRevokedCommand;
 using ApplicationReportFeedbackAddedCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackAddedInAppNotificationCommand;
 using ApplicationReportRequestCreatedCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportRequestCreatedInAppNotificationCommand;
+using ApplicationReportSubmissionAcceptedProgressCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand;
 using ApplicationReportSubmissionCreatedCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionCreatedInAppNotificationCommand;
 using ApplicationTraineeNoteUpdatedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TraineeNoteUpdatedInAppNotificationCommand;
 using ApplicationTrainerInvitationAcceptedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationAcceptedInAppNotificationCommand;
@@ -46,6 +47,9 @@ public sealed partial class CommandContractRegistry
         Create<ApplicationReportSubmissionCreatedCommand>(
             "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionCreatedInAppNotificationCommand",
             typeof(ReportSubmissionCreatedInAppNotificationCommandHandler)),
+        Create<ApplicationReportSubmissionAcceptedProgressCommand>(
+            "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand",
+            typeof(ReportSubmissionAcceptedProgressCommandHandler)),
         Create<ApplicationReportRequestCreatedCommand>(
             "LgymApi.BackgroundWorker.Common.Commands.ReportRequestCreatedInAppNotificationCommand",
             typeof(ReportRequestCreatedInAppNotificationCommandHandler)),

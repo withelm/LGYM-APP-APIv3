@@ -70,7 +70,6 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 | Repository contract | `IRecurringReportAssignmentRepository` | `Reporting` | Recurring assignment rows belong to reporting orchestration. | Non-owners reach them only through the reporting service. |
 | Service contract | `IPhotoStorageProvider` | `Reporting` | Photo storage is part of the reporting photo workflow. | Non-owners consume it through the reporting upload flow only. |
 | Service contract | `IPhotoUploadInitTracker` | `Reporting` | Upload init tracking belongs to reporting because it gates report photo uploads. | Non-owners do not track upload state directly. |
-| Service contract | `IReportSubmissionMeasurementWriter` | `Reporting` | Measurement writes during report submission are part of reporting. | Non-owners write measurements through the reporting service only. |
 | Table | `ReportTemplates` | `Reporting` | Templates are owned by reporting. | Non-owners read templates through reporting contracts only. |
 | Table | `ReportRequests` | `Reporting` | Report requests are owned by reporting. | Non-owners do not write requests directly. |
 | Table | `ReportSubmissions` | `Reporting` | Report submissions are owned by reporting. | Non-owners consume submission state through reporting contracts only. |
@@ -114,7 +113,7 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 - The Notifications rows define module/write responsibility; #381 does not move their entities from `LgymApi.Domain/Entities` or create a separate persistence root.
 - All owner rows describe logical write ownership only. They do not create a physical database, `DbContext`, schema, or migration-stream split.
 - Completed `Training` rows remain `Workout & Progress`-owned. `Training.TypePlanDayId` references the `Training Planning` definition used for a performed workout; it does not grant Training Planning write ownership over completed training.
-- Workout & Progress publishes `ProgressData`, dashboard, ranking, training execution/history, and the contract-only `#386` Reporting integration surface as explicit contracts/read models. Foreign modules do not reference its entities, repositories, or implementation classes. `#386` is not a production Reporting cutover, and legacy API routes remain unchanged.
+- Workout & Progress publishes `ProgressData`, dashboard, ranking, training execution/history, and the production `#386` accepted-progress consumer surface as explicit contracts/read models. Foreign modules do not reference its entities, repositories, or implementation classes. Reporting stages the accepted-progress command in the shared `CommandEnvelope` outbox, and Workout & Progress owns measurement persistence. Legacy API routes remain unchanged.
 
 ## Persisted Entity Ownership Catalog
 

@@ -9,7 +9,7 @@ namespace LgymApi.UnitTests;
 public sealed class CommandPayloadRoundtripCompatibilityTests
 {
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
-    public void FixedGoldenPayload_RoundTripsByteForByte_ForAllFourteenCommands(LegacyCommandContract contract)
+    public void FixedGoldenPayload_RoundTripsByteForByte_ForAllFifteenCommands(LegacyCommandContract contract)
     {
         var command = JsonSerializer.Deserialize(
             contract.PayloadJson,

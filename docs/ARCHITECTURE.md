@@ -42,7 +42,7 @@ The production system has one `AppDbContext`, one database, and one migration st
 
 Workout execution and completed-training history belong to `Workout & Progress`. `Training.TypePlanDayId` may reference the `Training Planning` definition used to perform a workout, but that reference does not give Training Planning write ownership over the completed `Training` row.
 
-Workout & Progress exposes its cross-module surface through `ProgressData`, dashboard, ranking, and training execution/history contracts with explicit read/write models. Foreign modules must not consume its entities, repositories, or implementation classes directly. Existing legacy routes and payloads remain unchanged. The `#386` Reporting integration surface is contract-only and deliberately unwired from production reporting flows.
+Workout & Progress exposes its cross-module surface through `ProgressData`, dashboard, ranking, training execution/history, and accepted-progress contracts with explicit read/write models. Foreign modules must not consume its entities, repositories, or implementation classes directly. Existing legacy routes and payloads remain unchanged. For #386, Reporting stages a Reporting-owned accepted-progress command in the existing `CommandEnvelope` outbox, and Workout & Progress owns delivery-side measurement persistence.
 
 Known internal entity references use `Id<T>`. EF Core stores their provider values in PostgreSQL `uuid` columns, while HTTP and JSON UUID values remain strings. The only polymorphic string ID exceptions are `PushNotificationMessage.EntityId` and `PushEventPayload.EntityId`.
 
@@ -224,11 +224,17 @@ Notification delivery follows the same ownership rule: Application owns password
 
 ### Background Contract Ownership
 
-Application owns the Platform dispatcher ports at `LgymApi.Application/Platform/Contracts/BackgroundCommands/`, persisted-payload serialization at `LgymApi.Application/Platform/Contracts/Serialization/`, module commands at `LgymApi.Application/Identity/Contracts/BackgroundCommands/`, `LgymApi.Application/WorkoutProgress/Contracts/BackgroundCommands/`, `LgymApi.Application/Coaching/Contracts/BackgroundCommands/`, `LgymApi.Application/Reporting/Contracts/BackgroundCommands/`, and `LgymApi.Application/Nutrition/Contracts/BackgroundCommands/`, Notifications push contracts at `LgymApi.Application/Notifications/Contracts/Push/`, and the Identity password-recovery port at `LgymApi.Application/Features/PasswordReset/Contracts/`.
+Application owns the Platform dispatcher and stage-only outbox ports at `LgymApi.Application/Platform/Contracts/BackgroundCommands/`, persisted-payload serialization at `LgymApi.Application/Platform/Contracts/Serialization/`, module commands at `LgymApi.Application/Identity/Contracts/BackgroundCommands/`, `LgymApi.Application/WorkoutProgress/Contracts/BackgroundCommands/`, `LgymApi.Application/Coaching/Contracts/BackgroundCommands/`, `LgymApi.Application/Reporting/Contracts/BackgroundCommands/`, and `LgymApi.Application/Nutrition/Contracts/BackgroundCommands/`, Notifications push contracts at `LgymApi.Application/Notifications/Contracts/Push/`, and the Identity password-recovery port at `LgymApi.Application/Features/PasswordReset/Contracts/`.
 
 `LgymApi.BackgroundWorker/Runtime/` owns the closed command registry and runtime-only execution contracts. `LgymApi.BackgroundWorker/Notifications/PasswordRecoveryEmailSchedulerAdapter.cs` maps the Identity request to the retained Common email wire payload. `LgymApi.BackgroundWorker.Common/Jobs/` and `LgymApi.BackgroundWorker.Common/Notifications/` are the bounded persisted job and email wire seam only. Common must not regain commands, serialization, push contracts, or Application-facing ports.
 
 Application must not reference either `LgymApi.BackgroundWorker` project or any `LgymApi.BackgroundWorker*` namespace. Canonical persisted command IDs retain their legacy `LgymApi.BackgroundWorker.Common.Commands.*` strings, while Application CLR names are read aliases only. The Worker writes the legacy IDs and owns Hangfire-facing runtime behavior.
+
+### Accepted report progress flow
+
+Reporting accepts a submission, derives valid measurement triples, and stages a Reporting-owned `ReportSubmissionAcceptedProgressCommand` in `CommandEnvelope` before the submission unit of work commits. The envelope is the same-database outbox and is not dispatched by Reporting directly. After the committed intent is dispatched through the existing ActionMessage infrastructure, the Worker handler invokes the Workout & Progress consumer. That consumer validates the event, deduplicates by trainee, body part, and `ObservedAt` UTC day, and owns the measurement rows. Invalid, unsupported-schema, or poison deliveries are sanitized and bounded for the existing retry/dead-letter path; unexpected persistence exceptions remain retryable.
+
+Operators can trace this flow with event ID, report submission ID, correlation ID, causation ID, schema version, outcome, retry or dead-letter state, and aggregate counts. Logs and operational records must not contain raw answer JSON, photos, device tokens, or payload dumps.
 
 ### Forbidden Patterns 
 
