@@ -10,6 +10,8 @@ namespace LgymApi.Application.Repositories;
 public interface IUserRepository
 {
     Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default);
+    Task<List<User>> GetByIdsAsync(IReadOnlyCollection<Id<User>> ids, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
     Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default);
     Task<User?> FindByIdWithRolesAsync(Id<User> id, CancellationToken cancellationToken = default);
     Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default);

@@ -1,4 +1,6 @@
 using LgymApi.Application.Features.PlanDay;
+using LgymApi.Application.TrainingPlanning.Contracts.ManagedPlans;
+using LgymApi.Application.TrainingPlanning.ManagedPlans;
 using LgymApi.Application.TrainingPlanning.Plan.CheckIsUserHavePlan;
 using LgymApi.Application.TrainingPlanning.Plan.CopyPlan;
 using LgymApi.Application.TrainingPlanning.Plan.CreatePlan;
@@ -25,6 +27,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICopyPlanUseCase, CopyPlanUseCase>();
         services.AddScoped<IGenerateShareCodeUseCase, GenerateShareCodeUseCase>();
         services.AddScoped<ICheckIsUserHavePlanUseCase, CheckIsUserHavePlanUseCase>();
+        services.AddScoped<IGetManagedPlansUseCase, GetManagedPlansUseCase>();
+        services.AddScoped<ICreateManagedPlanUseCase, CreateManagedPlanUseCase>();
+        services.AddScoped<IUpdateManagedPlanUseCase, UpdateManagedPlanUseCase>();
+        services.AddScoped<IDeleteManagedPlanUseCase, DeleteManagedPlanUseCase>();
+        services.AddScoped<IAssignManagedPlanUseCase, AssignManagedPlanUseCase>();
+        services.AddScoped<IUnassignManagedPlanUseCase, UnassignManagedPlanUseCase>();
+        services.AddScoped<IGetActiveAssignedPlanUseCase, GetActiveAssignedPlanUseCase>();
         services.AddScoped<IPlanDayServiceDependencies, PlanDayServiceDependencies>();
         services.AddScoped<IPlanDayService, PlanDayService>();
 

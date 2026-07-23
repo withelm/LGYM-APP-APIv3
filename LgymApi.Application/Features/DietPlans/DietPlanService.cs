@@ -1,5 +1,6 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Features.DietPlans.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Nutrition.Contracts.BackgroundCommands;
@@ -13,18 +14,17 @@ namespace LgymApi.Application.Features.DietPlans;
 public sealed class DietPlanService : IDietPlanService
 {
     private readonly IDietPlanRepository _dietPlanRepository;
-    private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly ICoachingRelationshipAccessService _relationshipAccess;
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IUnitOfWork _unitOfWork;
-
     public DietPlanService(
         IDietPlanRepository dietPlanRepository,
-        ITrainerRelationshipRepository trainerRelationshipRepository,
+        ICoachingRelationshipAccessService relationshipAccess,
         ICommandDispatcher commandDispatcher,
         IUnitOfWork unitOfWork)
     {
         _dietPlanRepository = dietPlanRepository;
-        _trainerRelationshipRepository = trainerRelationshipRepository;
+        _relationshipAccess = relationshipAccess;
         _commandDispatcher = commandDispatcher;
         _unitOfWork = unitOfWork;
     }
@@ -208,8 +208,8 @@ public sealed class DietPlanService : IDietPlanService
             return Result<Unit, AppError>.Failure(new BadRequestError(Messages.UserIdRequired));
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
-        return link == null
+        var access = await _relationshipAccess.GetAccessDecisionAsync(currentTrainer.Id, traineeId, cancellationToken);
+        return !access.HasActiveRelationship
             ? Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind))
             : Result<Unit, AppError>.Success(Unit.Value);
     }

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
@@ -103,16 +104,14 @@ public sealed class PhotoUploadServiceTests
         var requestId = Id<ReportRequest>.New();
         var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
-        var link = new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainerId, TraineeId = traineeId };
-
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         storageProvider.GenerateSignedUploadUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns("https://storage.example.com/signed-upload-url");
 
         var service = PhotoServiceTestFactory.CreateService(
             findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
-            userHasRole: (_, _, _) => Task.FromResult(true),
-            hasTrainerTraineeLink: (tId, trainee, _) => Task.FromResult(tId == trainerId && trainee == traineeId ? link : null),
+            relationshipAccess: (currentTrainerId, currentTraineeId, _) => Task.FromResult(
+                new CoachingRelationshipAccessDecision(true, currentTrainerId == trainerId && currentTraineeId == traineeId)),
             photoStorageProvider: storageProvider);
 
         var result = await service.InitiatePhotoUploadAsync(trainer, new InitiatePhotoUploadCommand
@@ -139,8 +138,7 @@ public sealed class PhotoUploadServiceTests
 
         var service = PhotoServiceTestFactory.CreateService(
             findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
-            userHasRole: (_, _, _) => Task.FromResult(true),
-            hasTrainerTraineeLink: (_, _, _) => Task.FromResult<TrainerTraineeLink?>(null));
+            relationshipAccess: (_, _, _) => Task.FromResult(new CoachingRelationshipAccessDecision(true, false)));
 
         var result = await service.InitiatePhotoUploadAsync(trainer, new InitiatePhotoUploadCommand
         {

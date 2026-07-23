@@ -1,12 +1,12 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
-using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -15,8 +15,7 @@ namespace LgymApi.Application.Features.Reporting;
 
 public sealed partial class RecurringReportAssignmentService : IRecurringReportAssignmentService
 {
-    private readonly IRoleRepository _roleRepository;
-    private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly ICoachingRelationshipAccessService _coachingRelationshipAccessService;
     private readonly IReportingRepository _reportingRepository;
     private readonly IRecurringReportAssignmentRepository _assignmentRepository;
     private readonly ICommandDispatcher _commandDispatcher;
@@ -24,8 +23,7 @@ public sealed partial class RecurringReportAssignmentService : IRecurringReportA
 
     public RecurringReportAssignmentService(IRecurringReportAssignmentServiceDependencies dependencies)
     {
-        _roleRepository = dependencies.RoleRepository;
-        _trainerRelationshipRepository = dependencies.TrainerRelationshipRepository;
+        _coachingRelationshipAccessService = dependencies.CoachingRelationshipAccessService;
         _reportingRepository = dependencies.ReportingRepository;
         _assignmentRepository = dependencies.RecurringReportAssignmentRepository;
         _commandDispatcher = dependencies.CommandDispatcher;

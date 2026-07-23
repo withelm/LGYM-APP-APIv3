@@ -107,6 +107,8 @@ The #375 baseline already shows these as the current feature-level dependency cl
 ### Public contract surface
 
 - Exposes coach-trainee relationship, invitation, and dashboard contracts that other modules can query or react to.
+- Exposes `ICoachingRelationshipAccessService` as the ID-only Reporting/Nutrition authorization surface; `CoachingRelationshipAccessDecision` reports trainer status and active-link existence independently.
+- Implements the Training Planning-owned `IPlanDayRelationshipAccessPort` and Workout & Progress-owned `IMeasurementsRelationshipAccessPort` as boolean projections of its access decision. Both adapters are registered by `AddCoachingModule`, so neither consumer depends on Coaching contracts, persistence, or implementations.
 - Publishes coaching relationship changes and request flows, while delegating actual workout, plan, or report behavior to the owning module.
 
 ## Nutrition
@@ -120,6 +122,7 @@ The #375 baseline already shows these as the current feature-level dependency cl
 
 - Exposes diet-plan, meal, supplement-plan, and intake contracts that other modules can read or react to.
 - Publishes nutrition data and nutrition events while keeping nutrition write rules internal.
+- Diet-plan and supplementation authorization consume only Coaching's `ICoachingRelationshipAccessService`; Nutrition adapts its trainer and active-link decision to the existing feature-specific errors without importing Coaching persistence or private implementation types.
 
 ## Allowed dependencies
 
@@ -130,11 +133,11 @@ The #375 baseline shows the current clusters already depend on shared platform, 
 | Platform / Reference Data | Its own shared bootstrap, configuration, reference data stores, and external runtime primitives | Any feature module's internal services, write models, or feature workflows |
 | Identity & Accounts | Platform / Reference Data | Internal persistence or private services from Notifications, Reporting, Training Planning, Workout & Progress, or Coaching |
 | Notifications | Platform / Reference Data; Identity & Accounts public contracts | Internal persistence or private services from Reporting, Training Planning, Workout & Progress, or Coaching |
-| Reporting | Platform / Reference Data; Identity & Accounts public contracts; Coaching relationship contracts; Training Planning read contracts | Internal persistence or private services from Notifications, Training Planning, Workout & Progress, or Coaching |
-| Training Planning | Platform / Reference Data; Identity & Accounts public contracts | Internal persistence or private services from Notifications, Reporting, Workout & Progress, or Coaching |
-| Workout & Progress | Platform / Reference Data; Identity & Accounts public contracts; Training Planning plan contracts | Internal persistence or private services from Notifications, Reporting, or Coaching |
-| Coaching | Platform / Reference Data; Identity & Accounts public contracts; Training Planning; Workout & Progress; Notifications public contracts | Internal persistence or private services from Reporting |
-| Nutrition | Platform / Reference Data; Identity & Accounts public contracts | Internal persistence or private services from Notifications, Reporting, Training Planning, Workout & Progress, or Coaching |
+| Reporting | Platform / Reference Data; Identity & Accounts public contracts; Coaching `ICoachingRelationshipAccessService`; Training Planning read contracts | Internal persistence or private services from Notifications, Training Planning, Workout & Progress, or Coaching |
+| Training Planning | Platform / Reference Data; Identity & Accounts public contracts; its own `IPlanDayRelationshipAccessPort` | Internal persistence, private services, or public contracts from Notifications, Reporting, Workout & Progress, or Coaching |
+| Workout & Progress | Platform / Reference Data; Identity & Accounts public contracts; Training Planning plan contracts; its own `IMeasurementsRelationshipAccessPort` | Internal persistence, private services, or public contracts from Notifications, Reporting, or Coaching |
+| Coaching | Platform / Reference Data; Identity & Accounts public contracts; Training Planning; Workout & Progress; Notifications public contracts | Internal persistence or private services from Reporting or Nutrition |
+| Nutrition | Platform / Reference Data; Identity & Accounts public contracts; Coaching `ICoachingRelationshipAccessService` | Internal persistence or private services from Notifications, Reporting, Training Planning, Workout & Progress, or Coaching |
 
 ## Platform / Reference Data hosting rules
 

@@ -8,6 +8,7 @@ namespace LgymApi.ArchitectureTests;
 public sealed class ModuleDependencyGuardTests
 {
     private const string GuardId = nameof(ModuleDependencyGuardTests);
+    private const string NutritionCoachingContract = "LgymApi.Application.Coaching.Contracts.Access.ICoachingRelationshipAccessService";
 
     private static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> AllowedDependencies =
         new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal)
@@ -19,7 +20,7 @@ public sealed class ModuleDependencyGuardTests
             [ArchitectureTestHelpers.TrainingPlanningModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName),
             [ArchitectureTestHelpers.WorkoutProgressModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName, ArchitectureTestHelpers.TrainingPlanningModuleName),
             [ArchitectureTestHelpers.CoachingModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName, ArchitectureTestHelpers.TrainingPlanningModuleName, ArchitectureTestHelpers.WorkoutProgressModuleName, ArchitectureTestHelpers.NotificationsModuleName),
-            [ArchitectureTestHelpers.NutritionModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName)
+            [ArchitectureTestHelpers.NutritionModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName, ArchitectureTestHelpers.CoachingModuleName)
         };
 
     [Test]
@@ -111,7 +112,7 @@ public sealed class ModuleDependencyGuardTests
                 }
 
                 if (targetOwnership.ModuleName.Equals(sourceModule, StringComparison.Ordinal)
-                    || IsAllowedDependency(sourceModule, targetOwnership.ModuleName))
+                    || IsAllowedDependency(sourceModule, targetOwnership))
                 {
                     continue;
                 }
@@ -141,14 +142,21 @@ public sealed class ModuleDependencyGuardTests
             .ToList();
     }
 
-    private static bool IsAllowedDependency(string sourceModule, string targetModule)
+    private static bool IsAllowedDependency(string sourceModule, OwnedType targetOwnership)
     {
         if (!AllowedDependencies.TryGetValue(sourceModule, out var allowedTargets))
         {
             throw new AssertionException($"Missing allowed dependency configuration for module '{sourceModule}'.");
         }
 
-        return allowedTargets.Contains(targetModule);
+        if (!allowedTargets.Contains(targetOwnership.ModuleName))
+        {
+            return false;
+        }
+
+        return !sourceModule.Equals(ArchitectureTestHelpers.NutritionModuleName, StringComparison.Ordinal)
+            || !targetOwnership.ModuleName.Equals(ArchitectureTestHelpers.CoachingModuleName, StringComparison.Ordinal)
+            || targetOwnership.DisplayName.Equals(NutritionCoachingContract, StringComparison.Ordinal);
     }
 
     private static IReadOnlySet<string> CreateAllowedSet(params string[] allowedTargets)
@@ -204,9 +212,6 @@ public sealed class ModuleDependencyGuardTests
             "LgymApi.Application/Repositories/IEloRegistryRepository.cs" or
             "LgymApi.Application/Repositories/IMainRecordRepository.cs"
                 => ArchitectureTestHelpers.WorkoutProgressModuleName,
-            "LgymApi.Application/Repositories/ITrainerRelationshipRepository.cs" or
-            "LgymApi.Application/Repositories/ITraineeNoteRepository.cs"
-                => ArchitectureTestHelpers.CoachingModuleName,
             "LgymApi.Application/Repositories/IDietPlanRepository.cs" or
             "LgymApi.Application/Repositories/ISupplementationRepository.cs"
                 => ArchitectureTestHelpers.NutritionModuleName,

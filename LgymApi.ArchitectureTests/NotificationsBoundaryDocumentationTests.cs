@@ -41,7 +41,8 @@ public sealed class NotificationsBoundaryDocumentationTests
         "notifications.adapter.legacy-command-ids",
         "notifications.adapter.password-email",
         "notifications.adapter.report-submission",
-        "notifications.adapter.scheduler-runtime"
+        "notifications.adapter.scheduler-runtime",
+        "notifications.adapter.coaching-intents"
     ];
 
     private static readonly string[] MigrationIds =

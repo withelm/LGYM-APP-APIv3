@@ -1,11 +1,11 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Measurements.Models;
-using LgymApi.Application.Repositories;
+using LgymApi.Application.Identity.Contracts.Access;
+using LgymApi.Application.WorkoutProgress.Contracts.Measurements;
 using LgymApi.Application.WorkoutProgress.ProgressData;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Domain.Enums;
-using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using UserEntity = LgymApi.Domain.Entities.User;
 using LgymApi.Resources;
@@ -15,14 +15,17 @@ namespace LgymApi.Application.Features.Measurements;
 public sealed class MeasurementsService : IMeasurementsService
 {
     private readonly IWorkoutProgressReadWriteService _progress;
-    private readonly IRoleRepository _roleRepository;
-    private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly IUserAccessReadService _userAccess;
+    private readonly IMeasurementsRelationshipAccessPort _relationshipAccess;
 
-    public MeasurementsService(IWorkoutProgressReadWriteService progress, IRoleRepository roleRepository, ITrainerRelationshipRepository trainerRelationshipRepository)
+    public MeasurementsService(
+        IWorkoutProgressReadWriteService progress,
+        IUserAccessReadService userAccess,
+        IMeasurementsRelationshipAccessPort relationshipAccess)
     {
         _progress = progress;
-        _roleRepository = roleRepository;
-        _trainerRelationshipRepository = trainerRelationshipRepository;
+        _userAccess = userAccess;
+        _relationshipAccess = relationshipAccess;
     }
 
     public Task<Result<Unit, AppError>> AddMeasurementAsync(UserEntity currentUser, BodyParts bodyPart, MeasurementUnits unit, double value, CancellationToken cancellationToken = default)
@@ -84,8 +87,8 @@ public sealed class MeasurementsService : IMeasurementsService
             return Result<Unit, AppError>.Success(Unit.Value);
         }
 
-        if (!await _roleRepository.UserHasRoleAsync(currentUser.Id, AuthConstants.Roles.Trainer, cancellationToken) ||
-            await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentUser.Id, routeUserId, cancellationToken) == null)
+        if (!await _userAccess.IsTrainerAsync(currentUser.Id, cancellationToken) ||
+            !await _relationshipAccess.HasActiveRelationshipAsync(currentUser.Id, routeUserId, cancellationToken))
         {
             return Result<Unit, AppError>.Failure(new MeasurementForbiddenError(Messages.Forbidden));
         }

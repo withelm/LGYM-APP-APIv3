@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LgymApi.Application.Features.PasswordReset.Contracts;
+using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker;
@@ -25,6 +26,10 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
             .Which.Should().BeOfType<CommandDispatcher>();
         services.GetServices<IPasswordRecoveryEmailScheduler>().Should().ContainSingle()
             .Which.Should().BeOfType<PasswordRecoveryEmailSchedulerAdapter>();
+        services.GetServices<ICoachingEmailNotificationFeature>().Should().ContainSingle()
+            .Which.Should().BeOfType<CoachingEmailNotificationSchedulerAdapter>();
+        services.GetServices<ICoachingEmailNotificationScheduler>().Should().ContainSingle()
+            .Which.Should().BeOfType<CoachingEmailNotificationSchedulerAdapter>();
         services.GetServices<IPushBackgroundScheduler>().Should().ContainSingle()
             .Which.Should().BeOfType<NoOpPushBackgroundScheduler>();
         services.GetServices<IPushProviderSender>().Should().ContainSingle()

@@ -1,4 +1,5 @@
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -9,7 +10,7 @@ namespace LgymApi.Application.Features.Reporting;
 public interface IReportingServiceDependencies
 {
     IRoleRepository RoleRepository { get; }
-    ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
+    ICoachingRelationshipAccessService CoachingRelationshipAccessService { get; }
     IReportingRepository ReportingRepository { get; }
     IRecurringReportAssignmentRepository RecurringReportAssignmentRepository { get; }
     IReportSubmissionAcceptedProgressCommandFactory ReportSubmissionAcceptedProgressCommandFactory { get; }
@@ -26,9 +27,9 @@ internal sealed class ReportingServiceDependencies : IReportingServiceDependenci
 {
     public ReportingServiceDependencies(
         IRoleRepository roleRepository,
-    ITrainerRelationshipRepository trainerRelationshipRepository,
-    IReportingRepository reportingRepository,
-    IRecurringReportAssignmentRepository recurringReportAssignmentRepository,
+        ICoachingRelationshipAccessService coachingRelationshipAccessService,
+        IReportingRepository reportingRepository,
+        IRecurringReportAssignmentRepository recurringReportAssignmentRepository,
         IReportSubmissionAcceptedProgressCommandFactory reportSubmissionAcceptedProgressCommandFactory,
         ICommandDispatcher commandDispatcher,
         ICommandOutboxWriter commandOutboxWriter,
@@ -39,9 +40,9 @@ internal sealed class ReportingServiceDependencies : IReportingServiceDependenci
         PhotoStorageOptions photoStorageOptions)
     {
         RoleRepository = roleRepository;
-    TrainerRelationshipRepository = trainerRelationshipRepository;
-    ReportingRepository = reportingRepository;
-    RecurringReportAssignmentRepository = recurringReportAssignmentRepository;
+        CoachingRelationshipAccessService = coachingRelationshipAccessService;
+        ReportingRepository = reportingRepository;
+        RecurringReportAssignmentRepository = recurringReportAssignmentRepository;
         ReportSubmissionAcceptedProgressCommandFactory = reportSubmissionAcceptedProgressCommandFactory;
         CommandDispatcher = commandDispatcher;
         CommandOutboxWriter = commandOutboxWriter;
@@ -53,7 +54,7 @@ internal sealed class ReportingServiceDependencies : IReportingServiceDependenci
     }
 
     public IRoleRepository RoleRepository { get; }
-    public ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
+    public ICoachingRelationshipAccessService CoachingRelationshipAccessService { get; }
     public IReportingRepository ReportingRepository { get; }
     public IRecurringReportAssignmentRepository RecurringReportAssignmentRepository { get; }
     public IReportSubmissionAcceptedProgressCommandFactory ReportSubmissionAcceptedProgressCommandFactory { get; }

@@ -37,6 +37,19 @@ public sealed class UserRepository : IUserRepository
         return _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
+    public Task<List<User>> GetByIdsAsync(IReadOnlyCollection<Id<User>> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+        {
+            return Task.FromResult(new List<User>());
+        }
+
+        return _dbContext.Users
+            .AsNoTracking()
+            .Where(user => ids.Contains(user.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default)
     {
         return _dbContext.Users

@@ -37,22 +37,29 @@ public sealed class CoachingBackgroundCommandOwnershipTests
             declaration.BaseList!.Types.Select(baseType => baseType.Type.ToString()).Should().Equal("IActionCommand");
             declaration.AttributeLists.Should().BeEmpty();
             declaration.Members.OfType<ConstructorDeclarationSyntax>().Should().BeEmpty();
-            declaration.Members.OfType<PropertyDeclarationSyntax>().Select(property => property.Identifier.ValueText)
-                .Should().Equal(command.PropertyNames);
+            var properties = declaration.Members.OfType<PropertyDeclarationSyntax>().ToArray();
+            properties.Select(property => property.Identifier.ValueText)
+                .Should().Equal(command.Properties.Select(property => property.Name));
+            properties.Select(property => property.Type.ToString())
+                .Should().Equal(command.Properties.Select(property => property.Type));
+            properties.Select(property => property.AccessorList!.Accessors.Select(accessor => accessor.Keyword.ValueText))
+                .Should().AllSatisfy(accessors => accessors.Should().Equal("get", "init"));
         }
     }
 
     private static readonly ExpectedCommand[] ExpectedCommands =
     [
-        new("InvitationCreatedCommand.cs", "InvitationCreatedCommand", ["InvitationId"]),
-        new("InvitationAcceptedCommand.cs", "InvitationAcceptedCommand", ["InvitationId"]),
-        new("InvitationRevokedCommand.cs", "InvitationRevokedCommand", ["InvitationId"]),
-        new("TrainerInvitationCreatedInAppNotificationCommand.cs", "TrainerInvitationCreatedInAppNotificationCommand", ["InvitationId", "TraineeId", "TrainerId"]),
-        new("TrainerInvitationAcceptedInAppNotificationCommand.cs", "TrainerInvitationAcceptedInAppNotificationCommand", ["InvitationId", "TrainerId", "TraineeId"]),
-        new("TrainerInvitationRejectedInAppNotificationCommand.cs", "TrainerInvitationRejectedInAppNotificationCommand", ["InvitationId", "TrainerId", "TraineeId"]),
-        new("TrainerRelationshipEndedInAppNotificationCommand.cs", "TrainerRelationshipEndedInAppNotificationCommand", ["TrainerId", "TraineeId"]),
-        new("TraineeNoteUpdatedInAppNotificationCommand.cs", "TraineeNoteUpdatedInAppNotificationCommand", ["TraineeNoteId", "TraineeId", "TrainerId", "NoteTitle", "TriggeredAt"])
+        new("InvitationCreatedCommand.cs", "InvitationCreatedCommand", [new("InvitationId", "Id<TrainerInvitation>")]),
+        new("InvitationAcceptedCommand.cs", "InvitationAcceptedCommand", [new("InvitationId", "Id<TrainerInvitation>")]),
+        new("InvitationRevokedCommand.cs", "InvitationRevokedCommand", [new("InvitationId", "Id<TrainerInvitation>")]),
+        new("TrainerInvitationCreatedInAppNotificationCommand.cs", "TrainerInvitationCreatedInAppNotificationCommand", [new("InvitationId", "Id<TrainerInvitation>"), new("TraineeId", "Id<User>"), new("TrainerId", "Id<User>")]),
+        new("TrainerInvitationAcceptedInAppNotificationCommand.cs", "TrainerInvitationAcceptedInAppNotificationCommand", [new("InvitationId", "Id<TrainerInvitation>"), new("TrainerId", "Id<User>"), new("TraineeId", "Id<User>")]),
+        new("TrainerInvitationRejectedInAppNotificationCommand.cs", "TrainerInvitationRejectedInAppNotificationCommand", [new("InvitationId", "Id<TrainerInvitation>"), new("TrainerId", "Id<User>"), new("TraineeId", "Id<User>")]),
+        new("TrainerRelationshipEndedInAppNotificationCommand.cs", "TrainerRelationshipEndedInAppNotificationCommand", [new("TrainerId", "Id<User>"), new("TraineeId", "Id<User>")]),
+        new("TraineeNoteUpdatedInAppNotificationCommand.cs", "TraineeNoteUpdatedInAppNotificationCommand", [new("TraineeNoteId", "Id<TraineeNote>"), new("TraineeId", "Id<User>"), new("TrainerId", "Id<User>"), new("NoteTitle", "string?"), new("TriggeredAt", "DateTimeOffset")])
     ];
 
-    private sealed record ExpectedCommand(string FileName, string TypeName, string[] PropertyNames);
+    private sealed record ExpectedCommand(string FileName, string TypeName, ExpectedProperty[] Properties);
+
+    private sealed record ExpectedProperty(string Name, string Type);
 }

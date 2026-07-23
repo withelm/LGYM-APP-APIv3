@@ -997,6 +997,24 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             CultureInfo.CurrentCulture = originalCulture;
             CultureInfo.CurrentUICulture = originalUiCulture;
         }
+
+        var emptyExerciseResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/exercise-scores/chart", new
+        {
+            exerciseId = string.Empty
+        });
+        emptyExerciseResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var emptyExerciseBody = await emptyExerciseResponse.Content.ReadAsStringAsync();
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            emptyExerciseBody.Should().Contain(Messages.ExerciseIdRequired);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
     }
 
     [Test]

@@ -3,6 +3,7 @@ using LgymApi.Application.Identity.Authentication;
 using LgymApi.Application.Identity.Contracts.Authentication;
 using LgymApi.Application.Identity.Contracts.Administration;
 using LgymApi.Application.Identity.Contracts.Access;
+using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Identity.Contracts.Profile;
 using LgymApi.Application.Identity.Contracts.Registration;
 using LgymApi.Application.Identity.Contracts.Ranking;
@@ -51,6 +52,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRankingAccountProfileReadService, RankingAccountProfileReadService>();
         services.AddScoped<IUserAdminAccessService, UserAdminAccessService>();
         services.AddScoped<IUserAccessReadService, UserAccessReadService>();
+        services.AddScoped<IAccountReadService, AccountReadService>();
         services.AddScoped<IUserRoleAdministrationService, UserRoleAdministrationService>();
         services.AddScoped<IExternalAuthService, ExternalAuthService>();
         services.AddScoped<IGoogleUserRegistrar, GoogleUserRegistrar>();

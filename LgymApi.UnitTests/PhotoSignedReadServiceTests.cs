@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -97,11 +98,8 @@ public sealed class PhotoSignedReadServiceTests
         var service = PhotoServiceTestFactory.CreateService(
             reportingRepository: repository,
             photoStorageProvider: storageProvider,
-            userHasRole: (_, _, _) => Task.FromResult(true),
-            hasTrainerTraineeLink: (currentTrainerId, currentTraineeId, _) => Task.FromResult<TrainerTraineeLink?>(
-                currentTrainerId == trainerId && currentTraineeId == traineeId
-                    ? new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainerId, TraineeId = traineeId }
-                    : null));
+            relationshipAccess: (currentTrainerId, currentTraineeId, _) => Task.FromResult(
+                new CoachingRelationshipAccessDecision(true, currentTrainerId == trainerId && currentTraineeId == traineeId)));
 
         var result = await service.GetSignedReadUrlAsync(trainer, photoId);
 
@@ -127,8 +125,7 @@ public sealed class PhotoSignedReadServiceTests
         var service = PhotoServiceTestFactory.CreateService(
             reportingRepository: repository,
             photoStorageProvider: storageProvider,
-            userHasRole: (_, _, _) => Task.FromResult(true),
-            hasTrainerTraineeLink: (_, _, _) => Task.FromResult<TrainerTraineeLink?>(null));
+            relationshipAccess: (_, _, _) => Task.FromResult(new CoachingRelationshipAccessDecision(true, false)));
 
         var result = await service.GetSignedReadUrlAsync(trainer, photoId);
 
