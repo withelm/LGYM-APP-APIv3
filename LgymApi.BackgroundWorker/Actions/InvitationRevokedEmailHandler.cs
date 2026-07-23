@@ -1,78 +1,65 @@
-using LgymApi.Application.Options;
-using LgymApi.Application.Repositories;
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Notifications;
-using LgymApi.BackgroundWorker.Common.Notifications.Models;
-using LgymApi.Domain.Entities;
-using LgymApi.Domain.ValueObjects;
+using LgymApi.Application.Coaching.Contracts.Notifications;
+using LgymApi.Application.Identity.Contracts.Accounts;
+using LgymApi.Application.Notifications.Contracts.Events;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
 public sealed partial class InvitationRevokedEmailHandler : global::LgymApi.BackgroundWorker.Actions.Contracts.IBackgroundAction<InvitationRevokedCommand>
 {
-    private readonly ITrainerRelationshipRepository _invitationRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IEmailScheduler<InvitationRevokedEmailPayload> _emailScheduler;
+    private readonly ICoachingNotificationReadService _notificationReadService;
+    private readonly IAccountReadService _accountReadService;
+    private readonly ICoachingNotificationIntentService _notificationIntentService;
+    private readonly ICoachingEmailNotificationScheduler _emailScheduler;
     private readonly ILogger<InvitationRevokedEmailHandler> _logger;
-    private readonly IEmailNotificationsFeature _emailNotificationsFeature;
-    private readonly AppDefaultsOptions _appDefaultsOptions;
 
     public InvitationRevokedEmailHandler(
-        ITrainerRelationshipRepository invitationRepository,
-        IUserRepository userRepository,
-        IEmailScheduler<InvitationRevokedEmailPayload> emailScheduler,
-        IEmailNotificationsFeature emailNotificationsFeature,
-        ILogger<InvitationRevokedEmailHandler> logger,
-        AppDefaultsOptions appDefaultsOptions)
+        ICoachingNotificationReadService notificationReadService,
+        IAccountReadService accountReadService,
+        ICoachingNotificationIntentService notificationIntentService,
+        ICoachingEmailNotificationScheduler emailScheduler,
+        ILogger<InvitationRevokedEmailHandler> logger)
     {
-        _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
-        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _notificationReadService = notificationReadService ?? throw new ArgumentNullException(nameof(notificationReadService));
+        _accountReadService = accountReadService ?? throw new ArgumentNullException(nameof(accountReadService));
+        _notificationIntentService = notificationIntentService ?? throw new ArgumentNullException(nameof(notificationIntentService));
         _emailScheduler = emailScheduler ?? throw new ArgumentNullException(nameof(emailScheduler));
-        _emailNotificationsFeature = emailNotificationsFeature ?? throw new ArgumentNullException(nameof(emailNotificationsFeature));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _appDefaultsOptions = appDefaultsOptions ?? throw new ArgumentNullException(nameof(appDefaultsOptions));
     }
 
     public async Task ExecuteAsync(InvitationRevokedCommand command, CancellationToken cancellationToken = default)
     {
-        if (!_emailNotificationsFeature.Enabled)
-        {
-            return;
-        }
-
-        var invitation = await _invitationRepository.FindInvitationByIdAsync(command.InvitationId, cancellationToken);
+        var invitation = await _notificationReadService.GetInvitationAsync(command.InvitationId, cancellationToken);
         if (invitation == null)
         {
             _logger.LogWarning("Invitation not found for InvitationRevoked {InvitationId}", command.InvitationId);
             return;
         }
 
-        var trainer = await _userRepository.FindByIdAsync((Id<User>)invitation.TrainerId, cancellationToken);
+        var trainer = await _accountReadService.GetByIdAsync(invitation.TrainerId, cancellationToken);
         if (trainer == null)
         {
             _logger.LogWarning("Trainer user not found for InvitationRevoked {InvitationId}, TrainerId {TrainerId}", command.InvitationId, invitation.TrainerId);
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(invitation.InviteeEmail))
+        var result = await _notificationIntentService.SubmitAsync(
+            new InvitationRevokedCoachingNotificationIntent(
+                CoachingNotificationLegacyChannel.Email,
+                invitation.InvitationId,
+                invitation.TrainerId,
+                invitation.InviteeEmail,
+                trainer),
+            cancellationToken);
+        var schedulingRequest = result.EmailSchedulingRequest;
+        if (schedulingRequest == null)
         {
-            _logger.LogWarning("InvitationRevoked email skipped for Invitation {InvitationId} - no invitee email provided", command.InvitationId);
             return;
         }
 
-        var emailPayload = new InvitationRevokedEmailPayload
-        {
-            InvitationId = command.InvitationId,
-            TrainerName = trainer.Name,
-            RecipientEmail = invitation.InviteeEmail,
-            CultureName = _appDefaultsOptions.PreferredLanguage,
-            PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone
-        };
+        await _emailScheduler.ScheduleAsync(schedulingRequest, cancellationToken);
 
-        await _emailScheduler.ScheduleAsync(emailPayload, cancellationToken);
-
-        _logger.LogInformation("InvitationRevoked email scheduled for Invitation {InvitationId} to {Email}", command.InvitationId, invitation.InviteeEmail);
+        _logger.LogInformation("InvitationRevoked email scheduled for Invitation {InvitationId} to {Email}", command.InvitationId, schedulingRequest.RecipientEmail);
     }
 }

@@ -80,6 +80,8 @@ Source modules own business event timing, source-of-truth facts, recipient eligi
 
 Notifications owns channel policy and preference evaluation, in-app persistence and fan-out, push enqueue and delivery lifecycle, email subscription and durable intent ownership, and provider-private delivery decisions. It owns the decision to suppress, persist, enqueue, or deliver through a channel. An in-app event does not automatically imply push or email delivery. No contract in this document authorizes automatic push emission for every in-app event.
 
+Coaching compatibility is expressed as six typed Notifications intents. The eight preserved commands select one eligible channel each: invitation created and accepted have separate email and in-app commands, invitation revoked is email-only, and invitation rejected, relationship ended, and trainee note updated are in-app-only. Notifications owns rendering, culture fallback, delivery metadata, email eligibility, and provider-neutral scheduling requests. Worker adapters execute the selected path without regaining policy ownership.
+
 Worker implements runtime handlers and chooses the configured scheduler implementation. Infrastructure implements persistence and external provider adapters. These layers apply the Notifications policy and do not redefine source module business event semantics or expose runtime details through the public contract.
 
 ## Privacy, idempotency, and retry rules
@@ -101,6 +103,7 @@ Compatibility adapters preserve current wire shapes and durable identities while
 | `notifications.adapter.password-email` | `IPasswordRecoveryEmailScheduler`, `PasswordRecoveryEmailRequest`, `PasswordRecoveryEmailSchedulerAdapter`, and retained Common email payload | Identity exposes its Application request; Worker maps it to the closed Common email wire seam. Correlation and email idempotency remain unchanged. |
 | `notifications.adapter.report-submission` | `ReportSubmissionCreatedInAppNotificationCommand` | Keep the current command and path as the adapter for the logical accepted-submission event. #381 does not rename or replace it. |
 | `notifications.adapter.scheduler-runtime` | Worker scheduler and Common persisted job interfaces | Worker owns scheduler selection and execution. The Common identities remain stable persisted targets. |
+| `notifications.adapter.coaching-intents` | Six Coaching intent records and eight legacy Coaching commands | Notifications owns intent and channel policy; Worker preserves canonical IDs, handler identities, and adapter execution. |
 
 ## Migration sequence
 

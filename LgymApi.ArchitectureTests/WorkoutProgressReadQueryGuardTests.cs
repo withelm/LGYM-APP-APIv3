@@ -25,31 +25,6 @@ public sealed class WorkoutProgressReadQueryGuardTests
             $"{relativePath}:{methodName} must retain its no-tracking/projection query shape.");
     }
 
-    [Test]
-    public void Coaching_Dashboard_Should_Delegate_Progress_Reads_Through_The_Public_Facade()
-    {
-        var dependencies = ReadSource("LgymApi.Application/TrainerRelationships/ITrainerRelationshipServiceDependencies.cs");
-        var dashboard = ReadSource("LgymApi.Application/TrainerRelationships/TrainerRelationshipService.Dashboard.cs");
-        var forbiddenDirectDependencies = new[]
-        {
-            "ITrainingService",
-            "IExerciseScoresService",
-            "IEloRegistryService",
-            "IMainRecordsService",
-            "ITrainingRepository",
-            "IExerciseScoreRepository",
-            "IEloRegistryRepository",
-            "IMainRecordRepository"
-        };
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(dependencies, Does.Contain("IWorkoutProgressDashboardReadService"));
-            Assert.That(dashboard, Does.Contain("_workoutProgressDashboardReadService"));
-            Assert.That(forbiddenDirectDependencies.Where(dependency => dependencies.Contains(dependency, StringComparison.Ordinal) || dashboard.Contains(dependency, StringComparison.Ordinal)), Is.Empty);
-        });
-    }
-
     private static string ReadMethodSource(string relativePath, string methodName)
     {
         var source = ReadSource(relativePath);

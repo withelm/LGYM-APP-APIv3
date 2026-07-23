@@ -1,9 +1,9 @@
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Features.Supplementation.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -18,27 +18,24 @@ public sealed partial class SupplementationService : ISupplementationService
     private const int SupplementNameMaxLength = 160;
     private const int DosageMaxLength = 120;
 
-    private readonly IRoleRepository _roleRepository;
-    private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly ICoachingRelationshipAccessService _relationshipAccess;
     private readonly ISupplementationRepository _supplementationRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public SupplementationService(
-        IRoleRepository roleRepository,
-        ITrainerRelationshipRepository trainerRelationshipRepository,
+        ICoachingRelationshipAccessService relationshipAccess,
         ISupplementationRepository supplementationRepository,
         IUnitOfWork unitOfWork)
     {
-        _roleRepository = roleRepository;
-        _trainerRelationshipRepository = trainerRelationshipRepository;
+        _relationshipAccess = relationshipAccess;
         _supplementationRepository = supplementationRepository;
         _unitOfWork = unitOfWork;
     }
 
     private async Task<Result<Unit, AppError>> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
     {
-        var isTrainer = await _roleRepository.UserHasRoleAsync(currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
-        if (!isTrainer)
+        var access = await _relationshipAccess.GetAccessDecisionAsync(currentTrainer.Id, traineeId, cancellationToken);
+        if (!access.IsTrainer)
         {
             return Result<Unit, AppError>.Failure(new SupplementationForbiddenError(Messages.TrainerRoleRequired));
         }
@@ -48,8 +45,7 @@ public sealed partial class SupplementationService : ISupplementationService
             return Result<Unit, AppError>.Failure(new InvalidSupplementationError(Messages.UserIdRequired));
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
-        if (link == null)
+        if (!access.HasActiveRelationship)
         {
             return Result<Unit, AppError>.Failure(new SupplementationNotFoundError(Messages.DidntFind));
         }

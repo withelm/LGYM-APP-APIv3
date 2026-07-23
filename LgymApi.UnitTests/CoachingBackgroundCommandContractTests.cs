@@ -1,6 +1,9 @@
 using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Platform.Contracts.Serialization;
+using LgymApi.BackgroundWorker.Common.Notifications;
+using LgymApi.BackgroundWorker.Common.Notifications.Models;
+using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using NUnit.Framework;
@@ -68,6 +71,32 @@ public sealed class CoachingBackgroundCommandContractTests
         JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current).Should().Be(nullPayload);
     }
 
+    [Test]
+    public void CoachingCommands_UseTheFixedLegacyDeliveryChannelMap()
+    {
+        var registry = CommandContractRegistry.CreateDefault();
+
+        foreach (var expected in DeliveryChannelCases)
+        {
+            var commandType = GetCommandType(expected.TypeName);
+            var contract = registry.Contracts.Single(candidate => candidate.RuntimeType == commandType);
+            var handlerType = contract.ExpectedHandlerTypes.Should().ContainSingle().Subject;
+
+            contract.CanonicalId.Should().Be(expected.CanonicalId);
+            contract.ReadAlias.Should().Be($"{CommandsNamespace}.{expected.TypeName}");
+            handlerType.FullName.Should().Be(expected.HandlerTypeFullName);
+            ResolveDeliveryChannel(handlerType).Should().Be(expected.Channel);
+
+            if (expected.EmailPayloadTypeFullName is not null)
+            {
+                var emailPayloadType = GetEmailPayloadType(handlerType);
+                emailPayloadType.FullName.Should().Be(expected.EmailPayloadTypeFullName);
+                var payload = (IEmailPayload)Activator.CreateInstance(emailPayloadType)!;
+                payload.NotificationType.Value.Should().Be(expected.DeliveryKey);
+            }
+        }
+    }
+
     private static IEnumerable<TestCaseData> CommandCases()
     {
         yield return Case("InvitationCreatedCommand", "{\"invitationId\":\"00000000-0000-0000-0000-000000000004\"}", new ExpectedProperty("InvitationId", typeof(Id<TrainerInvitation>)));
@@ -79,6 +108,47 @@ public sealed class CoachingBackgroundCommandContractTests
         yield return Case("TrainerRelationshipEndedInAppNotificationCommand", "{\"trainerId\":\"00000000-0000-0000-0000-000000000031\",\"traineeId\":\"00000000-0000-0000-0000-000000000032\"}", new ExpectedProperty("TrainerId", typeof(Id<User>)), new ExpectedProperty("TraineeId", typeof(Id<User>)));
         yield return Case("TraineeNoteUpdatedInAppNotificationCommand", "{\"traineeNoteId\":\"00000000-0000-0000-0000-000000000010\",\"traineeId\":\"00000000-0000-0000-0000-000000000011\",\"trainerId\":\"00000000-0000-0000-0000-000000000012\",\"noteTitle\":\"Weekly check-in\",\"triggeredAt\":\"2026-07-18T12:34:57+00:00\"}", new ExpectedProperty("TraineeNoteId", typeof(Id<TraineeNote>)), new ExpectedProperty("TraineeId", typeof(Id<User>)), new ExpectedProperty("TrainerId", typeof(Id<User>)), new ExpectedProperty("NoteTitle", typeof(string)), new ExpectedProperty("TriggeredAt", typeof(DateTimeOffset)));
     }
+
+    private static readonly DeliveryChannelContract[] DeliveryChannelCases =
+    [
+        new("InvitationCreatedCommand", "LgymApi.BackgroundWorker.Common.Commands.InvitationCreatedCommand", "LgymApi.BackgroundWorker.Actions.SendInvitationEmailHandler", DeliveryChannel.Email, "LgymApi.BackgroundWorker.Common.Notifications.Models.InvitationEmailPayload", "trainer.invitation.created"),
+        new("TrainerInvitationCreatedInAppNotificationCommand", "LgymApi.BackgroundWorker.Common.Commands.TrainerInvitationCreatedInAppNotificationCommand", "LgymApi.BackgroundWorker.Actions.TrainerInvitationCreatedInAppNotificationCommandHandler", DeliveryChannel.InApp, null, null),
+        new("InvitationAcceptedCommand", "LgymApi.BackgroundWorker.Common.Commands.InvitationAcceptedCommand", "LgymApi.BackgroundWorker.Actions.InvitationAcceptedEmailHandler", DeliveryChannel.Email, "LgymApi.BackgroundWorker.Common.Notifications.Models.InvitationAcceptedEmailPayload", "trainer.invitation.accepted"),
+        new("TrainerInvitationAcceptedInAppNotificationCommand", "LgymApi.BackgroundWorker.Common.Commands.TrainerInvitationAcceptedInAppNotificationCommand", "LgymApi.BackgroundWorker.Actions.TrainerInvitationAcceptedInAppNotificationCommandHandler", DeliveryChannel.InApp, null, null),
+        new("InvitationRevokedCommand", "LgymApi.BackgroundWorker.Common.Commands.InvitationRevokedCommand", "LgymApi.BackgroundWorker.Actions.InvitationRevokedEmailHandler", DeliveryChannel.Email, "LgymApi.BackgroundWorker.Common.Notifications.Models.InvitationRevokedEmailPayload", "trainer.invitation.revoked"),
+        new("TrainerInvitationRejectedInAppNotificationCommand", "LgymApi.BackgroundWorker.Common.Commands.TrainerInvitationRejectedInAppNotificationCommand", "LgymApi.BackgroundWorker.Actions.TrainerInvitationRejectedInAppNotificationCommandHandler", DeliveryChannel.InApp, null, null),
+        new("TrainerRelationshipEndedInAppNotificationCommand", "LgymApi.BackgroundWorker.Common.Commands.TrainerRelationshipEndedInAppNotificationCommand", "LgymApi.BackgroundWorker.Actions.TrainerRelationshipEndedInAppNotificationCommandHandler", DeliveryChannel.InApp, null, null),
+        new("TraineeNoteUpdatedInAppNotificationCommand", "LgymApi.BackgroundWorker.Common.Commands.TraineeNoteUpdatedInAppNotificationCommand", "LgymApi.BackgroundWorker.Actions.TraineeNoteUpdatedInAppNotificationCommandHandler", DeliveryChannel.InApp, null, null)
+    ];
+
+    private static DeliveryChannel ResolveDeliveryChannel(Type handlerType)
+    {
+        var constructorParameterTypes = handlerType.GetConstructors().Single().GetParameters()
+            .Select(parameter => parameter.ParameterType)
+            .ToArray();
+
+        if (constructorParameterTypes.Any(type => type.FullName is "LgymApi.Application.Notifications.Contracts.Events.ICoachingEmailNotificationScheduler"
+            or "LgymApi.BackgroundWorker.Common.Notifications.IEmailScheduler`1"))
+        {
+            return DeliveryChannel.Email;
+        }
+
+        if (constructorParameterTypes.Any(type => type.FullName is "LgymApi.Application.Notifications.IInAppNotificationService"
+            or "LgymApi.Application.Notifications.Contracts.Events.ICoachingNotificationIntentService"))
+        {
+            return DeliveryChannel.InApp;
+        }
+
+        throw new InvalidOperationException($"Handler '{handlerType.FullName}' has no supported legacy delivery dependency.");
+    }
+
+    private static Type GetEmailPayloadType(Type handlerType) => handlerType.FullName switch
+    {
+        "LgymApi.BackgroundWorker.Actions.SendInvitationEmailHandler" => typeof(InvitationEmailPayload),
+        "LgymApi.BackgroundWorker.Actions.InvitationAcceptedEmailHandler" => typeof(InvitationAcceptedEmailPayload),
+        "LgymApi.BackgroundWorker.Actions.InvitationRevokedEmailHandler" => typeof(InvitationRevokedEmailPayload),
+        _ => throw new InvalidOperationException($"Handler '{handlerType.FullName}' has no legacy email payload mapping.")
+    };
 
     private static TestCaseData Case(string typeName, string payloadJson, params ExpectedProperty[] properties) =>
         new TestCaseData(new ExpectedCommand(typeName, payloadJson, properties)).SetName(typeName);
@@ -93,4 +163,18 @@ public sealed class CoachingBackgroundCommandContractTests
     public sealed record ExpectedCommand(string TypeName, string PayloadJson, ExpectedProperty[] Properties);
 
     public sealed record ExpectedProperty(string Name, Type Type);
+
+    private sealed record DeliveryChannelContract(
+        string TypeName,
+        string CanonicalId,
+        string HandlerTypeFullName,
+        DeliveryChannel Channel,
+        string? EmailPayloadTypeFullName,
+        string? DeliveryKey);
+
+    private enum DeliveryChannel
+    {
+        Email,
+        InApp
+    }
 }

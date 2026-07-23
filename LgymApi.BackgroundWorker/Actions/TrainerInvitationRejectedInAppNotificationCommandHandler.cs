@@ -1,42 +1,39 @@
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.BackgroundWorker.Actions.Contracts;
-using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging;
-using NotificationsApp = global::LgymApi.Application.Notifications;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
 public sealed partial class TrainerInvitationRejectedInAppNotificationCommandHandler : IBackgroundAction<TrainerInvitationRejectedInAppNotificationCommand>
 {
-    private readonly NotificationsApp.IInAppNotificationService _notificationService;
+    private readonly ICoachingNotificationIntentService _notificationIntentService;
     private readonly ILogger<TrainerInvitationRejectedInAppNotificationCommandHandler> _logger;
 
     public TrainerInvitationRejectedInAppNotificationCommandHandler(
-        NotificationsApp.IInAppNotificationService notificationService,
+        ICoachingNotificationIntentService notificationIntentService,
         ILogger<TrainerInvitationRejectedInAppNotificationCommandHandler> logger)
     {
-        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+        _notificationIntentService = notificationIntentService ?? throw new ArgumentNullException(nameof(notificationIntentService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task ExecuteAsync(TrainerInvitationRejectedInAppNotificationCommand command, CancellationToken cancellationToken = default)
     {
-        var input = new NotificationsApp.Models.CreateInAppNotificationInput(
-            command.TrainerId,
-            command.TraineeId,
-            $"trainer-invitation:{command.InvitationId}:rejected",
-            false,
-            global::LgymApi.Resources.Messages.TrainerInvitationRejected,
-            "/trainer/invitations",
-            InAppNotificationTypes.InvitationRejected);
+        var result = await _notificationIntentService.SubmitAsync(
+            new InvitationRejectedCoachingNotificationIntent(
+                CoachingNotificationLegacyChannel.InApp,
+                command.InvitationId,
+                command.TrainerId,
+                command.TraineeId),
+            cancellationToken);
 
-        var result = await _notificationService.CreateAsync(input, cancellationToken);
-        if (result.IsFailure)
+        if (result.InAppError is not null)
         {
             _logger.LogError(
                 "Failed to create invitation-rejected notification for trainer {TrainerId}: {Error}",
                 command.TrainerId,
-                result.Error);
+                result.InAppError);
         }
     }
 }

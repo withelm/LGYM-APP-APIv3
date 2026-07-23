@@ -1,4 +1,5 @@
 using FluentAssertions;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting;
@@ -416,20 +417,13 @@ public sealed class RecurringReportAssignmentServiceTests
         ICommandDispatcher? commandDispatcher = null,
         bool isTrainer = true)
     {
-        var roleRepository = Substitute.For<IRoleRepository>();
-        roleRepository.UserHasRoleAsync(trainerId, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(isTrainer);
-
-        var trainerRelationshipRepository = Substitute.For<ITrainerRelationshipRepository>();
-        trainerRelationshipRepository
-            .FindActiveLinkByTrainerAndTraineeAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
-            .Returns(ownsTrainee
-                ? new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainerId, TraineeId = traineeId }
-                : null);
+        var relationshipAccess = Substitute.For<ICoachingRelationshipAccessService>();
+        relationshipAccess
+            .GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
+            .Returns(new CoachingRelationshipAccessDecision(isTrainer, ownsTrainee));
 
         return new RecurringReportAssignmentService(new RecurringReportAssignmentServiceDependencies(
-            roleRepository,
-            trainerRelationshipRepository,
+            relationshipAccess,
             new ReportingRepository(db),
             new RecurringReportAssignmentRepository(db),
             commandDispatcher ?? Substitute.For<ICommandDispatcher>(),

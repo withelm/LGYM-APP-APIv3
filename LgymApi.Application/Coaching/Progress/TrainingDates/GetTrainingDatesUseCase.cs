@@ -1,0 +1,40 @@
+using LgymApi.Application.Coaching.Contracts.Access;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Common.Results;
+using LgymApi.Application.WorkoutProgress.Dashboard;
+
+namespace LgymApi.Application.Coaching.Progress.TrainingDates;
+
+internal sealed class GetTrainingDatesUseCase : IGetTrainingDatesUseCase
+{
+    private readonly ICoachingRelationshipAccessService _relationshipAccess;
+    private readonly IWorkoutProgressDashboardReadService _progress;
+
+    public GetTrainingDatesUseCase(
+        ICoachingRelationshipAccessService relationshipAccess,
+        IWorkoutProgressDashboardReadService progress)
+    {
+        _relationshipAccess = relationshipAccess;
+        _progress = progress;
+    }
+
+    public async Task<Result<List<DateTime>, AppError>> ExecuteAsync(
+        GetTrainingDatesQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var access = await _relationshipAccess.GetAccessDecisionAsync(
+            query.TrainerId,
+            query.TraineeId,
+            cancellationToken);
+        var accessError = ProgressReadAccess.GetError(access, query.TraineeId);
+        if (accessError is not null)
+        {
+            return Result<List<DateTime>, AppError>.Failure(accessError);
+        }
+
+        var result = await _progress.GetTrainingDatesAsync(query.TraineeId, cancellationToken);
+        return result.IsFailure
+            ? Result<List<DateTime>, AppError>.Failure(new TrainerRelationshipNotFoundError(result.Error.Message))
+            : Result<List<DateTime>, AppError>.Success(result.Value);
+    }
+}

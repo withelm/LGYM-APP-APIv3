@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -7,6 +8,8 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class WorkoutProgressPublicContractGuardTests
 {
+    private const string TypedIdMetadataName = "LgymApi.Domain.ValueObjects.Id`1";
+
     private static readonly IReadOnlySet<string> ForeignModuleNames = new HashSet<string>(StringComparer.Ordinal)
     {
         ArchitectureTestHelpers.IdentityModuleName,
@@ -44,7 +47,8 @@ public sealed class WorkoutProgressPublicContractGuardTests
         "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedProgressEvent",
         "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedMeasurement",
         "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedProgressValidationResult",
-        "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedProgressConsumeResult"
+        "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedProgressConsumeResult",
+        "LgymApi.Application.WorkoutProgress.Contracts.Measurements.IMeasurementsRelationshipAccessPort"
     };
 
     [Test]
@@ -98,9 +102,62 @@ public sealed class WorkoutProgressPublicContractGuardTests
             }));
     }
 
+    [Test]
+    public void Exercise_Typed_Ids_Should_Be_Allowed_As_Identifier_Only_Transport()
+    {
+        var (repoRoot, compilation, _) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
+        var fixture = CSharpSyntaxTree.ParseText("""
+            using LgymApi.Domain.ValueObjects;
+            using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
+
+            namespace LgymApi.Application.Coaching.Progress;
+
+            public sealed record IdentifierOnlyExerciseQuery(
+                Id<ExerciseEntity> ExerciseId,
+                Id<LgymApi.Domain.Entities.Exercise> FullyQualifiedExerciseId);
+            """, path: Path.Combine(repoRoot, "LgymApi.Application", "Coaching", "Progress", "IdentifierOnlyExerciseQuery.cs"));
+
+        CollectViolations(compilation.AddSyntaxTrees(fixture), [fixture]).Should().BeEmpty();
+    }
+
+    [TestCase("", "Exercise DirectExercise { get; init; } = default!;", "LgymApi.Domain.Entities.Exercise")]
+    [TestCase("using ExerciseEntity = LgymApi.Domain.Entities.Exercise;", "ExerciseEntity DirectAliasedExercise { get; init; } = default!;", "LgymApi.Domain.Entities.Exercise")]
+    [TestCase("", "Exercise[] ExerciseCollection { get; init; } = [];", "LgymApi.Domain.Entities.Exercise")]
+    [TestCase("", "IReadOnlyCollection<Exercise> ExerciseCollection { get; init; } = [];", "LgymApi.Domain.Entities.Exercise")]
+    [TestCase("", "ForeignWrapper<Exercise> ExerciseWrapper { get; init; } = new();", "LgymApi.Domain.Entities.Exercise")]
+    [TestCase("", "IExerciseRepository ExerciseRepository { get; init; } = default!;", "LgymApi.Application.Repositories.IExerciseRepository")]
+    public void Direct_Exercise_Shapes_And_Repository_Should_Be_Rejected(
+        string aliasDirective,
+        string declaration,
+        string expectedTarget)
+    {
+        var (repoRoot, compilation, _) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
+        var fixture = CSharpSyntaxTree.ParseText($$"""
+            using System.Collections.Generic;
+            using LgymApi.Application.Repositories;
+            using LgymApi.Domain.Entities;
+            {{aliasDirective}}
+
+            namespace LgymApi.Application.Coaching.Progress;
+
+            public sealed class ForeignWrapper<T> { }
+            public sealed class ForeignExerciseExposure
+            {
+                public {{declaration}}
+            }
+            """, path: Path.Combine(repoRoot, "LgymApi.Application", "Coaching", "Progress", "ForeignExerciseExposure.cs"));
+
+        var violations = CollectViolations(compilation.AddSyntaxTrees(fixture), [fixture]);
+
+        violations.Should().NotBeEmpty();
+        violations.Select(violation => violation.TargetMetadataName).Should().Contain(expectedTarget);
+    }
+
     private static IReadOnlyList<Violation> CollectViolations(CSharpCompilation compilation, IEnumerable<SyntaxTree> syntaxTrees)
     {
         var violations = new Dictionary<string, Violation>(StringComparer.Ordinal);
+        var typedIdDefinition = compilation.GetTypeByMetadataName(TypedIdMetadataName)
+            ?? throw new InvalidOperationException($"Unable to resolve '{TypedIdMetadataName}'.");
 
         foreach (var tree in syntaxTrees)
         {
@@ -111,8 +168,15 @@ public sealed class WorkoutProgressPublicContractGuardTests
             }
 
             var semanticModel = compilation.GetSemanticModel(tree, ignoreAccessibility: true);
-            foreach (var typeSyntax in tree.GetCompilationUnitRoot().DescendantNodes().OfType<TypeSyntax>())
+            var root = tree.GetCompilationUnitRoot();
+            foreach (var typeSyntax in root.DescendantNodes().OfType<TypeSyntax>())
             {
+                if (IsIdentifierOnlyTypedIdReference(typeSyntax, semanticModel, typedIdDefinition)
+                    || IsIdentifierOnlyAliasDeclaration(typeSyntax, semanticModel, root, typedIdDefinition))
+                {
+                    continue;
+                }
+
                 var type = ArchitectureTestHelpers.GetOwnedNamedTypeSymbol(semanticModel.GetTypeInfo(typeSyntax).Type);
                 if (type is null || !IsWorkoutProgressType(type))
                 {
@@ -133,6 +197,45 @@ public sealed class WorkoutProgressPublicContractGuardTests
         }
 
         return violations.Values.OrderBy(violation => violation.Identity, StringComparer.Ordinal).ToList();
+    }
+
+    private static bool IsIdentifierOnlyTypedIdReference(
+        TypeSyntax typeSyntax,
+        SemanticModel semanticModel,
+        INamedTypeSymbol typedIdDefinition)
+    {
+        var referencedType = semanticModel.GetTypeInfo(typeSyntax).Type;
+        if (referencedType is null)
+        {
+            return false;
+        }
+
+        return typeSyntax.Ancestors().OfType<TypeArgumentListSyntax>().Any(typeArguments =>
+            typeArguments.Parent is GenericNameSyntax genericName
+            && semanticModel.GetTypeInfo(genericName).Type is INamedTypeSymbol constructedType
+            && SymbolEqualityComparer.Default.Equals(constructedType.OriginalDefinition, typedIdDefinition)
+            && constructedType.TypeArguments.Length == 1
+            && SymbolEqualityComparer.Default.Equals(constructedType.TypeArguments[0], referencedType));
+    }
+
+    private static bool IsIdentifierOnlyAliasDeclaration(
+        TypeSyntax typeSyntax,
+        SemanticModel semanticModel,
+        CompilationUnitSyntax root,
+        INamedTypeSymbol typedIdDefinition)
+    {
+        var usingDirective = typeSyntax.AncestorsAndSelf().OfType<UsingDirectiveSyntax>().FirstOrDefault();
+        if (usingDirective?.Alias is null
+            || semanticModel.GetDeclaredSymbol(usingDirective) is not IAliasSymbol aliasSymbol)
+        {
+            return false;
+        }
+
+        var aliasUsages = root.DescendantNodes().OfType<IdentifierNameSyntax>()
+            .Where(identifier => SymbolEqualityComparer.Default.Equals(semanticModel.GetAliasInfo(identifier), aliasSymbol))
+            .ToArray();
+        return aliasUsages.Length > 0
+            && aliasUsages.All(aliasUsage => IsIdentifierOnlyTypedIdReference(aliasUsage, semanticModel, typedIdDefinition));
     }
 
     private static bool IsWorkoutProgressType(INamedTypeSymbol type)

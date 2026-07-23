@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Options;
@@ -230,7 +231,7 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
         dependencies.CommandOutboxWriter.Returns(commandOutboxWriter);
         dependencies.ReportSubmissionAcceptedProgressCommandFactory.Returns(new ReportSubmissionAcceptedProgressCommandFactory());
         dependencies.RoleRepository.Returns(Substitute.For<IRoleRepository>());
-        dependencies.TrainerRelationshipRepository.Returns(Substitute.For<ITrainerRelationshipRepository>());
+        dependencies.CoachingRelationshipAccessService.Returns(Substitute.For<ICoachingRelationshipAccessService>());
         dependencies.RecurringReportAssignmentRepository.Returns(Substitute.For<IRecurringReportAssignmentRepository>());
         dependencies.PhotoStorageProvider.Returns(Substitute.For<IPhotoStorageProvider>());
         dependencies.PhotoUploadInitTracker.Returns(Substitute.For<IPhotoUploadInitTracker>());

@@ -9,6 +9,7 @@ using LgymApi.Application.Models;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning;
+using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Application.TrainingPlanning.Plan.CheckIsUserHavePlan;
 using LgymApi.Application.TrainingPlanning.Plan.CopyPlan;
@@ -161,7 +162,7 @@ public sealed class ServiceTransactionBehaviorTests
 
            var service = new PlanDayService(new PlanDayServiceDependenciesStub(
                planRepository,
-               new TrainerRelationshipRepositoryStub(),
+               new PlanDayRelationshipAccessStub(),
                planDayRepository,
                exercisesRepository,
                new ExerciseRepositoryStub(),
@@ -200,7 +201,7 @@ public sealed class ServiceTransactionBehaviorTests
                 {
                     PlanToReturn = new Plan { Id = planId, UserId = userId }
                 },
-                new TrainerRelationshipRepositoryStub(),
+                new PlanDayRelationshipAccessStub(),
                 new PlanDayRepositoryStub
                 {
                     PlanDayToReturn = new PlanDay { Id = planDayId, PlanId = planId, Name = "old" }
@@ -364,7 +365,7 @@ public sealed class ServiceTransactionBehaviorTests
            var currentUser = new User { Id = Id<User>.New() };
            var service = new PlanDayService(new PlanDayServiceDependenciesStub(
                new PlanRepositoryStub(),
-               new TrainerRelationshipRepositoryStub(),
+               new PlanDayRelationshipAccessStub(),
                new PlanDayRepositoryStub(),
                new PlanDayExerciseRepositoryStub(),
                new ExerciseRepositoryStub(),
@@ -388,7 +389,7 @@ public sealed class ServiceTransactionBehaviorTests
            var currentUser = new User { Id = Id<User>.New() };
            var service = new PlanDayService(new PlanDayServiceDependenciesStub(
                new PlanRepositoryStub(),
-               new TrainerRelationshipRepositoryStub(),
+               new PlanDayRelationshipAccessStub(),
                new PlanDayRepositoryStub(),
                new PlanDayExerciseRepositoryStub(),
                new ExerciseRepositoryStub(),
@@ -405,7 +406,7 @@ public sealed class ServiceTransactionBehaviorTests
     {
         public PlanDayServiceDependenciesStub(
             IPlanRepository planRepository,
-            ITrainerRelationshipRepository trainerRelationshipRepository,
+            IPlanDayRelationshipAccessPort relationshipAccess,
             IPlanDayRepository planDayRepository,
             IPlanDayExerciseRepository planDayExerciseRepository,
             IExerciseRepository exerciseRepository,
@@ -413,7 +414,7 @@ public sealed class ServiceTransactionBehaviorTests
             IUnitOfWork unitOfWork)
         {
             PlanRepository = planRepository;
-            TrainerRelationshipRepository = trainerRelationshipRepository;
+            RelationshipAccess = relationshipAccess;
             PlanDayRepository = planDayRepository;
             PlanDayExerciseRepository = planDayExerciseRepository;
             ExerciseRepository = exerciseRepository;
@@ -422,7 +423,7 @@ public sealed class ServiceTransactionBehaviorTests
         }
 
         public IPlanRepository PlanRepository { get; }
-        public ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
+        public IPlanDayRelationshipAccessPort RelationshipAccess { get; }
         public IPlanDayRepository PlanDayRepository { get; }
         public IPlanDayExerciseRepository PlanDayExerciseRepository { get; }
         public IExerciseRepository ExerciseRepository { get; }
@@ -430,22 +431,9 @@ public sealed class ServiceTransactionBehaviorTests
         public IUnitOfWork UnitOfWork { get; }
     }
 
-    private sealed class TrainerRelationshipRepositoryStub : ITrainerRelationshipRepository
+    private sealed class PlanDayRelationshipAccessStub : IPlanDayRelationshipAccessPort
     {
-        public Task AddInvitationAsync(TrainerInvitation invitation, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<TrainerInvitation?> FindInvitationByIdAsync(Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
-        public Task<TrainerInvitation?> FindPendingInvitationAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
-        public Task<TrainerInvitation?> FindPendingInvitationByEmailAsync(Id<User> trainerId, string inviteeEmail, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
-        public Task<bool> IsEmailAlreadyTraineeAsync(Id<User> trainerId, string inviteeEmail, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<TrainerInvitation?> FindInvitationByIdWithCodeAsync(Id<TrainerInvitation> invitationId, string code, CancellationToken cancellationToken = default) => Task.FromResult<TrainerInvitation?>(null);
-        public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default) => Task.FromResult(new List<TrainerInvitation>());
-        public Task<bool> HasActiveLinkForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerTraineeLink?>(null);
-        public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult<TrainerTraineeLink?>(null);
-        public Task<TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Pagination<TrainerInvitationResult>> GetInvitationsPaginatedAsync(Id<User> trainerId, FilterInput filterInput, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<bool> HasActiveRelationshipAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 
     private sealed class RecordingUnitOfWork : IUnitOfWork

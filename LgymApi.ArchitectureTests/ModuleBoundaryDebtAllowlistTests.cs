@@ -132,6 +132,18 @@ public sealed class ModuleBoundaryDebtAllowlistTests
     }
 
     [Test]
+    public void Allowlist_Registry_Excludes_Retired_Coaching_Boundary_Debt()
+    {
+        var retiredReferences = ModuleBoundaryDebtAllowlistRegistry.AllEntries
+            .Where(entry => entry.Key.SourceModule == "Coaching"
+                || entry.Key.TargetSymbolOrPath.Contains("ITrainerRelationshipRepository", StringComparison.Ordinal)
+                || entry.Key.TargetSymbolOrPath.Contains("ITraineeNoteRepository", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.That(retiredReferences, Is.Empty);
+    }
+
+    [Test]
     public void Allowlist_Evaluation_Fails_For_Speculative_Or_Duplicate_Identity_Entries()
     {
         var firstEntry = new ModuleBoundaryDebtEntry(

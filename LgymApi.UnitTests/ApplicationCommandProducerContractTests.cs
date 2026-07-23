@@ -11,18 +11,12 @@ public sealed class ApplicationCommandProducerContractTests
     {
         yield return CreateCase("WorkoutProgress/TrainingExecution/CompleteTrainingUseCase.cs", "LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands");
         yield return CreateCase("Features/DietPlans/DietPlanService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands", "LgymApi.Application.Nutrition.Contracts.BackgroundCommands");
-        yield return CreateCase("Features/TraineeNotes/TraineeNoteService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands", "LgymApi.Application.Coaching.Contracts.BackgroundCommands");
         yield return CreateCase("Features/Reporting/ReportingService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
         yield return CreateCase("Features/Reporting/ReportingService.Requests.cs", "LgymApi.Application.Reporting.Contracts.BackgroundCommands");
         yield return CreateCase("Features/Reporting/ReportingService.Submissions.cs", "LgymApi.Application.Reporting.Contracts.BackgroundCommands");
         yield return CreateCase("Features/Reporting/RecurringReportAssignmentService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands", "LgymApi.Application.Reporting.Contracts.BackgroundCommands");
         yield return CreateCase("Features/Reporting/IReportingServiceDependencies.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
         yield return CreateCase("Features/Reporting/IRecurringReportAssignmentServiceDependencies.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
-        yield return CreateCase("TrainerRelationships/TrainerRelationshipService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
-        yield return CreateCase("TrainerRelationships/TrainerRelationshipService.InvitationCreation.cs", "LgymApi.Application.Coaching.Contracts.BackgroundCommands");
-        yield return CreateCase("TrainerRelationships/TrainerRelationshipService.InvitationLifecycle.cs", "LgymApi.Application.Coaching.Contracts.BackgroundCommands");
-        yield return CreateCase("TrainerRelationships/TrainerRelationshipService.Links.cs", "LgymApi.Application.Coaching.Contracts.BackgroundCommands");
-        yield return CreateCase("TrainerRelationships/ITrainerRelationshipServiceDependencies.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
     }
 
     [TestCaseSource(nameof(ProducerContractCases))]

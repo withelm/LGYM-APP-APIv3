@@ -30,6 +30,12 @@ Reporting application ownership includes:
 
 Infrastructure implements the Reporting repository ports in `LgymApi.Infrastructure/Repositories/ReportingRepository.cs` and `LgymApi.Infrastructure/Repositories/RecurringReportAssignmentRepository.cs`. Reporting entity mappings remain under `LgymApi.Infrastructure/Data/Configurations/Reporting/`. Repositories stage changes only. Application services own authorization, transaction boundaries, and `IUnitOfWork.SaveChangesAsync()`.
 
+## Coaching Authorization Boundary
+
+Reporting and Recurring Reporting consume trainer status and active trainer-trainee relationship facts only through the published `ICoachingRelationshipAccessService`. Reporting owns the interpretation of those facts: a non-trainer retains the existing resource-backed Reporting forbidden error, while a trainer without the active relationship retains the existing Reporting not-found error. Trainee self-access for report photos remains a Reporting rule and bypasses the trainer relationship check.
+
+The access decision carries typed user IDs and booleans only. It exposes no Coaching entity, repository, persistence port, or private implementation. Reporting continues to own report and photo authorization, repository writes, unit-of-work commits, transactions, notification dispatch timing, and accepted-progress outbox staging.
+
 ## Evidence and Photo Lifecycle
 
 Reporting owns the business lifecycle for evidence attached to report requests and submissions. That lifecycle includes authorization, view-type normalization, upload-init tracking, generated storage-key conventions, declared size and MIME validation, completion-time object metadata checks, persisted `Photo` metadata, signed reads, history visibility, and cleanup of expired upload sessions.

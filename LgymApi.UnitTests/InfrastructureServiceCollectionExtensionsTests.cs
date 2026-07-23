@@ -1,10 +1,15 @@
 using FluentAssertions;
+using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.Application.Identity;
+using LgymApi.Application.Mapping;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Application.Options;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Notifications.Repositories;
@@ -14,6 +19,7 @@ using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Actions.Contracts;
+using LgymApi.BackgroundWorker.Notifications;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.TestUtils;
 using Microsoft.Extensions.Configuration;
@@ -237,7 +243,12 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
           var services = new ServiceCollection();
           var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
           {
-              ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+              ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
+              ["PhotoStorage:Provider"] = "CloudflareR2",
+              ["PhotoStorage:BucketName"] = "lgym-report-photos-dev",
+              ["PhotoStorage:Endpoint"] = "https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com",
+              ["PhotoStorage:AccessKeyId"] = "test-access-key",
+              ["PhotoStorage:SecretAccessKey"] = "test-secret-key"
           });
 
           services.AddLogging();
@@ -258,7 +269,12 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
           var services = new ServiceCollection();
           var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
           {
-              ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test"
+              ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
+              ["PhotoStorage:Provider"] = "CloudflareR2",
+              ["PhotoStorage:BucketName"] = "lgym-report-photos-dev",
+              ["PhotoStorage:Endpoint"] = "https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com",
+              ["PhotoStorage:AccessKeyId"] = "test-access-key",
+              ["PhotoStorage:SecretAccessKey"] = "test-secret-key"
           });
 
           services.AddNotificationsModule(configuration);
@@ -273,7 +289,7 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
 
        [TestCase(true)]
        [TestCase(false)]
-       public void FullHostComposition_RetainsApplicationNotificationBridge(bool isTesting)
+      public void FullHostComposition_RetainsApplicationNotificationBridge(bool isTesting)
       {
           var services = new ServiceCollection();
           var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
@@ -291,6 +307,39 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
               .ContainSingle()
               .Which;
            bridge.ImplementationType.Should().Be(typeof(NotificationEventBridge));
+      }
+
+      [TestCase(true, typeof(NoOpEmailBackgroundScheduler))]
+      [TestCase(false, typeof(HangfireEmailBackgroundScheduler))]
+      public void FullHostComposition_ResolvesCoachingEmailPortsExactlyOnce(
+          bool isTesting,
+          Type expectedBackgroundScheduler)
+      {
+          var services = new ServiceCollection();
+          var configuration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
+          {
+              ["ConnectionStrings:Postgres"] = "Host=localhost;Database=test;Username=test;Password=test",
+              ["PhotoStorage:Provider"] = "CloudflareR2",
+              ["PhotoStorage:BucketName"] = "lgym-report-photos-dev",
+              ["PhotoStorage:Endpoint"] = "https://38c1c25f99af223efee28a9afcf5d575.r2.cloudflarestorage.com",
+              ["PhotoStorage:AccessKeyId"] = "test-access-key",
+              ["PhotoStorage:SecretAccessKey"] = "test-secret-key"
+          });
+
+          services.AddLogging();
+          services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting);
+          services.AddNotificationsModule(configuration);
+          services.AddBackgroundWorkerServices(isTesting);
+
+          using var provider = services.BuildServiceProvider();
+          using var scope = provider.CreateScope();
+          var scopedServices = scope.ServiceProvider;
+
+          scopedServices.GetServices<ICoachingEmailNotificationFeature>().Should().ContainSingle()
+              .Which.Should().BeOfType<CoachingEmailNotificationSchedulerAdapter>();
+          scopedServices.GetServices<ICoachingEmailNotificationScheduler>().Should().ContainSingle()
+              .Which.Should().BeOfType<CoachingEmailNotificationSchedulerAdapter>();
+          scopedServices.GetRequiredService<IEmailBackgroundScheduler>().Should().BeOfType(expectedBackgroundScheduler);
       }
 
       [TestCaseSource(nameof(FullHostPushCompositionManifest))]
@@ -428,6 +477,9 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
          });
 
          services.AddLogging();
+         services.AddApplicationMapping(typeof(IMappingProfile).Assembly);
+         services.AddIdentityModule();
+         services.AddCoachingModule();
          services.AddInfrastructure(configuration, enableSensitiveLogging: false, isTesting: true);
          services.AddNotificationsModule(configuration);
          services.AddBackgroundWorkerServices(isTesting: true);

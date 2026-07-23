@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using LgymApi.Application.Notifications.Contracts.Events;
 
 namespace LgymApi.Application.Notifications;
 
@@ -8,6 +9,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<IInAppNotificationServiceDependencies, InAppNotificationServiceDependencies>();
         services.AddScoped<IInAppNotificationService, InAppNotificationService>();
+        services.AddScoped<ICoachingNotificationIntentService, CoachingNotificationIntentService>();
         services.AddScoped<IPushNotificationService, PushNotificationService>();
         services.AddScoped<IPushNotificationDeliveryServiceDependencies, PushNotificationDeliveryServiceDependencies>();
         services.AddScoped<IPushNotificationDeliveryService, PushNotificationDeliveryService>();

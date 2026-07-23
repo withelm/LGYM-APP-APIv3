@@ -14,9 +14,6 @@ public sealed class PaginationArchitectureGuardTests
     private static readonly Assembly InfrastructureAssembly =
         typeof(GridifyExecutionService).Assembly;
 
-    private static readonly string RepositorySourcePath = ResolveSourcePath(
-        "LgymApi.Infrastructure", "Repositories", "TrainerRelationshipRepository.cs");
-
     [Test]
     public void PaginationContracts_DoNotReferenceGridifyOrEfTypes()
     {
@@ -68,35 +65,6 @@ public sealed class PaginationArchitectureGuardTests
         efCoreReferences.Should().BeEmpty(
             "LgymApi.Application must not reference EF Core assemblies — " +
             "EF Core is an infrastructure concern");
-    }
-
-    [Test]
-    public void TrainerDashboardGridifyPagination_DoesNotMaterializeBeforePaging()
-    {
-        File.Exists(RepositorySourcePath).Should().BeTrue($"TrainerRelationshipRepository source not found at '{RepositorySourcePath}'.");
-
-        var sourceCode = File.ReadAllText(RepositorySourcePath);
-
-        var methodBody = ExtractMethodBody(sourceCode, "GetDashboardTraineesAsync");
-
-        methodBody.Should().NotBeNull(
-            "GetDashboardTraineesAsync method must exist in TrainerRelationshipRepository");
-
-        var gridifyCallIndex = methodBody!.IndexOf("_gridifyExecutionService.ExecuteAsync", StringComparison.Ordinal);
-        gridifyCallIndex.Should().BeGreaterThan(-1,
-            "GetDashboardTraineesAsync should delegate to GridifyExecutionService.ExecuteAsync");
-
-        var beforeGridify = methodBody[..gridifyCallIndex];
-
-        beforeGridify.Should().NotContain("ToListAsync",
-            "must not materialize query before passing to GridifyExecutionService — " +
-            "this was the old in-memory sorting anti-pattern");
-
-        beforeGridify.Should().NotContain("ToList()",
-            "must not materialize query synchronously before passing to GridifyExecutionService");
-
-        beforeGridify.Should().NotContain("ToArrayAsync",
-            "must not materialize query to array before passing to GridifyExecutionService");
     }
 
     [Test]
@@ -212,48 +180,4 @@ public sealed class PaginationArchitectureGuardTests
         }
     }
 
-    private static string? ExtractMethodBody(string sourceCode, string methodName)
-    {
-        var methodIndex = sourceCode.IndexOf(methodName, StringComparison.Ordinal);
-        if (methodIndex < 0) return null;
-
-        var braceStart = sourceCode.IndexOf('{', methodIndex);
-        if (braceStart < 0) return null;
-
-        var depth = 0;
-        for (var i = braceStart; i < sourceCode.Length; i++)
-        {
-            if (sourceCode[i] == '{') depth++;
-            else if (sourceCode[i] == '}') depth--;
-
-            if (depth == 0)
-            {
-                return sourceCode[braceStart..(i + 1)];
-            }
-        }
-
-        return null;
-    }
-
-    private static string ResolveSourcePath(params string[] pathSegments)
-    {
-        var repoRoot = ResolveRepositoryRoot();
-        return Path.Combine(new[] { repoRoot }.Concat(pathSegments).ToArray());
-    }
-
-    private static string ResolveRepositoryRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current != null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "LgymApi.sln")))
-            {
-                return current.FullName;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Unable to locate repository root (LgymApi.sln).");
-    }
 }

@@ -99,7 +99,7 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 - Keep the request flow: `Controller -> FluentValidation -> Application Service -> Repository -> Unit of Work -> Mapper -> Middleware`.
 - Keep controllers thin; business rules belong in Application services.
 - Keep repositories stage-only; services own `IUnitOfWork.SaveChangesAsync()` and transactions.
-- Use the custom mapper (`IMapper`, `IMappingProfile`, `MappingContext`), not AutoMapper.
+- Map between distinct layer models or results, including entities, application/read models, and DTOs, through registered custom `IMapper` mapping profiles (`IMapper`, `IMappingProfile`, `MappingContext`). AutoMapper, ad-hoc mapper implementations, and manual cross-layer mapping in controllers, services, or adapters are prohibited. Trivial scalar assignments without model transformation are allowed.
 - Use resource-backed messages from `LgymApi.Resources` for user-facing validation, errors, and emails.
 - Register Application services in `LgymApi.Application/ServiceCollectionExtensions.cs` and Infrastructure services and repositories in `LgymApi.Infrastructure/ServiceCollectionExtensions.cs`.
 - Application owns module-facing background command, password scheduling, push, and persisted-payload serialization contracts. It must not reference either Worker project or namespace.

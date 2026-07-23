@@ -1,6 +1,7 @@
 using FluentAssertions;
 using LgymApi.Application.Features.PasswordReset.Contracts;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker;
@@ -90,8 +91,13 @@ public sealed class CompositionRootConvergenceTests
         services.AddSingleton(registry);
         services.AddScoped(typeof(ICommandDispatcher), typeof(CommandDispatcher));
         services.AddScoped<IBackgroundActionResolver, BackgroundActionResolver>();
+        services.AddScoped<IEmailScheduler<InvitationEmailPayload>, EmailSchedulerService<InvitationEmailPayload>>();
+        services.AddScoped<IEmailScheduler<InvitationAcceptedEmailPayload>, EmailSchedulerService<InvitationAcceptedEmailPayload>>();
+        services.AddScoped<IEmailScheduler<InvitationRevokedEmailPayload>, EmailSchedulerService<InvitationRevokedEmailPayload>>();
         services.AddScoped<IEmailScheduler<PasswordRecoveryEmailPayload>, EmailSchedulerService<PasswordRecoveryEmailPayload>>();
         services.AddScoped<IPasswordRecoveryEmailScheduler, PasswordRecoveryEmailSchedulerAdapter>();
+        services.AddScoped<ICoachingEmailNotificationFeature, CoachingEmailNotificationSchedulerAdapter>();
+        services.AddScoped<ICoachingEmailNotificationScheduler, CoachingEmailNotificationSchedulerAdapter>();
         services.AddScoped<IPushProviderSender, FcmPushSender>();
 
         if (isTesting)
@@ -143,6 +149,16 @@ public sealed class CompositionRootConvergenceTests
             typeof(IPasswordRecoveryEmailScheduler),
             ServiceLifetime.Scoped,
             typeof(PasswordRecoveryEmailSchedulerAdapter));
+        ValidateSingleDescriptor(
+            services,
+            typeof(ICoachingEmailNotificationFeature),
+            ServiceLifetime.Scoped,
+            typeof(CoachingEmailNotificationSchedulerAdapter));
+        ValidateSingleDescriptor(
+            services,
+            typeof(ICoachingEmailNotificationScheduler),
+            ServiceLifetime.Scoped,
+            typeof(CoachingEmailNotificationSchedulerAdapter));
         ValidateSingleDescriptor(
             services,
             typeof(IPushBackgroundScheduler),

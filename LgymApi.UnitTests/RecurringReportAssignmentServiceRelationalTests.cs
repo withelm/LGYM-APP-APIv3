@@ -1,4 +1,5 @@
 using FluentAssertions;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -198,12 +199,10 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
 
     private static RecurringReportAssignmentService CreateService(AppDbContext db, ICommandDispatcher commandDispatcher)
     {
-        var roleRepository = Substitute.For<IRoleRepository>();
-        var trainerRelationshipRepository = Substitute.For<ITrainerRelationshipRepository>();
+        var relationshipAccess = Substitute.For<ICoachingRelationshipAccessService>();
 
         return new RecurringReportAssignmentService(new RecurringReportAssignmentServiceDependencies(
-            roleRepository,
-            trainerRelationshipRepository,
+            relationshipAccess,
             new ReportingRepository(db),
             new RecurringReportAssignmentRepository(db),
             commandDispatcher,

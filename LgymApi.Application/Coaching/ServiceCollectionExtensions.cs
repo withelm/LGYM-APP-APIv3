@@ -1,5 +1,41 @@
-using LgymApi.Application.Features.TraineeNotes;
-using LgymApi.Application.Features.TrainerRelationships;
+using LgymApi.Application.Coaching.Access;
+using LgymApi.Application.Coaching.Adapters;
+using LgymApi.Application.Coaching.Contracts.Access;
+using LgymApi.Application.Coaching.Contracts.Notifications;
+using LgymApi.Application.Coaching.Invitations.Create;
+using LgymApi.Application.Coaching.Invitations.CreateByEmail;
+using LgymApi.Application.Coaching.Invitations.List;
+using LgymApi.Application.Coaching.Invitations.ListPaginated;
+using LgymApi.Application.Coaching.Invitations.PublicStatus;
+using LgymApi.Application.Coaching.Invitations.Accept;
+using LgymApi.Application.Coaching.Invitations.Reject;
+using LgymApi.Application.Coaching.Invitations.Revoke;
+using LgymApi.Application.Coaching.ManagedPlans.Assign;
+using LgymApi.Application.Coaching.ManagedPlans.Create;
+using LgymApi.Application.Coaching.ManagedPlans.Delete;
+using LgymApi.Application.Coaching.ManagedPlans.GetActive;
+using LgymApi.Application.Coaching.ManagedPlans.List;
+using LgymApi.Application.Coaching.ManagedPlans.Unassign;
+using LgymApi.Application.Coaching.ManagedPlans.Update;
+using LgymApi.Application.Coaching.Relationships.DetachFromTrainer;
+using LgymApi.Application.Coaching.Relationships.GetCurrentTrainer;
+using LgymApi.Application.Coaching.Relationships.UnlinkTrainee;
+using LgymApi.Application.Coaching.Relationships.TrainerDashboard;
+using LgymApi.Application.Coaching.TraineeNotes.Create;
+using LgymApi.Application.Coaching.TraineeNotes.Delete;
+using LgymApi.Application.Coaching.TraineeNotes.History;
+using LgymApi.Application.Coaching.TraineeNotes.TrainerList;
+using LgymApi.Application.Coaching.TraineeNotes.Update;
+using LgymApi.Application.Coaching.TraineeNotes.VisibleList;
+using LgymApi.Application.Coaching.TraineeNotes.VisibleSingle;
+using LgymApi.Application.Coaching.Progress.TrainingDates;
+using LgymApi.Application.Coaching.Progress.TrainingByDate;
+using LgymApi.Application.Coaching.Progress.ExerciseScoresChart;
+using LgymApi.Application.Coaching.Progress.EloChart;
+using LgymApi.Application.Coaching.Progress.MainRecordsHistory;
+using LgymApi.Application.Coaching.Notifications;
+using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
+using LgymApi.Application.WorkoutProgress.Contracts.Measurements;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.Application.Coaching;
@@ -8,10 +44,41 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddCoachingModule(this IServiceCollection services)
     {
-        services.AddScoped<ITraineeNoteService, TraineeNoteService>();
-        services.AddScoped<ITrainerRelationshipServiceDependencies, TrainerRelationshipServiceDependencies>();
-        services.AddScoped<ITrainerRelationshipService, TrainerRelationshipService>();
-
+        services.AddScoped<ICoachingRelationshipAccessService, CoachingRelationshipAccessService>();
+        services.AddScoped<ICoachingNotificationReadService, CoachingNotificationReadService>();
+        services.AddScoped<ICreateInvitationUseCase, CreateInvitationUseCase>();
+        services.AddScoped<ICreateInvitationByEmailUseCase, CreateInvitationByEmailUseCase>();
+        services.AddScoped<IListInvitationsUseCase, ListInvitationsUseCase>();
+        services.AddScoped<IListPaginatedInvitationsUseCase, ListPaginatedInvitationsUseCase>();
+        services.AddScoped<IPublicInvitationStatusUseCase, PublicInvitationStatusUseCase>();
+        services.AddScoped<IAcceptInvitationUseCase, AcceptInvitationUseCase>();
+        services.AddScoped<IRejectInvitationUseCase, RejectInvitationUseCase>();
+        services.AddScoped<IRevokeInvitationUseCase, RevokeInvitationUseCase>();
+        services.AddScoped<IUnlinkTraineeUseCase, UnlinkTraineeUseCase>();
+        services.AddScoped<IDetachFromTrainerUseCase, DetachFromTrainerUseCase>();
+        services.AddScoped<IGetCurrentTrainerUseCase, GetCurrentTrainerUseCase>();
+        services.AddScoped<IGetTrainerDashboardUseCase, GetTrainerDashboardUseCase>();
+        services.AddScoped<IGetTrainingDatesUseCase, GetTrainingDatesUseCase>();
+        services.AddScoped<IGetTrainingByDateUseCase, GetTrainingByDateUseCase>();
+        services.AddScoped<IGetExerciseScoresChartUseCase, GetExerciseScoresChartUseCase>();
+        services.AddScoped<IGetEloChartUseCase, GetEloChartUseCase>();
+        services.AddScoped<IGetMainRecordsHistoryUseCase, GetMainRecordsHistoryUseCase>();
+        services.AddScoped<IListManagedPlansUseCase, ListManagedPlansUseCase>();
+        services.AddScoped<ICreateTraineeManagedPlanUseCase, CreateTraineeManagedPlanUseCase>();
+        services.AddScoped<IUpdateTraineeManagedPlanUseCase, UpdateTraineeManagedPlanUseCase>();
+        services.AddScoped<IDeleteTraineeManagedPlanUseCase, DeleteTraineeManagedPlanUseCase>();
+        services.AddScoped<IAssignTraineeManagedPlanUseCase, AssignTraineeManagedPlanUseCase>();
+        services.AddScoped<IUnassignTraineeManagedPlanUseCase, UnassignTraineeManagedPlanUseCase>();
+        services.AddScoped<IGetActiveManagedPlanUseCase, GetActiveManagedPlanUseCase>();
+        services.AddScoped<IListTrainerNotesUseCase, ListTrainerNotesUseCase>();
+        services.AddScoped<ICreateTraineeNoteUseCase, CreateTraineeNoteUseCase>();
+        services.AddScoped<IUpdateTraineeNoteUseCase, UpdateTraineeNoteUseCase>();
+        services.AddScoped<IDeleteTraineeNoteUseCase, DeleteTraineeNoteUseCase>();
+        services.AddScoped<IGetTraineeNoteHistoryUseCase, GetTraineeNoteHistoryUseCase>();
+        services.AddScoped<IListVisibleTraineeNotesUseCase, ListVisibleTraineeNotesUseCase>();
+        services.AddScoped<IGetVisibleTraineeNoteUseCase, GetVisibleTraineeNoteUseCase>();
+        services.AddScoped<IPlanDayRelationshipAccessPort, PlanDayRelationshipAccessAdapter>();
+        services.AddScoped<IMeasurementsRelationshipAccessPort, MeasurementsRelationshipAccessAdapter>();
         return services;
     }
 }

@@ -2,8 +2,9 @@ using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Features.TraineeNotes;
-using LgymApi.Application.Features.TraineeNotes.Models;
+using LgymApi.Application.Coaching.TraineeNotes.Models;
+using LgymApi.Application.Coaching.TraineeNotes.VisibleList;
+using LgymApi.Application.Coaching.TraineeNotes.VisibleSingle;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 using LgymApi.Resources;
@@ -17,12 +18,17 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 [Authorize]
 public sealed class TraineeNotesController : ControllerBase
 {
-    private readonly ITraineeNoteService _traineeNoteService;
+    private readonly IListVisibleTraineeNotesUseCase _listNotes;
+    private readonly IGetVisibleTraineeNoteUseCase _getNote;
     private readonly IMapper _mapper;
 
-    public TraineeNotesController(ITraineeNoteService traineeNoteService, IMapper mapper)
+    public TraineeNotesController(
+        IListVisibleTraineeNotesUseCase listNotes,
+        IGetVisibleTraineeNoteUseCase getNote,
+        IMapper mapper)
     {
-        _traineeNoteService = traineeNoteService;
+        _listNotes = listNotes;
+        _getNote = getNote;
         _mapper = mapper;
     }
 
@@ -31,8 +37,8 @@ public sealed class TraineeNotesController : ControllerBase
     public async Task<IActionResult> GetVisibleNotes(CancellationToken cancellationToken = default)
     {
         var trainee = HttpContext.GetCurrentUser();
-        var result = await _traineeNoteService.GetVisibleNotesAsync(trainee!, cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.MapList<TraineeNoteResult, TraineeNoteDto>(result.Value));
+        var result = await _listNotes.ExecuteAsync(new ListVisibleTraineeNotesQuery(trainee!.Id), cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.MapList<TraineeNoteReadModel, TraineeNoteDto>(result.Value));
     }
 
     [HttpGet("notes/{noteId}")]
@@ -45,7 +51,7 @@ public sealed class TraineeNotesController : ControllerBase
         }
 
         var trainee = HttpContext.GetCurrentUser();
-        var result = await _traineeNoteService.GetVisibleNoteAsync(trainee!, parsedNoteId, cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<TraineeNoteResult, TraineeNoteDto>(result.Value));
+        var result = await _getNote.ExecuteAsync(new GetVisibleTraineeNoteQuery(trainee!.Id, parsedNoteId), cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<TraineeNoteReadModel, TraineeNoteDto>(result.Value));
     }
 }

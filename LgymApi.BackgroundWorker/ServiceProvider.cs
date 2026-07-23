@@ -11,6 +11,7 @@ using LgymApi.Application.Features.PasswordReset.Contracts;
 using LgymApi.Infrastructure.Jobs;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.BackgroundWorker.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,6 +76,8 @@ public static class ServiceProvider
         services.AddScoped<IEmailScheduler<WelcomeEmailPayload>, EmailSchedulerService<WelcomeEmailPayload>>();
         services.AddScoped<IEmailScheduler<PasswordRecoveryEmailPayload>, EmailSchedulerService<PasswordRecoveryEmailPayload>>();
         services.AddScoped<IPasswordRecoveryEmailScheduler, PasswordRecoveryEmailSchedulerAdapter>();
+        services.AddScoped<ICoachingEmailNotificationFeature, CoachingEmailNotificationSchedulerAdapter>();
+        services.AddScoped<ICoachingEmailNotificationScheduler, CoachingEmailNotificationSchedulerAdapter>();
         services.AddScoped<IEmailJobHandler, EmailJobHandlerService>();
         services.AddScoped<ApplicationCommandDispatcher, CommandDispatcher>();
         services.AddScoped<ApplicationCommandOutboxWriter, CommandOutboxWriter>();

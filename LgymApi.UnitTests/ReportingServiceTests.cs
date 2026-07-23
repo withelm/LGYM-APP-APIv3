@@ -4,6 +4,7 @@ using FluentValidation.TestHelper;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Validation;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
@@ -897,13 +898,24 @@ public sealed class ReportingServiceTests
     public async Task UpdateTrainerFeedbackAsync_WhenOwnershipFails_ReturnsFailure()
     {
         var trainerId = Id<User>.New();
-        var result = await CreateReportingService(userHasTrainerRole: false).UpdateTrainerFeedbackAsync(
+        var submissionLookupCalled = false;
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainer: (_, _, _, _) =>
+            {
+                submissionLookupCalled = true;
+                return Task.FromResult<ReportSubmission?>(null);
+            },
+            userHasTrainerRole: false);
+
+        var result = await service.UpdateTrainerFeedbackAsync(
             CreateUser(trainerId),
             Id<User>.New(),
             Id<ReportSubmission>.New(),
             new UpdateReportSubmissionFeedbackCommand());
 
         result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingForbiddenError>();
+        submissionLookupCalled.Should().BeFalse();
     }
 
     [Test]
@@ -1331,9 +1343,9 @@ public sealed class ReportingServiceTests
         var roleRepository = Substitute.For<IRoleRepository>();
         roleRepository.UserHasRoleAsync(Arg.Any<Id<User>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(userHasTrainerRole);
-        var trainerRelationshipRepository = Substitute.For<ITrainerRelationshipRepository>();
-        trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
-            .Returns(hasActiveTrainerLink ? new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() } : null);
+        var relationshipAccess = Substitute.For<ICoachingRelationshipAccessService>();
+        relationshipAccess.GetAccessDecisionAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns(new CoachingRelationshipAccessDecision(userHasTrainerRole, hasActiveTrainerLink));
         var recurringRepository = Substitute.For<IRecurringReportAssignmentRepository>();
 
         if (recurringAssignmentByRequestId != null)
@@ -1349,7 +1361,7 @@ public sealed class ReportingServiceTests
         dependencies.CommandOutboxWriter.Returns(commandOutboxWriter);
         dependencies.ReportSubmissionAcceptedProgressCommandFactory.Returns(new ReportSubmissionAcceptedProgressCommandFactory());
         dependencies.RoleRepository.Returns(roleRepository);
-        dependencies.TrainerRelationshipRepository.Returns(trainerRelationshipRepository);
+        dependencies.CoachingRelationshipAccessService.Returns(relationshipAccess);
         dependencies.RecurringReportAssignmentRepository.Returns(recurringRepository);
         dependencies.PhotoStorageProvider.Returns(Substitute.For<IPhotoStorageProvider>());
         dependencies.PhotoUploadInitTracker.Returns(uploadInitTracker);

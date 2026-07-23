@@ -1,15 +1,12 @@
 using FluentAssertions;
-using LgymApi.Application.Common.Errors;
-using LgymApi.Application.Common.Results;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
-using LgymApi.BackgroundWorker.Actions;
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.Application.Common.Errors;
+using LgymApi.Application.Notifications.Contracts.Events;
+using LgymApi.BackgroundWorker.Actions;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Resources;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests.InAppNotifications;
@@ -18,57 +15,56 @@ namespace LgymApi.UnitTests.InAppNotifications;
 public sealed class TrainerInvitationAcceptedInAppNotificationCommandHandlerTests
 {
     [Test]
-    public async Task ExecuteAsync_Success_CreatesExpectedNotification()
+    public async Task ExecuteAsync_SubmitsTheExactInAppIntent()
     {
-        var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Success(CreateResult()));
-        var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>.Instance);
-        var command = new TrainerInvitationAcceptedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() };
+        var command = new TrainerInvitationAcceptedInAppNotificationCommand
+        {
+            InvitationId = Id<TrainerInvitation>.New(),
+            TrainerId = Id<User>.New(),
+            TraineeId = Id<User>.New(),
+        };
+        var intents = Substitute.For<ICoachingNotificationIntentService>();
+        CoachingNotificationIntent? submittedIntent = null;
+        intents.SubmitAsync(Arg.Any<CoachingNotificationIntent>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                submittedIntent = call.Arg<CoachingNotificationIntent>();
+                return Task.FromResult(new CoachingNotificationIntentResult(null, null));
+            });
+        var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(
+            intents,
+            Substitute.For<ILogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>>());
 
         await handler.ExecuteAsync(command);
 
-        service.Calls.Should().Be(1);
-        service.LastInput!.RecipientId.Should().Be(command.TrainerId);
-        service.LastInput.SenderUserId.Should().Be(command.TraineeId);
-        service.LastInput.DeliveryKey.Should().Be($"trainer-invitation:{command.InvitationId}:accepted");
-        service.LastInput.IsSystemNotification.Should().BeFalse();
-        service.LastInput.Message.Should().Be(Messages.TrainerInvitationAccepted);
-        service.LastInput.RedirectUrl.Should().Be($"/trainer/members/{command.TraineeId}");
-        service.LastInput.Type.Should().Be(InAppNotificationTypes.InvitationAccepted);
+        submittedIntent.Should().BeEquivalentTo(new InvitationAcceptedCoachingNotificationIntent(
+            CoachingNotificationLegacyChannel.InApp,
+            command.InvitationId,
+            command.TrainerId,
+            command.TraineeId,
+            null,
+            null));
     }
 
     [Test]
-    public async Task ExecuteAsync_Failure_StillInvokesService()
+    public async Task ExecuteAsync_WhenInAppDeliveryFails_LogsAnError()
     {
-        var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Failure(new BadRequestError("boom")));
-        var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(service, NullLogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>.Instance);
+        var intents = Substitute.For<ICoachingNotificationIntentService>();
+        var logger = Substitute.For<ILogger<TrainerInvitationAcceptedInAppNotificationCommandHandler>>();
+        intents.SubmitAsync(Arg.Any<CoachingNotificationIntent>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CoachingNotificationIntentResult(null, new BadRequestError("boom"))));
+        var handler = new TrainerInvitationAcceptedInAppNotificationCommandHandler(intents, logger);
 
-        await handler.ExecuteAsync(new TrainerInvitationAcceptedInAppNotificationCommand { InvitationId = Id<TrainerInvitation>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() });
-
-        service.Calls.Should().Be(1);
-    }
-
-    private static InAppNotificationResult CreateResult()
-        => new(Id<InAppNotification>.New(), Id<User>.New(), "message", null, false, InAppNotificationTypes.InvitationAccepted, false, null, DateTimeOffset.UtcNow);
-
-    private sealed class FakeNotificationService : IInAppNotificationService
-    {
-        private readonly Result<InAppNotificationResult, AppError> _result;
-
-        public FakeNotificationService(Result<InAppNotificationResult, AppError> result) => _result = result;
-
-        public int Calls { get; private set; }
-        public CreateInAppNotificationInput? LastInput { get; private set; }
-
-        public Task<Result<InAppNotificationResult, AppError>> CreateAsync(CreateInAppNotificationInput input, CancellationToken cancellationToken = default)
+        await handler.ExecuteAsync(new TrainerInvitationAcceptedInAppNotificationCommand
         {
-            Calls++;
-            LastInput = input;
-            return Task.FromResult(_result);
-        }
+            InvitationId = Id<TrainerInvitation>.New(),
+            TrainerId = Id<User>.New(),
+            TraineeId = Id<User>.New(),
+        });
 
-        public Task<Result<PagedResult<InAppNotificationResult>, AppError>> GetForUserAsync(Id<User> userId, CursorPaginationQuery query, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<Unit, AppError>> MarkAsReadAsync(Id<InAppNotification> notificationId, Id<User> requestingUserId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<Unit, AppError>> MarkAllAsReadAsync(Id<User> userId, DateTimeOffset? before, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<int, AppError>> GetUnreadCountAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        ErrorLogCount(logger).Should().Be(1);
     }
+
+    private static int ErrorLogCount<THandler>(ILogger<THandler> logger)
+        => logger.ReceivedCalls().Count(call => call.GetArguments()[0] is LogLevel.Error);
 }

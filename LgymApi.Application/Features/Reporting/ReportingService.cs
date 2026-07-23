@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Globalization;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
@@ -20,7 +21,7 @@ namespace LgymApi.Application.Features.Reporting;
 public sealed partial class ReportingService : IReportingService
 {
     private readonly IRoleRepository _roleRepository;
-    private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly ICoachingRelationshipAccessService _coachingRelationshipAccessService;
     private readonly IReportingRepository _reportingRepository;
     private readonly IRecurringReportAssignmentRepository _recurringReportAssignmentRepository;
     private readonly IReportSubmissionAcceptedProgressCommandFactory _reportSubmissionAcceptedProgressCommandFactory;
@@ -35,7 +36,7 @@ public sealed partial class ReportingService : IReportingService
     public ReportingService(IReportingServiceDependencies dependencies)
     {
         _roleRepository = dependencies.RoleRepository;
-        _trainerRelationshipRepository = dependencies.TrainerRelationshipRepository;
+        _coachingRelationshipAccessService = dependencies.CoachingRelationshipAccessService;
         _reportingRepository = dependencies.ReportingRepository;
         _recurringReportAssignmentRepository = dependencies.RecurringReportAssignmentRepository;
         _reportSubmissionAcceptedProgressCommandFactory = dependencies.ReportSubmissionAcceptedProgressCommandFactory;
@@ -61,10 +62,13 @@ public sealed partial class ReportingService : IReportingService
 
     private async Task<Result<Unit, AppError>> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
     {
-        var trainerCheck = await EnsureTrainerAsync(currentTrainer, cancellationToken);
-        if (trainerCheck.IsFailure)
+        var access = await _coachingRelationshipAccessService.GetAccessDecisionAsync(
+            currentTrainer.Id,
+            traineeId,
+            cancellationToken);
+        if (!access.IsTrainer)
         {
-            return Result<Unit, AppError>.Failure(trainerCheck.Error);
+            return Result<Unit, AppError>.Failure(new ReportingForbiddenError(Messages.TrainerRoleRequired));
         }
 
         if (traineeId.IsEmpty)
@@ -72,8 +76,7 @@ public sealed partial class ReportingService : IReportingService
             return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.UserIdRequired));
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
-        if (link == null)
+        if (!access.HasActiveRelationship)
         {
             return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }

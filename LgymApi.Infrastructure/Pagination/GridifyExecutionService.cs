@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Gridify;
 using LgymApi.Application.Pagination;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace LgymApi.Infrastructure.Pagination;
 
@@ -49,7 +50,10 @@ public sealed class GridifyExecutionService : IGridifyExecutionService
             query = query.ApplyFiltering(filter, gridifyMapper);
         }
 
-        var totalCount = await query.CountAsync(cancellationToken);
+        var supportsAsyncQuery = query.Provider is IAsyncQueryProvider;
+        var totalCount = supportsAsyncQuery
+            ? await query.CountAsync(cancellationToken)
+            : query.Count();
 
         var (queryWithEnumOrdering, remainingOrderBy) = ApplyEnumOrdering(
             query, normalizedInput.SortDescriptors, mappings);
@@ -62,7 +66,9 @@ public sealed class GridifyExecutionService : IGridifyExecutionService
 
         query = query.ApplyPaging(normalizedInput.Page, normalizedInput.PageSize);
 
-        var items = await query.ToListAsync(cancellationToken);
+        var items = supportsAsyncQuery
+            ? await query.ToListAsync(cancellationToken)
+            : query.ToList();
 
         return new Pagination<TProjection>
         {
