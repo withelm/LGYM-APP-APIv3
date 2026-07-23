@@ -5,8 +5,9 @@ using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands;
+using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Services;
@@ -21,7 +22,7 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class TrainingServiceAddTrainingTests
 {
-    private ITrainingServiceDependencies _deps = null!;
+    private ICompleteTrainingUseCaseDependencies _deps = null!;
     private IUserRepository _userRepository = null!;
     private IGymRepository _gymRepository = null!;
     private ITrainingRepository _trainingRepository = null!;
@@ -32,7 +33,7 @@ public sealed class TrainingServiceAddTrainingTests
     private IEloRegistryRepository _eloRepository = null!;
     private IRankService _rankService = null!;
     private IUnitOfWork _unitOfWork = null!;
-    private TrainingService _service = null!;
+    private ICompleteTrainingUseCase _service = null!;
 
     [SetUp]
     public void SetUp()
@@ -48,7 +49,7 @@ public sealed class TrainingServiceAddTrainingTests
         _rankService = Substitute.For<IRankService>();
         _unitOfWork = Substitute.For<IUnitOfWork>();
 
-        _deps = Substitute.For<ITrainingServiceDependencies>();
+        _deps = Substitute.For<ICompleteTrainingUseCaseDependencies>();
         _deps.UserRepository.Returns(_userRepository);
         _deps.GymRepository.Returns(_gymRepository);
         _deps.TrainingRepository.Returns(_trainingRepository);
@@ -67,7 +68,7 @@ public sealed class TrainingServiceAddTrainingTests
             new PullupWeightedExerciseEloCalculator()
         });
 
-        _service = new TrainingService(_deps);
+        _service = new CompleteTrainingUseCase(_deps);
     }
 
     [Test]
@@ -113,7 +114,7 @@ public sealed class TrainingServiceAddTrainingTests
             .Returns((EloRegistry?)null);
 
         // Act
-        var result = await _service.AddTrainingAsync(userId, input);
+        var result = await _service.AddTrainingAsync(userId, ToCompleteInput(input));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -135,7 +136,7 @@ public sealed class TrainingServiceAddTrainingTests
              .Throws(new InvalidOperationException("Database connection failed"));
 
          // Act & Assert
-         var action = () => _service.AddTrainingAsync(userId, input);
+         var action = () => _service.AddTrainingAsync(userId, ToCompleteInput(input));
          var ex = await action.Should().ThrowAsync<InvalidOperationException>();
          ex.And.Message.Should().Be("Database connection failed");
      }
@@ -151,7 +152,7 @@ public sealed class TrainingServiceAddTrainingTests
         var input = new AddTrainingInput(gymId, planDayId, DateTime.UtcNow, new List<TrainingExerciseInput>());
 
         // Act
-        var result = await _service.AddTrainingAsync(emptyUserId, input);
+        var result = await _service.AddTrainingAsync(emptyUserId, ToCompleteInput(input));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -169,7 +170,7 @@ public sealed class TrainingServiceAddTrainingTests
         var input = new AddTrainingInput(emptyGymId, planDayId, DateTime.UtcNow, new List<TrainingExerciseInput>());
 
         // Act
-        var result = await _service.AddTrainingAsync(userId, input);
+        var result = await _service.AddTrainingAsync(userId, ToCompleteInput(input));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -187,7 +188,7 @@ public sealed class TrainingServiceAddTrainingTests
         var input = new AddTrainingInput(gymId, emptyPlanDayId, DateTime.UtcNow, new List<TrainingExerciseInput>());
 
         // Act
-        var result = await _service.AddTrainingAsync(userId, input);
+        var result = await _service.AddTrainingAsync(userId, ToCompleteInput(input));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -234,7 +235,7 @@ public sealed class TrainingServiceAddTrainingTests
             .Returns(transaction);
 
         // Act
-        var result = await _service.AddTrainingAsync(userId, input);
+        var result = await _service.AddTrainingAsync(userId, ToCompleteInput(input));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -296,12 +297,20 @@ public sealed class TrainingServiceAddTrainingTests
             .Returns(new List<ExerciseScore> { previousScore });
         _eloRepository.GetLatestEntryAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
             .Returns(new EloRegistry { Id = Id<EloRegistry>.New(), UserId = userId, Date = DateTimeOffset.UtcNow, Elo = 1000 });
+        var operationOrder = new List<string>();
+        _commandDispatcher.EnqueueAsync(Arg.Any<TrainingCompletedCommand>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => operationOrder.Add("enqueue"));
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(1))
+            .AndDoes(_ => operationOrder.Add("commit"));
+
         async Task<int> RunProfileAsync(ExerciseEloFormula formula)
         {
             var transaction = Substitute.For<IUnitOfWorkTransaction>();
             _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
                 .Returns(transaction);
-            var service = new TrainingService(new SuccessfulTrainingServiceDependencies(
+            var service = new CompleteTrainingUseCase(new SuccessfulTrainingServiceDependencies(
                 _userRepository,
                 _gymRepository,
                 _trainingRepository,
@@ -341,12 +350,7 @@ public sealed class TrainingServiceAddTrainingTests
                 .Returns(Task.CompletedTask);
             _userRepository.UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
                 .Returns(Task.CompletedTask);
-            _commandDispatcher.EnqueueAsync(Arg.Any<TrainingCompletedCommand>())
-                .Returns(Task.CompletedTask);
-            _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-                .Returns(Task.FromResult(1));
-
-            var result = await service.AddTrainingAsync(userId, input);
+            var result = await service.AddTrainingAsync(userId, ToCompleteInput(input));
 
             result.IsSuccess.Should().BeTrue();
             await transaction.Received(1).CommitAsync(Arg.Any<CancellationToken>());
@@ -359,6 +363,9 @@ public sealed class TrainingServiceAddTrainingTests
 
         strengthGain.Should().BeLessThan(standardGain);
         standardGain.Should().BeLessThan(volumeGain);
+        await _commandDispatcher.Received(3).EnqueueAsync(Arg.Is<TrainingCompletedCommand>(command =>
+            command.UserId == userId && !command.TrainingId.IsEmpty));
+        operationOrder.Should().Equal("enqueue", "commit", "enqueue", "commit", "enqueue", "commit");
     }
 
     [Test]
@@ -393,7 +400,10 @@ public sealed class TrainingServiceAddTrainingTests
                 : null;
     }
 
-    private sealed class SuccessfulTrainingServiceDependencies : ITrainingServiceDependencies
+    private static CompleteTrainingInput ToCompleteInput(AddTrainingInput input)
+        => new(input.GymId, input.PlanDayId, input.CreatedAt, input.Exercises);
+
+    private sealed class SuccessfulTrainingServiceDependencies : ICompleteTrainingUseCaseDependencies
     {
         public SuccessfulTrainingServiceDependencies(
             IUserRepository userRepository,

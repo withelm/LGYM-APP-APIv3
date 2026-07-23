@@ -2,14 +2,16 @@ using LgymApi.Domain.ValueObjects;
 using System.Text.Json;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Serialization;
+using LgymApi.BackgroundWorker.Actions.Contracts;
+using LgymApi.BackgroundWorker.Runtime;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 using FluentAssertions;
+using ApplicationActionCommand = LgymApi.Application.Platform.Contracts.BackgroundCommands.IActionCommand;
 
 namespace LgymApi.UnitTests;
 
@@ -28,12 +30,34 @@ public sealed class BackgroundActionOrchestratorTests
     private FakeCommandEnvelopeRepository _repository = null!;
     private FakeUnitOfWork _unitOfWork = null!;
     private Microsoft.Extensions.DependencyInjection.ServiceProvider _serviceProvider = null!;
+    private CommandContractRegistry _commandContractRegistry = null!;
 
     [SetUp]
     public void SetUp()
     {
         _repository = new FakeCommandEnvelopeRepository();
         _unitOfWork = new FakeUnitOfWork();
+        _commandContractRegistry = CommandContractRegistry.CreateForTesting(
+        [
+            new CommandContract(
+                "Tests.BackgroundActionOrchestrator.TestCommand",
+                typeof(TestCommand),
+                typeof(TestCommand).FullName!,
+                [
+                    typeof(TestActionHandler1),
+                    typeof(TestActionHandler2),
+                    typeof(TestActionHandlerSuccess),
+                    typeof(TestActionHandlerFailure),
+                    typeof(ScopeAwareHandler),
+                    typeof(ConcurrencyTestHandler),
+                    typeof(CancellationAwareHandler)
+                ]),
+            new CommandContract(
+                "Tests.BackgroundActionOrchestrator.DerivedTestCommand",
+                typeof(DerivedTestCommand),
+                typeof(DerivedTestCommand).FullName!,
+                [typeof(DerivedTestActionHandler)])
+        ]);
     }
 
     [TearDown]
@@ -229,6 +253,65 @@ public sealed class BackgroundActionOrchestratorTests
     }
 
     [Test]
+    public async Task OrchestrateAsync_CancelledBeforeHandlerExecution_RecordsRecoverableFailure()
+    {
+        var envelopeId = Id<CommandEnvelope>.New();
+        var envelope = CreateEnvelope(envelopeId, new TestCommand { Value = "cancelled" });
+        _repository.AddEnvelope(envelope);
+        var services = new ServiceCollection();
+        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
+        services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
+        _serviceProvider = services.BuildServiceProvider();
+        var orchestrator = CreateOrchestrator();
+        using var cancellationSource = new CancellationTokenSource();
+        cancellationSource.Cancel();
+
+        var action = () => orchestrator.OrchestrateAsync(envelopeId, cancellationSource.Token);
+
+        await action.Should().ThrowAsync<OperationCanceledException>();
+        envelope.Status.Should().Be(ActionExecutionStatus.Failed);
+        envelope.ProcessingStartedAtUtc.Should().BeNull();
+        envelope.NextAttemptAt.Should().NotBeNull();
+        envelope.ExecutionLogs.Should().ContainSingle(log =>
+            log.ActionType == ActionExecutionLogType.Execute
+            && log.Status == ActionExecutionStatus.Failed
+            && log.ErrorMessage == "Command orchestration was cancelled.");
+        _repository.UpdateCallCount.Should().Be(2);
+        _unitOfWork.SaveCallCount.Should().Be(2);
+    }
+
+    [Test]
+    public async Task OrchestrateAsync_CancelledDuringHandlerExecution_PropagatesAndRecordsRecoverableFailure()
+    {
+        var envelopeId = Id<CommandEnvelope>.New();
+        var envelope = CreateEnvelope(envelopeId, new TestCommand { Value = "in-flight-cancelled" });
+        _repository.AddEnvelope(envelope);
+        var handlerStarted = new HandlerStartedSignal();
+        var services = new ServiceCollection();
+        services.AddSingleton(handlerStarted);
+        services.AddScoped<IBackgroundAction<TestCommand>, CancellationAwareHandler>();
+        services.AddSingleton<ILogger<BackgroundActionOrchestratorService>>(_ => new FakeLogger());
+        _serviceProvider = services.BuildServiceProvider();
+        var orchestrator = CreateOrchestrator();
+        using var cancellationSource = new CancellationTokenSource();
+
+        var orchestration = orchestrator.OrchestrateAsync(envelopeId, cancellationSource.Token);
+        await handlerStarted.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        cancellationSource.Cancel();
+
+        await FluentActions.Invoking(async () => await orchestration)
+            .Should().ThrowAsync<OperationCanceledException>();
+        envelope.Status.Should().Be(ActionExecutionStatus.Failed);
+        envelope.NextAttemptAt.Should().NotBeNull();
+        envelope.ExecutionLogs.Should().ContainSingle(log =>
+            log.ActionType == ActionExecutionLogType.Execute
+            && log.Status == ActionExecutionStatus.Failed
+            && log.ErrorMessage == "Command orchestration was cancelled.");
+        _repository.UpdateTokens.Last().Should().Be(CancellationToken.None);
+        _unitOfWork.SaveTokens.Last().Should().Be(CancellationToken.None);
+    }
+
+    [Test]
     public async Task OrchestrateAsync_AlreadyCompleted_SkipsDuplicate()
     {
         // Arrange
@@ -278,6 +361,9 @@ public sealed class BackgroundActionOrchestratorTests
 
         // Assert
         envelope.Status.Should().Be(ActionExecutionStatus.DeadLettered);
+        envelope.ExecutionLogs.Should().Contain(log =>
+            log.ActionType == ActionExecutionLogType.DeadLetter
+            && log.ErrorMessage == "Dead-lettered because command ID could not be resolved");
     }
 
     [Test]
@@ -290,7 +376,7 @@ public sealed class BackgroundActionOrchestratorTests
             Id = (LgymApi.Domain.ValueObjects.Id<CommandEnvelope>)envelopeId,
             CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = "{invalid json",
-            CommandTypeFullName = typeof(TestCommand).AssemblyQualifiedName!,
+            CommandTypeFullName = _commandContractRegistry.DescribeForWrite(typeof(TestCommand)).CanonicalId,
             Status = ActionExecutionStatus.Pending
         };
         _repository.AddEnvelope(envelope);
@@ -401,7 +487,7 @@ public sealed class BackgroundActionOrchestratorTests
 
 
     [Test]
-    public async Task OrchestrateAsync_FullNameTypeResolution_ResolvesWithoutAssemblyQualifiedName()
+    public async Task OrchestrateAsync_ReadAliasResolution_ResolvesWithoutAssemblyQualifiedName()
     {
         // Arrange: Use FullName only (no assembly qualification)
          var envelopeId = Id<CommandEnvelope>.New();
@@ -421,8 +507,29 @@ public sealed class BackgroundActionOrchestratorTests
         // Act
          await orchestrator.OrchestrateAsync(envelopeId);
 
-        // Assert: Should resolve successfully using CommandDescriptor.ResolveCommandType
+        // Assert: The read alias resolves through the closed registry.
         envelope.Status.Should().Be(ActionExecutionStatus.Completed, "FullName-only type resolution should succeed");
+    }
+
+    [Test]
+    public async Task OrchestrateAsync_ReadAlias_LogsOnlyCanonicalCommandId()
+    {
+        var envelopeId = Id<CommandEnvelope>.New();
+        var envelope = CreateEnvelope(envelopeId, new TestCommand { Value = "canonical-log" });
+        envelope.CommandTypeFullName = typeof(TestCommand).FullName!;
+        _repository.AddEnvelope(envelope);
+
+        var services = new ServiceCollection();
+        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
+        _serviceProvider = services.BuildServiceProvider();
+        var logger = new FakeLogger();
+
+        await CreateOrchestrator(logger).OrchestrateAsync(envelopeId);
+
+        logger.Messages.Should().Contain(message =>
+            message.Contains("Tests.BackgroundActionOrchestrator.TestCommand", StringComparison.Ordinal));
+        logger.Messages.Should().NotContain(message =>
+            message.Contains(typeof(TestCommand).FullName!, StringComparison.Ordinal));
     }
 
     [Test]
@@ -567,24 +674,25 @@ public sealed class BackgroundActionOrchestratorTests
         failedLog.ErrorDetails.Should().Contain("at ", "Should contain stack trace");
     }
 
-    private BackgroundActionOrchestratorService CreateOrchestrator()
+    private BackgroundActionOrchestratorService CreateOrchestrator(FakeLogger? logger = null)
     {
         return new BackgroundActionOrchestratorService(
-            _serviceProvider,
+            new BackgroundActionResolver(_serviceProvider.GetRequiredService<IServiceScopeFactory>()),
+            _commandContractRegistry,
             _repository,
             _unitOfWork,
-            new FakeLogger());
+            logger ?? new FakeLogger());
     }
 
-    private static CommandEnvelope CreateEnvelope<TCommand>(Id<CommandEnvelope> envelopeId, TCommand command)
-        where TCommand : IActionCommand
+    private CommandEnvelope CreateEnvelope<TCommand>(Id<CommandEnvelope> envelopeId, TCommand command)
+        where TCommand : ApplicationActionCommand
     {
         return new CommandEnvelope
         {
             Id = envelopeId,
             CorrelationId = Id<CorrelationScope>.New(),
             PayloadJson = JsonSerializer.Serialize(command, SharedSerializationOptions.Current),
-            CommandTypeFullName = typeof(TCommand).AssemblyQualifiedName!,
+            CommandTypeFullName = _commandContractRegistry.DescribeForWrite(typeof(TCommand)).CanonicalId,
             Status = ActionExecutionStatus.Pending
         };
     }
@@ -602,7 +710,7 @@ public sealed class BackgroundActionOrchestratorTests
     }
 
     // Test command and handlers
-    private class TestCommand : IActionCommand
+    private class TestCommand : ApplicationActionCommand
     {
         public string Value { get; set; } = string.Empty;
     }
@@ -610,6 +718,12 @@ public sealed class BackgroundActionOrchestratorTests
     private class DerivedTestCommand : TestCommand
     {
         public int Extra { get; set; }
+    }
+
+    private sealed class DerivedTestActionHandler : IBackgroundAction<DerivedTestCommand>
+    {
+        public Task ExecuteAsync(DerivedTestCommand command, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private class TestActionHandler1 : IBackgroundAction<TestCommand>
@@ -716,11 +830,33 @@ public sealed class BackgroundActionOrchestratorTests
         }
     }
 
+    private sealed class HandlerStartedSignal
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private sealed class CancellationAwareHandler : IBackgroundAction<TestCommand>
+    {
+        private readonly HandlerStartedSignal _handlerStarted;
+
+        public CancellationAwareHandler(HandlerStartedSignal handlerStarted)
+        {
+            _handlerStarted = handlerStarted;
+        }
+
+        public async Task ExecuteAsync(TestCommand command, CancellationToken cancellationToken = default)
+        {
+            _handlerStarted.Started.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        }
+    }
+
     // Fake implementations for testing
-     private sealed class FakeCommandEnvelopeRepository : ICommandEnvelopeRepository
-     {
+      private sealed class FakeCommandEnvelopeRepository : ICommandEnvelopeRepository
+      {
          private readonly Dictionary<Id<CommandEnvelope>, CommandEnvelope> _envelopes = new();
         public int UpdateCallCount { get; private set; }
+        public List<CancellationToken> UpdateTokens { get; } = [];
 
         public void AddEnvelope(CommandEnvelope envelope)
         {
@@ -754,8 +890,11 @@ public sealed class BackgroundActionOrchestratorTests
         public Task UpdateAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
         {
             UpdateCallCount++;
+            UpdateTokens.Add(cancellationToken);
             return Task.CompletedTask;
         }
+
+        public void Detach(CommandEnvelope envelope) { }
 
         public Task<CommandEnvelope> AddOrGetExistingAsync(CommandEnvelope envelope, CancellationToken cancellationToken = default)
         {
@@ -800,10 +939,12 @@ public sealed class BackgroundActionOrchestratorTests
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
         public int SaveCallCount { get; private set; }
+        public List<CancellationToken> SaveTokens { get; } = [];
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SaveCallCount++;
+            SaveTokens.Add(cancellationToken);
             return Task.FromResult(1);
         }
 
@@ -822,9 +963,12 @@ public sealed class BackgroundActionOrchestratorTests
 
     private sealed class FakeLogger : ILogger<BackgroundActionOrchestratorService>
     {
+        public List<string> Messages { get; } = new();
+
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => false;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Messages.Add(formatter(state, exception));
     }
 }
 

@@ -4,7 +4,6 @@ using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
-using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -64,8 +63,11 @@ public sealed partial class RecurringReportAssignmentService
 
     private async Task<Result<Unit, AppError>> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
     {
-        var isTrainer = await _roleRepository.UserHasRoleAsync(currentTrainer.Id, AuthConstants.Roles.Trainer, cancellationToken);
-        if (!isTrainer)
+        var access = await _coachingRelationshipAccessService.GetAccessDecisionAsync(
+            currentTrainer.Id,
+            traineeId,
+            cancellationToken);
+        if (!access.IsTrainer)
         {
             return Result<Unit, AppError>.Failure(new ReportingForbiddenError(Messages.TrainerRoleRequired));
         }
@@ -75,8 +77,7 @@ public sealed partial class RecurringReportAssignmentService
             return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.UserIdRequired));
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
-        if (link == null)
+        if (!access.HasActiveRelationship)
         {
             return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }

@@ -5,6 +5,7 @@ using LgymApi.TestUtils;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,8 @@ namespace LgymApi.IntegrationTests;
 /// </summary>
 public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
+    private readonly InMemoryDatabaseRoot _databaseRoot = new();
+
     /// <summary>
     /// Gets a unique database name for this test instance.
     /// </summary>
@@ -55,7 +58,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseInMemoryDatabase(DatabaseName);
+                options.UseInMemoryDatabase(DatabaseName, _databaseRoot);
                 options.EnableSensitiveDataLogging();
             });
 

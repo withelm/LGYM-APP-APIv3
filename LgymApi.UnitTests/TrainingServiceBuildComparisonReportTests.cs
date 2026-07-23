@@ -2,6 +2,7 @@ using FluentAssertions;
 using LgymApi.Application.Common.Training.Elo;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
+using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -12,14 +13,6 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class TrainingServiceBuildComparisonReportTests
 {
-    private TrainingService _service = null!;
-
-    [SetUp]
-    public void SetUp()
-    {
-        _service = new TrainingService(new NullTrainingServiceDependencies());
-    }
-
     [Test]
     public void Should_ReturnExercisesInCurrentExercisesOrder_When_Called()
     {
@@ -46,7 +39,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
         };
 
         // Act
-        var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
+        var result = TrainingComparisonReportBuilder.Build(currentExercises, previousScores, exerciseDetails);
 
         // Assert
          result.Should().HaveCount(3);
@@ -80,7 +73,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
           };
 
         // Act
-        var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
+        var result = TrainingComparisonReportBuilder.Build(currentExercises, previousScores, exerciseDetails);
 
          // Assert
          result.Should().HaveCount(2);
@@ -119,7 +112,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
          };
 
         // Act
-        var result = _service.BuildComparisonReport(currentExercises, previousScores, exerciseDetails);
+        var result = TrainingComparisonReportBuilder.Build(currentExercises, previousScores, exerciseDetails);
 
         // Assert
         result.Should().HaveCount(1);
@@ -131,19 +124,4 @@ public sealed class TrainingServiceBuildComparisonReportTests
         comparison.PreviousResult.Reps.Should().Be(8);
     }
 
-    // Test double — BuildComparisonReport does not use any dependencies
-    private sealed class NullTrainingServiceDependencies : ITrainingServiceDependencies
-    {
-        public Application.Repositories.IUserRepository UserRepository => null!;
-        public Application.Repositories.IGymRepository GymRepository => null!;
-        public Application.Repositories.ITrainingRepository TrainingRepository => null!;
-        public Application.Repositories.IExerciseRepository ExerciseRepository => null!;
-        public Application.Repositories.IExerciseScoreRepository ExerciseScoreRepository => null!;
-        public Application.Repositories.ITrainingExerciseScoreRepository TrainingExerciseScoreRepository => null!;
-        public BackgroundWorker.Common.ICommandDispatcher CommandDispatcher => null!;
-        public Application.Repositories.IEloRegistryRepository EloRepository => null!;
-        public Application.Services.IRankService RankService => null!;
-        public Application.Repositories.IUnitOfWork UnitOfWork => null!;
-        public IReadOnlyCollection<IExerciseEloCalculator> ExerciseEloCalculators => Array.Empty<IExerciseEloCalculator>();
-    }
 }

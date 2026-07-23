@@ -10,7 +10,7 @@ using LgymApi.Application.Options;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Actions;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Nutrition.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;

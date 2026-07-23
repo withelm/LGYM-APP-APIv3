@@ -1,12 +1,12 @@
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 
 namespace LgymApi.Application.Features.Reporting;
 
 public interface IRecurringReportAssignmentServiceDependencies
 {
-    IRoleRepository RoleRepository { get; }
-    ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
+    ICoachingRelationshipAccessService CoachingRelationshipAccessService { get; }
     IReportingRepository ReportingRepository { get; }
     IRecurringReportAssignmentRepository RecurringReportAssignmentRepository { get; }
     ICommandDispatcher CommandDispatcher { get; }
@@ -16,23 +16,20 @@ public interface IRecurringReportAssignmentServiceDependencies
 internal sealed class RecurringReportAssignmentServiceDependencies : IRecurringReportAssignmentServiceDependencies
 {
     public RecurringReportAssignmentServiceDependencies(
-        IRoleRepository roleRepository,
-        ITrainerRelationshipRepository trainerRelationshipRepository,
+        ICoachingRelationshipAccessService coachingRelationshipAccessService,
         IReportingRepository reportingRepository,
         IRecurringReportAssignmentRepository recurringReportAssignmentRepository,
         ICommandDispatcher commandDispatcher,
         IUnitOfWork unitOfWork)
     {
-        RoleRepository = roleRepository;
-        TrainerRelationshipRepository = trainerRelationshipRepository;
+        CoachingRelationshipAccessService = coachingRelationshipAccessService;
         ReportingRepository = reportingRepository;
         RecurringReportAssignmentRepository = recurringReportAssignmentRepository;
         CommandDispatcher = commandDispatcher;
         UnitOfWork = unitOfWork;
     }
 
-    public IRoleRepository RoleRepository { get; }
-    public ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
+    public ICoachingRelationshipAccessService CoachingRelationshipAccessService { get; }
     public IReportingRepository ReportingRepository { get; }
     public IRecurringReportAssignmentRepository RecurringReportAssignmentRepository { get; }
     public ICommandDispatcher CommandDispatcher { get; }

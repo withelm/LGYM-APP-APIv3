@@ -1,21 +1,14 @@
 using FluentAssertions;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
 using LgymApi.Application.Common.Errors;
-using LgymApi.Application.Common.Results;
-using LgymApi.Application.Features.AdminManagement.Models;
-using LgymApi.Application.Models;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
-using LgymApi.Application.Options;
-using LgymApi.Application.Pagination;
-using LgymApi.Application.Repositories;
+using LgymApi.Application.Identity.Contracts.Accounts;
+using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.BackgroundWorker.Actions;
-using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 using NUnit.Framework;
-using System.Globalization;
 
 namespace LgymApi.UnitTests.InAppNotifications;
 
@@ -23,117 +16,66 @@ namespace LgymApi.UnitTests.InAppNotifications;
 public sealed class TrainerRelationshipEndedInAppNotificationCommandHandlerTests
 {
     [Test]
-    public async Task ExecuteAsync_Success_CreatesExpectedNotification()
+    public async Task ExecuteAsync_LoadsPublicAccountsAndSubmitsTheExactInAppIntent()
     {
-        var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Success(CreateResult()));
-        var trainerId = Id<User>.New();
-        var traineeId = Id<User>.New();
-        var previousUiCulture = CultureInfo.CurrentUICulture;
-        var handler = new TrainerRelationshipEndedInAppNotificationCommandHandler(
-            service,
-            new FakeUserRepository(
-                new User { Id = trainerId, Name = "Coach", PreferredLanguage = "en-US" },
-                new User { Id = traineeId, Name = "Adam" }),
-            new AppDefaultsOptions { PreferredLanguage = "pl-PL" },
-            NullLogger<TrainerRelationshipEndedInAppNotificationCommandHandler>.Instance);
-
-        try
+        var command = new TrainerRelationshipEndedInAppNotificationCommand
         {
-            await handler.ExecuteAsync(new TrainerRelationshipEndedInAppNotificationCommand
+            TrainerId = Id<User>.New(),
+            TraineeId = Id<User>.New(),
+        };
+        var trainer = Account(command.TrainerId, "Coach", "pl-PL");
+        var accounts = Substitute.For<IAccountReadService>();
+        var intents = Substitute.For<ICoachingNotificationIntentService>();
+        CoachingNotificationIntent? submittedIntent = null;
+        accounts.GetByIdAsync(command.TrainerId, Arg.Any<CancellationToken>()).Returns(trainer);
+        accounts.GetByIdAsync(command.TraineeId, Arg.Any<CancellationToken>()).Returns((AccountReadModel?)null);
+        intents.SubmitAsync(Arg.Any<CoachingNotificationIntent>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
             {
-                TrainerId = trainerId,
-                TraineeId = traineeId,
+                submittedIntent = call.Arg<CoachingNotificationIntent>();
+                return Task.FromResult(new CoachingNotificationIntentResult(null, null));
             });
-        }
-        finally
-        {
-            CultureInfo.CurrentUICulture = previousUiCulture;
-        }
+        var handler = new TrainerRelationshipEndedInAppNotificationCommandHandler(
+            intents,
+            accounts,
+            Substitute.For<ILogger<TrainerRelationshipEndedInAppNotificationCommandHandler>>());
 
-        service.Calls.Should().Be(1);
-        service.LastInput.Should().NotBeNull();
-        service.LastInput!.RecipientId.Should().Be(trainerId);
-        service.LastInput.SenderUserId.Should().Be(traineeId);
-        service.LastInput.DeliveryKey.Should().Be($"trainer-relationship-ended:{trainerId}:{traineeId}");
-        service.LastInput.Message.Should().Be("Adam ended your collaboration.");
-        service.LastInput.RedirectUrl.Should().Be("/trainer/members");
-        service.LastInput.Type.Should().Be(InAppNotificationTypes.TrainerRelationshipEnded);
+        await handler.ExecuteAsync(command);
+
+        await accounts.Received(1).GetByIdAsync(command.TrainerId, Arg.Any<CancellationToken>());
+        await accounts.Received(1).GetByIdAsync(command.TraineeId, Arg.Any<CancellationToken>());
+        submittedIntent.Should().BeEquivalentTo(new RelationshipEndedCoachingNotificationIntent(
+            CoachingNotificationLegacyChannel.InApp,
+            command.TrainerId,
+            command.TraineeId,
+            trainer,
+            null));
     }
 
     [Test]
-    public async Task ExecuteAsync_WhenTraineeNameMissing_UsesLocalizedFallback()
+    public async Task ExecuteAsync_WhenInAppDeliveryFails_LogsAnError()
     {
-        var service = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Success(CreateResult()));
-        var trainerId = Id<User>.New();
-        var traineeId = Id<User>.New();
-        var previousUiCulture = CultureInfo.CurrentUICulture;
+        var intents = Substitute.For<ICoachingNotificationIntentService>();
+        var logger = Substitute.For<ILogger<TrainerRelationshipEndedInAppNotificationCommandHandler>>();
+        intents.SubmitAsync(Arg.Any<CoachingNotificationIntent>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CoachingNotificationIntentResult(null, new BadRequestError("boom"))));
         var handler = new TrainerRelationshipEndedInAppNotificationCommandHandler(
-            service,
-            new FakeUserRepository(
-                new User { Id = trainerId, Name = "Coach", PreferredLanguage = "pl-PL" },
-                new User { Id = traineeId, Name = string.Empty }),
-            new AppDefaultsOptions { PreferredLanguage = "en-US" },
-            NullLogger<TrainerRelationshipEndedInAppNotificationCommandHandler>.Instance);
+            intents,
+            Substitute.For<IAccountReadService>(),
+            logger);
 
-        try
+        await handler.ExecuteAsync(new TrainerRelationshipEndedInAppNotificationCommand
         {
-            await handler.ExecuteAsync(new TrainerRelationshipEndedInAppNotificationCommand
-            {
-                TrainerId = trainerId,
-                TraineeId = traineeId,
-            });
-        }
-        finally
-        {
-            CultureInfo.CurrentUICulture = previousUiCulture;
-        }
+            TrainerId = Id<User>.New(),
+            TraineeId = Id<User>.New(),
+        });
 
-        service.LastInput!.Message.Should().Be("Podopieczny zakończył współpracę.");
+        ErrorLogCount(logger).Should().Be(1);
     }
 
-    private static InAppNotificationResult CreateResult()
-        => new(Id<InAppNotification>.New(), Id<User>.New(), "message", null, false, InAppNotificationTypes.TrainerRelationshipEnded, false, null, DateTimeOffset.UtcNow);
+    private static AccountReadModel Account(Id<User> id, string name, string culture)
+        => new(id, name, "person@example.com", null, culture, "Europe/Warsaw");
 
-    private sealed class FakeNotificationService : IInAppNotificationService
-    {
-        private readonly Result<InAppNotificationResult, AppError> _result;
-
-        public FakeNotificationService(Result<InAppNotificationResult, AppError> result) => _result = result;
-
-        public int Calls { get; private set; }
-        public CreateInAppNotificationInput? LastInput { get; private set; }
-
-        public Task<Result<InAppNotificationResult, AppError>> CreateAsync(CreateInAppNotificationInput input, CancellationToken cancellationToken = default)
-        {
-            Calls++;
-            LastInput = input;
-            return Task.FromResult(_result);
-        }
-
-        public Task<Result<PagedResult<InAppNotificationResult>, AppError>> GetForUserAsync(Id<User> userId, CursorPaginationQuery query, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<Unit, AppError>> MarkAsReadAsync(Id<InAppNotification> notificationId, Id<User> requestingUserId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<Unit, AppError>> MarkAllAsReadAsync(Id<User> userId, DateTimeOffset? before, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<int, AppError>> GetUnreadCountAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-    }
-
-    private sealed class FakeUserRepository : IUserRepository
-    {
-        private readonly Dictionary<string, User> _users;
-
-        public FakeUserRepository(params User[] users)
-            => _users = users.ToDictionary(user => user.Id.ToString(), user => user);
-
-        public Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default)
-            => Task.FromResult(_users.TryGetValue(id.ToString(), out var user) ? user : null);
-
-        public Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<User?> FindByIdWithRolesAsync(Id<User> id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<User?> FindByEmailAsync(Email email, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task AddAsync(User user, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task UpdateAsync(User user, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-    }
+    private static int ErrorLogCount<THandler>(ILogger<THandler> logger)
+        => logger.ReceivedCalls().Count(call => call.GetArguments()[0] is LogLevel.Error);
 }

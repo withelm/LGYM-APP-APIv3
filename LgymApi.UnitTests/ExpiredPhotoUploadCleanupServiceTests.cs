@@ -64,14 +64,24 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
             .Returns<Task>(_ => throw new InvalidOperationException("storage failure"));
 
         var unitOfWork = Substitute.For<IUnitOfWork>();
-        var service = CreateService(tracker, storage, unitOfWork);
+        var logger = Substitute.For<ILogger<ExpiredPhotoUploadCleanupService>>();
+        var service = CreateService(tracker, storage, unitOfWork, logger);
 
         var cleaned = await service.CleanupExpiredUploadsAsync();
 
         cleaned.Should().Be(1);
+        await storage.Received(1).DeleteAsync(failedCandidate.StorageKey, Arg.Any<CancellationToken>());
         await tracker.DidNotReceive().MarkExpiredAsync(failedCandidate.StorageKey, Arg.Any<CancellationToken>());
         await tracker.Received(1).MarkExpiredAsync(successfulCandidate.StorageKey, Arg.Any<CancellationToken>());
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        var warningCall = logger.ReceivedCalls().Single(call =>
+            call.GetMethodInfo().Name == nameof(ILogger.Log)
+            && call.GetArguments()[0] is LogLevel logLevel
+            && logLevel == LogLevel.Warning);
+        var warningState = warningCall.GetArguments()[2];
+        warningState.Should().NotBeNull();
+        warningState!.ToString().Should().Contain(failedCandidate.StorageKey);
+        warningCall.GetArguments()[3].Should().BeOfType<InvalidOperationException>();
     }
 
     [Test]
@@ -98,12 +108,13 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
     private static ExpiredPhotoUploadCleanupService CreateService(
         IPhotoUploadInitTracker tracker,
         IPhotoStorageProvider storage,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<ExpiredPhotoUploadCleanupService>? logger = null)
         => new(
             tracker,
             storage,
             unitOfWork,
-            Substitute.For<ILogger<ExpiredPhotoUploadCleanupService>>());
+            logger ?? Substitute.For<ILogger<ExpiredPhotoUploadCleanupService>>());
 
     private static PendingPhotoUpload CreatePendingUpload(string storageKey)
         => new()

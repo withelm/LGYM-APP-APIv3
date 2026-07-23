@@ -1,33 +1,33 @@
 using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.BackgroundWorker.Actions.Contracts;
+using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
-using LgymApi.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
+using IActionMessageScheduler = LgymApi.BackgroundWorker.Common.IActionMessageScheduler;
 
 namespace LgymApi.UnitTests;
 
 /// <summary>
 /// Tests for CommandDispatcher covering:
-/// - Single handler dispatch flow
-/// - Multi-handler dispatch flow
-/// - Zero-handler no-enqueue path
-/// - Duplicate/idempotent path blocks duplicate enqueue
-/// - Persistence + enqueue contract assertions
+/// - Single handler staging flow
+/// - Multi-handler staging flow
+/// - Zero-handler no-persistence path
+/// - Duplicate/idempotent path blocks duplicate staging
+/// - Durable-envelope persistence assertions
 /// </summary>
 [TestFixture]
 public sealed class BackgroundActionDispatcherTests
 {
     private FakeCommandEnvelopeRepository _repository = null!;
     private FakeUnitOfWork _unitOfWork = null!;
-    private FakeActionMessageScheduler _scheduler = null!;
-    private AppDbContext _dbContext = null!;
+    private CommandContractRegistry _commandContractRegistry = null!;
     private Microsoft.Extensions.DependencyInjection.ServiceProvider _serviceProvider = null!;
 
     [SetUp]
@@ -35,22 +35,24 @@ public sealed class BackgroundActionDispatcherTests
     {
         _repository = new FakeCommandEnvelopeRepository();
         _unitOfWork = new FakeUnitOfWork();
-        _scheduler = new FakeActionMessageScheduler();
-        _dbContext = new AppDbContext(
-            new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase($"command-dispatcher-tests-{Id<BackgroundActionDispatcherTests>.New()}")
-                .Options);
+        _commandContractRegistry = CommandContractRegistry.CreateForTesting(
+        [
+            new CommandContract(
+                "Tests.BackgroundActionDispatcher.TestCommand",
+                typeof(TestCommand),
+                typeof(TestCommand).FullName!,
+                [typeof(TestActionHandler1), typeof(TestActionHandler2), typeof(TestActionHandlerSuccess)])
+        ]);
     }
 
     [TearDown]
     public void TearDown()
     {
         _serviceProvider?.Dispose();
-        _dbContext?.Dispose();
     }
 
     [Test]
-    public async Task Enqueue_SingleHandler_CreatesEnvelopeAndEnqueues()
+    public async Task Enqueue_SingleHandler_CreatesEnvelope()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -69,12 +71,12 @@ public sealed class BackgroundActionDispatcherTests
 
         var envelope = _repository.Envelopes.First();
         envelope.Status.Should().Be(ActionExecutionStatus.Pending);
-        envelope.CommandTypeFullName.Should().Be(typeof(TestCommand).FullName);
+        envelope.CommandTypeFullName.Should().Be("Tests.BackgroundActionDispatcher.TestCommand");
         envelope.PayloadJson.Should().Contain("test-single");
     }
 
     [Test]
-    public async Task Enqueue_MultipleHandlers_CreatesOneEnvelopeAndOneJob()
+    public async Task Enqueue_MultipleHandlers_CreatesOneEnvelope()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -95,7 +97,7 @@ public sealed class BackgroundActionDispatcherTests
     }
 
     [Test]
-    public async Task Enqueue_ZeroHandlers_NoEnqueueAndNoFailure()
+    public async Task Enqueue_ZeroHandlers_NoPersistenceAndNoFailure()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -110,10 +112,11 @@ public sealed class BackgroundActionDispatcherTests
 
         // Assert - Zero-handler path: safe no-op, no failure, no enqueue
         _repository.Envelopes.Count.Should().Be(0, "Should not persist envelope when no handlers registered");
+        _unitOfWork.SaveCallCount.Should().Be(0);
     }
 
     [Test]
-    public async Task Enqueue_DuplicateCommand_BlocksDuplicateEnqueue()
+    public async Task Enqueue_DuplicateCommand_BlocksDuplicatePersistence()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -166,10 +169,58 @@ public sealed class BackgroundActionDispatcherTests
 
         // Assert - Zero-handler path because exact-type matching only
         _repository.Envelopes.Count.Should().Be(0, "Should not persist envelope for derived command when only base handler exists");
+        _unitOfWork.SaveCallCount.Should().Be(0);
     }
 
     [Test]
-    public async Task Enqueue_PersistsThenEnqueues_OrderGuaranteed()
+    public async Task Enqueue_RegisteredHandlerForUnregisteredCommand_ThrowsBeforePersistence()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<IBackgroundAction<UnregisteredCommand>, UnregisteredCommandHandler>();
+        services.AddSingleton<ILogger<CommandDispatcher>>(_ => new FakeLogger<CommandDispatcher>());
+        _serviceProvider = services.BuildServiceProvider();
+
+        var dispatcher = CreateDispatcher();
+        var action = () => dispatcher.EnqueueAsync(new UnregisteredCommand());
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*absent from the closed command registry*");
+        _repository.Envelopes.Should().BeEmpty();
+        _unitOfWork.SaveCallCount.Should().Be(0);
+    }
+
+    [Test]
+    public async Task Enqueue_CanonicalNameCollidingRuntimeType_ThrowsBeforePersistence()
+    {
+        var collisionRegistry = CommandContractRegistry.CreateForTesting(
+        [
+            new CommandContract(
+                typeof(CanonicalNameCollisionCommand).FullName!,
+                typeof(TestCommand),
+                typeof(TestCommand).FullName!,
+                [typeof(TestActionHandler1)])
+        ]);
+        var services = new ServiceCollection();
+        services.AddScoped<IBackgroundAction<CanonicalNameCollisionCommand>, CanonicalNameCollisionHandler>();
+        services.AddSingleton<ILogger<CommandDispatcher>>(_ => new FakeLogger<CommandDispatcher>());
+        _serviceProvider = services.BuildServiceProvider();
+        var dispatcher = new CommandDispatcher(
+            new BackgroundActionResolver(_serviceProvider.GetRequiredService<IServiceScopeFactory>()),
+            collisionRegistry,
+            _repository,
+            _unitOfWork,
+            _serviceProvider.GetRequiredService<ILogger<CommandDispatcher>>());
+
+        var action = () => dispatcher.EnqueueAsync(new CanonicalNameCollisionCommand());
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*absent from the closed command registry*");
+        _repository.Envelopes.Should().BeEmpty();
+        _unitOfWork.SaveCallCount.Should().Be(0);
+    }
+
+    [Test]
+    public async Task Enqueue_PersistsEnvelope()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -183,17 +234,34 @@ public sealed class BackgroundActionDispatcherTests
         // Act
         await dispatcher.EnqueueAsync(command);
 
-        // Assert - Envelope must be persisted before enqueue
+        // Assert - envelope is persisted for the committed-intent dispatcher.
         _repository.Envelopes.Count.Should().Be(1);
+    }
+
+    [Test]
+    public async Task Enqueue_RegisteredCommand_LogsOnlyCanonicalCommandId()
+    {
+        var logger = new FakeLogger<CommandDispatcher>();
+        var services = new ServiceCollection();
+        services.AddScoped<IBackgroundAction<TestCommand>, TestActionHandler1>();
+        services.AddSingleton<ILogger<CommandDispatcher>>(logger);
+        _serviceProvider = services.BuildServiceProvider();
+
+        await CreateDispatcher().EnqueueAsync(new TestCommand { Value = "canonical-log" });
+
+        logger.Messages.Should().Contain(message =>
+            message.Contains("Tests.BackgroundActionDispatcher.TestCommand", StringComparison.Ordinal));
+        logger.Messages.Should().NotContain(message =>
+            message.Contains(typeof(TestCommand).FullName!, StringComparison.Ordinal));
     }
 
     private CommandDispatcher CreateDispatcher()
     {
         return new CommandDispatcher(
-            _serviceProvider,
+            new BackgroundActionResolver(_serviceProvider.GetRequiredService<IServiceScopeFactory>()),
+            _commandContractRegistry,
             _repository,
             _unitOfWork,
-            _dbContext,
             _serviceProvider.GetRequiredService<ILogger<CommandDispatcher>>());
     }
 
@@ -219,6 +287,8 @@ public sealed class BackgroundActionDispatcherTests
         {
             return Task.FromResult(Envelopes.FirstOrDefault(e => e.CorrelationId == correlationId));
         }
+
+        public void Detach(CommandEnvelope envelope) { }
 
         public Task<List<CommandEnvelope>> GetPendingRetriesAsync(CancellationToken cancellationToken = default)
         {
@@ -315,22 +385,14 @@ public sealed class BackgroundActionDispatcherTests
     }
 
 
-    private sealed class FakeActionMessageScheduler : IActionMessageScheduler
-    {
-        public List<Id<CommandEnvelope>> EnqueuedIds { get; } = new();
-
-        public string? Enqueue(Id<CommandEnvelope> actionMessageId)
-        {
-            EnqueuedIds.Add(actionMessageId);
-            return "test-job-id";
-        }
-    }
-
     private sealed class FakeLogger<T> : ILogger<T>
     {
+        public List<string> Messages { get; } = new();
+
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Messages.Add(formatter(state, exception));
     }
 
     // Test command types
@@ -343,6 +405,10 @@ public sealed class BackgroundActionDispatcherTests
     {
         public string DerivedValue { get; set; } = string.Empty;
     }
+
+    private sealed class UnregisteredCommand : IActionCommand;
+
+    private sealed class CanonicalNameCollisionCommand : IActionCommand;
 
     // Test action handlers
     private sealed class TestActionHandler1 : IBackgroundAction<TestCommand>
@@ -367,5 +433,19 @@ public sealed class BackgroundActionDispatcherTests
         {
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class UnregisteredCommandHandler : IBackgroundAction<UnregisteredCommand>
+    {
+        public Task ExecuteAsync(UnregisteredCommand command, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+    }
+
+    private sealed class CanonicalNameCollisionHandler : IBackgroundAction<CanonicalNameCollisionCommand>
+    {
+        public Task ExecuteAsync(
+            CanonicalNameCollisionCommand command,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 }

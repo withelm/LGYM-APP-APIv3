@@ -1,7 +1,7 @@
 using LgymApi.Domain.ValueObjects;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using LgymApi.BackgroundWorker.Common.Serialization;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using NUnit.Framework;
 using FluentAssertions;
 

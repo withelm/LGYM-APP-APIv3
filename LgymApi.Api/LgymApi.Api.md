@@ -4,11 +4,20 @@
 - Contains: controllers, DTO contracts, validators, middleware, mapping profiles, auth, JSON setup, Swagger, CORS, rate limits, SignalR, and composition root.
 - Rules: keep controllers thin and preserve legacy payload shapes.
 - Boundary: do not move application or infrastructure business logic here.
+- Composition: `Program.cs` wires named module helpers, `AddPlatformServices(...)`, and Worker services. Host-only bindings stay in the API project.
 - Exercise read and legacy write contracts stay without `eloFormula`; privileged exercise create/update endpoints use separate DTOs and `ManageGlobalExercises` policy.
 - Enum-backed choice lists must return `LookupItem`-style payloads with stable enum-string `id`; `name` and `displayName` both carry translated display text.
 - Exercise ELO formulas must be sourced from the enum lookup API (`/api/enums/enumType/ExerciseEloFormula`) and must not be hardcoded in the front-end.
 - Lookup-backed request values such as `ExerciseExtendedFormDto.EloFormula` must be mapped in API mapping profiles from lookup ids to application enums; controllers should not parse them.
 - Push installation endpoints live under `/api/push/installations/*`, rely on middleware-authenticated `User` plus `sid` claims, and never trust client-supplied user identity for device registration or disassociation.
-- Push sender configuration follows the existing `appsettings.json` convention under `PushNotifications:*`; the API host composes the enqueue service and background worker pieces but does not send push notifications synchronously inside controllers.
+- Push sender configuration follows the existing `appsettings.json` convention under `PushNotifications:*`; the API host composes Infrastructure FCM and Worker scheduling through module helpers but does not send push notifications synchronously inside controllers.
+- Notifications composition is host-facing: the API calls Infrastructure `AddNotificationsModule(...)` before `AddBackgroundWorkerServices(...)`; password and push scheduler adapters are supplied only by the Worker helper, not direct `Program.cs` bindings.
+- Testing composition passes `isTesting: true`, which selects Worker no-op schedulers and suppresses Hangfire storage/server registration. Non-testing composition selects Worker Hangfire schedulers; server hosting still depends on the host option.
+- Elasticsearch logging is optional: a non-blank `Elasticsearch:Url` enables the existing asynchronous sink; missing or blank configuration leaves that sink unregistered while preserving Serilog provider registration and sensitive-data enrichment.
 - The only API-level push bridge path is the admin-only test endpoint at `/api/internal/push/test-event`; it accepts privacy-safe IDs only and exists to prove generic enqueue wiring without auto-converting all in-app notifications to push.
 - Rollout guardrails rely on `PushNotifications:SendEnabled` for send-only disablement plus the recurring `push-stale-installation-cleanup` Hangfire job for inactive-token tombstoning.
+- `PlanController` preserves its legacy routes and DTO contracts by constructing typed Plan commands and queries and calling focused `TrainingPlanning/Plan/*` contracts directly; it does not depend on a broad Plan facade.
+- `PublicInvitationController` preserves the anonymous `GET /api/invitations/{invitationId}` contract while calling only `IPublicInvitationStatusUseCase`; it retains controller-level blank-code and malformed-ID parsing, bare 404 responses, and profile-based `PublicInvitationStatusReadModel` mapping.
+- Trainer relationship HTTP actions are split into `TrainerInvitationController`, `TrainerDashboardProgressController`, and `TrainerManagedPlansController`. Each retains the `api/trainer` route and trainer policy while injecting only its focused Coaching use cases plus `IMapper`; response transformations remain registered API mappings.
+- Trainee relationship and trainer/trainee-note controllers use focused Coaching use cases plus API mapping profiles, preserving their existing `api/trainee` and `api/trainer` routes, malformed-ID branches, and legacy response DTO shapes.
+- Coaching HTTP controllers are adapters only: they inject focused public use cases and `IMapper`, while ownership, authorization, commits, and persistence stay behind Application ports.

@@ -12,22 +12,16 @@ public sealed partial class ReportingService
 {
     public async Task<Result<SignedReadUrlResult, AppError>> GetSignedReadUrlAsync(
         UserEntity currentUser,
-        string photoId,
+        Id<Photo> photoId,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(photoId))
+        if (photoId.IsEmpty)
         {
             return Result<SignedReadUrlResult, AppError>.Failure(
                 new InvalidReportingError(Messages.FieldRequired));
         }
 
-        if (!Id<Photo>.TryParse(photoId, out var parsedPhotoId))
-        {
-            return Result<SignedReadUrlResult, AppError>.Failure(
-                new InvalidReportingError("Invalid photo ID format"));
-        }
-
-        var photo = await _reportingRepository.FindPhotoByIdAsync(parsedPhotoId, cancellationToken);
+        var photo = await _reportingRepository.FindPhotoByIdAsync(photoId, cancellationToken);
         if (photo == null || photo.IsDeleted)
         {
             return Result<SignedReadUrlResult, AppError>.Failure(

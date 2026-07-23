@@ -6,9 +6,16 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.PasswordReset;
-using LgymApi.Application.Features.User;
+using LgymApi.Application.Features.EloRegistry;
 using LgymApi.Application.Features.User.Models;
+using LgymApi.Application.Identity.Contracts.Administration;
+using LgymApi.Application.Identity.Contracts.Authentication;
+using LgymApi.Application.Identity.Contracts.Profile;
+using LgymApi.Application.Identity.Contracts.Ranking;
+using LgymApi.Application.Identity.Contracts.Sessions;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.WorkoutProgress.Ranking;
+using LgymApi.Application.WorkoutProgress.Ranking.Models;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
@@ -22,13 +29,34 @@ namespace LgymApi.Api.Features.User.Controllers;
 [Route("api")]
 public sealed class UserController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IUserCredentialLoginService _userCredentialLoginService;
+    private readonly IUserSessionTerminationService _userSessionTerminationService;
+    private readonly IUserProfileService _userProfileService;
+    private readonly IUserRankingService _userRankingService;
+    private readonly IWorkoutProgressRankingReadService _workoutProgressRankingReadService;
+    private readonly IUserAdminAccessService _userAdminAccessService;
+    private readonly IEloRegistryService _eloRegistryService;
     private readonly IPasswordResetService _passwordResetService;
     private readonly IMapper _mapper;
 
-    public UserController(IUserService userService, IPasswordResetService passwordResetService, IMapper mapper)
+    public UserController(
+        IUserCredentialLoginService userCredentialLoginService,
+        IUserSessionTerminationService userSessionTerminationService,
+        IUserProfileService userProfileService,
+        IUserRankingService userRankingService,
+        IWorkoutProgressRankingReadService workoutProgressRankingReadService,
+        IUserAdminAccessService userAdminAccessService,
+        IEloRegistryService eloRegistryService,
+        IPasswordResetService passwordResetService,
+        IMapper mapper)
     {
-        _userService = userService;
+        _userCredentialLoginService = userCredentialLoginService;
+        _userSessionTerminationService = userSessionTerminationService;
+        _userProfileService = userProfileService;
+        _userRankingService = userRankingService;
+        _workoutProgressRankingReadService = workoutProgressRankingReadService;
+        _userAdminAccessService = userAdminAccessService;
+        _eloRegistryService = eloRegistryService;
         _passwordResetService = passwordResetService;
         _mapper = mapper;
     }
@@ -51,7 +79,7 @@ public sealed class UserController : ControllerBase
             request.IsVisibleInRanking,
             preferredLanguage);
 
-        var result = await _userService.RegisterAsync(input, cancellationToken);
+        var result = await _eloRegistryService.RegisterUserAsync(input, trainer: false, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -65,12 +93,13 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await _userService.LoginAsync(request.Name, request.Password, cancellationToken);
+        var result = await _userCredentialLoginService.LoginAsync(request.Name, request.Password, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
+        await _eloRegistryService.PopulateLatestEloAsync(result.Value.User, cancellationToken);
         var mapped = _mapper.Map<LoginResult, LoginResponseDto>(result.Value);
         return Ok(mapped);
     }
@@ -80,7 +109,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> IsAdmin([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = ParseUserId(id);
-        var result = await _userService.IsAdminAsync(userId, cancellationToken);
+        var result = await _userAdminAccessService.IsAdminAsync(userId, cancellationToken);
         return Ok(result);
     }
 
@@ -89,12 +118,13 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> CheckToken(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.CheckTokenAsync(user, cancellationToken);
+        var result = await _userProfileService.CheckTokenAsync(user, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
+        await _eloRegistryService.PopulateLatestEloAsync(result.Value, cancellationToken);
         var mapped = _mapper.Map<UserInfoResult, UserInfoDto>(result.Value);
         return Ok(mapped);
     }
@@ -109,7 +139,7 @@ public sealed class UserController : ControllerBase
             ? parsedSessionId
             : (Id<UserSessionEntity>?)null;
 
-        var result = await _userService.LogoutAsync(user, sessionId, cancellationToken);
+        var result = await _userSessionTerminationService.LogoutAsync(user, sessionId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -122,13 +152,13 @@ public sealed class UserController : ControllerBase
     [ProducesResponseType(typeof(List<UserBaseInfoDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUsersRanking(CancellationToken cancellationToken = default)
     {
-        var result = await _userService.GetUsersRankingAsync(cancellationToken);
+        var result = await _workoutProgressRankingReadService.GetUsersRankingAsync(cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        var mapped = _mapper.MapList<RankingEntry, UserBaseInfoDto>(result.Value);
+        var mapped = _mapper.MapList<RankingReadModel, UserBaseInfoDto>(result.Value);
         return Ok(mapped);
     }
 
@@ -137,7 +167,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> GetUserElo([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var userId = ParseUserId(id);
-        var result = await _userService.GetUserEloAsync(userId, cancellationToken);
+        var result = await _eloRegistryService.GetUserEloAsync(userId, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -158,7 +188,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.DeleteAccountAsync(user, cancellationToken);
+        var result = await _userProfileService.DeleteAccountAsync(user, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -173,7 +203,7 @@ public sealed class UserController : ControllerBase
     {
         var user = HttpContext.GetCurrentUser();
         var isVisibleInRanking = request.IsVisibleInRanking.GetValueOrDefault();
-        var result = await _userService.ChangeVisibilityInRankingAsync(user, isVisibleInRanking, cancellationToken);
+        var result = await _userRankingService.ChangeVisibilityInRankingAsync(user, isVisibleInRanking, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -187,7 +217,7 @@ public sealed class UserController : ControllerBase
     public async Task<IActionResult> UpdateTimeZone([FromBody] UpdateTimeZoneRequest request, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var result = await _userService.UpdateTimeZoneAsync(user, request.PreferredTimeZone, cancellationToken);
+        var result = await _userProfileService.UpdateTimeZoneAsync(user, request.PreferredTimeZone, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();

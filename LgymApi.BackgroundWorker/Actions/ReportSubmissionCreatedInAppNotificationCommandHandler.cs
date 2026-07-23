@@ -1,6 +1,7 @@
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
+using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
@@ -8,7 +9,7 @@ using NotificationsApp = global::LgymApi.Application.Notifications;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
-public sealed class ReportSubmissionCreatedInAppNotificationCommandHandler : global::LgymApi.BackgroundWorker.Common.IBackgroundAction<ReportSubmissionCreatedInAppNotificationCommand>
+public sealed partial class ReportSubmissionCreatedInAppNotificationCommandHandler : IBackgroundAction<ReportSubmissionCreatedInAppNotificationCommand>
 {
     private readonly NotificationsApp.IInAppNotificationService _notificationService;
     private readonly IUserRepository _userRepository;

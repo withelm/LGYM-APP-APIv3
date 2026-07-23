@@ -386,8 +386,18 @@ Important limitation:
 - Application services define commit timing (`IUnitOfWork.SaveChangesAsync`) at use-case boundaries.
 - Multi-step write flows use explicit `IUnitOfWork` transactions in services.
 - Read-only queries should prefer `AsNoTracking()` unless tracking is required.
+- The production application has one `AppDbContext`, one PostgreSQL database, and one migration stream. Each persisted entity still has one module owner. See `docs/modular-monolith/issue-376-ownership-map.md`; the executable source is `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs`.
+- Known internal entity IDs use `Id<T>` and PostgreSQL `uuid` columns. API JSON UUID values remain strings. Only `PushNotificationMessage.EntityId` and `PushEventPayload.EntityId` are polymorphic string ID exceptions.
+
+### PostgreSQL integration runner
+
+The runner needs Docker, or an admin connection supplied through `-ConnectionString`. It scopes `LGYM_TEST_POSTGRES` to the test process, checks non-empty TRX counters, removes its Docker container, and the test fixture drops its leased `lgym_it_*` database.
+
+```powershell
+pwsh -File scripts/run-postgresql-integration-tests.ps1
+```
 
 ## Notes
 
 - Password verification uses legacy `passport-local-mongoose` PBKDF2 settings (sha256, 25000 iterations, keylen 512, hex).
-- In PostgreSQL all IDs are GUIDs; API responses return `_id` as string GUID values.
+- Known internal entity IDs use `Id<T>`; EF Core stores their provider values as PostgreSQL `uuid`, while API responses transport UUID values such as `_id` as strings. The only polymorphic string ID exceptions are `PushNotificationMessage.EntityId` and `PushEventPayload.EntityId`.

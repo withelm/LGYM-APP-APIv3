@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Repositories;
@@ -22,12 +23,17 @@ public sealed class PhotoHistoryServiceTests
         var requestId = Id<ReportRequest>.New();
         var otherUser = PhotoServiceTestFactory.CreateUser(otherUserId, "other@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
-        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), userHasRole: (_, _, _) => Task.FromResult(false));
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            relationshipAccess: (_, _, _) => Task.FromResult(new CoachingRelationshipAccessDecision(false, false)),
+            photoStorageProvider: storageProvider);
 
         var result = await service.GetPhotoHistoryAsync(otherUser, new GetPhotoHistoryCommand { TraineeId = traineeId, RequestId = requestId });
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ReportingForbiddenError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -38,12 +44,17 @@ public sealed class PhotoHistoryServiceTests
         var requestId = Id<ReportRequest>.New();
         var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "non-assigned-trainer@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
-        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), userHasRole: (_, _, _) => Task.FromResult(true), hasTrainerTraineeLink: (_, _, _) => Task.FromResult<TrainerTraineeLink?>(null));
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            relationshipAccess: (_, _, _) => Task.FromResult(new CoachingRelationshipAccessDecision(true, false)),
+            photoStorageProvider: storageProvider);
 
         var result = await service.GetPhotoHistoryAsync(trainer, new GetPhotoHistoryCommand { TraineeId = traineeId, RequestId = requestId });
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -76,7 +87,6 @@ public sealed class PhotoHistoryServiceTests
         var requestId = Id<ReportRequest>.New();
         var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
-        var link = new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainerId, TraineeId = traineeId };
         var photos = new List<Photo> { new() { Id = Id<Photo>.New(), ReportRequestId = requestId, OwnerUserId = traineeId, UploaderUserId = traineeId, ViewType = PhotoViewType.Side.ToString(), StorageKey = "photos/side.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "def456", IsDeleted = false } };
 
         var repo = Substitute.For<IReportingRepository>();
@@ -84,7 +94,12 @@ public sealed class PhotoHistoryServiceTests
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         storageProvider.GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns("https://storage.example.com/read-url");
 
-        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), userHasRole: (_, _, _) => Task.FromResult(true), hasTrainerTraineeLink: (tId, trainee, _) => Task.FromResult(tId == trainerId && trainee == traineeId ? link : null), reportingRepository: repo, photoStorageProvider: storageProvider);
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            relationshipAccess: (currentTrainerId, currentTraineeId, _) => Task.FromResult(
+                new CoachingRelationshipAccessDecision(true, currentTrainerId == trainerId && currentTraineeId == traineeId)),
+            reportingRepository: repo,
+            photoStorageProvider: storageProvider);
         var result = await service.GetPhotoHistoryAsync(trainer, new GetPhotoHistoryCommand { TraineeId = traineeId, RequestId = requestId });
 
         result.IsSuccess.Should().BeTrue();

@@ -1,11 +1,12 @@
 using FluentAssertions;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -69,6 +70,46 @@ public sealed class RecurringReportAssignmentServiceTests
 
         result.IsFailure.Should().BeTrue();
         db.RecurringReportAssignments.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task PauseAsync_WhenTrainerNoLongerOwnsTrainee_ReturnsNotFoundWithoutMutatingAssignment()
+    {
+        await using var db = CreateDbContext("recurring-pause-not-owned");
+        var trainer = CreateUser();
+        var traineeId = Id<User>.New();
+        var template = CreateTemplate(trainer.Id);
+        var assignment = CreateAssignment(trainer.Id, traineeId, template.Id);
+        db.ReportTemplates.Add(template);
+        db.RecurringReportAssignments.Add(assignment);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, trainer.Id, traineeId, ownsTrainee: false);
+        var result = await service.PauseAsync(trainer, traineeId, assignment.Id);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        db.RecurringReportAssignments.Single().IsActive.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task PauseAsync_WhenCallerIsNotTrainer_ReturnsForbiddenWithoutMutatingAssignment()
+    {
+        await using var db = CreateDbContext("recurring-pause-not-trainer");
+        var caller = CreateUser();
+        var traineeId = Id<User>.New();
+        var template = CreateTemplate(caller.Id);
+        var assignment = CreateAssignment(caller.Id, traineeId, template.Id);
+        db.ReportTemplates.Add(template);
+        db.RecurringReportAssignments.Add(assignment);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, caller.Id, traineeId, ownsTrainee: true, isTrainer: false);
+        var result = await service.PauseAsync(caller, traineeId, assignment.Id);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingForbiddenError>();
+        db.RecurringReportAssignments.Single().IsActive.Should().BeTrue();
     }
 
     [Test]
@@ -373,22 +414,16 @@ public sealed class RecurringReportAssignmentServiceTests
         Id<User> trainerId,
         Id<User> traineeId,
         bool ownsTrainee,
-        ICommandDispatcher? commandDispatcher = null)
+        ICommandDispatcher? commandDispatcher = null,
+        bool isTrainer = true)
     {
-        var roleRepository = Substitute.For<IRoleRepository>();
-        roleRepository.UserHasRoleAsync(trainerId, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(true);
-
-        var trainerRelationshipRepository = Substitute.For<ITrainerRelationshipRepository>();
-        trainerRelationshipRepository
-            .FindActiveLinkByTrainerAndTraineeAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
-            .Returns(ownsTrainee
-                ? new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainerId, TraineeId = traineeId }
-                : null);
+        var relationshipAccess = Substitute.For<ICoachingRelationshipAccessService>();
+        relationshipAccess
+            .GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
+            .Returns(new CoachingRelationshipAccessDecision(isTrainer, ownsTrainee));
 
         return new RecurringReportAssignmentService(new RecurringReportAssignmentServiceDependencies(
-            roleRepository,
-            trainerRelationshipRepository,
+            relationshipAccess,
             new ReportingRepository(db),
             new RecurringReportAssignmentRepository(db),
             commandDispatcher ?? Substitute.For<ICommandDispatcher>(),

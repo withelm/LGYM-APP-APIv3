@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
-using LgymApi.BackgroundWorker.Common;
-using Microsoft.Extensions.DependencyInjection;
+using LgymApi.BackgroundWorker.Actions.Contracts;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker;
@@ -20,23 +20,17 @@ public sealed partial class BackgroundActionOrchestratorService
     /// Returns execution result with success flag and error details.
     /// </summary>
     private async Task<HandlerExecutionResult> ExecuteHandlerInIsolatedScopeAsync(
-        Type handlerType,
         object command,
         Type commandType,
+        string canonicalCommandId,
         string expectedHandlerTypeName,
         CancellationToken cancellationToken)
     {
         var resolvedHandlerTypeName = expectedHandlerTypeName;
         try
         {
-            // Create isolated scope for this handler
-            using var scope = _serviceProvider.CreateScope();
-
-            // Resolve handler instance from this scope (ensures isolated scoped dependencies)
-            var handlers = scope.ServiceProvider.GetServices(handlerType).ToList();
-            var handler = handlers.FirstOrDefault(h => h?.GetType().FullName == expectedHandlerTypeName)
-                ?? throw new InvalidOperationException(
-                    $"Handler with type '{expectedHandlerTypeName}' not found in execution scope. Available handlers: [{string.Join(", ", handlers.Select(h => h?.GetType().FullName ?? "null"))}]");
+            using var scope = _backgroundActionResolver.CreateScope(commandType);
+            var handler = scope.ResolveHandler(expectedHandlerTypeName);
             resolvedHandlerTypeName = handler.GetType().FullName ?? expectedHandlerTypeName;
 
             // Get or create cached invoker delegate for this command type
@@ -62,9 +56,9 @@ public sealed partial class BackgroundActionOrchestratorService
             await invoker(handler, command, cancellationToken);
 
             _logger.LogInformation(
-                "Handler {HandlerType} executed successfully for command {CommandType}.",
+                "Handler {HandlerType} executed successfully for command {CommandId}.",
                 resolvedHandlerTypeName,
-                commandType.FullName);
+                canonicalCommandId);
 
             return new HandlerExecutionResult
             {
@@ -72,15 +66,19 @@ public sealed partial class BackgroundActionOrchestratorService
                 HandlerTypeName = resolvedHandlerTypeName
             };
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             // Exceptions from compiled delegates are direct (no TargetInvocationException wrapping)
             var inner = ex;
 
             _logger.LogError(ex,
-                "Handler {HandlerType} failed for command {CommandType}.",
+                "Handler {HandlerType} failed for command {CommandId}.",
                 resolvedHandlerTypeName,
-                commandType.FullName);
+                canonicalCommandId);
 
             return new HandlerExecutionResult
             {

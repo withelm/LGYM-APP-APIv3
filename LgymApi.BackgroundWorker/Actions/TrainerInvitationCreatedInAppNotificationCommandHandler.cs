@@ -1,49 +1,59 @@
-using LgymApi.BackgroundWorker.Common.Commands;
-using LgymApi.Application.Repositories;
-using LgymApi.Domain.Notifications;
-using LgymApi.Resources;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.Application.Coaching.Contracts.Notifications;
+using LgymApi.Application.Identity.Contracts.Accounts;
+using LgymApi.Application.Notifications.Contracts.Events;
+using LgymApi.BackgroundWorker.Actions.Contracts;
 using Microsoft.Extensions.Logging;
-using NotificationsApp = global::LgymApi.Application.Notifications;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
-public sealed class TrainerInvitationCreatedInAppNotificationCommandHandler : global::LgymApi.BackgroundWorker.Common.IBackgroundAction<TrainerInvitationCreatedInAppNotificationCommand>
+public sealed partial class TrainerInvitationCreatedInAppNotificationCommandHandler : IBackgroundAction<TrainerInvitationCreatedInAppNotificationCommand>
 {
-    private readonly NotificationsApp.IInAppNotificationService _notificationService;
-    private readonly IUserRepository _userRepository;
+    private readonly ICoachingNotificationIntentService _notificationIntentService;
+    private readonly ICoachingNotificationReadService _notificationReadService;
+    private readonly IAccountReadService _accountReadService;
     private readonly ILogger<TrainerInvitationCreatedInAppNotificationCommandHandler> _logger;
 
     public TrainerInvitationCreatedInAppNotificationCommandHandler(
-        NotificationsApp.IInAppNotificationService notificationService,
-        IUserRepository userRepository,
+        ICoachingNotificationIntentService notificationIntentService,
+        ICoachingNotificationReadService notificationReadService,
+        IAccountReadService accountReadService,
         ILogger<TrainerInvitationCreatedInAppNotificationCommandHandler> logger)
     {
-        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
-        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _notificationIntentService = notificationIntentService ?? throw new ArgumentNullException(nameof(notificationIntentService));
+        _notificationReadService = notificationReadService ?? throw new ArgumentNullException(nameof(notificationReadService));
+        _accountReadService = accountReadService ?? throw new ArgumentNullException(nameof(accountReadService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task ExecuteAsync(TrainerInvitationCreatedInAppNotificationCommand command, CancellationToken cancellationToken = default)
     {
-        var trainer = await _userRepository.FindByIdAsync(command.TrainerId, cancellationToken);
-        var trainerName = string.IsNullOrWhiteSpace(trainer?.Name) ? Messages.GenericTrainerDisplayName : trainer.Name;
+        var invitation = await _notificationReadService.GetInvitationAsync(command.InvitationId, cancellationToken);
+        if (invitation is null)
+        {
+            return;
+        }
 
-        var input = new NotificationsApp.Models.CreateInAppNotificationInput(
-            command.TraineeId,
-            command.TrainerId,
-            $"trainer-invitation:{command.InvitationId}:sent",
-            false,
-            string.Format(Messages.TrainerInvitationCreatedNotification, trainerName),
-            $"/trainers/invitations/{command.InvitationId}",
-            InAppNotificationTypes.InvitationSent);
+        var trainer = await _accountReadService.GetByIdAsync(command.TrainerId, cancellationToken);
+        var result = await _notificationIntentService.SubmitAsync(
+            new InvitationCreatedCoachingNotificationIntent(
+                CoachingNotificationLegacyChannel.InApp,
+                command.InvitationId,
+                command.TrainerId,
+                command.TraineeId,
+                invitation.InviteeEmail,
+                invitation.InvitationCode,
+                invitation.ExpiresAt,
+                trainer,
+                null),
+            cancellationToken);
 
-        var result = await _notificationService.CreateAsync(input, cancellationToken);
-        if (result.IsFailure)
+        if (result.InAppError is not null)
         {
             _logger.LogError(
                 "Failed to create invitation-sent notification for trainee {TraineeId}: {Error}",
                 command.TraineeId,
-                result.Error);
+                result.InAppError);
         }
     }
 }

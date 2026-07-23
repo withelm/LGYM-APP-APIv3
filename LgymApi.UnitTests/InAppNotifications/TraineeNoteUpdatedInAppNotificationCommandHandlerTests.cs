@@ -1,20 +1,14 @@
-using System.Globalization;
 using FluentAssertions;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
 using LgymApi.Application.Common.Errors;
-using LgymApi.Application.Common.Results;
-using LgymApi.Application.Features.AdminManagement.Models;
-using LgymApi.Application.Models;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
-using LgymApi.Application.Options;
-using LgymApi.Application.Pagination;
-using LgymApi.Application.Repositories;
+using LgymApi.Application.Identity.Contracts.Accounts;
+using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.BackgroundWorker.Actions;
-using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
+using NUnit.Framework;
 
 namespace LgymApi.UnitTests.InAppNotifications;
 
@@ -22,91 +16,74 @@ namespace LgymApi.UnitTests.InAppNotifications;
 public sealed class TraineeNoteUpdatedInAppNotificationCommandHandlerTests
 {
     [Test]
-    public async Task ExecuteAsync_UsesFallbackNamesAndNoteNotificationContract()
+    public async Task ExecuteAsync_ForwardsPublicFactsAndUntitledNoteToTheInAppIntent()
     {
-        var previousCulture = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("pl-PL");
-
-        try
+        var command = new TraineeNoteUpdatedInAppNotificationCommand
         {
-            var notificationService = new FakeNotificationService(Result<InAppNotificationResult, AppError>.Success(CreateResult()));
-            var traineeId = Id<User>.New();
-            var noteId = Id<TraineeNote>.New();
-            var trainee = new User { Id = traineeId, Name = "Trainee", Email = "trainee@example.com", PreferredLanguage = "pl-PL" };
-            var handler = new TraineeNoteUpdatedInAppNotificationCommandHandler(
-                notificationService,
-                new FakeUserRepository(trainee),
-                new AppDefaultsOptions { PreferredLanguage = "en" },
-                NullLogger<TraineeNoteUpdatedInAppNotificationCommandHandler>.Instance);
-
-            await handler.ExecuteAsync(new TraineeNoteUpdatedInAppNotificationCommand
+            TraineeNoteId = Id<TraineeNote>.New(),
+            TraineeId = Id<User>.New(),
+            TrainerId = Id<User>.New(),
+            NoteTitle = "   ",
+            TriggeredAt = new DateTimeOffset(2026, 6, 26, 0, 30, 0, TimeSpan.Zero),
+        };
+        var trainee = Account(command.TraineeId, "Trainee", "pl-PL");
+        var accounts = Substitute.For<IAccountReadService>();
+        var intents = Substitute.For<ICoachingNotificationIntentService>();
+        CoachingNotificationIntent? submittedIntent = null;
+        accounts.GetByIdAsync(command.TrainerId, Arg.Any<CancellationToken>()).Returns((AccountReadModel?)null);
+        accounts.GetByIdAsync(command.TraineeId, Arg.Any<CancellationToken>()).Returns(trainee);
+        intents.SubmitAsync(Arg.Any<CoachingNotificationIntent>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
             {
-                TraineeNoteId = noteId,
-                TraineeId = traineeId,
-                TrainerId = Id<User>.New(),
-                NoteTitle = "   ",
-                TriggeredAt = new DateTimeOffset(2026, 6, 26, 0, 30, 0, TimeSpan.Zero)
+                submittedIntent = call.Arg<CoachingNotificationIntent>();
+                return Task.FromResult(new CoachingNotificationIntentResult(null, null));
             });
+        var handler = new TraineeNoteUpdatedInAppNotificationCommandHandler(
+            intents,
+            accounts,
+            Substitute.For<ILogger<TraineeNoteUpdatedInAppNotificationCommandHandler>>());
 
-            notificationService.Calls.Should().Be(1);
-            notificationService.LastInput.Should().NotBeNull();
-            notificationService.LastInput!.DeliveryKey.Should().Be($"trainee-note:{noteId}:2026-06-26T00:30:00.0000000+00:00");
-            notificationService.LastInput.Type.Should().Be(InAppNotificationTypes.TraineeNoteUpdated);
-            notificationService.LastInput.Message.Should().Contain(LgymApi.Resources.Messages.GenericTrainerDisplayName);
-            notificationService.LastInput.Message.Should().Contain(LgymApi.Resources.Messages.GenericTrainerNoteDisplayName);
-            notificationService.LastInput.RedirectUrl.Should().Be($"/trainer/notes/{noteId}");
-        }
-        finally
-        {
-            CultureInfo.CurrentUICulture = previousCulture;
-        }
+        await handler.ExecuteAsync(command);
+
+        await accounts.Received(1).GetByIdAsync(command.TrainerId, Arg.Any<CancellationToken>());
+        await accounts.Received(1).GetByIdAsync(command.TraineeId, Arg.Any<CancellationToken>());
+        submittedIntent.Should().BeEquivalentTo(new TraineeNoteUpdatedCoachingNotificationIntent(
+            CoachingNotificationLegacyChannel.InApp,
+            command.TraineeNoteId,
+            command.TraineeId,
+            command.TrainerId,
+            command.NoteTitle,
+            command.TriggeredAt,
+            null,
+            trainee));
     }
 
-    private static InAppNotificationResult CreateResult()
-        => new(Id<InAppNotification>.New(), Id<User>.New(), "message", null, false, InAppNotificationTypes.TraineeNoteUpdated, false, null, DateTimeOffset.UtcNow);
-
-    private sealed class FakeNotificationService : IInAppNotificationService
+    [Test]
+    public async Task ExecuteAsync_WhenInAppDeliveryFails_LogsAnError()
     {
-        private readonly Result<InAppNotificationResult, AppError> _result;
+        var intents = Substitute.For<ICoachingNotificationIntentService>();
+        var logger = Substitute.For<ILogger<TraineeNoteUpdatedInAppNotificationCommandHandler>>();
+        intents.SubmitAsync(Arg.Any<CoachingNotificationIntent>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CoachingNotificationIntentResult(null, new BadRequestError("boom"))));
+        var handler = new TraineeNoteUpdatedInAppNotificationCommandHandler(
+            intents,
+            Substitute.For<IAccountReadService>(),
+            logger);
 
-        public FakeNotificationService(Result<InAppNotificationResult, AppError> result) => _result = result;
-
-        public int Calls { get; private set; }
-        public CreateInAppNotificationInput? LastInput { get; private set; }
-
-        public Task<Result<InAppNotificationResult, AppError>> CreateAsync(CreateInAppNotificationInput input, CancellationToken cancellationToken = default)
+        await handler.ExecuteAsync(new TraineeNoteUpdatedInAppNotificationCommand
         {
-            Calls++;
-            LastInput = input;
-            return Task.FromResult(_result);
-        }
+            TraineeNoteId = Id<TraineeNote>.New(),
+            TraineeId = Id<User>.New(),
+            TrainerId = Id<User>.New(),
+            TriggeredAt = DateTimeOffset.UtcNow,
+        });
 
-        public Task<Result<PagedResult<InAppNotificationResult>, AppError>> GetForUserAsync(Id<User> userId, CursorPaginationQuery query, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<Unit, AppError>> MarkAsReadAsync(Id<InAppNotification> notificationId, Id<User> requestingUserId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<Unit, AppError>> MarkAllAsReadAsync(Id<User> userId, DateTimeOffset? before, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<int, AppError>> GetUnreadCountAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        ErrorLogCount(logger).Should().Be(1);
     }
 
-    private sealed class FakeUserRepository : IUserRepository
-    {
-        private readonly Dictionary<Id<User>, User> _users;
+    private static AccountReadModel Account(Id<User> id, string name, string culture)
+        => new(id, name, "person@example.com", null, culture, "Europe/Warsaw");
 
-        public FakeUserRepository(params User[] users)
-        {
-            _users = users.ToDictionary(user => user.Id);
-        }
-
-        public Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default)
-            => Task.FromResult(_users.TryGetValue(id, out var user) ? user : null);
-
-        public Task<User?> FindByIdIncludingDeletedAsync(Id<User> id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<User?> FindByIdWithRolesAsync(Id<User> id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<User?> FindByEmailAsync(Email email, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<User?> FindByNameOrEmailAsync(string name, string email, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<List<UserRankingEntry>> GetRankingAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task AddAsync(User user, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task UpdateAsync(User user, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Pagination<UserResult>> GetUsersPaginatedAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-    }
+    private static int ErrorLogCount<THandler>(ILogger<THandler> logger)
+        => logger.ReceivedCalls().Count(call => call.GetArguments()[0] is LogLevel.Error);
 }

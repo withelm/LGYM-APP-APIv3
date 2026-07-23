@@ -16,16 +16,10 @@ public sealed class ServiceTransactionHeuristicGuardTests
     [Test]
     public void Multi_Write_Service_Methods_Should_Use_A_Commit_Boundary_Or_Be_Allowlisted()
     {
-        var repoRoot = ResolveRepositoryRoot();
-        var applicationRoot = Path.Combine(repoRoot, "LgymApi.Application");
-
-        Assert.That(Directory.Exists(applicationRoot), Is.True, $"Application root '{applicationRoot}' not found.");
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
 
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
-        var serviceFiles = Directory
-            .EnumerateFiles(applicationRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsInBuildArtifacts(path))
-            .ToList();
+        var serviceFiles = ArchitectureTestHelpers.EnumerateProductionSourceFiles("LgymApi.Application");
 
         Assert.That(serviceFiles, Is.Not.Empty, "No application source files found for transaction heuristic guard test.");
 
@@ -179,32 +173,9 @@ public sealed class ServiceTransactionHeuristicGuardTests
             && !typeDeclaration.Modifiers.Any(modifier => modifier.Kind() == Microsoft.CodeAnalysis.CSharp.SyntaxKind.AbstractKeyword);
     }
 
-    private static bool IsInBuildArtifacts(string path)
-    {
-        var normalized = path.Replace('\\', '/');
-        return normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("/bin/", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static string GetAllowlistKey(string serviceName, string methodName)
     {
         return $"{serviceName}.{methodName}";
-    }
-
-    private static string ResolveRepositoryRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current != null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "LgymApi.sln")))
-            {
-                return current.FullName;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Unable to locate repository root.");
     }
 
     private sealed record MethodAnalysis(

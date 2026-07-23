@@ -1,13 +1,14 @@
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
+using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.Domain.Notifications;
 using Microsoft.Extensions.Logging;
 using NotificationsApp = global::LgymApi.Application.Notifications;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
-public sealed class ReportRequestCreatedInAppNotificationCommandHandler : global::LgymApi.BackgroundWorker.Common.IBackgroundAction<ReportRequestCreatedInAppNotificationCommand>
+public sealed partial class ReportRequestCreatedInAppNotificationCommandHandler : IBackgroundAction<ReportRequestCreatedInAppNotificationCommand>
 {
     private readonly NotificationsApp.IInAppNotificationService _notificationService;
     private readonly IUserRepository _userRepository;

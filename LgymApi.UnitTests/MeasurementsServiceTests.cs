@@ -2,14 +2,16 @@ using FluentAssertions;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Measurements.Models;
-using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
-using LgymApi.Application.Features.TrainerRelationships.Models;
 using LgymApi.Application.Units;
+using LgymApi.Application.Identity.Contracts.Access;
+using LgymApi.Application.WorkoutProgress.Contracts.Measurements;
+using LgymApi.Application.WorkoutProgress.ProgressData;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using NUnit.Framework;
+using NSubstitute;
 
 namespace LgymApi.UnitTests;
 
@@ -53,19 +55,129 @@ public sealed class MeasurementsServiceTests
 
         var service = CreateService(
             getByUser: (userId, _, _) => Task.FromResult(userId == traineeId ? measurements : new List<Measurement>()),
-            userHasRole: (_, _, _) => Task.FromResult(true),
-            hasTrainerTraineeLink: (_, _, _) => Task.FromResult(new TrainerTraineeLink
-            {
-                Id = Id<TrainerTraineeLink>.New(),
-                TrainerId = trainerId,
-                TraineeId = traineeId,
-            }));
+            isTrainer: (_, _) => Task.FromResult(true),
+            hasActiveRelationship: (_, _, _) => Task.FromResult(true));
 
         var result = await service.GetMeasurementsHistoryAsync(trainer, traineeId, BodyParts.BodyWeight, MeasurementUnits.Kilograms);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().HaveCount(2);
         result.Value.Should().OnlyContain(item => item.UserId == traineeId);
+    }
+
+    [Test]
+    public async Task GetMeasurementsHistoryAsync_WhenTrainerRequestsLinkedTrainee_ForwardsAuthorizationToConsumerOwnedPort()
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var cancellationToken = new CancellationTokenSource().Token;
+        var forwardedIdentityId = Id<User>.Empty;
+        var forwardedRelationshipTrainerId = Id<User>.Empty;
+        var forwardedRelationshipTraineeId = Id<User>.Empty;
+        var forwardedCancellationToken = CancellationToken.None;
+        var service = CreateService(
+            getByUser: (userId, _, _) => Task.FromResult(new List<Measurement>
+            {
+                CreateMeasurement(userId, BodyParts.BodyWeight, MeasurementUnits.Kilograms, 80, 0)
+            }),
+            isTrainer: (userId, token) =>
+            {
+                forwardedIdentityId = userId;
+                forwardedCancellationToken = token;
+                return Task.FromResult(true);
+            },
+            hasActiveRelationship: (trainerIdFromPort, traineeIdFromPort, token) =>
+            {
+                forwardedRelationshipTrainerId = trainerIdFromPort;
+                forwardedRelationshipTraineeId = traineeIdFromPort;
+                forwardedCancellationToken = token;
+                return Task.FromResult(true);
+            });
+
+        var result = await service.GetMeasurementsHistoryAsync(
+            CreateUser(trainerId, "linked-trainer@example.com"),
+            traineeId,
+            BodyParts.BodyWeight,
+            MeasurementUnits.Kilograms,
+            cancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        forwardedIdentityId.Should().Be(trainerId);
+        forwardedRelationshipTrainerId.Should().Be(trainerId);
+        forwardedRelationshipTraineeId.Should().Be(traineeId);
+        forwardedCancellationToken.Should().Be(cancellationToken);
+    }
+
+    [Test]
+    public async Task GetMeasurementsHistoryAsync_WhenTraineeReadsOwnHistory_SkipsAuthorizationPorts()
+    {
+        var traineeId = Id<User>.New();
+        var service = CreateService(
+            getByUser: (userId, _, _) => Task.FromResult(new List<Measurement>
+            {
+                CreateMeasurement(userId, BodyParts.BodyWeight, MeasurementUnits.Kilograms, 80, 0)
+            }),
+            isTrainer: (_, _) => throw new AssertionException("Self access must not read the trainer role."),
+            hasActiveRelationship: (_, _, _) => throw new AssertionException("Self access must not check a relationship."));
+
+        var result = await service.GetMeasurementsHistoryAsync(
+            CreateUser(traineeId, "trainee-self@example.com"),
+            traineeId,
+            BodyParts.BodyWeight,
+            MeasurementUnits.Kilograms);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task GetMeasurementsHistoryAsync_WhenCallerIsNotTrainer_ReturnsForbiddenWithoutRelationshipCheck()
+    {
+        var service = CreateService(
+            isTrainer: (_, _) => Task.FromResult(false),
+            hasActiveRelationship: (_, _, _) => throw new AssertionException("Non-trainers must not check relationships."));
+
+        var result = await service.GetMeasurementsHistoryAsync(
+            CreateUser(Id<User>.New(), "non-trainer@example.com"),
+            Id<User>.New(),
+            null,
+            null);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<MeasurementForbiddenError>();
+    }
+
+    [Test]
+    public async Task GetMeasurementsHistoryAsync_WhenTrainerIsNotLinkedToRequestedUser_ReturnsForbidden()
+    {
+        var service = CreateService(
+            isTrainer: (_, _) => Task.FromResult(true),
+            hasActiveRelationship: (_, _, _) => Task.FromResult(false));
+
+        var result = await service.GetMeasurementsHistoryAsync(
+            CreateUser(Id<User>.New(), "foreign-trainer@example.com"),
+            Id<User>.New(),
+            null,
+            null);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<MeasurementForbiddenError>();
+    }
+
+    [Test]
+    public async Task GetMeasurementsHistoryAsync_WhenRouteUserIdIsEmpty_ReturnsInvalidMeasurementErrorWithoutAuthorizationReads()
+    {
+        var service = CreateService(
+            isTrainer: (_, _) => throw new AssertionException("An empty route ID must not read the trainer role."),
+            hasActiveRelationship: (_, _, _) => throw new AssertionException("An empty route ID must not check a relationship."));
+
+        var result = await service.GetMeasurementsHistoryAsync(
+            CreateUser(Id<User>.New(), "empty-id@example.com"),
+            Id<User>.Empty,
+            null,
+            null);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidMeasurementError>();
     }
 
     [Test]
@@ -214,7 +326,7 @@ public sealed class MeasurementsServiceTests
     }
 
     [Test]
-    public async Task AddMeasurementsAsync_WhenBulkPayloadIsValid_SavesAllMeasurements()
+    public async Task AddMeasurementsAsync_WhenOwnerWritesValidBulkPayload_SavesAllMeasurements()
     {
         var userId = Id<User>.New();
         var currentUser = CreateUser(userId, "bulk-valid@example.com");
@@ -248,59 +360,36 @@ public sealed class MeasurementsServiceTests
     private static MeasurementsService CreateService(
         Func<Id<Measurement>, CancellationToken, Task<Measurement?>>? findById = null,
         Func<Id<User>, BodyParts?, CancellationToken, Task<List<Measurement>>>? getByUser = null,
-        Func<Id<User>, string, CancellationToken, Task<bool>>? userHasRole = null,
-        Func<Id<User>, Id<User>, CancellationToken, Task<TrainerTraineeLink?>>? hasTrainerTraineeLink = null,
+        Func<Id<User>, CancellationToken, Task<bool>>? isTrainer = null,
+        Func<Id<User>, Id<User>, CancellationToken, Task<bool>>? hasActiveRelationship = null,
         CapturingMeasurementRepository? repository = null)
     {
         var measurementRepository = repository ?? new CapturingMeasurementRepository();
         measurementRepository.FindByIdHandler = findById ?? ((_, _) => Task.FromResult<Measurement?>(null));
         measurementRepository.GetByUserHandler = getByUser ?? ((_, _, _) => Task.FromResult(new List<Measurement>()));
-        var roleRepository = new StubRoleRepository
-        {
-            UserHasRoleHandler = userHasRole ?? ((_, _, _) => Task.FromResult(false))
-        };
-        var trainerRelationshipRepository = new StubTrainerRelationshipRepository
-        {
-            FindActiveLinkByTrainerAndTraineeHandler = hasTrainerTraineeLink ?? ((_, _, _) => Task.FromResult<TrainerTraineeLink?>(null))
-        };
-
         var heightConverter = new StubHeightUnitConverter();
         var weightConverter = new StubWeightUnitConverter();
         var unitOfWork = new StubUnitOfWork();
-
-        return new MeasurementsService(new StubMeasurementsServiceDependencies(
+        var userAccess = Substitute.For<IUserAccessReadService>();
+        userAccess.IsTrainerAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns(call => (isTrainer ?? ((_, _) => Task.FromResult(false)))(call.Arg<Id<User>>(), call.Arg<CancellationToken>()));
+        var relationshipAccess = Substitute.For<IMeasurementsRelationshipAccessPort>();
+        relationshipAccess.HasActiveRelationshipAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns(call => (hasActiveRelationship ?? ((_, _, _) => Task.FromResult(false)))(
+                call.ArgAt<Id<User>>(0),
+                call.ArgAt<Id<User>>(1),
+                call.ArgAt<CancellationToken>(2)));
+        var progress = new WorkoutProgressReadWriteService(new WorkoutProgressReadWriteServiceDependencies(
+            Substitute.For<IExerciseRepository>(),
+            Substitute.For<IExerciseScoreRepository>(),
             measurementRepository,
-            roleRepository,
-            trainerRelationshipRepository,
+            Substitute.For<IMainRecordRepository>(),
+            Substitute.For<IEloRegistryRepository>(),
+            userAccess,
             heightConverter,
             weightConverter,
             unitOfWork));
-    }
-
-    private sealed class StubMeasurementsServiceDependencies : IMeasurementsServiceDependencies
-    {
-        public StubMeasurementsServiceDependencies(
-            IMeasurementRepository measurementRepository,
-            IRoleRepository roleRepository,
-            ITrainerRelationshipRepository trainerRelationshipRepository,
-            IUnitConverter<HeightUnits> heightUnitConverter,
-            IUnitConverter<WeightUnits> weightUnitConverter,
-            IUnitOfWork unitOfWork)
-        {
-            MeasurementRepository = measurementRepository;
-            RoleRepository = roleRepository;
-            TrainerRelationshipRepository = trainerRelationshipRepository;
-            HeightUnitConverter = heightUnitConverter;
-            WeightUnitConverter = weightUnitConverter;
-            UnitOfWork = unitOfWork;
-        }
-
-        public IMeasurementRepository MeasurementRepository { get; }
-        public IRoleRepository RoleRepository { get; }
-        public ITrainerRelationshipRepository TrainerRelationshipRepository { get; }
-        public IUnitConverter<HeightUnits> HeightUnitConverter { get; }
-        public IUnitConverter<WeightUnits> WeightUnitConverter { get; }
-        public IUnitOfWork UnitOfWork { get; }
+        return new MeasurementsService(progress, userAccess, relationshipAccess);
     }
 
     private sealed class CapturingMeasurementRepository : IMeasurementRepository
@@ -391,54 +480,5 @@ public sealed class MeasurementsServiceTests
             => throw new NotSupportedException();
 
         public void DetachEntity<TEntity>(TEntity entity) where TEntity : class => throw new NotSupportedException();
-    }
-
-    private sealed class StubRoleRepository : IRoleRepository
-    {
-        public Func<Id<User>, string, CancellationToken, Task<bool>> UserHasRoleHandler { get; set; } = (_, _, _) => Task.FromResult(false);
-
-        public Task<bool> UserHasRoleAsync(Id<User> userId, string roleName, CancellationToken cancellationToken = default)
-            => UserHasRoleHandler(userId, roleName, cancellationToken);
-
-        public Task<List<Role>> GetAllAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Role?> FindByIdAsync(Id<Role> roleId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Role?> FindByNameAsync(string roleName, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<Role>> GetByNamesAsync(IReadOnlyCollection<string> roleNames, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<bool> ExistsByNameAsync(string roleName, Id<Role>? excludeRoleId = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<string>> GetRoleNamesByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Dictionary<Id<User>, List<string>>> GetRoleNamesByUserIdsAsync(IReadOnlyCollection<Id<User>> userIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<string>> GetPermissionClaimsByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<string>> GetPermissionClaimsByRoleIdAsync(Id<Role> targetRoleId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Dictionary<Id<Role>, List<string>>> GetPermissionClaimsByRoleIdsAsync(IReadOnlyCollection<Id<Role>> targetRoleIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<bool> UserHasPermissionAsync(Id<User> userId, string permission, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task AddRoleAsync(Role role, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task UpdateRoleAsync(Role role, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task DeleteRoleAsync(Role role, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task ReplaceRolePermissionClaimsAsync(Id<Role> targetRoleId, IReadOnlyCollection<string> permissionClaims, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task AddUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task ReplaceUserRolesAsync(Id<User> userId, IReadOnlyCollection<Id<Role>> roleIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<LgymApi.Application.Pagination.Pagination<Role>> GetRolesPaginatedAsync(FilterInput filterInput, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-    }
-
-    private sealed class StubTrainerRelationshipRepository : ITrainerRelationshipRepository
-    {
-        public Func<Id<User>, Id<User>, CancellationToken, Task<TrainerTraineeLink?>> FindActiveLinkByTrainerAndTraineeHandler { get; set; } = (_, _, _) => Task.FromResult<TrainerTraineeLink?>(null);
-
-        public Task<TrainerTraineeLink?> FindActiveLinkByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
-            => FindActiveLinkByTrainerAndTraineeHandler(trainerId, traineeId, cancellationToken);
-
-        public Task AddInvitationAsync(TrainerInvitation invitation, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerInvitation?> FindInvitationByIdAsync(Id<TrainerInvitation> invitationId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerInvitation?> FindPendingInvitationAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerInvitation?> FindPendingInvitationByEmailAsync(Id<User> trainerId, string inviteeEmail, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<bool> IsEmailAlreadyTraineeAsync(Id<User> trainerId, string inviteeEmail, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerInvitation?> FindInvitationByIdWithCodeAsync(Id<TrainerInvitation> invitationId, string code, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<List<TrainerInvitation>> GetInvitationsByTrainerIdAsync(Id<User> trainerId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<bool> HasActiveLinkForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<TrainerTraineeLink?> FindActiveLinkByTraineeIdAsync(Id<User> traineeId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeListResult> GetDashboardTraineesAsync(Id<User> trainerId, LgymApi.Application.Features.TrainerRelationships.Models.TrainerDashboardTraineeQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<LgymApi.Application.Pagination.Pagination<LgymApi.Application.Features.TrainerRelationships.Models.TrainerInvitationResult>> GetInvitationsPaginatedAsync(Id<User> trainerId, FilterInput filterInput, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task AddLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task RemoveLinkAsync(TrainerTraineeLink link, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }

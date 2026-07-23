@@ -2,11 +2,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using LgymApi.BackgroundWorker.Common.Serialization;
-using Google.Apis.Auth.OAuth2;
-using LgymApi.BackgroundWorker.Common.Push;
-using LgymApi.BackgroundWorker.Common.Push.Models;
+using LgymApi.Application.Notifications.Contracts.Push;
+using LgymApi.Application.Notifications.Repositories;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
+using Google.Apis.Auth.OAuth2;
 using LgymApi.Infrastructure.Options;
 using Microsoft.Extensions.Logging;
 
@@ -17,23 +18,45 @@ public sealed class FcmPushSender : IPushProviderSender
     private const string MessagingScope = "https://www.googleapis.com/auth/firebase.messaging";
     private const string NotificationTitle = "LGYM";
     private const string NotificationBody = "You have a new notification.";
+    private const string AcceptedResponseSummary = "accepted";
+    private const string ReceivedResponseSummary = "provider-response-received";
+
+    private static readonly HashSet<string> KnownProviderStatuses = new(StringComparer.Ordinal)
+    {
+        "CANCELLED",
+        "DEADLINE_EXCEEDED",
+        "INTERNAL",
+        "INVALID_ARGUMENT",
+        "NOT_FOUND",
+        "PERMISSION_DENIED",
+        "QUOTA_EXCEEDED",
+        "RESOURCE_EXHAUSTED",
+        "SENDER_ID_MISMATCH",
+        "THIRD_PARTY_AUTH_ERROR",
+        "UNAUTHENTICATED",
+        "UNAVAILABLE",
+        "UNREGISTERED"
+    };
 
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IPushInstallationRepository _pushInstallationRepository;
     private readonly PushNotificationOptions _options;
     private readonly ILogger<FcmPushSender> _logger;
 
     public FcmPushSender(
         IHttpClientFactory httpClientFactory,
+        IPushInstallationRepository pushInstallationRepository,
         PushNotificationOptions options,
         ILogger<FcmPushSender> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _pushInstallationRepository = pushInstallationRepository;
         _options = options;
         _logger = logger;
     }
 
     public async Task<PushSendAttemptResult> SendAsync(
-        PushInstallation installation,
+        Id<PushInstallation> installationId,
         PushEventPayload payload,
         CancellationToken cancellationToken = default)
     {
@@ -47,45 +70,60 @@ public sealed class FcmPushSender : IPushProviderSender
                 "Push notifications are disabled.");
         }
 
-        var accessToken = await GetAccessTokenAsync(cancellationToken);
-        using var request = new HttpRequestMessage(HttpMethod.Post, BuildSendUrl())
+        try
         {
-            Content = BuildRequestContent(installation, payload)
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            var installation = await _pushInstallationRepository.FindByIdAsync(installationId, cancellationToken)
+                ?? throw new InvalidOperationException("Push installation was not found for provider delivery.");
 
-        var client = _httpClientFactory.CreateClient(nameof(FcmPushSender));
-        using var response = await client.SendAsync(request, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            var accessToken = await GetAccessTokenAsync(cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Post, BuildSendUrl())
+            {
+                Content = BuildRequestContent(installation.FcmToken, payload)
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        if (response.IsSuccessStatusCode)
-        {
-            var providerMessageId = TryExtractValue(body, "name");
+            var client = _httpClientFactory.CreateClient(nameof(FcmPushSender));
+            using var response = await client.SendAsync(request, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var providerMessageId = TryExtractProviderMessageId(body);
+                return new PushSendAttemptResult(
+                    PushSendOutcome.Sent,
+                    response.StatusCode.ToString(),
+                    providerMessageId,
+                    null,
+                    AcceptedResponseSummary);
+            }
+
+            var summary = Summarize(body);
+            var errorCode = TryExtractProviderStatus(body) ?? response.StatusCode.ToString();
+            var outcome = ClassifyFailure(response.StatusCode, body);
+            _logger.LogWarning(
+                "FCM send failed for installation {InstallationId}, event {EventId}, category {Category} with provider status {ProviderStatus}, outcome {Outcome}, and summary {ProviderSummary}.",
+                installation.InstallationId,
+                payload.EventId,
+                payload.Type,
+                response.StatusCode,
+                outcome,
+                summary);
+
             return new PushSendAttemptResult(
-                PushSendOutcome.Sent,
+                outcome,
                 response.StatusCode.ToString(),
-                providerMessageId,
                 null,
-                Summarize(body));
+                errorCode,
+                summary);
         }
-
-        var summary = Summarize(body);
-        var errorCode = TryExtractValue(body, "status") ?? response.StatusCode.ToString();
-        var outcome = ClassifyFailure(response.StatusCode, summary);
-        _logger.LogWarning(
-            "FCM send failed for installation {InstallationId}, event {EventId}, category {Category} with provider status {ProviderStatus} and outcome {Outcome}.",
-            installation.InstallationId,
-            payload.EventId,
-            payload.Type,
-            response.StatusCode,
-            outcome);
-
-        return new PushSendAttemptResult(
-            outcome,
-            response.StatusCode.ToString(),
-            null,
-            errorCode,
-            summary);
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw new InvalidOperationException("FCM provider delivery failed.");
+        }
     }
 
     private async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
@@ -120,13 +158,13 @@ public sealed class FcmPushSender : IPushProviderSender
         return CredentialFactory.FromStream<ServiceAccountCredential>(stream).ToGoogleCredential();
     }
 
-    private StringContent BuildRequestContent(PushInstallation installation, PushEventPayload payload)
+    private StringContent BuildRequestContent(string deviceToken, PushEventPayload payload)
     {
         var request = new
         {
             message = new
             {
-                token = installation.FcmToken,
+                token = deviceToken,
                 notification = new
                 {
                     title = NotificationTitle,
@@ -142,7 +180,7 @@ public sealed class FcmPushSender : IPushProviderSender
                     ["type"] = payload.Type,
                     ["eventId"] = payload.EventId,
                     ["entityId"] = payload.EntityId ?? string.Empty,
-                    ["inAppNotificationId"] = payload.InAppNotificationId ?? string.Empty,
+                    ["inAppNotificationId"] = payload.InAppNotificationId?.ToString() ?? string.Empty,
                     ["deeplink"] = payload.Deeplink ?? string.Empty
                 }
             }
@@ -157,9 +195,9 @@ public sealed class FcmPushSender : IPushProviderSender
         return $"{_options.Fcm.BaseUrl}/v1/projects/{_options.Fcm.ProjectId}/messages:send";
     }
 
-    private static PushSendOutcome ClassifyFailure(HttpStatusCode statusCode, string summary)
+    private static PushSendOutcome ClassifyFailure(HttpStatusCode statusCode, string providerResponse)
     {
-        if (ContainsAny(summary, "unregistered", "registration-token-not-registered", "invalid registration token", "not a valid fcm registration token"))
+        if (ContainsAny(providerResponse, "unregistered", "registration-token-not-registered", "invalid registration token", "not a valid fcm registration token"))
         {
             return PushSendOutcome.InvalidToken;
         }
@@ -174,7 +212,7 @@ public sealed class FcmPushSender : IPushProviderSender
             return PushSendOutcome.TransientFailure;
         }
 
-        if (ContainsAny(summary, "unavailable", "internal", "timeout", "temporar"))
+        if (ContainsAny(providerResponse, "unavailable", "internal", "timeout", "temporar"))
         {
             return PushSendOutcome.TransientFailure;
         }
@@ -228,9 +266,31 @@ public sealed class FcmPushSender : IPushProviderSender
             return string.Empty;
         }
 
-        var normalized = value.Replace("\r", " ", StringComparison.Ordinal)
-            .Replace("\n", " ", StringComparison.Ordinal)
-            .Trim();
-        return normalized.Length <= 1000 ? normalized : normalized[..1000];
+        return TryExtractProviderStatus(value) is { } status
+            ? $"status={status}"
+            : ReceivedResponseSummary;
+    }
+
+    private static string? TryExtractProviderStatus(string body)
+    {
+        var status = TryExtractValue(body, "status");
+        return status != null && KnownProviderStatuses.Contains(status)
+            ? status
+            : null;
+    }
+
+    private static string? TryExtractProviderMessageId(string body)
+    {
+        var messageId = TryExtractValue(body, "name");
+        if (string.IsNullOrWhiteSpace(messageId)
+            || messageId.Length > 200
+            || !messageId.StartsWith("projects/", StringComparison.Ordinal)
+            || !messageId.Contains("/messages/", StringComparison.Ordinal)
+            || messageId.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '/' and not '-' and not '_' and not '.' and not ':'))
+        {
+            return null;
+        }
+
+        return messageId;
     }
 }

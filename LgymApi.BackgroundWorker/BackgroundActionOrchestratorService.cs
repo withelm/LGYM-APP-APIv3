@@ -1,14 +1,14 @@
-using System.Collections.Concurrent;
-using System.Linq.Expressions;
 using System.Text.Json;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Serialization;
+using LgymApi.BackgroundWorker.Actions.Contracts;
+using LgymApi.BackgroundWorker.Runtime;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RuntimeCommandDescriptor = LgymApi.BackgroundWorker.Runtime.CommandDescriptor;
 
 namespace LgymApi.BackgroundWorker;
 
@@ -19,7 +19,8 @@ namespace LgymApi.BackgroundWorker;
 /// </summary>
 public sealed partial class BackgroundActionOrchestratorService
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IBackgroundActionResolver _backgroundActionResolver;
+    private readonly CommandContractRegistry _commandContractRegistry;
     private readonly ICommandEnvelopeRepository _commandEnvelopeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BackgroundActionOrchestratorService> _logger;
@@ -28,12 +29,14 @@ public sealed partial class BackgroundActionOrchestratorService
     private const int MaxDegreeOfParallelism = 4;
 
     public BackgroundActionOrchestratorService(
-        IServiceProvider serviceProvider,
+        IBackgroundActionResolver backgroundActionResolver,
+        CommandContractRegistry commandContractRegistry,
         ICommandEnvelopeRepository commandEnvelopeRepository,
         IUnitOfWork unitOfWork,
         ILogger<BackgroundActionOrchestratorService> logger)
     {
-        _serviceProvider = serviceProvider;
+        _backgroundActionResolver = backgroundActionResolver;
+        _commandContractRegistry = commandContractRegistry;
         _commandEnvelopeRepository = commandEnvelopeRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -104,25 +107,27 @@ public sealed partial class BackgroundActionOrchestratorService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Resolve command runtime type from durable descriptor
-        Type? commandType;
+        RuntimeCommandDescriptor descriptor;
         try
         {
-            commandType = CommandDescriptor.ResolveCommandType(envelope.CommandTypeFullName);
+            descriptor = _commandContractRegistry.Resolve(envelope.CommandTypeFullName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "Failed to resolve command type for envelope {EnvelopeId}. Marking dead-lettered.",
+                "Failed to resolve command ID for envelope {EnvelopeId}. Marking dead-lettered.",
                 envelopeId);
 
-            envelopeAttemptLog.Status = ActionExecutionStatus.Failed;
-            envelopeAttemptLog.ErrorMessage = ex.Message;
-            envelopeAttemptLog.ErrorDetails = ex.ToString();
-            envelope.MarkDeadLettered("Dead-lettered because command type could not be resolved", ex.ToString());
-            await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await MarkDeadLetteredAsync(
+                envelope,
+                envelopeAttemptLog,
+                "Dead-lettered because command ID could not be resolved",
+                ex,
+                cancellationToken);
             return;
         }
+
+        var commandType = descriptor.RuntimeType;
 
         // Deserialize command payload
         object command;
@@ -137,35 +142,23 @@ public sealed partial class BackgroundActionOrchestratorService
                 "Failed to deserialize command payload for envelope {EnvelopeId}. Marking dead-lettered.",
                 envelopeId);
 
-            envelopeAttemptLog.Status = ActionExecutionStatus.Failed;
-            envelopeAttemptLog.ErrorMessage = ex.Message;
-            envelopeAttemptLog.ErrorDetails = ex.ToString();
-            envelope.MarkDeadLettered("Dead-lettered because command payload could not be deserialized", ex.ToString());
-            await _commandEnvelopeRepository.UpdateAsync(envelope, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await MarkDeadLetteredAsync(
+                envelope,
+                envelopeAttemptLog,
+                "Dead-lettered because command payload could not be deserialized",
+                ex,
+                cancellationToken);
             return;
         }
 
-        // Resolve handlers for exact command type only (no polymorphic matching)
-        var handlerType = typeof(IBackgroundAction<>).MakeGenericType(commandType);
-
-        // Check if any handlers are registered (without materializing them)
-        int handlerCount;
-        List<string> handlerTypeNames;
-        using (var tempScope = _serviceProvider.CreateScope())
-        {
-            var handlers = tempScope.ServiceProvider.GetServices(handlerType).ToList();
-            handlerCount = handlers.Count;
-            handlerTypeNames = handlers
-                .Select(h => h?.GetType().FullName ?? "UnknownHandler")
-                .ToList();
-        }
+        var handlerTypeNames = _backgroundActionResolver.GetHandlerTypeNames(commandType);
+        var handlerCount = handlerTypeNames.Count;
 
         if (handlerCount == 0)
         {
             _logger.LogWarning(
-                "No handlers registered for command type {CommandType} (envelope {EnvelopeId}). Completing without execution.",
-                commandType.FullName,
+                "No handlers registered for command {CommandId} (envelope {EnvelopeId}). Completing without execution.",
+                descriptor.CanonicalId,
                 envelopeId);
 
             envelopeAttemptLog.Status = ActionExecutionStatus.Completed;
@@ -176,43 +169,47 @@ public sealed partial class BackgroundActionOrchestratorService
         }
 
         _logger.LogInformation(
-            "Orchestrating {HandlerCount} handler(s) for command type {CommandType} (envelope {EnvelopeId}).",
+            "Orchestrating {HandlerCount} handler(s) for command {CommandId} (envelope {EnvelopeId}).",
             handlerCount,
-            commandType.FullName,
+            descriptor.CanonicalId,
             envelopeId);
 
-        // Execute handlers in parallel with MaxDegreeOfParallelism=4 and isolated scopes
         var executionTasks = new List<Task<HandlerExecutionResult>>();
-        var semaphore = new SemaphoreSlim(MaxDegreeOfParallelism);
-
-        for (int i = 0; i < handlerCount; i++)
+        using var semaphore = new SemaphoreSlim(MaxDegreeOfParallelism);
+        HandlerExecutionResult[] results;
+        try
         {
-            var expectedHandlerTypeName = handlerTypeNames[i];
-            var task = Task.Run(async () =>
+            for (int i = 0; i < handlerCount; i++)
             {
-                await semaphore.WaitAsync(cancellationToken);
-                try
+                var expectedHandlerTypeName = handlerTypeNames[i];
+                var task = Task.Run(async () =>
                 {
-                    return await ExecuteHandlerInIsolatedScopeAsync(
-                        handlerType,
-                        command,
-                        commandType,
-                        expectedHandlerTypeName,
-                        cancellationToken);
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-            }, cancellationToken);
-            executionTasks.Add(task);
+                    await semaphore.WaitAsync(cancellationToken);
+                    try
+                    {
+                        return await ExecuteHandlerInIsolatedScopeAsync(
+                            command,
+                            commandType,
+                            descriptor.CanonicalId,
+                            expectedHandlerTypeName,
+                            cancellationToken);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }, cancellationToken);
+                executionTasks.Add(task);
+            }
+
+            results = await Task.WhenAll(executionTasks);
         }
-        var results = await Task.WhenAll(executionTasks);
-
-        // Evaluate results and update envelope status
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await RecordCancelledAttemptAsync(envelope, envelopeAttemptLog);
+            throw;
+        }
         var hasFailures = results.Any(r => !r.Success);
-
-        // Record per-handler execution outcomes in durable ExecutionLog
         foreach (var result in results)
         {
             var executionLog = new ActionExecutionLog
@@ -287,6 +284,4 @@ public sealed partial class BackgroundActionOrchestratorService
                 envelopeId);
         }
     }
-
-
 }

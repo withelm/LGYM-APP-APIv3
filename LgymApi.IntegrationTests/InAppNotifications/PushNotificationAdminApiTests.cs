@@ -76,6 +76,26 @@ public sealed class PushNotificationAdminApiTests : IntegrationTestBase
         count.Should().Be(0);
     }
 
+    [Test]
+    public async Task EnqueueTestEvent_WithoutAuthorization_ReturnsUnauthorized()
+    {
+        var response = await PostAsJsonWithApiOptionsAsync(
+            "/api/internal/push/test-event",
+            new EnqueueTestPushEventHttpRequest(
+                Id<User>.New().ToString(),
+                "internal.test.push",
+                "event-admin-test-anonymous",
+                null,
+                null,
+                null));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.PushNotificationMessages.CountAsync(x => x.EventId == "event-admin-test-anonymous")).Should().Be(0);
+    }
+
     private async Task<InAppNotification> SeedNotificationAsync(Id<User> recipientId, string message)
     {
         using var scope = Factory.Services.CreateScope();

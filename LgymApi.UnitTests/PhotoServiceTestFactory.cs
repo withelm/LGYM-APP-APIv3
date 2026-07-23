@@ -1,10 +1,11 @@
 using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -35,8 +36,7 @@ internal static class PhotoServiceTestFactory
 
     public static IReportingService CreateService(
         Func<Id<ReportRequest>, CancellationToken, Task<ReportRequest?>>? findRequestById = null,
-        Func<Id<User>, string, CancellationToken, Task<bool>>? userHasRole = null,
-        Func<Id<User>, Id<User>, CancellationToken, Task<TrainerTraineeLink?>>? hasTrainerTraineeLink = null,
+        Func<Id<User>, Id<User>, CancellationToken, Task<CoachingRelationshipAccessDecision>>? relationshipAccess = null,
         IPhotoStorageProvider? photoStorageProvider = null,
         IReportingRepository? reportingRepository = null,
         PendingPhotoUpload? pendingUpload = null,
@@ -45,12 +45,10 @@ internal static class PhotoServiceTestFactory
         PhotoStorageOptions? photoStorageOptions = null)
     {
         var roleRepository = Substitute.For<IRoleRepository>();
-        roleRepository.UserHasRoleAsync(Arg.Any<Id<User>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(ci => userHasRole?.Invoke(ci.ArgAt<Id<User>>(0), ci.ArgAt<string>(1), ci.ArgAt<CancellationToken>(2)) ?? Task.FromResult(false));
-
-        var trainerRelationshipRepository = Substitute.For<ITrainerRelationshipRepository>();
-        trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
-            .Returns(ci => hasTrainerTraineeLink?.Invoke(ci.ArgAt<Id<User>>(0), ci.ArgAt<Id<User>>(1), ci.ArgAt<CancellationToken>(2)) ?? Task.FromResult<TrainerTraineeLink?>(null));
+        var coachingRelationshipAccess = Substitute.For<ICoachingRelationshipAccessService>();
+        coachingRelationshipAccess.GetAccessDecisionAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => relationshipAccess?.Invoke(ci.ArgAt<Id<User>>(0), ci.ArgAt<Id<User>>(1), ci.ArgAt<CancellationToken>(2))
+                ?? Task.FromResult(new CoachingRelationshipAccessDecision(false, false)));
 
         var repo = reportingRepository ?? Substitute.For<IReportingRepository>();
         if (findRequestById != null)
@@ -77,7 +75,7 @@ internal static class PhotoServiceTestFactory
 
         var dependencies = Substitute.For<IReportingServiceDependencies>();
         dependencies.RoleRepository.Returns(roleRepository);
-        dependencies.TrainerRelationshipRepository.Returns(trainerRelationshipRepository);
+        dependencies.CoachingRelationshipAccessService.Returns(coachingRelationshipAccess);
         dependencies.ReportingRepository.Returns(repo);
         dependencies.CommandDispatcher.Returns(commandDispatcher);
         dependencies.UnitOfWork.Returns(resolvedUnitOfWork);

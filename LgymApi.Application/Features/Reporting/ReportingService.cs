@@ -1,12 +1,13 @@
 using System.Text.Json;
 using System.Globalization;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Common.Results;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Enums;
@@ -20,11 +21,12 @@ namespace LgymApi.Application.Features.Reporting;
 public sealed partial class ReportingService : IReportingService
 {
     private readonly IRoleRepository _roleRepository;
-    private readonly ITrainerRelationshipRepository _trainerRelationshipRepository;
+    private readonly ICoachingRelationshipAccessService _coachingRelationshipAccessService;
     private readonly IReportingRepository _reportingRepository;
     private readonly IRecurringReportAssignmentRepository _recurringReportAssignmentRepository;
-    private readonly IReportSubmissionMeasurementWriter _reportSubmissionMeasurementWriter;
+    private readonly IReportSubmissionAcceptedProgressCommandFactory _reportSubmissionAcceptedProgressCommandFactory;
     private readonly ICommandDispatcher _commandDispatcher;
+    private readonly ICommandOutboxWriter _commandOutboxWriter;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPhotoStorageProvider _photoStorageProvider;
     private readonly IPhotoUploadInitTracker _photoUploadInitTracker;
@@ -34,11 +36,12 @@ public sealed partial class ReportingService : IReportingService
     public ReportingService(IReportingServiceDependencies dependencies)
     {
         _roleRepository = dependencies.RoleRepository;
-        _trainerRelationshipRepository = dependencies.TrainerRelationshipRepository;
+        _coachingRelationshipAccessService = dependencies.CoachingRelationshipAccessService;
         _reportingRepository = dependencies.ReportingRepository;
         _recurringReportAssignmentRepository = dependencies.RecurringReportAssignmentRepository;
-        _reportSubmissionMeasurementWriter = dependencies.ReportSubmissionMeasurementWriter;
+        _reportSubmissionAcceptedProgressCommandFactory = dependencies.ReportSubmissionAcceptedProgressCommandFactory;
         _commandDispatcher = dependencies.CommandDispatcher;
+        _commandOutboxWriter = dependencies.CommandOutboxWriter;
         _unitOfWork = dependencies.UnitOfWork;
         _photoStorageProvider = dependencies.PhotoStorageProvider;
         _photoUploadInitTracker = dependencies.PhotoUploadInitTracker;
@@ -59,10 +62,13 @@ public sealed partial class ReportingService : IReportingService
 
     private async Task<Result<Unit, AppError>> EnsureTrainerOwnsTraineeAsync(UserEntity currentTrainer, Id<UserEntity> traineeId, CancellationToken cancellationToken)
     {
-        var trainerCheck = await EnsureTrainerAsync(currentTrainer, cancellationToken);
-        if (trainerCheck.IsFailure)
+        var access = await _coachingRelationshipAccessService.GetAccessDecisionAsync(
+            currentTrainer.Id,
+            traineeId,
+            cancellationToken);
+        if (!access.IsTrainer)
         {
-            return Result<Unit, AppError>.Failure(trainerCheck.Error);
+            return Result<Unit, AppError>.Failure(new ReportingForbiddenError(Messages.TrainerRoleRequired));
         }
 
         if (traineeId.IsEmpty)
@@ -70,8 +76,7 @@ public sealed partial class ReportingService : IReportingService
             return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.UserIdRequired));
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(currentTrainer.Id, traineeId, cancellationToken);
-        if (link == null)
+        if (!access.HasActiveRelationship)
         {
             return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }

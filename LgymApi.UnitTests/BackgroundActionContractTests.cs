@@ -1,10 +1,28 @@
 using FluentAssertions;
-using LgymApi.BackgroundWorker.Common;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.BackgroundWorker.Actions.Contracts;
 using NUnit.Framework;
+using System.Reflection;
 
 [TestFixture]
 public sealed class BackgroundActionContractTests
 {
+    private const string ApplicationActionCommandTypeName =
+        "LgymApi.Application.Platform.Contracts.BackgroundCommands.IActionCommand";
+
+    [Test]
+    public void ApplicationIActionCommand_IsExactPublicMarkerInterface()
+    {
+        var type = GetApplicationType(ApplicationActionCommandTypeName);
+
+        type.IsPublic.Should().BeTrue();
+        type.IsInterface.Should().BeTrue();
+        type.IsGenericType.Should().BeFalse();
+        type.GetInterfaces().Should().BeEmpty();
+        type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Should().BeEmpty();
+    }
+
     [Test]
     public void IActionCommand_IsMarkerInterface()
     {
@@ -144,5 +162,12 @@ public sealed class BackgroundActionContractTests
         {
             return Task.CompletedTask;
         }
+    }
+
+    private static Type GetApplicationType(string metadataName)
+    {
+        var type = typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly.GetType(metadataName);
+        type.Should().NotBeNull($"{metadataName} must be defined by the Application assembly");
+        return type!;
     }
 }

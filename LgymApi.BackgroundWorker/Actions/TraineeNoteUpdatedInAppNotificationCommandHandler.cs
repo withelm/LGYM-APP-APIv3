@@ -1,83 +1,46 @@
-using System.Globalization;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Models;
-using LgymApi.Application.Options;
-using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common.Commands;
-using LgymApi.Domain.Notifications;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.Application.Identity.Contracts.Accounts;
+using LgymApi.Application.Notifications.Contracts.Events;
+using LgymApi.BackgroundWorker.Actions.Contracts;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.BackgroundWorker.Actions;
 
-public sealed class TraineeNoteUpdatedInAppNotificationCommandHandler : global::LgymApi.BackgroundWorker.Common.IBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand>
+public sealed partial class TraineeNoteUpdatedInAppNotificationCommandHandler : IBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand>
 {
-    private readonly IInAppNotificationService _notificationService;
-    private readonly IUserRepository _userRepository;
-    private readonly AppDefaultsOptions _appDefaultsOptions;
+    private readonly ICoachingNotificationIntentService _notificationIntentService;
+    private readonly IAccountReadService _accountReadService;
     private readonly ILogger<TraineeNoteUpdatedInAppNotificationCommandHandler> _logger;
 
     public TraineeNoteUpdatedInAppNotificationCommandHandler(
-        IInAppNotificationService notificationService,
-        IUserRepository userRepository,
-        AppDefaultsOptions appDefaultsOptions,
+        ICoachingNotificationIntentService notificationIntentService,
+        IAccountReadService accountReadService,
         ILogger<TraineeNoteUpdatedInAppNotificationCommandHandler> logger)
     {
-        _notificationService = notificationService;
-        _userRepository = userRepository;
-        _appDefaultsOptions = appDefaultsOptions;
-        _logger = logger;
+        _notificationIntentService = notificationIntentService ?? throw new ArgumentNullException(nameof(notificationIntentService));
+        _accountReadService = accountReadService ?? throw new ArgumentNullException(nameof(accountReadService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task ExecuteAsync(TraineeNoteUpdatedInAppNotificationCommand command, CancellationToken cancellationToken = default)
     {
-        var trainer = await _userRepository.FindByIdAsync(command.TrainerId, cancellationToken);
-        var trainee = await _userRepository.FindByIdAsync(command.TraineeId, cancellationToken);
-        var previousUiCulture = CultureInfo.CurrentUICulture;
-
-        try
-        {
-            CultureInfo.CurrentUICulture = ResolveCulture(trainee?.PreferredLanguage);
-            var trainerName = string.IsNullOrWhiteSpace(trainer?.Name)
-                ? global::LgymApi.Resources.Messages.GenericTrainerDisplayName
-                : trainer.Name;
-            var noteTitle = string.IsNullOrWhiteSpace(command.NoteTitle)
-                ? global::LgymApi.Resources.Messages.GenericTrainerNoteDisplayName
-                : command.NoteTitle!.Trim();
-
-            var input = new CreateInAppNotificationInput(
+        var trainer = await _accountReadService.GetByIdAsync(command.TrainerId, cancellationToken);
+        var trainee = await _accountReadService.GetByIdAsync(command.TraineeId, cancellationToken);
+        var result = await _notificationIntentService.SubmitAsync(
+            new TraineeNoteUpdatedCoachingNotificationIntent(
+                CoachingNotificationLegacyChannel.InApp,
+                command.TraineeNoteId,
                 command.TraineeId,
                 command.TrainerId,
-                $"trainee-note:{command.TraineeNoteId}:{command.TriggeredAt:O}",
-                false,
-                string.Format(global::LgymApi.Resources.Messages.TrainerTraineeNoteUpdated, trainerName, noteTitle),
-                $"/trainer/notes/{command.TraineeNoteId}",
-                InAppNotificationTypes.TraineeNoteUpdated);
+                command.NoteTitle,
+                command.TriggeredAt,
+                trainer,
+                trainee),
+            cancellationToken);
 
-            var result = await _notificationService.CreateAsync(input, cancellationToken);
-            if (result.IsFailure)
-            {
-                _logger.LogError("Failed to create trainee note notification for trainee {TraineeId}: {Error}", command.TraineeId, result.Error);
-            }
-        }
-        finally
+        if (result.InAppError is not null)
         {
-            CultureInfo.CurrentUICulture = previousUiCulture;
-        }
-    }
-
-    private CultureInfo ResolveCulture(string? preferredLanguage)
-    {
-        var cultureName = string.IsNullOrWhiteSpace(preferredLanguage)
-            ? _appDefaultsOptions.PreferredLanguage
-            : preferredLanguage;
-
-        try
-        {
-            return CultureInfo.GetCultureInfo(cultureName);
-        }
-        catch (CultureNotFoundException)
-        {
-            return CultureInfo.GetCultureInfo(_appDefaultsOptions.PreferredLanguage);
+            _logger.LogError("Failed to create trainee note notification for trainee {TraineeId}: {Error}", command.TraineeId, result.InAppError);
         }
     }
 }

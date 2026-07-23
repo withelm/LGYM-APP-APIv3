@@ -1,7 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Units;
+using LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -14,7 +14,7 @@ namespace LgymApi.BackgroundWorker.Actions;
 /// Analyzes training exercises and creates new personal records when weights exceed previous bests.
 /// Fetches exercise data from repositories instead of command payload.
 /// </summary>
-public sealed class UpdateTrainingMainRecordsHandler : IBackgroundAction<TrainingCompletedCommand>
+public sealed partial class UpdateTrainingMainRecordsHandler : global::LgymApi.BackgroundWorker.Actions.Contracts.IBackgroundAction<TrainingCompletedCommand>
 {
     private readonly IMainRecordRepository _mainRecordRepository;
     private readonly ITrainingRepository _trainingRepository;

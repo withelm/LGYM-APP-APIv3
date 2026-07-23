@@ -2,8 +2,12 @@ using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Middleware;
-using LgymApi.Application.Features.TraineeNotes;
-using LgymApi.Application.Features.TraineeNotes.Models;
+using LgymApi.Application.Coaching.TraineeNotes.Create;
+using LgymApi.Application.Coaching.TraineeNotes.Delete;
+using LgymApi.Application.Coaching.TraineeNotes.History;
+using LgymApi.Application.Coaching.TraineeNotes.Models;
+using LgymApi.Application.Coaching.TraineeNotes.TrainerList;
+using LgymApi.Application.Coaching.TraineeNotes.Update;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
@@ -19,12 +23,26 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 [Authorize(Policy = AuthConstants.Policies.TrainerAccess)]
 public sealed class TrainerTraineeNotesController : ControllerBase
 {
-    private readonly ITraineeNoteService _traineeNoteService;
+    private readonly IListTrainerNotesUseCase _listNotes;
+    private readonly ICreateTraineeNoteUseCase _createNote;
+    private readonly IUpdateTraineeNoteUseCase _updateNote;
+    private readonly IDeleteTraineeNoteUseCase _deleteNote;
+    private readonly IGetTraineeNoteHistoryUseCase _getHistory;
     private readonly IMapper _mapper;
 
-    public TrainerTraineeNotesController(ITraineeNoteService traineeNoteService, IMapper mapper)
+    public TrainerTraineeNotesController(
+        IListTrainerNotesUseCase listNotes,
+        ICreateTraineeNoteUseCase createNote,
+        IUpdateTraineeNoteUseCase updateNote,
+        IDeleteTraineeNoteUseCase deleteNote,
+        IGetTraineeNoteHistoryUseCase getHistory,
+        IMapper mapper)
     {
-        _traineeNoteService = traineeNoteService;
+        _listNotes = listNotes;
+        _createNote = createNote;
+        _updateNote = updateNote;
+        _deleteNote = deleteNote;
+        _getHistory = getHistory;
         _mapper = mapper;
     }
 
@@ -34,8 +52,8 @@ public sealed class TrainerTraineeNotesController : ControllerBase
     {
         Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId);
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _traineeNoteService.GetTrainerNotesAsync(trainer!, parsedTraineeId, cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.MapList<TraineeNoteResult, TraineeNoteDto>(result.Value));
+        var result = await _listNotes.ExecuteAsync(new ListTrainerNotesQuery(trainer!.Id, parsedTraineeId), cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.MapList<TraineeNoteReadModel, TraineeNoteDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/notes")]
@@ -44,8 +62,13 @@ public sealed class TrainerTraineeNotesController : ControllerBase
     {
         Id<LgymApi.Domain.Entities.User>.TryParse(traineeId, out var parsedTraineeId);
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _traineeNoteService.CreateTrainerNoteAsync(trainer!, parsedTraineeId, MapCommand(request), cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : StatusCode(StatusCodes.Status201Created, _mapper.Map<TraineeNoteResult, TraineeNoteDto>(result.Value));
+        var command = _mapper.Map<UpsertTraineeNoteRequest, CreateTraineeNoteCommand>(request) with
+        {
+            TrainerId = trainer!.Id,
+            TraineeId = parsedTraineeId
+        };
+        var result = await _createNote.ExecuteAsync(command, cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : StatusCode(StatusCodes.Status201Created, _mapper.Map<TraineeNoteReadModel, TraineeNoteDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/notes/{noteId}/update")]
@@ -58,8 +81,14 @@ public sealed class TrainerTraineeNotesController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _traineeNoteService.UpdateTrainerNoteAsync(trainer!, parsedTraineeId, parsedNoteId, MapCommand(request), cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<TraineeNoteResult, TraineeNoteDto>(result.Value));
+        var command = _mapper.Map<UpsertTraineeNoteRequest, UpdateTraineeNoteCommand>(request) with
+        {
+            TrainerId = trainer!.Id,
+            TraineeId = parsedTraineeId,
+            NoteId = parsedNoteId
+        };
+        var result = await _updateNote.ExecuteAsync(command, cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<TraineeNoteReadModel, TraineeNoteDto>(result.Value));
     }
 
     [HttpPost("trainees/{traineeId}/notes/{noteId}/delete")]
@@ -72,7 +101,9 @@ public sealed class TrainerTraineeNotesController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _traineeNoteService.DeleteTrainerNoteAsync(trainer!, parsedTraineeId, parsedNoteId, cancellationToken);
+        var result = await _deleteNote.ExecuteAsync(
+            new DeleteTraineeNoteCommand(trainer!.Id, parsedTraineeId, parsedNoteId),
+            cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -86,17 +117,11 @@ public sealed class TrainerTraineeNotesController : ControllerBase
         }
 
         var trainer = HttpContext.GetCurrentUser();
-        var result = await _traineeNoteService.GetTrainerNoteHistoryAsync(trainer!, parsedTraineeId, parsedNoteId, cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.MapList<TraineeNoteHistoryResult, TraineeNoteHistoryDto>(result.Value));
+        var result = await _getHistory.ExecuteAsync(
+            new GetTraineeNoteHistoryQuery(trainer!.Id, parsedTraineeId, parsedNoteId),
+            cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.MapList<TraineeNoteHistoryReadModel, TraineeNoteHistoryDto>(result.Value));
     }
-
-    private static UpsertTraineeNoteCommand MapCommand(UpsertTraineeNoteRequest request) => new()
-    {
-        Title = request.Title,
-        Content = request.Content,
-        VisibleToTrainee = request.VisibleToTrainee,
-        IsPinned = request.IsPinned,
-    };
 
     private bool TryParseIds(string traineeId, string noteId, out Id<LgymApi.Domain.Entities.User> parsedTraineeId, out Id<TraineeNote> parsedNoteId, out IActionResult? errorResult)
     {

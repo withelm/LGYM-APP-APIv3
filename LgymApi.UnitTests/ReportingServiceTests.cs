@@ -4,13 +4,14 @@ using FluentValidation.TestHelper;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Validation;
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Common.Errors;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
-using LgymApi.BackgroundWorker.Common;
-using LgymApi.BackgroundWorker.Common.Commands;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -897,13 +898,50 @@ public sealed class ReportingServiceTests
     public async Task UpdateTrainerFeedbackAsync_WhenOwnershipFails_ReturnsFailure()
     {
         var trainerId = Id<User>.New();
-        var result = await CreateReportingService(userHasTrainerRole: false).UpdateTrainerFeedbackAsync(
+        var submissionLookupCalled = false;
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainer: (_, _, _, _) =>
+            {
+                submissionLookupCalled = true;
+                return Task.FromResult<ReportSubmission?>(null);
+            },
+            userHasTrainerRole: false);
+
+        var result = await service.UpdateTrainerFeedbackAsync(
             CreateUser(trainerId),
             Id<User>.New(),
             Id<ReportSubmission>.New(),
             new UpdateReportSubmissionFeedbackCommand());
 
         result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingForbiddenError>();
+        submissionLookupCalled.Should().BeFalse();
+    }
+
+    [Test]
+    public async Task UpdateTrainerFeedbackAsync_WhenTrainerDoesNotOwnTrainee_ReturnsNotFoundWithoutReadingSubmission()
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var submissionLookupCalled = false;
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainer: (_, _, _, _) =>
+            {
+                submissionLookupCalled = true;
+                return Task.FromResult<ReportSubmission?>(null);
+            },
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: false);
+
+        var result = await service.UpdateTrainerFeedbackAsync(
+            CreateUser(trainerId),
+            traineeId,
+            Id<ReportSubmission>.New(),
+            new UpdateReportSubmissionFeedbackCommand());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        submissionLookupCalled.Should().BeFalse();
     }
 
     [Test]
@@ -997,6 +1035,25 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
+    public async Task MarkTrainerFeedbackAsReadAsync_WhenSubmissionBelongsToAnotherTrainee_ReturnsNotFound()
+    {
+        var currentTrainee = CreateUser(Id<User>.New());
+        var queriedTraineeId = Id<User>.Empty;
+        var service = CreateReportingService(
+            findSubmissionByIdForTrainee: (_, traineeId, _) =>
+            {
+                queriedTraineeId = traineeId;
+                return Task.FromResult<ReportSubmission?>(null);
+            });
+
+        var result = await service.MarkTrainerFeedbackAsReadAsync(currentTrainee, Id<ReportSubmission>.New());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        queriedTraineeId.Should().Be(currentTrainee.Id);
+    }
+
+    [Test]
     public async Task MarkTrainerFeedbackAsReadAsync_WhenFeedbackNotAdded_ReturnsFailure()
     {
         var traineeId = Id<User>.New();
@@ -1017,6 +1074,26 @@ public sealed class ReportingServiceTests
         var result = await CreateReportingService(userHasTrainerRole: false).GetTraineeSubmissionsAsync(CreateUser(Id<User>.New()), Id<User>.New());
 
         result.IsFailure.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task GetTraineeSubmissionsAsync_WhenTrainerDoesNotOwnTrainee_ReturnsNotFoundWithoutReadingSubmissions()
+    {
+        var submissionsLookupCalled = false;
+        var service = CreateReportingService(
+            getSubmissionsByTrainerAndTrainee: (_, _, _) =>
+            {
+                submissionsLookupCalled = true;
+                return Task.FromResult(new List<ReportSubmission>());
+            },
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: false);
+
+        var result = await service.GetTraineeSubmissionsAsync(CreateUser(Id<User>.New()), Id<User>.New());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        submissionsLookupCalled.Should().BeFalse();
     }
 
     [Test]
@@ -1260,13 +1337,15 @@ public sealed class ReportingServiceTests
         var uploadInitTracker = Substitute.For<IPhotoUploadInitTracker>();
         uploadInitTracker.CountRecentUploadInitsAsync(Arg.Any<Id<User>>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns(0);
-        var reportSubmissionMeasurementWriter = Substitute.For<IReportSubmissionMeasurementWriter>();
+        var commandOutboxWriter = Substitute.For<ICommandOutboxWriter>();
+        commandOutboxWriter.StageAsync(Arg.Any<ReportSubmissionAcceptedProgressCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommandEnvelopeStageResult(null, false)));
         var roleRepository = Substitute.For<IRoleRepository>();
         roleRepository.UserHasRoleAsync(Arg.Any<Id<User>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(userHasTrainerRole);
-        var trainerRelationshipRepository = Substitute.For<ITrainerRelationshipRepository>();
-        trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
-            .Returns(hasActiveTrainerLink ? new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = Id<User>.New(), TraineeId = Id<User>.New() } : null);
+        var relationshipAccess = Substitute.For<ICoachingRelationshipAccessService>();
+        relationshipAccess.GetAccessDecisionAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+            .Returns(new CoachingRelationshipAccessDecision(userHasTrainerRole, hasActiveTrainerLink));
         var recurringRepository = Substitute.For<IRecurringReportAssignmentRepository>();
 
         if (recurringAssignmentByRequestId != null)
@@ -1279,9 +1358,10 @@ public sealed class ReportingServiceTests
         dependencies.ReportingRepository.Returns(repository);
         dependencies.UnitOfWork.Returns(unitOfWork);
         dependencies.CommandDispatcher.Returns(commandDispatcher);
-        dependencies.ReportSubmissionMeasurementWriter.Returns(reportSubmissionMeasurementWriter);
+        dependencies.CommandOutboxWriter.Returns(commandOutboxWriter);
+        dependencies.ReportSubmissionAcceptedProgressCommandFactory.Returns(new ReportSubmissionAcceptedProgressCommandFactory());
         dependencies.RoleRepository.Returns(roleRepository);
-        dependencies.TrainerRelationshipRepository.Returns(trainerRelationshipRepository);
+        dependencies.CoachingRelationshipAccessService.Returns(relationshipAccess);
         dependencies.RecurringReportAssignmentRepository.Returns(recurringRepository);
         dependencies.PhotoStorageProvider.Returns(Substitute.For<IPhotoStorageProvider>());
         dependencies.PhotoUploadInitTracker.Returns(uploadInitTracker);

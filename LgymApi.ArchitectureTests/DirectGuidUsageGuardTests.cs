@@ -312,6 +312,17 @@ public sealed class DirectGuidUsageGuardTests
             return true;
         }
 
+        if (normalized.EndsWith("/LgymApi.IntegrationTests/PostgreSqlDatabaseLease.cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (normalized.EndsWith("/LgymApi.IntegrationTests/PostgreSqlPersistenceTests.cs", StringComparison.OrdinalIgnoreCase)
+            || normalized.EndsWith("/LgymApi.UnitTests/TypedIdValueConverterTests.cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         return normalized.EndsWith("/LgymApi.UnitTests/TypedIdTests.cs", StringComparison.OrdinalIgnoreCase);
     }
 

@@ -23,18 +23,16 @@ public sealed partial class ReportingService
             return Result<Unit, AppError>.Success(Unit.Value);
         }
 
-        var isTrainer = await _roleRepository.UserHasRoleAsync(currentUser.Id, Domain.Security.AuthConstants.Roles.Trainer, cancellationToken);
-        if (!isTrainer)
+        var access = await _coachingRelationshipAccessService.GetAccessDecisionAsync(
+            currentUser.Id,
+            traineeId,
+            cancellationToken);
+        if (!access.IsTrainer)
         {
             return Result<Unit, AppError>.Failure(new ReportingForbiddenError(Messages.TrainerRoleRequired));
         }
 
-        var link = await _trainerRelationshipRepository.FindActiveLinkByTrainerAndTraineeAsync(
-            currentUser.Id,
-            traineeId,
-            cancellationToken);
-
-        if (link == null)
+        if (!access.HasActiveRelationship)
         {
             return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }

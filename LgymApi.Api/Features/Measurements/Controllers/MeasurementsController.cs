@@ -5,11 +5,11 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Measurements.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Measurement = LgymApi.Domain.Entities.Measurement;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Api.Features.Measurements.Controllers;
@@ -76,7 +76,7 @@ public sealed class MeasurementsController : ControllerBase
     public async Task<IActionResult> GetMeasurementDetail([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var user = HttpContext.GetCurrentUser();
-        var measurementId = Id<Measurement>.TryParse(id, out var parsedId) ? parsedId : Id<Measurement>.Empty;
+        var measurementId = Id<LgymApi.Domain.Entities.Measurement>.TryParse(id, out var parsedId) ? parsedId : Id<LgymApi.Domain.Entities.Measurement>.Empty;
         var result = await _measurementsService.GetMeasurementDetailAsync(user!, measurementId, cancellationToken);
         
         if (result.IsFailure)
@@ -84,7 +84,7 @@ public sealed class MeasurementsController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.Map<Measurement, MeasurementResponseDto>(result.Value));
+        return Ok(_mapper.Map<MeasurementReadModel, MeasurementResponseDto>(result.Value));
     }
 
     [HttpGet("measurements/{id}/getHistory")]
@@ -103,7 +103,7 @@ public sealed class MeasurementsController : ControllerBase
             return result.ToActionResult();
         }
 
-        var dto = _mapper.Map<List<Measurement>, MeasurementsHistoryDto>(result.Value);
+        var dto = _mapper.Map<List<MeasurementReadModel>, MeasurementsHistoryDto>(result.Value);
         return Ok(dto);
     }
 
@@ -123,7 +123,7 @@ public sealed class MeasurementsController : ControllerBase
             return result.ToActionResult();
         }
 
-        var dto = _mapper.Map<List<Measurement>, MeasurementsListDto>(result.Value);
+        var dto = _mapper.Map<List<MeasurementReadModel>, MeasurementsListDto>(result.Value);
         return Ok(dto);
     }
 
@@ -143,7 +143,7 @@ public sealed class MeasurementsController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.Map<MeasurementTrendResult, MeasurementTrendDto>(result.Value));
+        return Ok(_mapper.Map<MeasurementTrendReadModel, MeasurementTrendDto>(result.Value));
     }
 
     [HttpGet("measurements/{id}/trends")]
@@ -161,7 +161,7 @@ public sealed class MeasurementsController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.Map<List<MeasurementTrendResult>, MeasurementTrendsDto>(result.Value));
+        return Ok(_mapper.Map<List<MeasurementTrendReadModel>, MeasurementTrendsDto>(result.Value));
     }
 
 }

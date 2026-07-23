@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Api.Features.Tutorial.Contracts;
-using LgymApi.BackgroundWorker.Common.Serialization;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;

@@ -5,7 +5,10 @@ using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Data.SeedData;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.IntegrationTests;
 
@@ -695,6 +698,65 @@ public sealed class PlanDayTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetPlanDays_AsLinkedTrainer_ReturnsOwnerPlanDays()
+    {
+        var (trainerId, trainerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandaylinkedtrainer",
+            email: "plandaylinkedtrainer@example.com",
+            password: "password123");
+        var (ownerId, ownerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandaylinkedowner",
+            email: "plandaylinkedowner@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
+        var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Linked Trainer Exercise", BodyParts.Back);
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "Linked Trainer Plan");
+        await CreatePlanDayViaEndpointAsync(ownerId, planId, "Linked Trainer Day",
+        [
+            new PlanDayExerciseInput { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        ]);
+        await SeedTrainerRelationshipAsync(trainerId, ownerId);
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", trainerToken);
+        var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<PlanDayResult>>();
+        body.Should().ContainSingle(day => day.Name == "Linked Trainer Day");
+    }
+
+    [Test]
+    public async Task GetPlanDays_AsTrainerLinkedToAnotherOwner_ReturnsForbiddenForForeignPlan()
+    {
+        var (trainerId, trainerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayforeigntrainer",
+            email: "plandayforeigntrainer@example.com",
+            password: "password123");
+        var (linkedOwnerId, _) = await RegisterUserViaEndpointAsync(
+            name: "plandaylinkedtrainee",
+            email: "plandaylinkedtrainee@example.com",
+            password: "password123");
+        var (foreignOwnerId, foreignOwnerToken) = await RegisterUserViaEndpointAsync(
+            name: "plandayforeignowner",
+            email: "plandayforeignowner@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", foreignOwnerToken);
+        var planId = await CreatePlanViaEndpointAsync(foreignOwnerId, "Foreign Owner Plan");
+        await SeedTrainerRelationshipAsync(trainerId, linkedOwnerId);
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", trainerToken);
+        var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
     public async Task GetPlanDaysTypes_WithOtherUserId_ReturnsForbidden()
     {
         var (ownerId, ownerToken) = await RegisterUserViaEndpointAsync(
@@ -782,6 +844,24 @@ public sealed class PlanDayTests : IntegrationTestBase
         body.Should().NotBeNull();
         body.Should().HaveCountGreaterThanOrEqualTo(1);
         body!.Should().Contain(pd => pd.Name == "Arms Day");
+    }
+
+    private async Task SeedTrainerRelationshipAsync(Id<User> trainerId, Id<User> traineeId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        dbContext.UserRoles.Add(new UserRole
+        {
+            UserId = trainerId,
+            RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
+        });
+        dbContext.TrainerTraineeLinks.Add(new TrainerTraineeLink
+        {
+            Id = Id<TrainerTraineeLink>.New(),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        });
+        await dbContext.SaveChangesAsync();
     }
 
     [Test]

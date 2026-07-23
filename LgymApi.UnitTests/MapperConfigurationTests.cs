@@ -2,11 +2,16 @@ using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Features.ExerciseScores.Contracts;
+using LgymApi.Api.Features.EloRegistry.Contracts;
 using LgymApi.Api;
 using LgymApi.Api.Mapping.Profiles;
+using LgymApi.Application.Features.EloRegistry.Models;
+using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Features.Exercise.Models;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
@@ -182,5 +187,43 @@ public sealed class MapperConfigurationTests
         var input = mapper.Map<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>(dto);
 
         input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+    }
+
+    [Test]
+    public void Chart_Profiles_Should_Map_Typed_Entity_Ids_To_Uuid_Strings()
+    {
+        var exerciseId = Id<Exercise>.New();
+        var eloRegistryId = Id<EloRegistry>.New();
+        var exerciseScores = new ExerciseScoresChartData
+        {
+            Id = "presentation-key",
+            Value = 120,
+            Date = "01/02",
+            ExerciseName = "Squat"
+        };
+        var eloRegistry = new EloRegistryChartEntry
+        {
+            Value = 1020,
+            Date = "01/03"
+        };
+        var exerciseIdProperty = typeof(ExerciseScoresChartData).GetProperty(nameof(ExerciseScoresChartData.ExerciseId));
+        var eloRegistryIdProperty = typeof(EloRegistryChartEntry).GetProperty(nameof(EloRegistryChartEntry.Id));
+
+        exerciseIdProperty!.PropertyType.Should().Be(typeof(Id<Exercise>));
+        eloRegistryIdProperty!.PropertyType.Should().Be(typeof(Id<EloRegistry>));
+        exerciseIdProperty.SetValue(exerciseScores, exerciseId);
+        eloRegistryIdProperty.SetValue(eloRegistry, eloRegistryId);
+
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+
+        var exerciseScoresDto = mapper.Map<ExerciseScoresChartData, ExerciseScoresChartDataDto>(exerciseScores);
+        var eloRegistryDto = mapper.Map<EloRegistryChartEntry, EloRegistryBaseChartDto>(eloRegistry);
+
+        exerciseScoresDto.Id.Should().Be("presentation-key");
+        exerciseScoresDto.ExerciseId.Should().Be(exerciseId.ToString());
+        eloRegistryDto.Id.Should().Be(eloRegistryId.ToString());
     }
 }

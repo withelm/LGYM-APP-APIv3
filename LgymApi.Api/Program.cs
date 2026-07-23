@@ -5,7 +5,15 @@ using FluentValidation.AspNetCore;
 using LgymApi.BackgroundWorker;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
-using LgymApi.Application;
+using LgymApi.Application.Coaching;
+using LgymApi.Application.Identity;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Nutrition;
+using LgymApi.Application.Platform;
+using LgymApi.Application.Platform.Contracts.Serialization;
+using LgymApi.Application.Reporting;
+using LgymApi.Application.TrainingPlanning;
+using LgymApi.Application.WorkoutProgress;
 using LgymApi.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -22,13 +30,7 @@ using LgymApi.Api.Constants;
 using Hangfire;
 using LgymApi.Api.Serialization;
 using LgymApi.Api.Logging;
-using LgymApi.BackgroundWorker.Common.Serialization;
 using LgymApi.BackgroundWorker.Common.Jobs;
-using LgymApi.BackgroundWorker.Common.Notifications.Models;
-using LgymApi.BackgroundWorker.Common.Notifications;
-using LgymApi.BackgroundWorker.Notifications;
-using LgymApi.Infrastructure.Services;
-using LgymApi.Application.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http.Json;
@@ -99,18 +101,34 @@ builder.Services.AddCors(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddLocalization();
 builder.Services.AddApplicationMapping(typeof(Program).Assembly, typeof(IMappingProfile).Assembly);
-builder.Services.AddApplicationServices();
-builder.Services.AddNotificationsModule();
+var isTesting = builder.Environment.IsEnvironment(TestingEnvironment);
 
-builder.Services.AddInfrastructure(
+builder.Services
+    .AddIdentityModule()
+    .AddTrainingPlanningModule()
+    .AddWorkoutAndProgressModule()
+    .AddCoachingModule()
+    .AddNutritionModule()
+    .AddReportingModule()
+    .AddPlatformModule();
+
+builder.Services.AddPlatformServices(
     builder.Configuration,
     builder.Environment.IsDevelopment(),
-    builder.Environment.IsEnvironment(TestingEnvironment),
+    isTesting,
     hostBackgroundServer: true);
-builder.Services.AddBackgroundWorkerServices(builder.Environment.IsEnvironment(TestingEnvironment));
 
-// Register password recovery email scheduler in Api layer (allowed scope per plan guardrail)
-builder.Services.AddScoped<IEmailScheduler<PasswordRecoveryEmailPayload>, EmailSchedulerService<PasswordRecoveryEmailPayload>>();
+var isDevelopmentOrTesting = builder.Environment.IsDevelopment() || isTesting;
+
+builder.Services
+    .AddIdentityInfrastructure()
+    .AddTrainingPlanningInfrastructure()
+    .AddWorkoutProgressInfrastructure()
+    .AddCoachingInfrastructure()
+    .AddNutritionInfrastructure()
+    .AddReportingInfrastructure(builder.Configuration, isDevelopmentOrTesting)
+    .AddNotificationsModule(builder.Configuration);
+builder.Services.AddBackgroundWorkerServices(isTesting);
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IUserIdProvider, LgymApi.Api.Hubs.NotificationHubUserIdProvider>();
