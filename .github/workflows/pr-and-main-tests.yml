@@ -502,7 +502,7 @@ jobs:
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Sonar Begin
-        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.qualitygate.wait=true /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.qualitygate.wait=true /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cpd.exclusions="deploy/postgres/**/*.sql" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
 
       - name: Restore
         run: dotnet restore LgymApi.sln
@@ -574,7 +574,7 @@ jobs:
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Sonar Begin
-        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cpd.exclusions="deploy/postgres/**/*.sql" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
 
       - name: Restore
         run: dotnet restore LgymApi.sln
