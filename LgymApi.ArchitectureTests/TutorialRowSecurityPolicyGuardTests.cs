@@ -8,6 +8,7 @@ public sealed class TutorialRowSecurityPolicyGuardTests
     private const string MigrationPath = "LgymApi.Infrastructure/Migrations/20260807160000_AddTutorialRowSecurityPolicies.cs";
     private const string ActivationScriptPath = "deploy/postgres/activate-tutorial-row-security.sql";
     private const string DeactivationScriptPath = "deploy/postgres/deactivate-tutorial-row-security.sql";
+    private const string PreflightScriptPath = "deploy/postgres/tutorial-row-security-preflight.sql";
     private const string ProvisionScriptPath = "deploy/postgres/provision-rls-pilot-roles.sql";
     private const string OwnershipUpgradeScriptPath = "deploy/postgres/upgrade-runtime-migration-ownership.sql";
     private const string RuntimeConfigurationPath = "appsettings.container.example.json";
@@ -73,11 +74,13 @@ public sealed class TutorialRowSecurityPolicyGuardTests
     {
         var activation = Read(ActivationScriptPath);
         var deactivation = Read(DeactivationScriptPath);
+        var preflight = Read(PreflightScriptPath);
 
-        AssertScriptSafety(activation);
-        AssertScriptSafety(deactivation);
-        Assert.That(activation, Does.Contain("lower(:'target_environment') = 'staging'"));
-        Assert.That(activation, Does.Contain("Task 18 production go/no-go"));
+        AssertOperatorScriptIncludesPreflight(activation, "true");
+        AssertOperatorScriptIncludesPreflight(deactivation, "false");
+        AssertScriptSafety(preflight);
+        Assert.That(preflight, Does.Contain("lower(:'target_environment') = 'staging'"));
+        Assert.That(preflight, Does.Contain("Task 18 production go/no-go"));
         Assert.That(activation, Does.Not.Contain("CREATE POLICY"));
         Assert.That(activation, Does.Contain("ENABLE ROW LEVEL SECURITY"));
         Assert.That(activation, Does.Contain("FORCE ROW LEVEL SECURITY"));
@@ -87,9 +90,8 @@ public sealed class TutorialRowSecurityPolicyGuardTests
         Assert.That(activation, Does.Contain("policy.polpermissive"));
         Assert.That(activation, Does.Contain("pg_get_expr(policy.polqual"));
         Assert.That(activation, Does.Contain("pg_get_expr(policy.polwithcheck"));
-        AssertDatabaseEnvironmentIdentity(activation);
-        AssertDatabaseEnvironmentIdentity(deactivation);
-        Assert.That(deactivation, Does.Contain("IN ('development', 'staging', 'production')"));
+        AssertDatabaseEnvironmentIdentity(preflight);
+        Assert.That(preflight, Does.Contain("IN ('development', 'staging', 'production')"));
         Assert.That(deactivation, Does.Not.Contain("DROP POLICY"));
         Assert.That(deactivation.IndexOf("NO FORCE ROW LEVEL SECURITY", StringComparison.Ordinal),
             Is.LessThan(deactivation.IndexOf("DISABLE ROW LEVEL SECURITY", StringComparison.Ordinal)));
@@ -208,15 +210,37 @@ public sealed class TutorialRowSecurityPolicyGuardTests
 
     private static void AssertScriptSafety(string source)
     {
-        Assert.That(source, Does.StartWith("\\set ON_ERROR_STOP on"));
+        Assert.That(source, Does.Contain("\\if :{?database_name}"));
+        Assert.That(source, Does.Contain("\\if :{?target_environment}"));
+        Assert.That(source, Does.Contain("\\if :{?maintenance_role}"));
+        Assert.That(source, Does.Contain("\\if :{?runtime_role}"));
         Assert.That(source, Does.Contain("current_database() = :'database_name'"));
         Assert.That(source, Does.Contain("session_user = :'maintenance_role'"));
         Assert.That(source, Does.Contain("SET ROLE :\"runtime_role\""));
         Assert.That(source, Does.Contain("pg_advisory_xact_lock(hashtextextended('lgym.tutorial-row-security.rollout', 0))"));
         Assert.That(source.IndexOf("BEGIN;", StringComparison.Ordinal),
             Is.LessThan(source.IndexOf("pg_advisory_xact_lock", StringComparison.Ordinal)));
-        Assert.That(source.IndexOf("pg_advisory_xact_lock", StringComparison.Ordinal),
-            Is.LessThan(source.IndexOf("COMMIT;", StringComparison.Ordinal)));
+        Assert.That(source, Does.Not.Contain("COMMIT;"));
+        Assert.That(source.IndexOf("\\if :{?runtime_role}", StringComparison.Ordinal),
+            Is.LessThan(source.IndexOf("BEGIN;", StringComparison.Ordinal)));
+        Assert.That(source.IndexOf("current_database() = :'database_name'", StringComparison.Ordinal),
+            Is.LessThan(source.IndexOf("target_environment_is_", StringComparison.Ordinal)));
+        Assert.That(source.IndexOf("target_environment_is_", StringComparison.Ordinal),
+            Is.LessThan(source.IndexOf("database_environment_matches", StringComparison.Ordinal)));
+        Assert.That(source.IndexOf("database_environment_matches", StringComparison.Ordinal),
+            Is.LessThan(source.IndexOf("session_user = :'maintenance_role'", StringComparison.Ordinal)));
+        Assert.That(source.IndexOf("session_user = :'maintenance_role'", StringComparison.Ordinal),
+            Is.LessThan(source.IndexOf("role_configuration_matches", StringComparison.Ordinal)));
+        Assert.That(source.IndexOf("role_configuration_matches", StringComparison.Ordinal),
+            Is.LessThan(source.IndexOf("SET ROLE :\"runtime_role\"", StringComparison.Ordinal)));
+        Assert.That(source.IndexOf("SET ROLE :\"runtime_role\"", StringComparison.Ordinal),
+            Is.LessThan(source.IndexOf("protected_tables_owned_by_runtime", StringComparison.Ordinal)));
+    }
+
+    private static void AssertOperatorScriptIncludesPreflight(string source, string isActivation)
+    {
+        Assert.That(source, Does.StartWith($"\\set ON_ERROR_STOP on\n\\set tutorial_row_security_is_activation {isActivation}\n\\ir tutorial-row-security-preflight.sql"));
+        Assert.That(Count(source, "\\ir tutorial-row-security-preflight.sql"), Is.EqualTo(1));
     }
 
     private static string ExtractPolicy(string source, string policyName)
