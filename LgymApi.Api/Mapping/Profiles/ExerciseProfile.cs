@@ -66,7 +66,7 @@ public sealed class ExerciseProfile : IMappingProfile
             return new ExerciseResponseDto
             {
                 Id = source.Id.ToString(),
-                Name = name,
+                Name = source.Name,
                 DisplayName = name,
                 BodyPart = context!.Map<BodyParts, EnumLookupDto>(source.BodyPart),
                 EloFormula = source.EloFormula == null ? null : context.Map<EnumLookupDto, LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.EloFormula.Value)),
@@ -86,7 +86,7 @@ public sealed class ExerciseProfile : IMappingProfile
             }
             return new ExerciseResponseDto
             {
-                Id = source.Id.ToString(), Name = name, DisplayName = name, BodyPart = context!.Map<BodyParts, EnumLookupDto>(source.BodyPart),
+                Id = source.Id.ToString(), Name = source.Name, DisplayName = name, BodyPart = context!.Map<BodyParts, EnumLookupDto>(source.BodyPart),
                 EloFormula = context.Map<EnumLookupDto, LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.EloFormula)),
                 Description = source.Description, Image = source.Image, UserId = source.UserId?.ToString()
             };

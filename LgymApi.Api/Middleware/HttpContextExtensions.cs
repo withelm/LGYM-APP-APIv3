@@ -18,21 +18,23 @@ public static class HttpContextExtensions
     {
         var cultures = new List<string>();
 
-        var acceptLanguage = context.Request.Headers.AcceptLanguage.ToString();
-        var rawCulture = acceptLanguage
-            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(value => value.Split(';', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault())
-            .FirstOrDefault()?.Trim();
-
-        if (!string.IsNullOrWhiteSpace(rawCulture))
-        {
-            AddCultureAndNeutral(cultures, rawCulture);
-        }
-
         var requestCulture = context.Features.Get<IRequestCultureFeature>()?.RequestCulture?.UICulture;
         if (requestCulture != null && !string.IsNullOrWhiteSpace(requestCulture.Name))
         {
             AddCultureAndNeutral(cultures, requestCulture.Name);
+        }
+        else
+        {
+            var acceptLanguage = context.Request.Headers.AcceptLanguage.ToString();
+            var rawCulture = acceptLanguage
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(value => value.Split(';', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault())
+                .FirstOrDefault()?.Trim();
+
+            if (!string.IsNullOrWhiteSpace(rawCulture))
+            {
+                AddCultureAndNeutral(cultures, rawCulture);
+            }
         }
 
         var culture = CultureInfo.CurrentUICulture;
