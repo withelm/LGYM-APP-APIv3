@@ -43,9 +43,8 @@ public static class Program
 
         if (mode == SeederMode.MigrateOnly)
         {
-            await context.Database.MigrateAsync();
-            Console.WriteLine("EF Core migrations are current.");
-            return 0;
+            Console.Error.WriteLine("--migrate-only is disabled. The API applies migrations as lgym_runtime after ownership provisioning.");
+            return 1;
         }
 
         if (mode == SeederMode.PrepareHangfire)
@@ -66,7 +65,7 @@ public static class Program
         var options = new SeedOptions
         {
             DropDatabase = dropDatabase,
-            UseMigrations = true,
+            UseMigrations = false,
             SeedDemoData = seedDemo
         };
         var orchestrator = scope.ServiceProvider.GetRequiredService<SeedOrchestrator>();

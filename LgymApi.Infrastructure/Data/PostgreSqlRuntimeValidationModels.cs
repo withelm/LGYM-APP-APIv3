@@ -90,9 +90,13 @@ public sealed class PostgreSqlHelperFunctionOptions
 
 public sealed record PostgreSqlRuntimeInspection(
     string DatabaseName,
+    string SessionUser,
     string CurrentUser,
     bool IsSuperuser,
     bool BypassesRowSecurity,
+    bool CanCreateDatabases,
+    bool CanCreateRoles,
+    bool CanReplicate,
     IReadOnlyList<string> ElevatedMemberships,
     bool MultiplexingEnabled,
     bool HangfireSchemaExists,
@@ -101,6 +105,18 @@ public sealed record PostgreSqlRuntimeInspection(
     IReadOnlyList<string> MissingSequenceGrants,
     IReadOnlyList<PostgreSqlProtectedTableInspection> ProtectedTables,
     PostgreSqlHelperFunctionInspection? HelperFunction);
+
+public sealed record PostgreSqlRuntimePreflightInspection(
+    string DatabaseName,
+    string SessionUser,
+    string CurrentUser,
+    bool IsSuperuser,
+    bool BypassesRowSecurity,
+    bool CanCreateDatabases,
+    bool CanCreateRoles,
+    bool CanReplicate,
+    IReadOnlyList<string> ElevatedMemberships,
+    bool MultiplexingEnabled);
 
 public sealed record PostgreSqlProtectedTableInspection(
     string Key,

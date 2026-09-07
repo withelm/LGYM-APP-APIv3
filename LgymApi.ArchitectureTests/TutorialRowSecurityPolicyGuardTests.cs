@@ -9,6 +9,7 @@ public sealed class TutorialRowSecurityPolicyGuardTests
     private const string ActivationScriptPath = "deploy/postgres/activate-tutorial-row-security.sql";
     private const string DeactivationScriptPath = "deploy/postgres/deactivate-tutorial-row-security.sql";
     private const string ProvisionScriptPath = "deploy/postgres/provision-rls-pilot-roles.sql";
+    private const string OwnershipUpgradeScriptPath = "deploy/postgres/upgrade-runtime-migration-ownership.sql";
     private const string RuntimeConfigurationPath = "appsettings.container.example.json";
     private const string ReadmePath = "README.md";
 
@@ -103,8 +104,36 @@ public sealed class TutorialRowSecurityPolicyGuardTests
         Assert.That(provisioning, Does.Contain("database_environment is required"));
         Assert.That(provisioning, Does.Contain("ALTER DATABASE"));
         Assert.That(provisioning, Does.Contain("lgym.deployment_environment"));
+        Assert.That(provisioning, Does.Contain("ALTER SCHEMA public OWNER TO :\"runtime_role\""));
+        Assert.That(provisioning, Does.Contain("REVOKE :\"maintenance_role\" FROM :\"runtime_role\""));
+        Assert.That(provisioning, Does.Contain("GRANT :\"runtime_role\" TO :\"maintenance_role\""));
+        var ownershipUpgrade = Read(OwnershipUpgradeScriptPath);
+        Assert.That(ownershipUpgrade, Does.Contain("ALTER SCHEMA public OWNER TO :\"runtime_role\""));
+        Assert.That(ownershipUpgrade, Does.Contain("ALTER TABLE %I.%I OWNER TO %I"));
+        Assert.That(ownershipUpgrade, Does.Contain("ALTER DEFAULT PRIVILEGES FOR ROLE :\"runtime_role\""));
         Assert.That(readme, Does.Contain(
             "psql -X -v ON_ERROR_STOP=1 -v database_name=LGYM-APP -v database_environment=Staging"));
+    }
+
+    [Test]
+    public void OwnershipUpgrade_PreflightUsesTransactionSettingsBeforeAnyMutation()
+    {
+        var source = Read(OwnershipUpgradeScriptPath);
+        var preflightStart = source.IndexOf("DO $preflight$", StringComparison.Ordinal);
+        var preflightEnd = source.IndexOf("$preflight$;", preflightStart, StringComparison.Ordinal);
+        var preflight = source[preflightStart..preflightEnd];
+        var firstMutation = source.IndexOf("GRANT :\"runtime_role\" TO :\"maintenance_role\"", StringComparison.Ordinal);
+
+        Assert.That(source.IndexOf("SELECT set_config('lgym.runtime_role', :'runtime_role', true);", StringComparison.Ordinal), Is.LessThan(preflightStart));
+        Assert.That(source.IndexOf("SELECT set_config('lgym.maintenance_role', :'maintenance_role', true);", StringComparison.Ordinal), Is.LessThan(preflightStart));
+        Assert.That(preflight, Does.Not.Contain(":'runtime_role'"));
+        Assert.That(preflight, Does.Not.Contain(":'maintenance_role'"));
+        Assert.That(preflight, Does.Contain("current_setting('lgym.runtime_role')"));
+        Assert.That(preflight, Does.Contain("current_setting('lgym.maintenance_role')"));
+        Assert.That(preflight, Does.Contain("maintenance_attributes.rolsuper OR NOT maintenance_attributes.rolbypassrls"));
+        Assert.That(preflight, Does.Contain("runtime_attributes.rolsuper OR runtime_attributes.rolbypassrls"));
+        Assert.That(preflight, Does.Contain("pg_has_role(runtime_role_name, maintenance_role_name, 'member')"));
+        Assert.That(preflightEnd, Is.LessThan(firstMutation));
     }
 
     [Test]
@@ -181,7 +210,8 @@ public sealed class TutorialRowSecurityPolicyGuardTests
     {
         Assert.That(source, Does.StartWith("\\set ON_ERROR_STOP on"));
         Assert.That(source, Does.Contain("current_database() = :'database_name'"));
-        Assert.That(source, Does.Contain("current_user = :'maintenance_role'"));
+        Assert.That(source, Does.Contain("session_user = :'maintenance_role'"));
+        Assert.That(source, Does.Contain("SET ROLE :\"runtime_role\""));
         Assert.That(source, Does.Contain("pg_advisory_xact_lock(hashtextextended('lgym.tutorial-row-security.rollout', 0))"));
         Assert.That(source.IndexOf("BEGIN;", StringComparison.Ordinal),
             Is.LessThan(source.IndexOf("pg_advisory_xact_lock", StringComparison.Ordinal)));

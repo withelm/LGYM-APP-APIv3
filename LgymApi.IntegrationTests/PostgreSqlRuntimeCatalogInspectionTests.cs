@@ -38,7 +38,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
         inspection.MissingTableGrants.Should().BeEmpty();
         inspection.MissingSequenceGrants.Should().BeEmpty();
         inspection.ProtectedTables.Should().OnlyContain(table =>
-            !table.RowSecurityEnabled && !table.RowSecurityForced && !table.IsOwnedByRuntimeRole);
+            !table.RowSecurityEnabled && !table.RowSecurityForced && table.IsOwnedByRuntimeRole);
 
         var policies = inspection.ProtectedTables.SelectMany(table => table.Policies).ToArray();
         policies.Should().HaveCount(8);
