@@ -124,8 +124,8 @@ public sealed class TutorialRowSecurityPolicyGuardTests
         var preflight = source[preflightStart..preflightEnd];
         var firstMutation = source.IndexOf("GRANT :\"runtime_role\" TO :\"maintenance_role\"", StringComparison.Ordinal);
 
-        Assert.That(source.IndexOf("SELECT set_config('lgym.runtime_role', :'runtime_role', true);", StringComparison.Ordinal), Is.LessThan(preflightStart));
-        Assert.That(source.IndexOf("SELECT set_config('lgym.maintenance_role', :'maintenance_role', true);", StringComparison.Ordinal), Is.LessThan(preflightStart));
+        Assert.That(source.IndexOf("SET LOCAL lgym.runtime_role TO :'runtime_role';", StringComparison.Ordinal), Is.LessThan(preflightStart));
+        Assert.That(source.IndexOf("SET LOCAL lgym.maintenance_role TO :'maintenance_role';", StringComparison.Ordinal), Is.LessThan(preflightStart));
         Assert.That(preflight, Does.Not.Contain(":'runtime_role'"));
         Assert.That(preflight, Does.Not.Contain(":'maintenance_role'"));
         Assert.That(preflight, Does.Contain("current_setting('lgym.runtime_role')"));

@@ -25,8 +25,8 @@ SELECT current_database() = :'database_name' AS target_database_matches \gset
 
 BEGIN;
 SELECT pg_advisory_xact_lock(hashtextextended('lgym.runtime-migration-ownership', 0));
-SELECT set_config('lgym.runtime_role', :'runtime_role', true);
-SELECT set_config('lgym.maintenance_role', :'maintenance_role', true);
+SET LOCAL lgym.runtime_role TO :'runtime_role';
+SET LOCAL lgym.maintenance_role TO :'maintenance_role';
 DO $preflight$
 DECLARE
     maintenance_role_name text := current_setting('lgym.maintenance_role');
