@@ -83,7 +83,7 @@ SELECT EXISTS (
 
 SET ROLE :"runtime_role";
 
-SELECT current_user = :'runtime_role' AS runtime_connection_matches \gset
+SELECT current_user = current_role AS runtime_connection_matches \gset
 \if :runtime_connection_matches
 \else
   \echo 'Maintenance role could not assume the configured runtime role.'
@@ -97,7 +97,7 @@ JOIN pg_roles owner ON owner.oid = relation.relowner
 WHERE namespace.nspname = 'public'
   AND relation.relkind = 'r'
   AND relation.relname IN ('UserTutorialProgresses', 'UserTutorialStepProgresses')
-  AND owner.rolname = :'runtime_role' \gset
+  AND owner.rolname = current_user \gset
 \if :protected_tables_owned_by_runtime
 \else
   \echo 'Both tutorial tables must exist and be owned by the configured runtime role.'
