@@ -1,0 +1,5 @@
+<RunSettings>
+  <NUnit>
+    <NumberOfTestWorkers>0</NumberOfTestWorkers>
+  </NUnit>
+</RunSettings>

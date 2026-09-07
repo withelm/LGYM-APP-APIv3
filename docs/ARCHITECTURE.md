@@ -12,6 +12,7 @@ This document explains how the backend is structured and how to add a new module
 - `LgymApi.UnitTests` - focused unit tests.
 - `LgymApi.ArchitectureTests` - Roslyn-based architecture guards.
 - `LgymApi.IntegrationTests` - end-to-end API tests with `WebApplicationFactory`, in-memory coverage, and prepared PostgreSQL coverage.
+- `LgymApi.ExternalE2ETests` - standalone package-only external-environment acceptance harness outside the main solution. It validates only user-provided dedicated API, web, and PostgreSQL endpoints through a fail-closed restore/recovery/browser lifecycle; it owns no product startup and has no product or legacy E2E project reference.
 - `LgymApi.Resources` and `LgymApi.Resources.Generator` - localized resources and source generators for strongly-typed message access.
 
 ## 2. Request Flow
@@ -130,6 +131,7 @@ Start with the canonical owner and follow the conditional layouts in the [Module
 - **Architecture tests** validate Roslyn-based dependency, boundary, mapping, DI, and persistence guards.
 - **Integration tests** validate real HTTP behavior with middleware, auth, serialization, and data persistence through in-memory and prepared PostgreSQL coverage.
   - Reuse `IntegrationTestBase` helpers for seeding users, setting auth headers, and creating dependent data.
+- **External E2E tests** are a separate, serial acceptance boundary. They require ignored user-owned configuration, a dedicated `lgym_external_e2e*` database with its expected baseline marker, and `psql`/`pg_restore`; they must fail before external work when that setup is absent. The harness may terminate only peer sessions for the exact validated target, never starts product services, and retains only sanitized failed diagnostics.
 
 Recommended validation path for new modules:
 

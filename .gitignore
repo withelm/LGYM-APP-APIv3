@@ -116,6 +116,10 @@ appsettings.Production.json
 appsettings.Local.json
 appsettings.*.json
 !appsettings.json
+!LgymApi.ExternalE2ETests/appsettings.ExternalE2E.example.json
+LgymApi.ExternalE2ETests/appsettings.ExternalE2E.json
+LgymApi.ExternalE2ETests/*.bak
+LgymApi.ExternalE2ETests/external-e2e-artifacts/
 appsettings.container.json
 appsettings.*.container.json
 appsettings.secrets.json
