@@ -417,7 +417,7 @@ function Assert-UnifiedSonarContract {
         $copyRun = [string]$copyStep.run
 
         Assert-True -Condition ($beginRun -match '^\s*dotnet sonarscanner begin(?:\s|$)') -Message "Sonar job '$jobId' must invoke Begin directly."
-        foreach ($property in @('/k:"${{ env.SONAR_PROJECT_KEY }}"', '/o:"${{ env.SONAR_ORG }}"', '/d:sonar.host.url="${{ env.SONAR_HOST_URL }}"', '/d:sonar.token="${{ secrets.SONAR_TOKEN }}"', '/d:sonar.exclusions="**/.github/**,**/Migrations/**"', '/d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}"', '/d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml"', '/d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx"', '/d:sonar.verbose=true')) {
+        foreach ($property in @('/k:"${{ env.SONAR_PROJECT_KEY }}"', '/o:"${{ env.SONAR_ORG }}"', '/d:sonar.host.url="${{ env.SONAR_HOST_URL }}"', '/d:sonar.token="${{ secrets.SONAR_TOKEN }}"', '/d:sonar.exclusions="**/.github/**,**/Migrations/**"', '/d:sonar.cpd.exclusions="deploy/postgres/activate-tutorial-row-security.sql,deploy/postgres/deactivate-tutorial-row-security.sql"', '/d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}"', '/d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml"', '/d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx"', '/d:sonar.verbose=true')) {
             Assert-True -Condition ($beginRun -match [regex]::Escape($property)) -Message "Sonar job '$jobId' Begin must contain '$property'."
         }
         Assert-True -Condition (@([regex]::Matches($beginRun, $waitPropertyPattern)).Count -eq $expectedWaitCounts[$jobId]) -Message "Sonar job '$jobId' has an incorrect Quality Gate wait policy."
