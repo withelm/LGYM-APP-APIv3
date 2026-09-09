@@ -100,7 +100,7 @@ public sealed class SeedOrchestratorTests
     }
 
     [Test]
-    public async Task RunAsync_Should_Use_Migrations_For_Relational_Providers()
+    public async Task RunAsync_Should_Not_Migrate_Relational_Providers_WhenMigrationOwnershipIsDisabled()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=127.0.0.1;Port=1;Database=lgym-seeder-test;Username=postgres;Password=secret;Timeout=1;Command Timeout=1")
@@ -122,8 +122,35 @@ public sealed class SeedOrchestratorTests
             Console.SetOut(originalOut);
         }
 
-        output.ToString().Should().Contain("Applying migrations");
+        output.ToString().Should().Contain("API startup owns EF Core migrations");
         output.ToString().Should().NotContain("Ensuring non-relational test database is created...");
+    }
+
+    [Test]
+    public async Task RunAsync_Should_Reject_Relational_Drop_When_Migrations_Are_Disabled()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql("Host=127.0.0.1;Port=1;Database=lgym-seeder-test;Username=postgres;Password=secret;Timeout=1;Command Timeout=1")
+            .Options;
+        await using var context = new AppDbContext(options);
+        var originalOut = Console.Out;
+        using var output = new StringWriter();
+        Console.SetOut(output);
+
+        try
+        {
+            var action = async () => await new SeedOrchestrator(Array.Empty<IEntitySeeder>())
+                .RunAsync(context, new SeedContext(), new SeedOptions { DropDatabase = true }, CancellationToken.None);
+
+            await action.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("Relational database deletion requires migrations to be enabled so the schema can be recreated.");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        output.ToString().Should().NotContain("Dropping existing database...");
     }
 
     [Test]

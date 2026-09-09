@@ -6,7 +6,7 @@ This document defines how to verify data migration from `EmailNotificationLogs` 
 
 - Database schema is migrated to include `NotificationMessages`.
 - Migration `20260227180901_DropLegacyEmailNotificationLogs` was applied.
-- Deploy sequence is schema first, app second.
+- Deploy runtime ownership provisioning first; application startup then applies schema migrations as `lgym_runtime`.
 
 ## Migration Verification
 

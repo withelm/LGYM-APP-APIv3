@@ -55,13 +55,11 @@ public sealed class PostgreSqlTutorialRowSecurityTests
     }
 
     [Test]
-    public async Task RuntimeRole_CannotEscalateOrPrepareMaintenanceSchema()
+    public async Task RuntimeRole_CannotEscalateOrPrepareHangfireSchema()
     {
         await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync();
 
         await AssertPermissionDeniedAsync(environment.RuntimeConnectionString, $"SET ROLE {environment.MaintenanceRole};");
-        await AssertPermissionDeniedAsync(environment.RuntimeConnectionString, "ALTER TABLE public.\"UserTutorialProgresses\" DISABLE ROW LEVEL SECURITY;");
-        await AssertPermissionDeniedAsync(environment.RuntimeConnectionString, "ALTER TABLE public.\"UserTutorialProgresses\" ADD COLUMN \"runtime_schema_attempt\" integer;");
         await AssertPermissionDeniedAsync(environment.RuntimeConnectionString, "CREATE TABLE hangfire.\"runtime_schema_attempt\" (\"Id\" integer);");
     }
 
