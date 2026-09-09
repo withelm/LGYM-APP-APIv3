@@ -53,7 +53,8 @@ internal static class PostgreSqlTutorialRowSecurityActivation
             UseShellExecute = false,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
-            RedirectStandardError = true
+            RedirectStandardError = true,
+            WorkingDirectory = Path.GetDirectoryName(Path.Combine(FindRepositoryRoot(), ScriptRelativePath))!
         };
         startInfo.Environment["PGPASSWORD"] = connection.Password;
 
