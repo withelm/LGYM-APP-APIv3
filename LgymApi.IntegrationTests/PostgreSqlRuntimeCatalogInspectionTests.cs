@@ -38,7 +38,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
         inspection.MissingTableGrants.Should().BeEmpty();
         inspection.MissingSequenceGrants.Should().BeEmpty();
         inspection.ProtectedTables.Should().OnlyContain(table =>
-            !table.RowSecurityEnabled && !table.RowSecurityForced && !table.IsOwnedByRuntimeRole);
+            !table.RowSecurityEnabled && !table.RowSecurityForced && table.IsOwnedByRuntimeRole);
 
         var policies = inspection.ProtectedTables.SelectMany(table => table.Policies).ToArray();
         policies.Should().HaveCount(8);
@@ -105,7 +105,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
     }
 
     [Test]
-    public async Task RuntimeValidation_WhenProtectedTableRlsStateDiffers_FailsClosed()
+    public async Task RuntimeValidation_WhenRuntimeOwnedProtectedTableEnablesUnforcedRls_FailsClosed()
     {
         await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync(activate: false);
         await environment.ExecuteMaintenanceFormattedAsync(
@@ -114,7 +114,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
 
         var action = () => ValidateAsync(environment, CreateConfiguration(environment));
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("Protected-table RLS state does not match*");
+        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("Runtime-owned protected tables must force row-level security.");
     }
 
     [Test]

@@ -7,6 +7,24 @@ namespace LgymApi.Infrastructure.Data;
 
 public static class PostgreSqlRuntimeConnectionValidator
 {
+    public static async Task ValidatePreMigrationAsync(AppDbContext dbContext, IConfiguration configuration, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(configuration);
+        var options = configuration.GetSection("PostgreSqlRuntime").Get<PostgreSqlRuntimeValidationOptions>()
+            ?? new PostgreSqlRuntimeValidationOptions();
+        options.Validate();
+        if (dbContext.Database.GetDbConnection() is not NpgsqlConnection connection)
+        {
+            throw new InvalidOperationException("Staging and Production require an Npgsql runtime connection.");
+        }
+
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose) await connection.OpenAsync(cancellationToken);
+        try { ValidatePreMigrationInspection(await PostgreSqlRuntimeConnectionInspector.InspectPreMigrationAsync(connection, cancellationToken), options); }
+        finally { if (shouldClose) await connection.CloseAsync(); }
+    }
+
     public static async Task ValidateAsync(AppDbContext dbContext, IConfiguration configuration, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
@@ -44,26 +62,10 @@ public static class PostgreSqlRuntimeConnectionValidator
     public static void ValidateInspection(PostgreSqlRuntimeInspection inspection, PostgreSqlRuntimeValidationOptions options)
     {
         options.Validate();
-
-        if (!string.Equals(inspection.DatabaseName, options.ExpectedDatabase, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("Runtime PostgreSQL connection targets an unexpected database.");
-        }
-
-        if (!string.Equals(inspection.CurrentUser, options.ExpectedRole, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("Runtime PostgreSQL connection uses an unexpected role.");
-        }
-
-        if (inspection.IsSuperuser || inspection.BypassesRowSecurity || inspection.ElevatedMemberships.Count != 0)
-        {
-            throw new InvalidOperationException("Runtime PostgreSQL role has prohibited superuser, BYPASSRLS, or elevated role membership.");
-        }
-
-        if (inspection.MultiplexingEnabled)
-        {
-            throw new InvalidOperationException("Runtime PostgreSQL connection must disable multiplexing for the RLS pilot.");
-        }
+        ValidatePreMigrationInspection(new PostgreSqlRuntimePreflightInspection(
+            inspection.DatabaseName, inspection.SessionUser, inspection.CurrentUser, inspection.IsSuperuser, inspection.BypassesRowSecurity,
+            inspection.CanCreateDatabases, inspection.CanCreateRoles, inspection.CanReplicate,
+            inspection.ElevatedMemberships, inspection.MultiplexingEnabled), options);
 
         if (!inspection.HangfireSchemaExists)
         {
@@ -88,9 +90,9 @@ public static class PostgreSqlRuntimeConnectionValidator
                 throw new InvalidOperationException("A configured protected table is missing from the runtime database.");
             }
 
-            if (table.IsOwnedByRuntimeRole)
+            if (table.IsOwnedByRuntimeRole && table.RowSecurityEnabled && !table.RowSecurityForced)
             {
-                throw new InvalidOperationException("Runtime PostgreSQL role must not own protected tables.");
+                throw new InvalidOperationException("Runtime-owned protected tables must force row-level security.");
             }
 
             if (table.RowSecurityEnabled != expectedTable.RowSecurityEnabled || table.RowSecurityForced != expectedTable.RowSecurityForced)
@@ -98,29 +100,45 @@ public static class PostgreSqlRuntimeConnectionValidator
                 throw new InvalidOperationException("Protected-table RLS state does not match the configured runtime expectation.");
             }
 
-            var expectedPolicies = expectedTable.Policies
-                .OrderBy(policy => policy.Name, StringComparer.Ordinal)
-                .ThenBy(policy => policy.Command, StringComparer.Ordinal)
-                .ToArray();
-            var actualPolicies = table.Policies
-                .OrderBy(policy => policy.Name, StringComparer.Ordinal)
-                .ThenBy(policy => policy.Command, StringComparer.Ordinal)
-                .ToArray();
-            if (expectedPolicies.Length != actualPolicies.Length
-                || !expectedPolicies.Zip(actualPolicies).All(pair => PolicyMatches(pair.First, pair.Second)))
+            var expectedPolicies = expectedTable.Policies.OrderBy(policy => policy.Name, StringComparer.Ordinal).ThenBy(policy => policy.Command, StringComparer.Ordinal).ToArray();
+            var actualPolicies = table.Policies.OrderBy(policy => policy.Name, StringComparer.Ordinal).ThenBy(policy => policy.Command, StringComparer.Ordinal).ToArray();
+            if (expectedPolicies.Length != actualPolicies.Length || !expectedPolicies.Zip(actualPolicies).All(pair => PolicyMatches(pair.First, pair.Second)))
             {
                 throw new InvalidOperationException("Protected-table policies do not match the configured runtime expectation.");
             }
         }
 
-        if (options.HelperFunction is not null &&
-            (inspection.HelperFunction is null ||
-             inspection.HelperFunction.IsSecurityDefiner ||
-             !inspection.HelperFunction.HasSafeSearchPath ||
-             !inspection.HelperFunction.HasRequiredExecuteGrant))
+        if (options.HelperFunction is not null && (inspection.HelperFunction is null || inspection.HelperFunction.IsSecurityDefiner || !inspection.HelperFunction.HasSafeSearchPath || !inspection.HelperFunction.HasRequiredExecuteGrant))
         {
             throw new InvalidOperationException("Configured RLS helper function has unsafe security mode, search path, or grants.");
         }
+    }
+
+    public static void ValidatePreMigrationInspection(PostgreSqlRuntimePreflightInspection inspection, PostgreSqlRuntimeValidationOptions options)
+    {
+        options.Validate();
+        if (!string.Equals(inspection.DatabaseName, options.ExpectedDatabase, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Runtime PostgreSQL connection targets an unexpected database.");
+        }
+
+        if (!string.Equals(inspection.SessionUser, options.ExpectedRole, StringComparison.Ordinal)
+            || !string.Equals(inspection.CurrentUser, options.ExpectedRole, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Runtime PostgreSQL connection uses an unexpected role.");
+        }
+
+        if (inspection.IsSuperuser || inspection.BypassesRowSecurity || inspection.CanCreateDatabases
+            || inspection.CanCreateRoles || inspection.CanReplicate || inspection.ElevatedMemberships.Count != 0)
+        {
+            throw new InvalidOperationException("Runtime PostgreSQL role has prohibited elevated attributes or role membership.");
+        }
+
+        if (inspection.MultiplexingEnabled)
+        {
+            throw new InvalidOperationException("Runtime PostgreSQL connection must disable multiplexing for the RLS pilot.");
+        }
+
     }
 
     private static bool PolicyMatches(PostgreSqlPolicyOptions expected, PostgreSqlPolicyInspection actual)

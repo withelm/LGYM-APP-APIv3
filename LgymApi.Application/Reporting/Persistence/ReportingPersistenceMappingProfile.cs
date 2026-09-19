@@ -58,6 +58,14 @@ public sealed class ReportingPersistenceMappingProfile : IMappingProfile
             Request = context.Map<ReportRequestPersistenceModel, ReportRequestResult>(source.ReportRequest)
         });
 
+        configuration.CreateMap<ReportPhotoCapabilitySource, ReportSubmissionPhotoCapabilityResult>((source, _) =>
+            source.CanonicalPhoto is null || source.ReadUrl is null
+                ? new ReportSubmissionPhotoCapabilityResult(null, null, null)
+                : new ReportSubmissionPhotoCapabilityResult(
+                    source.CanonicalPhoto.StorageKey,
+                    source.ReadUrl,
+                    string.IsNullOrWhiteSpace(source.CanonicalPhoto.ThumbnailStorageKey) ? null : source.ThumbnailUrl));
+
         configuration.CreateMap<RecurringReportAssignmentPersistenceModel, RecurringReportAssignmentResult>((source, context) => new RecurringReportAssignmentResult
         {
             Id = source.Id,

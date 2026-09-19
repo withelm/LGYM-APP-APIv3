@@ -1,13 +1,15 @@
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
+using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
-using LgymApi.Resources;
 using LgymApi.Identity.Contracts.AdultConfirmation;
+using LgymApi.Resources;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace LgymApi.Application.ExternalAuth;
@@ -21,6 +23,8 @@ internal sealed class GoogleUserRegistrar : IGoogleUserRegistrar
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITutorialService _tutorialService;
+    private readonly ILogger<GoogleUserRegistrar> _logger;
     private readonly AgeGateOptions _ageGateOptions;
 
     public GoogleUserRegistrar(
@@ -29,6 +33,8 @@ internal sealed class GoogleUserRegistrar : IGoogleUserRegistrar
         IRoleRepository roleRepository,
         IUnitOfWork unitOfWork,
         AppDefaultsOptions appDefaultsOptions,
+        ITutorialService tutorialService,
+        ILogger<GoogleUserRegistrar> logger,
         IOptions<AgeGateOptions> ageGateOptions)
     {
         _userRepository = userRepository;
@@ -36,6 +42,8 @@ internal sealed class GoogleUserRegistrar : IGoogleUserRegistrar
         _roleRepository = roleRepository;
         _unitOfWork = unitOfWork;
         _appDefaultsOptions = appDefaultsOptions;
+        _tutorialService = tutorialService;
+        _logger = logger;
         _ageGateOptions = ageGateOptions.Value;
     }
 
@@ -76,6 +84,7 @@ internal sealed class GoogleUserRegistrar : IGoogleUserRegistrar
             ProviderEmail = normalizedEmail.Value
         };
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         await _userRepository.AddAsync(user, cancellationToken);
         await _userExternalLoginRepository.AddAsync(externalLogin, cancellationToken);
         await _roleRepository.AddUserRolesAsync(user.Id, [userRole[0].Id], cancellationToken);
@@ -86,13 +95,29 @@ internal sealed class GoogleUserRegistrar : IGoogleUserRegistrar
         }
         catch (Exception ex) when (ex.GetType().Name == "DbUpdateException")
         {
+            await transaction.RollbackAsync(cancellationToken);
             return Result<User, AppError>.Failure(new ConflictError(Messages.GoogleEmailConflict));
         }
 
+        var tutorialInitialization = await _tutorialService.InitializeOnboardingTutorialAsync(user.Id, cancellationToken);
+        if (tutorialInitialization.IsFailure)
+        {
+            _logger.LogError(
+                "Failed to initialize onboarding tutorial for Google registration with error {ErrorType}.",
+                tutorialInitialization.Error!.GetType().Name);
+            await transaction.RollbackAsync(cancellationToken);
+            return Result<User, AppError>.Failure(tutorialInitialization.Error!);
+        }
+
         var createdUser = await _userRepository.FindByIdWithRolesAsync(user.Id, cancellationToken);
-        return createdUser == null
-            ? Result<User, AppError>.Failure(new InternalServerError(Messages.UserLoadFailed))
-            : Result<User, AppError>.Success(createdUser);
+        if (createdUser == null)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return Result<User, AppError>.Failure(new InternalServerError(Messages.UserLoadFailed));
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return Result<User, AppError>.Success(createdUser);
     }
 
     private async Task<string> GenerateUniqueUserNameAsync(string email, CancellationToken cancellationToken)

@@ -64,6 +64,8 @@ public sealed class GoogleAuthTests : IntegrationTestBase
         var body = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
         body.Should().NotBeNull();
         body!.Token.Should().NotBeNullOrWhiteSpace();
+        body.User.Should().NotBeNull();
+        body.User!.HasActiveTutorials.Should().BeTrue();
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -76,6 +78,11 @@ public sealed class GoogleAuthTests : IntegrationTestBase
         externalLogin!.ProviderEmail.Should().Be(email);
         user.AdultConfirmedAt.Should().NotBeNull();
         user.AdultConfirmationVersion.Should().Be("18plus-v1");
+
+        var tutorial = await db.UserTutorialProgresses
+            .AsNoTracking()
+            .SingleAsync(progress => progress.UserId == user.Id && !progress.IsCompleted);
+        tutorial.TutorialType.Should().Be(LgymApi.Domain.Enums.TutorialType.OnboardingDemo);
 
         var session = await db.UserSessions
             .AsNoTracking()
@@ -484,6 +491,15 @@ public sealed class GoogleAuthTests : IntegrationTestBase
     {
         [System.Text.Json.Serialization.JsonPropertyName("token")]
         public string Token { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("req")]
+        public LoginUserDto? User { get; set; }
+    }
+
+    private sealed class LoginUserDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("hasActiveTutorials")]
+        public bool HasActiveTutorials { get; set; }
     }
 
     private sealed class ExternalLoginDto
