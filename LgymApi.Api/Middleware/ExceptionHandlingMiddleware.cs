@@ -26,7 +26,7 @@ public sealed class ExceptionHandlingMiddleware
                 throw;
             }
 
-            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status403Forbidden, ex.Message, context.RequestAborted);
+            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status403Forbidden, ex.Message, cancellationToken: context.RequestAborted);
         }
         catch (Exception ex)
         {
@@ -37,7 +37,7 @@ public sealed class ExceptionHandlingMiddleware
 
             // Handle all other exceptions as 500 Internal Server Error
             _logger.LogError(ex, "Unhandled exception");
-            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status500InternalServerError, Messages.TryAgain, context.RequestAborted);
+            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status500InternalServerError, Messages.TryAgain, cancellationToken: context.RequestAborted);
         }
     }
 }

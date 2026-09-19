@@ -12,8 +12,8 @@ public static class ErrorResponseWriter
         HttpContext context,
         int statusCode,
         string message,
-        CancellationToken cancellationToken = default,
-        string? code = null)
+        string? code = null,
+        CancellationToken cancellationToken = default)
     {
         if (context.Response.HasStarted)
         {

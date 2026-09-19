@@ -46,7 +46,7 @@ public static class ApiAuthenticationExtensions
                     {
                         if (context.Exception is SecurityTokenExpiredException)
                         {
-                            return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, Messages.ExpiredToken, context.HttpContext.RequestAborted);
+                            return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, Messages.ExpiredToken, cancellationToken: context.HttpContext.RequestAborted);
                         }
 
                         return Task.CompletedTask;
@@ -56,14 +56,14 @@ public static class ApiAuthenticationExtensions
                         if (!context.Response.HasStarted)
                         {
                             context.HandleResponse();
-                            return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, Messages.InvalidToken, context.HttpContext.RequestAborted);
+                            return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, Messages.InvalidToken, cancellationToken: context.HttpContext.RequestAborted);
                         }
 
                         return Task.CompletedTask;
                     },
                     OnForbidden = context =>
                     {
-                        return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status403Forbidden, Messages.Unauthorized, context.HttpContext.RequestAborted);
+                        return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status403Forbidden, Messages.Unauthorized, cancellationToken: context.HttpContext.RequestAborted);
                     }
                 };
             });
