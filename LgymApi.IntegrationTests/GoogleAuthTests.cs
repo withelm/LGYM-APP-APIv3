@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
@@ -56,7 +57,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         _googleTokenValidator.ReturnFor("valid-token", new GoogleTokenPayload(subject, email, true, "Google New", null));
 
-        var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
+        var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token", adultConfirmed = true });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -75,6 +76,8 @@ public sealed class GoogleAuthTests : IntegrationTestBase
         var externalLogin = await db.UserExternalLogins.FirstOrDefaultAsync(x => x.UserId == user!.Id && x.Provider == AuthConstants.ExternalProviders.Google);
         externalLogin.Should().NotBeNull();
         externalLogin!.ProviderEmail.Should().Be(email);
+        user.AdultConfirmedAt.Should().NotBeNull();
+        user.AdultConfirmationVersion.Should().Be("18plus-v1");
 
         var tutorial = await db.UserTutorialProgresses
             .AsNoTracking()
@@ -85,6 +88,29 @@ public sealed class GoogleAuthTests : IntegrationTestBase
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.UserId == user.Id && x.RevokedAtUtc == null);
         session.Should().NotBeNull();
+    }
+
+    [Test]
+    public async Task POST_AuthGoogle_NewUserWithoutAdultConfirmation_Returns428WithoutCreatingRows()
+    {
+        const string email = "google-pending@example.com";
+        const string subject = "google-sub-pending";
+        _googleTokenValidator.ReturnFor(
+            "pending-token",
+            new GoogleTokenPayload(subject, email, true, "Google Pending", null));
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/auth/google",
+            new { idToken = "pending-token" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.PreconditionRequired);
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        payload.GetProperty("code").GetString().Should().Be("AdultConfirmationRequiredForRegistration");
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.Users.CountAsync(user => user.Email.Value == email)).Should().Be(0);
+        (await db.UserExternalLogins.CountAsync(login => login.ProviderKey == subject)).Should().Be(0);
     }
 
     [Test]
@@ -121,7 +147,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         _googleTokenValidator.ReturnFor("valid-token", new GoogleTokenPayload("google-sub-collision", email, true, "Google Collision", null));
 
-        var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
+        var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token", adultConfirmed = true });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }

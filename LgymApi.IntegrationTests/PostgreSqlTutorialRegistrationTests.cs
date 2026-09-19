@@ -39,7 +39,8 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
             email,
             password,
             cpassword = password,
-            isVisibleInRanking = true
+            isVisibleInRanking = true,
+            adultConfirmed = true
         });
 
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -88,7 +89,9 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
             }));
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/google",
+            new { idToken = "valid-token", adultConfirmed = true });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var login = await response.Content.ReadFromJsonAsync<LoginResponseDto>(SharedSerializationOptions.Current);
@@ -160,7 +163,8 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
             email,
             password = "UserSecret123!",
             cpassword = "UserSecret123!",
-            isVisibleInRanking = true
+            isVisibleInRanking = true,
+            adultConfirmed = true
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
@@ -189,7 +193,9 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
             }));
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/google",
+            new { idToken = "valid-token", adultConfirmed = true });
 
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         await AssertAccountWasRolledBackAsync(email);

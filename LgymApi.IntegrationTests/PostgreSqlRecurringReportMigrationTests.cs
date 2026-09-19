@@ -245,28 +245,28 @@ public sealed class PostgreSqlRecurringReportMigrationTests
 
     private static async Task<RecurringRequestSeed> SeedFirstRecurringRequestAsync(AppDbContext dbContext)
     {
-        var trainer = CreateUser("trainer");
-        var trainee = CreateUser("trainee");
+        var trainerId = await InsertUserAsync(dbContext, "trainer");
+        var traineeId = await InsertUserAsync(dbContext, "trainee");
         var template = new ReportTemplate
         {
             Id = Id<ReportTemplate>.New(),
-            TrainerId = trainer.Id,
+            TrainerId = trainerId,
             Name = "Recurring migration template"
         };
         var assignment = new RecurringReportAssignment
         {
             Id = Id<RecurringReportAssignment>.New(),
-            TrainerId = trainer.Id,
-            TraineeId = trainee.Id,
+            TrainerId = trainerId,
+            TraineeId = traineeId,
             TemplateId = template.Id,
             IntervalValue = 1,
             IntervalUnit = RecurringReportIntervalUnit.Week,
             StartsAt = DateTimeOffset.UtcNow.AddDays(-7),
             IsActive = true
         };
-        var seed = new RecurringRequestSeed(trainer.Id, trainee.Id, template.Id, assignment.Id);
+        var seed = new RecurringRequestSeed(trainerId, traineeId, template.Id, assignment.Id);
 
-        dbContext.AddRange(trainer, trainee, template, assignment, CreateRequest(seed, "first"));
+        dbContext.AddRange(template, assignment, CreateRequest(seed, "first"));
         await dbContext.SaveChangesAsync();
 
         return seed;
@@ -296,16 +296,13 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         }
     }
 
-    private static User CreateUser(string prefix)
+    private static Task<Id<User>> InsertUserAsync(AppDbContext dbContext, string prefix)
     {
         var suffix = Id<User>.New();
-        return new User
-        {
-            Id = Id<User>.New(),
-            Name = $"{prefix}-{suffix}",
-            Email = $"{prefix}-{suffix}@test.local",
-            ProfileRank = "Rookie"
-        };
+        return PostgreSqlHistoricalSchemaSeed.InsertUserAsync(
+            dbContext,
+            $"{prefix}-{suffix}",
+            $"{prefix}-{suffix}@test.local");
     }
 
     private static ReportRequest CreateRequest(RecurringRequestSeed seed, string note)

@@ -7,8 +7,10 @@ using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts.AdultConfirmation;
 using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace LgymApi.Application.ExternalAuth;
 
@@ -23,6 +25,7 @@ internal sealed class GoogleUserRegistrar : IGoogleUserRegistrar
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITutorialService _tutorialService;
     private readonly ILogger<GoogleUserRegistrar> _logger;
+    private readonly AgeGateOptions _ageGateOptions;
 
     public GoogleUserRegistrar(
         IUserRepository userRepository,
@@ -31,7 +34,8 @@ internal sealed class GoogleUserRegistrar : IGoogleUserRegistrar
         IUnitOfWork unitOfWork,
         AppDefaultsOptions appDefaultsOptions,
         ITutorialService tutorialService,
-        ILogger<GoogleUserRegistrar> logger)
+        ILogger<GoogleUserRegistrar> logger,
+        IOptions<AgeGateOptions> ageGateOptions)
     {
         _userRepository = userRepository;
         _userExternalLoginRepository = userExternalLoginRepository;
@@ -40,6 +44,7 @@ internal sealed class GoogleUserRegistrar : IGoogleUserRegistrar
         _appDefaultsOptions = appDefaultsOptions;
         _tutorialService = tutorialService;
         _logger = logger;
+        _ageGateOptions = ageGateOptions.Value;
     }
 
     public async Task<Result<User, AppError>> RegisterAsync(GoogleTokenPayload payload, CancellationToken cancellationToken)
@@ -65,7 +70,9 @@ internal sealed class GoogleUserRegistrar : IGoogleUserRegistrar
             IsVisibleInRanking = true,
             ProfileRank = DefaultProfileRank,
             PreferredLanguage = _appDefaultsOptions.PreferredLanguage,
-            PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone
+            PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone,
+            AdultConfirmedAt = DateTimeOffset.UtcNow,
+            AdultConfirmationVersion = _ageGateOptions.ConfirmationVersion
         };
 
         var externalLogin = new UserExternalLogin
