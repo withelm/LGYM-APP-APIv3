@@ -185,3 +185,8 @@ public sealed record PendingPhotoUpload(
     string? FailureReason);
 
 public sealed record ReportingRelationshipAccessFact(bool HasActiveRelationship);
+
+internal sealed record ReportPhotoCapabilitySource(
+    ReportPhotoPersistenceModel? CanonicalPhoto,
+    string? ReadUrl,
+    string? ThumbnailUrl);

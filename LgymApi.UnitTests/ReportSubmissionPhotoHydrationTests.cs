@@ -158,6 +158,60 @@ public sealed class ReportSubmissionPhotoHydrationTests
             Arg.Any<CancellationToken>());
     }
 
+    [Test]
+    public async Task GetOwnSubmissionsAsync_WhenPhotosArrayContainsMetadataWithLegacyIdAlias_PreservesMetadataObject()
+    {
+        var fixture = CreateFixture();
+        fixture.ReturnSubmissions(CreateSubmission(
+            fixture.RequestId,
+            fixture.TraineeId,
+            new Dictionary<string, object?> { ["photoId"] = fixture.Photos[0].Id.ToString(), ["readUrl"] = "https://expired.example/read" },
+            additionalPhotoItems: [new Dictionary<string, object?> { ["_id"] = "caption-1" }]));
+
+        var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
+
+        var metadata = result.Value.Single().Answers["photos"].EnumerateArray().Last();
+        metadata.EnumerateObject().Select(property => property.Name).Should().Equal("_id");
+        metadata.GetProperty("_id").GetString().Should().Be("caption-1");
+    }
+
+    [Test]
+    public async Task GetOwnSubmissionsAsync_WhenPhotosArrayContainsMetadataWithStorageKey_PreservesMetadataObject()
+    {
+        var fixture = CreateFixture();
+        fixture.ReturnSubmissions(CreateSubmission(
+            fixture.RequestId,
+            fixture.TraineeId,
+            new Dictionary<string, object?> { ["photoId"] = fixture.Photos[0].Id.ToString(), ["readUrl"] = "https://expired.example/read" },
+            additionalPhotoItems: [new Dictionary<string, object?> { ["storageKey"] = "captions/front.txt", ["caption"] = "front" }]));
+
+        var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
+
+        var metadata = result.Value.Single().Answers["photos"].EnumerateArray().Last();
+        metadata.EnumerateObject().Select(property => property.Name).Should().Equal("storageKey", "caption");
+        metadata.GetProperty("storageKey").GetString().Should().Be("captions/front.txt");
+    }
+
+    [Test]
+    public async Task GetOwnSubmissionsAsync_WhenAnswerIsNotDeclaredAsPhotosField_LeavesAnswerUntouched()
+    {
+        var fixture = CreateFixture();
+        fixture.ReturnSubmissions(CreateSubmission(
+            fixture.RequestId,
+            fixture.TraineeId,
+            new Dictionary<string, object?>
+            {
+                ["photoId"] = fixture.Photos[0].Id.ToString(),
+                ["readUrl"] = "https://expired.example/read"
+            },
+            fieldType: ReportFieldType.Text));
+
+        var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
+
+        GetOnlyPhoto(result.Value.Single()).GetProperty("readUrl").GetString().Should().Be("https://expired.example/read");
+        await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
     private static Fixture CreateFixture(string? thumbnailStorageKey = "photos/thumb.jpg", IReadOnlyList<ReportPhotoPersistenceModel>? photos = null)
     {
         var traineeId = Id<User>.New();
@@ -189,7 +243,9 @@ public sealed class ReportSubmissionPhotoHydrationTests
         Id<ReportRequest> requestId,
         Id<User> traineeId,
         Dictionary<string, object?> photo,
-        bool photoAsObject = false)
+        bool photoAsObject = false,
+        object?[]? additionalPhotoItems = null,
+        ReportFieldType fieldType = ReportFieldType.Photos)
     {
         var now = DateTimeOffset.UtcNow;
         var templateId = Id<ReportTemplate>.New();
@@ -200,7 +256,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
             null,
             now,
             false,
-            [new ReportTemplateFieldPersistenceModel(Id<ReportTemplateField>.New(), "photos", "Photos", ReportFieldType.Photos, false, 1, null, now)]);
+            [new ReportTemplateFieldPersistenceModel(Id<ReportTemplateField>.New(), "photos", "Photos", fieldType, false, 1, null, now)]);
         var request = new ReportRequestPersistenceModel(
             requestId,
             template.TrainerId,
@@ -219,7 +275,12 @@ public sealed class ReportSubmissionPhotoHydrationTests
             Id<ReportSubmission>.New(),
             requestId,
             ReportingTestData.AccountId(traineeId),
-            JsonSerializer.Serialize(new Dictionary<string, object?> { ["photos"] = photoAsObject ? photo : new[] { photo } }),
+            JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                ["photos"] = photoAsObject
+                    ? photo
+                    : new object?[] { photo }.Concat(additionalPhotoItems ?? []).ToArray()
+            }),
             null,
             null,
             null,

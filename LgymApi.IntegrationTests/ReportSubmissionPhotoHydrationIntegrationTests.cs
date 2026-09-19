@@ -79,8 +79,10 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var metadata = document.RootElement[0].GetProperty("answers").GetProperty("photos")[1];
-        metadata.EnumerateObject().Select(property => property.Name).Should().Equal("caption");
+        metadata.EnumerateObject().Select(property => property.Name).Should().Equal("caption", "_id", "storageKey");
         metadata.GetProperty("caption").GetString().Should().Be("front");
+        metadata.GetProperty("_id").GetString().Should().Be("caption-1");
+        metadata.GetProperty("storageKey").GetString().Should().Be("captions/front.txt");
     }
 
     private async Task<Scenario> SeedScenarioAsync(
@@ -152,7 +154,12 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         var photoAnswers = new List<object?> { photoPayload };
         if (includeMetadataObject)
         {
-            photoAnswers.Add(new Dictionary<string, object?> { ["caption"] = "front" });
+            photoAnswers.Add(new Dictionary<string, object?>
+            {
+                ["caption"] = "front",
+                ["_id"] = "caption-1",
+                ["storageKey"] = "captions/front.txt"
+            });
         }
 
         var payloadJson = duplicateExactPhotoId
