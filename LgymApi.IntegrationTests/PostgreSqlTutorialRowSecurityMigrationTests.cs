@@ -98,19 +98,14 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
     private static async Task SeedTutorialAsync(AppDbContext dbContext)
     {
         var now = DateTimeOffset.UtcNow;
-        var user = new User
-        {
-            Id = Id<User>.New(),
-            Name = "tutorial-rls-migration-user",
-            Email = "tutorial-rls-migration-user@example.test",
-            ProfileRank = "Rookie",
-            CreatedAt = now,
-            UpdatedAt = now
-        };
+        var userId = await PostgreSqlHistoricalSchemaSeed.InsertUserAsync(
+            dbContext,
+            "tutorial-rls-migration-user",
+            "tutorial-rls-migration-user@example.test");
         var progress = new UserTutorialProgress
         {
             Id = Id<UserTutorialProgress>.New(),
-            UserId = user.Id,
+            UserId = userId,
             TutorialType = TutorialType.OnboardingDemo,
             CreatedAt = now,
             UpdatedAt = now
@@ -125,7 +120,7 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
             UpdatedAt = now
         };
 
-        dbContext.AddRange(user, progress, step);
+        dbContext.AddRange(progress, step);
         await dbContext.SaveChangesAsync();
     }
 
