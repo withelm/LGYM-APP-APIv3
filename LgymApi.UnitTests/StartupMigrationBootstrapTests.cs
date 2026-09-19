@@ -64,17 +64,23 @@ public sealed class StartupMigrationBootstrapTests
             .WithMessage("*relational-specific methods*");
     }
 
+    [TestCase("Development")]
     [TestCase("Staging")]
     [TestCase("Production")]
-    public void ShouldApplyMigrations_OutsideDevelopment_ReturnsFalse(string environmentName)
+    [TestCase("Preview")]
+    public void ShouldApplyMigrations_InNonTestingEnvironment_ReturnsTrue(string environmentName)
     {
-        StartupMigrationBootstrap.ShouldApplyMigrations(environmentName, "Testing").Should().BeFalse();
+        StartupMigrationBootstrap.ShouldApplyMigrations(environmentName, "Testing").Should().BeTrue();
     }
 
-    [Test]
-    public void ShouldApplyMigrations_InDevelopment_ReturnsTrue()
+    [TestCase("Development", false)]
+    [TestCase("Testing", false)]
+    [TestCase("Staging", true)]
+    [TestCase("Production", true)]
+    [TestCase("Preview", true)]
+    public void RequiresRuntimeValidation_IsFailClosedOutsideDevelopmentAndTesting(string environmentName, bool expected)
     {
-        StartupMigrationBootstrap.ShouldApplyMigrations("Development", "Testing").Should().BeTrue();
+        StartupMigrationBootstrap.RequiresRuntimeValidation(environmentName).Should().Be(expected);
     }
 
     private static WebApplication CreateApp(string environmentName, Action<IServiceCollection> configureServices)

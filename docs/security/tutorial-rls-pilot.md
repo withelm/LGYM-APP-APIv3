@@ -10,7 +10,7 @@ Production configuration must keep both protected-table expectations at `RowSecu
 
 ## Roles and actor scope
 
-Use two distinct PostgreSQL roles. The maintenance role owns the database and the two protected tables, has `BYPASSRLS`, and is used only outside the API for provisioning, EF migration, Hangfire preparation, activation, deactivation, and recovery. The runtime role has `NOBYPASSRLS`, `NOINHERIT`, required DML and sequence grants, and no membership path to the maintenance role. The API uses only the runtime database setting. Do not put `LGYM_MIGRATION_POSTGRES` in the API process.
+Use two distinct PostgreSQL roles. The maintenance role owns the database and `hangfire`, has `BYPASSRLS`, and is used only outside the API for provisioning, Hangfire preparation, activation, deactivation, and recovery. The runtime role has `NOBYPASSRLS`, `NOINHERIT`, owns `public` and its EF migration objects, and has no membership path to the maintenance role. The API uses only the runtime database setting. Do not put `LGYM_MIGRATION_POSTGRES` in the API process. Maintenance may assume the runtime role for operator-applied protected-table DDL; that reverse membership does not let runtime assume maintenance.
 
 Every tutorial operation obtains an actor scope before its first tutorial repository access. The scope borrows an active caller-owned transaction or opens and owns a new unit-of-work transaction. Infrastructure then runs the parameterized command `SELECT set_config('lgym.account_id', @actorId, true)` on that transaction's active Npgsql connection. The `true` argument makes the setting transaction-local, so it expires when the transaction ends and cannot leak through connection pooling. Reads and no-op paths dispose without commit or rollback. Mutations save once; a borrowed scope leaves completion to its caller, while an owned scope commits once. Setup failures dispose only transactions created by the actor scope and do not clear existing EF tracking.
 
@@ -33,17 +33,21 @@ psql -X -v ON_ERROR_STOP=1 `
 
 `database_environment` must be `Development`, `Staging`, or `Production` and must describe the database being provisioned. Provisioning persists the normalized value as the database-level `lgym.deployment_environment` setting. Activation and deactivation read that independent marker from `pg_db_role_setting` for the current database and reject a mismatched `target_environment`; changing only the CLI argument cannot turn a Production database into a Staging target.
 
-2. In the offline deployment environment only, provide `LGYM_MIGRATION_POSTGRES` through secret injection and run the EF and Hangfire bootstrap. This is the only supported schema-preparation path. The API never migrates or prepares Hangfire in Staging or Production.
+2. For an already-provisioned database, run the ownership upgrade through an operator-admin connection before deploying the API change. It transfers maintenance-owned `public` relations to runtime ownership and keeps maintenance DML grants.
 
 ```powershell
-pwsh -NoProfile -File scripts/migrate-db.ps1
+psql -X -v ON_ERROR_STOP=1 `
+  -v database_name=<database_name> `
+  -v maintenance_role=<maintenance_role> `
+  -v runtime_role=<runtime_role> `
+  -f deploy/postgres/upgrade-runtime-migration-ownership.sql
 ```
 
-3. Confirm the startup configuration uses the runtime role and disables multiplexing. Confirm `PostgreSqlRuntime` names only the two tutorial tables, retains all eight policy contracts including command, exact roles, permissiveness, `USING`, and `WITH CHECK`, and still expects both RLS flags to be `false` before activation. Start the API only after the offline work completes. Startup rejects pending migrations, the wrong database or runtime role, elevated membership, superuser or `BYPASSRLS`, missing Hangfire schema usage or any required table/sequence grant, table ownership by the runtime role, multiplexing, and a policy semantic or RLS state that differs from configuration.
+3. Confirm the startup configuration uses the runtime role and disables multiplexing. Confirm `PostgreSqlRuntime` names only the two tutorial tables, retains all eight policy contracts including command, exact roles, permissiveness, `USING`, and `WITH CHECK`, and still expects both RLS flags to be `false` before activation. Start the API: every non-Testing environment applies pending EF migrations with the runtime role before validation. Startup rejects the wrong database or runtime role, elevated membership, superuser or `BYPASSRLS`, missing Hangfire schema usage or any required table/sequence grant, multiplexing, unforced enabled RLS on a runtime-owned table, and a policy semantic or RLS state that differs from configuration.
 
 ## Activate in Staging
 
-Activation is manual and staging-only. The script starts one transaction, takes an advisory transaction lock, verifies the stored database environment, target database, maintenance connection, role properties, table ownership, and the exact eight-policy semantic contract, then enables and forces RLS on both tables together. It rejects `Production`, a missing or mismatched database marker, altered policy roles or permissiveness, and altered `USING` or `WITH CHECK` predicates.
+Activation is manual and staging-only. The script starts one transaction, takes an advisory transaction lock, verifies the stored database environment, maintenance connection, role properties, runtime table ownership, and the exact eight-policy semantic contract, then has maintenance assume runtime for the owner-required commands that enable and force RLS on both tables together. It rejects `Production`, a missing or mismatched database marker, altered policy roles or permissiveness, and altered `USING` or `WITH CHECK` predicates.
 
 Before activation, deploy configuration that expects `RowSecurityEnabled: true` and `RowSecurityForced: true` for both protected tables, but do not restart traffic yet. Then run:
 
@@ -67,13 +71,13 @@ pwsh -NoProfile -File scripts/run-postgresql-integration-tests.ps1 `
   -TestFilter "FullyQualifiedName~PostgreSqlTutorialRowSecurityTests"
 ```
 
-Expected evidence includes actor A and B parent/child isolation, zero visible rows and zero writes for missing or malformed context, rejected foreign writes, no actor value after a pooled connection returns, denied runtime `SET ROLE` and protected-table DDL, denied runtime Hangfire schema preparation, and a working runtime-role tutorial API flow.
+Expected evidence includes actor A and B parent/child isolation, zero visible rows and zero writes for missing or malformed context, rejected foreign writes, no actor value after a pooled connection returns, denied runtime `SET ROLE`, denied runtime Hangfire schema preparation, runtime EF DDL in `public`, and a working runtime-role tutorial API flow. Forced RLS remains mandatory whenever a runtime-owned protected table has RLS enabled.
 
 During staging, monitor the API and PostgreSQL diagnostics for unexpected RLS denials or missing actor-context events. Treat either as an incident: stop further rollout, preserve redacted timestamps and request correlation data, verify the scope begins before tutorial access, and use the rollback below if service is affected. Do not log actor values, sensitive access details, or tutorial data.
 
 ## Deactivate and break-glass rollback
 
-Use deactivation for a controlled staging rollback or break-glass recovery. It validates the same database, environment, maintenance role, role properties, and table ownership, takes the same advisory lock, and clears `FORCE` and `ENABLE` for both tables without deleting policies or data.
+Use deactivation for a controlled staging rollback or break-glass recovery. It validates the same database, environment, maintenance role, role properties, and runtime table ownership, takes the same advisory lock, assumes runtime for the owner-required commands, and clears `FORCE` and `ENABLE` for both tables without deleting policies or data.
 
 1. Stop or drain affected API traffic.
 2. Change the deployed runtime configuration to expect `RowSecurityEnabled: false` and `RowSecurityForced: false` for both tables.
@@ -90,7 +94,7 @@ psql -X -v ON_ERROR_STOP=1 `
 
 4. Run startup validation with the disabled expectation before restoring traffic. Verify both tables report RLS disabled and not forced. Native Application authorization remains active throughout this rollback.
 
-For a disaster recovery restore, restore into an isolated lease first, rerun offline migration and Hangfire preparation with the maintenance role, leave RLS disabled, and validate the runtime role before any staging traffic. Rehearse this path before exit approval.
+For a disaster recovery restore, restore into an isolated lease first, apply the runtime ownership upgrade, run offline Hangfire preparation if needed, leave RLS disabled, and validate the runtime role before any staging traffic. Rehearse this path before exit approval.
 
 ## Staging exit and Production gate
 

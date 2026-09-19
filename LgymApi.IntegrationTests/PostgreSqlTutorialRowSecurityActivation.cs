@@ -7,6 +7,20 @@ namespace LgymApi.IntegrationTests;
 internal static class PostgreSqlTutorialRowSecurityActivation
 {
     private const string ScriptRelativePath = "deploy/postgres/activate-tutorial-row-security.sql";
+    private const string OwnershipUpgradeScriptRelativePath = "deploy/postgres/upgrade-runtime-migration-ownership.sql";
+
+    public static async Task RunOwnershipUpgradeAsync(
+        string adminConnectionString,
+        string databaseName,
+        string maintenanceRole,
+        string runtimeRole)
+    {
+        var connection = new NpgsqlConnectionStringBuilder(adminConnectionString);
+        var scriptPath = Path.Combine(FindRepositoryRoot(), OwnershipUpgradeScriptRelativePath);
+        var startInfo = CreateProcessStartInfo(connection, databaseName, maintenanceRole, runtimeRole, "Staging");
+        await RunScriptAsync(startInfo, scriptPath);
+        await RunScriptAsync(CreateProcessStartInfo(connection, databaseName, maintenanceRole, runtimeRole, "Staging"), scriptPath);
+    }
 
     public static async Task RunAsync(
         string maintenanceConnectionString,
@@ -39,7 +53,8 @@ internal static class PostgreSqlTutorialRowSecurityActivation
             UseShellExecute = false,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
-            RedirectStandardError = true
+            RedirectStandardError = true,
+            WorkingDirectory = Path.GetDirectoryName(Path.Combine(FindRepositoryRoot(), ScriptRelativePath))!
         };
         startInfo.Environment["PGPASSWORD"] = connection.Password;
 

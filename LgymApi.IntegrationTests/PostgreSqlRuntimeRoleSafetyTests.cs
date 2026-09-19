@@ -27,7 +27,7 @@ public sealed class PostgreSqlRuntimeRoleSafetyTests
                 PostgreSqlRuntimeCatalogInspectionTests.CreateConfiguration(environment));
 
             await action.Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage("*prohibited superuser, BYPASSRLS, or elevated role membership*");
+                .WithMessage("*prohibited elevated attributes or role membership*");
         }
         finally
         {
@@ -35,12 +35,14 @@ public sealed class PostgreSqlRuntimeRoleSafetyTests
         }
     }
 
-    [Test]
-    public async Task RuntimeValidation_WhenRuntimeRoleHasElevatedMembership_FailsClosed()
+    [TestCase("CREATEDB")]
+    [TestCase("CREATEROLE")]
+    [TestCase("REPLICATION")]
+    public async Task RuntimeValidation_WhenRuntimeRoleCanSetAnInheritedProhibitedAttributeRole_FailsClosed(string attribute)
     {
         await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync(activate: false);
         var elevatedRole = $"lgym_elevated_it_{Id<PostgreSqlRuntimeRoleSafetyTests>.New():N}";
-        await environment.ExecuteAdminFormattedAsync("CREATE ROLE %I NOLOGIN NOSUPERUSER BYPASSRLS", elevatedRole);
+        await environment.ExecuteAdminFormattedAsync("CREATE ROLE %I NOLOGIN NOSUPERUSER " + attribute, elevatedRole);
         await environment.ExecuteAdminFormattedAsync("GRANT %I TO %I", elevatedRole, environment.RuntimeRole);
 
         try
@@ -50,7 +52,7 @@ public sealed class PostgreSqlRuntimeRoleSafetyTests
                 PostgreSqlRuntimeCatalogInspectionTests.CreateConfiguration(environment));
 
             await action.Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage("*prohibited superuser, BYPASSRLS, or elevated role membership*");
+                .WithMessage("*prohibited elevated attributes or role membership*");
         }
         finally
         {
@@ -60,28 +62,16 @@ public sealed class PostgreSqlRuntimeRoleSafetyTests
     }
 
     [Test]
-    public async Task RuntimeValidation_WhenRuntimeRoleOwnsProtectedTable_FailsClosed()
+    public async Task RuntimeRole_CannotEscalateButCanApplyApplicationSchemaDdl()
     {
         await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync(activate: false);
-        await environment.ExecuteAdminFormattedAsync(
-            "ALTER TABLE public.\"UserTutorialProgresses\" OWNER TO %I",
-            environment.RuntimeRole);
 
-        try
-        {
-            var action = () => PostgreSqlRuntimeCatalogInspectionTests.ValidateAsync(
-                environment,
-                PostgreSqlRuntimeCatalogInspectionTests.CreateConfiguration(environment));
-
-            await action.Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage("Runtime PostgreSQL role must not own protected tables.");
-        }
-        finally
-        {
-            await environment.ExecuteAdminFormattedAsync(
-                "ALTER TABLE public.\"UserTutorialProgresses\" OWNER TO %I",
-                environment.MaintenanceRole);
-        }
+        await AssertPermissionDeniedAsync(environment.RuntimeConnectionString, $"SET ROLE {environment.MaintenanceRole};");
+        await ExecuteAsync(environment.RuntimeConnectionString, "CREATE TABLE public.runtime_schema_attempt (\"Id\" integer);");
+        await ExecuteAsync(environment.RuntimeConnectionString, "DROP TABLE public.runtime_schema_attempt;");
+        await PostgreSqlRuntimeCatalogInspectionTests.ValidateAsync(
+            environment,
+            PostgreSqlRuntimeCatalogInspectionTests.CreateConfiguration(environment));
     }
 
     [Test]
@@ -106,5 +96,20 @@ public sealed class PostgreSqlRuntimeRoleSafetyTests
     {
         Superuser,
         BypassRls
+    }
+
+    private static async Task ExecuteAsync(string connectionString, string sql)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(sql, connection);
+        await command.ExecuteNonQueryAsync();
+    }
+
+    private static async Task AssertPermissionDeniedAsync(string connectionString, string sql)
+    {
+        var action = () => ExecuteAsync(connectionString, sql);
+        var exception = await action.Should().ThrowAsync<PostgresException>();
+        exception.Which.SqlState.Should().Be("42501");
     }
 }
