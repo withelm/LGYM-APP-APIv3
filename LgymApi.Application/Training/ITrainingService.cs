@@ -9,6 +9,6 @@ public interface ITrainingService
 {
     Task<Result<TrainingSummaryResult, AppError>> AddTrainingAsync(Id<LgymApi.Identity.Contracts.AccountReference> accountId, AddTrainingInput input, CancellationToken cancellationToken = default);
     Task<Result<WorkoutTrainingReadModel, AppError>> GetLastTrainingAsync(Id<LgymApi.Identity.Contracts.AccountReference> accountId, CancellationToken cancellationToken = default);
-    Task<Result<List<TrainingByDateDetails>, AppError>> GetTrainingByDateAsync(Id<LgymApi.Identity.Contracts.AccountReference> accountId, DateTime createdAt, CancellationToken cancellationToken = default);
+    Task<Result<TrainingsByDateWithTranslations, AppError>> GetTrainingByDateAsync(Id<LgymApi.Identity.Contracts.AccountReference> accountId, DateTime createdAt, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
     Task<Result<List<DateTime>, AppError>> GetTrainingDatesAsync(Id<LgymApi.Identity.Contracts.AccountReference> accountId, CancellationToken cancellationToken = default);
 }

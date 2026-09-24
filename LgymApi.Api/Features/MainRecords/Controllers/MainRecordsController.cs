@@ -18,16 +18,11 @@ public sealed class MainRecordsController : ControllerBase
 {
     private readonly IMainRecordsApiAdapter _mainRecordsService;
     private readonly IMapper _mapper;
-    private readonly IExerciseApiAdapter _exercises;
 
-    public MainRecordsController(
-        IMainRecordsApiAdapter mainRecordsService,
-        IMapper mapper,
-        IExerciseApiAdapter exercises)
+    public MainRecordsController(IMainRecordsApiAdapter mainRecordsService, IMapper mapper)
     {
         _mainRecordsService = mainRecordsService;
         _mapper = mapper;
-        _exercises = exercises;
     }
 
     [HttpPost("mainRecords/{id}/addNewRecord")]
@@ -72,20 +67,16 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetLastMainRecords([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var accountId = ParseRouteAccountIdForCurrentAccount(id);
-        var result = await _mainRecordsService.GetLastMainRecordsAsync(accountId, cancellationToken);
+        var result = await _mainRecordsService.GetLastMainRecordsAsync(accountId, HttpContext.GetCulturePreferences(), cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        var translations = await _exercises.GetDisplayNamesAsync(
-            result.Value.Select(record => record.Exercise.Id),
-            HttpContext.GetCulturePreferences(),
-            cancellationToken);
         var mappingContext = _mapper.CreateContext();
-        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
+        mappingContext.Set(ExerciseProfile.Keys.Translations, result.Value.Translations);
         var mapped = _mapper.MapList<MainRecordBestReadModel, MainRecordsLastDto>(
-            result.Value,
+            result.Value.Records,
             mappingContext);
         return Ok(mapped);
     }

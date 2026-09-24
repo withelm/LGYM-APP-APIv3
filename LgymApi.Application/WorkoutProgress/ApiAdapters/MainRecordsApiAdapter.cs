@@ -13,7 +13,7 @@ public interface IMainRecordsApiAdapter
 {
     Task<Result<Unit, AppError>> AddNewRecordAsync(Id<AccountReference> accountId, Id<LgymApi.Domain.Entities.Exercise> exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default);
     Task<Result<List<MainRecordReadModel>, AppError>> GetMainRecordsHistoryAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default);
-    Task<Result<List<MainRecordBestReadModel>, AppError>> GetLastMainRecordsAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default);
+    Task<Result<BestMainRecordsWithTranslations, AppError>> GetLastMainRecordsAsync(Id<AccountReference> accountId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> DeleteMainRecordAsync(Id<AccountReference> currentAccountId, Id<LgymApi.Domain.Entities.MainRecord> recordId, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> UpdateMainRecordAsync(Id<AccountReference> routeAccountId, Id<AccountReference> currentAccountId, Id<LgymApi.Domain.Entities.MainRecord> recordId, Id<LgymApi.Domain.Entities.Exercise> exerciseId, double weight, WeightUnits unit, DateTime date, CancellationToken cancellationToken = default);
     Task<Result<PossibleRecordReadModel, AppError>> GetRecordOrPossibleRecordInExerciseAsync(Id<AccountReference> accountId, Id<LgymApi.Domain.Entities.Exercise> exerciseId, CancellationToken cancellationToken = default);
@@ -34,8 +34,8 @@ internal sealed class MainRecordsApiAdapter : IMainRecordsApiAdapter
     public Task<Result<List<MainRecordReadModel>, AppError>> GetMainRecordsHistoryAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default)
         => _mainRecordsService.GetMainRecordsHistoryAsync(accountId, cancellationToken);
 
-    public Task<Result<List<MainRecordBestReadModel>, AppError>> GetLastMainRecordsAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default)
-        => _mainRecordsService.GetLastMainRecordsAsync(accountId, cancellationToken);
+    public Task<Result<BestMainRecordsWithTranslations, AppError>> GetLastMainRecordsAsync(Id<AccountReference> accountId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+        => _mainRecordsService.GetLastMainRecordsAsync(accountId, cultures, cancellationToken);
 
     public Task<Result<Unit, AppError>> DeleteMainRecordAsync(Id<AccountReference> currentAccountId, Id<LgymApi.Domain.Entities.MainRecord> recordId, CancellationToken cancellationToken = default)
         => _mainRecordsService.DeleteMainRecordAsync(currentAccountId, recordId, cancellationToken);

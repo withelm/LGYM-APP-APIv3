@@ -5,6 +5,7 @@ using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.WorkoutProgress.Dashboard.Models;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -50,46 +51,35 @@ public sealed class ExerciseProfile : IMappingProfile
             source.Description,
             source.Image));
 
-        configuration.CreateMap<ProgressExerciseReadModel, ExerciseResponseDto>((source, context) =>
+        configuration.CreateMap<ProgressExerciseReadModel, ExerciseResponseDto>((source, context) => new ExerciseResponseDto
         {
-            var name = source.Name;
-
-            if (source.UserId is null)
-            {
-                var translations = context?.Get(Keys.Translations);
-                if (translations != null && translations.TryGetValue(source.Id, out var translatedName))
-                {
-                    name = translatedName;
-                }
-            }
-
-            return new ExerciseResponseDto
-            {
-                Id = source.Id.ToString(),
-                Name = source.Name,
-                DisplayName = name,
-                BodyPart = context!.Map<BodyParts, EnumLookupDto>(source.BodyPart),
-                EloFormula = source.EloFormula == null ? null : context.Map<EnumLookupDto, LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.EloFormula.Value)),
-                Description = source.Description,
-                Image = source.Image,
-                UserId = source.UserId?.ToString()
-            };
+            Id = source.Id.ToString(),
+            Name = source.Name,
+            DisplayName = ResolveDisplayName(context, source.Id, source.UserId is null, source.Name),
+            BodyPart = context!.Map<BodyParts, EnumLookupDto>(source.BodyPart),
+            EloFormula = source.EloFormula == null ? null : context.Map<EnumLookupDto, LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.EloFormula.Value)),
+            Description = source.Description,
+            Image = source.Image,
+            UserId = source.UserId?.ToString()
         });
 
-        configuration.CreateMap<Exercise, ExerciseResponseDto>((source, context) =>
+        configuration.CreateMap<WorkoutProgressDashboardExerciseDetailsReadModel, ExerciseResponseDto>((source, context) => new ExerciseResponseDto
         {
-            var name = source.Name;
-            if (source.UserId is null)
-            {
-                var translations = context?.Get(Keys.Translations);
-                if (translations != null && translations.TryGetValue(source.Id, out var translatedName)) name = translatedName;
-            }
-            return new ExerciseResponseDto
-            {
-                Id = source.Id.ToString(), Name = source.Name, DisplayName = name, BodyPart = context!.Map<BodyParts, EnumLookupDto>(source.BodyPart),
-                EloFormula = context.Map<EnumLookupDto, LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.EloFormula)),
-                Description = source.Description, Image = source.Image, UserId = source.UserId?.ToString()
-            };
+            Id = source.Id,
+            Name = source.Name,
+            DisplayName = ResolveDisplayName(context, source.Id.ToIdOrEmpty<Exercise>(), source.UserId is null, source.Name),
+            BodyPart = context!.Map<BodyParts, EnumLookupDto>(source.BodyPart),
+            EloFormula = source.EloFormula == null ? null : context.Map<EnumLookupDto, LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.EloFormula.Value)),
+            Description = source.Description,
+            Image = source.Image,
+            UserId = source.UserId
+        });
+
+        configuration.CreateMap<Exercise, ExerciseResponseDto>((source, context) => new ExerciseResponseDto
+        {
+            Id = source.Id.ToString(), Name = source.Name, DisplayName = ResolveDisplayName(context, source.Id, source.UserId is null, source.Name), BodyPart = context!.Map<BodyParts, EnumLookupDto>(source.BodyPart),
+            EloFormula = context.Map<EnumLookupDto, LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.EloFormula)),
+            Description = source.Description, Image = source.Image, UserId = source.UserId?.ToString()
         });
 
         configuration.CreateMap<SeriesScoreResult, SeriesScoreWithGymDto>((source, context) => new SeriesScoreWithGymDto
@@ -119,6 +109,22 @@ public sealed class ExerciseProfile : IMappingProfile
             TrainingName = source.TrainingName,
             SeriesScores = context!.MapList<SeriesScoreResult, SeriesScoreDto>(source.SeriesScores)
         });
+    }
+
+    /// <summary>
+    /// Translations apply only to global exercises; custom exercises and missing translations keep the stored name.
+    /// </summary>
+    internal static string ResolveDisplayName(MappingContext? context, Id<Exercise> exerciseId, bool isGlobal, string name)
+    {
+        if (!isGlobal || exerciseId.IsEmpty)
+        {
+            return name;
+        }
+
+        var translations = context?.Get(Keys.Translations);
+        return translations != null && translations.TryGetValue(exerciseId, out var translatedName)
+            ? translatedName
+            : name;
     }
 
     private static ExerciseEloFormula? ParseExerciseEloFormula(LookupItemVm? eloFormula)

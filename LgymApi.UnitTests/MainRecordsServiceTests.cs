@@ -50,7 +50,7 @@ public sealed class MainRecordsServiceTests
     {
         var service = CreateService();
 
-        var result = await service.GetLastMainRecordsAsync(Id<AccountReference>.Empty);
+        var result = await service.GetLastMainRecordsAsync(Id<AccountReference>.Empty, []);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidMainRecordsError>();

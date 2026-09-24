@@ -25,15 +25,27 @@ public sealed class WorkoutProgressDashboardReadService : IWorkoutProgressDashbo
     public Task<Result<List<DateTime>, AppError>> GetTrainingDatesAsync(Id<LgymApi.Identity.Contracts.AccountReference> traineeId, CancellationToken cancellationToken = default)
         => _trainingHistory.GetTrainingDatesAsync(traineeId, cancellationToken);
 
-    public async Task<Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>> GetTrainingByDateAsync(
+    public async Task<Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>> GetTrainingByDateAsync(
         Id<LgymApi.Identity.Contracts.AccountReference> traineeId,
         DateTime createdAt,
+        IReadOnlyList<string> cultures,
         CancellationToken cancellationToken = default)
     {
         var result = await _trainingHistory.GetTrainingByDateAsync(traineeId, createdAt, cancellationToken);
-        return result.IsFailure
-            ? Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>.Failure(result.Error)
-            : Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>.Success(result.Value.Select(MapTraining).ToList());
+        if (result.IsFailure)
+        {
+            return Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Failure(result.Error);
+        }
+
+        var translations = await _progress.GetExerciseDisplayNamesAsync(
+            result.Value.SelectMany(training => training.Exercises).Select(exercise => exercise.ExerciseDetails.Id),
+            cultures,
+            cancellationToken);
+        return Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Success(new WorkoutProgressDashboardTrainingsWithTranslations
+        {
+            Trainings = result.Value.Select(MapTraining).ToList(),
+            Translations = translations
+        });
     }
 
     public Task<Result<List<ExerciseScoreChartPoint>, AppError>> GetExerciseScoreChartAsync(

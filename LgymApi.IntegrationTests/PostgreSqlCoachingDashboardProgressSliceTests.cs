@@ -132,7 +132,7 @@ internal sealed class PostgreSqlCoachingDashboardProgressSliceTests : PostgreSql
         var dates = await actionScope.ServiceProvider.GetRequiredService<IGetTrainingDatesUseCase>()
             .ExecuteAsync(new GetTrainingDatesQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>()));
         var byDate = await actionScope.ServiceProvider.GetRequiredService<IGetTrainingByDateUseCase>()
-            .ExecuteAsync(new GetTrainingByDateQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>(), createdAt));
+            .ExecuteAsync(new GetTrainingByDateQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>(), createdAt, []));
         var scores = await actionScope.ServiceProvider.GetRequiredService<IGetExerciseScoresChartUseCase>()
             .ExecuteAsync(new GetExerciseScoresChartQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>(), exerciseId));
         var elo = await actionScope.ServiceProvider.GetRequiredService<IGetEloChartUseCase>()
@@ -143,7 +143,7 @@ internal sealed class PostgreSqlCoachingDashboardProgressSliceTests : PostgreSql
         dates.IsSuccess.Should().BeTrue();
         dates.Value.Should().ContainSingle();
         byDate.IsSuccess.Should().BeTrue();
-        byDate.Value.Should().ContainSingle();
+        byDate.Value.Trainings.Should().ContainSingle();
         scores.IsSuccess.Should().BeTrue();
         scores.Value.Should().ContainSingle();
         elo.IsSuccess.Should().BeTrue();

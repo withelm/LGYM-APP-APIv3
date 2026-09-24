@@ -83,26 +83,19 @@ public sealed class TrainerDashboardProgressController : ControllerBase
     {
         if (!Id<AccountReference>.TryParse(traineeId, out var parsedTraineeId))
         {
-            return Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
+            return Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
-        var result = await _progress.GetTrainingByDateAsync(HttpContext.GetAuthenticatedAccountContext()!, parsedTraineeId, request.CreatedAt, cancellationToken);
+        var result = await _progress.GetTrainingByDateAsync(HttpContext.GetAuthenticatedAccountContext()!, parsedTraineeId, request.CreatedAt, HttpContext.GetCulturePreferences(), cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        var exerciseIds = result.Value
-            .SelectMany(training => training.Exercises)
-            .Select(exercise => exercise.ExerciseDetails.Id.ToIdOrEmpty<ExerciseEntity>());
-        var translations = await _progress.GetExerciseDisplayNamesAsync(
-            exerciseIds,
-            HttpContext.GetCulturePreferences(),
-            cancellationToken);
         var mappingContext = _mapper.CreateContext();
-        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
+        mappingContext.Set(ExerciseProfile.Keys.Translations, result.Value.Translations);
         return Ok(_mapper.MapList<WorkoutProgressDashboardTrainingReadModel, TrainingByDateDetailsDto>(
-            result.Value,
+            result.Value.Trainings,
             mappingContext));
     }
 

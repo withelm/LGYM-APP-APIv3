@@ -48,7 +48,7 @@ public sealed class CoachingApiAdapterMappingProfile : IMappingProfile
         configuration.CreateMap<TrainerTraineeAccountInput, GetTrainingDatesQuery>((source, _) => new(
             source.TrainerId, source.TraineeId));
         configuration.CreateMap<TrainingByDateAccountInput, GetTrainingByDateQuery>((source, _) => new(
-            source.TrainerId, source.TraineeId, source.CreatedAt));
+            source.TrainerId, source.TraineeId, source.CreatedAt, source.Cultures));
         configuration.CreateMap<ExerciseScoresChartAccountInput, GetExerciseScoresChartQuery>((source, _) => new(
             source.TrainerId, source.TraineeId, source.ExerciseId));
         configuration.CreateMap<TrainerTraineeAccountInput, GetEloChartQuery>((source, _) => new(
@@ -85,7 +85,7 @@ internal sealed record ActorInvitationAccountInput(Id<AccountReference> ActorId,
 internal sealed record ActorFilterAccountInput(Id<AccountReference> ActorId, Application.Pagination.FilterInput Filter);
 internal sealed record ActorEmailAccountInput(Id<AccountReference> ActorId, string Email, string PreferredLanguage, string PreferredTimeZone);
 internal sealed record DashboardAccountInput(Id<AccountReference> TrainerId, string? Search, string? Status, string? SortBy, string? SortDirection, int Page, int PageSize);
-internal sealed record TrainingByDateAccountInput(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, DateTime CreatedAt);
+internal sealed record TrainingByDateAccountInput(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, DateTime CreatedAt, IReadOnlyList<string> Cultures);
 internal sealed record ExerciseScoresChartAccountInput(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, Id<Exercise> ExerciseId);
 internal sealed record CreateNoteAccountInput(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, TraineeNotes.Models.TraineeNoteUpsertData Data);
 internal sealed record UpdateNoteAccountInput(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, Id<TraineeNote> NoteId, TraineeNotes.Models.TraineeNoteUpsertData Data);

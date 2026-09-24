@@ -6,7 +6,6 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Mapping.Core;
-using LgymApi.Application.WorkoutProgress.ApiAdapters;
 using LgymApi.Api.Mapping.Profiles;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using LgymApi.Domain.ValueObjects;
@@ -22,16 +21,11 @@ public sealed class TrainingController : ControllerBase
 {
     private readonly ITrainingService _trainingService;
     private readonly IMapper _mapper;
-    private readonly IExerciseApiAdapter _exercises;
 
-    public TrainingController(
-        ITrainingService trainingService,
-        IMapper mapper,
-        IExerciseApiAdapter exercises)
+    public TrainingController(ITrainingService trainingService, IMapper mapper)
     {
         _trainingService = trainingService;
         _mapper = mapper;
-        _exercises = exercises;
     }
 
     [HttpPost("{id}/addTraining")]
@@ -90,26 +84,17 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> GetTrainingByDate([FromRoute] string id, [FromBody] TrainingByDateRequestDto request, CancellationToken cancellationToken = default)
     {
         var accountId = ParseRouteAccountIdForCurrentAccount(id);
-        var result = await _trainingService.GetTrainingByDateAsync(accountId, request.CreatedAt, cancellationToken);
+        var result = await _trainingService.GetTrainingByDateAsync(accountId, request.CreatedAt, HttpContext.GetCulturePreferences(), cancellationToken);
 
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        var exerciseIds = result.Value
-            .SelectMany(training => training.Exercises)
-            .Select(exercise => exercise.ExerciseDetails)
-            .OfType<LgymApi.Application.WorkoutProgress.ProgressData.Models.ProgressExerciseReadModel>()
-            .Select(exercise => exercise.Id);
-        var translations = await _exercises.GetDisplayNamesAsync(
-            exerciseIds,
-            HttpContext.GetCulturePreferences(),
-            cancellationToken);
         var mappingContext = _mapper.CreateContext();
-        mappingContext.Set(ExerciseProfile.Keys.Translations, translations);
+        mappingContext.Set(ExerciseProfile.Keys.Translations, result.Value.Translations);
         var mapped = _mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(
-            result.Value,
+            result.Value.Trainings,
             mappingContext);
         return Ok(mapped);
     }

@@ -66,19 +66,7 @@ public sealed class MainRecordProfile : IMappingProfile
             Weight = source.Record.Weight,
             Unit = context!.Map<WeightUnits, EnumLookupDto>(source.Record.Unit),
             Date = source.Record.Date,
-            ExerciseDetails = new ExerciseResponseDto
-            {
-                Id = source.Exercise.Id.ToString(),
-                Name = source.Exercise.Name,
-                DisplayName = GetDisplayName(context, source.Exercise.Id, source.Exercise.Name),
-                UserId = source.Exercise.UserId?.ToString(),
-                BodyPart = context.Map<BodyParts, EnumLookupDto>(source.Exercise.BodyPart),
-                EloFormula = source.Exercise.EloFormula == null
-                    ? null
-                    : context.Map<EnumLookupDto, LgymApi.Api.Features.Common.Contracts.LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.Exercise.EloFormula.Value)),
-                Description = source.Exercise.Description,
-                Image = source.Exercise.Image
-            }
+            ExerciseDetails = context.Map<ProgressExerciseReadModel, ExerciseResponseDto>(source.Exercise)
         });
 
         configuration.CreateMap<PossibleRecordResult, PossibleRecordForExerciseDto>((source, context) => new PossibleRecordForExerciseDto
@@ -96,16 +84,5 @@ public sealed class MainRecordProfile : IMappingProfile
             Unit = context!.Map<WeightUnits, EnumLookupDto>(source.Unit),
             Date = source.Date
         });
-    }
-
-    private static string GetDisplayName(
-        MappingContext context,
-        Id<Exercise> exerciseId,
-        string fallback)
-    {
-        var translations = context.Get(ExerciseProfile.Keys.Translations);
-        return translations is not null && translations.TryGetValue(exerciseId, out var displayName)
-            ? displayName
-            : fallback;
     }
 }
