@@ -22,6 +22,11 @@ public sealed class SeedOrchestrator
     {
         seedContext.SeedDemoData = options.SeedDemoData;
 
+        if (context.Database.IsRelational() && options.DropDatabase && !options.UseMigrations)
+        {
+            throw new InvalidOperationException("Relational database deletion requires migrations to be enabled so the schema can be recreated.");
+        }
+
         if (options.DropDatabase)
         {
             Console.WriteLine("Dropping existing database...");
@@ -37,14 +42,13 @@ public sealed class SeedOrchestrator
         {
             if (!options.UseMigrations)
             {
-                Console.WriteLine("EnsureCreated bootstrap is disabled for relational databases to prevent EF Core schema drift. Applying migrations instead...");
+                Console.WriteLine("Using the existing relational schema. API startup owns EF Core migrations.");
             }
             else
             {
                 Console.WriteLine("Applying migrations...");
+                await context.Database.MigrateAsync(cancellationToken);
             }
-
-            await context.Database.MigrateAsync(cancellationToken);
         }
 
         seedContext.AdminUser ??= await FindExistingUserAsync(context, "Admin", cancellationToken);

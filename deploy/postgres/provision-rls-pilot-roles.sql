@@ -38,6 +38,7 @@ WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'runtime_role')
 ALTER ROLE :"maintenance_role" NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION;
 ALTER ROLE :"runtime_role" NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION NOINHERIT;
 REVOKE :"maintenance_role" FROM :"runtime_role";
+GRANT :"runtime_role" TO :"maintenance_role";
 ALTER DATABASE :"database_name" OWNER TO :"maintenance_role";
 SELECT format(
     'ALTER DATABASE %I SET lgym.deployment_environment TO %L',
@@ -45,20 +46,19 @@ SELECT format(
     lower(:'database_environment'))
 \gexec
 CREATE SCHEMA IF NOT EXISTS hangfire AUTHORIZATION :"maintenance_role";
-SELECT format('ALTER TABLE %I.%I OWNER TO %I', schemaname, tablename, :'maintenance_role')
-FROM pg_tables
-WHERE schemaname = 'public'
-  AND tablename IN ('UserTutorialProgresses', 'UserTutorialStepProgresses')
-\gexec
+ALTER SCHEMA public OWNER TO :"runtime_role";
 
 GRANT CONNECT ON DATABASE :"database_name" TO :"runtime_role";
-GRANT USAGE ON SCHEMA public, hangfire TO :"runtime_role";
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public, hangfire TO :"runtime_role";
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public, hangfire TO :"runtime_role";
-ALTER DEFAULT PRIVILEGES FOR ROLE :"maintenance_role" IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"runtime_role";
-ALTER DEFAULT PRIVILEGES FOR ROLE :"maintenance_role" IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO :"runtime_role";
+GRANT USAGE ON SCHEMA hangfire TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA hangfire TO :"runtime_role";
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA hangfire TO :"runtime_role";
 ALTER DEFAULT PRIVILEGES FOR ROLE :"maintenance_role" IN SCHEMA hangfire GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"runtime_role";
 ALTER DEFAULT PRIVILEGES FOR ROLE :"maintenance_role" IN SCHEMA hangfire GRANT USAGE, SELECT ON SEQUENCES TO :"runtime_role";
+GRANT USAGE ON SCHEMA public TO :"maintenance_role";
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"maintenance_role";
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO :"maintenance_role";
+ALTER DEFAULT PRIVILEGES FOR ROLE :"runtime_role" IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"maintenance_role";
+ALTER DEFAULT PRIVILEGES FOR ROLE :"runtime_role" IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO :"maintenance_role";
 
 WITH RECURSIVE memberships(role_id) AS (
     SELECT roleid FROM pg_auth_members WHERE member = (SELECT oid FROM pg_roles WHERE rolname = :'runtime_role')

@@ -3,12 +3,10 @@ using Npgsql;
 
 namespace LgymApi.Infrastructure.Data;
 
-internal static class PostgreSqlRuntimeConnectionInspector
-{
-    public static async Task<PostgreSqlRuntimeInspection> InspectAsync(
-        AppDbContext dbContext,
+    internal static class PostgreSqlRuntimeConnectionInspector
+    {
+    public static async Task<PostgreSqlRuntimePreflightInspection> InspectPreMigrationAsync(
         NpgsqlConnection connection,
-        PostgreSqlRuntimeValidationOptions options,
         CancellationToken cancellationToken)
     {
         var session = await InspectSessionAsync(connection, cancellationToken);
@@ -18,11 +16,29 @@ internal static class PostgreSqlRuntimeConnectionInspector
                 UNION
                 SELECT membership.roleid FROM pg_auth_members membership JOIN memberships ON membership.member = memberships.role_id
             )
-            SELECT role.rolname
-            FROM memberships
-            JOIN pg_roles role ON role.oid = memberships.role_id
-            WHERE role.rolsuper OR role.rolbypassrls;
+            SELECT role.rolname FROM memberships JOIN pg_roles role ON role.oid = memberships.role_id
+            WHERE role.rolsuper OR role.rolbypassrls OR role.rolcreatedb OR role.rolcreaterole OR role.rolreplication;
             """, cancellationToken);
+        return new PostgreSqlRuntimePreflightInspection(
+            session.DatabaseName,
+            session.SessionUser,
+            session.CurrentUser,
+            session.IsSuperuser,
+            session.BypassesRowSecurity,
+            session.CanCreateDatabases,
+            session.CanCreateRoles,
+            session.CanReplicate,
+            elevatedMemberships,
+            new NpgsqlConnectionStringBuilder(connection.ConnectionString).Multiplexing);
+    }
+
+    public static async Task<PostgreSqlRuntimeInspection> InspectAsync(
+        AppDbContext dbContext,
+        NpgsqlConnection connection,
+        PostgreSqlRuntimeValidationOptions options,
+        CancellationToken cancellationToken)
+    {
+        var preflight = await InspectPreMigrationAsync(connection, cancellationToken);
         var protectedTables = await InspectProtectedTablesAsync(connection, options.ProtectedTables, cancellationToken);
         var helperFunction = options.HelperFunction is null
             ? null
@@ -34,12 +50,16 @@ internal static class PostgreSqlRuntimeConnectionInspector
             cancellationToken);
 
         return new PostgreSqlRuntimeInspection(
-            session.DatabaseName,
-            session.CurrentUser,
-            session.IsSuperuser,
-            session.BypassesRowSecurity,
-            elevatedMemberships,
-            new NpgsqlConnectionStringBuilder(connection.ConnectionString).Multiplexing,
+            preflight.DatabaseName,
+            preflight.SessionUser,
+            preflight.CurrentUser,
+            preflight.IsSuperuser,
+            preflight.BypassesRowSecurity,
+            preflight.CanCreateDatabases,
+            preflight.CanCreateRoles,
+            preflight.CanReplicate,
+            preflight.ElevatedMemberships,
+            preflight.MultiplexingEnabled,
             privileges.HangfireSchemaExists,
             privileges.HangfireSchemaUsageGranted,
             privileges.MissingTableGrants,
@@ -52,7 +72,8 @@ internal static class PostgreSqlRuntimeConnectionInspector
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT current_database(), current_user, role.rolsuper, role.rolbypassrls
+            SELECT current_database(), session_user, current_user, role.rolsuper, role.rolbypassrls,
+                role.rolcreatedb, role.rolcreaterole, role.rolreplication
             FROM pg_roles role
             WHERE role.rolname = current_user;
             """;
@@ -62,7 +83,9 @@ internal static class PostgreSqlRuntimeConnectionInspector
             throw new InvalidOperationException("Could not inspect the runtime PostgreSQL role.");
         }
 
-        return new SessionInspection(reader.GetString(0), reader.GetString(1), reader.GetBoolean(2), reader.GetBoolean(3));
+        return new SessionInspection(
+            reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetBoolean(3),
+            reader.GetBoolean(4), reader.GetBoolean(5), reader.GetBoolean(6), reader.GetBoolean(7));
     }
 
     private static async Task<IReadOnlyList<PostgreSqlProtectedTableInspection>> InspectProtectedTablesAsync(NpgsqlConnection connection, IEnumerable<PostgreSqlProtectedTableOptions> expectedTables, CancellationToken cancellationToken)
@@ -154,5 +177,7 @@ internal static class PostgreSqlRuntimeConnectionInspector
         }
     }
 
-    private sealed record SessionInspection(string DatabaseName, string CurrentUser, bool IsSuperuser, bool BypassesRowSecurity);
+    private sealed record SessionInspection(
+        string DatabaseName, string SessionUser, string CurrentUser, bool IsSuperuser, bool BypassesRowSecurity,
+        bool CanCreateDatabases, bool CanCreateRoles, bool CanReplicate);
 }

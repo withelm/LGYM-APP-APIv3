@@ -43,6 +43,11 @@ internal sealed partial class PostgreSqlTutorialRowSecurityTestEnvironment : IAs
 
     public string MaintenanceConnectionString { get; }
 
+    public string AdminConnectionString => new NpgsqlConnectionStringBuilder(_lease.AdminConnectionString)
+    {
+        Database = DatabaseName
+    }.ConnectionString;
+
     public static async Task<PostgreSqlTutorialRowSecurityTestEnvironment> CreateAsync(
         string databaseEnvironment = "Staging",
         bool activate = true)
@@ -142,6 +147,7 @@ internal sealed partial class PostgreSqlTutorialRowSecurityTestEnvironment : IAs
             await CreateRoleAsync(adminConnection, _maintenanceRole, maintenancePassword, true);
             await CreateRoleAsync(adminConnection, _runtimeRole, runtimePassword, false);
             await ExecuteFormattedAsync(adminConnection, "REVOKE %I FROM %I", _maintenanceRole, _runtimeRole);
+            await ExecuteFormattedAsync(adminConnection, "GRANT %I TO %I", _runtimeRole, _maintenanceRole);
             await ExecuteFormattedAsync(adminConnection, "ALTER DATABASE %I OWNER TO %I", _lease.DatabaseName, _maintenanceRole);
             await ExecuteFormattedAsync(
                 adminConnection,
@@ -157,6 +163,7 @@ internal sealed partial class PostgreSqlTutorialRowSecurityTestEnvironment : IAs
             await GrantRuntimeAccessAsync();
             await TestDataFactory.SeedDefaultRolesAsync(database);
             await database.SaveChangesAsync();
+            await TransferApplicationOwnershipAsync();
         }
 
         if (activate)

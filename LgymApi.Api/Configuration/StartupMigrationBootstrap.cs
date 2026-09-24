@@ -10,34 +10,32 @@ public static class StartupMigrationBootstrap
         ArgumentNullException.ThrowIfNull(app);
         ArgumentException.ThrowIfNullOrWhiteSpace(testingEnvironmentName);
 
-        if (app.Environment.IsEnvironment(testingEnvironmentName))
+        if (!ShouldApplyMigrations(app.Environment.EnvironmentName, testingEnvironmentName))
         {
             return;
         }
 
         await using var startupScope = app.Services.CreateAsyncScope();
         var dbContext = startupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        if (ShouldApplyMigrations(app.Environment.EnvironmentName, testingEnvironmentName))
+        if (RequiresRuntimeValidation(app.Environment.EnvironmentName))
         {
-            await dbContext.Database.MigrateAsync();
-            return;
+            await PostgreSqlRuntimeConnectionValidator.ValidatePreMigrationAsync(dbContext, app.Configuration);
         }
-
-        var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
-        if (pendingMigrations.Count != 0)
+        await dbContext.Database.MigrateAsync();
+        if (RequiresRuntimeValidation(app.Environment.EnvironmentName))
         {
-            throw new InvalidOperationException(
-                "Database schema is behind the application model. Run the offline DataSeeder with --migrate-only " +
-                "and LGYM_MIGRATION_POSTGRES before starting this API instance.");
+            await PostgreSqlRuntimeConnectionValidator.ValidateAsync(dbContext, app.Configuration);
         }
-
-        await PostgreSqlRuntimeConnectionValidator.ValidateAsync(dbContext, app.Configuration);
     }
 
     internal static bool ShouldApplyMigrations(string environmentName, string testingEnvironmentName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(environmentName);
         ArgumentException.ThrowIfNullOrWhiteSpace(testingEnvironmentName);
-        return string.Equals(environmentName, Environments.Development, StringComparison.OrdinalIgnoreCase);
+        return !string.Equals(environmentName, testingEnvironmentName, StringComparison.OrdinalIgnoreCase);
     }
+
+    internal static bool RequiresRuntimeValidation(string environmentName)
+        => !string.Equals(environmentName, Environments.Development, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(environmentName, "Testing", StringComparison.OrdinalIgnoreCase);
 }

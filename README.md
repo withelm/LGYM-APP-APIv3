@@ -62,7 +62,7 @@ Do not bake secrets or site-specific values into the image.
 - Use `ASPNETCORE_ENVIRONMENT=Development` for local dev and `ASPNETCORE_ENVIRONMENT=Production` for production
 - Publish the API on container port `8080` and map that port to a host port
 - Set `ConnectionStrings__Postgres` from the runtime environment
-- Keep `LGYM_MIGRATION_POSTGRES` out of the API process; it is used only by offline migration and Hangfire bootstrap commands
+- Keep `LGYM_MIGRATION_POSTGRES` out of the API process; it remains available for offline DataSeeder and Hangfire bootstrap maintenance, while API startup applies EF migrations itself
 - Set `Jwt__SigningKey` only if the mounted config does not already provide it
 - Keep PostgreSQL outside this image; for a database running on the Docker host, use `host.docker.internal` from inside the container
 
@@ -71,11 +71,12 @@ Avoid launch profile assumptions when testing the image.
 
 ### PostgreSQL deployment order
 
-1. Run `psql -X -v ON_ERROR_STOP=1 -v database_name=LGYM-APP -v database_environment=Staging -v maintenance_role=lgym_maintenance -v runtime_role=lgym_runtime -f deploy/postgres/provision-rls-pilot-roles.sql` with an operator-admin connection. Set `database_environment` to the database's real deployment environment; provisioning stores it as a database-level marker that activation and deactivation verify independently of their CLI input. Supply role passwords separately through the secret manager or an interactive `psql` password command.
-2. Set `LGYM_MIGRATION_POSTGRES` only in the offline deployment environment, then run `pwsh -File scripts/migrate-db.ps1` to apply EF migrations and prepare Hangfire.
-3. The tutorial migration installs policies in a dormant state. Do not activate them automatically. A staging operator may run `psql -X -v ON_ERROR_STOP=1 -v database_name=LGYM-APP -v target_environment=Staging -v maintenance_role=lgym_maintenance -v runtime_role=lgym_runtime -f deploy/postgres/activate-tutorial-row-security.sql`; it validates the stored database environment, target database, roles, and exact policy roles, permissiveness, and predicates, takes a transaction advisory lock, and enables/forces both tutorial tables together. The script rejects Production until the separate Task 18 go/no-go.
-4. To roll back an activated pilot without dropping policies or data, use the same variables with `deploy/postgres/deactivate-tutorial-row-security.sql`. The runtime `PostgreSqlRuntime:ProtectedTables` expectation must be changed with the database state before traffic resumes.
-5. Start the API with only `ConnectionStrings__Postgres` for `lgym_runtime`. Staging and Production reject pending migrations, elevated roles, multiplexing, missing Hangfire schema usage or any required table/sequence grant, and configured RLS policy semantic mismatches.
+1. Run `psql -X -v ON_ERROR_STOP=1 -v database_name=LGYM-APP -v database_environment=Staging -v maintenance_role=lgym_maintenance -v runtime_role=lgym_runtime -f deploy/postgres/provision-rls-pilot-roles.sql` with an operator-admin connection. Fresh provisioning makes `lgym_runtime` own `public` so EF-created objects are migration-capable; it stores the database environment marker. Supply role passwords separately through the secret manager or an interactive `psql` password command.
+2. For an already-provisioned database, before deploying this API change run `psql -X -v ON_ERROR_STOP=1 -v database_name=LGYM-APP -v maintenance_role=lgym_maintenance -v runtime_role=lgym_runtime -f deploy/postgres/upgrade-runtime-migration-ownership.sql` through an operator-admin connection. It idempotently transfers maintenance-owned `public` relations to `lgym_runtime` and preserves maintenance DML access.
+3. When offline DataSeeder maintenance or Hangfire preparation is required, set `LGYM_MIGRATION_POSTGRES` only in that deployment environment. Do not use the maintenance migration command after the ownership upgrade: the API applies pending EF migrations automatically at startup.
+4. The tutorial migration installs policies in a dormant state. Do not activate them automatically. A staging operator may run `psql -X -v ON_ERROR_STOP=1 -v database_name=LGYM-APP -v target_environment=Staging -v maintenance_role=lgym_maintenance -v runtime_role=lgym_runtime -f deploy/postgres/activate-tutorial-row-security.sql`; it validates the stored database environment, target database, roles, and exact policy roles, permissiveness, and predicates, takes a transaction advisory lock, and enables/forces both tutorial tables together. The script rejects Production until the separate Task 18 go/no-go.
+5. To roll back an activated pilot without dropping policies or data, use the same variables with `deploy/postgres/deactivate-tutorial-row-security.sql`. The runtime `PostgreSqlRuntime:ProtectedTables` expectation must be changed with the database state before traffic resumes.
+6. Start the API with only `ConnectionStrings__Postgres` for `lgym_runtime`. In every non-Testing environment, including Staging and Production, startup applies pending EF migrations before validating and rejecting elevated roles, multiplexing, missing Hangfire schema usage or any required table/sequence grant, and configured RLS policy semantic mismatches.
 
 ## Push rollout and credentials
 
@@ -112,7 +113,7 @@ Non-positive retention or batch values are normalized to these defaults. Non-num
 
 The retention indexes are delivered by migration `20260815080018_AddNotificationRetentionIndexes`. Before the first production run, the operator should:
 
-1. Apply the migration through the established offline migration process, using `LGYM_MIGRATION_POSTGRES` only in that deployment environment and `scripts/migrate-db.ps1`. Do not run migration work from the API process.
+1. Start the API so its non-Testing startup applies the migration before the retention jobs run. Use `LGYM_MIGRATION_POSTGRES` only for offline DataSeeder or Hangfire maintenance, not to apply production EF migrations after runtime ownership is provisioned.
 2. Confirm the deployment has the expected `PushNotifications` settings, a positive `PushNotifications:RetentionPurgeBatchSize`, and `PushNotifications:StaleTokenCleanupEnabled=true` unless an approved operational exception exists.
 3. Record preflight counts for push message history, all installations, disabled installations, and in-app notifications. Counts should be taken from the LGYM database and retained with the deployment record. Do not export tokens, notification content, or provider payloads.
 4. Confirm the worker has the four expected recurring registrations. `push-stale-installation-cleanup` remains at its existing daily 03:00 schedule. The three retention jobs run daily: `push-notification-message-retention-cleanup`, `push-disabled-installation-retention-cleanup`, and `in-app-notification-retention-cleanup`.

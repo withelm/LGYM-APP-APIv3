@@ -32,7 +32,19 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*membership*");
+        action.Should().Throw<InvalidOperationException>().WithMessage("*role membership*");
+    }
+
+    [TestCase("role_with_createdb")]
+    [TestCase("role_with_createrole")]
+    [TestCase("role_with_replication")]
+    public void ValidateInspection_WhenRuntimeRoleCanSetAnInheritedProhibitedAttributeRole_FailsClosed(string elevatedRole)
+    {
+        var inspection = CreateInspection() with { ElevatedMemberships = [elevatedRole] };
+
+        var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
+
+        action.Should().Throw<InvalidOperationException>().WithMessage("*role membership*");
     }
 
     [Test]
@@ -42,7 +54,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
             CreateInspection() with { IsSuperuser = true },
             CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*superuser*");
+        action.Should().Throw<InvalidOperationException>().WithMessage("*elevated attributes*");
     }
 
     [Test]
@@ -52,7 +64,34 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
             CreateInspection() with { BypassesRowSecurity = true },
             CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*BYPASSRLS*");
+        action.Should().Throw<InvalidOperationException>().WithMessage("*elevated attributes*");
+    }
+
+    [TestCase(true, false, false)]
+    [TestCase(false, true, false)]
+    [TestCase(false, false, true)]
+    public void ValidateInspection_WhenRuntimeRoleHasProhibitedRoleAttribute_FailsClosed(
+        bool canCreateDatabases, bool canCreateRoles, bool canReplicate)
+    {
+        var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(
+            CreateInspection() with
+            {
+                CanCreateDatabases = canCreateDatabases,
+                CanCreateRoles = canCreateRoles,
+                CanReplicate = canReplicate
+            },
+            CreateOptions());
+
+        action.Should().Throw<InvalidOperationException>().WithMessage("*elevated attributes*");
+    }
+
+    [Test]
+    public void ValidateInspection_WhenSessionIdentityDiffersFromRuntimeRole_FailsClosed()
+    {
+        var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(
+            CreateInspection() with { SessionUser = "lgym_maintenance" }, CreateOptions());
+
+        action.Should().Throw<InvalidOperationException>().WithMessage("*unexpected role*");
     }
 
     [Test]
@@ -66,16 +105,35 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
     }
 
     [Test]
-    public void ValidateInspection_WhenRuntimeRoleOwnsProtectedTable_FailsClosed()
+    public void ValidateInspection_WhenRuntimeRoleOwnsDormantProtectedTable_Succeeds()
     {
+        var inspection = CreateInspection() with
+        {
+            ProtectedTables = [new PostgreSqlProtectedTableInspection("public.UserTutorialProgresses", false, false, true, [])]
+        };
+
+        var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
+
+        action.Should().NotThrow();
+    }
+
+    [Test]
+    public void ValidateInspection_WhenRuntimeOwnedProtectedTableEnablesUnforcedRls_FailsClosed()
+    {
+        var options = new PostgreSqlRuntimeValidationOptions
+        {
+            ExpectedDatabase = "lgym",
+            ExpectedRole = "lgym_runtime",
+            ProtectedTables = [new PostgreSqlProtectedTableOptions { Name = "UserTutorialProgresses", RowSecurityEnabled = true }]
+        };
         var inspection = CreateInspection() with
         {
             ProtectedTables = [new PostgreSqlProtectedTableInspection("public.UserTutorialProgresses", true, false, true, [])]
         };
 
-        var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
+        var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, options);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*must not own protected tables*");
+        action.Should().Throw<InvalidOperationException>().WithMessage("*must force row-level security*");
     }
 
     [Test]
@@ -268,6 +326,10 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
         => new(
             "lgym",
             "lgym_runtime",
+            "lgym_runtime",
+            false,
+            false,
+            false,
             false,
             false,
             [],

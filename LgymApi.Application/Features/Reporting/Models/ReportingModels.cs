@@ -140,3 +140,8 @@ public sealed class PhotoHistoryItemResult
     public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest> ReportRequestId { get; set; }
     public DateTimeOffset UploadedAt { get; set; }
 }
+
+internal sealed record ReportSubmissionPhotoCapabilityResult(
+    string? StorageKey,
+    string? ReadUrl,
+    string? ThumbnailUrl);
