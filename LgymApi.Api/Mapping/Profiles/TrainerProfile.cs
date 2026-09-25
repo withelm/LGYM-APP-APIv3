@@ -41,7 +41,7 @@ public sealed class TrainerProfile : IMappingProfile
             new GetTrainerDashboardQuery(Id<UserEntity>.Empty, source.Search, source.Status, source.SortBy, source.SortDirection, source.Page, source.PageSize));
 
         configuration.CreateMap<TrainingByDateRequestDto, GetTrainingByDateQuery>((source, _) =>
-            new GetTrainingByDateQuery(Id<AccountReference>.Empty, Id<AccountReference>.Empty, source.CreatedAt));
+            new GetTrainingByDateQuery(Id<AccountReference>.Empty, Id<AccountReference>.Empty, source.CreatedAt, Array.Empty<string>()));
 
         configuration.CreateMap<ExerciseScoresChartRequestDto, GetExerciseScoresChartQuery>((_, _) =>
             new GetExerciseScoresChartQuery(Id<AccountReference>.Empty, Id<AccountReference>.Empty, Id<ExerciseEntity>.Empty));

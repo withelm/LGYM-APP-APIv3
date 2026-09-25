@@ -6,7 +6,7 @@ namespace LgymApi.Application.Coaching.Progress.TrainingByDate;
 
 public interface IGetTrainingByDateUseCase
 {
-    Task<Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>> ExecuteAsync(
+    Task<Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>> ExecuteAsync(
         GetTrainingByDateQuery query,
         CancellationToken cancellationToken = default);
 }

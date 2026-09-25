@@ -31,6 +31,7 @@ public sealed class PlanDayProfile : IMappingProfile
         {
             Id = source.Id.ToString(),
             Name = source.Name,
+            DisplayName = ExerciseProfile.ResolveDisplayName(context, source.Id.Rebind<LgymApi.Domain.Entities.Exercise>(), source.OwnerId is null, source.Name),
             BodyPart = context!.Map<BodyParts, EnumLookupDto>(source.BodyPart),
             EloFormula = context.Map<EnumLookupDto, LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.EloFormula)),
             Description = source.Description,

@@ -67,13 +67,17 @@ public sealed class MainRecordsController : ControllerBase
     public async Task<IActionResult> GetLastMainRecords([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var accountId = ParseRouteAccountIdForCurrentAccount(id);
-        var result = await _mainRecordsService.GetLastMainRecordsAsync(accountId, cancellationToken);
+        var result = await _mainRecordsService.GetLastMainRecordsAsync(accountId, HttpContext.GetCulturePreferences(), cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        var mapped = _mapper.MapList<MainRecordBestReadModel, MainRecordsLastDto>(result.Value);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, result.Value.Translations);
+        var mapped = _mapper.MapList<MainRecordBestReadModel, MainRecordsLastDto>(
+            result.Value.Records,
+            mappingContext);
         return Ok(mapped);
     }
 

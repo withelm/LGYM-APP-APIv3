@@ -22,8 +22,24 @@ public sealed class MainRecordsService : IMainRecordsService
     public Task<Result<List<MainRecordReadModel>, AppError>> GetMainRecordsHistoryAsync(Id<LgymApi.Identity.Contracts.AccountReference> userId, CancellationToken cancellationToken = default)
         => _progress.GetMainRecordHistoryAsync(userId, cancellationToken);
 
-    public Task<Result<List<MainRecordBestReadModel>, AppError>> GetLastMainRecordsAsync(Id<LgymApi.Identity.Contracts.AccountReference> userId, CancellationToken cancellationToken = default)
-        => _progress.GetBestMainRecordsAsync(userId, cancellationToken);
+    public async Task<Result<BestMainRecordsWithTranslations, AppError>> GetLastMainRecordsAsync(Id<LgymApi.Identity.Contracts.AccountReference> userId, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+    {
+        var result = await _progress.GetBestMainRecordsAsync(userId, cancellationToken);
+        if (result.IsFailure)
+        {
+            return Result<BestMainRecordsWithTranslations, AppError>.Failure(result.Error);
+        }
+
+        var translations = await _progress.GetExerciseDisplayNamesAsync(
+            result.Value.Select(record => record.Exercise.Id),
+            cultures,
+            cancellationToken);
+        return Result<BestMainRecordsWithTranslations, AppError>.Success(new BestMainRecordsWithTranslations
+        {
+            Records = result.Value,
+            Translations = translations
+        });
+    }
 
     public Task<Result<Unit, AppError>> DeleteMainRecordAsync(Id<LgymApi.Identity.Contracts.AccountReference> currentUserId, Id<LgymApi.Domain.Entities.MainRecord> recordId, CancellationToken cancellationToken = default)
         => _progress.DeleteMainRecordAsync(currentUserId, recordId, cancellationToken);

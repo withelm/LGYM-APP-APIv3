@@ -49,16 +49,24 @@ public sealed class WorkoutProgressDashboardReadServiceTests
         };
         trainingHistory.GetTrainingByDateAsync(traineeId, createdAt, Arg.Any<CancellationToken>())
             .Returns(Result<List<TrainingByDateDetails>, AppError>.Success([training]));
+        IReadOnlyList<string> cultures = ["pl-PL", "pl"];
+        IReadOnlyDictionary<Id<Exercise>, string> translations = new Dictionary<Id<Exercise>, string> { [exercise.Id] = "Wyciskanie" };
+        progress.GetExerciseDisplayNamesAsync(
+                Arg.Is<IEnumerable<Id<Exercise>>>(ids => ids.SequenceEqual(new[] { exercise.Id })),
+                cultures,
+                Arg.Any<CancellationToken>())
+            .Returns(translations);
         var service = new WorkoutProgressDashboardReadService(trainingHistory, progress);
 
-        var result = await service.GetTrainingByDateAsync(traineeId, createdAt);
+        var result = await service.GetTrainingByDateAsync(traineeId, createdAt, cultures);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle();
-        result.Value[0].Id.Should().Be(training.Id.ToString());
-        result.Value[0].PlanDay.Should().BeEquivalentTo(new { Id = planDayId.ToString(), Name = "Push" });
-        result.Value[0].Exercises[0].ExerciseDetails.Should().BeEquivalentTo(new { Id = exercise.Id.ToString(), Name = "Bench" });
-        result.Value[0].Exercises[0].ScoresDetails[0].Should().BeEquivalentTo(new { Id = score.Id.ToString(), ExerciseId = exercise.Id.ToString(), Weight = 80d, Reps = 8d, Series = 1 });
+        result.Value.Translations.Should().BeSameAs(translations);
+        result.Value.Trainings.Should().ContainSingle();
+        result.Value.Trainings[0].Id.Should().Be(training.Id.ToString());
+        result.Value.Trainings[0].PlanDay.Should().BeEquivalentTo(new { Id = planDayId.ToString(), Name = "Push" });
+        result.Value.Trainings[0].Exercises[0].ExerciseDetails.Should().BeEquivalentTo(new { Id = exercise.Id.ToString(), Name = "Bench" });
+        result.Value.Trainings[0].Exercises[0].ScoresDetails[0].Should().BeEquivalentTo(new { Id = score.Id.ToString(), ExerciseId = exercise.Id.ToString(), Weight = 80d, Reps = 8d, Series = 1 });
     }
 
     [Test]
@@ -99,9 +107,10 @@ public sealed class WorkoutProgressDashboardReadServiceTests
             .Returns(Result<List<TrainingByDateDetails>, AppError>.Failure(error));
         var service = new WorkoutProgressDashboardReadService(trainingHistory, progress);
 
-        var result = await service.GetTrainingByDateAsync(traineeId, DateTime.UtcNow);
+        var result = await service.GetTrainingByDateAsync(traineeId, DateTime.UtcNow, []);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeSameAs(error);
+        await progress.DidNotReceiveWithAnyArgs().GetExerciseDisplayNamesAsync(default!, default!, default);
     }
 }

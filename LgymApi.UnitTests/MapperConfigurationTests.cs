@@ -11,6 +11,8 @@ using LgymApi.Application.Features.ExerciseScores.Models;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Features.Exercise.Models;
+using LgymApi.Application.WorkoutProgress.Dashboard.Models;
+using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -110,6 +112,95 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         var input = mapper.Map<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>(dto);
 
         input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+    }
+
+    [Test]
+    public void ExerciseResponseDto_UsesLocalizedDisplayNameFromMappingContext()
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+        var exerciseId = Id<Exercise>.New();
+        var context = mapper.CreateContext();
+        context.Set(
+            new ContextKey<IReadOnlyDictionary<Id<Exercise>, string>>("Exercise.Translations"),
+            new Dictionary<Id<Exercise>, string> { [exerciseId] = "Polska nazwa" });
+        var exercise = new ProgressExerciseReadModel(
+            exerciseId,
+            "English name",
+            null,
+            BodyParts.Back,
+            null,
+            null,
+            null);
+
+        var dto = context.Map<ProgressExerciseReadModel, ExerciseResponseDto>(exercise);
+
+        dto.DisplayName.Should().Be("Polska nazwa");
+    }
+
+    [Test]
+    public void TrainerTrainingByDate_ComposesRegisteredExerciseMapsWithGlobalOnlyTranslations()
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+        var globalExerciseId = Id<Exercise>.New();
+        var customExerciseId = Id<Exercise>.New();
+        var context = mapper.CreateContext();
+        context.Set(
+            new ContextKey<IReadOnlyDictionary<Id<Exercise>, string>>("Exercise.Translations"),
+            new Dictionary<Id<Exercise>, string>
+            {
+                [globalExerciseId] = "Polska nazwa",
+                [customExerciseId] = "Ignored translation"
+            });
+        var training = new WorkoutProgressDashboardTrainingReadModel(
+            Id<Training>.New().ToString(),
+            Id<LgymApi.TrainingPlanning.Contracts.PlanDayReference>.New().ToString(),
+            DateTime.UtcNow,
+            null,
+            "Gym",
+            [
+                new WorkoutProgressDashboardExerciseReadModel(
+                    Id<ExerciseScore>.New().ToString(),
+                    new WorkoutProgressDashboardExerciseDetailsReadModel(globalExerciseId.ToString(), "English name", null, BodyParts.Back, null, null, null),
+                    [new WorkoutProgressDashboardExerciseScoreReadModel(Id<ExerciseScore>.New().ToString(), globalExerciseId.ToString(), 80, WeightUnits.Kilograms, 8, 1)]),
+                new WorkoutProgressDashboardExerciseReadModel(
+                    Id<ExerciseScore>.New().ToString(),
+                    new WorkoutProgressDashboardExerciseDetailsReadModel(customExerciseId.ToString(), "Custom name", Id<User>.New().ToString(), BodyParts.Back, null, null, null),
+                    [])
+            ]);
+
+        var dto = context.Map<WorkoutProgressDashboardTrainingReadModel, LgymApi.Api.Features.Training.Contracts.TrainingByDateDetailsDto>(training);
+
+        dto.Exercises[0].ExerciseDetails.Name.Should().Be("English name");
+        dto.Exercises[0].ExerciseDetails.DisplayName.Should().Be("Polska nazwa");
+        dto.Exercises[0].ScoresDetails.Should().ContainSingle().Which.Unit.Should().NotBeNull();
+        dto.Exercises[1].ExerciseDetails.DisplayName.Should().Be("Custom name");
+    }
+
+    [Test]
+    public void PlanExerciseResponseDto_FallsBackToStoredNameForDisplayName()
+    {
+        var services = new ServiceCollection();
+        services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+        var exercise = new LgymApi.Application.TrainingPlanning.Contracts.PlanDay.PlanExerciseReadModel(
+            Id<LgymApi.TrainingPlanning.Contracts.PlanExerciseReference>.New(),
+            "Bench Press",
+            null,
+            BodyParts.Chest,
+            ExerciseEloFormula.Standard,
+            null,
+            null);
+
+        var dto = mapper.Map<LgymApi.Application.TrainingPlanning.Contracts.PlanDay.PlanExerciseReadModel, ExerciseResponseDto>(exercise);
+
+        dto.DisplayName.Should().Be("Bench Press");
     }
 
     [Test]

@@ -113,13 +113,14 @@ public sealed class CoachingDashboardProgressSliceTests
         var traineeId = Id<AccountReference>.New();
         var exerciseId = Id<Exercise>.New();
         var createdAt = new DateTime(2026, 7, 1);
+        IReadOnlyList<string> cultures = ["pl-PL", "pl"];
         var services = CreateServices(out var access, out _, out _, out _, out var progress);
         access.GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(true, true));
         progress.GetTrainingDatesAsync(traineeId, Arg.Any<CancellationToken>())
             .Returns(Result<List<DateTime>, AppError>.Success([createdAt]));
-        progress.GetTrainingByDateAsync(traineeId, createdAt, Arg.Any<CancellationToken>())
-            .Returns(Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>.Success([]));
+        progress.GetTrainingByDateAsync(traineeId, createdAt, cultures, Arg.Any<CancellationToken>())
+            .Returns(Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Success(new WorkoutProgressDashboardTrainingsWithTranslations()));
         progress.GetExerciseScoreChartAsync(traineeId, exerciseId.ToString(), Arg.Any<CancellationToken>())
             .Returns(Result<List<ExerciseScoreChartPoint>, AppError>.Success([]));
         progress.GetEloChartAsync(traineeId, Arg.Any<CancellationToken>())
@@ -128,14 +129,14 @@ public sealed class CoachingDashboardProgressSliceTests
             .Returns(Result<List<MainRecordReadModel>, AppError>.Success([]));
 
         (await Resolve<IGetTrainingDatesUseCase>(services).ExecuteAsync(new GetTrainingDatesQuery(trainerId, traineeId))).IsSuccess.Should().BeTrue();
-        (await Resolve<IGetTrainingByDateUseCase>(services).ExecuteAsync(new GetTrainingByDateQuery(trainerId, traineeId, createdAt))).IsSuccess.Should().BeTrue();
+        (await Resolve<IGetTrainingByDateUseCase>(services).ExecuteAsync(new GetTrainingByDateQuery(trainerId, traineeId, createdAt, cultures))).IsSuccess.Should().BeTrue();
         (await Resolve<IGetExerciseScoresChartUseCase>(services).ExecuteAsync(new GetExerciseScoresChartQuery(trainerId, traineeId, exerciseId))).IsSuccess.Should().BeTrue();
         (await Resolve<IGetEloChartUseCase>(services).ExecuteAsync(new GetEloChartQuery(trainerId, traineeId))).IsSuccess.Should().BeTrue();
         (await Resolve<IGetMainRecordsHistoryUseCase>(services).ExecuteAsync(new GetMainRecordsHistoryQuery(trainerId, traineeId))).IsSuccess.Should().BeTrue();
 
         await access.Received(5).GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>());
         await progress.Received(1).GetTrainingDatesAsync(traineeId, Arg.Any<CancellationToken>());
-        await progress.Received(1).GetTrainingByDateAsync(traineeId, createdAt, Arg.Any<CancellationToken>());
+        await progress.Received(1).GetTrainingByDateAsync(traineeId, createdAt, cultures, Arg.Any<CancellationToken>());
         await progress.Received(1).GetExerciseScoreChartAsync(traineeId, exerciseId.ToString(), Arg.Any<CancellationToken>());
         await progress.Received(1).GetEloChartAsync(traineeId, Arg.Any<CancellationToken>());
         await progress.Received(1).GetMainRecordHistoryAsync(traineeId, Arg.Any<CancellationToken>());
@@ -153,7 +154,7 @@ public sealed class CoachingDashboardProgressSliceTests
         var results = new AppError[]
         {
             (await Resolve<IGetTrainingDatesUseCase>(services).ExecuteAsync(new GetTrainingDatesQuery(trainerId, traineeId))).Error,
-            (await Resolve<IGetTrainingByDateUseCase>(services).ExecuteAsync(new GetTrainingByDateQuery(trainerId, traineeId, DateTime.UtcNow))).Error,
+            (await Resolve<IGetTrainingByDateUseCase>(services).ExecuteAsync(new GetTrainingByDateQuery(trainerId, traineeId, DateTime.UtcNow, []))).Error,
             (await Resolve<IGetExerciseScoresChartUseCase>(services).ExecuteAsync(new GetExerciseScoresChartQuery(trainerId, traineeId, Id<Exercise>.New()))).Error,
             (await Resolve<IGetEloChartUseCase>(services).ExecuteAsync(new GetEloChartQuery(trainerId, traineeId))).Error,
             (await Resolve<IGetMainRecordsHistoryUseCase>(services).ExecuteAsync(new GetMainRecordsHistoryQuery(trainerId, traineeId))).Error
@@ -161,7 +162,7 @@ public sealed class CoachingDashboardProgressSliceTests
 
         results.Should().OnlyContain(error => error is TrainerRelationshipNotFoundError);
         await progress.DidNotReceiveWithAnyArgs().GetTrainingDatesAsync(default, default);
-        await progress.DidNotReceiveWithAnyArgs().GetTrainingByDateAsync(default, default, default);
+        await progress.DidNotReceiveWithAnyArgs().GetTrainingByDateAsync(default, default, default!, default);
         await progress.DidNotReceiveWithAnyArgs().GetExerciseScoreChartAsync(default, default!, default);
         await progress.DidNotReceiveWithAnyArgs().GetEloChartAsync(default, default);
         await progress.DidNotReceiveWithAnyArgs().GetMainRecordHistoryAsync(default, default);
@@ -178,7 +179,8 @@ public sealed class CoachingDashboardProgressSliceTests
         access.GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(true, true));
         progress.GetTrainingDatesAsync(traineeId, Arg.Any<CancellationToken>()).Returns(Failure<DateTime>());
-        progress.GetTrainingByDateAsync(traineeId, createdAt, Arg.Any<CancellationToken>()).Returns(Failure<WorkoutProgressDashboardTrainingReadModel>());
+        progress.GetTrainingByDateAsync(traineeId, createdAt, Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Failure(new BadRequestError("downstream failure")));
         progress.GetExerciseScoreChartAsync(traineeId, exerciseId.ToString(), Arg.Any<CancellationToken>()).Returns(Failure<ExerciseScoreChartPoint>());
         progress.GetEloChartAsync(traineeId, Arg.Any<CancellationToken>()).Returns(Failure<EloChartPoint>());
         progress.GetMainRecordHistoryAsync(traineeId, Arg.Any<CancellationToken>()).Returns(Failure<MainRecordReadModel>());
@@ -186,7 +188,7 @@ public sealed class CoachingDashboardProgressSliceTests
         var errors = new AppError[]
         {
             (await Resolve<IGetTrainingDatesUseCase>(services).ExecuteAsync(new GetTrainingDatesQuery(trainerId, traineeId))).Error,
-            (await Resolve<IGetTrainingByDateUseCase>(services).ExecuteAsync(new GetTrainingByDateQuery(trainerId, traineeId, createdAt))).Error,
+            (await Resolve<IGetTrainingByDateUseCase>(services).ExecuteAsync(new GetTrainingByDateQuery(trainerId, traineeId, createdAt, []))).Error,
             (await Resolve<IGetExerciseScoresChartUseCase>(services).ExecuteAsync(new GetExerciseScoresChartQuery(trainerId, traineeId, exerciseId))).Error,
             (await Resolve<IGetEloChartUseCase>(services).ExecuteAsync(new GetEloChartQuery(trainerId, traineeId))).Error,
             (await Resolve<IGetMainRecordsHistoryUseCase>(services).ExecuteAsync(new GetMainRecordsHistoryQuery(trainerId, traineeId))).Error

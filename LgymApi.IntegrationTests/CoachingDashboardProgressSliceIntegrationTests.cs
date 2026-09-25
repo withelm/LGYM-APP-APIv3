@@ -242,7 +242,7 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
         var dates = await actionScope.ServiceProvider.GetRequiredService<IGetTrainingDatesUseCase>()
             .ExecuteAsync(new GetTrainingDatesQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>()));
         var byDate = await actionScope.ServiceProvider.GetRequiredService<IGetTrainingByDateUseCase>()
-            .ExecuteAsync(new GetTrainingByDateQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>(), createdAt));
+            .ExecuteAsync(new GetTrainingByDateQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>(), createdAt, []));
         var scores = await actionScope.ServiceProvider.GetRequiredService<IGetExerciseScoresChartUseCase>()
             .ExecuteAsync(new GetExerciseScoresChartQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>(), exerciseId));
         var elo = await actionScope.ServiceProvider.GetRequiredService<IGetEloChartUseCase>()
@@ -253,7 +253,7 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
         dates.IsSuccess.Should().BeTrue();
         dates.Value.Should().ContainSingle();
         byDate.IsSuccess.Should().BeTrue();
-        byDate.Value.Should().ContainSingle(item => item.Gym == gymName);
+        byDate.Value.Trainings.Should().ContainSingle(item => item.Gym == gymName);
         scores.IsSuccess.Should().BeTrue();
         scores.Value.Should().ContainSingle(item => item.ExerciseId == exerciseId);
         elo.IsSuccess.Should().BeTrue();

@@ -20,7 +20,7 @@ internal sealed class GetTrainingByDateUseCase : IGetTrainingByDateUseCase
         _progress = progress;
     }
 
-    public async Task<Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>> ExecuteAsync(
+    public async Task<Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>> ExecuteAsync(
         GetTrainingByDateQuery query,
         CancellationToken cancellationToken = default)
     {
@@ -31,16 +31,17 @@ internal sealed class GetTrainingByDateUseCase : IGetTrainingByDateUseCase
         var accessError = ProgressReadAccess.GetError(access, query.TraineeId);
         if (accessError is not null)
         {
-            return Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>.Failure(accessError);
+            return Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Failure(accessError);
         }
 
         var result = await _progress.GetTrainingByDateAsync(
             query.TraineeId,
             query.CreatedAt,
+            query.Cultures,
             cancellationToken);
         return result.IsFailure
-            ? Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>.Failure(
+            ? Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Failure(
                 new TrainerRelationshipNotFoundError(result.Error.Message))
-            : Result<List<WorkoutProgressDashboardTrainingReadModel>, AppError>.Success(result.Value);
+            : Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Success(result.Value);
     }
 }

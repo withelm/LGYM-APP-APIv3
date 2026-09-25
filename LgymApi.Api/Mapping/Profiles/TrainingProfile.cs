@@ -79,31 +79,24 @@ public sealed class TrainingProfile : IMappingProfile
                 ? new PlanDayChooseDto()
                 : new PlanDayChooseDto { Id = source.PlanDay.Id, Name = source.PlanDay.Name },
             Gym = source.Gym,
-            Exercises = source.Exercises.Select(exercise => new EnrichedExerciseDto
-            {
-                ExerciseScoreId = exercise.ExerciseScoreId,
-                ExerciseDetails = new ExerciseResponseDto
-                {
-                    Id = exercise.ExerciseDetails.Id,
-                    Name = exercise.ExerciseDetails.Name,
-                    UserId = exercise.ExerciseDetails.UserId,
-                    BodyPart = context!.Map<BodyParts, EnumLookupDto>(exercise.ExerciseDetails.BodyPart),
-                    EloFormula = exercise.ExerciseDetails.EloFormula == null
-                        ? null
-                        : context.Map<EnumLookupDto, LgymApi.Api.Features.Common.Contracts.LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(exercise.ExerciseDetails.EloFormula.Value)),
-                    Description = exercise.ExerciseDetails.Description,
-                    Image = exercise.ExerciseDetails.Image
-                },
-                ScoresDetails = exercise.ScoresDetails.Select(score => new ExerciseScoreResponseDto
-                {
-                    Id = score.Id,
-                    ExerciseId = score.ExerciseId,
-                    Weight = score.Weight,
-                    Unit = context.Map<WeightUnits, EnumLookupDto>(score.Unit),
-                    Reps = score.Reps,
-                    Series = score.Series
-                }).ToList()
-            }).ToList()
+            Exercises = context!.MapList<WorkoutProgressDashboardExerciseReadModel, EnrichedExerciseDto>(source.Exercises)
+        });
+
+        configuration.CreateMap<WorkoutProgressDashboardExerciseReadModel, EnrichedExerciseDto>((source, context) => new EnrichedExerciseDto
+        {
+            ExerciseScoreId = source.ExerciseScoreId,
+            ExerciseDetails = context!.Map<WorkoutProgressDashboardExerciseDetailsReadModel, ExerciseResponseDto>(source.ExerciseDetails),
+            ScoresDetails = context.MapList<WorkoutProgressDashboardExerciseScoreReadModel, ExerciseScoreResponseDto>(source.ScoresDetails)
+        });
+
+        configuration.CreateMap<WorkoutProgressDashboardExerciseScoreReadModel, ExerciseScoreResponseDto>((source, context) => new ExerciseScoreResponseDto
+        {
+            Id = source.Id,
+            ExerciseId = source.ExerciseId,
+            Weight = source.Weight,
+            Unit = context!.Map<WeightUnits, EnumLookupDto>(source.Unit),
+            Reps = source.Reps,
+            Series = source.Series
         });
 
         configuration.CreateMap<WorkoutTrainingReadModel, LastTrainingInfoDto>((source, _) => new LastTrainingInfoDto

@@ -3,6 +3,8 @@ using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
+using LgymApi.Application.WorkoutProgress.ProgressData;
+using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -22,7 +24,7 @@ public sealed class TrainingServiceFacadeTests
     {
         var completionUseCase = Substitute.For<ICompleteTrainingUseCase>();
         var historyReadService = Substitute.For<ITrainingHistoryReadService>();
-        var service = new TrainingService(completionUseCase, historyReadService);
+        var service = new TrainingService(completionUseCase, historyReadService, Substitute.For<IWorkoutProgressReadWriteService>());
         var userId = Id<AccountReference>.New();
         var input = new AddTrainingInput(
             Id<Gym>.New(),
@@ -54,22 +56,38 @@ public sealed class TrainingServiceFacadeTests
     {
         var completionUseCase = Substitute.For<ICompleteTrainingUseCase>();
         var historyReadService = Substitute.For<ITrainingHistoryReadService>();
-        var service = new TrainingService(completionUseCase, historyReadService);
+        var workoutProgress = Substitute.For<IWorkoutProgressReadWriteService>();
+        var service = new TrainingService(completionUseCase, historyReadService, workoutProgress);
         var userId = Id<AccountReference>.New();
         var createdAt = DateTime.UtcNow;
+        IReadOnlyList<string> cultures = ["pl-PL", "pl"];
+        var exercise = new ProgressExerciseReadModel(Id<Exercise>.New(), "Bench Press", null, BodyParts.Chest, null, null, null);
+        var training = new TrainingByDateDetails
+        {
+            Id = Id<Training>.New(),
+            Exercises = [new EnrichedExercise { ExerciseScoreId = Id<ExerciseScore>.New(), ExerciseDetails = exercise }]
+        };
+        IReadOnlyDictionary<Id<Exercise>, string> translations = new Dictionary<Id<Exercise>, string> { [exercise.Id] = "Wyciskanie" };
         historyReadService.GetLastTrainingAsync(userId, Arg.Any<CancellationToken>())
             .Returns(Result<WorkoutTrainingReadModel, AppError>.Success(new WorkoutTrainingReadModel(Id<Training>.New(), Id<PlanDayReference>.New(), DateTimeOffset.UtcNow, null)));
         historyReadService.GetTrainingByDateAsync(userId, createdAt, Arg.Any<CancellationToken>())
-            .Returns(Result<List<TrainingByDateDetails>, AppError>.Success([]));
+            .Returns(Result<List<TrainingByDateDetails>, AppError>.Success([training]));
+        workoutProgress.GetExerciseDisplayNamesAsync(
+                Arg.Is<IEnumerable<Id<Exercise>>>(ids => ids.SequenceEqual(new[] { exercise.Id })),
+                cultures,
+                Arg.Any<CancellationToken>())
+            .Returns(translations);
         historyReadService.GetTrainingDatesAsync(userId, Arg.Any<CancellationToken>())
             .Returns(Result<List<DateTime>, AppError>.Success([]));
 
         await service.GetLastTrainingAsync(userId);
-        await service.GetTrainingByDateAsync(userId, createdAt);
+        var byDate = await service.GetTrainingByDateAsync(userId, createdAt, cultures);
         await service.GetTrainingDatesAsync(userId);
 
         await historyReadService.Received(1).GetLastTrainingAsync(userId, Arg.Any<CancellationToken>());
         await historyReadService.Received(1).GetTrainingByDateAsync(userId, createdAt, Arg.Any<CancellationToken>());
         await historyReadService.Received(1).GetTrainingDatesAsync(userId, Arg.Any<CancellationToken>());
+        byDate.Value.Trainings.Should().ContainSingle().Which.Should().BeSameAs(training);
+        byDate.Value.Translations.Should().BeSameAs(translations);
     }
 }

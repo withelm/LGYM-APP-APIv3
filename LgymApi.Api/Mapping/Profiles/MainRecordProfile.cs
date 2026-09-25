@@ -66,18 +66,7 @@ public sealed class MainRecordProfile : IMappingProfile
             Weight = source.Record.Weight,
             Unit = context!.Map<WeightUnits, EnumLookupDto>(source.Record.Unit),
             Date = source.Record.Date,
-            ExerciseDetails = new ExerciseResponseDto
-            {
-                Id = source.Exercise.Id.ToString(),
-                Name = source.Exercise.Name,
-                UserId = source.Exercise.UserId?.ToString(),
-                BodyPart = context.Map<BodyParts, EnumLookupDto>(source.Exercise.BodyPart),
-                EloFormula = source.Exercise.EloFormula == null
-                    ? null
-                    : context.Map<EnumLookupDto, LgymApi.Api.Features.Common.Contracts.LookupItemVm>(context.Map<ExerciseEloFormula, EnumLookupDto>(source.Exercise.EloFormula.Value)),
-                Description = source.Exercise.Description,
-                Image = source.Exercise.Image
-            }
+            ExerciseDetails = context.Map<ProgressExerciseReadModel, ExerciseResponseDto>(source.Exercise)
         });
 
         configuration.CreateMap<PossibleRecordResult, PossibleRecordForExerciseDto>((source, context) => new PossibleRecordForExerciseDto

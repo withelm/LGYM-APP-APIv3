@@ -34,6 +34,7 @@ public sealed class WorkoutProgressPublicContractGuardTests
         "LgymApi.Application.WorkoutProgress.ProgressData.Models.MainRecordUpdateWriteModel",
         "LgymApi.Application.WorkoutProgress.Dashboard.IWorkoutProgressDashboardReadService",
         "LgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardTrainingReadModel",
+        "LgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardTrainingsWithTranslations",
         "LgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardPlanDayReadModel",
         "LgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardExerciseReadModel",
         "LgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardExerciseDetailsReadModel",

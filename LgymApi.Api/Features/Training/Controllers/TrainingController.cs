@@ -6,6 +6,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Features.Training;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Api.Mapping.Profiles;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
@@ -83,14 +84,18 @@ public sealed class TrainingController : ControllerBase
     public async Task<IActionResult> GetTrainingByDate([FromRoute] string id, [FromBody] TrainingByDateRequestDto request, CancellationToken cancellationToken = default)
     {
         var accountId = ParseRouteAccountIdForCurrentAccount(id);
-        var result = await _trainingService.GetTrainingByDateAsync(accountId, request.CreatedAt, cancellationToken);
+        var result = await _trainingService.GetTrainingByDateAsync(accountId, request.CreatedAt, HttpContext.GetCulturePreferences(), cancellationToken);
 
         if (result.IsFailure)
         {
             return result.ToActionResult();
         }
 
-        var mapped = _mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(result.Value);
+        var mappingContext = _mapper.CreateContext();
+        mappingContext.Set(ExerciseProfile.Keys.Translations, result.Value.Translations);
+        var mapped = _mapper.MapList<TrainingByDateDetails, TrainingByDateDetailsDto>(
+            result.Value.Trainings,
+            mappingContext);
         return Ok(mapped);
     }
 
