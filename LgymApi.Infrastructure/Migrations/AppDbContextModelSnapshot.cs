@@ -1938,9 +1938,17 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasMaxLength(8000)
                         .HasColumnType("character varying(8000)");
 
+                    b.Property<bool>("NewVisibleToTrainee")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("PreviousContent")
                         .HasMaxLength(8000)
                         .HasColumnType("character varying(8000)");
+
+                    b.Property<bool?>("PreviousVisibleToTrainee")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("TraineeNoteId")
                         .HasColumnType("uuid");
