@@ -44,6 +44,7 @@ public sealed class WorkoutProgressPublicContractGuardTests
         "LgymApi.Application.WorkoutProgress.TrainingExecution.ICompleteTrainingUseCase",
         "LgymApi.Application.WorkoutProgress.TrainingExecution.CompleteTrainingInput",
         "LgymApi.Application.WorkoutProgress.TrainingExecution.ITrainingHistoryReadService",
+        "LgymApi.Application.WorkoutProgress.TrainingExecution.UtcTimeRange",
         "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.IReportSubmissionAcceptedProgressConsumer",
         "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedProgressEvent",
         "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedMeasurement",

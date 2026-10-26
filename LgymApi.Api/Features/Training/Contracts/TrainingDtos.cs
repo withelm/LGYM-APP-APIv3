@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.ComponentModel;
 using LgymApi.Api.Features.Enum.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.PlanDay.Contracts;
@@ -86,9 +87,25 @@ public sealed class LastTrainingInfoDto : IResultDto
 
 public sealed class TrainingByDateRequestDto : IDto
 {
+    [JsonConstructor]
+    public TrainingByDateRequestDto(DateTime? createdAt = null, DateOnly? date = null, string? timeZone = null)
+    {
+        CreatedAt = createdAt;
+        Date = date;
+        TimeZone = timeZone;
+    }
+
+    [Description("Legacy UTC-day variant. Provide this field alone as an ISO 8601 instant; it is incompatible with date and timeZone.")]
     [JsonPropertyName("createdAt")]
-    [JsonRequired]
-    public DateTime CreatedAt { get; set; }
+    public DateTime? CreatedAt { get; set; }
+
+    [Description("Local calendar-day variant. Provide together with timeZone as YYYY-MM-DD; it is incompatible with createdAt. Example: 2026-10-22.")]
+    [JsonPropertyName("date")]
+    public DateOnly? Date { get; set; }
+
+    [Description("IANA TZDB timezone (including UTC) for the local calendar-day variant. Provide together with date. Both local midnights must exist, be unambiguous and fit UTC bounds; skipped dates are rejected. Example: Europe/Warsaw.")]
+    [JsonPropertyName("timeZone")]
+    public string? TimeZone { get; set; }
 }
 
 public sealed class TrainingExerciseScoreRefDto : IResultDto

@@ -1,6 +1,7 @@
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.TrainingPlanning.Contracts;
+using LgymApi.Application.WorkoutProgress.TrainingExecution;
 
 namespace LgymApi.Application.WorkoutProgress.Persistence;
 
@@ -8,7 +9,7 @@ public interface IWorkoutTrainingPersistence
 {
     Task AddAsync(WorkoutTrainingWriteModel training, CancellationToken cancellationToken = default);
     Task<WorkoutTrainingPersistenceModel?> GetLastByAccountIdAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<WorkoutTrainingPersistenceModel>> GetByAccountIdAndDateAsync(Id<AccountReference> accountId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<WorkoutTrainingPersistenceModel>> GetByAccountIdAndDateAsync(Id<AccountReference> accountId, UtcTimeRange dateRange, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DateTimeOffset>> GetDatesByAccountIdAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default);
     Task<IReadOnlyDictionary<Id<PlanDayReference>, DateTime?>> GetLastTrainingDatesAsync(IReadOnlyCollection<Id<PlanDayReference>> planDayIds, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<WorkoutTrainingPersistenceModel>> GetByGymIdsAsync(IReadOnlyCollection<Id<LgymApi.Domain.Entities.Gym>> gymIds, CancellationToken cancellationToken = default);

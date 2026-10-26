@@ -27,11 +27,11 @@ public sealed class WorkoutProgressDashboardReadService : IWorkoutProgressDashbo
 
     public async Task<Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>> GetTrainingByDateAsync(
         Id<LgymApi.Identity.Contracts.AccountReference> traineeId,
-        DateTime createdAt,
+        UtcTimeRange dateRange,
         IReadOnlyList<string> cultures,
         CancellationToken cancellationToken = default)
     {
-        var result = await _trainingHistory.GetTrainingByDateAsync(traineeId, createdAt, cancellationToken);
+        var result = await _trainingHistory.GetTrainingByDateAsync(traineeId, dateRange, cancellationToken);
         if (result.IsFailure)
         {
             return Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Failure(result.Error);

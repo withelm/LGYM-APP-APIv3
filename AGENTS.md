@@ -59,7 +59,7 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 | Project | Why it exists | Rules for agents |
 | --- | --- | --- |
 | `LgymApi.Api/LgymApi.Api.csproj` | ASP.NET Core HTTP entrypoint: controllers, DTO contracts, validators, middleware, mapping profiles, auth, JSON setup, Swagger, CORS, rate limits, SignalR, and composition root. | Keep controllers thin and preserve legacy payload shapes. |
-| `LgymApi.Application/LgymApi.Application.csproj` | Use-case and business orchestration for the remaining Reporting, Workout & Progress, Coaching, and Nutrition capabilities, plus their application-facing contracts and DI facade. | Own business rules, authorization checks, transactions, and unit-of-work commits here. Never reference a `LgymApi.BackgroundWorker*` project or namespace. |
+| `LgymApi.Application/LgymApi.Application.csproj` | Use-case and business orchestration for the remaining Reporting, Workout & Progress, Coaching, and Nutrition capabilities, plus their application-facing contracts and DI facade; owns TZDB local-day history conversion via centrally pinned NodaTime. | Own business rules, authorization checks, transactions, and unit-of-work commits here. Never reference a `LgymApi.BackgroundWorker*` project or namespace. |
 | `LgymApi.Domain/LgymApi.Domain.csproj` | Core domain: entities, enums, strongly typed IDs, domain helpers, and auth/security constants. | Keep free of HTTP, EF, API, and localization concerns. Domain is localization-neutral and must not reference `LgymApi.Resources`. Do not reorder or renumber existing enums. |
 | `LgymApi.Infrastructure/LgymApi.Infrastructure.csproj` | Shared technical composition: the EF Core `DbContext`, migrations, unit of work, Hangfire persistence, module persistence bridges, and remaining non-extracted persistence adapters. | Repositories must not call `SaveChangesAsync` or own transactions. Do not register extracted module services, providers, or select push schedulers here. |
 | `LgymApi.Resources/LgymApi.Resources.csproj` | Localized `.resx` resources for messages, enums, and emails, with generated strongly typed access. | Add or update English and Polish resources for user-facing text. |
@@ -120,6 +120,21 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 - Do not migrate to ASP.NET Identity unless a new ADR explicitly supersedes ADR-005.
 - Do not remove idempotency or uniqueness constraints in `AppDbContext` without an explicit replacement.
 - Follow the repository's `.editorconfig` and existing code style.
+
+## Date and Time Contracts
+
+These are the implemented LGYM-102 local-day rules. History requests accept either legacy `createdAt` UTC-day queries or explicit `{ date, timeZone }` local-day queries; both account and trainer paths consume validated UTC ranges.
+
+- Distinguish instants, calendar dates, and local-day queries. Do not introduce a universal date converter or change every date field mechanically.
+- Keep event timestamps stored in UTC. Transport instants as ISO 8601 with `Z` or an explicit offset; use `DateTimeOffset` for new instant contracts and normalize to UTC. Never shift historical timestamps to fix calendar grouping.
+- Represent calendar-only values, such as diet start/end dates, with `DateOnly` and `YYYY-MM-DD`; they have no timezone.
+- Model a local-day query as `LocalCalendarDay`: a valid calendar date plus an explicit IANA timezone, transported as `{ "date": "2026-10-22", "timeZone": "Europe/Warsaw" }`. Do not infer a timezone from language, server settings, or a numeric offset.
+- Convert the local day centrally into an immutable, validated `UtcTimeRange` with UTC `DateTimeOffset` bounds and `FromUtc < ToUtc`. Prevent invalid construction and mutation. Resolve each local midnight separately; do not assume 24 hours. Define and test an explicit policy for ambiguous/nonexistent midnight or skipped dates rather than silently using the server timezone.
+- Repositories consume the validated range and filter `CreatedAt >= FromUtc && CreatedAt < ToUtc`. Convert query boundaries, not stored rows; do not use inclusive end-of-day ticks or timezone functions on the database column.
+- Calendar markers and details must use the same explicit viewing timezone. For device-local history this is the viewer's current device timezone, not the original workout location; UTC alone cannot recover an event's original timezone.
+- Keep conversion outside controllers and map DTOs through registered mapping profiles. Reuse the same day/range semantics for account history and trainer history without changing project-reference topology.
+- Preserve legacy `createdAt` UTC-day behavior. Document accepted request variants and reject ambiguous combinations; the implemented local-day form requires an IANA zone and rejects ambiguous, nonexistent, skipped, and UTC-unrepresentable local-midnight boundaries.
+- Regression coverage must include UTC, positive/negative and fractional offsets, local midnight, inclusive start/exclusive end, invalid dates/zones, legacy clients, and Warsaw DST days `2026-03-29` (23 hours) and `2026-10-25` (25 hours).
 
 ## Change Guidance
 

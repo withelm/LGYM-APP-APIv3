@@ -36,7 +36,7 @@ internal sealed class GetTrainingByDateUseCase : IGetTrainingByDateUseCase
 
         var result = await _progress.GetTrainingByDateAsync(
             query.TraineeId,
-            query.CreatedAt,
+            query.DateRange,
             query.Cultures,
             cancellationToken);
         return result.IsFailure

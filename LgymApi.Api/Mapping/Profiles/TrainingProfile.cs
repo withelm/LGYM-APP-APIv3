@@ -8,6 +8,7 @@ using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.WorkoutProgress.Dashboard.Models;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
+using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Mapping.Profiles;
@@ -16,6 +17,11 @@ public sealed class TrainingProfile : IMappingProfile
 {
     public void Configure(MappingConfiguration configuration)
     {
+        configuration.CreateMap<TrainingByDateRequestDto, UtcTimeRange>((source, _) =>
+            source.Date.HasValue && !string.IsNullOrWhiteSpace(source.TimeZone)
+                ? new LocalCalendarDay(source.Date.Value, source.TimeZone).ToUtcTimeRange()
+                : UtcTimeRange.ForLegacyUtcDay(source.CreatedAt ?? default));
+
         configuration.CreateMap<ScoreResult, ScoreResultDto>((source, context) => new ScoreResultDto
         {
             Reps = source.Reps,

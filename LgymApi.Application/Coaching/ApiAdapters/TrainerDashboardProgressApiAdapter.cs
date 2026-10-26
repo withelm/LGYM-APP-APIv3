@@ -11,6 +11,7 @@ using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.WorkoutProgress.Dashboard.Models;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
+using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
@@ -47,8 +48,8 @@ internal sealed class TrainerDashboardProgressApiAdapter : ITrainerDashboardProg
     public Task<Result<List<DateTime>, AppError>> GetTrainingDatesAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, CancellationToken cancellationToken = default)
         => _getTrainingDates.ExecuteAsync(_mapper.Map<TrainerTraineeAccountInput, GetTrainingDatesQuery>(new(trainer.Id, traineeId)), cancellationToken);
 
-    public Task<Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>> GetTrainingByDateAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, DateTime createdAt, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
-        => _getTrainingByDate.ExecuteAsync(_mapper.Map<TrainingByDateAccountInput, GetTrainingByDateQuery>(new(trainer.Id, traineeId, createdAt, cultures)), cancellationToken);
+    public Task<Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>> GetTrainingByDateAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, UtcTimeRange dateRange, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default)
+        => _getTrainingByDate.ExecuteAsync(_mapper.Map<TrainingByDateAccountInput, GetTrainingByDateQuery>(new(trainer.Id, traineeId, dateRange, cultures)), cancellationToken);
 
     public Task<Result<List<ExerciseScoreChartPoint>, AppError>> GetExerciseScoresChartAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default)
         => _getExerciseScoresChart.ExecuteAsync(_mapper.Map<ExerciseScoresChartAccountInput, GetExerciseScoresChartQuery>(new(trainer.Id, traineeId, exerciseId)), cancellationToken);

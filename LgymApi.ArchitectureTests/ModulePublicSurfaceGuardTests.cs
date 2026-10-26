@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 783;
+    private const int ManifestEntryCount = 785;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -33,6 +33,8 @@ public sealed class ModulePublicSurfaceGuardTests
 
     private static readonly string[] ReviewedManifestRows =
     [
+        "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.LocalCalendarDay",
+        "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.UtcTimeRange",
         "LgymApi.Application/Features/Reporting/RecurringReportAssignmentService.Processing.cs\tLgymApi.Application.Features.Reporting.RecurringReportAssignmentService",
         "LgymApi.Application/Features/Reporting/RecurringReportAssignmentService.RequestNow.cs\tLgymApi.Application.Features.Reporting.RecurringReportAssignmentService",
         "LgymApi.Application/Features/Reporting/ReportingService.Submissions.PhotoHydration.cs\tLgymApi.Application.Features.Reporting.ReportingService",

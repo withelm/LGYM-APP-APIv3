@@ -14,6 +14,7 @@ using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.WorkoutProgress.Dashboard.Models;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
+using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
@@ -86,7 +87,8 @@ public sealed class TrainerDashboardProgressController : ControllerBase
             return Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.UserIdRequired)).ToActionResult();
         }
 
-        var result = await _progress.GetTrainingByDateAsync(HttpContext.GetAuthenticatedAccountContext()!, parsedTraineeId, request.CreatedAt, HttpContext.GetCulturePreferences(), cancellationToken);
+        var dateRange = _mapper.Map<TrainingByDateRequestDto, UtcTimeRange>(request);
+        var result = await _progress.GetTrainingByDateAsync(HttpContext.GetAuthenticatedAccountContext()!, parsedTraineeId, dateRange, HttpContext.GetCulturePreferences(), cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
