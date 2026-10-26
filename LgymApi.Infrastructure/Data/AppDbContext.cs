@@ -28,6 +28,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     public DbSet<TrainingExerciseScore> TrainingExerciseScores => Set<TrainingExerciseScore>();
     public DbSet<ExerciseScore> ExerciseScores => Set<ExerciseScore>();
     public DbSet<Measurement> Measurements => Set<Measurement>();
+    public DbSet<ReportSubmissionProgressReceipt> ReportSubmissionProgressReceipts => Set<ReportSubmissionProgressReceipt>();
     public DbSet<MainRecord> MainRecords => Set<MainRecord>();
     public DbSet<Gym> Gyms => Set<Gym>();
     public DbSet<Address> Addresses => Set<Address>();

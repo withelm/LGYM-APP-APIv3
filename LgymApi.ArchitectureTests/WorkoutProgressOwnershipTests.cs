@@ -13,6 +13,7 @@ public sealed class WorkoutProgressOwnershipTests
         typeof(TrainingExerciseScore),
         typeof(ExerciseScore),
         typeof(Measurement),
+        typeof(ReportSubmissionProgressReceipt),
         typeof(MainRecord),
         typeof(Gym),
         typeof(Address),
@@ -89,7 +90,7 @@ public sealed class WorkoutProgressOwnershipTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(WorkoutProgressEntityTypes, Has.Length.EqualTo(10));
+            Assert.That(WorkoutProgressEntityTypes, Has.Length.EqualTo(11));
             Assert.That(TrainingPlanningEntityTypes, Has.Length.EqualTo(3));
 
             foreach (var entityType in WorkoutProgressEntityTypes)
@@ -126,7 +127,7 @@ public sealed class WorkoutProgressOwnershipTests
         Assert.Multiple(() =>
         {
             Assert.That(exception!.Message, Does.Contain("Training Planning expected 3"));
-            Assert.That(exception.Message, Does.Contain("Workout & Progress expected 10"));
+            Assert.That(exception.Message, Does.Contain("Workout & Progress expected 11"));
         });
     }
 

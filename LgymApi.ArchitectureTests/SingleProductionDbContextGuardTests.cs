@@ -9,14 +9,19 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 48;
+    private const int PersistedEntityCount = 49;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
+    private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
+    private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
     private const string SignalRClientTestPackageProject = "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj";
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         [MigrationRoot + "/20260815080018_AddNotificationRetentionIndexes.cs"] = "8661dde0f29629b836a76a5562066bfbc20628455359cbc507597350287e3bac",
-        [MigrationRoot + "/20260815080018_AddNotificationRetentionIndexes.Designer.cs"] = "b16f275e60894b2e245ced98c3366353cca45d611862530a27b74b98972a953f",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "c9b15b81472f52c99262fd7e00b356ed0bde797dbee52aaeebbe047cc8527960"
+        [MigrationRoot + "/20260815080018_AddNotificationRetentionIndexes.Designer.cs"] = "b16f275e60894b2e245ced98c3366353cca45d611862530a27b74b98972a953f"
+        ,
+        [ReportReceiptMigration] = "c9567019410d7d64ce119614ae40d0b6dec473bada60ce23986d5bdedef9d62a",
+        [ReportReceiptMigrationDesigner] = "a6ab655fcc346b2f12b17baea223f58c3f2d70f63e2df6d589c483025f2991b5",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "af1d8968aea6f020a723e51c72ebc0f48638f256a13c4a49b92499d851e0561d"
     };
 
     [Test]
@@ -380,7 +385,8 @@ public sealed class SingleProductionDbContextGuardTests
         }
 
         const string applicationProject = "LgymApi.Application/LgymApi.Application.csproj";
-        var approvedChanges = ApprovedRetentionMigrationLedger.Keys.ToList();
+        var approvedChanges = ApprovedRetentionMigrationLedger.Keys
+            .ToList();
         if (headChanges.Contains(applicationProject, StringComparer.OrdinalIgnoreCase))
         {
             var baseline = string.Join(Environment.NewLine, RunGit(repoRoot, ["show", $"HEAD:{applicationProject}"]));

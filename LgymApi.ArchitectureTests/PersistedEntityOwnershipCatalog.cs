@@ -59,6 +59,7 @@ internal static class PersistedEntityOwnershipCatalog
         new(typeof(TrainingExerciseScore), WorkoutProgressModuleName),
         new(typeof(ExerciseScore), WorkoutProgressModuleName),
         new(typeof(Measurement), WorkoutProgressModuleName),
+        new(typeof(ReportSubmissionProgressReceipt), WorkoutProgressModuleName),
         new(typeof(MainRecord), WorkoutProgressModuleName),
         new(typeof(Gym), WorkoutProgressModuleName),
         new(typeof(Address), WorkoutProgressModuleName),
@@ -85,7 +86,7 @@ internal static class PersistedEntityOwnershipCatalog
         [NotificationsModuleName] = 5,
         [ReportingModuleName] = 7,
         [TrainingPlanningModuleName] = 3,
-        [WorkoutProgressModuleName] = 10,
+        [WorkoutProgressModuleName] = 11,
         [CoachingModuleName] = 4,
         [NutritionModuleName] = 6,
         [PlatformModuleName] = 4

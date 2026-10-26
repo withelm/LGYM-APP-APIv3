@@ -1,6 +1,5 @@
 using LgymApi.Application.WorkoutProgress.ReportingIntegration;
 using LgymApi.Domain.Entities;
-using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -13,30 +12,23 @@ public sealed class ReportSubmissionAcceptedProgressPersistenceRepository : IRep
 
     public ReportSubmissionAcceptedProgressPersistenceRepository(AppDbContext dbContext) => _dbContext = dbContext;
 
-    public async Task<IReadOnlySet<BodyParts>> GetExistingBodyPartsAsync(
-        LgymApi.Domain.ValueObjects.Id<LgymApi.Identity.Contracts.AccountReference> traineeId,
-        IReadOnlyCollection<BodyParts> bodyParts,
-        DateTimeOffset createdAtFromUtc,
-        DateTimeOffset createdAtToUtc,
+    public Task<bool> HasReceiptAsync(
+        Id<ReportSubmission> reportSubmissionId,
         CancellationToken cancellationToken = default)
     {
-        if (bodyParts.Count == 0)
-        {
-            return new HashSet<BodyParts>();
-        }
-
-        var persistedTraineeId = ReportingPersistenceAccountIds.ToPersisted(traineeId);
-        var existing = await _dbContext.Measurements
+        return _dbContext.ReportSubmissionProgressReceipts
             .AsNoTracking()
-            .Where(measurement => measurement.UserId == persistedTraineeId
-                && bodyParts.Contains(measurement.BodyPart)
-                && measurement.CreatedAt >= createdAtFromUtc
-                && measurement.CreatedAt < createdAtToUtc)
-            .Select(measurement => measurement.BodyPart)
-            .Distinct()
-            .ToListAsync(cancellationToken);
-        return existing.ToHashSet();
+            .AnyAsync(receipt => receipt.ReportSubmissionId == reportSubmissionId, cancellationToken);
     }
+
+    public Task AddReceiptAsync(
+        AcceptedReportSubmissionReceiptPersistenceModel receipt,
+        CancellationToken cancellationToken = default)
+        => _dbContext.ReportSubmissionProgressReceipts.AddAsync(new ReportSubmissionProgressReceipt
+        {
+            Id = Id<ReportSubmissionProgressReceipt>.New(),
+            ReportSubmissionId = receipt.ReportSubmissionId
+        }, cancellationToken).AsTask();
 
     public Task AddAsync(
         AcceptedReportMeasurementPersistenceModel measurement,

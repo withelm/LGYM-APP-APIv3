@@ -19,6 +19,10 @@ public sealed class PostgreSqlRecurringReportMigrationTests
     private const string OrphanRepairMigrationId = "20260710120000_FixRecurringReportAssignmentIdIndex";
     private const string RepairMigrationName = "RepairRecurringReportAssignmentRequestIndex";
     private const string RecurringAssignmentIndexName = "IX_ReportRequests_RecurringReportAssignmentId";
+    private const string PreviousMigrationId = "20260815080018_AddNotificationRetentionIndexes";
+    private const string ReceiptMigrationId = "20261026222317_AddReportSubmissionProgressReceipts";
+    private const string ReceiptTableName = "ReportSubmissionProgressReceipts";
+    private const string ReceiptIndexName = "IX_ReportSubmissionProgressReceipts_ReportSubmissionId";
 
     [Test]
     public async Task PreRepairTarget_ExcludesOrphanFromDiscoveryAndHistory_AndRetainsUniqueIndex()
@@ -192,6 +196,52 @@ public sealed class PostgreSqlRecurringReportMigrationTests
             $"Rejected downgrade: index unique={indexIsUnique}; requests={requestCount}; history={string.Join(',', history.TakeLast(2))}");
     }
 
+    [Test]
+    public async Task ReceiptMigration_FromPreviousMigration_PreservesReportAndMeasurementDataAndCreatesUniqueReceiptIndex()
+    {
+        await using var lease = await PostgreSqlDatabaseLease.CreateAsync();
+        MigrationPreservationSeed seed;
+
+        await using (var baselineContext = CreateDbContext(lease))
+        {
+            var migrations = baselineContext.Database.GetMigrations().ToList();
+            migrations.IndexOf(PreviousMigrationId).Should().Be(migrations.IndexOf(ReceiptMigrationId) - 1);
+            await MigrateAsync(baselineContext, PreviousMigrationId);
+            seed = await SeedMigrationPreservationDataAsync(baselineContext);
+        }
+
+        await using (var migrationContext = CreateDbContext(lease))
+        {
+            await MigrateAsync(migrationContext, ReceiptMigrationId);
+        }
+
+        await using var verificationContext = CreateDbContext(lease);
+        var submission = await verificationContext.ReportSubmissions
+            .AsNoTracking()
+            .SingleAsync(candidate => candidate.Id == seed.SubmissionId);
+        var measurement = await verificationContext.Measurements
+            .AsNoTracking()
+            .SingleAsync(candidate => candidate.Id == seed.MeasurementId);
+        var appliedMigrations = (await verificationContext.Database.GetAppliedMigrationsAsync()).ToList();
+
+        Assert.Multiple(() =>
+        {
+            submission.ReportRequestId.Should().Be(seed.RequestId);
+            submission.TraineeId.Should().Be(seed.TraineeId);
+            submission.PayloadJson.Should().Be(seed.PayloadJson);
+            measurement.UserId.Should().Be(seed.TraineeId);
+            measurement.BodyPart.Should().Be(seed.BodyPart);
+            measurement.Unit.Should().Be(seed.Unit);
+            measurement.Value.Should().Be(seed.Value);
+            measurement.CreatedAt.Should().Be(seed.CreatedAtUtc);
+            appliedMigrations.Should().Contain(ReceiptMigrationId);
+        });
+        (await TableExistsAsync(verificationContext, ReceiptTableName)).Should().BeTrue();
+        (await GetIndexIsUniqueAsync(verificationContext, ReceiptIndexName)).Should().BeTrue();
+        TestContext.Progress.WriteLine(
+            $"Receipt migration preservation: submission={submission.Id}; measurement={measurement.Id}; table={ReceiptTableName}; uniqueIndex={ReceiptIndexName}");
+    }
+
     private static AppDbContext CreateDbContext(PostgreSqlDatabaseLease lease)
         => new(new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(lease.ConnectionString)
@@ -210,7 +260,9 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         return matchingMigrations[0];
     }
 
-    private static async Task<bool> GetIndexIsUniqueAsync(AppDbContext dbContext)
+    private static async Task<bool> GetIndexIsUniqueAsync(
+        AppDbContext dbContext,
+        string indexName = RecurringAssignmentIndexName)
     {
         await dbContext.Database.OpenConnectionAsync();
         try
@@ -223,11 +275,30 @@ public sealed class PostgreSqlRecurringReportMigrationTests
                 WHERE index_class.relname = @indexName
                 """;
 
-            var indexName = command.CreateParameter();
-            indexName.ParameterName = "indexName";
-            indexName.Value = RecurringAssignmentIndexName;
-            command.Parameters.Add(indexName);
+            var indexNameParameter = command.CreateParameter();
+            indexNameParameter.ParameterName = "indexName";
+            indexNameParameter.Value = indexName;
+            command.Parameters.Add(indexNameParameter);
 
+            return (bool)(await command.ExecuteScalarAsync())!;
+        }
+        finally
+        {
+            await dbContext.Database.CloseConnectionAsync();
+        }
+    }
+
+    private static async Task<bool> TableExistsAsync(AppDbContext dbContext, string tableName)
+    {
+        await dbContext.Database.OpenConnectionAsync();
+        try
+        {
+            await using var command = dbContext.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "SELECT to_regclass('public.' || quote_ident(@tableName)) IS NOT NULL";
+            var tableNameParameter = command.CreateParameter();
+            tableNameParameter.ParameterName = "tableName";
+            tableNameParameter.Value = tableName;
+            command.Parameters.Add(tableNameParameter);
             return (bool)(await command.ExecuteScalarAsync())!;
         }
         finally
@@ -270,6 +341,56 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         await dbContext.SaveChangesAsync();
 
         return seed;
+    }
+
+    private static async Task<MigrationPreservationSeed> SeedMigrationPreservationDataAsync(AppDbContext dbContext)
+    {
+        var trainer = CreateUser("receipt-migration-trainer");
+        var trainee = CreateUser("receipt-migration-trainee");
+        var template = new ReportTemplate
+        {
+            Id = Id<ReportTemplate>.New(),
+            TrainerId = trainer.Id,
+            Name = "Receipt migration template"
+        };
+        var request = new ReportRequest
+        {
+            Id = Id<ReportRequest>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            TemplateId = template.Id,
+            Status = ReportRequestStatus.Submitted
+        };
+        const string payloadJson = "{\"measurements\":{\"Waist\":{\"value\":87.125,\"unit\":\"Centimeters\"}}}";
+        var submission = new ReportSubmission
+        {
+            Id = Id<ReportSubmission>.New(),
+            ReportRequestId = request.Id,
+            TraineeId = trainee.Id,
+            PayloadJson = payloadJson
+        };
+        var measurement = new Measurement
+        {
+            Id = Id<Measurement>.New(),
+            UserId = trainee.Id,
+            BodyPart = BodyParts.Waist,
+            Unit = MeasurementUnits.Centimeters.ToString(),
+            Value = 87.125,
+            CreatedAt = new DateTimeOffset(2026, 10, 25, 1, 30, 0, TimeSpan.Zero)
+        };
+
+        dbContext.AddRange(trainer, trainee, template, request, submission, measurement);
+        await dbContext.SaveChangesAsync();
+        return new MigrationPreservationSeed(
+            request.Id,
+            submission.Id,
+            measurement.Id,
+            trainee.Id,
+            payloadJson,
+            measurement.BodyPart,
+            measurement.Unit,
+            measurement.Value,
+            measurement.CreatedAt);
     }
 
     private static async Task AssertDuplicateRequestIsRejectedAsync(AppDbContext dbContext, RecurringRequestSeed seed)
@@ -326,4 +447,15 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         Id<User> TraineeId,
         Id<ReportTemplate> TemplateId,
         Id<RecurringReportAssignment> AssignmentId);
+
+    private sealed record MigrationPreservationSeed(
+        Id<ReportRequest> RequestId,
+        Id<ReportSubmission> SubmissionId,
+        Id<Measurement> MeasurementId,
+        Id<User> TraineeId,
+        string PayloadJson,
+        BodyParts BodyPart,
+        string Unit,
+        double Value,
+        DateTimeOffset CreatedAtUtc);
 }

@@ -2,6 +2,7 @@ using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration;
 using LgymApi.Application.WorkoutProgress.ReportingIntegration;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
@@ -13,7 +14,7 @@ namespace LgymApi.UnitTests;
 public sealed class ReportSubmissionAcceptedProgressConsumerTests
 {
     [Test]
-    public async Task ConsumeAsync_WithValidEvent_StagesOneMeasurementPerNewBodyPartAndCommitsOnce()
+    public async Task ConsumeAsync_WithValidEvent_StagesReceiptAndOneMeasurementPerBodyPartAndCommitsOnce()
     {
         var persistence = Substitute.For<IReportSubmissionAcceptedProgressPersistence>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
@@ -21,7 +22,7 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
         var @event = CreateValidEvent(
             new ReportSubmissionAcceptedMeasurement(BodyParts.Chest, 101.5, MeasurementUnits.Centimeters),
             new ReportSubmissionAcceptedMeasurement(BodyParts.BodyWeight, 82.4, MeasurementUnits.Kilograms));
-        ConfigureExisting(persistence);
+        ConfigureReceipt(persistence, false);
         ConfigureStaging(persistence, staged);
         var consumer = new ReportSubmissionAcceptedProgressConsumer(persistence, unitOfWork);
 
@@ -30,47 +31,45 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
         result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
         staged.Select(measurement => measurement.BodyPart).Should().BeEquivalentTo([BodyParts.Chest, BodyParts.BodyWeight]);
         staged.Should().OnlyContain(measurement => measurement.TraineeId == @event.TraineeId && measurement.CreatedAt == @event.ObservedAt);
-        await persistence.Received(1).GetExistingBodyPartsAsync(
-            @event.TraineeId,
-            Arg.Is<IReadOnlyCollection<BodyParts>>(bodyParts => bodyParts.ToHashSet().SetEquals(new[] { BodyParts.Chest, BodyParts.BodyWeight })),
-            new DateTimeOffset(2026, 7, 20, 0, 0, 0, TimeSpan.Zero),
-            new DateTimeOffset(2026, 7, 21, 0, 0, 0, TimeSpan.Zero),
+        await persistence.Received(1).HasReceiptAsync(
+            Arg.Is<Id<ReportSubmission>>(id => id.ToString() == @event.ReportSubmissionId),
+            Arg.Any<CancellationToken>());
+        await persistence.Received(1).AddReceiptAsync(
+            Arg.Is<AcceptedReportSubmissionReceiptPersistenceModel>(receipt => receipt.ReportSubmissionId.ToString() == @event.ReportSubmissionId),
             Arg.Any<CancellationToken>());
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task ConsumeAsync_WithReplay_ReturnsDuplicateWithoutSecondCommit()
+    public async Task ConsumeAsync_WithReplayUsingDifferentEventId_ReturnsDuplicateWithoutSecondCommit()
     {
         var persistence = Substitute.For<IReportSubmissionAcceptedProgressPersistence>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
-        var existing = new HashSet<BodyParts>();
+        var receipts = new HashSet<Id<ReportSubmission>>();
         var staged = new List<AcceptedReportMeasurementPersistenceModel>();
         var @event = CreateValidEvent(new ReportSubmissionAcceptedMeasurement(BodyParts.Chest, 101.5, MeasurementUnits.Centimeters));
-        persistence.GetExistingBodyPartsAsync(
-                Arg.Any<Id<AccountReference>>(),
-                Arg.Any<IReadOnlyCollection<BodyParts>>(),
-                Arg.Any<DateTimeOffset>(),
-                Arg.Any<DateTimeOffset>(),
-                Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult<IReadOnlySet<BodyParts>>(existing.ToHashSet()));
+        persistence.HasReceiptAsync(Arg.Any<Id<ReportSubmission>>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult(receipts.Contains(call.ArgAt<Id<ReportSubmission>>(0))));
+        persistence.AddReceiptAsync(Arg.Do<AcceptedReportSubmissionReceiptPersistenceModel>(receipt =>
+            receipts.Add(receipt.ReportSubmissionId)), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
         persistence.AddAsync(Arg.Do<AcceptedReportMeasurementPersistenceModel>(measurement =>
             {
                 staged.Add(measurement);
-                existing.Add(measurement.BodyPart);
             }), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
         var consumer = new ReportSubmissionAcceptedProgressConsumer(persistence, unitOfWork);
 
         (await consumer.ConsumeAsync(@event)).Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
-        (await consumer.ConsumeAsync(@event)).Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Duplicate);
+        (await consumer.ConsumeAsync(@event with { EventId = "00000000-0000-0000-0000-000000000099" })).Outcome
+            .Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Duplicate);
 
         staged.Should().ContainSingle();
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task ConsumeAsync_WithDuplicateBodyPartForTheSameUtcDay_StagesTheFirstMeasurementOnce()
+    public async Task ConsumeAsync_WithDuplicateBodyPartWithinOneEvent_StagesTheFirstMeasurementOnce()
     {
         var persistence = Substitute.For<IReportSubmissionAcceptedProgressPersistence>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
@@ -78,7 +77,7 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
         var @event = CreateValidEvent(
             new ReportSubmissionAcceptedMeasurement(BodyParts.Chest, 101.5, MeasurementUnits.Centimeters),
             new ReportSubmissionAcceptedMeasurement(BodyParts.Chest, 99.1, MeasurementUnits.Centimeters));
-        ConfigureExisting(persistence);
+        ConfigureReceipt(persistence, false);
         ConfigureStaging(persistence, staged);
         var consumer = new ReportSubmissionAcceptedProgressConsumer(persistence, unitOfWork);
 
@@ -91,22 +90,33 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
     }
 
     [Test]
-    public async Task ConsumeAsync_WithPartialReplay_StagesOnlyMissingBodyParts()
+    public async Task ConsumeAsync_WithDistinctSubmissionsOnTheSameDay_StagesAllMeasurementsForEachSubmission()
     {
         var persistence = Substitute.For<IReportSubmissionAcceptedProgressPersistence>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var staged = new List<AcceptedReportMeasurementPersistenceModel>();
-        var @event = CreateValidEvent(
+        var firstEvent = CreateValidEvent(
             new ReportSubmissionAcceptedMeasurement(BodyParts.Chest, 101.5, MeasurementUnits.Centimeters),
             new ReportSubmissionAcceptedMeasurement(BodyParts.Waist, 87.1, MeasurementUnits.Centimeters));
-        ConfigureExisting(persistence, BodyParts.Chest);
+        var secondEvent = firstEvent with
+        {
+            ReportSubmissionId = "00000000-0000-0000-0000-000000000098",
+            EventId = "00000000-0000-0000-0000-000000000099"
+        };
+        ConfigureReceipt(persistence, false);
         ConfigureStaging(persistence, staged);
         var consumer = new ReportSubmissionAcceptedProgressConsumer(persistence, unitOfWork);
 
-        var result = await consumer.ConsumeAsync(@event);
+        var firstResult = await consumer.ConsumeAsync(firstEvent);
+        var secondResult = await consumer.ConsumeAsync(secondEvent);
 
-        result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
-        staged.Should().ContainSingle(measurement => measurement.BodyPart == BodyParts.Waist);
+        firstResult.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
+        secondResult.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
+        staged.Should().HaveCount(4);
+        staged.Select(measurement => measurement.BodyPart).Should().BeEquivalentTo(
+            [BodyParts.Chest, BodyParts.Waist, BodyParts.Chest, BodyParts.Waist]);
+        await persistence.Received(2).AddReceiptAsync(Arg.Any<AcceptedReportSubmissionReceiptPersistenceModel>(), Arg.Any<CancellationToken>());
+        await unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [TestCase(0, ReportSubmissionAcceptedProgressConsumeOutcome.UnsupportedSchema)]
@@ -137,13 +147,8 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var @event = CreateValidEvent(new ReportSubmissionAcceptedMeasurement(BodyParts.Chest, 101.5, MeasurementUnits.Centimeters));
         var exception = new TimeoutException("Transient measurement persistence failure.");
-        persistence.GetExistingBodyPartsAsync(
-                Arg.Any<Id<AccountReference>>(),
-                Arg.Any<IReadOnlyCollection<BodyParts>>(),
-                Arg.Any<DateTimeOffset>(),
-                Arg.Any<DateTimeOffset>(),
-                Arg.Any<CancellationToken>())
-            .Returns(Task.FromException<IReadOnlySet<BodyParts>>(exception));
+        persistence.HasReceiptAsync(Arg.Any<Id<ReportSubmission>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<bool>(exception));
         var consumer = new ReportSubmissionAcceptedProgressConsumer(persistence, unitOfWork);
 
         var action = () => consumer.ConsumeAsync(@event);
@@ -152,16 +157,11 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
         await unitOfWork.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
     }
 
-    private static void ConfigureExisting(
+    private static void ConfigureReceipt(
         IReportSubmissionAcceptedProgressPersistence persistence,
-        params BodyParts[] existing)
-        => persistence.GetExistingBodyPartsAsync(
-                Arg.Any<Id<AccountReference>>(),
-                Arg.Any<IReadOnlyCollection<BodyParts>>(),
-                Arg.Any<DateTimeOffset>(),
-                Arg.Any<DateTimeOffset>(),
-                Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlySet<BodyParts>>(existing.ToHashSet()));
+        bool exists)
+        => persistence.HasReceiptAsync(Arg.Any<Id<ReportSubmission>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(exists));
 
     private static void ConfigureStaging(
         IReportSubmissionAcceptedProgressPersistence persistence,
