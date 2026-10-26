@@ -70,7 +70,8 @@ public sealed class TrainingServiceFacadeTests
         IReadOnlyDictionary<Id<Exercise>, string> translations = new Dictionary<Id<Exercise>, string> { [exercise.Id] = "Wyciskanie" };
         historyReadService.GetLastTrainingAsync(userId, Arg.Any<CancellationToken>())
             .Returns(Result<WorkoutTrainingReadModel, AppError>.Success(new WorkoutTrainingReadModel(Id<Training>.New(), Id<PlanDayReference>.New(), DateTimeOffset.UtcNow, null)));
-        historyReadService.GetTrainingByDateAsync(userId, createdAt, Arg.Any<CancellationToken>())
+        var dateRange = UtcTimeRange.ForLegacyUtcDay(createdAt);
+        historyReadService.GetTrainingByDateAsync(userId, dateRange, Arg.Any<CancellationToken>())
             .Returns(Result<List<TrainingByDateDetails>, AppError>.Success([training]));
         workoutProgress.GetExerciseDisplayNamesAsync(
                 Arg.Is<IEnumerable<Id<Exercise>>>(ids => ids.SequenceEqual(new[] { exercise.Id })),
@@ -81,11 +82,11 @@ public sealed class TrainingServiceFacadeTests
             .Returns(Result<List<DateTime>, AppError>.Success([]));
 
         await service.GetLastTrainingAsync(userId);
-        var byDate = await service.GetTrainingByDateAsync(userId, createdAt, cultures);
+        var byDate = await service.GetTrainingByDateAsync(userId, dateRange, cultures);
         await service.GetTrainingDatesAsync(userId);
 
         await historyReadService.Received(1).GetLastTrainingAsync(userId, Arg.Any<CancellationToken>());
-        await historyReadService.Received(1).GetTrainingByDateAsync(userId, createdAt, Arg.Any<CancellationToken>());
+        await historyReadService.Received(1).GetTrainingByDateAsync(userId, dateRange, Arg.Any<CancellationToken>());
         await historyReadService.Received(1).GetTrainingDatesAsync(userId, Arg.Any<CancellationToken>());
         byDate.Value.Trainings.Should().ContainSingle().Which.Should().BeSameAs(training);
         byDate.Value.Translations.Should().BeSameAs(translations);

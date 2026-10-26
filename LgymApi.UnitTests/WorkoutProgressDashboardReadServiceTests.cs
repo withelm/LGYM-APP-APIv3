@@ -47,7 +47,8 @@ public sealed class WorkoutProgressDashboardReadServiceTests
                 }
             ]
         };
-        trainingHistory.GetTrainingByDateAsync(traineeId, createdAt, Arg.Any<CancellationToken>())
+        var dateRange = UtcTimeRange.ForLegacyUtcDay(createdAt);
+        trainingHistory.GetTrainingByDateAsync(traineeId, dateRange, Arg.Any<CancellationToken>())
             .Returns(Result<List<TrainingByDateDetails>, AppError>.Success([training]));
         IReadOnlyList<string> cultures = ["pl-PL", "pl"];
         IReadOnlyDictionary<Id<Exercise>, string> translations = new Dictionary<Id<Exercise>, string> { [exercise.Id] = "Wyciskanie" };
@@ -58,7 +59,7 @@ public sealed class WorkoutProgressDashboardReadServiceTests
             .Returns(translations);
         var service = new WorkoutProgressDashboardReadService(trainingHistory, progress);
 
-        var result = await service.GetTrainingByDateAsync(traineeId, createdAt, cultures);
+        var result = await service.GetTrainingByDateAsync(traineeId, dateRange, cultures);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Translations.Should().BeSameAs(translations);
@@ -103,11 +104,11 @@ public sealed class WorkoutProgressDashboardReadServiceTests
         var progress = Substitute.For<IWorkoutProgressReadWriteService>();
         var traineeId = Id<AccountReference>.New();
         var error = new TrainingNotFoundError("missing");
-        trainingHistory.GetTrainingByDateAsync(traineeId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+        trainingHistory.GetTrainingByDateAsync(traineeId, Arg.Any<UtcTimeRange>(), Arg.Any<CancellationToken>())
             .Returns(Result<List<TrainingByDateDetails>, AppError>.Failure(error));
         var service = new WorkoutProgressDashboardReadService(trainingHistory, progress);
 
-        var result = await service.GetTrainingByDateAsync(traineeId, DateTime.UtcNow, []);
+        var result = await service.GetTrainingByDateAsync(traineeId, UtcTimeRange.ForLegacyUtcDay(DateTime.UtcNow), []);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeSameAs(error);

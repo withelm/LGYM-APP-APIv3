@@ -467,6 +467,51 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Should_ReturnTrainingOnlyForMatchingWarsawLocalDay_When_RequestUsesDateAndTimeZone()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "bydate-warsaw",
+            email: "bydate-warsaw@example.com",
+            password: "password123");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Warsaw Rows", BodyParts.Back);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Warsaw Gym");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Warsaw Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Warsaw Day", new List<PlanDayExerciseInput>
+        {
+            new() { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
+        });
+
+        var createdAt = new DateTime(2026, 10, 21, 22, 22, 4, 551, DateTimeKind.Utc);
+        var trainingRequest = new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 60.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        };
+        (await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", trainingRequest)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var matchingDayResponse = await PostAsJsonWithApiOptionsAsync(
+            $"/api/{userId}/getTrainingByDate",
+            new { date = "2026-10-22", timeZone = "Europe/Warsaw" });
+        var previousDayResponse = await PostAsJsonWithApiOptionsAsync(
+            $"/api/{userId}/getTrainingByDate",
+            new { date = "2026-10-21", timeZone = "Europe/Warsaw" });
+
+        matchingDayResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await matchingDayResponse.Content.ReadFromJsonAsync<List<TrainingByDateResponse>>())
+            .Should().ContainSingle(training => training.PlanDay!.Name == "Warsaw Day");
+        previousDayResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
     [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/{id}/getTrainingByDate", "own", "foreign-object-denial-no-mutation")]
     public async Task Should_ReturnForbidden_When_GetTrainingByDateRouteUserIdMismatched()
     {

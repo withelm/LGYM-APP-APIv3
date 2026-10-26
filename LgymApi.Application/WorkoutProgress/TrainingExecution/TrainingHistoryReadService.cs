@@ -54,7 +54,7 @@ internal sealed class TrainingHistoryReadService : ITrainingHistoryReadService
         return Result<WorkoutTrainingReadModel, AppError>.Success(MapTraining(training, planDay));
     }
 
-    public async Task<Result<List<TrainingByDateDetails>, AppError>> GetTrainingByDateAsync(Id<AccountReference> userId, DateTime createdAt, CancellationToken cancellationToken = default)
+    public async Task<Result<List<TrainingByDateDetails>, AppError>> GetTrainingByDateAsync(Id<AccountReference> userId, UtcTimeRange dateRange, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
         {
@@ -66,9 +66,7 @@ internal sealed class TrainingHistoryReadService : ITrainingHistoryReadService
             return Result<List<TrainingByDateDetails>, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
 
-        var startOfDay = new DateTimeOffset(DateTime.SpecifyKind(createdAt.Date, DateTimeKind.Utc));
-        var endOfDay = startOfDay.AddDays(1).AddTicks(-1);
-        var trainings = await _trainingRepository.GetByAccountIdAndDateAsync(userId, startOfDay, endOfDay, cancellationToken);
+        var trainings = await _trainingRepository.GetByAccountIdAndDateAsync(userId, dateRange, cancellationToken);
         if (trainings.Count == 0)
         {
             return Result<List<TrainingByDateDetails>, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));

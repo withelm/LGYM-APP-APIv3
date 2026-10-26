@@ -1,4 +1,5 @@
 using LgymApi.Application.WorkoutProgress.Persistence;
+using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands;
 using LgymApi.Domain.Entities;
@@ -21,8 +22,8 @@ public sealed class WorkoutTrainingPersistenceRepository(AppDbContext dbContext,
         return entity is null ? null : WorkoutPersistenceProjection.Training(entity);
     }
 
-    public async Task<IReadOnlyList<WorkoutTrainingPersistenceModel>> GetByAccountIdAndDateAsync(Id<AccountReference> accountId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
-        => (await WithDetails().Where(training => training.UserId == WorkoutPersistenceAccountIds.ToPersisted(accountId) && training.CreatedAt >= start && training.CreatedAt <= end).ToListAsync(cancellationToken)).Select(WorkoutPersistenceProjection.Training).ToList();
+    public async Task<IReadOnlyList<WorkoutTrainingPersistenceModel>> GetByAccountIdAndDateAsync(Id<AccountReference> accountId, UtcTimeRange dateRange, CancellationToken cancellationToken = default)
+        => (await WithDetails().Where(training => training.UserId == WorkoutPersistenceAccountIds.ToPersisted(accountId) && training.CreatedAt >= dateRange.FromUtc && training.CreatedAt < dateRange.ToUtc).ToListAsync(cancellationToken)).Select(WorkoutPersistenceProjection.Training).ToList();
 
     public async Task<IReadOnlyList<DateTimeOffset>> GetDatesByAccountIdAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default)
         => await dbContext.Trainings.AsNoTracking().Where(training => training.UserId == WorkoutPersistenceAccountIds.ToPersisted(accountId)).OrderBy(training => training.CreatedAt).Select(training => training.CreatedAt).ToListAsync(cancellationToken);

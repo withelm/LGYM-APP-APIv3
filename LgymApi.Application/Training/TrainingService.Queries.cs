@@ -13,11 +13,11 @@ public sealed partial class TrainingService
 
     public async Task<Result<TrainingsByDateWithTranslations, AppError>> GetTrainingByDateAsync(
         Id<LgymApi.Identity.Contracts.AccountReference> userId,
-        DateTime createdAt,
+        UtcTimeRange dateRange,
         IReadOnlyList<string> cultures,
         CancellationToken cancellationToken = default)
     {
-        var result = await _trainingHistoryReadService.GetTrainingByDateAsync(userId, createdAt, cancellationToken);
+        var result = await _trainingHistoryReadService.GetTrainingByDateAsync(userId, dateRange, cancellationToken);
         if (result.IsFailure)
         {
             return Result<TrainingsByDateWithTranslations, AppError>.Failure(result.Error);

@@ -8,6 +8,7 @@ using LgymApi.Application.Pagination;
 using LgymApi.Application.TrainingPlanning.Contracts.ManagedPlans;
 using LgymApi.Application.WorkoutProgress.Dashboard.Models;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
+using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
@@ -27,7 +28,7 @@ public interface ITrainerDashboardProgressApiPort
 {
     Task<Result<Pagination<TrainerDashboardTraineeReadModel>, AppError>> GetDashboardAsync(AuthenticatedAccountContext trainer, string? search, string? status, string? sortBy, string? sortDirection, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<Result<List<DateTime>, AppError>> GetTrainingDatesAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, CancellationToken cancellationToken = default);
-    Task<Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>> GetTrainingByDateAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, DateTime createdAt, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
+    Task<Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>> GetTrainingByDateAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, UtcTimeRange dateRange, IReadOnlyList<string> cultures, CancellationToken cancellationToken = default);
     Task<Result<List<ExerciseScoreChartPoint>, AppError>> GetExerciseScoresChartAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<Exercise> exerciseId, CancellationToken cancellationToken = default);
     Task<Result<List<EloChartPoint>, AppError>> GetEloChartAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, CancellationToken cancellationToken = default);
     Task<Result<List<MainRecordReadModel>, AppError>> GetMainRecordsHistoryAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, CancellationToken cancellationToken = default);

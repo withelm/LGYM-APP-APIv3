@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Xml.Linq;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -378,7 +379,36 @@ public sealed class SingleProductionDbContextGuardTests
             Assert.That(hash, Is.EqualTo(entry.Value), $"Approved retention migration ledger hash changed: {entry.Key}");
         }
 
-        AssertPhysicalTopologyWorktreeIsClean(headChanges, untrackedFiles, ApprovedRetentionMigrationLedger.Keys);
+        const string applicationProject = "LgymApi.Application/LgymApi.Application.csproj";
+        var approvedChanges = ApprovedRetentionMigrationLedger.Keys.ToList();
+        if (headChanges.Contains(applicationProject, StringComparer.OrdinalIgnoreCase))
+        {
+            var baseline = string.Join(Environment.NewLine, RunGit(repoRoot, ["show", $"HEAD:{applicationProject}"]));
+            AssertOnlyNodaTimePackageAdded(baseline, File.ReadAllText(Path.Combine(repoRoot, applicationProject)));
+            approvedChanges.Add(applicationProject);
+        }
+
+        AssertPhysicalTopologyWorktreeIsClean(headChanges, untrackedFiles, approvedChanges);
+    }
+
+    private static void AssertOnlyNodaTimePackageAdded(string baseline, string current)
+    {
+        var before = XDocument.Parse(baseline);
+        var after = XDocument.Parse(current);
+        var package = after.Descendants("PackageReference")
+            .Single(element => (string?)element.Attribute("Include") == "NodaTime");
+        Assert.That(XNode.DeepEquals(package, new XElement("PackageReference", new XAttribute("Include", "NodaTime"))), Is.True);
+        package.Remove();
+        Assert.That(XNode.DeepEquals(before, after), Is.True, "Only the centrally versioned NodaTime package addition is approved; project topology must remain exact.");
+    }
+
+    [TestCase("<ProjectReference Include=\"Other.csproj\" />")]
+    [TestCase("<PackageReference Include=\"Other\" />")]
+    public void NodaTimePackageApproval_RejectsAdditionalProjectChanges(string extra)
+    {
+        const string baseline = "<Project><ItemGroup /></Project>";
+        var current = $"<Project><ItemGroup><PackageReference Include=\"NodaTime\" />{extra}</ItemGroup></Project>";
+        Assert.Throws<AssertionException>(() => AssertOnlyNodaTimePackageAdded(baseline, current));
     }
 
     private static void AssertPhysicalTopologyWorktreeIsClean(

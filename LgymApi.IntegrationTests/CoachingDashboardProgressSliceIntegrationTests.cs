@@ -14,6 +14,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Data.SeedData;
 using LgymApi.IntegrationTests.Authorization;
@@ -242,7 +243,7 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
         var dates = await actionScope.ServiceProvider.GetRequiredService<IGetTrainingDatesUseCase>()
             .ExecuteAsync(new GetTrainingDatesQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>()));
         var byDate = await actionScope.ServiceProvider.GetRequiredService<IGetTrainingByDateUseCase>()
-            .ExecuteAsync(new GetTrainingByDateQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>(), createdAt, []));
+            .ExecuteAsync(new GetTrainingByDateQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>(), UtcTimeRange.ForLegacyUtcDay(createdAt), []));
         var scores = await actionScope.ServiceProvider.GetRequiredService<IGetExerciseScoresChartUseCase>()
             .ExecuteAsync(new GetExerciseScoresChartQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>(), exerciseId));
         var elo = await actionScope.ServiceProvider.GetRequiredService<IGetEloChartUseCase>()
