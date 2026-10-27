@@ -40,6 +40,36 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
+    [TestCase(0)]
+    [TestCase(330)]
+    [TestCase(-150)]
+    public async Task ConsumeAsync_WithObservedOffset_StagesUtcWithoutChangingInstant(int offsetMinutes)
+    {
+        var persistence = Substitute.For<IReportSubmissionAcceptedProgressPersistence>();
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        var staged = new List<AcceptedReportMeasurementPersistenceModel>();
+        var observedAt = new DateTimeOffset(2026, 7, 20, 23, 45, 0, TimeSpan.FromMinutes(offsetMinutes));
+        var @event = CreateValidEvent(
+            new ReportSubmissionAcceptedMeasurement(BodyParts.BodyWeight, 82.4, MeasurementUnits.Kilograms)) with
+        {
+            ObservedAt = observedAt
+        };
+        ConfigureReceipt(persistence, false);
+        ConfigureStaging(persistence, staged);
+        var consumer = new ReportSubmissionAcceptedProgressConsumer(persistence, unitOfWork);
+
+        var result = await consumer.ConsumeAsync(@event);
+
+        result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
+        var measurement = staged.Should().ContainSingle().Subject;
+        measurement.CreatedAt.Offset.Should().Be(TimeSpan.Zero);
+        measurement.CreatedAt.Should().Be(observedAt.ToUniversalTime());
+        measurement.Value.Should().Be(82.4);
+        measurement.Unit.Should().Be(MeasurementUnits.Kilograms);
+        @event.ObservedAt.Offset.Should().Be(TimeSpan.FromMinutes(offsetMinutes));
+        await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
     [Test]
     public async Task ConsumeAsync_WithReplayUsingDifferentEventId_ReturnsDuplicateWithoutSecondCommit()
     {

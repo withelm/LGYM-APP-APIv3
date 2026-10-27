@@ -7,7 +7,7 @@
 - Rules: prefer `LgymApi.Resources` accessors over hardcoded translated/user-facing strings when the resource value is the source of truth.
 - Boundary: keep tests isolated and fast.
 - Local-day history tests cover strict TZDB midnight resolution, UTC/fractional offsets, Warsaw 23/25-hour DST days, Apia skipped days, range bounds, and separate request-shape versus semantic validation errors.
-- EF bootstrap coverage constructs `AppDbContextFactory` without host DI, verifies the canonical 48-entity Npgsql model and Infrastructure migration snapshot, and preserves Testing startup migration suppression versus non-Testing migration attempts.
+- EF bootstrap coverage constructs `AppDbContextFactory` without host DI, verifies the canonical 49-entity Npgsql model and Infrastructure migration snapshot, and preserves Testing startup migration suppression versus non-Testing migration attempts.
 - Composition guards assert one canonical registry/dispatcher/password adapter, one scoped AppConfig and enum service, one singleton converter per supported unit family, Notifications FCM ownership, environment-selected Worker push scheduling, and exact 15-row/16-handler startup validation.
 - API adapter registration coverage requires the exact 25 scoped Application and 3 scoped Notifications API-adapter contracts to be unique, resolve through host composition, retain internal implementations, and remain distinct from the three Notifications integration adapters.
 - Notification hub and publisher unit coverage exercises active session registration and direct validated-connection delivery; publisher tests do not rely on user-group delivery alone.

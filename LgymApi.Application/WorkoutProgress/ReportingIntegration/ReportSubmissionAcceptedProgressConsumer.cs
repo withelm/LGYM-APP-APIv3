@@ -64,7 +64,7 @@ public sealed class ReportSubmissionAcceptedProgressConsumer : IReportSubmission
                 measurement.BodyPart,
                 measurement.Unit,
                 measurement.Value,
-                @event.ObservedAt), cancellationToken);
+                @event.ObservedAt.ToUniversalTime()), cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
