@@ -1,3 +1,4 @@
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
@@ -11,13 +12,17 @@ public sealed record AcceptedReportMeasurementPersistenceModel(
     double Value,
     DateTimeOffset CreatedAt);
 
+public sealed record AcceptedReportSubmissionReceiptPersistenceModel(
+    Id<ReportSubmission> ReportSubmissionId);
+
 public interface IReportSubmissionAcceptedProgressPersistence
 {
-    Task<IReadOnlySet<BodyParts>> GetExistingBodyPartsAsync(
-        Id<AccountReference> traineeId,
-        IReadOnlyCollection<BodyParts> bodyParts,
-        DateTimeOffset createdAtFromUtc,
-        DateTimeOffset createdAtToUtc,
+    Task<bool> HasReceiptAsync(
+        Id<ReportSubmission> reportSubmissionId,
+        CancellationToken cancellationToken = default);
+
+    Task AddReceiptAsync(
+        AcceptedReportSubmissionReceiptPersistenceModel receipt,
         CancellationToken cancellationToken = default);
 
     Task AddAsync(

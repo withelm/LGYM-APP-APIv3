@@ -1502,6 +1502,31 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("ReportSubmissions", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportSubmissionProgressReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ReportSubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportSubmissionId")
+                        .IsUnique();
+
+                    b.ToTable("ReportSubmissionProgressReceipts", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.ReportTemplate", b =>
                 {
                     b.Property<Guid>("Id")

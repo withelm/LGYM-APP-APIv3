@@ -165,6 +165,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `TrainingExerciseScore` | `Workout & Progress` |
 | `ExerciseScore` | `Workout & Progress` |
 | `Measurement` | `Workout & Progress` |
+| `ReportSubmissionProgressReceipt` | `Workout & Progress` |
 | `MainRecord` | `Workout & Progress` |
 | `Gym` | `Workout & Progress` |
 | `Address` | `Workout & Progress` |
@@ -184,7 +185,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `CommandEnvelope` | `Platform / Reference Data` |
 | `ApiIdempotencyRecord` | `Platform / Reference Data` |
 
-Totals are fixed: Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 10, Coaching 4, Nutrition 6, and Platform / Reference Data 4.
+Totals are fixed: Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, and Platform / Reference Data 4.
 
 ## Ownership tie-breaker
 

@@ -36,6 +36,7 @@ internal static class AppDbContextEntityTypeConfigurationRegistrar
         Register(modelBuilder, new TrainingExerciseScoreEntityTypeConfiguration());
         Register(modelBuilder, new ExerciseScoreEntityTypeConfiguration());
         Register(modelBuilder, new MeasurementEntityTypeConfiguration());
+        Register(modelBuilder, new ReportSubmissionProgressReceiptEntityTypeConfiguration());
         Register(modelBuilder, new MainRecordEntityTypeConfiguration());
         Register(modelBuilder, new GymEntityTypeConfiguration());
         Register(modelBuilder, new AddressEntityTypeConfiguration());

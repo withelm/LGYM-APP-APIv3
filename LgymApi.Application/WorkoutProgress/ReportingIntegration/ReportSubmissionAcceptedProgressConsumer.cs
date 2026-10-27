@@ -1,5 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.WorkoutProgress.ReportingIntegration;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration;
 
@@ -40,34 +42,29 @@ public sealed class ReportSubmissionAcceptedProgressConsumer : IReportSubmission
             };
         }
 
-        var measurements = @event.Measurements
-            .GroupBy(measurement => measurement.BodyPart)
-            .Select(group => group.First())
-            .ToArray();
-        var dayStartUtc = new DateTimeOffset(@event.ObservedAt.UtcDateTime.Date, TimeSpan.Zero);
-        var existingBodyParts = await _persistence.GetExistingBodyPartsAsync(
-            @event.TraineeId,
-            measurements.Select(measurement => measurement.BodyPart).ToArray(),
-            dayStartUtc,
-            dayStartUtc.AddDays(1),
-            cancellationToken);
-        var missingMeasurements = measurements
-            .Where(measurement => !existingBodyParts.Contains(measurement.BodyPart))
-            .ToArray();
-
-        if (missingMeasurements.Length == 0)
+        Id<ReportSubmission>.TryParse(@event.ReportSubmissionId, out var reportSubmissionId);
+        if (await _persistence.HasReceiptAsync(reportSubmissionId, cancellationToken))
         {
             return ReportSubmissionAcceptedProgressConsumeResult.Duplicate();
         }
 
-        foreach (var measurement in missingMeasurements)
+        var measurements = @event.Measurements
+            .GroupBy(measurement => measurement.BodyPart)
+            .Select(group => group.First())
+            .ToArray();
+
+        await _persistence.AddReceiptAsync(
+            new AcceptedReportSubmissionReceiptPersistenceModel(reportSubmissionId),
+            cancellationToken);
+
+        foreach (var measurement in measurements)
         {
             await _persistence.AddAsync(new AcceptedReportMeasurementPersistenceModel(
                 @event.TraineeId,
                 measurement.BodyPart,
                 measurement.Unit,
                 measurement.Value,
-                @event.ObservedAt), cancellationToken);
+                @event.ObservedAt.ToUniversalTime()), cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
