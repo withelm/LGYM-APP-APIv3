@@ -3,6 +3,7 @@ using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Notifications.Contracts;
 using LgymApi.Platform.Contracts;
+using LgymApi.Payments.Contracts;
 using LgymApi.TrainingPlanning.Contracts;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -33,6 +34,7 @@ public sealed class ModulePersistenceBridgeGuardTests
             Context(typeof(AccountReference).Assembly, "LgymApi.Identity.Persistence.IIdentityPersistenceContext", ["Users", "Roles", "UserRoles", "RoleClaims", "PasswordResetTokens", "UserExternalLogins", "UserSessions", "UserTutorialProgresses", "UserTutorialStepProgresses", "ProviderName"], []),
             Context(typeof(PlanReference).Assembly, "LgymApi.TrainingPlanning.Persistence.ITrainingPlanningPersistenceContext", ["Plans", "PlanDays", "PlanDayExercises"], []),
             Context(typeof(NotificationReference).Assembly, "LgymApi.Notifications.Persistence.INotificationsPersistenceContext", ["NotificationMessages", "EmailNotificationSubscriptions", "PushInstallations", "PushNotificationMessages", "InAppNotifications"], ["InAppNotification", "PushNotificationMessage"])
+            ,Context(typeof(PaymentReference).Assembly, "LgymApi.Payments.Persistence.IPaymentsPersistenceContext", ["PaymentCheckouts", "PaymentEventReceipts"], [])
         };
 
         var services = new ServiceCollection();
@@ -99,12 +101,15 @@ public sealed class ModulePersistenceBridgeGuardTests
     public void Module_InternalsVisibleTo_Lists_Should_Be_Exact()
     {
         var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
-        var modulePaths = new[] { "LgymApi.Platform", "LgymApi.Identity", "LgymApi.TrainingPlanning", "LgymApi.Notifications" };
+        var modulePaths = new[] { "LgymApi.Platform", "LgymApi.Identity", "LgymApi.TrainingPlanning", "LgymApi.Notifications", "LgymApi.Payments" };
 
         foreach (var modulePath in modulePaths)
         {
             var assemblyInfo = Path.Combine(repoRoot, modulePath, "Properties", "AssemblyInfo.cs");
-            Assert.That(ReadFriends(File.ReadAllText(assemblyInfo)), Is.EqualTo(ApprovedFriends), modulePath);
+            var expectedFriends = modulePath == "LgymApi.Payments"
+                ? ApprovedFriends.Concat(["DynamicProxyGenAssembly2"]).ToArray()
+                : ApprovedFriends;
+            Assert.That(ReadFriends(File.ReadAllText(assemblyInfo)), Is.EqualTo(expectedFriends), modulePath);
         }
 
         Assert.That(
@@ -144,6 +149,25 @@ public sealed class ModulePersistenceBridgeGuardTests
         });
     }
 
+    [Test]
+    public void Payments_Workflow_UnitOfWork_Should_Be_The_Only_Module_Commit_Seam()
+    {
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+        var contextSource = File.ReadAllText(Path.Combine(repoRoot, "LgymApi.Payments", "Persistence", "IPaymentsPersistenceContext.cs"));
+        var workflowSource = File.ReadAllText(Path.Combine(repoRoot, "LgymApi.Payments", "Workflows", "IPaymentsWorkflowUnitOfWork.cs"));
+        var adapterSource = File.ReadAllText(Path.Combine(repoRoot, "LgymApi.Infrastructure", "PaymentsWorkflowUnitOfWork.cs"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(contextSource, Does.Not.Contain("SaveChangesAsync"));
+            Assert.That(contextSource, Does.Not.Contain("CommitAsync"));
+            Assert.That(workflowSource, Does.Contain("internal interface IPaymentsWorkflowUnitOfWork"));
+            Assert.That(workflowSource, Does.Contain("Task<int> SaveChangesAsync"));
+            Assert.That(adapterSource, Does.Contain("IUnitOfWork unitOfWork"));
+            Assert.That(adapterSource, Does.Contain("unitOfWork.SaveChangesAsync(cancellationToken)"));
+        });
+    }
+
     private static PersistenceContextExpectation Context(Assembly assembly, string typeName, string[] properties, string[] entryEntities)
     {
         return new PersistenceContextExpectation(assembly.GetType(typeName, throwOnError: true)!, properties, entryEntities);
@@ -176,6 +200,7 @@ public sealed class ModulePersistenceBridgeGuardTests
             Assert.That(entryMethods.Select(method => method.GetParameters().Single().ParameterType.Name), Is.EquivalentTo(expectation.EntryEntities));
             Assert.That(entryMethods.All(method => method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(EntityEntry<>)), Is.True);
             Assert.That(expectation.Type.GetMembers().Select(member => member.Name), Does.Not.Contain("SaveChangesAsync"));
+            Assert.That(expectation.Type.GetMembers().Select(member => member.Name), Does.Not.Contain("CommitAsync"));
             Assert.That(expectation.Type.GetMembers().Select(member => member.Name), Does.Not.Contain("Database"));
             Assert.That(expectation.Type.GetMembers().Select(member => member.Name), Does.Not.Contain("BeginTransactionAsync"));
         });

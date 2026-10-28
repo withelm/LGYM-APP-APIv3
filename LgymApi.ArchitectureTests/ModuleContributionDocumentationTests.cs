@@ -36,7 +36,8 @@ public sealed class ModuleContributionDocumentationTests
         new("module-guide.authority.reporting-boundary", "docs/modular-monolith/issue-392-reporting-boundary.md", "reporting-boundary"),
         new("module-guide.authority.platform-provider-boundary", "docs/modular-monolith/issue-393-platform-reference-data-boundary.md", "platform-provider-boundary"),
         new("module-guide.authority.final-compatibility", "docs/adr/007-final-modular-monolith-compatibility-commitments.md", "final-compatibility"),
-        new("module-guide.authority.final-verification", "docs/modular-monolith/issue-395-final-verification.md", "final-verification")
+        new("module-guide.authority.final-verification", "docs/modular-monolith/issue-395-final-verification.md", "final-verification"),
+        new("module-guide.authority.payments-topology", "docs/adr/008-payments-spike-topology.md", "payments-topology")
     ];
 
     private static readonly PolicyExpectation[] Policies =
@@ -57,7 +58,7 @@ public sealed class ModuleContributionDocumentationTests
         new("module-guide.policy.localization", "resources=en,pl"),
         new("module-guide.policy.tactical-ddd", "invariants=required"),
         new("module-guide.policy.architecture-tests", "focused-guards=true"),
-        new("module-guide.policy.prohibited-patterns", "ninth-module=false; application-to-worker=false; worker-common-feature-command=false")
+        new("module-guide.policy.prohibited-patterns", "tenth-module=false; application-to-worker=false; worker-common-feature-command=false")
     ];
 
     private static readonly PathExpectation[] TrainingPlanningPath =
@@ -272,9 +273,9 @@ public sealed class ModuleContributionDocumentationTests
             AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.owner", "Contract", "canonical-owners=8; completed-training=Workout & Progress; api-persistence=true")), "module-guide.policy.owner");
             AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.placement", "Contract", "owner-first=true; foreign-entities=true; foreign-repositories=true")), "module-guide.policy.placement");
             AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.ef-migrations", "Contract", "AppDbContext=2; PostgreSQL database=2; migration stream=2; physical split=schema")), "module-guide.policy.ef-migrations");
-            AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.prohibited-patterns", "Contract", "ninth-module=true; application-to-worker=false; worker-common-feature-command=false")), "module-guide.policy.prohibited-patterns");
-            AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.prohibited-patterns", "Contract", "ninth-module=false; application-to-worker=true; worker-common-feature-command=false")), "module-guide.policy.prohibited-patterns");
-            AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.prohibited-patterns", "Contract", "ninth-module=false; application-to-worker=false; worker-common-feature-command=true")), "module-guide.policy.prohibited-patterns");
+        AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.prohibited-patterns", "Contract", "tenth-module=true; application-to-worker=false; worker-common-feature-command=false")), "module-guide.policy.prohibited-patterns");
+        AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.prohibited-patterns", "Contract", "tenth-module=false; application-to-worker=true; worker-common-feature-command=false")), "module-guide.policy.prohibited-patterns");
+        AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.prohibited-patterns", "Contract", "tenth-module=false; application-to-worker=false; worker-common-feature-command=true")), "module-guide.policy.prohibited-patterns");
             AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.public-surface", "Contract", "focused-contracts=false; broad-dependency-aggregate=true")), "module-guide.policy.public-surface");
             AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.api-compatibility", "Contract", "endpoint-specific=false; legacy-fields=universal:_id,msg,req")), "module-guide.policy.api-compatibility");
             AssertRejected(() => ValidateGuideTables(ReplaceStableCell(validGuide, "module-guide.policy.read-models", "Contract", "no-tracking=optional; tracked-read=arbitrary")), "module-guide.policy.read-models");
@@ -391,10 +392,10 @@ public sealed class ModuleContributionDocumentationTests
             }
         }
 
-        Ensure(PersistedEntityOwnershipCatalog.CanonicalOwners.Count == 8, "The canonical ownership authority must retain eight owners.");
+        Ensure(PersistedEntityOwnershipCatalog.CanonicalOwners.Count == 9, "The canonical ownership authority must retain nine owners.");
         var projects = File.ReadLines(Path.Combine(repositoryRoot, "LgymApi.sln")).Where(line => line.StartsWith("Project(", StringComparison.Ordinal)).ToArray();
         var edges = projects.Select(line => line.Split('"')[5]).Select(path => Path.Combine(repositoryRoot, path)).SelectMany(ArchitectureTestHelpers.ParseProjectReferences).ToArray();
-        Ensure(projects.Length == 18 && edges.Length == 90, "The dependency authority must retain the 18-project, 90-edge graph.");
+        Ensure(projects.Length == 19 && edges.Length == 97, "The dependency authority must retain the 19-project, 97-edge graph.");
     }
 
     private static IReadOnlyDictionary<string, BoundaryDocumentationRow> ValidateGuideTables(string markdown)

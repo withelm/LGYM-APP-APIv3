@@ -22,6 +22,7 @@ internal static class PersistenceIdentityContract
         "PlatformModelConfigurationRegistrar.ApplyReliability",
         "ApplyNutrition",
         "ApplyReporting"
+        ,"ApplyPayments"
     ];
 
     internal static IReadOnlyList<PersistedDbSetIdentity> DbSets { get; } =
@@ -75,6 +76,8 @@ internal static class PersistenceIdentityContract
         DbSet("UserExternalLogins", "UserExternalLogin"),
         DbSet("Photos", "Photo"),
         DbSet("PhotoUploadSessions", "PhotoUploadSession")
+        ,DbSet("PaymentCheckouts", "PaymentCheckout")
+        ,DbSet("PaymentEventReceipts", "PaymentEventReceipt")
     ];
 
     internal static IReadOnlyList<string> RegistrarConfigurationTypes { get; } =
@@ -128,6 +131,8 @@ internal static class PersistenceIdentityContract
         "RecurringReportAssignmentEntityTypeConfiguration",
         "PhotoEntityTypeConfiguration",
         "PhotoUploadSessionEntityTypeConfiguration"
+        ,"PaymentCheckoutEntityTypeConfiguration"
+        ,"PaymentEventReceiptEntityTypeConfiguration"
     ];
 
     private static PersistedDbSetIdentity DbSet(string propertyName, string entityTypeName)

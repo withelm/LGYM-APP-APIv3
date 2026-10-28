@@ -150,6 +150,7 @@ public sealed class RuntimeCompositionValidationTests
             new FacadeMethodExpectation(typeof(LgymApi.Identity.IdentityModule), "AddIdentityModule"),
             new FacadeMethodExpectation(typeof(LgymApi.TrainingPlanning.TrainingPlanningModule), "AddTrainingPlanningModule"),
             new FacadeMethodExpectation(typeof(LgymApi.Application.Notifications.NotificationsModule), "AddNotificationsModule"),
+            new FacadeMethodExpectation(typeof(LgymApi.Payments.PaymentsModule), "AddPaymentsModule"),
             new FacadeMethodExpectation(typeof(ServiceCollectionExtensions), "AddApplication"),
             new FacadeMethodExpectation(typeof(ApplicationApiAdapterServiceCollectionExtensions), "AddApplicationApiAdapters"),
             new FacadeMethodExpectation(typeof(LgymApi.Application.Notifications.NotificationsModule), "AddNotificationsApiAdapters"),
@@ -179,7 +180,7 @@ public sealed class RuntimeCompositionValidationTests
         {
             [typeof(LgymApi.Application.WorkoutProgress.Scoring.Elo.IExerciseEloCalculator)] = 4,
             [typeof(LgymApi.BackgroundWorker.Common.Notifications.IEmailTemplateComposer)] = 6,
-            [typeof(LgymApi.Application.Mapping.Core.IMappingProfile)] = 46
+            [typeof(LgymApi.Application.Mapping.Core.IMappingProfile)] = 47
         };
 
         foreach (var group in moduleDescriptors)
@@ -244,7 +245,7 @@ public sealed class RuntimeCompositionValidationTests
     {
         var controllerTypes = GetApiControllerTypes();
 
-        controllerTypes.Should().HaveCount(35);
+        controllerTypes.Should().HaveCount(36);
         foreach (var controllerType in controllerTypes)
         {
             serviceProvider.GetRequiredService(controllerType)

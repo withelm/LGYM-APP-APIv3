@@ -156,8 +156,8 @@ public sealed class PlatformReferenceDataBoundaryDocumentationTests
     private static void AssertLockedCatalogs()
     {
         Assert.That(ArchitectureTestHelpers.GetCanonicalModuleCatalog(), Is.EqualTo(PersistedEntityOwnershipCatalog.CanonicalOwners));
-        Assert.That(PersistedEntityOwnershipCatalog.CanonicalOwners, Has.Count.EqualTo(8));
-        Assert.That(PersistedEntityOwnershipCatalog.Entries, Has.Count.EqualTo(49));
+        Assert.That(PersistedEntityOwnershipCatalog.CanonicalOwners, Has.Count.EqualTo(9));
+        Assert.That(PersistedEntityOwnershipCatalog.Entries, Has.Count.EqualTo(51));
 
         var root = ArchitectureTestHelpers.ResolveRepositoryRoot();
         var projects = File.ReadLines(Path.Combine(root, "LgymApi.sln"))
@@ -165,10 +165,10 @@ public sealed class PlatformReferenceDataBoundaryDocumentationTests
         var edges = projects.Select(line => line.Split('"')[5])
             .Select(path => Path.Combine(root, path))
             .SelectMany(ArchitectureTestHelpers.ParseProjectReferences).ToList();
-        Assert.That(projects, Has.Count.EqualTo(18));
-        Assert.That(edges, Has.Count.EqualTo(90));
+        Assert.That(projects, Has.Count.EqualTo(19));
+        Assert.That(edges, Has.Count.EqualTo(97));
         Assert.That(PersistenceIdentityContract.DbContextSourcePath, Is.EqualTo("LgymApi.Infrastructure/Data/AppDbContext.cs"));
-        Assert.That(PersistenceIdentityContract.DbSets, Has.Count.EqualTo(49));
+        Assert.That(PersistenceIdentityContract.DbSets, Has.Count.EqualTo(51));
     }
 
     private static void AssertRegistrations()

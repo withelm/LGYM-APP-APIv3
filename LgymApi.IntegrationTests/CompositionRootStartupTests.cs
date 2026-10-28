@@ -31,6 +31,7 @@ using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.BackgroundWorker.Services;
 using LgymApi.Notifications;
 using LgymApi.Notifications.ApiAdapters;
+using LgymApi.Payments.Persistence;
 using LgymApi.Domain.Enums;
 using LgymApi.Infrastructure.Pagination;
 using LgymApi.Infrastructure.Repositories;
@@ -149,6 +150,8 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
             .Which.Should().BeOfType<NoOpPushBackgroundScheduler>();
         services.GetServices<IPushProviderSender>().Should().ContainSingle()
             .Which.Should().BeSameAs(Factory.PushSender);
+        services.GetServices<IPaymentCheckoutRepository>().Should().ContainSingle();
+        services.GetServices<IPaymentEventReceiptRepository>().Should().ContainSingle();
         services.GetServices<IPhotoStorageProvider>().Should().ContainSingle()
             .Which.Should().BeOfType<LocalPhotoStorageProvider>();
         services.GetServices<IReportPhotoPersistence>().Should().ContainSingle()
@@ -175,7 +178,7 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
         emailTemplateComposers.Should().HaveCount(6);
         emailTemplateComposers.Select(composer => composer.GetType()).Should().OnlyHaveUniqueItems();
         var mappingProfiles = services.GetServices<IMappingProfile>().ToArray();
-        mappingProfiles.Should().HaveCount(46);
+        mappingProfiles.Should().HaveCount(47);
         mappingProfiles.Select(profile => profile.GetType()).Should().OnlyHaveUniqueItems();
         mappingProfiles.OfType<EnumLookupMappingProfile>().Should().ContainSingle();
         mappingProfiles.OfType<PlanExerciseWorkoutAdapterMappingProfile>().Should().ContainSingle();

@@ -12,11 +12,12 @@ public sealed class ModuleBoundaryProductionScanGuardTests
         "LgymApi.Platform",
         "LgymApi.Identity",
         "LgymApi.TrainingPlanning",
-        "LgymApi.Notifications"
+        "LgymApi.Notifications",
+        "LgymApi.Payments"
     ];
 
     [Test]
-    public void Production_Scan_Should_Compile_Every_Source_From_The_Exact_Six_Assemblies()
+    public void Production_Scan_Should_Compile_Every_Source_From_The_Exact_Seven_Assemblies()
     {
         var scan = ModuleBoundaryProductionScan.Prepare();
 
@@ -54,7 +55,7 @@ public sealed class ModuleBoundaryProductionScanGuardTests
         Assert.That(
             () => ModuleBoundaryProductionScan.AssertExactProjectCoverage(wildcardProjects),
             Throws.TypeOf<AssertionException>()
-                .With.Message.Contains("LgymApi.Notifications"));
+                .With.Message.Contains("LgymApi.Payments"));
     }
 
     [Test]

@@ -1,6 +1,6 @@
 # Issue #380: Approved Current Project-Reference Graph
 
-This is the authoritative current graph after the completed issue #387 extraction. It is derived only from tracked `.csproj` `ProjectReference` items. Namespace imports, runtime registration, and transitive build dependencies are not graph edges.
+This is the authoritative current graph after the completed issue #387 extraction and the Payments composition addition. It contains 19 projects, 97 direct edges, 96 semantic source/import edges, one Resources analyzer edge, and a 245-edge forbidden complement. Payments directly references Domain and Identity; API composes its public facade, while Infrastructure, ArchitectureTests, IntegrationTests, and UnitTests directly reference its persistence contracts. Stripe is a private Payments implementation, with no public provider-specific API surface or Worker implementation. The graph is derived only from tracked `.csproj` `ProjectReference` items. Namespace imports, runtime registration, and transitive build dependencies are not graph edges.
 
 ## Solution projects
 
@@ -16,12 +16,13 @@ This is the authoritative current graph after the completed issue #387 extractio
 10. `LgymApi.Infrastructure`
 11. `LgymApi.IntegrationTests`
 12. `LgymApi.Notifications`
-13. `LgymApi.Platform`
-14. `LgymApi.Resources`
-15. `LgymApi.Resources.Generator`
-16. `LgymApi.TestUtils`
-17. `LgymApi.TrainingPlanning`
-18. `LgymApi.UnitTests`
+13. `LgymApi.Payments`
+14. `LgymApi.Platform`
+15. `LgymApi.Resources`
+16. `LgymApi.Resources.Generator`
+17. `LgymApi.TestUtils`
+18. `LgymApi.TrainingPlanning`
+19. `LgymApi.UnitTests`
 
 ## Canonical direct edge manifest
 
@@ -33,6 +34,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Api` -> `LgymApi.Identity`
 - `LgymApi.Api` -> `LgymApi.Infrastructure`
 - `LgymApi.Api` -> `LgymApi.Notifications`
+- `LgymApi.Api` -> `LgymApi.Payments`
 - `LgymApi.Api` -> `LgymApi.Platform`
 - `LgymApi.Api` -> `LgymApi.Resources`
 - `LgymApi.Api` -> `LgymApi.TrainingPlanning`
@@ -48,6 +50,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.ArchitectureTests` -> `LgymApi.Identity`
 - `LgymApi.ArchitectureTests` -> `LgymApi.Infrastructure`
 - `LgymApi.ArchitectureTests` -> `LgymApi.Notifications`
+- `LgymApi.ArchitectureTests` -> `LgymApi.Payments`
 - `LgymApi.ArchitectureTests` -> `LgymApi.Platform`
 - `LgymApi.ArchitectureTests` -> `LgymApi.Resources`
 - `LgymApi.ArchitectureTests` -> `LgymApi.TrainingPlanning`
@@ -73,6 +76,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Infrastructure` -> `LgymApi.Domain`
 - `LgymApi.Infrastructure` -> `LgymApi.Identity`
 - `LgymApi.Infrastructure` -> `LgymApi.Notifications`
+- `LgymApi.Infrastructure` -> `LgymApi.Payments`
 - `LgymApi.Infrastructure` -> `LgymApi.Platform`
 - `LgymApi.Infrastructure` -> `LgymApi.TrainingPlanning`
 - `LgymApi.IntegrationTests` -> `LgymApi.Api`
@@ -83,6 +87,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.IntegrationTests` -> `LgymApi.Identity`
 - `LgymApi.IntegrationTests` -> `LgymApi.Infrastructure`
 - `LgymApi.IntegrationTests` -> `LgymApi.Notifications`
+- `LgymApi.IntegrationTests` -> `LgymApi.Payments`
 - `LgymApi.IntegrationTests` -> `LgymApi.Platform`
 - `LgymApi.IntegrationTests` -> `LgymApi.Resources`
 - `LgymApi.IntegrationTests` -> `LgymApi.TestUtils`
@@ -92,6 +97,8 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Notifications` -> `LgymApi.Identity`
 - `LgymApi.Notifications` -> `LgymApi.Platform`
 - `LgymApi.Notifications` -> `LgymApi.Resources`
+- `LgymApi.Payments` -> `LgymApi.Domain`
+- `LgymApi.Payments` -> `LgymApi.Identity`
 - `LgymApi.Platform` -> `LgymApi.Domain`
 - `LgymApi.Platform` -> `LgymApi.Resources`
 - `LgymApi.Resources` -> `LgymApi.Resources.Generator`
@@ -113,6 +120,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.UnitTests` -> `LgymApi.Identity`
 - `LgymApi.UnitTests` -> `LgymApi.Infrastructure`
 - `LgymApi.UnitTests` -> `LgymApi.Notifications`
+- `LgymApi.UnitTests` -> `LgymApi.Payments`
 - `LgymApi.UnitTests` -> `LgymApi.Platform`
 - `LgymApi.UnitTests` -> `LgymApi.Resources`
 - `LgymApi.UnitTests` -> `LgymApi.TestUtils`
@@ -130,6 +138,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Api -> LgymApi.Identity` | `LgymApi.Api/Features/Account/Controllers/AccountController.cs:8` |
 | `LgymApi.Api -> LgymApi.Infrastructure` | `LgymApi.Api/Configuration/LocalPhotoDevelopmentEndpoints.cs:27` |
 | `LgymApi.Api -> LgymApi.Notifications` | `LgymApi.Api/Features/InAppNotification/Controllers/InAppNotificationController.cs:6` |
+| `LgymApi.Api -> LgymApi.Payments` | `LgymApi.Api/Program.cs:80` |
 | `LgymApi.Api -> LgymApi.Platform` | `LgymApi.Api/Extensions/ApiJsonOptionsExtensions.cs:3` |
 | `LgymApi.Api -> LgymApi.Resources` | `LgymApi.Api/Configuration/ApiAuthenticationExtensions.cs:49` |
 | `LgymApi.Api -> LgymApi.TrainingPlanning` | `LgymApi.Api/Features/PlanDay/Controllers/PlanDayController.cs:9` |
@@ -145,6 +154,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.ArchitectureTests -> LgymApi.Identity` | `LgymApi.ArchitectureTests/CoachingManagedPlanSliceArchitectureTests.cs:13` |
 | `LgymApi.ArchitectureTests -> LgymApi.Infrastructure` | `LgymApi.ArchitectureTests/CanonicalRepositoryRegistrationDiTests.cs:37` |
 | `LgymApi.ArchitectureTests -> LgymApi.Notifications` | `LgymApi.ArchitectureTests/CanonicalRepositoryRegistrationDiTests.cs:1` |
+| `LgymApi.ArchitectureTests -> LgymApi.Payments` | `LgymApi.ArchitectureTests/ModulePersistenceBridgeGuardTests.cs:6` |
 | `LgymApi.ArchitectureTests -> LgymApi.Platform` | `LgymApi.ArchitectureTests/AppConfigAuthorizationBoundaryGuardTests.cs:1` |
 | `LgymApi.ArchitectureTests -> LgymApi.Resources` | `LgymApi.ArchitectureTests/ProjectReferenceGraphGuardTests.cs:27` |
 | `LgymApi.ArchitectureTests -> LgymApi.TrainingPlanning` | `LgymApi.ArchitectureTests/CoachingManagedPlanSliceArchitectureTests.cs:14` |
@@ -170,8 +180,9 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Infrastructure -> LgymApi.Domain` | `LgymApi.Infrastructure/Configuration/InfrastructureMappingRegistration.cs:4` |
 | `LgymApi.Infrastructure -> LgymApi.Identity` | `LgymApi.Infrastructure/Configuration/InfrastructureMappingRegistration.cs:12` |
 | `LgymApi.Infrastructure -> LgymApi.Notifications` | `LgymApi.Infrastructure/Data/AppDbContext.cs:9` |
+| `LgymApi.Infrastructure -> LgymApi.Payments` | `LgymApi.Infrastructure/Data/AppDbContext.cs:10` |
 | `LgymApi.Infrastructure -> LgymApi.Platform` | `LgymApi.Infrastructure/Configuration/InfrastructureMappingRegistration.cs:1` |
-| `LgymApi.Infrastructure -> LgymApi.TrainingPlanning` | `LgymApi.Infrastructure/Data/AppDbContext.cs:11` |
+| `LgymApi.Infrastructure -> LgymApi.TrainingPlanning` | `LgymApi.Infrastructure/Data/AppDbContext.cs:12` |
 | `LgymApi.IntegrationTests -> LgymApi.Api` | `LgymApi.IntegrationTests/ApiHostConfigurationCharacterizationTests.cs:8` |
 | `LgymApi.IntegrationTests -> LgymApi.Application` | `LgymApi.IntegrationTests/CoachingDashboardProgressSliceIntegrationTests.cs:5` |
 | `LgymApi.IntegrationTests -> LgymApi.BackgroundWorker` | `LgymApi.IntegrationTests/CoachingLegacyEnvelopeReplayIntegrationTests.cs:245` |
@@ -180,6 +191,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.IntegrationTests -> LgymApi.Identity` | `LgymApi.IntegrationTests/CoachingContractCompatibilityTests.cs:8` |
 | `LgymApi.IntegrationTests -> LgymApi.Infrastructure` | `LgymApi.IntegrationTests/AdminUserIntegrationTests.cs:102` |
 | `LgymApi.IntegrationTests -> LgymApi.Notifications` | `LgymApi.IntegrationTests/CompositionRootStartupTests.cs:16` |
+| `LgymApi.IntegrationTests -> LgymApi.Payments` | `LgymApi.IntegrationTests/PostgreSqlPaymentsPersistenceTests.cs:6` |
 | `LgymApi.IntegrationTests -> LgymApi.Platform` | `LgymApi.IntegrationTests/ApiHostConfigurationCharacterizationTests.cs:10` |
 | `LgymApi.IntegrationTests -> LgymApi.Resources` | `LgymApi.IntegrationTests/ApiHostConfigurationCharacterizationTests.cs:179` |
 | `LgymApi.IntegrationTests -> LgymApi.TestUtils` | `LgymApi.IntegrationTests/CoachingLegacyEnvelopeReplayIntegrationTests.cs:78` |
@@ -189,6 +201,8 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Notifications -> LgymApi.Identity` | `LgymApi.Notifications/Adapters/PushInstallationSessionDisassociationAdapter.cs:1` |
 | `LgymApi.Notifications -> LgymApi.Platform` | `LgymApi.Notifications/CoachingNotificationIntentService.cs:2` |
 | `LgymApi.Notifications -> LgymApi.Resources` | `LgymApi.Notifications/CoachingNotificationIntentService.cs:52` |
+| `LgymApi.Payments -> LgymApi.Domain` | `LgymApi.Payments/Contracts/PaymentAccountReference.cs:1` |
+| `LgymApi.Payments -> LgymApi.Identity` | `LgymApi.Payments/Contracts/PaymentAccountReference.cs:2` |
 | `LgymApi.Platform -> LgymApi.Domain` | `LgymApi.Platform/Contracts/Serialization/TypedIdJsonConverter.cs:3` |
 | `LgymApi.Platform -> LgymApi.Resources` | `LgymApi.Platform/ReferenceData/AppConfig/AppConfigService.cs:35` |
 | `LgymApi.Resources -> LgymApi.Resources.Generator` | `LgymApi.Resources/LgymApi.Resources.csproj:16` analyzer reference |
@@ -210,6 +224,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.UnitTests -> LgymApi.Identity` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:16` |
 | `LgymApi.UnitTests -> LgymApi.Infrastructure` | `LgymApi.UnitTests/ActorRowSecurityScopeTests.cs:7` |
 | `LgymApi.UnitTests -> LgymApi.Notifications` | `LgymApi.UnitTests/ApplicationPushContractCompatibilityTests.cs:7` |
+| `LgymApi.UnitTests -> LgymApi.Payments` | `LgymApi.UnitTests/PaymentsStripeBoundaryTests.cs:7` |
 | `LgymApi.UnitTests -> LgymApi.Platform` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:4` |
 | `LgymApi.UnitTests -> LgymApi.Resources` | `LgymApi.UnitTests/CoachingNotificationIntentInAppTests.cs:99` |
 | `LgymApi.UnitTests -> LgymApi.TestUtils` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:119` |
@@ -217,9 +232,9 @@ Each row is one representative source location whose symbol resolves to the targ
 
 ## Locked topology
 
-The graph has exactly 18 projects and 90 `ProjectReference` edges. It is acyclic, each edge is unique, 89 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured. The forbidden cross-project edge complement contains exactly 216 edges.
+The graph has exactly 19 projects and 97 `ProjectReference` edges. It is acyclic, each edge is unique, 96 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured. The forbidden cross-project edge complement contains exactly 245 edges.
 
-Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Identity` -> `LgymApi.Notifications` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
+Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Identity` -> `LgymApi.Notifications` -> `LgymApi.Payments` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
 
 This topology retains one `AppDbContext`, migration root, snapshot, database, schema, and migration stream. Worker selects environment-specific scheduling and delegates hosted Hangfire server registration to the Infrastructure-owned persistence helper.
 

@@ -13,7 +13,8 @@ public static class ModuleBoundaryProductionScan
         "LgymApi.Platform",
         "LgymApi.Identity",
         "LgymApi.TrainingPlanning",
-        "LgymApi.Notifications"
+        "LgymApi.Notifications",
+        "LgymApi.Payments"
     ];
 
     public static ModuleBoundaryProductionCompilation Prepare()
@@ -58,7 +59,7 @@ public static class ModuleBoundaryProductionScan
         }
 
         throw new AssertionException(
-            "Module-boundary production scans must compile exactly Application, Domain, Platform, Identity, TrainingPlanning, and Notifications in canonical order. " +
+            "Module-boundary production scans must compile exactly Application, Domain, Platform, Identity, TrainingPlanning, Notifications, and Payments in canonical order. " +
             $"Missing: {FormatValues(missingProjects)}; unexpected: {FormatValues(unexpectedProjects)}; duplicates: {FormatValues(duplicateProjects)}.");
     }
 
@@ -84,6 +85,8 @@ public static class ModuleBoundaryProductionScan
                 => ArchitectureTestHelpers.TrainingPlanningModuleName,
             var path when path.StartsWith("LgymApi.Notifications/", StringComparison.OrdinalIgnoreCase)
                 => ArchitectureTestHelpers.NotificationsModuleName,
+            var path when path.StartsWith("LgymApi.Payments/", StringComparison.OrdinalIgnoreCase)
+                => ArchitectureTestHelpers.PaymentsModuleName,
             _ => null
         };
         if (physicalAssemblyModule != null)

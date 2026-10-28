@@ -59,8 +59,8 @@ public sealed class Issue395FinalDocumentationTests
             "LgymApi.ArchitectureTests/Missing.cs#Missing",
             StringComparison.Ordinal))));
         Assert.Throws<AssertionException>(() => ValidateFinalDisposition(ParseRows(valid.Replace(
-            "projects=18; direct-edges=90; forbidden-complement=216",
-            "projects=19; direct-edges=90; forbidden-complement=216",
+            "projects=19; direct-edges=97; semantic-edges=96; analyzer-edges=1; forbidden-complement=245",
+            "projects=18; direct-edges=97; semantic-edges=96; analyzer-edges=1; forbidden-complement=245",
             StringComparison.Ordinal))));
         Assert.Throws<AssertionException>(() => ValidateAdapterDisposition(ParseRows(valid.Replace(
             "| `issue395.adapter.application-api` | Controller-facing API adapters | `25` |",
@@ -87,11 +87,11 @@ public sealed class Issue395FinalDocumentationTests
     private static void ValidateFinalDisposition(IReadOnlyList<Row> rows)
     {
         var disposition = RequirePrefix(rows, "issue395.dependency.", 5);
-        Assert.That(disposition["issue395.dependency.graph"]["Final fact"], Is.EqualTo("projects=18; direct-edges=90; forbidden-complement=216"));
+        Assert.That(disposition["issue395.dependency.graph"]["Final fact"], Is.EqualTo("projects=19; direct-edges=97; semantic-edges=96; analyzer-edges=1; forbidden-complement=245"));
         Assert.That(disposition["issue395.dependency.persistence"]["Final fact"], Is.EqualTo("AppDbContext=1; PostgreSQL-database=1; migration-stream=1; deployables=1"));
-        Assert.That(disposition["issue395.dependency.ownership"]["Final fact"], Is.EqualTo("entities=48; owners=8"));
-        Assert.That(disposition["issue395.dependency.mapping"]["Final fact"], Is.EqualTo("profiles=46"));
-        Assert.That(disposition["issue395.dependency.exports"]["Final fact"], Is.EqualTo("entries=771"));
+        Assert.That(disposition["issue395.dependency.ownership"]["Final fact"], Is.EqualTo("entities=51; owners=9; payments-entities=2"));
+        Assert.That(disposition["issue395.dependency.mapping"]["Final fact"], Is.EqualTo("profiles=47"));
+        Assert.That(disposition["issue395.dependency.exports"]["Final fact"], Is.EqualTo("entries=789"));
     }
 
     private static void ValidateAdapterDisposition(IReadOnlyList<Row> rows)

@@ -70,6 +70,9 @@ public sealed class ModulePersistenceOwnershipGuardTests
         configurationFiles.AddRange(notificationsFiles
             .Where(path => ArchitectureTestHelpers.NormalizePath(path).Contains("/Persistence/Configurations/", StringComparison.OrdinalIgnoreCase) &&
                            Path.GetFileName(path).EndsWith("EntityTypeConfiguration.cs", StringComparison.Ordinal)));
+        configurationFiles.AddRange(ArchitectureTestHelpers.EnumerateProjectSourceFiles("LgymApi.Payments")
+            .Where(path => ArchitectureTestHelpers.NormalizePath(path).Contains("/Persistence/Configurations/", StringComparison.OrdinalIgnoreCase) &&
+                           Path.GetFileName(path).EndsWith("EntityTypeConfiguration.cs", StringComparison.Ordinal)));
         configurationFiles.AddRange(trainingPlanningFiles
             .Where(path => ArchitectureTestHelpers.NormalizePath(path).Contains("/Persistence/Configurations/", StringComparison.OrdinalIgnoreCase) &&
                            Path.GetFileName(path).EndsWith("EntityTypeConfiguration.cs", StringComparison.Ordinal)));
@@ -247,6 +250,8 @@ public sealed class ModulePersistenceOwnershipGuardTests
             .Where(path => ArchitectureTestHelpers.NormalizePath(path).Contains("/Persistence/Configurations/", StringComparison.OrdinalIgnoreCase) && Path.GetFileName(path).EndsWith("EntityTypeConfiguration.cs", StringComparison.Ordinal)));
         configurationFiles = configurationFiles.Concat(ArchitectureTestHelpers.EnumerateProjectSourceFiles("LgymApi.Notifications")
             .Where(path => ArchitectureTestHelpers.NormalizePath(path).Contains("/Persistence/Configurations/", StringComparison.OrdinalIgnoreCase) && Path.GetFileName(path).EndsWith("EntityTypeConfiguration.cs", StringComparison.Ordinal)));
+        configurationFiles = configurationFiles.Concat(ArchitectureTestHelpers.EnumerateProjectSourceFiles("LgymApi.Payments")
+            .Where(path => ArchitectureTestHelpers.NormalizePath(path).Contains("/Persistence/Configurations/", StringComparison.OrdinalIgnoreCase) && Path.GetFileName(path).EndsWith("EntityTypeConfiguration.cs", StringComparison.Ordinal)));
         var configurations = CollectConfigurationDeclarations(
             configurationFiles,
             CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest));
@@ -327,6 +332,7 @@ public sealed class ModulePersistenceOwnershipGuardTests
             PersistedEntityOwnershipCatalog.WorkoutProgressModuleName => "WorkoutProgress",
             PersistedEntityOwnershipCatalog.CoachingModuleName => "Coaching",
             PersistedEntityOwnershipCatalog.NutritionModuleName => "Nutrition",
+            PersistedEntityOwnershipCatalog.PaymentsModuleName => "Payments",
             _ => throw new InvalidOperationException($"No physical configuration-folder mapping exists for catalog owner '{catalogOwner}'.")
         };
     }

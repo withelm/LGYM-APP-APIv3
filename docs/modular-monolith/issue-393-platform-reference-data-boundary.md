@@ -6,7 +6,7 @@ Current executable concern-owner matrix for the completed #387 architecture. It 
 
 ## Machine Contract
 
-Rows in this section are parsed by `PlatformReferenceDataBoundaryDocumentationTests`. `Implementation / host` is a semicolon-separated list of `repository-relative-path#CSharpSymbol` locators. `Canonical module` must be one of the eight entries in the executable ownership catalog.
+Rows in this section are parsed by `PlatformReferenceDataBoundaryDocumentationTests`. `Implementation / host` is a semicolon-separated list of `repository-relative-path#CSharpSymbol` locators. `Canonical module` must be one of the nine entries in the executable ownership catalog.
 
 | Concern ID | Canonical module | Owner | Seam | Implementation / host | Allowed dependencies | Forbidden placement | Compatibility invariant |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ Rows in this section are parsed by `PlatformReferenceDataBoundaryDocumentationTe
 
 ## Non-Canonical Platform Sub-Boundaries
 
-These are internal classifications of `Platform / Reference Data`. They are not canonical modules or projects and do not change the 18-project graph.
+These are internal classifications of `Platform / Reference Data`. They are not canonical modules or projects and do not change the 19-project graph.
 
 | Sub-boundary ID | Canonical module | Module/project status |
 | --- | --- | --- |
@@ -42,4 +42,4 @@ These are internal classifications of `Platform / Reference Data`. They are not 
 
 ## Locked Topology
 
-The executable project-reference guard fixes 18 projects and 90 edges, including the dependency-first order and 216 forbidden edges. The executable persisted-entity catalog fixes eight canonical modules and 48 entities. This matrix does not alter either contract.
+The executable project-reference guard fixes 19 projects and 97 edges, including the dependency-first order and 245 forbidden edges. The executable persisted-entity catalog fixes nine canonical modules and 51 entities, with Payments owning two persisted entities. This matrix does not alter either contract.

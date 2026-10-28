@@ -519,7 +519,7 @@ public sealed class CompositionRootConvergenceTests
         ValidateSingleDescriptor(services, typeof(IPushBackgroundScheduler), ServiceLifetime.Scoped, expectedPushSchedulerType);
 
         ValidateImplementationCollection(services, typeof(IEmailTemplateComposer), ServiceLifetime.Scoped, expectedCount: 6);
-        ValidateImplementationCollection(services, typeof(IMappingProfile), ServiceLifetime.Singleton, expectedCount: 46);
+        ValidateImplementationCollection(services, typeof(IMappingProfile), ServiceLifetime.Singleton, expectedCount: 47);
         services.Count(descriptor => descriptor.ServiceType == typeof(IAccountLookupService)).Should().Be(1);
         services.Count(descriptor => descriptor.ServiceType == typeof(IAccountAccessReader)).Should().Be(1);
         services.Count(descriptor => descriptor.ServiceType == typeof(IAccountSessionValidator)).Should().Be(1);

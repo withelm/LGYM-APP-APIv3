@@ -9,6 +9,7 @@ using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.Identity.Contracts;
 using LgymApi.Notifications.ApiAdapters;
+using LgymApi.Payments.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.UnitTests;
@@ -22,6 +23,7 @@ public sealed class CompositionFacadeOmissionTests
         new(CompositionFacade.Identity, typeof(ITokenService)),
         new(CompositionFacade.TrainingPlanning, typeof(IPlanDayService)),
         new(CompositionFacade.Notifications, typeof(IInAppNotificationService)),
+        new(CompositionFacade.Payments, typeof(IPaymentCheckoutRepository)),
         new(CompositionFacade.Application, typeof(IReportingService)),
         new(CompositionFacade.Infrastructure, typeof(LgymApi.Application.Repositories.IUnitOfWork)),
         new(CompositionFacade.ApplicationApiAdapters, typeof(IAppConfigApiAdapter)),

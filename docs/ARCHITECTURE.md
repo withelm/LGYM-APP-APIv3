@@ -6,7 +6,7 @@ This document explains how the backend is structured and how to add a new module
 
 - `LgymApi.Api` - HTTP layer (controllers, DTO contracts, validators, middleware, API mapping profiles).
 - `LgymApi.Application` - remaining Reporting, Workout & Progress, Coaching, and Nutrition use-case orchestration.
-- `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, and `LgymApi.Notifications` - stable module assemblies with public facades, explicit contracts, and internal implementations.
+- `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, `LgymApi.Notifications`, and `LgymApi.Payments` - stable module assemblies with public facades, explicit contracts, and internal implementations.
 - `LgymApi.Domain` - core domain types (entities, enums, domain-only helpers).
 - `LgymApi.Infrastructure` - shared persistence and technical runtime (EF Core `AppDbContext`, UoW, migrations, Hangfire persistence, and module context bridges).
 - `LgymApi.UnitTests` - focused unit tests.
@@ -45,7 +45,7 @@ If you add a repository method that mutates data, make it stage-only and ensure 
 
 ### Persistence ownership and identifier contract
 
-The production system has one `AppDbContext`, one design-time `AppDbContextFactory`, one `AppDbContextModelSnapshot`, one database, and one migration stream rooted in Infrastructure. The factory constructs the same Npgsql model without API/runtime DI. Each of the 49 persisted entities still has exactly one module owner. This is logical write ownership only; it does not introduce a physical database, `DbContext`, schema, or migration-stream split. `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable ownership source of truth, and `docs/modular-monolith/issue-376-ownership-map.md` is its tested documentation view.
+The production system has one `AppDbContext`, one design-time `AppDbContextFactory`, one `AppDbContextModelSnapshot`, one database, and one migration stream rooted in Infrastructure. The factory constructs the same Npgsql model without API/runtime DI. Each of the 51 persisted entities still has exactly one module owner. This is logical write ownership only; it does not introduce a physical database, `DbContext`, schema, or migration-stream split. `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable ownership source of truth, and `docs/modular-monolith/issue-376-ownership-map.md` is its tested documentation view.
 
 Workout execution and completed-training history belong to `Workout & Progress`. `Training.TypePlanDayId` may reference the `Training Planning` definition used to perform a workout, but that reference does not give Training Planning write ownership over the completed `Training` row.
 
@@ -111,7 +111,7 @@ When reviewing mapper changes:
 - Middleware order is localization, authentication, conditional rate limiting outside Testing, `UserContextMiddleware`, authorization, and API idempotency. Current persisted account, session, and permission facts in the authenticated context are policy authority; stale JWT permission claims are not.
 - Owner-scoped reads and writes bind the authenticated account to the target resource before materialization or mutation. For Plans, the persistence predicate requires matching Plan ID, owner ID, and non-deleted state. Exercise access distinguishes globally visible Exercises, actor-owned custom Exercises, and current `ManageGlobalExercises` overrides without disclosing foreign custom resources.
 - Development Local photo URLs are signed bearer capabilities. Their verification binds version, HTTP method, normalized storage key, and expiry before decoding or storage access; uploads also enforce MIME and streamed-size policy before an atomic temporary-file promotion.
-- The HTTP matrix has 185 classified routes. Each row has executable semantic evidence for its access class and facets, and the guard rejects unresolved, mismatched, or incomplete route evidence.
+- The HTTP matrix has 188 classified routes. Each row has executable semantic evidence for its access class and facets, and the guard rejects unresolved, mismatched, or incomplete route evidence.
 - SignalR connection state is API-local and keyed by validated account/session pairs. Publishers revalidate each pair and prune invalid entries before direct delivery. This supports sticky single-instance hosting only; a distributed backplane requires separate design work.
 
 ## 6. Contributing a Use Case or Module-Boundary Change
@@ -196,7 +196,7 @@ The solution uses module-owned registration helpers composed by the host, enforc
 - **Application services**: `AddApplication` composes Reporting, Workout & Progress, Coaching, Nutrition, and the internal Platform command-envelope runtime helper; extracted modules keep their own public facades.
 - **Infrastructure dependencies**: `AddInfrastructure` composes shared persistence/Hangfire/post-commit roots and remaining persistence adapters, but no extracted implementation service or provider.
 - **Shared platform roots**: keep cross-cutting services in `AddPlatformServices(...)`.
-- **Host composition**: `Program.cs` composes Platform, Identity, Training Planning, Notifications, remaining Application, Infrastructure, API adapters, and Worker in that exact order. Narrow Infrastructure helpers are not host entrypoints.
+- **Host composition**: `Program.cs` composes Platform, Identity, Training Planning, Notifications, Payments, remaining Application, Infrastructure, API adapters, and Worker in that exact order. Narrow Infrastructure helpers are not host entrypoints.
 
 ### Registration Ownership
 
@@ -222,7 +222,7 @@ Enum lookup is owned by Reference Data. `EnumLookupMappingProfile` registers the
 
 Notification delivery follows the same ownership rule: Notifications owns its provider-neutral intent policy, including the six typed Coaching intents, push event/result/scheduling contracts, delivery claims, state transitions, retry policy, UoW commits, private FCM implementation/configuration, and five stage-only repositories/mappings behind `INotificationsPersistenceContext`. The implementation compiles from `LgymApi.Notifications` while retaining compatible application namespaces. Application owns the internal command-envelope lifecycle runtime; Worker owns the closed command-handler registry, raw/string dispatch boundary, and Hangfire-facing host behavior. Password-recovery, push, and Coaching email scheduling adapters are selected by their owner modules, while Worker retains generic Common scheduler forwarding and no-op versus Hangfire host scheduling. Infrastructure retains the one-context bridge, global phase coordinator, migrations, and Hangfire persistence/server registration; the final Worker facade delegates enabled server hosting to that Infrastructure-owned helper.
 
-The composition facades are closed and ordered. `AddNotificationsModule(configuration)` owns Notifications policy, repositories, email, and FCM; `AddApplication` owns the four remaining Application modules plus the internal command-envelope runtime helper; `AddInfrastructure` owns shared technical roots, stage-only persistence, and the internal Npgsql duplicate-recovery classifier; Application and Notifications API-adapter facades follow Infrastructure; and `AddBackgroundWorkerServices` is last so Testing resolves no-op schedulers while non-testing resolves Hangfire schedulers.
+The composition facades are closed and ordered. `AddNotificationsModule(configuration)` owns Notifications policy, repositories, email, and FCM; `AddPaymentsModule(configuration, environment)` owns the disabled-by-default Payments registration and private Stripe test-mode provider; `AddApplication` owns the four remaining Application modules plus the internal command-envelope runtime helper; `AddInfrastructure` owns shared technical roots, stage-only persistence, the Payments context/UoW bridge, and the internal Npgsql duplicate-recovery classifier; Application and Notifications API-adapter facades follow Infrastructure; and `AddBackgroundWorkerServices` is last so Testing resolves no-op schedulers while non-testing resolves Hangfire schedulers.
 
 Infrastructure registration ownership is explicit: Notifications owns email registration and selection of Dummy or SMTP senders; Reporting owns its photo-storage registration and Local or Cloudflare R2 selection; Identity owns Google-token validation registration; Notifications owns the FCM provider registration; and API logging owns the optional Elasticsearch sink. Provider SDKs, credentials, and raw provider responses do not belong in Application or BuildingBlocks.
 
@@ -275,7 +275,7 @@ Use the [Module Contribution Guide](MODULE_CONTRIBUTION_GUIDE.md) for owner-firs
 - `#391` codifies Workout & Progress logical ownership and path classification without changing the shared persistence topology or legacy API contracts.
 - `#390` codifies Nutrition's six-entity, 18-action logical boundary and compatibility adapters without changing the shared persistence topology, command identity, or legacy API contracts.
 - `#393` defines the executable concern-owner matrix for Platform and Reference Data.
-- `docs/adr/006-lgym-evolves-as-modular-monolith.md` records the direction, while `docs/adr/007-final-modular-monolith-compatibility-commitments.md` records the final compatibility commitments.
+- `docs/adr/006-lgym-evolves-as-modular-monolith.md` records the direction, `docs/adr/007-final-modular-monolith-compatibility-commitments.md` records the final compatibility commitments, and `docs/adr/008-payments-spike-topology.md` records the implemented Payments skeleton topology.
 
 ### Issue #376 links
 
@@ -290,9 +290,9 @@ Use the [Module Contribution Guide](MODULE_CONTRIBUTION_GUIDE.md) for owner-firs
 - `docs/modular-monolith/issue-393-platform-reference-data-boundary.md`
 - `docs/modular-monolith/issue-395-final-verification.md`
 
-The project-reference manifest fixes the current solution at 18 projects and 90 unique, justified direct edges: 89 have Roslyn-resolved source/import evidence and one is the Resources analyzer edge. The import guard rejects unused edges, missing direct imports, transitive reliance, forbidden edges, duplicates, cycles, and topological-order drift. The graph document also fixes the dependency-first order and 216-edge forbidden complement.
-The authoritative 18-project, 90-edge graph remains unchanged. The SignalR test client is centrally pinned and referenced by the integration-test project as a package, not as a project-reference edge.
-The production topology remains one `AppDbContext`, one PostgreSQL database, and one migration stream. The eight owner totals remain Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, and Platform / Reference Data 4, for 49 persisted entities.
+The project-reference manifest fixes the current solution at 19 projects and 97 unique, justified direct edges: 96 have Roslyn-resolved source/import evidence and one is the Resources analyzer edge. The import guard rejects unused edges, missing direct imports, transitive reliance, forbidden edges, duplicates, cycles, and topological-order drift. The graph document also fixes the dependency-first order and 245-edge forbidden complement.
+The authoritative 19-project, 97-direct-edge graph includes the Payments boundary, with 96 semantic source/import edges and one Resources analyzer edge. Payments directly references Domain and Identity; Infrastructure, ArchitectureTests, IntegrationTests, and UnitTests directly reference its persistence contracts. Stripe SDK types, secrets, signatures, and raw payloads remain private to `LgymApi.Payments/Providers/Stripe`; the API host composes Payments' provider-neutral facade and Payments has no Worker implementation. The SignalR test client is centrally pinned and referenced by the integration-test project as a package, not as a project-reference edge.
+The production topology remains one `AppDbContext`, one PostgreSQL database, and one migration stream. The nine owner totals remain Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, Platform / Reference Data 4, and Payments 2, for 51 persisted entities.
 The compatibility, persistence, and Unit of Work guidance elsewhere in this guide continues to apply and is not restated here.
 
 The final handoff has 25 scoped Application API adapters and three scoped Notifications API adapters. Migration-era `Task7`, `ApiCompatibility`, and `Compatibility.Task7` adapter CLR identities are removed, but established HTTP, JSON, DTO, route, policy, and endpoint-specific legacy-field contracts remain unchanged. The three retained Notifications integration adapters are owner-to-owner seams, not API adapters: `PushInstallationSessionDisassociationAdapter`, `CoachingEmailNotificationSchedulerAdapter`, and `PasswordRecoveryEmailSchedulerAdapter`. See ADR-007 and issue-395 final verification for their removal conditions and the Todo 22 clean same-SHA evidence workflow.

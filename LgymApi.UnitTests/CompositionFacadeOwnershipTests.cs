@@ -23,6 +23,7 @@ using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Notifications.ApiAdapters;
 using LgymApi.Notifications.Contracts;
+using LgymApi.Payments.Persistence;
 using LgymApi.Platform.Contracts;
 using LgymApi.TrainingPlanning.Contracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -72,6 +73,8 @@ public sealed class CompositionFacadeOwnershipTests
         services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(ITokenService));
         services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IPlanDayService));
         services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService));
+        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IPaymentCheckoutRepository));
+        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IPaymentEventReceiptRepository));
         services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IAppConfigApiAdapter));
     }
 
@@ -141,6 +144,8 @@ public sealed class CompositionFacadeOwnershipTests
         new(typeof(ITokenService), ServiceLifetime.Scoped, typeof(AccountReference).Assembly),
         new(typeof(IPlanDayService), ServiceLifetime.Scoped, typeof(PlanReference).Assembly),
         new(typeof(IInAppNotificationService), ServiceLifetime.Scoped, typeof(NotificationReference).Assembly),
+        new(typeof(IPaymentCheckoutRepository), ServiceLifetime.Scoped, typeof(LgymApi.Payments.PaymentsModule).Assembly),
+        new(typeof(IPaymentEventReceiptRepository), ServiceLifetime.Scoped, typeof(LgymApi.Payments.PaymentsModule).Assembly),
         new(typeof(IReportingService), ServiceLifetime.Scoped, typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly),
         new(typeof(IWorkoutProgressReadWriteService), ServiceLifetime.Scoped, typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly),
         new(typeof(ICoachingRelationshipAccessService), ServiceLifetime.Scoped, typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly),

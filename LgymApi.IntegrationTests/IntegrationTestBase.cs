@@ -42,9 +42,11 @@ public abstract class IntegrationTestBase : IDisposable
     [SetUp]
     public void SetUp()
     {
-        Factory = new CustomWebApplicationFactory();
+        Factory = CreateFactory();
         Client = Factory.CreateClient();
     }
+
+    protected virtual CustomWebApplicationFactory CreateFactory() => new();
 
     [TearDown]
     public void TearDown()

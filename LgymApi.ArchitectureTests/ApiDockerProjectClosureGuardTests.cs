@@ -338,7 +338,7 @@ public sealed class ApiDockerProjectClosureGuardTests
             path => File.Exists(ArchitectureTestHelpers.ToHostPath(path))
                 ? File.ReadAllText(ArchitectureTestHelpers.ToHostPath(path))
                 : null);
-        Assert.That(closure, Has.Count.EqualTo(12), "The API project-reference closure must contain exactly 12 projects.");
+        Assert.That(closure, Has.Count.EqualTo(13), "The API project-reference closure must contain exactly 13 projects.");
 
         var repositoryProjects = Directory
             .EnumerateFiles(repositoryRoot, "*.csproj", SearchOption.AllDirectories)

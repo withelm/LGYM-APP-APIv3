@@ -13,11 +13,11 @@ gyms, measurements, records, scores, and application configuration.
 
 ## Solution structure
 
-The solution has 18 projects and 90 direct project references. The authoritative graph, dependency-first order, and forbidden complement are in `docs/modular-monolith/issue-380-project-reference-graph.md`.
+The solution has 19 projects and 97 direct project references. The authoritative graph, dependency-first order, and forbidden complement are in `docs/modular-monolith/issue-380-project-reference-graph.md`.
 
 - `LgymApi.Api` is the HTTP host and composition root.
 - `LgymApi.Application` contains the remaining Reporting, Workout & Progress, Coaching, and Nutrition use cases.
-- `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, and `LgymApi.Notifications` are stable module assemblies with small public facades and internal implementations.
+- `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, `LgymApi.Notifications`, and `LgymApi.Payments` are stable module assemblies with small public facades and internal implementations.
 - `LgymApi.Domain` contains entities, enums, IDs, and security constants.
 - `LgymApi.Infrastructure` owns the shared EF runtime: one `AppDbContext`, one migration stream, the Unit of Work, Hangfire persistence, and module persistence bridges.
 - `LgymApi.BackgroundWorker` executes durable jobs and selects no-op or Hangfire schedulers. `LgymApi.BackgroundWorker.Common` is the closed persisted-job and email-wire seam.

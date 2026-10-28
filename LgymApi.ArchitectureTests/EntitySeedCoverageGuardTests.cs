@@ -34,7 +34,10 @@ public sealed class EntitySeedCoverageGuardTests
             .Where(name => !string.Equals(name, "CommandEnvelope", StringComparison.Ordinal)
                        && !string.Equals(name, "ActionExecutionLog", StringComparison.Ordinal)
                        && !string.Equals(name, "ApiIdempotencyRecord", StringComparison.Ordinal)
-                       && !string.Equals(name, "ReportSubmissionProgressReceipt", StringComparison.Ordinal))
+                       && !string.Equals(name, "ReportSubmissionProgressReceipt", StringComparison.Ordinal)
+                       // Payments receipts and checkouts originate only from authenticated server workflows.
+                       && !string.Equals(name, "PaymentCheckout", StringComparison.Ordinal)
+                       && !string.Equals(name, "PaymentEventReceipt", StringComparison.Ordinal))
             .ToHashSet(StringComparer.Ordinal);
 
         Assert.That(entities, Is.Not.Empty, "No entities detected in Domain/Entities.");

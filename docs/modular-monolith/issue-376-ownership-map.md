@@ -124,7 +124,7 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 - The exact BuildingBlocks manifest is `Result<T, TError>`, `Result`, `Unit`, `AppError`, `NotFoundError`, `BadRequestError`, `UnauthorizedError`, `ForbiddenError`, `ConflictError`, `UnprocessableEntityError`, and `InternalServerError`.
 - AppConfig protected operations cross the Identity boundary only through its ID-only authorization port. The Identity adapter owns active-user and `ManageAppConfig` permission checks, while latest-by-platform remains unauthenticated.
 - Reference Data owns the enum lookup service and concrete mappings. API consumers do not duplicate enum formatting.
-- The current project-reference manifest is 18 projects and 90 edges. The completed extraction does not change persisted ownership totals, physical persistence topology, or the single migration stream.
+- The current project-reference manifest is 19 projects and 97 edges. Payments is the ninth canonical owner and owns two persisted entities; it does not change the physical persistence topology or the single migration stream.
 - Application, Identity, and Notifications business services use direct constructor injection. High constructor arity has no numeric cap when it keeps focused collaborators explicit. Dependency aggregates and service-locator wrappers are prohibited and must not be restored.
 
 ## Persisted Entity Ownership Catalog
@@ -184,8 +184,10 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `ActionExecutionLog` | `Platform / Reference Data` |
 | `CommandEnvelope` | `Platform / Reference Data` |
 | `ApiIdempotencyRecord` | `Platform / Reference Data` |
+| `PaymentCheckout` | `Payments` |
+| `PaymentEventReceipt` | `Payments` |
 
-Totals are fixed: Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, and Platform / Reference Data 4.
+Totals are fixed: Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, Platform / Reference Data 4, and Payments 2.
 
 ## Ownership tie-breaker
 

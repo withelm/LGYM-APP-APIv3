@@ -7,6 +7,7 @@ using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Identity;
 using LgymApi.Application.Notifications;
+using LgymApi.Payments;
 using LgymApi.TrainingPlanning;
 using LgymApi.Infrastructure;
 using LgymApi.Platform;
@@ -76,6 +77,7 @@ builder.Services
     .AddIdentityModule()
     .AddTrainingPlanningModule()
     .AddNotificationsModule(builder.Configuration)
+    .AddPaymentsModule(builder.Configuration, builder.Environment)
     .AddApplication()
     .AddInfrastructure(
         builder.Configuration,

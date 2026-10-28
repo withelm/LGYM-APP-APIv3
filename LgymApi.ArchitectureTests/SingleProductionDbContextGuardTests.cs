@@ -9,10 +9,12 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 49;
+    private const int PersistedEntityCount = 51;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
+    private const string PaymentsMigration = MigrationRoot + "/20261027200628_AddPaymentsPersistence.cs";
+    private const string PaymentsMigrationDesigner = MigrationRoot + "/20261027200628_AddPaymentsPersistence.Designer.cs";
     private const string SignalRClientTestPackageProject = "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj";
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -21,7 +23,9 @@ public sealed class SingleProductionDbContextGuardTests
         ,
         [ReportReceiptMigration] = "c9567019410d7d64ce119614ae40d0b6dec473bada60ce23986d5bdedef9d62a",
         [ReportReceiptMigrationDesigner] = "a6ab655fcc346b2f12b17baea223f58c3f2d70f63e2df6d589c483025f2991b5",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "af1d8968aea6f020a723e51c72ebc0f48638f256a13c4a49b92499d851e0561d"
+        [PaymentsMigration] = "db13acfd42d7c8e0fde30164ef08669fad4cc11880a63f870dbb08bd7bce66d9",
+        [PaymentsMigrationDesigner] = "bda65dd4e9647492b863e4316b9551a0ee8f3a81e7fa21d63f7c6b62f6a3f601",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "bf5e3871d186b64c21b5918a21e589129b0e69b1a84edb482a5140c2240a8707"
     };
 
     [Test]
@@ -127,7 +131,7 @@ public sealed class SingleProductionDbContextGuardTests
             MigrationRoot
         ]);
 
-        AssertApprovedRetentionMigrationWorktreeChanges(repoRoot, headChanges, untrackedFiles);
+        AssertApprovedPaymentsTopologyWorktreeChanges(repoRoot, headChanges, untrackedFiles);
     }
 
     [Test]
@@ -343,6 +347,48 @@ public sealed class SingleProductionDbContextGuardTests
             Throws.InstanceOf<AssertionException>().With.Message.Contains("LgymApi.sln"));
     }
 
+    [Test]
+    public void Payments_Topology_Approval_Should_Allow_Only_The_Exact_Solution_Project_References_And_Migration_Stream()
+    {
+        var approvedChanges = new[]
+        {
+            "LgymApi.sln",
+            "LgymApi.Api/LgymApi.Api.csproj",
+            "LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj",
+            "LgymApi.Infrastructure/LgymApi.Infrastructure.csproj",
+            "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj",
+            "LgymApi.UnitTests/LgymApi.UnitTests.csproj",
+            "LgymApi.Payments/LgymApi.Payments.csproj"
+        };
+        var approvedReferences = new[]
+        {
+            "LgymApi.Payments -> LgymApi.Domain",
+            "LgymApi.Payments -> LgymApi.Identity"
+        };
+        var approvedMigrationChanges = new[]
+        {
+            PaymentsMigration,
+            PaymentsMigrationDesigner,
+            MigrationRoot + "/AppDbContextModelSnapshot.cs"
+        };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                () => AssertApprovedPaymentsTopologyChanges(approvedChanges, approvedReferences, approvedMigrationChanges),
+                Throws.Nothing);
+            Assert.That(
+                () => AssertApprovedPaymentsTopologyChanges([.. approvedChanges, "LgymApi.Payments/Extra.csproj"], approvedReferences, approvedMigrationChanges),
+                Throws.InstanceOf<AssertionException>());
+            Assert.That(
+                () => AssertApprovedPaymentsTopologyChanges(approvedChanges, [.. approvedReferences, "LgymApi.Payments -> LgymApi.Api"], approvedMigrationChanges),
+                Throws.InstanceOf<AssertionException>());
+            Assert.That(
+                () => AssertApprovedPaymentsTopologyChanges(approvedChanges, approvedReferences, [MigrationRoot + "/20990101000000_SyntheticMigration.cs"]),
+                Throws.InstanceOf<AssertionException>());
+        });
+    }
+
     private static PersistenceTopologyAnalysis AnalyzeFixture(string path, string source)
     {
         return PersistenceTopologyGuardTestHelpers.Analyze([new TopologySource(path, source)]);
@@ -370,7 +416,8 @@ public sealed class SingleProductionDbContextGuardTests
     private static void AssertApprovedRetentionMigrationWorktreeChanges(
         string repoRoot,
         IEnumerable<string> headChanges,
-        IEnumerable<string> untrackedFiles)
+        IEnumerable<string> untrackedFiles,
+        IEnumerable<string>? additionalApprovedChanges = null)
     {
         foreach (var entry in ApprovedRetentionMigrationLedger)
         {
@@ -394,7 +441,77 @@ public sealed class SingleProductionDbContextGuardTests
             approvedChanges.Add(applicationProject);
         }
 
+        if (additionalApprovedChanges is not null)
+        {
+            approvedChanges.AddRange(additionalApprovedChanges);
+        }
+
         AssertPhysicalTopologyWorktreeIsClean(headChanges, untrackedFiles, approvedChanges);
+    }
+
+    private static void AssertApprovedPaymentsTopologyWorktreeChanges(
+        string repoRoot,
+        IEnumerable<string> headChanges,
+        IEnumerable<string> untrackedFiles)
+    {
+        const string paymentsProject = "LgymApi.Payments/LgymApi.Payments.csproj";
+        var paymentChanges = headChanges
+            .Concat(untrackedFiles)
+            .Where(path => string.Equals(path, "LgymApi.sln", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(path, "LgymApi.Api/LgymApi.Api.csproj", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(path, "LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(path, "LgymApi.Infrastructure/LgymApi.Infrastructure.csproj", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(path, "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(path, "LgymApi.UnitTests/LgymApi.UnitTests.csproj", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("LgymApi.Payments/", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var paymentReferences = ArchitectureTestHelpers.ParseProjectReferences(Path.Combine(repoRoot, paymentsProject))
+            .Select(edge => $"{edge.SourceProject} -> {edge.TargetProject}")
+            .ToArray();
+        var migrationChanges = headChanges
+            .Concat(untrackedFiles)
+            .Where(path => path.StartsWith(MigrationRoot + "/", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        AssertApprovedPaymentsTopologyChanges(paymentChanges, paymentReferences, migrationChanges);
+        AssertApprovedRetentionMigrationWorktreeChanges(repoRoot, headChanges, untrackedFiles,
+        [
+            "LgymApi.sln",
+            "LgymApi.Api/LgymApi.Api.csproj",
+            "LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj",
+            "LgymApi.Infrastructure/LgymApi.Infrastructure.csproj",
+            "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj",
+            "LgymApi.UnitTests/LgymApi.UnitTests.csproj",
+            paymentsProject
+        ]);
+    }
+
+    private static void AssertApprovedPaymentsTopologyChanges(
+        IEnumerable<string> changedPaths,
+        IEnumerable<string> paymentReferences,
+        IEnumerable<string> migrationChanges)
+    {
+        Assert.That(changedPaths, Is.EquivalentTo(new[]
+        {
+            "LgymApi.sln",
+            "LgymApi.Api/LgymApi.Api.csproj",
+            "LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj",
+            "LgymApi.Infrastructure/LgymApi.Infrastructure.csproj",
+            "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj",
+            "LgymApi.UnitTests/LgymApi.UnitTests.csproj",
+            "LgymApi.Payments/LgymApi.Payments.csproj"
+        }));
+        Assert.That(paymentReferences, Is.EquivalentTo(new[]
+        {
+            "LgymApi.Payments -> LgymApi.Domain",
+            "LgymApi.Payments -> LgymApi.Identity"
+        }));
+        Assert.That(migrationChanges, Is.EquivalentTo(new[]
+        {
+            PaymentsMigration,
+            PaymentsMigrationDesigner,
+            MigrationRoot + "/AppDbContextModelSnapshot.cs"
+        }));
     }
 
     private static void AssertOnlyNodaTimePackageAdded(string baseline, string current)

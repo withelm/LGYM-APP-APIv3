@@ -8,11 +8,11 @@ Implementation commitments complete. Final clean same-SHA evidence is pending To
 
 | Disposition ID | Subject | Owner | Final fact | Verification surface |
 | --- | --- | --- | --- | --- |
-| `issue395.dependency.graph` | Project topology | Platform / Reference Data | `projects=18; direct-edges=90; forbidden-complement=216` | `issue-380-project-reference-graph.md` |
+| `issue395.dependency.graph` | Project topology | Platform / Reference Data | `projects=19; direct-edges=97; semantic-edges=96; analyzer-edges=1; forbidden-complement=245` | `issue-380-project-reference-graph.md` |
 | `issue395.dependency.persistence` | Physical persistence | Infrastructure | `AppDbContext=1; PostgreSQL-database=1; migration-stream=1; deployables=1` | `SingleProductionDbContextGuardTests` |
-| `issue395.dependency.ownership` | Persisted ownership | Eight canonical owners | `entities=48; owners=8` | `PersistedEntityOwnershipCatalog.cs` |
-| `issue395.dependency.mapping` | Registered mapping profiles | Platform / Reference Data | `profiles=46` | API composition guards |
-| `issue395.dependency.exports` | Direct source public-surface manifest | Five module assemblies | `entries=771` | `ModulePublicSurfaceGuardTests` |
+| `issue395.dependency.ownership` | Persisted ownership | Nine canonical owners | `entities=51; owners=9; payments-entities=2` | `PersistedEntityOwnershipCatalog.cs` |
+| `issue395.dependency.mapping` | Registered mapping profiles | Platform / Reference Data | `profiles=47` | API composition guards |
+| `issue395.dependency.exports` | Direct source public-surface manifest | Five module assemblies | `entries=789` | `ModulePublicSurfaceGuardTests` |
 
 ## Adapter disposition
 
@@ -126,7 +126,7 @@ Direct local API process smoke remains blocked by operator-provided JWT and Post
 | `issue395.locator.application-api-registration` | Application | `LgymApi.Application/ApiAdapters/ServiceCollectionExtensions.cs#ApplicationApiAdapterServiceCollectionExtensions.AddApplicationApiAdapters` | Registers the 25 Application API adapter contracts. |
 | `issue395.locator.notifications-api-registration` | Notifications | `LgymApi.Notifications/ServiceCollectionExtensions.cs#ServiceCollectionExtensions.AddNotificationsApiAdapters` | Registers the three Notifications API adapter contracts. |
 | `issue395.locator.migration-ledger` | ArchitectureTests | `LgymApi.ArchitectureTests/Issue395MigrationLedgerTests.cs#Issue395MigrationLedgerTests` | Records removed migration-era adapter identities and partial disposition. |
-| `issue395.locator.persistence-catalog` | ArchitectureTests | `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs#PersistedEntityOwnershipCatalog` | Defines 48 persisted entities across eight owners. |
+| `issue395.locator.persistence-catalog` | ArchitectureTests | `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs#PersistedEntityOwnershipCatalog` | Defines 51 persisted entities across nine owners; Payments owns two. |
 
 ## Sources
 

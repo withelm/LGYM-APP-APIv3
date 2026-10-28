@@ -10,6 +10,7 @@
 !LgymApi.Domain/**
 !LgymApi.Identity/**
 !LgymApi.Notifications/**
+!LgymApi.Payments/**
 !LgymApi.Platform/**
 !LgymApi.Resources/**
 !LgymApi.Resources.Generator/**

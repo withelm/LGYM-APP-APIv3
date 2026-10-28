@@ -34,14 +34,14 @@ public sealed class PersistedEntityOwnershipCatalogTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(PersistedEntityOwnershipCatalog.Entries, Has.Count.EqualTo(49));
-            Assert.That(PersistenceIdentityContract.DbSets, Has.Count.EqualTo(49));
+            Assert.That(PersistedEntityOwnershipCatalog.Entries, Has.Count.EqualTo(51));
+            Assert.That(PersistenceIdentityContract.DbSets, Has.Count.EqualTo(51));
             Assert.That(expectedDbSetIdentities.Select(identity => identity.PropertyName), Is.Unique);
             Assert.That(expectedEntityTypeNames, Is.Unique);
             Assert.That(catalogEntityTypeNames, Is.EqualTo(expectedEntityTypeNames));
             Assert.That(dbSetIdentities, Is.EqualTo(expectedDbSetIdentities));
-            Assert.That(PersistedEntityOwnershipCatalog.CanonicalOwners, Has.Count.EqualTo(8));
-            Assert.That(PersistedEntityOwnershipCatalog.CanonicalOwners.Distinct().ToList(), Has.Count.EqualTo(8));
+            Assert.That(PersistedEntityOwnershipCatalog.CanonicalOwners, Has.Count.EqualTo(9));
+            Assert.That(PersistedEntityOwnershipCatalog.CanonicalOwners.Distinct().ToList(), Has.Count.EqualTo(9));
             Assert.That(
                 PersistedEntityOwnershipCatalog.Entries.Select(entry => entry.Owner).Distinct(),
                 Is.EquivalentTo(PersistedEntityOwnershipCatalog.CanonicalOwners));
@@ -53,6 +53,7 @@ public sealed class PersistedEntityOwnershipCatalogTests
             Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.CoachingModuleName), Is.EqualTo(4));
             Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.NutritionModuleName), Is.EqualTo(6));
             Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.PlatformModuleName), Is.EqualTo(4));
+            Assert.That(CountEntriesFor("Payments"), Is.EqualTo(2));
         });
 
         Assert.DoesNotThrow(() => PersistedEntityOwnershipCatalog.Validate(
@@ -86,14 +87,14 @@ public sealed class PersistedEntityOwnershipCatalogTests
     }
 
     [Test]
-    public void Validate_Should_Reject_A_Ninth_Module()
+    public void Validate_Should_Reject_A_Tenth_Module()
     {
-        var entriesWithNinthModule = PersistedEntityOwnershipCatalog.Entries
+        var entriesWithTenthModule = PersistedEntityOwnershipCatalog.Entries
             .Select((entry, index) => index == 0
                 ? new PersistedEntityOwnership(entry.EntityType, "Ninth Module")
                 : entry);
 
-        AssertInvalidCatalog(entriesWithNinthModule, "Unexpected catalog owner modules");
+        AssertInvalidCatalog(entriesWithTenthModule, "Unexpected catalog owner modules");
     }
 
     private static int CountEntriesFor(string owner)

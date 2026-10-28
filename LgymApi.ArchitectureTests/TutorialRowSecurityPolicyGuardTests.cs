@@ -239,6 +239,7 @@ public sealed class TutorialRowSecurityPolicyGuardTests
 
     private static void AssertOperatorScriptIncludesPreflight(string source, string isActivation)
     {
+        source = source.ReplaceLineEndings("\n");
         Assert.That(source, Does.StartWith($"\\set ON_ERROR_STOP on\n\\set tutorial_row_security_is_activation {isActivation}\n\\ir tutorial-row-security-preflight.sql"));
         Assert.That(Count(source, "\\ir tutorial-row-security-preflight.sql"), Is.EqualTo(1));
     }

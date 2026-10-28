@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 786;
+    private const int ManifestEntryCount = 793;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -48,6 +48,13 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Application/MainRecords/Models/BestMainRecordsWithTranslations.cs\tLgymApi.Application.Features.MainRecords.Models.BestMainRecordsWithTranslations",
         "LgymApi.Application/Training/Models/TrainingsByDateWithTranslations.cs\tLgymApi.Application.Features.Training.Models.TrainingsByDateWithTranslations",
         "LgymApi.Application/WorkoutProgress/Dashboard/Models/WorkoutProgressDashboardTrainingsWithTranslations.cs\tLgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardTrainingsWithTranslations"
+ ,"LgymApi.Payments/Contracts/PaymentAccountReference.cs\tLgymApi.Payments.Contracts.PaymentAccountReference"
+ ,"LgymApi.Payments/Contracts/PaymentsApiContracts.cs\tLgymApi.Payments.Contracts.IPaymentsApi"
+ ,"LgymApi.Payments/Contracts/PaymentsApiContracts.cs\tLgymApi.Payments.Contracts.PaymentCheckoutStartResult"
+ ,"LgymApi.Payments/Contracts/PaymentsApiContracts.cs\tLgymApi.Payments.Contracts.PaymentCheckoutStatusResult"
+ ,"LgymApi.Payments/Contracts/PaymentsApiContracts.cs\tLgymApi.Payments.Contracts.PaymentWebhookResult"
+        ,"LgymApi.Payments/Contracts/PaymentReferenceMarkers.cs\tLgymApi.Payments.Contracts.PaymentReference"
+        ,"LgymApi.Payments/PaymentsModule.cs\tLgymApi.Payments.PaymentsModule"
     ];
 
 
@@ -84,6 +91,18 @@ public sealed class ModulePublicSurfaceGuardTests
             .ToArray();
 
         Assert.That(violations, Is.Empty, FormatEntries(violations));
+    }
+
+    [Test]
+    public void Payments_Public_Surface_Should_Not_Expose_Stripe_Implementation_Types()
+    {
+        var exportedTypes = typeof(LgymApi.Payments.PaymentsModule).Assembly.GetExportedTypes();
+        var exposedStripeTypes = exportedTypes
+            .Where(type => type.Namespace?.Contains(".Providers.Stripe", StringComparison.Ordinal) == true)
+            .Select(type => type.FullName)
+            .ToArray();
+
+        Assert.That(exposedStripeTypes, Is.Empty, string.Join(Environment.NewLine, exposedStripeTypes));
     }
 
     [TestCase("LgymApi.Platform/Contracts/ActorReference.cs", "LgymApi.Platform.Contracts.ActorReference")]

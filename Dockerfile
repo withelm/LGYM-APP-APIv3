@@ -14,6 +14,7 @@ COPY LgymApi.Domain/*.csproj LgymApi.Domain/
 COPY LgymApi.Identity/*.csproj LgymApi.Identity/
 COPY LgymApi.Infrastructure/*.csproj LgymApi.Infrastructure/
 COPY LgymApi.Notifications/*.csproj LgymApi.Notifications/
+COPY LgymApi.Payments/*.csproj LgymApi.Payments/
 COPY LgymApi.Platform/*.csproj LgymApi.Platform/
 COPY LgymApi.Resources/*.csproj LgymApi.Resources/
 COPY LgymApi.Resources.Generator/*.csproj LgymApi.Resources.Generator/

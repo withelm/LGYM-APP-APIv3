@@ -11,7 +11,7 @@ public sealed class ProjectReferenceImportGuardTests
         Assert.Multiple(() =>
         {
             Assert.That(analysis.Violations, Is.Empty, string.Join(Environment.NewLine, analysis.Violations));
-            Assert.That(analysis.SemanticEvidenceByEdge, Has.Count.EqualTo(89));
+            Assert.That(analysis.SemanticEvidenceByEdge, Has.Count.EqualTo(96));
             Assert.That(analysis.AnalyzerEdgeIdentities, Is.EquivalentTo(new[]
             {
                 "LgymApi.Resources -> LgymApi.Resources.Generator"

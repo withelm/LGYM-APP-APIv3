@@ -13,7 +13,7 @@ public sealed class ProjectReferenceGraphGuardTests
     private static IReadOnlyList<string> ExpectedEdgeIdentities => ProjectReferenceGraphManifest.EdgeIdentities;
 
     [Test]
-    public void Solution_ProjectReference_Graph_Should_Match_The_Exact_18_Project_90_Edge_Manifest()
+    public void Solution_ProjectReference_Graph_Should_Match_The_Exact_19_Project_97_Edge_Manifest()
     {
         AssertExactGraph(LoadSolutionGraph());
     }
@@ -65,17 +65,17 @@ public sealed class ProjectReferenceGraphGuardTests
     }
 
     [Test]
-    public void Nineteenth_Project_Should_Fail_The_Manifest()
+    public void Twentieth_Project_Should_Fail_The_Manifest()
     {
         var fixture = ExpectedGraph() with
         {
-            ProjectNames = [.. ExpectedProjectNames, "LgymApi.NineteenthProject"]
+            ProjectNames = [.. ExpectedProjectNames, "LgymApi.TwentiethProject"]
         };
 
         var exception = Assert.Throws<AssertionException>(() => AssertExactGraph(fixture));
 
-        Assert.That(exception!.Message, Does.Contain("Expected 18 projects but found 19"));
-        Assert.That(exception.Message, Does.Contain("Unexpected project: LgymApi.NineteenthProject"));
+        Assert.That(exception!.Message, Does.Contain("Expected 19 projects but found 20"));
+        Assert.That(exception.Message, Does.Contain("Unexpected project: LgymApi.TwentiethProject"));
     }
 
     [Test]
@@ -91,11 +91,11 @@ public sealed class ProjectReferenceGraphGuardTests
     [Test]
     public void Stale_ProjectReference_Documentation_Should_Fail_The_Guard()
     {
-        var staleMarkdown = "The graph has exactly 18 projects and 89 `ProjectReference` edges.";
+        var staleMarkdown = "The graph has exactly 19 projects and 94 `ProjectReference` edges.";
 
         var exception = Assert.Throws<AssertionException>(() => AssertCurrentGraphDocumentation(staleMarkdown));
 
-        Assert.That(exception!.Message, Does.Contain("90 `ProjectReference` edges"));
+        Assert.That(exception!.Message, Does.Contain("97 `ProjectReference` edges"));
     }
 
     [Test]
@@ -111,7 +111,7 @@ public sealed class ProjectReferenceGraphGuardTests
     [Test]
     public void Mismatched_Root_Agent_Guidance_Should_Fail_The_Guard()
     {
-        var guidance = "The current project-reference graph is fixed at exactly 18 projects and 90 edges. " +
+        var guidance = "The current project-reference graph is fixed at exactly 19 projects and 97 edges. " +
             "The authoritative graph is `docs/modular-monolith/issue-380-project-reference-graph.md`.";
         var agentBytes = System.Text.Encoding.UTF8.GetBytes(guidance);
         var agentsBytes = System.Text.Encoding.UTF8.GetBytes(guidance + "\n");
@@ -157,14 +157,14 @@ public sealed class ProjectReferenceGraphGuardTests
         var cycle = FindCycle(actualEdges);
         var violations = new List<string>();
 
-        if (actualProjects.Length != 18)
+        if (actualProjects.Length != 19)
         {
-            violations.Add($"Expected 18 projects but found {actualProjects.Length}.");
+            violations.Add($"Expected 19 projects but found {actualProjects.Length}.");
         }
 
-        if (actualEdges.Length != 90)
+        if (actualEdges.Length != 97)
         {
-            violations.Add($"Expected 90 project-reference edges but found {actualEdges.Length}.");
+            violations.Add($"Expected 97 project-reference edges but found {actualEdges.Length}.");
         }
 
         violations.AddRange(duplicateProjects.Select(project => $"Duplicate project: {project}"));
@@ -266,8 +266,8 @@ public sealed class ProjectReferenceGraphGuardTests
 
     private static void AssertCurrentGraphDocumentation(string markdown)
     {
-        Assert.That(markdown, Does.Contain("The graph has exactly 18 projects and 90 `ProjectReference` edges."));
-        Assert.That(markdown, Does.Contain("The forbidden cross-project edge complement contains exactly 216 edges."));
+        Assert.That(markdown, Does.Contain("The graph has exactly 19 projects and 97 `ProjectReference` edges."));
+        Assert.That(markdown, Does.Contain("The forbidden cross-project edge complement contains exactly 245 edges."));
         Assert.That(
             markdown,
             Does.Contain("Topological order: " + string.Join(
@@ -303,7 +303,7 @@ public sealed class ProjectReferenceGraphGuardTests
         var guidance = System.Text.Encoding.UTF8.GetString(agentBytes);
         Assert.Multiple(() =>
         {
-            Assert.That(guidance, Does.Contain("The current project-reference graph is fixed at exactly 18 projects and 90 edges."));
+        Assert.That(guidance, Does.Contain("The current project-reference graph is fixed at exactly 19 projects and 97 edges."));
             Assert.That(guidance, Does.Contain("The authoritative current graph is `docs/modular-monolith/issue-380-project-reference-graph.md`"));
             Assert.That(guidance, Does.Contain("No project-reference edge may be added, removed, duplicated, or made cyclic outside an approved topology change."));
         });

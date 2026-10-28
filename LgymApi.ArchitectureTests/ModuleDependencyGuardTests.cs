@@ -20,11 +20,12 @@ public sealed class ModuleDependencyGuardTests
             [ArchitectureTestHelpers.TrainingPlanningModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName),
             [ArchitectureTestHelpers.WorkoutProgressModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName, ArchitectureTestHelpers.TrainingPlanningModuleName),
             [ArchitectureTestHelpers.CoachingModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName, ArchitectureTestHelpers.TrainingPlanningModuleName, ArchitectureTestHelpers.WorkoutProgressModuleName, ArchitectureTestHelpers.NotificationsModuleName),
-            [ArchitectureTestHelpers.NutritionModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName, ArchitectureTestHelpers.CoachingModuleName)
+            [ArchitectureTestHelpers.NutritionModuleName] = CreateAllowedSet(ArchitectureTestHelpers.PlatformModuleName, ArchitectureTestHelpers.IdentityModuleName, ArchitectureTestHelpers.CoachingModuleName),
+            [ArchitectureTestHelpers.PaymentsModuleName] = CreateAllowedSet(ArchitectureTestHelpers.IdentityModuleName)
         };
 
     [Test]
-    public void Module_Dependency_Graph_Should_Follow_Documented_Eight_Module_Matrix()
+    public void Module_Dependency_Graph_Should_Follow_Documented_Nine_Module_Matrix()
     {
         var scan = ModuleBoundaryProductionScan.Prepare();
         var treeModules = scan.SyntaxTrees

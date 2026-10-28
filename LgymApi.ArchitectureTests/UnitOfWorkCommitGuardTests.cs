@@ -61,7 +61,7 @@ public sealed class UnitOfWorkCommitGuardTests
                     continue;
                 }
 
-                if (IsAllowedPath(file) || IsActorScopeTransactionBegin(file, invocation))
+                if (IsAllowedPath(file) || IsActorScopeTransactionBegin(file, invocation) || IsPaymentsWorkflowSave(file, invocation) || IsPaymentsWorkflowAdapterSave(file, invocation))
                 {
                     continue;
                 }
@@ -84,6 +84,11 @@ public sealed class UnitOfWorkCommitGuardTests
         {
             Assert.That(IsAllowedPath("C:/repo/LgymApi.TrainingPlanning/Plan/CreatePlan/CreatePlanUseCase.cs"), Is.True);
             Assert.That(IsAllowedPath("C:/repo/LgymApi.Notifications/PushNotificationService.cs"), Is.True);
+            Assert.That(IsPaymentsWorkflowSave("C:/repo/LgymApi.Payments/Providers/Stripe/StripePaymentsService.cs", ParseInvocation("unitOfWork.SaveChangesAsync(cancellationToken)")), Is.True);
+            Assert.That(IsPaymentsWorkflowSave("C:/repo/LgymApi.Payments/Providers/Stripe/OtherService.cs", ParseInvocation("unitOfWork.SaveChangesAsync(cancellationToken)")), Is.False);
+            Assert.That(IsPaymentsWorkflowSave("C:/repo/LgymApi.Payments/Providers/Stripe/StripePaymentsService.cs", ParseInvocation("persistenceContext.SaveChangesAsync(cancellationToken)")), Is.False);
+            Assert.That(IsPaymentsWorkflowAdapterSave("C:/repo/LgymApi.Infrastructure/PaymentsWorkflowUnitOfWork.cs", ParseInvocation("unitOfWork.SaveChangesAsync(cancellationToken)")), Is.True);
+            Assert.That(IsPaymentsWorkflowAdapterSave("C:/repo/LgymApi.Infrastructure/OtherWorkflowUnitOfWork.cs", ParseInvocation("unitOfWork.SaveChangesAsync(cancellationToken)")), Is.False);
         });
     }
 
@@ -120,6 +125,31 @@ public sealed class UnitOfWorkCommitGuardTests
         return normalized.EndsWith("/LgymApi.Infrastructure/RowSecurity/EfActorRowSecurityScopeFactory.cs", StringComparison.OrdinalIgnoreCase)
             && invocation.Expression is MemberAccessExpressionSyntax { Name.Identifier.ValueText: "BeginTransactionAsync" };
     }
+
+    private static bool IsPaymentsWorkflowSave(string path, InvocationExpressionSyntax invocation)
+    {
+        var normalized = Normalize(path);
+        return normalized.EndsWith("/LgymApi.Payments/Providers/Stripe/StripePaymentsService.cs", StringComparison.OrdinalIgnoreCase)
+            && invocation.Expression is MemberAccessExpressionSyntax
+            {
+                Expression: IdentifierNameSyntax { Identifier.ValueText: "unitOfWork" },
+                Name.Identifier.ValueText: "SaveChangesAsync"
+            };
+    }
+
+    private static bool IsPaymentsWorkflowAdapterSave(string path, InvocationExpressionSyntax invocation)
+    {
+        var normalized = Normalize(path);
+        return normalized.EndsWith("/LgymApi.Infrastructure/PaymentsWorkflowUnitOfWork.cs", StringComparison.OrdinalIgnoreCase)
+            && invocation.Expression is MemberAccessExpressionSyntax
+            {
+                Expression: IdentifierNameSyntax { Identifier.ValueText: "unitOfWork" },
+                Name.Identifier.ValueText: "SaveChangesAsync"
+            };
+    }
+
+    private static InvocationExpressionSyntax ParseInvocation(string source) =>
+        CSharpSyntaxTree.ParseText(source).GetRoot().DescendantNodes().OfType<InvocationExpressionSyntax>().Single();
 
     private static bool IsTestPath(string normalizedPath)
     {

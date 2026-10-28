@@ -330,4 +330,7 @@
   <data name="CannotDeleteSelf" xml:space="preserve">
     <value>You cannot delete yourself.</value>
   </data>
+  <data name="PaymentCheckoutClientFieldsNotAllowed" xml:space="preserve">
+    <value>Checkout price, quantity, currency, return URLs, and status are server-controlled.</value>
+  </data>
 </root>

@@ -4,7 +4,7 @@ Use this guide when adding a use case or reviewing a module-boundary change. Sta
 
 ## Authority And Precedence
 
-This guide owns the contribution workflow. [ADR-006](adr/006-lgym-evolves-as-modular-monolith.md) owns the architectural direction, and [ADR-007](adr/007-final-modular-monolith-compatibility-commitments.md) owns final compatibility commitments. The compiled ownership catalog and its tested [issue-376 view](modular-monolith/issue-376-ownership-map.md) own persisted ownership. The [issue-380 graph](modular-monolith/issue-380-project-reference-graph.md) owns dependencies, while [issue-380 background ownership](modular-monolith/issue-380-background-contract-ownership.md) owns messaging. [Issue-392](modular-monolith/issue-392-reporting-boundary.md) and [issue-393](modular-monolith/issue-393-platform-reference-data-boundary.md) define their detailed boundaries. [Issue-395 final verification](modular-monolith/issue-395-final-verification.md) owns final disposition and Todo 22 evidence placeholders. Read the adjacent `<ProjectName>.md` before changing a project, and follow `AGENT.md` and `AGENTS.md` for repository behavior.
+This guide owns the contribution workflow. [ADR-006](adr/006-lgym-evolves-as-modular-monolith.md) owns the architectural direction, [ADR-007](adr/007-final-modular-monolith-compatibility-commitments.md) owns final compatibility commitments, and [ADR-008](adr/008-payments-spike-topology.md) owns the Payments skeleton topology. The compiled ownership catalog and its tested [issue-376 view](modular-monolith/issue-376-ownership-map.md) own persisted ownership. The [issue-380 graph](modular-monolith/issue-380-project-reference-graph.md) owns dependencies, while [issue-380 background ownership](modular-monolith/issue-380-background-contract-ownership.md) owns messaging. [Issue-392](modular-monolith/issue-392-reporting-boundary.md) and [issue-393](modular-monolith/issue-393-platform-reference-data-boundary.md) define their detailed boundaries. [Issue-395 final verification](modular-monolith/issue-395-final-verification.md) owns final disposition and Todo 22 evidence placeholders. Read the adjacent `<ProjectName>.md` before changing a project, and follow `AGENT.md` and `AGENTS.md` for repository behavior.
 
 | Authority ID | Authority source | Governs |
 | --- | --- | --- |
@@ -17,13 +17,14 @@ This guide owns the contribution workflow. [ADR-006](adr/006-lgym-evolves-as-mod
 | module-guide.authority.platform-provider-boundary | docs/modular-monolith/issue-393-platform-reference-data-boundary.md | platform-provider-boundary |
 | module-guide.authority.final-compatibility | docs/adr/007-final-modular-monolith-compatibility-commitments.md | final-compatibility |
 | module-guide.authority.final-verification | docs/modular-monolith/issue-395-final-verification.md | final-verification |
+| module-guide.authority.payments-topology | docs/adr/008-payments-spike-topology.md | payments-topology |
 
 ## Start With The Owner
 
-The eight canonical owners are `Platform / Reference Data`, `Identity & Accounts`, `Notifications`, `Reporting`, `Training Planning`, `Workout & Progress`, `Coaching`, and `Nutrition`. The first four stable extracted owners are Platform, Identity, Training Planning, and Notifications. Reporting, Workout & Progress, Coaching, and Nutrition remain Application-owned capabilities. The catalog, not this list, decides persisted ownership. In particular, completed `Training` is owned by Workout & Progress, even when it references a Training Planning plan day.
+The nine canonical owners are `Platform / Reference Data`, `Identity & Accounts`, `Notifications`, `Reporting`, `Training Planning`, `Workout & Progress`, `Coaching`, `Nutrition`, and `Payments`. The stable extracted owners are Platform, Identity, Training Planning, Notifications, and Payments. Reporting, Workout & Progress, Coaching, and Nutrition remain Application-owned capabilities. Payments owns checkout and event-receipt persistence through the shared context. The catalog, not this list, decides persisted ownership. In particular, completed `Training` is owned by Workout & Progress, even when it references a Training Planning plan day.
 
 1. Identify the capability and its canonical owner. Don't start from a familiar project or repository.
-2. Check the locked graph before proposing a dependency. There are 18 projects and 90 direct edges. A new edge needs a separately approved topology change.
+2. Check the locked graph before proposing a dependency. There are 19 projects and 97 direct edges. A new edge needs a separately approved topology change.
 3. If the owner is extracted, use the extracted-owner layout. If it is Application-owned, use the Application-owned layout. If the work crosses owners, consume the owner's focused contract or consumer-owned port.
 4. Keep physical files in the owner project. Retained `LgymApi.Application.*` namespaces can remain for source and wire compatibility.
 5. Stop when the applicable owner seams are complete. Don't turn a focused change into a global layer sweep.
@@ -63,7 +64,7 @@ Infrastructure supplies technical composition and stage-only adapters. It doesn'
 
 | Policy ID | Contract | Evidence |
 | --- | --- | --- |
-| module-guide.policy.owner | canonical-owners=8; completed-training=Workout & Progress; api-persistence=false | Compiled ownership catalog and issue-376 view |
+| module-guide.policy.owner | canonical-owners=9; completed-training=Workout & Progress; api-persistence=false | Compiled ownership catalog and issue-376 view |
 | module-guide.policy.placement | owner-first=true; foreign-entities=false; foreign-repositories=false | Owner project and focused ports |
 | module-guide.policy.namespace-compatibility | physical-path=owner; legacy-namespace=compatible | Extracted module compatibility namespaces |
 | module-guide.policy.public-surface | focused-contracts=true; dependency-aggregate=false; high-arity=accepted | Public contracts and module facades |
@@ -79,7 +80,7 @@ Infrastructure supplies technical composition and stage-only adapters. It doesn'
 | module-guide.policy.localization | resources=en,pl | Resource-backed user text |
 | module-guide.policy.tactical-ddd | invariants=required | Aggregate policy where justified |
 | module-guide.policy.architecture-tests | focused-guards=true | Relevant Roslyn guards |
-| module-guide.policy.prohibited-patterns | ninth-module=false; application-to-worker=false; worker-common-feature-command=false | Locked topology and messaging boundary |
+| module-guide.policy.prohibited-patterns | tenth-module=false; application-to-worker=false; worker-common-feature-command=false | Locked topology and messaging boundary |
 
 ### Commands, Queries, And Unit Of Work
 
@@ -91,7 +92,7 @@ Use no-tracking by default; tracking is permitted only when the same unit of wor
 
 The production topology is one `AppDbContext`, one PostgreSQL database, and one migration stream. Logical ownership doesn't create a context, schema, database, migration stream, broker, or deployment split. Add a configuration or migration only when an approved owner change needs it, using the existing fixed registrar and shared Infrastructure bridge.
 
-Register extracted workflows through their owner facade. Register remaining Application services in their owner helper, and technical services in Infrastructure. API composition follows the guarded facade order: Platform, Identity, Training Planning, Notifications, remaining Application, Infrastructure, API adapters, then Worker. Application must not reference Worker or Worker.Common.
+Register extracted workflows through their owner facade. Register remaining Application services in their owner helper, and technical services in Infrastructure. API composition follows the guarded facade order: Platform, Identity, Training Planning, Notifications, Payments, remaining Application, Infrastructure, API adapters, then Worker. Application must not reference Worker or Worker.Common.
 
 ### API, Localization, And DDD
 
@@ -152,7 +153,7 @@ The accepted-submission operation is the slice beginning with the Reporting pers
 | module-guide.exception.query-side-compatibility-cleanup | compatibility-adapter-only | owner-path=unchanged |
 | module-guide.exception.shared-physical-persistence | single-context-shared-database | AppDbContext=1; migration stream=1 |
 
-Don't add a ninth module or project, a new project-reference edge, a second production context, a schema per module, a database per module, or a separate migration stream. Don't use foreign entities or repositories, direct Worker dependencies, Worker.Common feature commands, provider leakage, manual controller or service cross-layer mapping, hardcoded messages, a global hotspot workflow, service location, dependency aggregates, or unapproved debt exemptions.
+Don't add a tenth module or project, a new project-reference edge, a second production context, a schema per module, a database per module, or a separate migration stream. Don't use foreign entities or repositories, direct Worker dependencies, Worker.Common feature commands, provider leakage, manual controller or service cross-layer mapping, hardcoded messages, a global hotspot workflow, service location, dependency aggregates, or unapproved debt exemptions. Provider SDK types, secrets, signatures, and raw payloads remain private to their owner module.
 
 ## Contributor And Verification Checklist
 

@@ -7,6 +7,8 @@ using LgymApi.Infrastructure.Data.Configurations.Reporting;
 using LgymApi.Infrastructure.Data.Configurations.WorkoutProgress;
 using LgymApi.Identity.Persistence;
 using LgymApi.Notifications.Persistence;
+using LgymApi.Payments.Persistence;
+using LgymApi.Payments.Persistence.Configurations;
 using LgymApi.Platform.Persistence;
 using LgymApi.TrainingPlanning.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +28,7 @@ internal static class AppDbContextEntityTypeConfigurationRegistrar
         PlatformModelConfigurationRegistrar.ApplyReliability(modelBuilder, ApplyPlatformReliability);
         ApplyNutrition(modelBuilder);
         ApplyReporting(modelBuilder);
+        ApplyPayments(modelBuilder);
     }
 
     private static void ApplyWorkoutProgress(ModelBuilder modelBuilder)
@@ -82,6 +85,12 @@ internal static class AppDbContextEntityTypeConfigurationRegistrar
         Register(modelBuilder, new RecurringReportAssignmentEntityTypeConfiguration());
         Register(modelBuilder, new PhotoEntityTypeConfiguration());
         Register(modelBuilder, new PhotoUploadSessionEntityTypeConfiguration());
+    }
+
+    private static void ApplyPayments(ModelBuilder modelBuilder)
+    {
+        Register(modelBuilder, new PaymentCheckoutEntityTypeConfiguration());
+        Register(modelBuilder, new PaymentEventReceiptEntityTypeConfiguration());
     }
 
     private static void Register<TEntity>(ModelBuilder modelBuilder, IEntityTypeConfiguration<TEntity> configuration)

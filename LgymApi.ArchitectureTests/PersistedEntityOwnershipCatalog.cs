@@ -14,6 +14,7 @@ internal static class PersistedEntityOwnershipCatalog
     internal const string WorkoutProgressModuleName = "Workout & Progress";
     internal const string CoachingModuleName = "Coaching";
     internal const string NutritionModuleName = "Nutrition";
+    internal const string PaymentsModuleName = "Payments";
 
     internal static IReadOnlyList<string> CanonicalOwners { get; } =
     [
@@ -24,7 +25,8 @@ internal static class PersistedEntityOwnershipCatalog
         TrainingPlanningModuleName,
         WorkoutProgressModuleName,
         CoachingModuleName,
-        NutritionModuleName
+        NutritionModuleName,
+        PaymentsModuleName
     ];
 
     internal static IReadOnlyList<PersistedEntityOwnership> Entries { get; } =
@@ -78,6 +80,8 @@ internal static class PersistedEntityOwnershipCatalog
         new(typeof(ActionExecutionLog), PlatformModuleName),
         new(typeof(CommandEnvelope), PlatformModuleName),
         new(typeof(ApiIdempotencyRecord), PlatformModuleName)
+        ,new(typeof(PaymentCheckout), PaymentsModuleName)
+        ,new(typeof(PaymentEventReceipt), PaymentsModuleName)
     ];
 
     private static readonly IReadOnlyDictionary<string, int> ExpectedEntityCountByOwner = new Dictionary<string, int>(StringComparer.Ordinal)
@@ -89,7 +93,8 @@ internal static class PersistedEntityOwnershipCatalog
         [WorkoutProgressModuleName] = 11,
         [CoachingModuleName] = 4,
         [NutritionModuleName] = 6,
-        [PlatformModuleName] = 4
+        [PlatformModuleName] = 4,
+        [PaymentsModuleName] = 2
     };
 
     internal static void Validate(
@@ -152,7 +157,9 @@ internal static class PersistedEntityOwnershipCatalog
                 "Unexpected catalog owner modules: " + string.Join(", ", unexpectedOwners));
         }
 
-        var missingOwners = CanonicalOwners
+        var missingOwners = ExpectedEntityCountByOwner
+            .Where(expected => expected.Value > 0)
+            .Select(expected => expected.Key)
             .Except(catalogOwners, StringComparer.Ordinal)
             .OrderBy(owner => owner, StringComparer.Ordinal)
             .ToList();

@@ -6,11 +6,14 @@ using LgymApi.Application.Notifications;
 using LgymApi.BackgroundWorker;
 using LgymApi.Identity;
 using LgymApi.Infrastructure;
+using LgymApi.Payments;
 using LgymApi.Platform;
 using LgymApi.TestUtils;
 using LgymApi.TrainingPlanning;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 
 namespace LgymApi.UnitTests;
 
@@ -20,6 +23,7 @@ public enum CompositionFacade
     Identity,
     TrainingPlanning,
     Notifications,
+    Payments,
     Application,
     Infrastructure,
     ApplicationApiAdapters,
@@ -48,6 +52,10 @@ internal static class CompositionRootTestHost
                 CompositionFacade.Notifications,
                 omittedFacade,
                 () => services.AddNotificationsModule(configuration)),
+            AddPaymentsModule: services => AddUnlessOmitted(
+                CompositionFacade.Payments,
+                omittedFacade,
+                () => services.AddPaymentsModule(configuration, new TestHostEnvironment())),
             AddApplication: services => AddUnlessOmitted(CompositionFacade.Application, omittedFacade, services.AddApplication),
             AddInfrastructure: services => AddUnlessOmitted(
                 CompositionFacade.Infrastructure,
@@ -99,6 +107,10 @@ internal static class CompositionRootTestHost
             CompositionFacade.Notifications,
             omittedFacade,
             () => services.AddNotificationsModule(configuration));
+        AddUnlessOmitted(
+            CompositionFacade.Payments,
+            omittedFacade,
+            () => services.AddPaymentsModule(configuration, new TestHostEnvironment()));
         AddUnlessOmitted(CompositionFacade.Application, omittedFacade, services.AddApplication);
 
         if (registerWorkerBeforeInfrastructure)
@@ -157,7 +169,16 @@ internal static class CompositionRootTestHost
         values["Email:DeliveryMode"] = "Dummy";
         values["Email:DummyOutputDirectory"] = "DummyOutbox";
         values["PhotoStorage:Provider"] = "Local";
+        values["Payments:ApiKey"] = "sk_test_composition";
 
         return TestConfigurationBuilder.BuildConfiguration(values);
+    }
+
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+        public string ApplicationName { get; set; } = nameof(CompositionRootTestHost);
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

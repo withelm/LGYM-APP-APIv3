@@ -7,9 +7,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using IIdentityPersistenceContext = LgymApi.Identity.Persistence.IIdentityPersistenceContext;
 using INotificationsPersistenceContext = LgymApi.Notifications.Persistence.INotificationsPersistenceContext;
+using IPaymentsPersistenceContext = LgymApi.Payments.Persistence.IPaymentsPersistenceContext;
 using IPlatformPersistenceContext = LgymApi.Platform.Persistence.IPlatformPersistenceContext;
 using ICommandEnvelopeDuplicateFailureClassifier = LgymApi.Platform.Persistence.ICommandEnvelopeDuplicateFailureClassifier;
 using ITrainingPlanningPersistenceContext = LgymApi.TrainingPlanning.Persistence.ITrainingPlanningPersistenceContext;
+using IPaymentsWorkflowUnitOfWork = LgymApi.Payments.Workflows.IPaymentsWorkflowUnitOfWork;
 
 namespace LgymApi.Infrastructure;
 
@@ -39,6 +41,8 @@ public static partial class ServiceCollectionExtensions
         services.AddScoped<IIdentityPersistenceContext>(static provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<ITrainingPlanningPersistenceContext>(static provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<INotificationsPersistenceContext>(static provider => provider.GetRequiredService<AppDbContext>());
+        services.AddScoped<IPaymentsPersistenceContext>(static provider => provider.GetRequiredService<AppDbContext>());
+        services.AddScoped<IPaymentsWorkflowUnitOfWork, PaymentsWorkflowUnitOfWork>();
     }
 
     private static void AddPlatformUnitOfWork(IServiceCollection services)

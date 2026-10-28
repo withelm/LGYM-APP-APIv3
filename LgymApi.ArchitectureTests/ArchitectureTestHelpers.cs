@@ -19,6 +19,7 @@ public static class ArchitectureTestHelpers
     public const string WorkoutProgressModuleName = "Workout & Progress";
     public const string CoachingModuleName = "Coaching";
     public const string NutritionModuleName = "Nutrition";
+    public const string PaymentsModuleName = "Payments";
 
     private static readonly string[] ApiFeatureLeafFolders =
     {
@@ -36,7 +37,8 @@ public static class ArchitectureTestHelpers
         TrainingPlanningModuleName,
         WorkoutProgressModuleName,
         CoachingModuleName,
-        NutritionModuleName
+        NutritionModuleName,
+        PaymentsModuleName
     ];
 
     private static readonly string[] BuildingBlocksPathMarkers =
@@ -638,6 +640,10 @@ public static class ArchitectureTestHelpers
         {
             return "Notifications";
         }
+        if (normalized.Contains("/LgymApi.Payments/Persistence/Configurations/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Payments";
+        }
         const string marker = "/Data/Configurations/";
 
         var markerIndex = normalized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
@@ -706,6 +712,11 @@ public static class ArchitectureTestHelpers
         if (normalized.Contains("/LgymApi.Platform/", StringComparison.OrdinalIgnoreCase))
         {
             return PlatformModuleName;
+        }
+
+        if (normalized.Contains("/LgymApi.Payments/", StringComparison.OrdinalIgnoreCase))
+        {
+            return PaymentsModuleName;
         }
 
         if (ApplicationExactFileModuleMap.TryGetValue(GetApplicationExactFileKey(normalized), out var applicationExactFileModule))
@@ -778,7 +789,7 @@ public static class ArchitectureTestHelpers
         if (!proposedCatalog.SequenceEqual(CanonicalModuleCatalog, StringComparer.Ordinal))
         {
             throw new InvalidOperationException(
-                "The canonical module catalog must contain exactly the established eight modules in canonical order.");
+                "The canonical module catalog must contain exactly the established nine modules in canonical order.");
         }
     }
 

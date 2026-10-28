@@ -26,7 +26,7 @@ The current system remains one deployable application with one production databa
 
 ## Ownership semantics
 
-Module ownership means write and responsibility ownership. Notifications defines notification write rules, validates notification intents, coordinates delivery, and compiles its five stage-only repository and mapping implementations behind the internal persistence seam. The private FCM provider implementation and its configuration compile from `LgymApi.Notifications` within the guarded 18-project, 90-edge graph.
+Module ownership means write and responsibility ownership. Notifications defines notification write rules, validates notification intents, coordinates delivery, and compiles its five stage-only repository and mapping implementations behind the internal persistence seam. The private FCM provider implementation and its configuration compile from `LgymApi.Notifications` within the guarded 19-project, 97-direct-edge graph.
 
 The notification entities remain under `LgymApi.Domain/Entities`. Their physical location does not change their module owner, and a shared `AppDbContext` does not create shared write authority. Non-owner modules use published contracts, read models, or in-process events and do not mutate notification rows directly.
 

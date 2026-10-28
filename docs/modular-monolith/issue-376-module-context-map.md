@@ -15,7 +15,7 @@ Current extracted-module catalog
 
 ## Scope
 
-This file defines the current eight-module catalog and its dependency policy after the issue #387 extraction.
+This file defines the current nine-module catalog and its dependency policy, including the ADR-008 Payments skeleton.
 
 ## Module catalog
 
@@ -35,7 +35,7 @@ The #375 baseline already shows these as the current feature-level dependency cl
 
 ### Final internal sub-boundaries
 
-`Platform / Reference Data` is one canonical module with three non-canonical internal sub-boundaries. None is a project or a ninth module.
+`Platform / Reference Data` is one canonical module with three non-canonical internal sub-boundaries. None is a project or a tenth module.
 
 | Sub-boundary | Final root | Responsibility |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ The #375 baseline already shows these as the current feature-level dependency cl
 | Technical Platform | `LgymApi.Platform/Contracts/` | Shared background-command and serialization contracts, pagination, reliability, Unit of Work ports, and the public Platform facade. |
 | Reference Data | `LgymApi.Platform/ReferenceData/` | AppConfig, enum lookup, unit conversion, and the internal registration helper composed only by `PlatformModule.AddPlatformModule`. |
 
-BuildingBlocks may consume only the BCL. Technical Platform may consume BuildingBlocks and approved Domain-neutral primitives. Reference Data may consume BuildingBlocks, approved Technical Platform contracts, and Domain types. These classifications do not change the canonical owner name in the eight-module catalog.
+BuildingBlocks may consume only the BCL. Technical Platform may consume BuildingBlocks and approved Domain-neutral primitives. Reference Data may consume BuildingBlocks, approved Technical Platform contracts, and Domain types. These classifications do not change the canonical owner name in the nine-module catalog.
 
 AppConfig owns the ID-only `IAppConfigAuthorizationPort`. Identity implements the port from Identity-owned repositories and registers the adapter. AppConfig has no direct Identity-repository dependency. Its latest-by-platform read remains unauthenticated.
 
@@ -144,6 +144,19 @@ Reference Data owns the six concrete enum-to-lookup mappings and the lookup serv
 - Diet-plan and supplementation authorization consume only Coaching's `ICoachingRelationshipAccessService`; Nutrition adapts its trainer and active-link decision to the existing feature-specific errors without importing Coaching persistence or private implementation types.
 - Uses module-local stage-only Diet and Supplementation persistence ports. D3, D4, and D5 preserve the existing post-save `DietPlanUpdatedInAppNotificationCommand` through the Platform dispatcher and its canonical legacy command ID.
 
+## Payments
+
+### Responsibility boundary
+
+- Establishes a provider-neutral payment capability boundary with checkout and event-receipt persistence.
+- Owns its two persisted entities through the shared Infrastructure context and migration stream, plus a private Stripe Checkout test-mode workflow under `LgymApi.Payments/Providers/Stripe`; the API host owns its three HTTP endpoints, while Payments has no Worker behavior, entitlement, or production payment support.
+- References only Domain and Identity marker contracts; Infrastructure owns the shared persistence bridge.
+
+### Public contract surface
+
+- Exposes payment markers, focused persistence contracts, and the module facade.
+- Must not expose provider types, secrets, raw payloads, or provider-specific workflow types; Stripe SDK integration remains private to the Payments provider implementation.
+
 ## Allowed dependencies
 
 The #375 baseline shows the current clusters already depend on shared platform, identity, and infrastructure roots. #311 narrows that into a contract-first module policy.
@@ -158,6 +171,7 @@ The #375 baseline shows the current clusters already depend on shared platform, 
 | Workout & Progress | Platform / Reference Data; Identity & Accounts public contracts; Training Planning plan contracts; its own `IMeasurementsRelationshipAccessPort` | Internal persistence, private services, or public contracts from Notifications, Reporting, or Coaching |
 | Coaching | Platform / Reference Data; Identity & Accounts public contracts; Training Planning; Workout & Progress; Notifications public contracts | Internal persistence or private services from Reporting or Nutrition |
 | Nutrition | Platform / Reference Data; Identity & Accounts public contracts; Coaching `ICoachingRelationshipAccessService` | Internal persistence or private services from Notifications, Reporting, Training Planning, Workout & Progress, or Coaching |
+| Payments | Domain and Identity & Accounts marker contracts; Infrastructure shared persistence bridge; private test-mode Stripe implementation | API, Application, Worker, Notifications, public provider types, entitlements, and live payment behavior |
 
 ## Platform / Reference Data hosting rules
 
@@ -224,11 +238,11 @@ Extraction is justified only when all of these conditions are true:
 - the module no longer needs direct access to another module's repositories, entities, or private services;
 - the dependency matrix can remain valid after extraction without adding a boundary-bypass path.
 
-The eight-module catalog is the current baseline for those checks, and any later split must stay compatible with the #311 constraints.
+The nine-module catalog is the current baseline for those checks, and any later split must stay compatible with the #311 constraints.
 
 ## Executable topology and concern matrix
 
-`ProjectReferenceGraphGuardTests` fixes the current graph at 18 projects and 90 edges, while the direct-import guard verifies 89 source edges plus the Resources analyzer edge and the dependency-first order. The system remains one production `AppDbContext`, one PostgreSQL database, and one migration stream.
+`ProjectReferenceGraphGuardTests` fixes the current graph at 19 projects and 97 edges, while the direct-import guard verifies 96 source edges plus the Resources analyzer edge and the dependency-first order. The system remains one production `AppDbContext`, one PostgreSQL database, and one migration stream; Payments owns two persisted entities.
 
 `issue-393-platform-reference-data-boundary.md` is the executable concern-owner matrix for authentication, authorization, serialization, localization, logging, providers, pagination, clock, correlation, idempotency, enum lookup, AppConfig, and persistence topology. It supplements this map without adding an owner, project, provider, or persistence root.
 
@@ -236,6 +250,7 @@ The eight-module catalog is the current baseline for those checks, and any later
 
 - `docs/adr/006-lgym-evolves-as-modular-monolith.md`
 - `docs/adr/007-final-modular-monolith-compatibility-commitments.md`
+- `docs/adr/008-payments-spike-topology.md`
 - `docs/modular-monolith/issue-376-ownership-map.md`
 - `docs/modular-monolith/issue-380-background-contract-ownership.md`
 - `docs/modular-monolith/issue-380-project-reference-graph.md`

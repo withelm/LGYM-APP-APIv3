@@ -309,4 +309,7 @@
   <data name="CannotDeleteSelf" xml:space="preserve">
     <value>Nie możesz usunąć samego siebie.</value>
   </data>
+  <data name="PaymentCheckoutClientFieldsNotAllowed" xml:space="preserve">
+    <value>Cena, ilość, waluta, adresy powrotu i status płatności są kontrolowane przez serwer.</value>
+  </data>
 </root>

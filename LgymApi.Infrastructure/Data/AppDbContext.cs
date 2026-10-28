@@ -7,12 +7,13 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Linq.Expressions;
 using IIdentityPersistenceContext = LgymApi.Identity.Persistence.IIdentityPersistenceContext;
 using INotificationsPersistenceContext = LgymApi.Notifications.Persistence.INotificationsPersistenceContext;
+using IPaymentsPersistenceContext = LgymApi.Payments.Persistence.IPaymentsPersistenceContext;
 using IPlatformPersistenceContext = LgymApi.Platform.Persistence.IPlatformPersistenceContext;
 using ITrainingPlanningPersistenceContext = LgymApi.TrainingPlanning.Persistence.ITrainingPlanningPersistenceContext;
 
 namespace LgymApi.Infrastructure.Data;
 
-public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIdentityPersistenceContext, ITrainingPlanningPersistenceContext, INotificationsPersistenceContext
+public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIdentityPersistenceContext, ITrainingPlanningPersistenceContext, INotificationsPersistenceContext, IPaymentsPersistenceContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -67,6 +68,8 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<PhotoUploadSession> PhotoUploadSessions => Set<PhotoUploadSession>();
+    public DbSet<PaymentCheckout> PaymentCheckouts => Set<PaymentCheckout>();
+    public DbSet<PaymentEventReceipt> PaymentEventReceipts => Set<PaymentEventReceipt>();
 
     DbSet<AppConfig> IPlatformPersistenceContext.AppConfigs => AppConfigs;
     DbSet<ActionExecutionLog> IPlatformPersistenceContext.ActionExecutionLogs => ActionExecutionLogs;
@@ -96,6 +99,9 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     DbSet<InAppNotification> INotificationsPersistenceContext.InAppNotifications => InAppNotifications;
     EntityEntry<InAppNotification> INotificationsPersistenceContext.Entry(InAppNotification entity) => Entry(entity);
     EntityEntry<PushNotificationMessage> INotificationsPersistenceContext.Entry(PushNotificationMessage entity) => Entry(entity);
+
+    DbSet<PaymentCheckout> IPaymentsPersistenceContext.PaymentCheckouts => PaymentCheckouts;
+    DbSet<PaymentEventReceipt> IPaymentsPersistenceContext.PaymentEventReceipts => PaymentEventReceipts;
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

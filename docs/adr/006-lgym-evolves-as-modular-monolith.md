@@ -13,7 +13,7 @@ Issue #375 captured the historical inventory. Issue #387 then extracted Platform
 
 - `#311` is the constraint authority.
 - `#375` is the historical baseline and inventory source. Its graph capture remains unchanged.
-- `#387` is the completed extraction that established the current 18-project, 90-edge topology.
+- `#387` is the completed extraction baseline; the Payments persistence and composition additions extend the current topology to 19 projects and 97 edges.
 - `docs/ARCHITECTURE.md` is the integration target and reader guide.
 - This ADR records the decision layer only and must stay aligned with those sources.
 
@@ -35,7 +35,7 @@ The extraction establishes four stable module assemblies while retaining the exi
 
 ## Consequences
 
-1. Durable docs must stay consistent with the eight-module catalog, the ownership map, the dependency policy matrix, and the current graph.
+1. Durable docs must stay consistent with the nine-module catalog, the ownership map, the dependency policy matrix, and the current graph.
 2. Ownership rules remain one-owner-per-artifact, with no shared write ownership hidden behind the one production `AppDbContext`.
 3. The current layered runtime remains the implementation baseline. The extraction does not authorize a second deployment, database, context, schema, or migration stream.
 4. The single migration stream remains the only migration history for the current production system.
@@ -44,7 +44,7 @@ The extraction establishes four stable module assemblies while retaining the exi
 ## Follow-up
 
 1. Keep the module context and ownership maps aligned with the extracted assemblies and their public contracts.
-2. Keep the project-reference graph at its guarded 18-project, 90-edge manifest.
+2. Keep the project-reference graph at its guarded 19-project, 97-direct-edge manifest, including 96 semantic source/import edges and one Resources analyzer edge.
 3. Keep `docs/ARCHITECTURE.md` and project documents aligned with the finalized modular-monolith docs.
 
 ## Links

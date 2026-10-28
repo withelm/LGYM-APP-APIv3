@@ -180,6 +180,19 @@ public sealed class ModuleBoundaryArchitectureTestHelpersTests
         });
     }
 
+    [Test]
+    public void Payments_Persistence_Configuration_Path_Should_Retain_The_Canonical_Payments_Owner()
+    {
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+        var filePath = Path.Combine(repoRoot, "LgymApi.Payments", "Persistence", "Configurations", "PaymentCheckoutEntityTypeConfiguration.cs");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ArchitectureTestHelpers.GetInfrastructureConfigurationModuleName(filePath), Is.EqualTo("Payments"));
+            Assert.That(ArchitectureTestHelpers.GetCanonicalModuleNameFromPath(filePath), Is.EqualTo(ArchitectureTestHelpers.PaymentsModuleName));
+        });
+    }
+
     [TestCaseSource(nameof(IdentityErrorPathCases))]
     public void Identity_Owned_Error_Paths_Should_Resolve_To_Identity_Accounts(string relativePath)
     {
@@ -361,17 +374,17 @@ public sealed class ModuleBoundaryArchitectureTestHelpersTests
     }
 
     [Test]
-    public void Canonical_Module_Catalog_Should_Reject_A_Ninth_SubBoundary_Module()
+    public void Canonical_Module_Catalog_Should_Reject_A_Tenth_SubBoundary_Module()
     {
         var canonicalModules = ArchitectureTestHelpers.GetCanonicalModuleCatalog();
-        var ninthModuleFixture = canonicalModules.Append("Reference Data").ToArray();
+        var tenthModuleFixture = canonicalModules.Append("Reference Data").ToArray();
 
         Assert.Multiple(() =>
         {
-            Assert.That(canonicalModules, Has.Count.EqualTo(8));
+            Assert.That(canonicalModules, Has.Count.EqualTo(9));
             Assert.That(
-                () => ArchitectureTestHelpers.ValidateCanonicalModuleCatalog(ninthModuleFixture),
-                Throws.InvalidOperationException.With.Message.Contains("exactly the established eight modules"));
+                () => ArchitectureTestHelpers.ValidateCanonicalModuleCatalog(tenthModuleFixture),
+                Throws.InvalidOperationException.With.Message.Contains("exactly the established nine modules"));
         });
     }
 
