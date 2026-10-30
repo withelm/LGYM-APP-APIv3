@@ -67,6 +67,8 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<PhotoUploadSession> PhotoUploadSessions => Set<PhotoUploadSession>();
+    public DbSet<TrainerPhotoType> TrainerPhotoTypes => Set<TrainerPhotoType>();
+    public DbSet<ReportRequestDefinitionSnapshot> ReportRequestDefinitionSnapshots => Set<ReportRequestDefinitionSnapshot>();
 
     DbSet<AppConfig> IPlatformPersistenceContext.AppConfigs => AppConfigs;
     DbSet<ActionExecutionLog> IPlatformPersistenceContext.ActionExecutionLogs => ActionExecutionLogs;

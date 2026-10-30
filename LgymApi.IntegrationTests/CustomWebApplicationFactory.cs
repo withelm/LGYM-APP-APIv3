@@ -1,6 +1,7 @@
 using LgymApi.Infrastructure.Data;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.TestUtils;
+using System.Reflection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,8 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     /// The JWT signing key used for generating test tokens during integration tests.
     /// </summary>
     public const string TestJwtSigningKey = "IntegrationTestSigningKey_MustBeAtLeast32Characters!";
+
+    protected override IEnumerable<Assembly> GetTestAssemblies() => [typeof(CustomWebApplicationFactory).Assembly];
 
     /// <summary>
     /// Configure the test web host with in-memory database, JWT settings, email configuration, and CORS policies.

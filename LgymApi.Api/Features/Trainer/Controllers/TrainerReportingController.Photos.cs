@@ -8,6 +8,7 @@ using LgymApi.Resources;
 using Microsoft.AspNetCore.Mvc;
 using PhotoEntity = LgymApi.Domain.Entities.Photo;
 using ReportRequestEntity = LgymApi.Domain.Entities.ReportRequest;
+using TrainerPhotoTypeEntity = LgymApi.Domain.Entities.TrainerPhotoType;
 using LgymApi.Identity.Contracts;
 
 namespace LgymApi.Api.Features.Trainer.Controllers;
@@ -15,11 +16,17 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 public sealed partial class TrainerReportingController
 {
     [HttpPost("reporting/photos/upload-init")]
+    [ReportingProtocol(RequestKind = ReportingProtocolRequestKind.Upload)]
     [ProducesResponseType(typeof(InitiatePhotoUploadResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> InitiatePhotoUpload([FromBody] InitiatePhotoUploadRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<ReportRequestEntity>.TryParse(request.ReportRequestId, out var parsedRequestId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        if (!TryParsePhotoBinding(request.PhotoTypeId, request.ReportPhotoSlotId, out var photoTypeId))
         {
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
@@ -30,6 +37,8 @@ public sealed partial class TrainerReportingController
             {
                 ReportRequestId = parsedRequestId,
                 ViewType = request.ViewType,
+                PhotoTypeId = photoTypeId,
+                ReportPhotoSlotId = request.ReportPhotoSlotId,
                 MimeType = request.MimeType,
                 SizeBytes = request.SizeBytes
             },
@@ -69,11 +78,17 @@ public sealed partial class TrainerReportingController
     }
 
     [HttpPost("reporting/photos/complete-upload")]
+    [ReportingProtocol(RequestKind = ReportingProtocolRequestKind.Upload)]
     [ProducesResponseType(typeof(CompletePhotoUploadResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CompletePhotoUpload([FromBody] CompletePhotoUploadRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<ReportRequestEntity>.TryParse(request.ReportRequestId, out var parsedRequestId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        if (!TryParsePhotoBinding(request.PhotoTypeId, request.ReportPhotoSlotId, out var photoTypeId))
         {
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
@@ -87,7 +102,9 @@ public sealed partial class TrainerReportingController
                 SizeBytes = request.SizeBytes,
                 Checksum = request.Checksum,
                 ReportRequestId = parsedRequestId,
-                ViewType = request.ViewType
+                ViewType = request.ViewType,
+                PhotoTypeId = photoTypeId,
+                ReportPhotoSlotId = request.ReportPhotoSlotId
             },
             cancellationToken);
 
@@ -137,5 +154,18 @@ public sealed partial class TrainerReportingController
         {
             Photos = _mapper.MapList<PhotoHistoryItemResult, PhotoHistoryItemResponse>(result.Value)
         });
+    }
+
+    private static bool TryParsePhotoBinding(string? photoTypeId, string? reportPhotoSlotId, out Id<TrainerPhotoTypeEntity>? parsedPhotoTypeId)
+    {
+        parsedPhotoTypeId = null;
+        if (string.IsNullOrWhiteSpace(photoTypeId) && string.IsNullOrWhiteSpace(reportPhotoSlotId))
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(photoTypeId)
+               && Id<TrainerPhotoTypeEntity>.TryParse(photoTypeId, out var parsedId)
+               && (parsedPhotoTypeId = parsedId).HasValue;
     }
 }

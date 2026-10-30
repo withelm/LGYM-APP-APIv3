@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 786;
+    private const int ManifestEntryCount = 797;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -37,7 +37,18 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.UtcTimeRange",
         "LgymApi.Application/WorkoutProgress/ReportingIntegration/IReportSubmissionAcceptedProgressPersistence.cs\tLgymApi.Application.WorkoutProgress.ReportingIntegration.AcceptedReportSubmissionReceiptPersistenceModel",
         "LgymApi.Application/Features/Reporting/RecurringReportAssignmentService.Processing.cs\tLgymApi.Application.Features.Reporting.RecurringReportAssignmentService",
+        "LgymApi.Application/Features/Reporting/RecurringReportAssignmentService.ProcessingTypes.cs\tLgymApi.Application.Features.Reporting.RecurringReportAssignmentService",
         "LgymApi.Application/Features/Reporting/RecurringReportAssignmentService.RequestNow.cs\tLgymApi.Application.Features.Reporting.RecurringReportAssignmentService",
+        "LgymApi.Application/Features/Reporting/Models/ReportingModels.cs\tLgymApi.Application.Features.Reporting.Models.PhotoTypeLabelsResult",
+        "LgymApi.Application/Features/Reporting/Models/ReportingModels.cs\tLgymApi.Application.Features.Reporting.Models.ReportTemplateSnapshotDocument",
+        "LgymApi.Application/Features/Reporting/Models/ReportingModels.cs\tLgymApi.Application.Features.Reporting.Models.ReportTemplateSnapshotFieldDocument",
+        "LgymApi.Application/Features/Reporting/Models/ReportingModels.cs\tLgymApi.Application.Features.Reporting.Models.TrainerPhotoTypeResult",
+        "LgymApi.Application/Features/Reporting/ReportingService.PhotoTypes.cs\tLgymApi.Application.Features.Reporting.ReportingService",
+        "LgymApi.Application/Features/Reporting/ReportingService.Photos.Access.cs\tLgymApi.Application.Features.Reporting.ReportingService",
+        "LgymApi.Application/Reporting/ApiAdapters/ReportingApiAdapterContracts.cs\tLgymApi.Application.Reporting.ApiAdapters.ITrainerPhotoTypeApiPort",
+        "LgymApi.Application/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.NewTrainerPhotoTypePersistenceModel",
+        "LgymApi.Application/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.ReportRequestDefinitionSnapshotPersistenceModel",
+        "LgymApi.Application/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.TrainerPhotoTypePersistenceModel",
         "LgymApi.Application/Features/Reporting/ReportingService.Submissions.PhotoHydration.cs\tLgymApi.Application.Features.Reporting.ReportingService",
         "LgymApi.Application/Reporting/Errors/ReportingErrors.cs\tLgymApi.Application.Reporting.Errors.ReportingConflictError",
         "LgymApi.Platform/Repositories/IActorRowSecurityScopeFactory.cs\tLgymApi.Application.Repositories.IActorRowSecurityScopeFactory",

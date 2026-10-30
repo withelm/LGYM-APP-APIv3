@@ -19,6 +19,7 @@ public sealed class MiddlewareRegistrationGuardTests
         "UseRateLimiter",
         "UseMiddleware<UserContextMiddleware>",
         "UseAuthorization",
+        "UseMiddleware<ReportingProtocolMiddleware>",
         "UseMiddleware<ApiIdempotencyMiddleware>"
     };
 
@@ -55,6 +56,7 @@ public sealed class MiddlewareRegistrationGuardTests
                 app.UseRateLimiter();
             }
             app.UseMiddleware<UserContextMiddleware>();
+            app.UseMiddleware<ReportingProtocolMiddleware>();
             app.UseMiddleware<ApiIdempotencyMiddleware>();
             """).GetCompilationUnitRoot();
 
@@ -98,6 +100,19 @@ public sealed class MiddlewareRegistrationGuardTests
         Assert.That(violations, Has.Count.EqualTo(1));
         Assert.That(violations[0], Does.Contain("UseRateLimiter"));
         Assert.That(violations[0], Does.Contain(ExpectedRateLimiterCondition));
+    }
+
+    [Test]
+    public void ReportingProtocolAfterIdempotencyFixture_IsRejected()
+    {
+        var root = ParsePipelineFixture(
+            "if (!app.Environment.IsEnvironment(TestingEnvironment)) { app.UseRateLimiter(); }",
+            protocolAfterIdempotency: true);
+
+        var violations = FindPipelineViolations(root);
+
+        Assert.That(violations, Has.Count.EqualTo(1));
+        Assert.That(violations[0], Does.Contain("UseMiddleware<ReportingProtocolMiddleware> -> UseMiddleware<ApiIdempotencyMiddleware>"));
     }
 
     private static IReadOnlyList<string> FindPipelineViolations(CompilationUnitSyntax root)
@@ -209,8 +224,13 @@ public sealed class MiddlewareRegistrationGuardTests
             : registrations.GetRange(start, end - start + 1);
     }
 
-    private static CompilationUnitSyntax ParsePipelineFixture(string rateLimiterRegistration)
+    private static CompilationUnitSyntax ParsePipelineFixture(
+        string rateLimiterRegistration,
+        bool protocolAfterIdempotency = false)
     {
+        var replayPipeline = protocolAfterIdempotency
+            ? "app.UseMiddleware<ApiIdempotencyMiddleware>();\napp.UseMiddleware<ReportingProtocolMiddleware>();"
+            : "app.UseMiddleware<ReportingProtocolMiddleware>();\napp.UseMiddleware<ApiIdempotencyMiddleware>();";
         return CSharpSyntaxTree.ParseText($$"""
             var app = builder.Build();
             app.UseRequestLocalization(localizationOptions);
@@ -221,7 +241,7 @@ public sealed class MiddlewareRegistrationGuardTests
             {{rateLimiterRegistration}}
             app.UseMiddleware<UserContextMiddleware>();
             app.UseAuthorization();
-            app.UseMiddleware<ApiIdempotencyMiddleware>();
+            {{replayPipeline}}
             """).GetCompilationUnitRoot();
     }
 

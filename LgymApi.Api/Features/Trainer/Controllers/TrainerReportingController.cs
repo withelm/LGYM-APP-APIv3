@@ -18,24 +18,28 @@ namespace LgymApi.Api.Features.Trainer.Controllers;
 [ApiController]
 [Route("api/trainer")]
 [Authorize(Policy = AuthConstants.Policies.TrainerAccess)]
+[ReportingProtocol]
 public sealed partial class TrainerReportingController : ControllerBase
 {
     private readonly ITrainerReportTemplateApiPort _templates;
     private readonly ITrainerReportRequestApiPort _requests;
     private readonly ITrainerReportPhotoApiPort _photos;
+    private readonly ITrainerPhotoTypeApiPort? _photoTypes;
     private readonly IRecurringReportAssignmentApiPort _recurringAssignments;
     private readonly IMapper _mapper;
 
-    public TrainerReportingController(ITrainerReportTemplateApiPort templates, ITrainerReportRequestApiPort requests, ITrainerReportPhotoApiPort photos, IRecurringReportAssignmentApiPort recurringAssignments, IMapper mapper)
+    public TrainerReportingController(ITrainerReportTemplateApiPort templates, ITrainerReportRequestApiPort requests, ITrainerReportPhotoApiPort photos, IRecurringReportAssignmentApiPort recurringAssignments, IMapper mapper, ITrainerPhotoTypeApiPort? photoTypes = null)
     {
         _templates = templates;
         _requests = requests;
         _photos = photos;
+        _photoTypes = photoTypes;
         _recurringAssignments = recurringAssignments;
         _mapper = mapper;
     }
 
     [HttpPost("report-templates")]
+    [ReportingProtocol(RequestKind = ReportingProtocolRequestKind.Template)]
     [ProducesResponseType(typeof(ReportTemplateDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateTemplate([FromBody] UpsertReportTemplateRequest request, CancellationToken cancellationToken = default)
     {
@@ -89,6 +93,7 @@ public sealed partial class TrainerReportingController : ControllerBase
     }
 
     [HttpPost("report-templates/{templateId}/update")]
+    [ReportingProtocol(RequestKind = ReportingProtocolRequestKind.Template)]
     [ProducesResponseType(typeof(ReportTemplateDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateTemplate([FromRoute] string templateId, [FromBody] UpsertReportTemplateRequest request, CancellationToken cancellationToken = default)
@@ -96,6 +101,21 @@ public sealed partial class TrainerReportingController : ControllerBase
         if (!Id<ReportTemplate>.TryParse(templateId, out var parsedTemplateId))
         {
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        if (ReportingProtocolContext.TryGetVersion(HttpContext, out var protocolVersion) && protocolVersion == 1)
+        {
+            var existing = await _templates.GetAsync(HttpContext.GetAuthenticatedAccountContext()!, parsedTemplateId, cancellationToken);
+            if (existing.IsFailure)
+            {
+                return existing.ToActionResult();
+            }
+
+            var existingDto = _mapper.Map<ReportTemplateResult, ReportTemplateDto>(existing.Value);
+            if (existingDto is null || !ReportingProtocolResultFilter.TryAdapt(existingDto))
+            {
+                return ReportingProtocolResponses.UpgradeRequiredResult();
+            }
         }
 
         var result = await _templates.UpdateAsync(HttpContext.GetAuthenticatedAccountContext()!, parsedTemplateId, new CreateReportTemplateCommand

@@ -1,4 +1,6 @@
 using LgymApi.Domain.ValueObjects;
+using LgymApi.DataSeeder.ReportingPhotoTypesMigration;
+using LgymApi.Infrastructure.Reporting.PhotoTypesMigration;
 
 namespace LgymApi.DataSeeder.Tests;
 
@@ -88,6 +90,49 @@ public sealed class ProgramMainTests
     {
         Program.TryParseMode(["--migrate-only", "--prepare-hangfire"], out _).Should().BeFalse();
         Program.TryParseMode(["--unknown"], out _).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task Main_Help_ReturnsWithoutConfigurationOrDatabaseAccess()
+    {
+        var originalOut = Console.Out;
+        var output = new StringWriter();
+        try
+        {
+            Console.SetOut(output);
+
+            var code = await Program.Main(["--help"]);
+
+            code.Should().Be(0);
+            output.ToString().Should().Contain("reporting-photo-types --dry-run");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Test]
+    public void ReportingMigrationCommand_ApplyRequiresFingerprintAndExactFenceAcknowledgement()
+    {
+        ReportingPhotoTypesMigrationCommand.TryParse(
+            ["reporting-photo-types", "--apply"],
+            out _,
+            out var missingGuardError).Should().BeFalse();
+        missingGuardError.Should().Contain("acknowledge-external-fence");
+
+        ReportingPhotoTypesMigrationCommand.TryParse(
+            [
+                "reporting-photo-types",
+                "--apply",
+                "--expected-fingerprint=ABC",
+                $"--acknowledge-external-fence={ReportingPhotoTypesMigrationCommand.ExternalFenceAcknowledgement}"
+            ],
+            out var options,
+            out _).Should().BeTrue();
+        options!.Mode.Should().Be(ReportingPhotoTypesMigrationMode.Apply);
+        options.ExpectedFingerprint.Should().Be("ABC");
+        options.ExternalFenceAcknowledged.Should().BeTrue();
     }
 
     private static string CreateTempRepo(bool withBaseSettings, bool includeConnection = true)

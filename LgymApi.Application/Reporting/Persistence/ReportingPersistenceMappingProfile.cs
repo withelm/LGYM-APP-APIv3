@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Mapping.Core;
 
 namespace LgymApi.Application.Reporting.Persistence;
@@ -8,6 +9,15 @@ public sealed class ReportingPersistenceMappingProfile : IMappingProfile
 {
     public void Configure(MappingConfiguration configuration)
     {
+        configuration.CreateMap<TrainerPhotoTypePersistenceModel, TrainerPhotoTypeResult>((source, _) =>
+        {
+            var labels = ReportingPhotoTypeLabels.Resolve(source);
+            return new TrainerPhotoTypeResult
+            {
+                Id = source.Id, SystemKey = source.SystemKey, Name = source.Name, NameMode = source.NameMode,
+                IsArchived = source.IsArchived, Labels = labels, DisplayName = ReportingPhotoTypeLabels.DisplayName(labels)
+            };
+        });
         configuration.CreateMap<ReportTemplateFieldPersistenceModel, ReportTemplateFieldResult>((source, _) => new ReportTemplateFieldResult
         {
             Key = source.Key,
@@ -41,7 +51,8 @@ public sealed class ReportingPersistenceMappingProfile : IMappingProfile
             Note = source.Note,
             CreatedAt = source.CreatedAt,
             SubmittedAt = source.SubmittedAt,
-            Template = context.Map<ReportTemplatePersistenceModel, ReportTemplateResult>(source.Template)
+            Template = MapRequestTemplate(source, context),
+            DefinitionSnapshotProvenance = source.DefinitionSnapshot?.Provenance
         });
 
         configuration.CreateMap<ReportSubmissionPersistenceModel, ReportSubmissionResult>((source, context) => new ReportSubmissionResult
@@ -100,5 +111,32 @@ public sealed class ReportingPersistenceMappingProfile : IMappingProfile
         return values is null
             ? new Dictionary<string, TValue>(StringComparer.OrdinalIgnoreCase)
             : new Dictionary<string, TValue>(values, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static ReportTemplateResult MapRequestTemplate(ReportRequestPersistenceModel source, MappingContext context)
+    {
+        if (source.DefinitionSnapshot is null)
+        {
+            return context.Map<ReportTemplatePersistenceModel, ReportTemplateResult>(source.Template);
+        }
+
+        var snapshot = ReportTemplateSnapshotFactory.Deserialize(source.DefinitionSnapshot.DefinitionJson);
+        return new ReportTemplateResult
+        {
+            Id = source.TemplateId,
+            TrainerId = source.TrainerId,
+            Name = snapshot.Name,
+            Description = snapshot.Description,
+            CreatedAt = source.DefinitionSnapshot.CreatedAt,
+            Fields = snapshot.Fields.Select(field => new ReportTemplateFieldResult
+            {
+                Key = field.Key,
+                Label = field.Label,
+                Type = field.Type,
+                IsRequired = field.IsRequired,
+                Order = field.Order,
+                ModuleConfig = field.ModuleConfig
+            }).ToList()
+        };
     }
 }

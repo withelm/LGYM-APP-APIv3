@@ -67,7 +67,15 @@ internal static class ReportingTestData
                 ? null
                 : new ReportSubmissionFeedbackPersistenceModel(
                     entity.Submission.TrainerFeedbackAddedAt,
-                    entity.Submission.TrainerFeedbackReadAt));
+                    entity.Submission.TrainerFeedbackReadAt),
+            entity.DefinitionSnapshot is null
+                ? null
+                : new ReportRequestDefinitionSnapshotPersistenceModel(
+                    entity.DefinitionSnapshot.ReportRequestId,
+                    entity.DefinitionSnapshot.SourceTemplateId,
+                    entity.DefinitionSnapshot.DefinitionJson,
+                    entity.DefinitionSnapshot.Provenance,
+                    entity.DefinitionSnapshot.CreatedAt));
 
     public static ReportSubmissionPersistenceModel Submission(ReportSubmission entity)
         => new(

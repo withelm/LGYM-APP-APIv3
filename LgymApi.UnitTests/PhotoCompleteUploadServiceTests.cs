@@ -107,6 +107,61 @@ public sealed class PhotoCompleteUploadServiceTests
     }
 
     [Test]
+    public async Task CompletePhotoUploadAsync_WhenPhotoBindingDiffersFromUploadInit_ReturnsInvalidError()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var photoTypeId = Id<TrainerPhotoType>.New();
+        var currentUser = PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com");
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        var completionTypeId = Id<TrainerPhotoType>.New();
+        var slotId = Id<PhotoUploadSession>.New().ToString();
+        request.DefinitionSnapshot = new ReportRequestDefinitionSnapshot
+        {
+            Id = Id<ReportRequestDefinitionSnapshot>.New(), ReportRequestId = requestId, SourceTemplateId = request.TemplateId,
+            DefinitionJson = System.Text.Json.JsonSerializer.Serialize(new ReportTemplateSnapshotDocument(
+                request.TemplateId.ToString(), "Photos", null,
+                [new ReportTemplateSnapshotFieldDocument("photos", "Photos", ReportFieldType.Photos, true, 0,
+                    System.Text.Json.JsonSerializer.SerializeToElement(new { photoTypes = new[] { new {
+                        photoTypeId = completionTypeId.ToString(), reportPhotoSlotId = slotId, systemKey = "Front",
+                        nameMode = PhotoTypeNameMode.SystemLocalized, labels = new { pl = "Przód", en = "Front" }
+                    } } }))], "Issued")),
+            Provenance = "Issued"
+        };
+        var pendingUpload = PhotoServiceTestFactory.CreatePendingUpload(
+            $"photos/{traineeId}/{requestId}/Front/test.jpg",
+            traineeId,
+            traineeId,
+            requestId,
+            PhotoViewType.Front.ToString(),
+            "image/jpeg",
+            2048) with
+        {
+            SourcePhotoTypeId = photoTypeId,
+            ReportPhotoSlotId = slotId
+        };
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            pendingUpload: pendingUpload);
+
+        var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand
+        {
+            ReportRequestId = requestId,
+            ViewType = "Front",
+            StorageKey = pendingUpload.StorageKey,
+            MimeType = "image/jpeg",
+            SizeBytes = 2048,
+            Checksum = "etag",
+            PhotoTypeId = completionTypeId,
+            ReportPhotoSlotId = slotId
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+        result.Error.Message.Should().Contain("original upload-init");
+    }
+
+    [Test]
     public async Task CompletePhotoUploadAsync_WhenNumericViewTypeIsUndefined_ReturnsInvalidError()
     {
         var traineeId = Id<User>.New();

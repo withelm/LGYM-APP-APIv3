@@ -8,6 +8,7 @@ public interface IReportPhotoPersistence
 {
     Task<ReportPhotoPersistenceModel?> FindByIdAsync(Id<Photo> photoId, CancellationToken cancellationToken = default);
     Task<ReportPhotoPersistenceModel?> FindActiveByRequestAndViewAsync(Id<ReportRequest> requestId, string viewType, CancellationToken cancellationToken = default);
+    Task<ReportPhotoPersistenceModel?> FindActiveByRequestAndSlotAsync(Id<ReportRequest> requestId, string reportPhotoSlotId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReportPhotoPersistenceModel>> ListByTraineeAsync(Id<AccountReference> traineeId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReportPhotoPersistenceModel>> ListByRequestAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReportPhotoPersistenceModel>> ListByRequestsAsync(IReadOnlyCollection<Id<ReportRequest>> requestIds, CancellationToken cancellationToken = default);

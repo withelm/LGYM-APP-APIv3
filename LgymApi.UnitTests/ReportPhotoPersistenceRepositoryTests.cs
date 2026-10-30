@@ -19,6 +19,8 @@ public sealed class ReportPhotoPersistenceRepositoryTests
         await using var db = CreateDbContext("record");
         var persistence = new ReportPhotoPersistenceRepository(db);
         var pending = CreatePendingUpload("photos/persisted.jpg", DateTimeOffset.UtcNow.AddMinutes(10));
+        var photoTypeId = Id<TrainerPhotoType>.New();
+        pending = pending with { SourcePhotoTypeId = photoTypeId, ReportPhotoSlotId = Id<PhotoUploadSession>.New().ToString() };
 
         await persistence.RecordUploadInitAsync(pending);
         await db.SaveChangesAsync();
@@ -28,6 +30,8 @@ public sealed class ReportPhotoPersistenceRepositoryTests
         reloaded!.InitiatedByAccountId.Should().Be(pending.InitiatedByAccountId);
         reloaded.OwnerAccountId.Should().Be(pending.OwnerAccountId);
         reloaded.ReportRequestId.Should().Be(pending.ReportRequestId);
+        reloaded.SourcePhotoTypeId.Should().Be(photoTypeId);
+        reloaded.ReportPhotoSlotId.Should().Be(pending.ReportPhotoSlotId);
     }
 
     [Test]
@@ -79,7 +83,10 @@ public sealed class ReportPhotoPersistenceRepositoryTests
         var requestId = Id<ReportRequest>.New();
         var ownerId = Id<AccountReference>.New();
         var first = NewPhoto(requestId, ownerId, "photos/old.jpg");
-        var replacement = NewPhoto(requestId, ownerId, "photos/new.jpg");
+        var slotId = Id<PhotoUploadSession>.New().ToString();
+        var photoTypeId = Id<TrainerPhotoType>.New();
+        first = first with { SourcePhotoTypeId = photoTypeId, ReportPhotoSlotId = slotId };
+        var replacement = NewPhoto(requestId, ownerId, "photos/new.jpg") with { SourcePhotoTypeId = photoTypeId, ReportPhotoSlotId = slotId };
         await persistence.SaveAsync(first);
         await db.SaveChangesAsync();
 
@@ -90,6 +97,8 @@ public sealed class ReportPhotoPersistenceRepositoryTests
         rows.Should().HaveCount(2);
         rows.Single(photo => photo.Id == first.Id).IsDeleted.Should().BeTrue();
         rows.Single(photo => photo.Id == replacement.Id).IsDeleted.Should().BeFalse();
+        rows.Single(photo => photo.Id == replacement.Id).SourcePhotoTypeId.Should().Be(photoTypeId);
+        rows.Single(photo => photo.Id == replacement.Id).ReportPhotoSlotId.Should().Be(slotId);
     }
 
     [Test]

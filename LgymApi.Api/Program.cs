@@ -24,6 +24,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Debugging;
+using LgymApi.Api.Features.Trainer;
+using Microsoft.AspNetCore.Mvc;
 
 const string TestingEnvironment = "Testing";
 
@@ -40,6 +42,7 @@ SelfLog.Enable(msg => Console.Error.WriteLine(msg));
 SerilogBootstrap.ConfigureSerilog(builder);
 
 builder.Services.AddStrictHttpJsonOptions();
+builder.Services.Configure<MvcOptions>(options => options.Filters.Add<ReportingProtocolResultFilter>());
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
@@ -59,7 +62,7 @@ builder.Services.AddCors(options =>
     {
         if (corsAllowedOrigins.Length > 0)
         {
-            policy.WithOrigins(corsAllowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials();
+            policy.WithOrigins(corsAllowedOrigins).AllowAnyMethod().AllowAnyHeader().WithExposedHeaders(ReportingProtocolMiddleware.HeaderName).AllowCredentials();
             return;
         }
 
@@ -180,6 +183,7 @@ if (!app.Environment.IsEnvironment(TestingEnvironment))
 
 app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
 app.UseAuthorization();
+app.UseMiddleware<ReportingProtocolMiddleware>();
 app.UseMiddleware<LgymApi.Api.Middleware.ApiIdempotencyMiddleware>();
 
 app.MapGet("/health/live", static () => Results.Json(new { status = "ok" }))
@@ -187,6 +191,7 @@ app.MapGet("/health/live", static () => Results.Json(new { status = "ok" }))
 
 app.MapLocalPhotoDevelopmentEndpoints();
 app.MapControllers();
+app.MapReportingProtocolCapabilities();
 app.MapHub<LgymApi.Api.Hubs.NotificationHub>("/hubs/notifications", options =>
 {
     options.CloseOnAuthenticationExpiration = true;

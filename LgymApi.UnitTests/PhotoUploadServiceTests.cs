@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System.Text.Json;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Reporting.Errors;
@@ -17,6 +18,99 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class PhotoUploadServiceTests
 {
+    [Test]
+    public async Task InitiatePhotoUploadAsync_WithSchema2Snapshot_PinsCanonicalTypeAndSlotWithoutDictionaryLookup()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var photoTypeId = Id<TrainerPhotoType>.New();
+        var slotId = Id<PhotoUploadSession>.New().ToString();
+        var currentUser = PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com");
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        request.DefinitionSnapshot = CreateSnapshot(request, photoTypeId, slotId);
+        PendingPhotoUpload? recorded = null;
+        var photos = Substitute.For<IReportPhotoPersistence>();
+        photos.RecordUploadInitAsync(Arg.Do<PendingPhotoUpload>(session => recorded = session), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        storageProvider.GenerateSignedUploadUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns("https://storage.example.com/upload");
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            reportingRepository: photos,
+            photoStorageProvider: storageProvider);
+
+        var result = await service.InitiatePhotoUploadAsync(currentUser, new InitiatePhotoUploadCommand
+        {
+            ReportRequestId = requestId,
+            ViewType = "Front",
+            PhotoTypeId = photoTypeId,
+            ReportPhotoSlotId = slotId,
+            MimeType = "image/jpeg",
+            SizeBytes = 1024
+        });
+
+        result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error.Message : string.Empty);
+        recorded.Should().NotBeNull();
+        recorded!.SourcePhotoTypeId.Should().Be(photoTypeId);
+        recorded.ReportPhotoSlotId.Should().Be(slotId);
+        recorded.ViewType.Should().Be("Front");
+    }
+
+    [Test]
+    public async Task InitiatePhotoUploadAsync_WithSchema2SnapshotAndMismatchedTypeSlot_IsRejected()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var photoTypeId = Id<TrainerPhotoType>.New();
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        request.DefinitionSnapshot = CreateSnapshot(request, photoTypeId, Id<PhotoUploadSession>.New().ToString());
+        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request));
+
+        var result = await service.InitiatePhotoUploadAsync(
+            PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com"),
+            new InitiatePhotoUploadCommand
+            {
+                ReportRequestId = requestId,
+                ViewType = "Front",
+                PhotoTypeId = photoTypeId,
+                ReportPhotoSlotId = Id<PhotoUploadSession>.New().ToString(),
+                MimeType = "image/jpeg",
+                SizeBytes = 1024
+            });
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [TestCase(false, "Front", true)]
+    [TestCase(true, "Back", false)]
+    [TestCase(true, "Front", true)]
+    public async Task InitiatePhotoUploadAsync_ResolvesLegacyViewAndRejectsConflictingDualIdentity(bool includeIdentity, string view, bool expectedSuccess)
+    {
+        var traineeId = Id<User>.New();
+        var request = PhotoServiceTestFactory.CreateReportRequest(Id<ReportRequest>.New(), traineeId);
+        var typeId = Id<TrainerPhotoType>.New();
+        var slotId = Id<PhotoUploadSession>.New().ToString();
+        request.DefinitionSnapshot = CreateSnapshot(request, typeId, slotId);
+        var photos = Substitute.For<IReportPhotoPersistence>();
+        PendingPhotoUpload? captured = null;
+        photos.RecordUploadInitAsync(Arg.Do<PendingPhotoUpload>(value => captured = value), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), reportingRepository: photos);
+        var result = await service.InitiatePhotoUploadAsync(PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com"), new InitiatePhotoUploadCommand
+        {
+            ReportRequestId = request.Id, ViewType = view, PhotoTypeId = includeIdentity ? typeId : null,
+            ReportPhotoSlotId = includeIdentity ? slotId : null, MimeType = "image/jpeg", SizeBytes = 1024
+        });
+        result.IsSuccess.Should().Be(expectedSuccess);
+        if (expectedSuccess)
+        {
+            captured.Should().NotBeNull();
+            captured!.SourcePhotoTypeId.Should().Be(typeId);
+            captured.ReportPhotoSlotId.Should().Be(slotId);
+        }
+        else captured.Should().BeNull();
+    }
+
     [Test]
     public async Task InitiatePhotoUploadAsync_WhenTraineeOwnsRequest_ReturnsSuccessWithStorageKeyAndUrl()
     {
@@ -105,6 +199,8 @@ public sealed class PhotoUploadServiceTests
         var requestId = Id<ReportRequest>.New();
         var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        request.TrainerId = trainerId;
+        request.Template.TrainerId = trainerId;
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         storageProvider.GenerateSignedUploadUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns("https://storage.example.com/signed-upload-url");
@@ -339,5 +435,42 @@ public sealed class PhotoUploadServiceTests
         });
 
         result.IsSuccess.Should().BeTrue();
+    }
+
+    private static ReportRequestDefinitionSnapshot CreateSnapshot(
+        ReportRequest request,
+        Id<TrainerPhotoType> photoTypeId,
+        string slotId)
+    {
+        var moduleConfig = JsonSerializer.SerializeToElement(new
+        {
+            schemaVersion = 2,
+            requiredPhotoTypeIds = new[] { photoTypeId.ToString() },
+            photoTypes = new[]
+            {
+                new
+                {
+                    photoTypeId = photoTypeId.ToString(),
+                    reportPhotoSlotId = slotId,
+                    systemKey = "Front",
+                    nameMode = PhotoTypeNameMode.SystemLocalized,
+                    labels = new { pl = "Przód", en = "Front" }
+                }
+            }
+        });
+        return new ReportRequestDefinitionSnapshot
+        {
+            Id = Id<ReportRequestDefinitionSnapshot>.New(),
+            ReportRequestId = request.Id,
+            SourceTemplateId = request.TemplateId,
+            DefinitionJson = JsonSerializer.Serialize(new ReportTemplateSnapshotDocument(
+                request.TemplateId.ToString(),
+                request.Template.Name,
+                null,
+                [new ReportTemplateSnapshotFieldDocument("photos", "Photos", ReportFieldType.Photos, true, 1, moduleConfig)],
+                "Issued")),
+            Provenance = "Issued",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
     }
 }

@@ -302,6 +302,8 @@ public sealed partial class RecurringReportAssignmentServiceTests
         params RecurringReportAssignmentPersistenceModel[] assignments)
     {
         var templatePersistence = Substitute.For<IReportTemplatePersistence>();
+        templatePersistence.FindByIdAsync(Arg.Any<Id<ReportTemplate>>(), Arg.Any<CancellationToken>())
+            .Returns(call => assignments.First(assignment => assignment.TemplateId == call.ArgAt<Id<ReportTemplate>>(0)).Template);
         var requestPersistence = Substitute.For<IReportRequestSubmissionPersistence>();
         var assignmentPersistence = Substitute.For<IRecurringReportAssignmentPersistence>();
         var relationshipPersistence = Substitute.For<IReportingRelationshipAccessPersistence>();

@@ -42,5 +42,10 @@ internal sealed class PhotoUploadSessionEntityTypeConfiguration : IEntityTypeCon
             .HasForeignKey(e => e.CompletedPhotoId)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(e => e.SourcePhotoType)
+            .WithMany()
+            .HasForeignKey(e => e.SourcePhotoTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

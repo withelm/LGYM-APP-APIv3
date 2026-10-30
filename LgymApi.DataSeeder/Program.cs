@@ -1,5 +1,7 @@
 using LgymApi.DataSeeder;
 using LgymApi.DataSeeder.Seeders;
+using LgymApi.DataSeeder.ReportingPhotoTypesMigration;
+using LgymApi.Infrastructure.Reporting.PhotoTypesMigration;
 using LgymApi.Identity;
 using LgymApi.Infrastructure.Data;
 using Hangfire.PostgreSql;
@@ -15,9 +17,25 @@ public static class Program
     {
         Console.WriteLine("=== LgymApi DataSeeder ===");
 
+        if (args.Length == 1 && args[0] is "--help" or "-h")
+        {
+            PrintHelp(Console.Out);
+            return 0;
+        }
+
+        if (args.Length > 0 && string.Equals(args[0], ReportingPhotoTypesMigrationCommand.CommandName, StringComparison.Ordinal))
+        {
+            if (args.Length == 2 && args[1] is "--help" or "-h")
+            {
+                PrintHelp(Console.Out);
+                return 0;
+            }
+            return await RunReportingPhotoTypesMigrationAsync(args);
+        }
+
         if (!TryParseMode(args, out var mode))
         {
-            Console.Error.WriteLine("Supported modes: --migrate-only, --prepare-hangfire, --seed.");
+            PrintHelp(Console.Error);
             return 1;
         }
 
@@ -74,6 +92,53 @@ public static class Program
         await orchestrator.RunAsync(context, seedContext, options, CancellationToken.None);
         Console.WriteLine("All done! Database is ready.");
         return 0;
+    }
+
+    private static async Task<int> RunReportingPhotoTypesMigrationAsync(string[] args)
+    {
+        if (!ReportingPhotoTypesMigrationCommand.TryParse(args, out var options, out var error))
+        {
+            Console.Error.WriteLine(error);
+            ReportingPhotoTypesMigrationCommand.PrintHelp(Console.Error);
+            return 1;
+        }
+
+        var connectionString = DataSeederProgram.GetMigrationConnectionString();
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            Console.Error.WriteLine("LGYM_MIGRATION_POSTGRES is required for offline database operations.");
+            return 1;
+        }
+
+        if (IsTestModeEnabled())
+        {
+            Console.WriteLine("Test mode enabled. Skipping offline database operation.");
+            return 0;
+        }
+
+        try
+        {
+            var basePath = Environment.GetEnvironmentVariable("LGYM_SEEDER_BASE_PATH") ?? AppContext.BaseDirectory;
+            var configuration = DataSeederProgram.BuildConfiguration(basePath);
+            await using var provider = BuildServiceProvider(configuration, connectionString);
+            await using var scope = provider.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var runner = new ReportingPhotoTypesMigrationRunner(context);
+            var report = await runner.RunAsync(options!, CancellationToken.None);
+            ReportingPhotoTypesMigrationConsole.Write(report, Console.Out);
+            return report.HasGlobalBlockers || report.HasUnresolvedRequests ? 2 : 0;
+        }
+        catch (Exception exception)
+        {
+            ReportingPhotoTypesMigrationConsole.WriteFailure(exception, Console.Error);
+            return 2;
+        }
+    }
+
+    private static void PrintHelp(TextWriter writer)
+    {
+        writer.WriteLine("Supported seed/bootstrap modes: --migrate-only, --prepare-hangfire, --seed.");
+        ReportingPhotoTypesMigrationCommand.PrintHelp(writer);
     }
 
     private static bool IsTestModeEnabled()

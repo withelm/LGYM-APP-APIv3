@@ -31,6 +31,14 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportTemplateResult, AppError>.Failure(validationCheck.Error);
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        await _templatePersistence.LockTrainerDefinitionsAsync(currentTrainer.Id, cancellationToken);
+        var photoTypeCheck = await ValidatePhotoTypeSelectionsAsync(currentTrainer, command.Fields, cancellationToken);
+        if (photoTypeCheck.IsFailure)
+        {
+            return Result<ReportTemplateResult, AppError>.Failure(photoTypeCheck.Error);
+        }
+
         var createdAt = DateTimeOffset.UtcNow;
         var fields = CreateTemplateFields(command.Fields, createdAt);
         var template = new NewReportTemplatePersistenceModel(
@@ -43,6 +51,7 @@ public sealed partial class ReportingService : IReportingService
 
         await _templatePersistence.AddAsync(template, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<ReportTemplateResult, AppError>.Success(
             _mapper.Map<ReportTemplatePersistenceModel, ReportTemplateResult>(ToPersistenceModel(template)));
@@ -99,6 +108,14 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportTemplateResult, AppError>.Failure(validationCheck.Error);
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        await _templatePersistence.LockTrainerDefinitionsAsync(currentTrainer.Id, cancellationToken);
+        var photoTypeCheck = await ValidatePhotoTypeSelectionsAsync(currentTrainer, command.Fields, cancellationToken);
+        if (photoTypeCheck.IsFailure)
+        {
+            return Result<ReportTemplateResult, AppError>.Failure(photoTypeCheck.Error);
+        }
+
         var templateResult = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
         if (templateResult.IsFailure)
         {
@@ -112,6 +129,7 @@ public sealed partial class ReportingService : IReportingService
             fields);
         await _templatePersistence.UpdateAsync(templateId, update, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         var updated = templateResult.Value with
         {
@@ -134,6 +152,8 @@ public sealed partial class ReportingService : IReportingService
             return Result<Unit, AppError>.Failure(trainerCheck.Error);
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        await _templatePersistence.LockTrainerDefinitionsAsync(currentTrainer.Id, cancellationToken);
         var templateResult = await EnsureOwnedTemplateAsync(currentTrainer, templateId, cancellationToken);
         if (templateResult.IsFailure)
         {
@@ -142,6 +162,7 @@ public sealed partial class ReportingService : IReportingService
 
         await _templatePersistence.MarkDeletedAsync(templateId, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -218,4 +239,31 @@ public sealed partial class ReportingService : IReportingService
                 => JsonSerializer.Serialize(measurements),
             _ => moduleConfig.HasValue ? JsonSerializer.Serialize(moduleConfig.Value) : null
         };
+
+    private async Task<Result<Unit, AppError>> ValidatePhotoTypeSelectionsAsync(
+        AuthenticatedAccountContext trainer,
+        IEnumerable<ReportTemplateFieldCommand> fields,
+        CancellationToken cancellationToken)
+    {
+        var photoFields = fields.Where(field => field.Type == ReportFieldType.Photos).ToList();
+        if (photoFields.Count == 0)
+        {
+            return Result<Unit, AppError>.Success(Unit.Value);
+        }
+        var types = await ReportTemplateSnapshotFactory.EnsureDefaultsAsync(_templatePersistence, trainer.Id, cancellationToken);
+        var allowed = types.Where(type => !type.IsArchived).Select(type => type.Id.ToString()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var field in photoFields)
+        {
+            if (!ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(field.ModuleConfig, out var normalized, out _))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+            if (normalized.TryGetProperty("requiredPhotoTypeIds", out var ids)
+                && ids.EnumerateArray().Any(id => !allowed.Contains(id.GetString() ?? string.Empty)))
+            {
+                return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+        }
+        return Result<Unit, AppError>.Success(Unit.Value);
+    }
 }

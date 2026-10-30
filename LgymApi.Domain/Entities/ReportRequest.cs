@@ -19,4 +19,5 @@ public sealed class ReportRequest : EntityBase<ReportRequest>
     public ReportTemplate Template { get; set; } = null!;
     public RecurringReportAssignment? RecurringReportAssignment { get; set; }
     public ReportSubmission? Submission { get; set; }
+    public ReportRequestDefinitionSnapshot? DefinitionSnapshot { get; set; }
 }
