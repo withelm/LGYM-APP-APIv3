@@ -1,5 +1,7 @@
 using System.Text.Json;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Application.Features.Reporting;
 
@@ -13,7 +15,46 @@ public static class ReportingModuleConfigParser
         normalizedConfig = default;
         requiredViews = [];
 
-        if (!TryGetArrayProperty(moduleConfig, "requiredViews", out var requiredViewsElement))
+        if (!moduleConfig.HasValue || moduleConfig.Value.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        var config = moduleConfig.Value;
+        var hasViews = config.TryGetProperty("requiredViews", out var requiredViewsElement);
+        var hasPhotoTypes = config.TryGetProperty("requiredPhotoTypeIds", out var requiredPhotoTypeIdsElement);
+        if (hasViews == hasPhotoTypes)
+        {
+            return false;
+        }
+
+        if (hasPhotoTypes)
+        {
+            if (requiredPhotoTypeIdsElement.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+            var ids = new List<string>();
+            var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var element in requiredPhotoTypeIdsElement.EnumerateArray())
+            {
+                if (element.ValueKind != JsonValueKind.String
+                    || !Id<TrainerPhotoType>.TryParse(element.GetString() ?? string.Empty, out var id)
+                    || !seenIds.Add(id.ToString()))
+                {
+                    return false;
+                }
+                ids.Add(id.ToString());
+            }
+            if (ids.Count == 0)
+            {
+                return false;
+            }
+            normalizedConfig = JsonSerializer.SerializeToElement(new { schemaVersion = 2, requiredPhotoTypeIds = ids });
+            return true;
+        }
+
+        if (requiredViewsElement.ValueKind != JsonValueKind.Array)
         {
             return false;
         }

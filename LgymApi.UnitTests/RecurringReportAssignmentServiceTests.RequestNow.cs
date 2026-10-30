@@ -664,6 +664,7 @@ public sealed partial class RecurringReportAssignmentServiceTests
         bool lockedRelationship = true)
     {
         var templatePersistence = Substitute.For<IReportTemplatePersistence>();
+        templatePersistence.FindByIdAsync(assignment.TemplateId, Arg.Any<CancellationToken>()).Returns(assignment.Template);
         var requestPersistence = Substitute.For<IReportRequestSubmissionPersistence>();
         var assignmentPersistence = Substitute.For<IRecurringReportAssignmentPersistence>();
         var relationshipPersistence = Substitute.For<IReportingRelationshipAccessPersistence>();

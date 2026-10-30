@@ -54,7 +54,8 @@ public sealed record ReportRequestPersistenceModel(
     DateTimeOffset CreatedAt,
     bool IsDeleted,
     ReportTemplatePersistenceModel Template,
-    ReportSubmissionFeedbackPersistenceModel? Submission);
+    ReportSubmissionFeedbackPersistenceModel? Submission,
+    ReportRequestDefinitionSnapshotPersistenceModel? DefinitionSnapshot = null);
 
 public sealed record NewReportRequestPersistenceModel(
     Id<ReportRequest> Id,
@@ -66,6 +67,14 @@ public sealed record NewReportRequestPersistenceModel(
     DateTimeOffset? DueAt,
     DateTimeOffset? SubmittedAt,
     string? Note,
+    DateTimeOffset CreatedAt,
+    string? DefinitionSnapshotJson = null);
+
+public sealed record ReportRequestDefinitionSnapshotPersistenceModel(
+    Id<ReportRequest> ReportRequestId,
+    Id<ReportTemplate> SourceTemplateId,
+    string DefinitionJson,
+    string Provenance,
     DateTimeOffset CreatedAt);
 
 public sealed record ReportSubmissionPersistenceModel(
@@ -153,7 +162,9 @@ public sealed record ReportPhotoPersistenceModel(
     Id<AccountReference> UploaderAccountId,
     Id<AccountReference> OwnerAccountId,
     DateTimeOffset CreatedAt,
-    bool IsDeleted);
+    bool IsDeleted,
+    Id<TrainerPhotoType>? SourcePhotoTypeId = null,
+    string? ReportPhotoSlotId = null);
 
 public sealed record NewReportPhotoPersistenceModel(
     Id<Photo> Id,
@@ -166,7 +177,9 @@ public sealed record NewReportPhotoPersistenceModel(
     Id<ReportRequest> ReportRequestId,
     Id<AccountReference> UploaderAccountId,
     Id<AccountReference> OwnerAccountId,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    Id<TrainerPhotoType>? SourcePhotoTypeId = null,
+    string? ReportPhotoSlotId = null);
 
 public sealed record PendingPhotoUpload(
     Id<PhotoUploadSession> Id,
@@ -182,7 +195,27 @@ public sealed record PendingPhotoUpload(
     DateTimeOffset? CompletedAtUtc,
     Id<Photo>? CompletedPhotoId,
     PhotoUploadSessionStatus Status,
-    string? FailureReason);
+    string? FailureReason,
+    Id<TrainerPhotoType>? SourcePhotoTypeId = null,
+    string? ReportPhotoSlotId = null);
+
+public sealed record TrainerPhotoTypePersistenceModel(
+    Id<TrainerPhotoType> Id,
+    Id<AccountReference> TrainerId,
+    string? SystemKey,
+    string Name,
+    PhotoTypeNameMode NameMode,
+    bool IsArchived,
+    DateTimeOffset CreatedAt);
+
+public sealed record NewTrainerPhotoTypePersistenceModel(
+    Id<TrainerPhotoType> Id,
+    Id<AccountReference> TrainerId,
+    string? SystemKey,
+    string Name,
+    PhotoTypeNameMode NameMode,
+    bool IsArchived,
+    DateTimeOffset CreatedAt);
 
 public sealed record ReportingRelationshipAccessFact(bool HasActiveRelationship);
 

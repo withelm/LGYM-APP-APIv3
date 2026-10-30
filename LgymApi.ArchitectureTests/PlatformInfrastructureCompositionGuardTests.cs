@@ -100,7 +100,7 @@ public sealed class PlatformInfrastructureCompositionGuardTests
     private static void AssertAppConfigRegistrarPlacement(IReadOnlyList<string> entries)
     {
         const int appConfigOrdinal = 23;
-        if (entries.Count != 51 ||
+        if (entries.Count != 53 ||
             entries.ElementAtOrDefault(appConfigOrdinal) != "AppConfigEntityTypeConfiguration" ||
             entries.ElementAtOrDefault(appConfigOrdinal - 1) != "EloRegistryEntityTypeConfiguration" ||
             entries.ElementAtOrDefault(appConfigOrdinal + 1) != "TrainerInvitationEntityTypeConfiguration")

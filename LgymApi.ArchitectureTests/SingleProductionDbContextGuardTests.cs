@@ -9,13 +9,17 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 51;
+    private const int PersistedEntityCount = 53;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
     private const string PaymentsMigration = MigrationRoot + "/20261027200628_AddPaymentsPersistence.cs";
     private const string PaymentsMigrationDesigner = MigrationRoot + "/20261027200628_AddPaymentsPersistence.Designer.cs";
     private const string SignalRClientTestPackageProject = "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj";
+    private static readonly IReadOnlyDictionary<string, string> ApprovedProjectFileLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj"] = "784fc7ec545ef354f14b14c3f9925298fed54a73429f78399fef9fd1b7ef7838"
+    };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         [MigrationRoot + "/20260815080018_AddNotificationRetentionIndexes.cs"] = "8661dde0f29629b836a76a5562066bfbc20628455359cbc507597350287e3bac",
@@ -25,7 +29,9 @@ public sealed class SingleProductionDbContextGuardTests
         [ReportReceiptMigrationDesigner] = "a6ab655fcc346b2f12b17baea223f58c3f2d70f63e2df6d589c483025f2991b5",
         [PaymentsMigration] = "db13acfd42d7c8e0fde30164ef08669fad4cc11880a63f870dbb08bd7bce66d9",
         [PaymentsMigrationDesigner] = "bda65dd4e9647492b863e4316b9551a0ee8f3a81e7fa21d63f7c6b62f6a3f601",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "bf5e3871d186b64c21b5918a21e589129b0e69b1a84edb482a5140c2240a8707"
+        [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.cs"] = "4f22bc2418831f276588d568ab40da6ce742ca781577eb42774e7724d19a0d82",
+        [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.Designer.cs"] = "ee6deb9e9ccaab9a5a9efbd5e6857c44c2fc679747ae8a9d538755c675b08d5a",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "418f3ccabfab07c10af65dbae1f624d484ed92605a27467c04316da9ed0fcfc5"
     };
 
     [Test]
@@ -131,7 +137,7 @@ public sealed class SingleProductionDbContextGuardTests
             MigrationRoot
         ]);
 
-        AssertApprovedPaymentsTopologyWorktreeChanges(repoRoot, headChanges, untrackedFiles);
+        AssertApprovedRetentionMigrationWorktreeChanges(repoRoot, headChanges, untrackedFiles);
     }
 
     [Test]
@@ -421,18 +427,17 @@ public sealed class SingleProductionDbContextGuardTests
     {
         foreach (var entry in ApprovedRetentionMigrationLedger)
         {
-            var path = Path.Combine(repoRoot, entry.Key.Replace('/', Path.DirectorySeparatorChar));
-            Assert.That(File.Exists(path), Is.True, $"Approved retention migration ledger path is missing: {entry.Key}");
-            var sourceBytes = File.ReadAllBytes(path);
-            var normalizedSource = sourceBytes
-                .Where((value, index) => value != '\r' || index + 1 >= sourceBytes.Length || sourceBytes[index + 1] != '\n')
-                .ToArray();
-            var hash = Convert.ToHexString(SHA256.HashData(normalizedSource)).ToLowerInvariant();
-            Assert.That(hash, Is.EqualTo(entry.Value), $"Approved retention migration ledger hash changed: {entry.Key}");
+            AssertApprovedFileHash(repoRoot, entry, "retention migration");
+        }
+
+        foreach (var entry in ApprovedProjectFileLedger)
+        {
+            AssertApprovedFileHash(repoRoot, entry, "project file");
         }
 
         const string applicationProject = "LgymApi.Application/LgymApi.Application.csproj";
         var approvedChanges = ApprovedRetentionMigrationLedger.Keys
+            .Concat(ApprovedProjectFileLedger.Keys)
             .ToList();
         if (headChanges.Contains(applicationProject, StringComparer.OrdinalIgnoreCase))
         {
@@ -447,43 +452,6 @@ public sealed class SingleProductionDbContextGuardTests
         }
 
         AssertPhysicalTopologyWorktreeIsClean(headChanges, untrackedFiles, approvedChanges);
-    }
-
-    private static void AssertApprovedPaymentsTopologyWorktreeChanges(
-        string repoRoot,
-        IEnumerable<string> headChanges,
-        IEnumerable<string> untrackedFiles)
-    {
-        const string paymentsProject = "LgymApi.Payments/LgymApi.Payments.csproj";
-        var paymentChanges = headChanges
-            .Concat(untrackedFiles)
-            .Where(path => string.Equals(path, "LgymApi.sln", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(path, "LgymApi.Api/LgymApi.Api.csproj", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(path, "LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(path, "LgymApi.Infrastructure/LgymApi.Infrastructure.csproj", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(path, "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(path, "LgymApi.UnitTests/LgymApi.UnitTests.csproj", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("LgymApi.Payments/", StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-        var paymentReferences = ArchitectureTestHelpers.ParseProjectReferences(Path.Combine(repoRoot, paymentsProject))
-            .Select(edge => $"{edge.SourceProject} -> {edge.TargetProject}")
-            .ToArray();
-        var migrationChanges = headChanges
-            .Concat(untrackedFiles)
-            .Where(path => path.StartsWith(MigrationRoot + "/", StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-        AssertApprovedPaymentsTopologyChanges(paymentChanges, paymentReferences, migrationChanges);
-        AssertApprovedRetentionMigrationWorktreeChanges(repoRoot, headChanges, untrackedFiles,
-        [
-            "LgymApi.sln",
-            "LgymApi.Api/LgymApi.Api.csproj",
-            "LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj",
-            "LgymApi.Infrastructure/LgymApi.Infrastructure.csproj",
-            "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj",
-            "LgymApi.UnitTests/LgymApi.UnitTests.csproj",
-            paymentsProject
-        ]);
     }
 
     private static void AssertApprovedPaymentsTopologyChanges(
@@ -512,6 +480,21 @@ public sealed class SingleProductionDbContextGuardTests
             PaymentsMigrationDesigner,
             MigrationRoot + "/AppDbContextModelSnapshot.cs"
         }));
+    }
+
+    private static void AssertApprovedFileHash(
+        string repoRoot,
+        KeyValuePair<string, string> entry,
+        string ledgerName)
+    {
+        var path = Path.Combine(repoRoot, entry.Key.Replace('/', Path.DirectorySeparatorChar));
+        Assert.That(File.Exists(path), Is.True, $"Approved {ledgerName} ledger path is missing: {entry.Key}");
+        var sourceBytes = File.ReadAllBytes(path);
+        var normalizedSource = sourceBytes
+            .Where((value, index) => value != '\r' || index + 1 >= sourceBytes.Length || sourceBytes[index + 1] != '\n')
+            .ToArray();
+        var hash = Convert.ToHexString(SHA256.HashData(normalizedSource)).ToLowerInvariant();
+        Assert.That(hash, Is.EqualTo(entry.Value), $"Approved {ledgerName} ledger hash changed: {entry.Key}");
     }
 
     private static void AssertOnlyNodaTimePackageAdded(string baseline, string current)

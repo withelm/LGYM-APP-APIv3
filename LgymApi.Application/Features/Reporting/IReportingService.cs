@@ -28,4 +28,8 @@ public interface IReportingService
     Task<Result<SignedReadUrlResult, AppError>> GetSignedReadUrlAsync(AuthenticatedAccountContext currentUser, Id<Photo> photoId, CancellationToken cancellationToken = default);
     Task<Result<CompletePhotoUploadResult, AppError>> CompletePhotoUploadAsync(AuthenticatedAccountContext currentUser, CompletePhotoUploadCommand command, CancellationToken cancellationToken = default);
     Task<Result<List<PhotoHistoryItemResult>, AppError>> GetPhotoHistoryAsync(AuthenticatedAccountContext currentUser, GetPhotoHistoryCommand command, CancellationToken cancellationToken = default);
+    Task<Result<List<TrainerPhotoTypeResult>, AppError>> GetPhotoTypesAsync(AuthenticatedAccountContext trainer, CancellationToken cancellationToken = default);
+    Task<Result<TrainerPhotoTypeResult, AppError>> CreatePhotoTypeAsync(AuthenticatedAccountContext trainer, string name, CancellationToken cancellationToken = default);
+    Task<Result<TrainerPhotoTypeResult, AppError>> UpdatePhotoTypeAsync(AuthenticatedAccountContext trainer, Id<TrainerPhotoType> photoTypeId, string? name, bool? archived, CancellationToken cancellationToken = default);
+    Task<Result<TrainerPhotoTypeResult, AppError>> ResetPhotoTypeNameAsync(AuthenticatedAccountContext trainer, Id<TrainerPhotoType> photoTypeId, CancellationToken cancellationToken = default);
 }

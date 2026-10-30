@@ -1012,11 +1012,17 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid>("OwnerUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ReportPhotoSlotId")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("ReportRequestId")
                         .HasColumnType("uuid");
 
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint");
+
+                    b.Property<Guid?>("SourcePhotoTypeId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("StorageKey")
                         .IsRequired()
@@ -1037,13 +1043,19 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SourcePhotoTypeId");
+
                     b.HasIndex("UploaderUserId");
 
                     b.HasIndex("OwnerUserId", "CreatedAt");
 
+                    b.HasIndex("ReportRequestId", "ReportPhotoSlotId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE AND \"ReportPhotoSlotId\" IS NOT NULL");
+
                     b.HasIndex("ReportRequestId", "ViewType")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = FALSE");
+                        .HasFilter("\"IsDeleted\" = FALSE AND \"ReportPhotoSlotId\" IS NULL");
 
                     b.ToTable("Photos", (string)null);
                 });
@@ -1086,7 +1098,13 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid>("OwnerUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ReportPhotoSlotId")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("ReportRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourcePhotoTypeId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Status")
@@ -1109,6 +1127,8 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasIndex("CompletedPhotoId");
 
                     b.HasIndex("InitiatedByUserId");
+
+                    b.HasIndex("SourcePhotoTypeId");
 
                     b.HasIndex("StorageKey")
                         .IsUnique()
@@ -1529,6 +1549,43 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasIndex("TrainerId", "TraineeId", "CreatedAt");
 
                     b.ToTable("ReportRequests", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequestDefinitionSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DefinitionJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Provenance")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("ReportRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceTemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportRequestId")
+                        .IsUnique();
+
+                    b.ToTable("ReportRequestDefinitionSnapshots", (string)null);
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.ReportSubmission", b =>
@@ -2110,6 +2167,57 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("TrainerInvitations", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.TrainerPhotoType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("NameMode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("SystemKey")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TrainerId", "NormalizedName")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TrainerId", "SystemKey")
+                        .IsUnique()
+                        .HasFilter("\"SystemKey\" IS NOT NULL");
+
+                    b.ToTable("TrainerPhotoTypes", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.TrainerTraineeLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2677,6 +2785,11 @@ namespace LgymApi.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("LgymApi.Domain.Entities.TrainerPhotoType", "SourcePhotoType")
+                        .WithMany()
+                        .HasForeignKey("SourcePhotoTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("LgymApi.Domain.Entities.User", "Uploader")
                         .WithMany()
                         .HasForeignKey("UploaderUserId")
@@ -2686,6 +2799,8 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Owner");
 
                     b.Navigation("ReportRequest");
+
+                    b.Navigation("SourcePhotoType");
 
                     b.Navigation("Uploader");
                 });
@@ -2715,6 +2830,11 @@ namespace LgymApi.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("LgymApi.Domain.Entities.TrainerPhotoType", "SourcePhotoType")
+                        .WithMany()
+                        .HasForeignKey("SourcePhotoTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("CompletedPhoto");
 
                     b.Navigation("InitiatedByUser");
@@ -2722,6 +2842,8 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("OwnerUser");
 
                     b.Navigation("ReportRequest");
+
+                    b.Navigation("SourcePhotoType");
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.Plan", b =>
@@ -2864,6 +2986,17 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Trainee");
 
                     b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequestDefinitionSnapshot", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.ReportRequest", "ReportRequest")
+                        .WithOne("DefinitionSnapshot")
+                        .HasForeignKey("LgymApi.Domain.Entities.ReportRequestDefinitionSnapshot", "ReportRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReportRequest");
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.ReportSubmission", b =>
@@ -3027,6 +3160,17 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Trainee");
+
+                    b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.TrainerPhotoType", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Trainer");
                 });
@@ -3203,6 +3347,8 @@ namespace LgymApi.Infrastructure.Migrations
 
             modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>
                 {
+                    b.Navigation("DefinitionSnapshot");
+
                     b.Navigation("Submission");
                 });
 

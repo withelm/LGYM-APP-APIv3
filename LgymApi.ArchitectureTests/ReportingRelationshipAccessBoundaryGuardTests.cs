@@ -74,7 +74,7 @@ public sealed class ReportingRelationshipAccessBoundaryGuardTests
                 var semanticModel = compilation.GetSemanticModel(tree, ignoreAccessibility: true);
                 return tree.GetRoot().DescendantNodes().OfType<TypeSyntax>()
                     .Select(type => semanticModel.GetTypeInfo(type).Type)
-                    .Where(type => type?.ContainingNamespace.ToDisplayString()
+                    .Where(type => type?.ContainingNamespace?.ToDisplayString()
                         .StartsWith("LgymApi.Application.Coaching", StringComparison.Ordinal) == true)
                     .Select(type => type!.ToDisplayString());
             })

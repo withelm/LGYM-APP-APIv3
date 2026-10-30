@@ -312,4 +312,22 @@
   <data name="PaymentCheckoutClientFieldsNotAllowed" xml:space="preserve">
     <value>Cena, ilość, waluta, adresy powrotu i status płatności są kontrolowane przez serwer.</value>
   </data>
+  <data name="ReportingProtocolUnsupported" xml:space="preserve">
+    <value>Nagłówek protokołu raportowania jest nieprawidłowy lub nieobsługiwany.</value>
+  </data>
+  <data name="ReportingProtocolV2Disabled" xml:space="preserve">
+    <value>Protokół raportowania 2 nie jest włączony.</value>
+  </data>
+  <data name="ReportingProtocolV2Required" xml:space="preserve">
+    <value>Ta operacja wymaga protokołu raportowania 2.</value>
+  </data>
+  <data name="ReportingProtocolUpgradeRequired" xml:space="preserve">
+    <value>Zaktualizuj aplikację, aby bezpiecznie odczytać lub edytować ten raport.</value>
+  </data>
+  <data name="ReportingProtocolPhotoTypeRequired" xml:space="preserve">
+    <value>photoTypeId jest wymagane dla przesyłania zdjęć w protokole raportowania 2.</value>
+  </data>
+  <data name="ReportingProtocolPayloadTooLarge" xml:space="preserve">
+    <value>Żądanie raportowania jest zbyt duże, aby zweryfikować protokół.</value>
+  </data>
 </root>

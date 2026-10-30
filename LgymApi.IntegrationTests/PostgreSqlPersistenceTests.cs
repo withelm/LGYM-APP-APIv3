@@ -28,7 +28,7 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
         database.Database.ProviderName.Should().Be("Npgsql.EntityFrameworkCore.PostgreSQL");
         (await database.Database.GetPendingMigrationsAsync()).Should().BeEmpty();
         database.Database.HasPendingModelChanges().Should().BeFalse();
-        database.Model.GetEntityTypes().Should().HaveCount(49);
+        database.Model.GetEntityTypes().Should().HaveCount(51);
     }
 
     [Test]

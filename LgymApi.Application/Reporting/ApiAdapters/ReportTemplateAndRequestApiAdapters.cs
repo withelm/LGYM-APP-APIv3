@@ -30,6 +30,16 @@ internal sealed class TrainerReportTemplateApiAdapter : ITrainerReportTemplateAp
         => _reportingService.DeleteTemplateAsync(trainer, templateId, cancellationToken);
 }
 
+internal sealed class TrainerPhotoTypeApiAdapter : ITrainerPhotoTypeApiPort
+{
+    private readonly IReportingService _reportingService;
+    public TrainerPhotoTypeApiAdapter(IReportingService reportingService) => _reportingService = reportingService;
+    public Task<Result<List<TrainerPhotoTypeResult>, AppError>> GetAllAsync(AuthenticatedAccountContext trainer, CancellationToken cancellationToken = default) => _reportingService.GetPhotoTypesAsync(trainer, cancellationToken);
+    public Task<Result<TrainerPhotoTypeResult, AppError>> CreateAsync(AuthenticatedAccountContext trainer, string name, CancellationToken cancellationToken = default) => _reportingService.CreatePhotoTypeAsync(trainer, name, cancellationToken);
+    public Task<Result<TrainerPhotoTypeResult, AppError>> UpdateAsync(AuthenticatedAccountContext trainer, Id<TrainerPhotoType> photoTypeId, string? name, bool? archived, CancellationToken cancellationToken = default) => _reportingService.UpdatePhotoTypeAsync(trainer, photoTypeId, name, archived, cancellationToken);
+    public Task<Result<TrainerPhotoTypeResult, AppError>> ResetNameAsync(AuthenticatedAccountContext trainer, Id<TrainerPhotoType> photoTypeId, CancellationToken cancellationToken = default) => _reportingService.ResetPhotoTypeNameAsync(trainer, photoTypeId, cancellationToken);
+}
+
 internal sealed class TrainerReportRequestApiAdapter : ITrainerReportRequestApiPort
 {
     private readonly IReportingService _reportingService;

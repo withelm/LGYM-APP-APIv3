@@ -39,7 +39,8 @@ public sealed class ReportingProfile : IMappingProfile
             Note = source?.Note,
             CreatedAt = source?.CreatedAt ?? default,
             SubmittedAt = source?.SubmittedAt,
-            Template = MapTemplate(source?.Template, mapper)
+            Template = MapTemplate(source?.Template, mapper),
+            DefinitionSnapshotProvenance = source?.DefinitionSnapshotProvenance
         });
 
         configuration.CreateMap<ReportSubmissionResult, ReportSubmissionDto>((source, mapper) => new ReportSubmissionDto
@@ -103,7 +104,25 @@ public sealed class ReportingProfile : IMappingProfile
             ThumbnailUrl = source?.ThumbnailUrl,
             ReadUrl = source?.ReadUrl ?? string.Empty,
             ReportRequestId = source?.ReportRequestId.ToString() ?? string.Empty,
-            UploadedAt = source?.UploadedAt ?? default
+            UploadedAt = source?.UploadedAt ?? default,
+            PhotoTypeId = source?.PhotoTypeId,
+            ReportPhotoSlotId = source?.ReportPhotoSlotId,
+            DisplayName = source?.DisplayName,
+            Labels = source?.Labels is null ? null : new PhotoTypeLabelsDto { Pl = source.Labels.Pl, En = source.Labels.En },
+            DefinitionSnapshotProvenance = source?.DefinitionSnapshotProvenance
+        });
+
+        configuration.CreateMap<TrainerPhotoTypeResult, TrainerPhotoTypeDto>((source, _) => new TrainerPhotoTypeDto
+        {
+            Id = source?.Id.ToString() ?? string.Empty,
+            SystemKey = source?.SystemKey,
+            Name = source?.Name ?? string.Empty,
+            NameMode = source?.NameMode ?? default,
+            IsArchived = source?.IsArchived ?? false,
+            DisplayName = source?.DisplayName ?? string.Empty,
+            Labels = source?.Labels is null
+                ? new PhotoTypeLabelsDto()
+                : new PhotoTypeLabelsDto { Pl = source.Labels.Pl, En = source.Labels.En }
         });
     }
 

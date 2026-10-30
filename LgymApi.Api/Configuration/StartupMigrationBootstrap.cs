@@ -1,4 +1,5 @@
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Reporting.PhotoTypesMigration;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Api.Configuration;
@@ -22,6 +23,7 @@ public static class StartupMigrationBootstrap
             await PostgreSqlRuntimeConnectionValidator.ValidatePreMigrationAsync(dbContext, app.Configuration);
         }
         await dbContext.Database.MigrateAsync();
+        await ReportingPhotoTypesStartupMigration.ApplyAsync(dbContext, app.Lifetime.ApplicationStopping);
         if (RequiresRuntimeValidation(app.Environment.EnvironmentName))
         {
             await PostgreSqlRuntimeConnectionValidator.ValidateAsync(dbContext, app.Configuration);

@@ -70,6 +70,8 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     public DbSet<PhotoUploadSession> PhotoUploadSessions => Set<PhotoUploadSession>();
     public DbSet<PaymentCheckout> PaymentCheckouts => Set<PaymentCheckout>();
     public DbSet<PaymentEventReceipt> PaymentEventReceipts => Set<PaymentEventReceipt>();
+    public DbSet<TrainerPhotoType> TrainerPhotoTypes => Set<TrainerPhotoType>();
+    public DbSet<ReportRequestDefinitionSnapshot> ReportRequestDefinitionSnapshots => Set<ReportRequestDefinitionSnapshot>();
 
     DbSet<AppConfig> IPlatformPersistenceContext.AppConfigs => AppConfigs;
     DbSet<ActionExecutionLog> IPlatformPersistenceContext.ActionExecutionLogs => ActionExecutionLogs;

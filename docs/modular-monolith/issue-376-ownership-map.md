@@ -156,6 +156,8 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `RecurringReportAssignment` | `Reporting` |
 | `Photo` | `Reporting` |
 | `PhotoUploadSession` | `Reporting` |
+| `TrainerPhotoType` | `Reporting` |
+| `ReportRequestDefinitionSnapshot` | `Reporting` |
 | `Plan` | `Training Planning` |
 | `PlanDay` | `Training Planning` |
 | `PlanDayExercise` | `Training Planning` |

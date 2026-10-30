@@ -104,10 +104,20 @@ public sealed partial class RecurringReportAssignmentService
                 }
                 else
                 {
-                    var staged = await StageRequestCreationAsync(
+                    var stagedResult = await StageRequestCreationAsync(
                         assignment,
                         DateTimeOffset.UtcNow,
                         cancellationToken);
+                    if (stagedResult.IsFailure)
+                    {
+                        result = RequestNowFailure(stagedResult.Error);
+                        var rollback = await RollbackRequestNowDecisionAsync(transaction, cancellationToken);
+                        phase = rollback.Phase;
+                        abort = rollback.Abort;
+                        goto RequestNowDecisionComplete;
+                    }
+
+                    var staged = stagedResult.Value;
                     if (staged.EnvelopeId == null)
                     {
                         throw new InvalidOperationException(
@@ -123,6 +133,8 @@ public sealed partial class RecurringReportAssignmentService
                     result = Result<RecurringReportAssignmentResult, AppError>.Success(mapped);
                 }
             }
+
+        RequestNowDecisionComplete:;
         }
         catch (OperationCanceledException exception)
             when (phase == TransactionPhase.PreCommit && cancellationToken.IsCancellationRequested)
@@ -196,11 +208,24 @@ public sealed partial class RecurringReportAssignmentService
             : Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
     }
 
-    private async Task<StagedRequestCreation> StageRequestCreationAsync(
+    private async Task<Result<StagedRequestCreation, AppError>> StageRequestCreationAsync(
         RecurringReportAssignmentPersistenceModel assignment,
         DateTimeOffset createdAt,
         CancellationToken cancellationToken)
     {
+        await _templatePersistence.LockTrainerDefinitionsAsync(assignment.TrainerId, cancellationToken);
+        var currentTemplate = await _templatePersistence.FindByIdAsync(assignment.TemplateId, cancellationToken);
+        if (currentTemplate is null || currentTemplate.IsDeleted)
+            return Result<StagedRequestCreation, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        assignment = assignment with { Template = currentTemplate };
+        var photoTypes = await ReportTemplateSnapshotFactory.EnsureDefaultsAsync(_templatePersistence, assignment.TrainerId, cancellationToken);
+        var snapshotResult = ReportTemplateSnapshotFactory.Create(assignment.Template, photoTypes);
+        if (snapshotResult.IsFailure)
+        {
+            return Result<StagedRequestCreation, AppError>.Failure(snapshotResult.Error);
+        }
+
+        var snapshotJson = ReportTemplateSnapshotFactory.Serialize(snapshotResult.Value);
         var request = new NewReportRequestPersistenceModel(
             Id<ReportRequest>.New(),
             assignment.TrainerId,
@@ -211,13 +236,14 @@ public sealed partial class RecurringReportAssignmentService
             null,
             null,
             assignment.Note,
-            createdAt);
+            createdAt,
+            snapshotJson);
         await _requestSubmissionPersistence.AddRequestAsync(request, cancellationToken);
 
         var updated = assignment with
         {
             CurrentReportRequestId = request.Id,
-            CurrentReportRequest = ToRequestPersistenceModel(request, assignment.Template),
+            CurrentReportRequest = ToRequestPersistenceModel(request, assignment.Template, snapshotJson),
             LastRequestCreatedAt = createdAt,
             NextEligibleAt = null
         };
@@ -230,21 +256,7 @@ public sealed partial class RecurringReportAssignmentService
             TrainerId = assignment.TrainerId,
             TemplateName = assignment.Template.Name
         }, cancellationToken);
-        return new StagedRequestCreation(request.Id, envelope.EnvelopeId, updated);
-    }
-
-    private static bool IsWithinManualRequestWindow(
-        RecurringReportAssignmentPersistenceModel assignment,
-        DateTimeOffset now)
-        => assignment.IsActive
-            && assignment.StartsAt <= now
-            && (!assignment.EndsAt.HasValue || assignment.EndsAt.Value >= now);
-
-    private static bool IsManualRequestLifecycleEligible(
-        RecurringReportAssignmentPersistenceModel assignment)
-    {
-        var automatic = EvaluateAutomaticEligibility(assignment, DateTimeOffset.UtcNow);
-        return automatic.CanCreate || automatic.Reason == AutomaticEligibilityReason.NotDue;
+        return Result<StagedRequestCreation, AppError>.Success(new StagedRequestCreation(request.Id, envelope.EnvelopeId, updated));
     }
 
     private static Result<RecurringReportAssignmentResult, AppError> RequestNowFailure(AppError error)

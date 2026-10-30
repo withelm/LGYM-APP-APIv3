@@ -3,6 +3,7 @@ using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Mapping.Profiles;
 using LgymApi.Application.Features.Reporting.Models;
@@ -129,6 +130,30 @@ public sealed class ReportingProfileTests
         mapper.Map<ReportTemplateResult, ReportTemplateDto>(new ReportTemplateResult()).Should().NotBeNull();
         mapper.Map<ReportRequestResult, ReportRequestDto>(new ReportRequestResult()).Should().NotBeNull();
         mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(new ReportSubmissionResult()).Should().NotBeNull();
+    }
+
+    [Test]
+    public void ReportingDictionaryAndSnapshotProvenance_SerializeWithExactClientPropertyNames()
+    {
+        var mapper = CreateMapper(new ReportingProfile());
+        var dto = mapper.Map<TrainerPhotoTypeResult, TrainerPhotoTypeDto>(new TrainerPhotoTypeResult
+        {
+            Id = Id<TrainerPhotoType>.New(),
+            SystemKey = "Front",
+            Name = "Front",
+            NameMode = PhotoTypeNameMode.SystemLocalized,
+            DisplayName = "Przód",
+            Labels = new PhotoTypeLabelsResult("Przód", "Front")
+        });
+        var options = new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } };
+
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(dto, options));
+
+        json.RootElement.EnumerateObject().Select(property => property.Name).Should().Equal(
+            "_id", "systemKey", "name", "nameMode", "isArchived", "displayName", "labels");
+        json.RootElement.GetProperty("labels").EnumerateObject().Select(property => property.Name)
+            .Should().Equal("pl", "en");
+        json.RootElement.GetProperty("nameMode").GetString().Should().Be("SystemLocalized");
     }
 
     private static IMapper CreateMapper(params IMappingProfile[] profiles)

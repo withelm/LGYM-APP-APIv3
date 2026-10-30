@@ -138,12 +138,51 @@ internal static class PartialServiceContributionAnalyzer
         return false;
     }
 
-    private static IEnumerable<string> FindScopedRegistrations(Compilation compilation, IReadOnlyList<SyntaxTree> trees, INamedTypeSymbol service, INamedTypeSymbol implementation)
+    private static IEnumerable<string> FindScopedRegistrations(
+        Compilation compilation,
+        IReadOnlyList<SyntaxTree> trees,
+        INamedTypeSymbol service,
+        INamedTypeSymbol implementation)
         => trees.SelectMany(tree => tree.GetRoot().DescendantNodes().OfType<InvocationExpressionSyntax>()
-            .Where(invocation => compilation.GetSemanticModel(tree).GetSymbolInfo(invocation).Symbol is IMethodSymbol { Name: "AddScoped" } method
-                && ((method.TypeArguments.Length == 2 && SymbolEqualityComparer.Default.Equals(method.TypeArguments[0], service) && SymbolEqualityComparer.Default.Equals(method.TypeArguments[1], implementation))
-                    || (method.TypeArguments.Length == 1 && SymbolEqualityComparer.Default.Equals(service, implementation) && SymbolEqualityComparer.Default.Equals(method.TypeArguments[0], implementation))))
+            .Where(invocation => IsScopedRegistration(
+                compilation.GetSemanticModel(tree),
+                invocation,
+                service,
+                implementation))
             .Select(_ => RelativePath(ArchitectureTestHelpers.ResolveRepositoryRoot(), tree.FilePath)));
+
+    private static bool IsScopedRegistration(
+        SemanticModel semanticModel,
+        InvocationExpressionSyntax invocation,
+        INamedTypeSymbol service,
+        INamedTypeSymbol implementation)
+    {
+        if (semanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol { Name: "AddScoped" } method)
+        {
+            return method.TypeArguments.Length == 2
+                    && SymbolEqualityComparer.Default.Equals(method.TypeArguments[0], service)
+                    && SymbolEqualityComparer.Default.Equals(method.TypeArguments[1], implementation)
+                || method.TypeArguments.Length == 1
+                    && SymbolEqualityComparer.Default.Equals(service, implementation)
+                    && SymbolEqualityComparer.Default.Equals(method.TypeArguments[0], implementation);
+        }
+
+        var genericName = invocation.Expression.DescendantNodesAndSelf()
+            .OfType<GenericNameSyntax>()
+            .SingleOrDefault(name => name.Identifier.ValueText == "AddScoped");
+        if (genericName is null)
+        {
+            return false;
+        }
+
+        var arguments = genericName.TypeArgumentList.Arguments.Select(argument => argument.ToString()).ToArray();
+        return arguments.Length == 2
+                && arguments[0] == service.Name
+                && arguments[1] == implementation.Name
+            || arguments.Length == 1
+                && SymbolEqualityComparer.Default.Equals(service, implementation)
+                && arguments[0] == implementation.Name;
+    }
 
     private static INamedTypeSymbol RequireType(Compilation compilation, string metadataName)
         => compilation.GetTypeByMetadataName(metadataName) ?? throw new InvalidOperationException($"Compiled type '{metadataName}' was not found.");

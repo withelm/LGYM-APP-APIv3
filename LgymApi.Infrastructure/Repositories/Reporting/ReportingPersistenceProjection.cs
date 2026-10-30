@@ -45,7 +45,13 @@ internal static class ReportingPersistenceProjection
                 ? null
                 : new ReportSubmissionFeedbackPersistenceModel(
                     entity.Submission.TrainerFeedbackAddedAt,
-                    entity.Submission.TrainerFeedbackReadAt));
+                    entity.Submission.TrainerFeedbackReadAt),
+            entity.DefinitionSnapshot is null ? null : new ReportRequestDefinitionSnapshotPersistenceModel(
+                entity.DefinitionSnapshot.ReportRequestId,
+                entity.DefinitionSnapshot.SourceTemplateId,
+                entity.DefinitionSnapshot.DefinitionJson,
+                entity.DefinitionSnapshot.Provenance,
+                entity.DefinitionSnapshot.CreatedAt));
 
     public static ReportSubmissionPersistenceModel Submission(ReportSubmission entity)
         => new(
@@ -93,7 +99,9 @@ internal static class ReportingPersistenceProjection
             ReportingPersistenceAccountIds.ToReference(entity.UploaderUserId),
             ReportingPersistenceAccountIds.ToReference(entity.OwnerUserId),
             entity.CreatedAt,
-            entity.IsDeleted);
+            entity.IsDeleted,
+            entity.SourcePhotoTypeId,
+            entity.ReportPhotoSlotId);
 
     public static PendingPhotoUpload UploadSession(PhotoUploadSession entity)
         => new(
@@ -110,5 +118,17 @@ internal static class ReportingPersistenceProjection
             entity.CompletedAtUtc,
             entity.CompletedPhotoId,
             entity.Status,
-            entity.FailureReason);
+            entity.FailureReason,
+            entity.SourcePhotoTypeId,
+            entity.ReportPhotoSlotId);
+
+    public static TrainerPhotoTypePersistenceModel PhotoType(TrainerPhotoType entity)
+        => new(
+            entity.Id,
+            ReportingPersistenceAccountIds.ToReference(entity.TrainerId),
+            entity.SystemKey,
+            entity.Name,
+            entity.NameMode,
+            entity.IsArchived,
+            entity.CreatedAt);
 }

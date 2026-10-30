@@ -33,6 +33,7 @@ public static class ApplicationApiAdapterServiceCollectionExtensions
         services.AddScoped<ITraineeNotesApiPort, TraineeNotesApiAdapter>();
         services.AddScoped<ITraineeRelationshipApiPort, TraineeRelationshipApiAdapter>();
         services.AddScoped<ITrainerReportTemplateApiPort, TrainerReportTemplateApiAdapter>();
+        services.AddScoped<ITrainerPhotoTypeApiPort, TrainerPhotoTypeApiAdapter>();
         services.AddScoped<ITrainerReportRequestApiPort, TrainerReportRequestApiAdapter>();
         services.AddScoped<ITraineeReportRequestApiPort, TraineeReportRequestApiAdapter>();
         services.AddScoped<ITrainerReportPhotoApiPort, TrainerReportPhotoApiAdapter>();

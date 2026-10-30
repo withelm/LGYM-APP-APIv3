@@ -85,6 +85,8 @@ internal static class AppDbContextEntityTypeConfigurationRegistrar
         Register(modelBuilder, new RecurringReportAssignmentEntityTypeConfiguration());
         Register(modelBuilder, new PhotoEntityTypeConfiguration());
         Register(modelBuilder, new PhotoUploadSessionEntityTypeConfiguration());
+        Register(modelBuilder, new TrainerPhotoTypeEntityTypeConfiguration());
+        Register(modelBuilder, new ReportRequestDefinitionSnapshotEntityTypeConfiguration());
     }
 
     private static void ApplyPayments(ModelBuilder modelBuilder)

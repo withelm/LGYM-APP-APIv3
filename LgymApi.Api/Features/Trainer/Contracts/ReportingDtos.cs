@@ -144,6 +144,9 @@ public sealed class ReportRequestDto : IResultDto
 
     [JsonPropertyName("template")]
     public ReportTemplateDto Template { get; set; } = new();
+
+    [JsonPropertyName("definitionSnapshotProvenance")]
+    public string? DefinitionSnapshotProvenance { get; set; }
 }
 
 public sealed class SubmitReportRequestRequest : IDto

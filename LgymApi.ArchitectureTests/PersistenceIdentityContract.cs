@@ -21,8 +21,8 @@ internal static class PersistenceIdentityContract
         "NotificationsModelConfigurationRegistrar.Apply",
         "PlatformModelConfigurationRegistrar.ApplyReliability",
         "ApplyNutrition",
-        "ApplyReporting"
-        ,"ApplyPayments"
+        "ApplyReporting",
+        "ApplyPayments"
     ];
 
     internal static IReadOnlyList<PersistedDbSetIdentity> DbSets { get; } =
@@ -75,9 +75,11 @@ internal static class PersistenceIdentityContract
         DbSet("PushNotificationMessages", "PushNotificationMessage"),
         DbSet("UserExternalLogins", "UserExternalLogin"),
         DbSet("Photos", "Photo"),
-        DbSet("PhotoUploadSessions", "PhotoUploadSession")
-        ,DbSet("PaymentCheckouts", "PaymentCheckout")
-        ,DbSet("PaymentEventReceipts", "PaymentEventReceipt")
+        DbSet("PhotoUploadSessions", "PhotoUploadSession"),
+        DbSet("TrainerPhotoTypes", "TrainerPhotoType"),
+        DbSet("ReportRequestDefinitionSnapshots", "ReportRequestDefinitionSnapshot"),
+        DbSet("PaymentCheckouts", "PaymentCheckout"),
+        DbSet("PaymentEventReceipts", "PaymentEventReceipt")
     ];
 
     internal static IReadOnlyList<string> RegistrarConfigurationTypes { get; } =
@@ -130,9 +132,11 @@ internal static class PersistenceIdentityContract
         "ReportSubmissionEntityTypeConfiguration",
         "RecurringReportAssignmentEntityTypeConfiguration",
         "PhotoEntityTypeConfiguration",
-        "PhotoUploadSessionEntityTypeConfiguration"
-        ,"PaymentCheckoutEntityTypeConfiguration"
-        ,"PaymentEventReceiptEntityTypeConfiguration"
+        "PhotoUploadSessionEntityTypeConfiguration",
+        "TrainerPhotoTypeEntityTypeConfiguration",
+        "ReportRequestDefinitionSnapshotEntityTypeConfiguration",
+        "PaymentCheckoutEntityTypeConfiguration",
+        "PaymentEventReceiptEntityTypeConfiguration"
     ];
 
     private static PersistedDbSetIdentity DbSet(string propertyName, string entityTypeName)

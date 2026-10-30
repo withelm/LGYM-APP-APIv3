@@ -46,10 +46,11 @@ public sealed partial class ReportingService : IReportingService
         }
 
         var normalizedAnswers = NormalizeAnswers(command.Answers);
+        var effectiveTemplate = ReportTemplateSnapshotFactory.EffectiveTemplate(request);
         var validationAnswers = _reportSubmissionAcceptedProgressCommandFactory.FilterInvalidMeasurementAnswers(
-            request.Template,
+            effectiveTemplate,
             normalizedAnswers);
-        var validationResult = ValidateAnswersAgainstTemplate(request.Template, validationAnswers);
+        var validationResult = ValidateAnswersAgainstTemplate(effectiveTemplate, validationAnswers);
         if (validationResult.IsFailure)
         {
             return Result<ReportSubmissionResult, AppError>.Failure(validationResult.Error);
@@ -73,7 +74,7 @@ public sealed partial class ReportingService : IReportingService
         await _requestSubmissionPersistence.SetRequestSubmittedAsync(request.Id, submittedAtUtc, cancellationToken);
 
         var acceptedProgressCommand = _reportSubmissionAcceptedProgressCommandFactory.Create(
-            request.Template,
+            effectiveTemplate,
             normalizedAnswers,
             submission.Id,
             request.Id,
@@ -84,7 +85,7 @@ public sealed partial class ReportingService : IReportingService
             await _commandOutboxWriter.StageAsync(acceptedProgressCommand, cancellationToken);
         }
 
-        var submittedRequest = request with { Status = ReportRequestStatus.Submitted, SubmittedAt = submittedAtUtc };
+        var submittedRequest = request with { Status = ReportRequestStatus.Submitted, SubmittedAt = submittedAtUtc, Template = effectiveTemplate };
         var result = await MapAndHydrateSubmissionAsync(
             ToPersistenceModel(submission, submittedRequest),
             cancellationToken);
@@ -103,7 +104,7 @@ public sealed partial class ReportingService : IReportingService
             SubmissionId = submission.Id,
             TrainerId = request.TrainerId,
             TraineeId = currentTrainee.Id,
-            TemplateName = request.Template.Name
+            TemplateName = effectiveTemplate.Name
         });
 
         return Result<ReportSubmissionResult, AppError>.Success(result);
@@ -138,7 +139,8 @@ public sealed partial class ReportingService : IReportingService
         }
 
         var normalizedFieldComments = NormalizeTrainerFieldComments(command.FieldComments);
-        var validationResult = ValidateTrainerFieldComments(submission.ReportRequest.Template, normalizedFieldComments);
+        var effectiveTemplate = ReportTemplateSnapshotFactory.EffectiveTemplate(submission.ReportRequest);
+        var validationResult = ValidateTrainerFieldComments(effectiveTemplate, normalizedFieldComments);
         if (validationResult.IsFailure)
         {
             return Result<ReportSubmissionResult, AppError>.Failure(validationResult.Error);
@@ -192,7 +194,7 @@ public sealed partial class ReportingService : IReportingService
                 SubmissionId = submission.Id,
                 TraineeId = traineeId,
                 TrainerId = currentTrainer.Id,
-                TemplateName = submission.ReportRequest.Template.Name,
+                TemplateName = effectiveTemplate.Name,
                 TriggeredAt = DateTimeOffset.UtcNow
             });
         }
