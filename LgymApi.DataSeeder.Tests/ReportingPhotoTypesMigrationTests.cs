@@ -44,12 +44,14 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         snapshot.SourceTemplateId.Should().Be(fixture.Template.Id);
         var runtimeType = System.Reflection.Assembly.Load("LgymApi.Application")
             .GetType("LgymApi.Application.Features.Reporting.Models.ReportTemplateSnapshotDocument", throwOnError: true)!;
-        var runtimeDocument = JsonSerializer.Deserialize(snapshot.DefinitionJson, runtimeType);
+        var runtimeReader = runtimeType.Assembly.GetType("LgymApi.Application.Features.Reporting.ReportTemplateSnapshotFactory", throwOnError: true)!
+            .GetMethod("Deserialize", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;
+        var runtimeDocument = runtimeReader.Invoke(null, [snapshot.DefinitionJson]);
         runtimeDocument.Should().NotBeNull();
         runtimeType.GetProperty("Provenance")!.GetValue(runtimeDocument).Should().Be("MigrationCapture");
         runtimeType.GetProperty("SchemaVersion")!.GetValue(runtimeDocument).Should().Be(2);
         using var serializedSnapshot = JsonDocument.Parse(snapshot.DefinitionJson);
-        var photoConfig = serializedSnapshot.RootElement.GetProperty("Fields")[0].GetProperty("ModuleConfig");
+        var photoConfig = serializedSnapshot.RootElement.GetProperty("fields")[0].GetProperty("moduleConfig");
         photoConfig.GetProperty("schemaVersion").GetInt32().Should().Be(2);
         var frozenTypes = photoConfig.GetProperty("photoTypes").EnumerateArray().ToList();
         frozenTypes.Should().HaveCount(2);

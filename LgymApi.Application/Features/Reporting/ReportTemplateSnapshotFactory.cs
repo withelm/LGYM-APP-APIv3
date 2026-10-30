@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Resources;
 using System.Text.Json;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Reporting.Models;
@@ -112,7 +113,11 @@ internal static class ReportTemplateSnapshotFactory
     }
 
     public static string Serialize(ReportTemplateSnapshotDocument snapshot)
-        => JsonSerializer.Serialize(snapshot);
+        => JsonSerializer.Serialize(snapshot, SharedSerializationOptions.Current);
+
+    public static ReportTemplateSnapshotDocument Deserialize(string json)
+        => JsonSerializer.Deserialize<ReportTemplateSnapshotDocument>(json, SharedSerializationOptions.Current)
+            ?? throw new InvalidOperationException("A report request snapshot is malformed.");
 
     public static ReportTemplatePersistenceModel EffectiveTemplate(ReportRequestPersistenceModel request)
     {
@@ -121,8 +126,7 @@ internal static class ReportTemplateSnapshotFactory
             return request.Template;
         }
 
-        var snapshot = JsonSerializer.Deserialize<ReportTemplateSnapshotDocument>(request.DefinitionSnapshot.DefinitionJson)
-            ?? throw new InvalidOperationException("A report request snapshot is malformed.");
+        var snapshot = Deserialize(request.DefinitionSnapshot.DefinitionJson);
         return new ReportTemplatePersistenceModel(
             request.TemplateId,
             request.TrainerId,

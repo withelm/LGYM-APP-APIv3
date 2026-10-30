@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Reporting.PhotoTypesMigration;
 
+/// <summary>Database maintenance coordinator; never a runtime repository or business-service dependency.</summary>
 public sealed class ReportingPhotoTypesMigrationRunner(AppDbContext context)
 {
     public async Task<ReportingPhotoTypesMigrationReport> RunAsync(

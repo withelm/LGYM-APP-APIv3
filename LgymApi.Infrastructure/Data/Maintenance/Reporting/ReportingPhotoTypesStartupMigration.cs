@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Reporting.PhotoTypesMigration;
 
-/// <summary>Runs before the host and hosted jobs start. Deployment must stop old writers first.</summary>
+/// <summary>Data-bootstrap transaction owner, invoked before hosting. Deployment must stop old writers first.</summary>
 public static class ReportingPhotoTypesStartupMigration
 {
     public static async Task ApplyAsync(AppDbContext context, CancellationToken cancellationToken = default)

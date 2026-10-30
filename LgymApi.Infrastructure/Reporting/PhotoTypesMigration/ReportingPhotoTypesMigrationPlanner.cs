@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -163,7 +164,7 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
                 Id = DeterministicMigrationId.For<ReportRequestDefinitionSnapshot>("snapshot", request.Id.ToString()),
                 ReportRequestId = request.Id,
                 SourceTemplateId = template.Id,
-                DefinitionJson = JsonSerializer.Serialize(snapshotDocument),
+                DefinitionJson = JsonSerializer.Serialize(snapshotDocument, SharedSerializationOptions.Current),
                 Provenance = Provenance,
                 CreatedAt = capturedAtUtc
             };

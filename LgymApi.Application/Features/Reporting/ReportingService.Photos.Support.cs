@@ -42,8 +42,7 @@ public sealed partial class ReportingService
                     parsedLegacyView, photoTypeId, reportPhotoSlotId, null, null));
         }
 
-        var snapshot = JsonSerializer.Deserialize<ReportTemplateSnapshotDocument>(request.DefinitionSnapshot.DefinitionJson)
-            ?? throw new InvalidOperationException("A report request snapshot is malformed.");
+        var snapshot = ReportTemplateSnapshotFactory.Deserialize(request.DefinitionSnapshot.DefinitionJson);
         var bindings = snapshot.Fields
             .Where(field => field.Type == ReportFieldType.Photos && field.ModuleConfig.HasValue)
             .SelectMany(field => ReadSnapshotPhotoBindings(field.ModuleConfig!.Value))

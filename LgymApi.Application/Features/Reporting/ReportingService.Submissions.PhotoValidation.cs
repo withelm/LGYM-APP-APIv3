@@ -132,8 +132,7 @@ public sealed partial class ReportingService
                 .ToList();
         }
 
-        var snapshot = System.Text.Json.JsonSerializer.Deserialize<ReportTemplateSnapshotDocument>(request.DefinitionSnapshot.DefinitionJson)
-            ?? throw new InvalidOperationException("A report request snapshot is malformed.");
+        var snapshot = ReportTemplateSnapshotFactory.Deserialize(request.DefinitionSnapshot.DefinitionJson);
         return snapshot.Fields
             .Where(field => field.Type == ReportFieldType.Photos && field.IsRequired)
             .Select(field => field.ModuleConfig.HasValue

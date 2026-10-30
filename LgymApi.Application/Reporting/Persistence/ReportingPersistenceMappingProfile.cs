@@ -120,8 +120,7 @@ public sealed class ReportingPersistenceMappingProfile : IMappingProfile
             return context.Map<ReportTemplatePersistenceModel, ReportTemplateResult>(source.Template);
         }
 
-        var snapshot = JsonSerializer.Deserialize<ReportTemplateSnapshotDocument>(source.DefinitionSnapshot.DefinitionJson)
-            ?? throw new InvalidOperationException("A report request snapshot is malformed.");
+        var snapshot = ReportTemplateSnapshotFactory.Deserialize(source.DefinitionSnapshot.DefinitionJson);
         return new ReportTemplateResult
         {
             Id = source.TemplateId,

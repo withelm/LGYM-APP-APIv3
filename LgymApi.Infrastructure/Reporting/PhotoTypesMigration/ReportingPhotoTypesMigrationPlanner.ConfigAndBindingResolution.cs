@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -20,7 +21,7 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
 
         try
         {
-            return JsonSerializer.Deserialize<JsonElement>(field.ModuleConfig);
+            return JsonSerializer.Deserialize<JsonElement>(field.ModuleConfig, SharedSerializationOptions.Current);
         }
         catch (JsonException)
         {

@@ -112,7 +112,7 @@ public sealed class ReportingPhotoTypeSnapshotTests
         result.Value.DefinitionSnapshotProvenance.Should().Be("Issued");
         staged.Should().NotBeNull();
         using var snapshot = JsonDocument.Parse(staged!.DefinitionSnapshotJson!);
-        var moduleConfig = snapshot.RootElement.GetProperty("Fields")[0].GetProperty("ModuleConfig");
+        var moduleConfig = snapshot.RootElement.GetProperty("fields")[0].GetProperty("moduleConfig");
         moduleConfig.GetProperty("schemaVersion").GetInt32().Should().Be(2);
         var frozen = moduleConfig.GetProperty("photoTypes")[0];
         frozen.GetProperty("photoTypeId").GetString().Should().Be(photoTypeId.ToString());
