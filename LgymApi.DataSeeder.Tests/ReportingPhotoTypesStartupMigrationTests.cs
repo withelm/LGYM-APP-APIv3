@@ -9,6 +9,24 @@ namespace LgymApi.DataSeeder.Tests;
 public sealed partial class ReportingPhotoTypesMigrationTests
 {
     [Test]
+    public async Task Startup_WithThirdPartyPhotoUploader_DoesNotCanonicalizeForeignPhoto()
+    {
+        await using var fixture = await MigrationFixture.CreateAsync();
+        var stranger = new User { Id = Id<User>.New(), Name = "Third party", Email = "stranger@example.test", ProfileRank = "Rookie" };
+        fixture.Context.Users.Add(stranger);
+        var photo = await fixture.Context.Photos.SingleAsync();
+        photo.UploaderUserId = stranger.Id;
+        await fixture.Context.SaveChangesAsync();
+        fixture.Context.ChangeTracker.Clear();
+        var action = () => ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
+
+        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*PHOTO_OWNER_UNSAFE*");
+
+        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
+        (await fixture.Context.Photos.SingleAsync()).SourcePhotoTypeId.Should().BeNull();
+    }
+
+    [Test]
     public async Task Startup_WithArchivedSourceTemplate_CapturesSurvivingReportWithoutRestoringTemplate()
     {
         await using var fixture = await MigrationFixture.CreateAsync();

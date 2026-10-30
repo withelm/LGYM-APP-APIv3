@@ -15,6 +15,14 @@ namespace LgymApi.Application.Features.Reporting;
 
 public sealed partial class ReportingService
 {
+    private Task<Result<Unit, AppError>> ValidatePhotoRequestAccessAsync(
+        AuthenticatedAccountContext currentUser,
+        ReportRequestPersistenceModel request,
+        CancellationToken cancellationToken)
+        => currentUser.Id != request.TraineeId && currentUser.Id != request.TrainerId
+            ? Task.FromResult(Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind)))
+            : ValidatePhotoAccessAsync(currentUser, request.TraineeId, cancellationToken);
+
     private async Task<Result<Unit, AppError>> ValidatePhotoAccessAsync(
         AuthenticatedAccountContext currentUser,
         Id<AccountReference> traineeId,

@@ -199,6 +199,8 @@ public sealed class PhotoUploadServiceTests
         var requestId = Id<ReportRequest>.New();
         var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com");
         var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        request.TrainerId = trainerId;
+        request.Template.TrainerId = trainerId;
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         storageProvider.GenerateSignedUploadUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns("https://storage.example.com/signed-upload-url");

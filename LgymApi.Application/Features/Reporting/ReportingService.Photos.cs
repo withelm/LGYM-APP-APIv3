@@ -39,7 +39,7 @@ public sealed partial class ReportingService
             return Result<InitiatePhotoUploadResult, AppError>.Failure(requestStatusValidation.Error);
         }
 
-        var authCheck = await ValidatePhotoAccessAsync(currentUser, request.TraineeId, cancellationToken);
+        var authCheck = await ValidatePhotoRequestAccessAsync(currentUser, request, cancellationToken);
         if (authCheck.IsFailure)
         {
             return authCheck.Error is ReportingForbiddenError

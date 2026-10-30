@@ -27,6 +27,7 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
             report.Counters.PhotosExamined++;
 
             if (photo.OwnerUserId != request.TraineeId
+                || (photo.UploaderUserId != request.TraineeId && photo.UploaderUserId != request.TrainerId)
                 || !ValidateAccount(users, photo.OwnerUserId, request.Id, "photo owner", options, report)
                 || !ValidateAccount(users, photo.UploaderUserId, request.Id, "photo uploader", options, report))
             {
