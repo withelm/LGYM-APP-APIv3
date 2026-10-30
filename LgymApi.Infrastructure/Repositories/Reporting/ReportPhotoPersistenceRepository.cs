@@ -24,6 +24,15 @@ public sealed class ReportPhotoPersistenceRepository : IReportPhotoPersistence
         => FindPhotoAsync(query => query.Where(photo =>
             photo.ReportRequestId == requestId && photo.ViewType == viewType && !photo.IsDeleted), cancellationToken);
 
+    public Task<ReportPhotoPersistenceModel?> FindActiveByRequestAndSlotAsync(
+        Id<ReportRequest> requestId,
+        string reportPhotoSlotId,
+        CancellationToken cancellationToken = default)
+        => FindPhotoAsync(query => query.Where(photo =>
+            photo.ReportRequestId == requestId
+            && photo.ReportPhotoSlotId == reportPhotoSlotId
+            && !photo.IsDeleted), cancellationToken);
+
     public Task<IReadOnlyList<ReportPhotoPersistenceModel>> ListByTraineeAsync(
         Id<AccountReference> traineeId,
         CancellationToken cancellationToken = default)
@@ -74,8 +83,10 @@ public sealed class ReportPhotoPersistenceRepository : IReportPhotoPersistence
     {
         var existingPhoto = await _dbContext.Photos.FirstOrDefaultAsync(candidate =>
             candidate.ReportRequestId == photo.ReportRequestId
-            && candidate.ViewType == photo.ViewType
-            && !candidate.IsDeleted,
+            && !candidate.IsDeleted
+            && (photo.ReportPhotoSlotId == null
+                ? candidate.ReportPhotoSlotId == null && candidate.ViewType == photo.ViewType
+                : candidate.ReportPhotoSlotId == photo.ReportPhotoSlotId),
             cancellationToken);
         if (existingPhoto != null)
         {
@@ -92,6 +103,8 @@ public sealed class ReportPhotoPersistenceRepository : IReportPhotoPersistence
             Checksum = photo.Checksum,
             ThumbnailStorageKey = photo.ThumbnailStorageKey,
             ViewType = photo.ViewType,
+            SourcePhotoTypeId = photo.SourcePhotoTypeId,
+            ReportPhotoSlotId = photo.ReportPhotoSlotId,
             ReportRequestId = photo.ReportRequestId,
             UploaderUserId = ReportingPersistenceAccountIds.ToPersisted(photo.UploaderAccountId),
             OwnerUserId = ReportingPersistenceAccountIds.ToPersisted(photo.OwnerAccountId),
@@ -126,7 +139,9 @@ public sealed class ReportPhotoPersistenceRepository : IReportPhotoPersistence
             CompletedAtUtc = pendingUpload.CompletedAtUtc,
             CompletedPhotoId = pendingUpload.CompletedPhotoId,
             Status = pendingUpload.Status,
-            FailureReason = pendingUpload.FailureReason
+            FailureReason = pendingUpload.FailureReason,
+            SourcePhotoTypeId = pendingUpload.SourcePhotoTypeId,
+            ReportPhotoSlotId = pendingUpload.ReportPhotoSlotId
         }, cancellationToken).AsTask();
 
     public async Task<PendingPhotoUpload?> FindUploadSessionAsync(

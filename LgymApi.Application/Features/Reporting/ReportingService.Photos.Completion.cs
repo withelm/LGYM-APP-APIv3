@@ -16,7 +16,7 @@ namespace LgymApi.Application.Features.Reporting;
 
 public sealed partial class ReportingService
 {
-    private sealed record CompletePhotoUploadValidationContext(ReportRequestPersistenceModel Request, string ParsedViewType);
+    private sealed record CompletePhotoUploadValidationContext(ReportRequestPersistenceModel Request, ResolvedPhotoBinding Binding);
 
     private async Task<Result<CompletePhotoUploadValidationContext, AppError>> ValidateCompletePhotoUploadRequestAsync(
         AuthenticatedAccountContext currentUser,
@@ -48,11 +48,12 @@ public sealed partial class ReportingService
             return Result<CompletePhotoUploadValidationContext, AppError>.Failure(authCheck.Error);
         }
 
-        var viewTypeValidation = TryParseViewType(command.ViewType, out var parsedViewType);
-        if (viewTypeValidation.IsFailure)
+        var bindingResult = ResolvePhotoBinding(request, command.PhotoTypeId, command.ReportPhotoSlotId, command.ViewType);
+        if (bindingResult.IsFailure)
         {
-            return Result<CompletePhotoUploadValidationContext, AppError>.Failure(viewTypeValidation.Error);
+            return Result<CompletePhotoUploadValidationContext, AppError>.Failure(bindingResult.Error);
         }
+        var binding = bindingResult.Value;
 
         var mimeTypeValidation = ValidateMimeType(command.MimeType);
         if (mimeTypeValidation.IsFailure)
@@ -66,13 +67,13 @@ public sealed partial class ReportingService
             return Result<CompletePhotoUploadValidationContext, AppError>.Failure(sizeValidation.Error);
         }
 
-        var prefixValidation = EnsureStorageKeyHasExpectedPrefix(currentUser, command.StorageKey, request.TraineeId, command.ReportRequestId, parsedViewType);
+        var prefixValidation = EnsureStorageKeyHasExpectedPrefix(currentUser, command.StorageKey, request.TraineeId, command.ReportRequestId, binding.ViewType);
         if (prefixValidation.IsFailure)
         {
             return Result<CompletePhotoUploadValidationContext, AppError>.Failure(prefixValidation.Error);
         }
 
-        return Result<CompletePhotoUploadValidationContext, AppError>.Success(new CompletePhotoUploadValidationContext(request, parsedViewType));
+        return Result<CompletePhotoUploadValidationContext, AppError>.Success(new CompletePhotoUploadValidationContext(request, binding));
     }
 
     private async Task<Result<PendingPhotoUpload, AppError>> GetUploadSessionOrErrorAsync(
@@ -165,6 +166,7 @@ public sealed partial class ReportingService
         PhotoMetadata metadata,
         string parsedViewType,
         Id<AccountReference> ownerUserId,
+        PendingPhotoUpload uploadSession,
         CancellationToken cancellationToken)
     {
         var createdAt = DateTimeOffset.UtcNow;
@@ -179,7 +181,9 @@ public sealed partial class ReportingService
             command.ReportRequestId,
             currentUser.Id,
             ownerUserId,
-            createdAt);
+            createdAt,
+            uploadSession.SourcePhotoTypeId,
+            uploadSession.ReportPhotoSlotId);
 
         await _photoPersistence.SaveAsync(photo, cancellationToken);
         await _photoPersistence.MarkUploadCompletedAsync(command.StorageKey, photo.Id, photo.CreatedAt, cancellationToken);
@@ -197,7 +201,9 @@ public sealed partial class ReportingService
             photo.UploaderAccountId,
             photo.OwnerAccountId,
             photo.CreatedAt,
-            false);
+            false,
+            photo.SourcePhotoTypeId,
+            photo.ReportPhotoSlotId);
     }
 
     private async Task TryDeleteReplacedObjectAsync(string storageKey, CancellationToken cancellationToken)

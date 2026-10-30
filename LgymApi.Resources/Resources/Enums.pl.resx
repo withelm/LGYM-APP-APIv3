@@ -177,4 +177,25 @@
   <data name="TrainerInvitationStatus_Expired" xml:space="preserve">
     <value>Wygasłe</value>
   </data>
+  <data name="TrainerPhotoType_Front" xml:space="preserve">
+    <value>Przód</value>
+  </data>
+  <data name="TrainerPhotoType_Side" xml:space="preserve">
+    <value>Bok</value>
+  </data>
+  <data name="TrainerPhotoType_Back" xml:space="preserve">
+    <value>Tył</value>
+  </data>
+  <data name="TrainerPhotoType_SideLeft" xml:space="preserve">
+    <value>Lewy bok</value>
+  </data>
+  <data name="TrainerPhotoType_SideRight" xml:space="preserve">
+    <value>Prawy bok</value>
+  </data>
+  <data name="PhotoTypeNameMode_SystemLocalized" xml:space="preserve">
+    <value>Nazwa systemowa</value>
+  </data>
+  <data name="PhotoTypeNameMode_TrainerProvided" xml:space="preserve">
+    <value>Nazwa trenera</value>
+  </data>
 </root>

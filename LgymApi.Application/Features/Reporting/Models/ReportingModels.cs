@@ -4,6 +4,8 @@ using LgymApi.Identity.Contracts;
 
 namespace LgymApi.Application.Features.Reporting.Models;
 
+internal sealed class ReportPhotoSlot;
+
 public sealed class CreateReportTemplateCommand
 {
     public string Name { get; set; } = string.Empty;
@@ -20,6 +22,22 @@ public sealed class ReportTemplateFieldCommand
     public int Order { get; set; }
     public JsonElement? ModuleConfig { get; set; }
 }
+
+public sealed record ReportTemplateSnapshotDocument(
+    string TemplateId,
+    string Name,
+    string? Description,
+    IReadOnlyList<ReportTemplateSnapshotFieldDocument> Fields,
+    string Provenance,
+    int SchemaVersion = 2);
+
+public sealed record ReportTemplateSnapshotFieldDocument(
+    string Key,
+    string Label,
+    ReportFieldType Type,
+    bool IsRequired,
+    int Order,
+    JsonElement? ModuleConfig);
 
 public sealed class CreateReportRequestCommand
 {
@@ -71,6 +89,7 @@ public sealed class ReportRequestResult
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }
     public ReportTemplateResult Template { get; set; } = new();
+    public string? DefinitionSnapshotProvenance { get; set; }
 }
 
 public sealed class ReportSubmissionResult
@@ -91,6 +110,8 @@ public sealed class InitiatePhotoUploadCommand
 {
     public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest> ReportRequestId { get; set; }
     public string ViewType { get; set; } = string.Empty;
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerPhotoType>? PhotoTypeId { get; set; }
+    public string? ReportPhotoSlotId { get; set; }
     public string MimeType { get; set; } = string.Empty;
     public long SizeBytes { get; set; }
 }
@@ -116,6 +137,8 @@ public sealed class CompletePhotoUploadCommand
     public string Checksum { get; set; } = string.Empty;
     public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest> ReportRequestId { get; set; }
     public string ViewType { get; set; } = string.Empty;
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerPhotoType>? PhotoTypeId { get; set; }
+    public string? ReportPhotoSlotId { get; set; }
 }
 
 public sealed class CompletePhotoUploadResult
@@ -139,6 +162,24 @@ public sealed class PhotoHistoryItemResult
     public string ReadUrl { get; set; } = string.Empty;
     public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportRequest> ReportRequestId { get; set; }
     public DateTimeOffset UploadedAt { get; set; }
+    public string? PhotoTypeId { get; set; }
+    public string? ReportPhotoSlotId { get; set; }
+    public string? DisplayName { get; set; }
+    public PhotoTypeLabelsResult? Labels { get; set; }
+    public string? DefinitionSnapshotProvenance { get; set; }
+}
+
+public sealed record PhotoTypeLabelsResult(string Pl, string En);
+
+public sealed class TrainerPhotoTypeResult
+{
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.TrainerPhotoType> Id { get; set; }
+    public string? SystemKey { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public LgymApi.Domain.Enums.PhotoTypeNameMode NameMode { get; set; }
+    public bool IsArchived { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
+    public PhotoTypeLabelsResult Labels { get; set; } = new(string.Empty, string.Empty);
 }
 
 internal sealed record ReportSubmissionPhotoCapabilityResult(

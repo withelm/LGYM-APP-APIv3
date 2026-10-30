@@ -17,6 +17,14 @@ public interface ITrainerReportTemplateApiPort
     Task<Result<Unit, AppError>> DeleteAsync(AuthenticatedAccountContext trainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken = default);
 }
 
+public interface ITrainerPhotoTypeApiPort
+{
+    Task<Result<List<TrainerPhotoTypeResult>, AppError>> GetAllAsync(AuthenticatedAccountContext trainer, CancellationToken cancellationToken = default);
+    Task<Result<TrainerPhotoTypeResult, AppError>> CreateAsync(AuthenticatedAccountContext trainer, string name, CancellationToken cancellationToken = default);
+    Task<Result<TrainerPhotoTypeResult, AppError>> UpdateAsync(AuthenticatedAccountContext trainer, Id<TrainerPhotoType> photoTypeId, string? name, bool? archived, CancellationToken cancellationToken = default);
+    Task<Result<TrainerPhotoTypeResult, AppError>> ResetNameAsync(AuthenticatedAccountContext trainer, Id<TrainerPhotoType> photoTypeId, CancellationToken cancellationToken = default);
+}
+
 public interface ITrainerReportRequestApiPort
 {
     Task<Result<ReportRequestResult, AppError>> CreateAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, CreateReportRequestCommand command, CancellationToken cancellationToken = default);

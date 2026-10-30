@@ -182,7 +182,10 @@ public sealed class ApiIdempotencyMiddleware
             callerScope = email.Trim().ToLowerInvariant();
         }
 
-        return $"{method}|{routeTemplate}|{callerScope}";
+        var scopeTuple = $"{method}|{routeTemplate}|{callerScope}";
+        return ReportingProtocolContext.TryGetVersion(context, out var reportingProtocol)
+            ? $"{scopeTuple}|reporting-protocol:{reportingProtocol}"
+            : scopeTuple;
     }
 
     private static async Task<string> ComputeFingerprintAsync(HttpContext context, string scopeTuple)
@@ -223,7 +226,10 @@ public sealed class ApiIdempotencyMiddleware
             ? context.Request.QueryString.Value
             : string.Empty;
 
-        var fingerprintInput = $"{canonicalBody}|{routeParams}|{query}|{scopeTuple}";
+        var reportingProtocol = ReportingProtocolContext.TryGetVersion(context, out var protocol)
+            ? $"|reporting-protocol:{protocol}"
+            : string.Empty;
+        var fingerprintInput = $"{canonicalBody}|{routeParams}|{query}|{scopeTuple}{reportingProtocol}";
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(fingerprintInput));
         return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }

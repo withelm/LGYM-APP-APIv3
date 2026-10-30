@@ -15,9 +15,12 @@ internal sealed class PhotoEntityTypeConfiguration : IEntityTypeConfiguration<Ph
         builder.Property(e => e.SizeBytes).IsRequired();
         builder.Property(e => e.Checksum).IsRequired();
 
+        builder.HasIndex(e => new { e.ReportRequestId, e.ReportPhotoSlotId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = FALSE AND \"ReportPhotoSlotId\" IS NOT NULL");
         builder.HasIndex(e => new { e.ReportRequestId, e.ViewType })
             .IsUnique()
-            .HasFilter(ReportingConfigurationFilters.ActiveRowsFilter);
+            .HasFilter("\"IsDeleted\" = FALSE AND \"ReportPhotoSlotId\" IS NULL");
         builder.HasIndex(e => new { e.OwnerUserId, e.CreatedAt });
 
         builder.HasOne(e => e.ReportRequest)
@@ -33,6 +36,11 @@ internal sealed class PhotoEntityTypeConfiguration : IEntityTypeConfiguration<Ph
         builder.HasOne(e => e.Owner)
             .WithMany()
             .HasForeignKey(e => e.OwnerUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.SourcePhotoType)
+            .WithMany()
+            .HasForeignKey(e => e.SourcePhotoTypeId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

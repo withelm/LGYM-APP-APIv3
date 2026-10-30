@@ -32,11 +32,23 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportRequestResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        await _templatePersistence.LockTrainerDefinitionsAsync(currentTrainer.Id, cancellationToken);
         var templateResult = await EnsureOwnedTemplateAsync(currentTrainer, command.TemplateId, cancellationToken);
         if (templateResult.IsFailure)
         {
             return Result<ReportRequestResult, AppError>.Failure(templateResult.Error);
         }
+
+        var photoTypes = await ReportTemplateSnapshotFactory.EnsureDefaultsAsync(_templatePersistence, currentTrainer.Id, cancellationToken);
+        var snapshotResult = ReportTemplateSnapshotFactory.Create(templateResult.Value, photoTypes);
+        if (snapshotResult.IsFailure)
+        {
+            return Result<ReportRequestResult, AppError>.Failure(snapshotResult.Error);
+        }
+
+        var createdAt = DateTimeOffset.UtcNow;
+        var snapshotJson = ReportTemplateSnapshotFactory.Serialize(snapshotResult.Value);
 
         var request = new NewReportRequestPersistenceModel(
             Id<ReportRequest>.New(),
@@ -48,20 +60,22 @@ public sealed partial class ReportingService : IReportingService
             NormalizeDueAt(command.DueAt),
             null,
             string.IsNullOrWhiteSpace(command.Note) ? null : command.Note.Trim(),
-            DateTimeOffset.UtcNow);
+            createdAt,
+            snapshotJson);
 
         await _requestSubmissionPersistence.AddRequestAsync(request, cancellationToken);
-        await _commandDispatcher.EnqueueAsync(new ReportRequestCreatedInAppNotificationCommand
+        await _commandOutboxWriter.StageAsync(new ReportRequestCreatedInAppNotificationCommand
         {
             RequestId = request.Id,
             TraineeId = traineeId,
             TrainerId = currentTrainer.Id,
             TemplateName = templateResult.Value.Name
-        });
+        }, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<ReportRequestResult, AppError>.Success(
-            _mapper.Map<ReportRequestPersistenceModel, ReportRequestResult>(ToPersistenceModel(request, templateResult.Value)));
+            _mapper.Map<ReportRequestPersistenceModel, ReportRequestResult>(ToPersistenceModel(request, templateResult.Value, snapshotJson)));
     }
 
     public async Task<Result<List<ReportRequestResult>, AppError>> GetPendingRequestsForTraineeAsync(
@@ -92,7 +106,8 @@ public sealed partial class ReportingService : IReportingService
 
     private static ReportRequestPersistenceModel ToPersistenceModel(
         NewReportRequestPersistenceModel request,
-        ReportTemplatePersistenceModel template)
+        ReportTemplatePersistenceModel template,
+        string snapshotJson)
         => new(
             request.Id,
             request.TrainerId,
@@ -106,7 +121,13 @@ public sealed partial class ReportingService : IReportingService
             request.CreatedAt,
             false,
             template,
-            null);
+            null,
+            new ReportRequestDefinitionSnapshotPersistenceModel(
+                request.Id,
+                request.TemplateId,
+                snapshotJson,
+                ReportTemplateSnapshotFactory.Provenance,
+                request.CreatedAt));
 
     private static DateTimeOffset? NormalizeDueAt(DateTimeOffset? dueAt)
     {

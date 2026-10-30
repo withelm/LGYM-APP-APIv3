@@ -64,21 +64,6 @@ public sealed class UpsertReportTemplateRequestValidator : AbstractValidator<Ups
             return false;
         }
 
-        if (!jsonElement.TryGetProperty("requiredViews", out var requiredViews)
-            || requiredViews.ValueKind != JsonValueKind.Array)
-        {
-            return false;
-        }
-
-        foreach (var requiredView in requiredViews.EnumerateArray())
-        {
-            if (requiredView.ValueKind != JsonValueKind.String
-                || !ReportingModuleConfigParser.TryNormalizePhotoViewName(requiredView.GetString(), out _))
-            {
-                return false;
-            }
-        }
-
         return ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(jsonElement, out _, out _);
     }
 

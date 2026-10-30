@@ -14,8 +14,9 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
 
     public ReportRequestSubmissionPersistenceRepository(AppDbContext dbContext) => _dbContext = dbContext;
 
-    public Task AddRequestAsync(NewReportRequestPersistenceModel request, CancellationToken cancellationToken = default)
-        => _dbContext.ReportRequests.AddAsync(new ReportRequest
+    public async Task AddRequestAsync(NewReportRequestPersistenceModel request, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.ReportRequests.AddAsync(new ReportRequest
         {
             Id = request.Id,
             TrainerId = ReportingPersistenceAccountIds.ToPersisted(request.TrainerId),
@@ -27,7 +28,20 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
             SubmittedAt = request.SubmittedAt,
             Note = request.Note,
             CreatedAt = request.CreatedAt
-        }, cancellationToken).AsTask();
+        }, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(request.DefinitionSnapshotJson))
+        {
+            await _dbContext.ReportRequestDefinitionSnapshots.AddAsync(new ReportRequestDefinitionSnapshot
+            {
+                Id = Id<ReportRequestDefinitionSnapshot>.New(),
+                ReportRequestId = request.Id,
+                SourceTemplateId = request.TemplateId,
+                DefinitionJson = request.DefinitionSnapshotJson,
+                Provenance = "Issued",
+                CreatedAt = request.CreatedAt
+            }, cancellationToken);
+        }
+    }
 
     public async Task<ReportRequestPersistenceModel?> FindRequestByIdAsync(
         Id<ReportRequest> requestId,
@@ -118,13 +132,15 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
         => _dbContext.ReportRequests
             .Include(request => request.Template)
                 .ThenInclude(template => template.Fields.OrderBy(field => field.Order).ThenBy(field => field.CreatedAt))
-            .Include(request => request.Submission);
+            .Include(request => request.Submission)
+            .Include(request => request.DefinitionSnapshot);
 
     private IQueryable<ReportSubmission> SubmissionQuery()
         => _dbContext.ReportSubmissions
             .Include(submission => submission.ReportRequest)
                 .ThenInclude(request => request.Template)
-                    .ThenInclude(template => template.Fields.OrderBy(field => field.Order).ThenBy(field => field.CreatedAt));
+                    .ThenInclude(template => template.Fields.OrderBy(field => field.Order).ThenBy(field => field.CreatedAt))
+            .Include(submission => submission.ReportRequest.DefinitionSnapshot);
 
     private async Task SetRequestStateAsync(
         Id<ReportRequest> requestId,

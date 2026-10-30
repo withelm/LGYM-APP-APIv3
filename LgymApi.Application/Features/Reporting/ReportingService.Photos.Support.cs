@@ -11,128 +11,126 @@ using LgymApi.Resources;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace LgymApi.Application.Features.Reporting;
 
 public sealed partial class ReportingService
 {
-    private async Task<Result<Unit, AppError>> ValidatePhotoAccessAsync(
-        AuthenticatedAccountContext currentUser,
-        Id<AccountReference> traineeId,
-        CancellationToken cancellationToken)
+    private sealed record ResolvedPhotoBinding(
+        string ViewType,
+        Id<TrainerPhotoType>? PhotoTypeId,
+        string? ReportPhotoSlotId,
+        string? DisplayName,
+        PhotoTypeLabelsResult? Labels,
+        bool LegacyCompatible = true);
+
+    private Result<ResolvedPhotoBinding, AppError> ResolvePhotoBinding(
+        ReportRequestPersistenceModel request,
+        Id<TrainerPhotoType>? photoTypeId,
+        string? reportPhotoSlotId,
+        string requestedViewType)
     {
-        if (currentUser.Id == traineeId)
+        if (request.DefinitionSnapshot is null)
         {
-            return Result<Unit, AppError>.Success(Unit.Value);
+            if (photoTypeId.HasValue || !string.IsNullOrWhiteSpace(reportPhotoSlotId))
+                return Result<ResolvedPhotoBinding, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            var legacyView = TryParseViewType(requestedViewType, out var parsedLegacyView);
+            return legacyView.IsFailure
+                ? Result<ResolvedPhotoBinding, AppError>.Failure(legacyView.Error)
+                : Result<ResolvedPhotoBinding, AppError>.Success(new ResolvedPhotoBinding(
+                    parsedLegacyView, photoTypeId, reportPhotoSlotId, null, null));
         }
 
-        var trainerCheck = EnsureTrainer(currentUser);
-        if (trainerCheck.IsFailure)
+        var snapshot = JsonSerializer.Deserialize<ReportTemplateSnapshotDocument>(request.DefinitionSnapshot.DefinitionJson)
+            ?? throw new InvalidOperationException("A report request snapshot is malformed.");
+        var bindings = snapshot.Fields
+            .Where(field => field.Type == ReportFieldType.Photos && field.ModuleConfig.HasValue)
+            .SelectMany(field => ReadSnapshotPhotoBindings(field.ModuleConfig!.Value))
+            .ToList();
+
+        if (bindings.Count == 0)
         {
-            return Result<Unit, AppError>.Failure(new ReportingForbiddenError(Messages.TrainerRoleRequired));
+            if (photoTypeId.HasValue || !string.IsNullOrWhiteSpace(reportPhotoSlotId))
+                return Result<ResolvedPhotoBinding, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            var legacyView = TryParseViewType(requestedViewType, out var parsedLegacyView);
+            return legacyView.IsFailure
+                ? Result<ResolvedPhotoBinding, AppError>.Failure(legacyView.Error)
+                : Result<ResolvedPhotoBinding, AppError>.Success(new ResolvedPhotoBinding(
+                    parsedLegacyView, photoTypeId, reportPhotoSlotId, null, null));
         }
 
-        var access = await _relationshipAccessPersistence.GetAccessAsync(currentUser.Id, traineeId, cancellationToken);
-        if (!access.HasActiveRelationship)
+        if (!string.IsNullOrWhiteSpace(reportPhotoSlotId) && !Id<ReportPhotoSlot>.TryParse(reportPhotoSlotId, out _))
         {
-            return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+            return Result<ResolvedPhotoBinding, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
         }
 
-        return Result<Unit, AppError>.Success(Unit.Value);
+        var candidates = bindings.Where(candidate =>
+            (!photoTypeId.HasValue || candidate.PhotoTypeId == photoTypeId)
+            && (string.IsNullOrWhiteSpace(reportPhotoSlotId) || string.Equals(candidate.ReportPhotoSlotId, reportPhotoSlotId, StringComparison.OrdinalIgnoreCase))
+            && (string.IsNullOrWhiteSpace(requestedViewType) || string.Equals(candidate.ViewType, requestedViewType.Trim(), StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        if (candidates.Count == 0 && !photoTypeId.HasValue && string.IsNullOrWhiteSpace(reportPhotoSlotId)
+            && snapshot.Fields.Any(field => field.ModuleConfig.HasValue
+                && field.ModuleConfig.Value.TryGetProperty("legacyViewTypes", out var legacy) && legacy.ValueKind == JsonValueKind.Array)
+            && ReportingModuleConfigParser.TryNormalizePhotoViewName(requestedViewType, out var legacyExtraView))
+            return Result<ResolvedPhotoBinding, AppError>.Success(new ResolvedPhotoBinding(legacyExtraView, null, null, null, null));
+
+        if (candidates.Count != 1 || (!photoTypeId.HasValue &&
+            (string.IsNullOrWhiteSpace(requestedViewType) || !candidates[0].LegacyCompatible)))
+        {
+            return Result<ResolvedPhotoBinding, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+        }
+
+        return Result<ResolvedPhotoBinding, AppError>.Success(candidates[0]);
     }
 
-    private static string GenerateStorageKey(
-        Id<AccountReference> traineeId,
-        Id<ReportRequest> reportRequestId,
-        string viewType,
-        string fileExtension)
+    private static IEnumerable<ResolvedPhotoBinding> ReadSnapshotPhotoBindings(JsonElement moduleConfig)
     {
-        var timestamp = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH-mm-ssZ");
-        var uniqueSuffix = Id<Photo>.New().ToString().Replace("-", string.Empty, StringComparison.Ordinal);
-        var sanitizedViewType = SanitizeViewTypeSegment(viewType);
+        if (!moduleConfig.TryGetProperty("photoTypes", out var photoTypes) || photoTypes.ValueKind != JsonValueKind.Array)
+        {
+            yield break;
+        }
 
-        return $"photos/{traineeId}/{reportRequestId}/{sanitizedViewType}/{timestamp}-{uniqueSuffix}.{fileExtension}";
+        foreach (var photoType in photoTypes.EnumerateArray())
+        {
+            if (!photoType.TryGetProperty("photoTypeId", out var photoTypeIdElement)
+                || !Id<TrainerPhotoType>.TryParse(photoTypeIdElement.GetString() ?? string.Empty, out var photoTypeId)
+                || !photoType.TryGetProperty("reportPhotoSlotId", out var slotElement)
+                || string.IsNullOrWhiteSpace(slotElement.GetString()))
+            {
+                continue;
+            }
+
+            var systemKey = photoType.TryGetProperty("systemKey", out var systemKeyElement)
+                && systemKeyElement.ValueKind == JsonValueKind.String
+                    ? systemKeyElement.GetString()
+                    : null;
+            var viewType = !string.IsNullOrWhiteSpace(systemKey)
+                && ReportingModuleConfigParser.TryNormalizePhotoViewName(systemKey, out var normalizedView)
+                    ? normalizedView
+                    : "Custom";
+            PhotoTypeLabelsResult? labels = null;
+            if (photoType.TryGetProperty("labels", out var labelsElement)
+                && labelsElement.TryGetProperty("pl", out var pl)
+                && labelsElement.TryGetProperty("en", out var en)
+                && pl.ValueKind == JsonValueKind.String
+                && en.ValueKind == JsonValueKind.String)
+            {
+                labels = new PhotoTypeLabelsResult(pl.GetString() ?? string.Empty, en.GetString() ?? string.Empty);
+            }
+
+            yield return new ResolvedPhotoBinding(
+                viewType,
+                photoTypeId,
+                slotElement.GetString(),
+                labels is null ? null : ReportingPhotoTypeLabels.DisplayName(labels),
+                labels,
+                systemKey is not null && photoType.TryGetProperty("nameMode", out var mode) &&
+                ((mode.ValueKind == JsonValueKind.Number && mode.TryGetInt32(out var numericMode) && numericMode == (int)PhotoTypeNameMode.SystemLocalized)
+                 || (mode.ValueKind == JsonValueKind.String && mode.GetString() == nameof(PhotoTypeNameMode.SystemLocalized))));
+        }
     }
-
-    private static string BuildStorageKeyPrefix(
-        Id<AccountReference> traineeId,
-        Id<ReportRequest> reportRequestId,
-        string viewType)
-    {
-        return $"photos/{traineeId}/{reportRequestId}/{SanitizeViewTypeSegment(viewType)}/";
-    }
-    private Result<Unit, AppError> TryParseViewType(string viewType, out string parsedViewType)
-    {
-        if (!ReportingModuleConfigParser.TryNormalizePhotoViewName(viewType, out parsedViewType))
-        {
-            return Result<Unit, AppError>.Failure(new InvalidReportingError($"Invalid view type: {viewType}"));
-        }
-
-        return Result<Unit, AppError>.Success(Unit.Value);
-    }
-
-    private Result<Unit, AppError> ValidateMimeType(string mimeType)
-    {
-        if (_photoStorageOptions.AllowedMimeTypes.Any(x => string.Equals(x, mimeType, StringComparison.OrdinalIgnoreCase)))
-        {
-            return Result<Unit, AppError>.Success(Unit.Value);
-        }
-
-        return Result<Unit, AppError>.Failure(
-            new InvalidReportingError($"Invalid MIME type: {mimeType}. Allowed types: {string.Join(", ", _photoStorageOptions.AllowedMimeTypes)}"));
-    }
-
-    private Result<Unit, AppError> ValidateFileSize(long sizeBytes)
-    {
-        if (sizeBytes <= 0)
-        {
-            return Result<Unit, AppError>.Failure(new InvalidReportingError("File size must be greater than 0 bytes"));
-        }
-
-        if (sizeBytes <= _photoStorageOptions.MaxFileSizeBytes)
-        {
-            return Result<Unit, AppError>.Success(Unit.Value);
-        }
-
-        return Result<Unit, AppError>.Failure(
-            new InvalidReportingError($"File size exceeds maximum: {sizeBytes} bytes (max: {_photoStorageOptions.MaxFileSizeBytes} bytes)"));
-    }
-
-    private async Task<Result<Unit, AppError>> ValidateDeveloperLimitsAsync(
-        Id<AccountReference> currentUserId,
-        CancellationToken cancellationToken)
-    {
-        var totalBytes = await _photoPersistence.GetActiveStorageBytesAsync(cancellationToken);
-        if (totalBytes >= _photoStorageOptions.DevMaxTotalBytes)
-        {
-            return Result<Unit, AppError>.Failure(new InvalidReportingError("Development photo storage byte limit reached"));
-        }
-
-        var startOfDayUtc = new DateTimeOffset(DateTime.UtcNow.Date, TimeSpan.Zero);
-        var uploadsToday = await _photoPersistence.CountCreatedSinceAsync(startOfDayUtc, cancellationToken);
-        if (uploadsToday >= _photoStorageOptions.DevMaxUploadsPerDay)
-        {
-            return Result<Unit, AppError>.Failure(new InvalidReportingError("Development daily photo upload limit reached"));
-        }
-
-        var perUserWindowStart = DateTimeOffset.UtcNow.AddHours(-1);
-        var recentUploadInits = await _photoPersistence.CountRecentUploadInitsAsync(currentUserId, perUserWindowStart, cancellationToken);
-        if (recentUploadInits >= _photoStorageOptions.DevMaxUploadInitPerUserPerHour)
-        {
-            return Result<Unit, AppError>.Failure(new InvalidReportingError("Development upload-init hourly limit reached"));
-        }
-
-        return Result<Unit, AppError>.Success(Unit.Value);
-    }
-
-    private bool ShouldEnforceDevelopmentPhotoLimits()
-        => string.Equals(_photoStorageOptions.Provider, "Local", StringComparison.OrdinalIgnoreCase);
-
-    private static Result<Unit, AppError> EnsureRequestAllowsPhotoUpload(ReportRequestPersistenceModel request)
-        => request.Status is ReportRequestStatus.Pending or ReportRequestStatus.Expired
-            ? Result<Unit, AppError>.Success(Unit.Value)
-            : Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportRequestNotPending));
-
     private Result<Unit, AppError> ValidateUploadedObjectMetadata(CompletePhotoUploadCommand command, PhotoMetadata metadata)
         => ValidateUploadedObjectMetadata(command, null, metadata);
 
@@ -188,19 +186,24 @@ public sealed partial class ReportingService
         AuthenticatedAccountContext currentUser,
         CompletePhotoUploadCommand command,
         Id<AccountReference> ownerUserId,
-        string parsedViewType,
+        ResolvedPhotoBinding binding,
         PendingPhotoUpload pendingUpload)
     {
         if (!string.Equals(pendingUpload.StorageKey, command.StorageKey, StringComparison.Ordinal)
             || pendingUpload.InitiatedByAccountId != currentUser.Id
             || pendingUpload.OwnerAccountId != ownerUserId
             || pendingUpload.ReportRequestId != command.ReportRequestId
-            || !string.Equals(pendingUpload.ViewType, parsedViewType, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(pendingUpload.ViewType, binding.ViewType, StringComparison.OrdinalIgnoreCase)
+            || pendingUpload.SourcePhotoTypeId != binding.PhotoTypeId
+            || !string.Equals(pendingUpload.ReportPhotoSlotId, binding.ReportPhotoSlotId, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(pendingUpload.DeclaredContentType, command.MimeType, StringComparison.OrdinalIgnoreCase)
             || pendingUpload.DeclaredSizeBytes != command.SizeBytes)
         {
             return Result<Unit, AppError>.Failure(new InvalidReportingError("Upload session does not match the original upload-init request"));
         }
+
+        if (pendingUpload.Status == PhotoUploadSessionStatus.Completed)
+            return Result<Unit, AppError>.Success(Unit.Value);
 
         if (pendingUpload.Status != PhotoUploadSessionStatus.Pending)
         {
@@ -286,14 +289,4 @@ public sealed partial class ReportingService
 
     private TimeSpan GetSignedReadExpiration() => TimeSpan.FromMinutes(_photoStorageOptions.SignedReadExpirationMinutes);
 
-    private static string GetFileExtensionFromMimeType(string mimeType)
-    {
-        return mimeType.ToLowerInvariant() switch
-        {
-            "image/jpeg" => "jpg",
-            "image/png" => "png",
-            "image/heic" => "heic",
-            _ => "jpg"
-        };
-    }
 }

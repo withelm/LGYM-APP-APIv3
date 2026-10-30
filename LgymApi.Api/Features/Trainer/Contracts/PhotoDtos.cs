@@ -11,6 +11,12 @@ public sealed class InitiatePhotoUploadRequest : IDto
     [JsonPropertyName("viewType")]
     public string ViewType { get; set; } = string.Empty;
 
+    [JsonPropertyName("photoTypeId")]
+    public string? PhotoTypeId { get; set; }
+
+    [JsonPropertyName("reportPhotoSlotId")]
+    public string? ReportPhotoSlotId { get; set; }
+
     [JsonPropertyName("mimeType")]
     public string MimeType { get; set; } = string.Empty;
 
@@ -58,6 +64,12 @@ public sealed class CompletePhotoUploadRequest : IDto
 
     [JsonPropertyName("viewType")]
     public string ViewType { get; set; } = string.Empty;
+
+    [JsonPropertyName("photoTypeId")]
+    public string? PhotoTypeId { get; set; }
+
+    [JsonPropertyName("reportPhotoSlotId")]
+    public string? ReportPhotoSlotId { get; set; }
 }
 
 public sealed class CompletePhotoUploadResponse : IResultDto
@@ -67,6 +79,7 @@ public sealed class CompletePhotoUploadResponse : IResultDto
 
     [JsonPropertyName("uploadedAt")]
     public DateTimeOffset UploadedAt { get; set; }
+
 }
 
 public sealed class PhotoHistoryItemResponse : IResultDto
@@ -91,6 +104,21 @@ public sealed class PhotoHistoryItemResponse : IResultDto
 
     [JsonPropertyName("uploadedAt")]
     public DateTimeOffset UploadedAt { get; set; }
+
+    [JsonPropertyName("photoTypeId")]
+    public string? PhotoTypeId { get; set; }
+
+    [JsonPropertyName("reportPhotoSlotId")]
+    public string? ReportPhotoSlotId { get; set; }
+
+    [JsonPropertyName("displayName")]
+    public string? DisplayName { get; set; }
+
+    [JsonPropertyName("labels")]
+    public PhotoTypeLabelsDto? Labels { get; set; }
+
+    [JsonPropertyName("definitionSnapshotProvenance")]
+    public string? DefinitionSnapshotProvenance { get; set; }
 }
 
 public sealed class GetPhotoHistoryResponse : IResultDto

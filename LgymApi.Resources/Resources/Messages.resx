@@ -330,4 +330,22 @@
   <data name="CannotDeleteSelf" xml:space="preserve">
     <value>You cannot delete yourself.</value>
   </data>
+  <data name="ReportingProtocolUnsupported" xml:space="preserve">
+    <value>The reporting protocol header is invalid or unsupported.</value>
+  </data>
+  <data name="ReportingProtocolV2Disabled" xml:space="preserve">
+    <value>Reporting protocol 2 is not enabled.</value>
+  </data>
+  <data name="ReportingProtocolV2Required" xml:space="preserve">
+    <value>Reporting protocol 2 is required for this request.</value>
+  </data>
+  <data name="ReportingProtocolUpgradeRequired" xml:space="preserve">
+    <value>Upgrade the app to read or edit this report safely.</value>
+  </data>
+  <data name="ReportingProtocolPhotoTypeRequired" xml:space="preserve">
+    <value>photoTypeId is required for reporting protocol 2 uploads.</value>
+  </data>
+  <data name="ReportingProtocolPayloadTooLarge" xml:space="preserve">
+    <value>The reporting request is too large for protocol validation.</value>
+  </data>
 </root>

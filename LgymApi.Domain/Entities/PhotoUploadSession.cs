@@ -10,6 +10,8 @@ public sealed class PhotoUploadSession : EntityBase<PhotoUploadSession>
     public Id<User> InitiatedByUserId { get; set; }
     public Id<ReportRequest> ReportRequestId { get; set; }
     public string ViewType { get; set; } = string.Empty;
+    public Id<TrainerPhotoType>? SourcePhotoTypeId { get; set; }
+    public string? ReportPhotoSlotId { get; set; }
     public string DeclaredContentType { get; set; } = string.Empty;
     public long DeclaredSizeBytes { get; set; }
     public DateTimeOffset ExpiresAtUtc { get; set; }
@@ -22,4 +24,5 @@ public sealed class PhotoUploadSession : EntityBase<PhotoUploadSession>
     public User OwnerUser { get; set; } = null!;
     public User InitiatedByUser { get; set; } = null!;
     public Photo? CompletedPhoto { get; set; }
+    public TrainerPhotoType? SourcePhotoType { get; set; }
 }

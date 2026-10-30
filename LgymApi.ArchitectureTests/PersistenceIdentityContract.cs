@@ -74,7 +74,9 @@ internal static class PersistenceIdentityContract
         DbSet("PushNotificationMessages", "PushNotificationMessage"),
         DbSet("UserExternalLogins", "UserExternalLogin"),
         DbSet("Photos", "Photo"),
-        DbSet("PhotoUploadSessions", "PhotoUploadSession")
+        DbSet("PhotoUploadSessions", "PhotoUploadSession"),
+        DbSet("TrainerPhotoTypes", "TrainerPhotoType"),
+        DbSet("ReportRequestDefinitionSnapshots", "ReportRequestDefinitionSnapshot")
     ];
 
     internal static IReadOnlyList<string> RegistrarConfigurationTypes { get; } =
@@ -127,7 +129,9 @@ internal static class PersistenceIdentityContract
         "ReportSubmissionEntityTypeConfiguration",
         "RecurringReportAssignmentEntityTypeConfiguration",
         "PhotoEntityTypeConfiguration",
-        "PhotoUploadSessionEntityTypeConfiguration"
+        "PhotoUploadSessionEntityTypeConfiguration",
+        "TrainerPhotoTypeEntityTypeConfiguration",
+        "ReportRequestDefinitionSnapshotEntityTypeConfiguration"
     ];
 
     private static PersistedDbSetIdentity DbSet(string propertyName, string entityTypeName)

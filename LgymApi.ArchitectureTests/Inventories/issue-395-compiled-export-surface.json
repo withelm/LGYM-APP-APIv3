@@ -3,8 +3,8 @@
   "assemblies": [
     {
       "name": "LgymApi.Application",
-      "exportedTypeCount": 482,
-      "sha256": "d59abdb60db91b41409ad42cf77deafadd76c9996d1f6289062a974f7b08be54"
+      "exportedTypeCount": 490,
+      "sha256": "e14b3153ff1470d6aaf30d949e3548bab73bca42deb69b77368ed5a4806d4183"
     },
     {
       "name": "LgymApi.Identity",

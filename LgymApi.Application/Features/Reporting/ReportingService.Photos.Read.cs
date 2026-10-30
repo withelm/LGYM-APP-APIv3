@@ -54,6 +54,7 @@ public sealed partial class ReportingService
         CancellationToken cancellationToken = default)
     {
         IReadOnlyList<ReportPhotoPersistenceModel> photos;
+        var requests = new Dictionary<Id<ReportRequest>, ReportRequestPersistenceModel>();
 
         if (command.RequestId.HasValue && !command.RequestId.Value.IsEmpty)
         {
@@ -71,6 +72,7 @@ public sealed partial class ReportingService
             }
 
             photos = await _photoPersistence.ListByRequestAsync(command.RequestId.Value, cancellationToken);
+            requests[reportRequest.Id] = reportRequest;
         }
         else if (command.TraineeId.HasValue && !command.TraineeId.Value.IsEmpty)
         {
@@ -91,6 +93,15 @@ public sealed partial class ReportingService
         var results = new List<PhotoHistoryItemResult>();
         foreach (var photo in photos)
         {
+            if (!requests.TryGetValue(photo.ReportRequestId, out var request))
+            {
+                request = await _requestSubmissionPersistence.FindRequestByIdAsync(photo.ReportRequestId, cancellationToken);
+                if (request is not null)
+                {
+                    requests[photo.ReportRequestId] = request;
+                }
+            }
+
             var readUrl = await _photoStorageProvider.GenerateSignedReadUrlAsync(
                 photo.StorageKey,
                 GetSignedReadExpiration(),
@@ -105,6 +116,16 @@ public sealed partial class ReportingService
                     cancellationToken);
             }
 
+            ResolvedPhotoBinding? binding = null;
+            if (request is not null && photo.SourcePhotoTypeId.HasValue && !string.IsNullOrWhiteSpace(photo.ReportPhotoSlotId))
+            {
+                var bindingResult = ResolvePhotoBinding(request, photo.SourcePhotoTypeId, photo.ReportPhotoSlotId, photo.ViewType);
+                if (bindingResult.IsSuccess)
+                {
+                    binding = bindingResult.Value;
+                }
+            }
+
             results.Add(new PhotoHistoryItemResult
             {
                 Id = photo.Id,
@@ -113,7 +134,12 @@ public sealed partial class ReportingService
                 ThumbnailUrl = thumbnailUrl,
                 ReadUrl = readUrl,
                 ReportRequestId = photo.ReportRequestId,
-                UploadedAt = photo.CreatedAt
+                UploadedAt = photo.CreatedAt,
+                PhotoTypeId = photo.SourcePhotoTypeId?.ToString(),
+                ReportPhotoSlotId = photo.ReportPhotoSlotId,
+                DisplayName = binding?.DisplayName,
+                Labels = binding?.Labels,
+                DefinitionSnapshotProvenance = request?.DefinitionSnapshot?.Provenance
             });
         }
 

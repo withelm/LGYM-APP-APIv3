@@ -47,11 +47,17 @@ public sealed partial class ReportingService
                 : Result<InitiatePhotoUploadResult, AppError>.Failure(authCheck.Error);
         }
 
-        var viewTypeValidation = TryParseViewType(command.ViewType, out var parsedViewType);
-        if (viewTypeValidation.IsFailure)
+        var binding = ResolvePhotoBinding(
+            request,
+            command.PhotoTypeId,
+            command.ReportPhotoSlotId,
+            command.ViewType);
+        if (binding.IsFailure)
         {
-            return Result<InitiatePhotoUploadResult, AppError>.Failure(viewTypeValidation.Error);
+            return Result<InitiatePhotoUploadResult, AppError>.Failure(binding.Error);
         }
+
+        var parsedViewType = binding.Value.ViewType;
 
         var mimeTypeValidation = ValidateMimeType(command.MimeType);
         if (mimeTypeValidation.IsFailure)
@@ -107,7 +113,9 @@ public sealed partial class ReportingService
             null,
             null,
             PhotoUploadSessionStatus.Pending,
-            null), cancellationToken);
+            null,
+            binding.Value.PhotoTypeId,
+            binding.Value.ReportPhotoSlotId), cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -144,7 +152,7 @@ public sealed partial class ReportingService
         }
 
         var request = validationContext.Value.Request;
-        var parsedViewType = validationContext.Value.ParsedViewType;
+        var parsedViewType = validationContext.Value.Binding.ViewType;
 
         var uploadSessionResult = await GetUploadSessionOrErrorAsync(command.StorageKey, cancellationToken);
         if (uploadSessionResult.IsFailure)
@@ -154,13 +162,7 @@ public sealed partial class ReportingService
 
         var uploadSession = uploadSessionResult.Value;
 
-        var completedResult = await TryGetCompletedPhotoResultAsync(uploadSession, cancellationToken);
-        if (completedResult != null)
-        {
-            return Result<CompletePhotoUploadResult, AppError>.Success(completedResult);
-        }
-
-        var pendingUploadValidation = ValidatePendingUpload(currentUser, command, request.TraineeId, parsedViewType, uploadSession);
+        var pendingUploadValidation = ValidatePendingUpload(currentUser, command, request.TraineeId, validationContext.Value.Binding, uploadSession);
         if (pendingUploadValidation.IsFailure)
         {
             _logger.LogWarning(
@@ -170,6 +172,10 @@ public sealed partial class ReportingService
 
             return Result<CompletePhotoUploadResult, AppError>.Failure(pendingUploadValidation.Error);
         }
+
+        var completedResult = await TryGetCompletedPhotoResultAsync(uploadSession, cancellationToken);
+        if (completedResult != null)
+            return Result<CompletePhotoUploadResult, AppError>.Success(completedResult);
 
         var metadataResult = await TryGetPhotoMetadataAsync(command.StorageKey, cancellationToken);
         if (metadataResult.IsFailure)
@@ -201,12 +207,12 @@ public sealed partial class ReportingService
             return Result<CompletePhotoUploadResult, AppError>.Failure(metadataValidation.Error);
         }
 
-        var existingPhoto = await _photoPersistence.FindActiveByRequestAndViewAsync(
-            command.ReportRequestId,
-            parsedViewType,
-            cancellationToken);
+        var existingPhoto = uploadSession.ReportPhotoSlotId is null
+            ? await _photoPersistence.FindActiveByRequestAndViewAsync(command.ReportRequestId, parsedViewType, cancellationToken)
+            : (await _photoPersistence.ListByRequestAsync(command.ReportRequestId, cancellationToken))
+                .SingleOrDefault(photo => !photo.IsDeleted && photo.ReportPhotoSlotId == uploadSession.ReportPhotoSlotId);
 
-        var photo = await CreateAndPersistPhotoAsync(currentUser, command, metadata, parsedViewType, request.TraineeId, cancellationToken);
+        var photo = await CreateAndPersistPhotoAsync(currentUser, command, metadata, parsedViewType, request.TraineeId, uploadSession, cancellationToken);
 
         if (existingPhoto != null && !string.Equals(existingPhoto.StorageKey, photo.StorageKey, StringComparison.Ordinal))
         {

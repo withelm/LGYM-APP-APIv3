@@ -197,6 +197,16 @@ public sealed partial class RecurringReportAssignmentService
             => new(false, reason);
     }
 
+    private static bool IsWithinManualRequestWindow(RecurringReportAssignmentPersistenceModel assignment, DateTimeOffset now)
+        => assignment.IsActive && assignment.StartsAt <= now
+            && (!assignment.EndsAt.HasValue || assignment.EndsAt.Value >= now);
+
+    private static bool IsManualRequestLifecycleEligible(RecurringReportAssignmentPersistenceModel assignment)
+    {
+        var automatic = EvaluateAutomaticEligibility(assignment, DateTimeOffset.UtcNow);
+        return automatic.CanCreate || automatic.Reason == AutomaticEligibilityReason.NotDue;
+    }
+
     private enum AutomaticEligibilityReason
     {
         Eligible,
@@ -212,7 +222,8 @@ public sealed partial class RecurringReportAssignmentService
         CurrentRequestNotSubmitted,
         SubmissionMissing,
         FeedbackNotAdded,
-        FeedbackNotRead
+        FeedbackNotRead,
+        TemplatePhotoTypeUnavailable
     }
 
     private RecurringReportAssignmentResult MapAssignment(RecurringReportAssignmentPersistenceModel assignment)
@@ -257,7 +268,8 @@ public sealed partial class RecurringReportAssignmentService
 
     private static ReportRequestPersistenceModel ToRequestPersistenceModel(
         NewReportRequestPersistenceModel request,
-        ReportTemplatePersistenceModel template)
+        ReportTemplatePersistenceModel template,
+        string snapshotJson)
         => new(
             request.Id,
             request.TrainerId,
@@ -271,5 +283,11 @@ public sealed partial class RecurringReportAssignmentService
             request.CreatedAt,
             false,
             template,
-            null);
+            null,
+            new ReportRequestDefinitionSnapshotPersistenceModel(
+                request.Id,
+                request.TemplateId,
+                snapshotJson,
+                ReportTemplateSnapshotFactory.Provenance,
+                request.CreatedAt));
 }
