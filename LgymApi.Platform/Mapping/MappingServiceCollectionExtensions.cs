@@ -19,9 +19,9 @@ public static class MappingServiceCollectionExtensions
             throw new InvalidOperationException($"Mapping assembly '{duplicateAssembly.Key}' was supplied more than once.");
         }
 
-        if (assemblies.Length != 6)
+        if (assemblies.Length != 7)
         {
-            throw new ArgumentException("Mapping discovery requires exactly six module assemblies.", nameof(assemblies));
+            throw new ArgumentException("Mapping discovery requires exactly seven module assemblies.", nameof(assemblies));
         }
 
         var profiles = assemblies

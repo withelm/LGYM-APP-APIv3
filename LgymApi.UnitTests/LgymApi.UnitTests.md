@@ -1,7 +1,7 @@
 # LgymApi.UnitTests.csproj
 
 - Purpose: focused unit tests.
-- Contains: unit coverage for service, domain, application, mapping, API, and infrastructure units.
+- Contains: unit coverage for service, domain, application, mapping, API, and infrastructure units, excluding Reporting-owned service, persistence, recurring-assignment, mapping, and photo tests.
 - Rules: use NUnit, FluentAssertions, and NSubstitute; prefer mocks for touched collaborators instead of new hand-written fake interfaces.
 - Rules: use shared helpers from `LgymApi.TestUtils` when they already fit the test.
 - Rules: prefer `LgymApi.Resources` accessors over hardcoded translated/user-facing strings when the resource value is the source of truth.
@@ -12,5 +12,6 @@
 - API adapter registration coverage requires the exact 25 scoped Application and 3 scoped Notifications API-adapter contracts to be unique, resolve through host composition, retain internal implementations, and remain distinct from the three Notifications integration adapters.
 - Notification hub and publisher unit coverage exercises active session registration and direct validated-connection delivery; publisher tests do not rely on user-group delivery alone.
 - `RuntimeCompositionValidationTests` builds both Testing and non-Testing ordered host graphs with `ValidateOnBuild` and `ValidateScopes`, resolves every closed module contract and all 35 controllers without invoking providers, and rejects duplicate descriptors or scoped dependencies captured by singletons.
+- Reporting API/controller, middleware, validator, Worker, Workout & Progress accepted-progress consumer, and cross-cutting composition coverage remains here; Reporting-owned behavior lives in `LgymApi.Reporting.UnitTests`.
 - Coaching coverage exercises focused use cases and ports, persistence staging without repository commits, the Worker invitation-email adapter mapping, and exact-one port registration. Run the suite with `dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build` after a Release build.
 - `ActorRowSecurityScopeTests` cover empty actors, InMemory no-op behavior, fail-closed relational setup, cancellation, and preservation of pre-existing tracked entries.

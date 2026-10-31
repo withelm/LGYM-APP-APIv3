@@ -34,7 +34,7 @@ public sealed class ReportingPersistencePortGuardTests
     public void ReportingPersistencePortsAdaptersAndRegistrations_ShouldRemainExact()
     {
         var root = ArchitectureTestHelpers.ResolveRepositoryRoot();
-        var portRoot = Path.Combine(root, "LgymApi.Application", "Reporting", "Persistence");
+        var portRoot = Path.Combine(root, "LgymApi.Reporting", "Reporting", "Persistence");
         var repositoryRoot = Path.Combine(root, "LgymApi.Infrastructure", "Repositories", "Reporting");
         var registrationSource = File.ReadAllText(Path.Combine(root, "LgymApi.Infrastructure", "ReportingServiceCollectionExtensions.cs"));
         var missing = Seams

@@ -11,12 +11,13 @@ public sealed class ModuleBoundaryProductionScanGuardTests
         "LgymApi.Domain",
         "LgymApi.Platform",
         "LgymApi.Identity",
+        "LgymApi.Reporting",
         "LgymApi.TrainingPlanning",
         "LgymApi.Notifications"
     ];
 
     [Test]
-    public void Production_Scan_Should_Compile_Every_Source_From_The_Exact_Six_Assemblies()
+    public void Production_Scan_Should_Compile_Every_Source_From_The_Exact_Seven_Assemblies()
     {
         var scan = ModuleBoundaryProductionScan.Prepare();
 

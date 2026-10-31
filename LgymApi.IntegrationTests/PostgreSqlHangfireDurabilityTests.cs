@@ -10,6 +10,7 @@ using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Repositories;
+using LgymApi.Application.Reporting;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.BackgroundWorker.Runtime;
@@ -312,6 +313,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
                 .AddIdentityModule()
                 .AddTrainingPlanningModule()
                 .AddNotificationsModule(configuration)
+                .AddReportingModule()
                 .AddApplication()
                 .AddInfrastructure(configuration, enableSensitiveLogging: true, isTesting: false, hostBackgroundServer: false);
             services.AddBackgroundWorkerServices(isTesting: false, hostBackgroundServer);

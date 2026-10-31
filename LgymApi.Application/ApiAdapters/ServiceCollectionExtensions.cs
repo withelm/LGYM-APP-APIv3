@@ -3,7 +3,6 @@ using LgymApi.Application.Identity.ApiAdapters;
 using LgymApi.Application.TrainingPlanning.ApiAdapters;
 using LgymApi.Application.Nutrition.ApiAdapters;
 using LgymApi.Application.Platform.ReferenceData.ApiAdapters;
-using LgymApi.Application.Reporting.ApiAdapters;
 using LgymApi.Application.WorkoutProgress.ApiAdapters;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,13 +31,6 @@ public static class ApplicationApiAdapterServiceCollectionExtensions
         services.AddScoped<ITrainerTraineeNotesApiPort, TrainerTraineeNotesApiAdapter>();
         services.AddScoped<ITraineeNotesApiPort, TraineeNotesApiAdapter>();
         services.AddScoped<ITraineeRelationshipApiPort, TraineeRelationshipApiAdapter>();
-        services.AddScoped<ITrainerReportTemplateApiPort, TrainerReportTemplateApiAdapter>();
-        services.AddScoped<ITrainerPhotoTypeApiPort, TrainerPhotoTypeApiAdapter>();
-        services.AddScoped<ITrainerReportRequestApiPort, TrainerReportRequestApiAdapter>();
-        services.AddScoped<ITraineeReportRequestApiPort, TraineeReportRequestApiAdapter>();
-        services.AddScoped<ITrainerReportPhotoApiPort, TrainerReportPhotoApiAdapter>();
-        services.AddScoped<ITraineeReportPhotoApiPort, TraineeReportPhotoApiAdapter>();
-        services.AddScoped<IRecurringReportAssignmentApiPort, RecurringReportAssignmentApiAdapter>();
 
         return services;
     }

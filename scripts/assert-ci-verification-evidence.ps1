@@ -569,7 +569,7 @@ if ($build.configuration -cne 'Release' -or [int]$build.exitCode -ne 0) {
     throw 'The uploaded build manifest is not a successful Release build.'
 }
 
-$expectedSuites = @('Unit', 'Architecture', 'InMemoryIntegration', 'PostgreSqlIntegration', 'DataSeeder')
+$expectedSuites = @('Unit', 'ReportingUnit', 'Architecture', 'InMemoryIntegration', 'PostgreSqlIntegration', 'DataSeeder')
 $summaries = @($documents | Where-Object {
     $_.document.PSObject.Properties['kind'] -and $_.document.kind -ceq 'trx-summary'
 })

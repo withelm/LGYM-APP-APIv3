@@ -2,26 +2,34 @@
 
 This is the authoritative current graph after the completed issue #387 extraction. It is derived only from tracked `.csproj` `ProjectReference` items. Namespace imports, runtime registration, and transitive build dependencies are not graph edges.
 
+## Governed project promotion
+
+`LgymApi.ArchitectureTests/ProjectReferenceGraphManifest.cs` is the executable allowlist. Every descriptor declares one approved project identity, its kind (`Production`, `Host`, `Test`, or `Tooling`), and its exact approved direct targets. The edge manifest, forbidden complement, semantic-edge diagnostics, and deterministic dependency-first order are derived from those descriptors.
+
+A project promotion must update the descriptor, solution membership, root Project Purpose Map, adjacent `<ProjectName>.md`, canonical edge list, and direct-use evidence together. Every direct target must name another approved project and have Roslyn-resolved source use, except the explicitly classified Resources analyzer edge. Unknown projects and unapproved, missing, duplicate, cyclic, unused, or transitively relied-on references fail the architecture guards. No wildcard targets or exception-based permissions are allowed.
+
 ## Solution projects
 
-1. `LgymApi.Api`
-2. `LgymApi.Application`
-3. `LgymApi.ArchitectureTests`
-4. `LgymApi.BackgroundWorker`
-5. `LgymApi.BackgroundWorker.Common`
-6. `LgymApi.DataSeeder`
-7. `LgymApi.DataSeeder.Tests`
-8. `LgymApi.Domain`
-9. `LgymApi.Identity`
-10. `LgymApi.Infrastructure`
-11. `LgymApi.IntegrationTests`
-12. `LgymApi.Notifications`
-13. `LgymApi.Platform`
-14. `LgymApi.Resources`
-15. `LgymApi.Resources.Generator`
-16. `LgymApi.TestUtils`
-17. `LgymApi.TrainingPlanning`
-18. `LgymApi.UnitTests`
+1. `LgymApi.Api` (`Host`)
+2. `LgymApi.Application` (`Production`)
+3. `LgymApi.ArchitectureTests` (`Test`)
+4. `LgymApi.BackgroundWorker` (`Host`)
+5. `LgymApi.BackgroundWorker.Common` (`Production`)
+6. `LgymApi.DataSeeder` (`Tooling`)
+7. `LgymApi.DataSeeder.Tests` (`Test`)
+8. `LgymApi.Domain` (`Production`)
+9. `LgymApi.Identity` (`Production`)
+10. `LgymApi.Infrastructure` (`Production`)
+11. `LgymApi.IntegrationTests` (`Test`)
+12. `LgymApi.Notifications` (`Production`)
+13. `LgymApi.Platform` (`Production`)
+14. `LgymApi.Resources` (`Production`)
+15. `LgymApi.Resources.Generator` (`Tooling`)
+16. `LgymApi.TestUtils` (`Test`)
+17. `LgymApi.TrainingPlanning` (`Production`)
+18. `LgymApi.UnitTests` (`Test`)
+19. `LgymApi.Reporting` (`Production`)
+20. `LgymApi.Reporting.UnitTests` (`Test`)
 
 ## Canonical direct edge manifest
 
@@ -34,6 +42,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Api` -> `LgymApi.Infrastructure`
 - `LgymApi.Api` -> `LgymApi.Notifications`
 - `LgymApi.Api` -> `LgymApi.Platform`
+- `LgymApi.Api` -> `LgymApi.Reporting`
 - `LgymApi.Api` -> `LgymApi.Resources`
 - `LgymApi.Api` -> `LgymApi.TrainingPlanning`
 - `LgymApi.Application` -> `LgymApi.Domain`
@@ -50,6 +59,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.ArchitectureTests` -> `LgymApi.Notifications`
 - `LgymApi.ArchitectureTests` -> `LgymApi.Platform`
 - `LgymApi.ArchitectureTests` -> `LgymApi.Resources`
+- `LgymApi.ArchitectureTests` -> `LgymApi.Reporting`
 - `LgymApi.ArchitectureTests` -> `LgymApi.TrainingPlanning`
 - `LgymApi.BackgroundWorker` -> `LgymApi.Application`
 - `LgymApi.BackgroundWorker` -> `LgymApi.BackgroundWorker.Common`
@@ -57,6 +67,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.BackgroundWorker` -> `LgymApi.Infrastructure`
 - `LgymApi.BackgroundWorker` -> `LgymApi.Notifications`
 - `LgymApi.BackgroundWorker` -> `LgymApi.Platform`
+- `LgymApi.BackgroundWorker` -> `LgymApi.Reporting`
 - `LgymApi.BackgroundWorker.Common` -> `LgymApi.Domain`
 - `LgymApi.DataSeeder` -> `LgymApi.Domain`
 - `LgymApi.DataSeeder` -> `LgymApi.Identity`
@@ -74,6 +85,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Infrastructure` -> `LgymApi.Identity`
 - `LgymApi.Infrastructure` -> `LgymApi.Notifications`
 - `LgymApi.Infrastructure` -> `LgymApi.Platform`
+- `LgymApi.Infrastructure` -> `LgymApi.Reporting`
 - `LgymApi.Infrastructure` -> `LgymApi.TrainingPlanning`
 - `LgymApi.IntegrationTests` -> `LgymApi.Api`
 - `LgymApi.IntegrationTests` -> `LgymApi.Application`
@@ -85,6 +97,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.IntegrationTests` -> `LgymApi.Notifications`
 - `LgymApi.IntegrationTests` -> `LgymApi.Platform`
 - `LgymApi.IntegrationTests` -> `LgymApi.Resources`
+- `LgymApi.IntegrationTests` -> `LgymApi.Reporting`
 - `LgymApi.IntegrationTests` -> `LgymApi.TestUtils`
 - `LgymApi.IntegrationTests` -> `LgymApi.TrainingPlanning`
 - `LgymApi.Notifications` -> `LgymApi.BackgroundWorker.Common`
@@ -92,6 +105,16 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Notifications` -> `LgymApi.Identity`
 - `LgymApi.Notifications` -> `LgymApi.Platform`
 - `LgymApi.Notifications` -> `LgymApi.Resources`
+- `LgymApi.Reporting` -> `LgymApi.Domain`
+- `LgymApi.Reporting` -> `LgymApi.Identity`
+- `LgymApi.Reporting` -> `LgymApi.Platform`
+- `LgymApi.Reporting` -> `LgymApi.Resources`
+- `LgymApi.Reporting.UnitTests` -> `LgymApi.Domain`
+- `LgymApi.Reporting.UnitTests` -> `LgymApi.Identity`
+- `LgymApi.Reporting.UnitTests` -> `LgymApi.Infrastructure`
+- `LgymApi.Reporting.UnitTests` -> `LgymApi.Platform`
+- `LgymApi.Reporting.UnitTests` -> `LgymApi.Reporting`
+- `LgymApi.Reporting.UnitTests` -> `LgymApi.Resources`
 - `LgymApi.Platform` -> `LgymApi.Domain`
 - `LgymApi.Platform` -> `LgymApi.Resources`
 - `LgymApi.Resources` -> `LgymApi.Resources.Generator`
@@ -115,6 +138,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.UnitTests` -> `LgymApi.Notifications`
 - `LgymApi.UnitTests` -> `LgymApi.Platform`
 - `LgymApi.UnitTests` -> `LgymApi.Resources`
+- `LgymApi.UnitTests` -> `LgymApi.Reporting`
 - `LgymApi.UnitTests` -> `LgymApi.TestUtils`
 - `LgymApi.UnitTests` -> `LgymApi.TrainingPlanning`
 
@@ -131,6 +155,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Api -> LgymApi.Infrastructure` | `LgymApi.Api/Configuration/LocalPhotoDevelopmentEndpoints.cs:27` |
 | `LgymApi.Api -> LgymApi.Notifications` | `LgymApi.Api/Features/InAppNotification/Controllers/InAppNotificationController.cs:6` |
 | `LgymApi.Api -> LgymApi.Platform` | `LgymApi.Api/Extensions/ApiJsonOptionsExtensions.cs:3` |
+| `LgymApi.Api -> LgymApi.Reporting` | `LgymApi.Api/Program.cs:8` |
 | `LgymApi.Api -> LgymApi.Resources` | `LgymApi.Api/Configuration/ApiAuthenticationExtensions.cs:49` |
 | `LgymApi.Api -> LgymApi.TrainingPlanning` | `LgymApi.Api/Features/PlanDay/Controllers/PlanDayController.cs:9` |
 | `LgymApi.Application -> LgymApi.Domain` | `LgymApi.Application/Coaching/Access/CoachingRelationshipAccessService.cs:4` |
@@ -147,6 +172,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.ArchitectureTests -> LgymApi.Notifications` | `LgymApi.ArchitectureTests/CanonicalRepositoryRegistrationDiTests.cs:1` |
 | `LgymApi.ArchitectureTests -> LgymApi.Platform` | `LgymApi.ArchitectureTests/AppConfigAuthorizationBoundaryGuardTests.cs:1` |
 | `LgymApi.ArchitectureTests -> LgymApi.Resources` | `LgymApi.ArchitectureTests/ProjectReferenceGraphGuardTests.cs:27` |
+| `LgymApi.ArchitectureTests -> LgymApi.Reporting` | `LgymApi.ArchitectureTests/ReportingPersistencePortGuardTests.cs:1` |
 | `LgymApi.ArchitectureTests -> LgymApi.TrainingPlanning` | `LgymApi.ArchitectureTests/CoachingManagedPlanSliceArchitectureTests.cs:14` |
 | `LgymApi.BackgroundWorker -> LgymApi.Application` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:1` |
 | `LgymApi.BackgroundWorker -> LgymApi.BackgroundWorker.Common` | `LgymApi.BackgroundWorker/Actions/SendRegistrationEmailHandler.cs:2` |
@@ -154,6 +180,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.BackgroundWorker -> LgymApi.Infrastructure` | `LgymApi.BackgroundWorker/ServiceProvider.cs:51` |
 | `LgymApi.BackgroundWorker -> LgymApi.Notifications` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:2` |
 | `LgymApi.BackgroundWorker -> LgymApi.Platform` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:4` |
+| `LgymApi.BackgroundWorker -> LgymApi.Reporting` | `LgymApi.BackgroundWorker/Jobs/RecurringReportAssignmentProcessingJob.cs:1` |
 | `LgymApi.BackgroundWorker.Common -> LgymApi.Domain` | `LgymApi.BackgroundWorker.Common/IdempotencyKeyPolicy.cs:1` |
 | `LgymApi.DataSeeder -> LgymApi.Domain` | `LgymApi.DataSeeder/SeedContext.cs:1` |
 | `LgymApi.DataSeeder -> LgymApi.Identity` | `LgymApi.DataSeeder/Program.cs:5` |
@@ -171,6 +198,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Infrastructure -> LgymApi.Identity` | `LgymApi.Infrastructure/Configuration/InfrastructureMappingRegistration.cs:12` |
 | `LgymApi.Infrastructure -> LgymApi.Notifications` | `LgymApi.Infrastructure/Data/AppDbContext.cs:9` |
 | `LgymApi.Infrastructure -> LgymApi.Platform` | `LgymApi.Infrastructure/Configuration/InfrastructureMappingRegistration.cs:1` |
+| `LgymApi.Infrastructure -> LgymApi.Reporting` | `LgymApi.Infrastructure/ReportingServiceCollectionExtensions.cs:5` |
 | `LgymApi.Infrastructure -> LgymApi.TrainingPlanning` | `LgymApi.Infrastructure/Data/AppDbContext.cs:11` |
 | `LgymApi.IntegrationTests -> LgymApi.Api` | `LgymApi.IntegrationTests/ApiHostConfigurationCharacterizationTests.cs:8` |
 | `LgymApi.IntegrationTests -> LgymApi.Application` | `LgymApi.IntegrationTests/CoachingDashboardProgressSliceIntegrationTests.cs:5` |
@@ -182,6 +210,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.IntegrationTests -> LgymApi.Notifications` | `LgymApi.IntegrationTests/CompositionRootStartupTests.cs:16` |
 | `LgymApi.IntegrationTests -> LgymApi.Platform` | `LgymApi.IntegrationTests/ApiHostConfigurationCharacterizationTests.cs:10` |
 | `LgymApi.IntegrationTests -> LgymApi.Resources` | `LgymApi.IntegrationTests/ApiHostConfigurationCharacterizationTests.cs:179` |
+| `LgymApi.IntegrationTests -> LgymApi.Reporting` | `LgymApi.IntegrationTests/CompositionRootStartupTests.cs:14` |
 | `LgymApi.IntegrationTests -> LgymApi.TestUtils` | `LgymApi.IntegrationTests/CoachingLegacyEnvelopeReplayIntegrationTests.cs:78` |
 | `LgymApi.IntegrationTests -> LgymApi.TrainingPlanning` | `LgymApi.IntegrationTests/CoachingManagedPlanSliceIntegrationTests.cs:6` |
 | `LgymApi.Notifications -> LgymApi.BackgroundWorker.Common` | `LgymApi.Notifications/EmailTemplates/EmailServiceCollectionExtensions.cs:1` |
@@ -189,6 +218,16 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Notifications -> LgymApi.Identity` | `LgymApi.Notifications/Adapters/PushInstallationSessionDisassociationAdapter.cs:1` |
 | `LgymApi.Notifications -> LgymApi.Platform` | `LgymApi.Notifications/CoachingNotificationIntentService.cs:2` |
 | `LgymApi.Notifications -> LgymApi.Resources` | `LgymApi.Notifications/CoachingNotificationIntentService.cs:52` |
+| `LgymApi.Reporting -> LgymApi.Domain` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:4` |
+| `LgymApi.Reporting -> LgymApi.Identity` | `LgymApi.Reporting/Features/Reporting/IRecurringReportAssignmentService.cs:6` |
+| `LgymApi.Reporting -> LgymApi.Platform` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:13` |
+| `LgymApi.Reporting -> LgymApi.Resources` | `LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.RequestNow.cs:54` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Domain` | `LgymApi.Reporting.UnitTests/ReportingServiceTests.cs:18` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Identity` | `LgymApi.Reporting.UnitTests/PhotoServiceTestFactory.cs:10` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Infrastructure` | `LgymApi.Reporting.UnitTests/CloudflareR2PhotoStorageProviderTests.cs:24` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Platform` | `LgymApi.Reporting.UnitTests/ExpiredPhotoUploadCleanupServiceTests.cs:27` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Reporting` | `LgymApi.Reporting.UnitTests/ReportingServiceTests.cs:10` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Resources` | `LgymApi.Reporting.UnitTests/PhotoCompleteUploadServiceTests.cs:213` |
 | `LgymApi.Platform -> LgymApi.Domain` | `LgymApi.Platform/Contracts/Serialization/TypedIdJsonConverter.cs:3` |
 | `LgymApi.Platform -> LgymApi.Resources` | `LgymApi.Platform/ReferenceData/AppConfig/AppConfigService.cs:35` |
 | `LgymApi.Resources -> LgymApi.Resources.Generator` | `LgymApi.Resources/LgymApi.Resources.csproj:16` analyzer reference |
@@ -203,7 +242,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.TrainingPlanning -> LgymApi.Platform` | `LgymApi.TrainingPlanning/Contracts/ManagedPlans/IAssignManagedPlanUseCase.cs:1` |
 | `LgymApi.TrainingPlanning -> LgymApi.Resources` | `LgymApi.TrainingPlanning/ManagedPlans/AssignManagedPlanUseCase.cs:44` |
 | `LgymApi.UnitTests -> LgymApi.Api` | `LgymApi.UnitTests/AccountReadServiceTests.cs:195` |
-| `LgymApi.UnitTests -> LgymApi.Application` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:6` |
+| `LgymApi.UnitTests -> LgymApi.Application` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:8` |
 | `LgymApi.UnitTests -> LgymApi.BackgroundWorker` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:11` |
 | `LgymApi.UnitTests -> LgymApi.BackgroundWorker.Common` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:21` |
 | `LgymApi.UnitTests -> LgymApi.Domain` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:13` |
@@ -212,14 +251,15 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.UnitTests -> LgymApi.Notifications` | `LgymApi.UnitTests/ApplicationPushContractCompatibilityTests.cs:7` |
 | `LgymApi.UnitTests -> LgymApi.Platform` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:4` |
 | `LgymApi.UnitTests -> LgymApi.Resources` | `LgymApi.UnitTests/CoachingNotificationIntentInAppTests.cs:99` |
-| `LgymApi.UnitTests -> LgymApi.TestUtils` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:120` |
+| `LgymApi.UnitTests -> LgymApi.Reporting` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:14` |
+| `LgymApi.UnitTests -> LgymApi.TestUtils` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:129` |
 | `LgymApi.UnitTests -> LgymApi.TrainingPlanning` | `LgymApi.UnitTests/CoachingManagedPlanSliceTests.cs:17` |
 
 ## Locked topology
 
-The graph has exactly 18 projects and 90 `ProjectReference` edges. It is acyclic, each edge is unique, 89 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured. The forbidden cross-project edge complement contains exactly 216 edges.
+Current derived snapshot: 20 approved projects, 106 approved direct `ProjectReference` edges, and 274 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 105 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
 
-Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Identity` -> `LgymApi.Notifications` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
+Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Identity` -> `LgymApi.Notifications` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
 
 This topology retains one `AppDbContext`, migration root, snapshot, database, schema, and migration stream. Worker selects environment-specific scheduling and delegates hosted Hangfire server registration to the Infrastructure-owned persistence helper.
 

@@ -13,6 +13,7 @@ public sealed class UnitOfWorkCommitGuardTests
         "/LgymApi.Identity/",
         "/LgymApi.Notifications/",
         "/LgymApi.Platform/ReferenceData/",
+        "/LgymApi.Reporting/",
         "/LgymApi.TrainingPlanning/",
         "/LgymApi.BackgroundWorker/",  // Orchestration service owns command envelope lifecycle
         "/LgymApi.Infrastructure/UnitOfWork/",
@@ -24,6 +25,7 @@ public sealed class UnitOfWorkCommitGuardTests
     private static readonly string[] TestSegments =
     {
         "/LgymApi.UnitTests/",
+        "/LgymApi.Reporting.UnitTests/",
         "/LgymApi.IntegrationTests/",
         "/LgymApi.DataSeeder.Tests/",
         "/LgymApi.ArchitectureTests/"

@@ -22,18 +22,21 @@ public sealed class ReportingNutritionCommandContractTests
     public void Commands_HaveExactApplicationOwnedPublicSurfaceAndDefaults()
     {
         AssertCommandContract<ReportRequestCreatedInAppNotificationCommand>(
+            "LgymApi.Reporting",
             "LgymApi.Application.Reporting.Contracts.BackgroundCommands",
             ("RequestId", typeof(Id<ReportRequest>)),
             ("TraineeId", typeof(Id<AccountReference>)),
             ("TrainerId", typeof(Id<AccountReference>)),
             ("TemplateName", typeof(string)));
         AssertCommandContract<ReportSubmissionCreatedInAppNotificationCommand>(
+            "LgymApi.Reporting",
             "LgymApi.Application.Reporting.Contracts.BackgroundCommands",
             ("SubmissionId", typeof(Id<ReportSubmission>)),
             ("TrainerId", typeof(Id<AccountReference>)),
             ("TraineeId", typeof(Id<AccountReference>)),
             ("TemplateName", typeof(string)));
         AssertCommandContract<ReportFeedbackAddedInAppNotificationCommand>(
+            "LgymApi.Reporting",
             "LgymApi.Application.Reporting.Contracts.BackgroundCommands",
             ("SubmissionId", typeof(Id<ReportSubmission>)),
             ("TraineeId", typeof(Id<AccountReference>)),
@@ -41,6 +44,7 @@ public sealed class ReportingNutritionCommandContractTests
             ("TemplateName", typeof(string)),
             ("TriggeredAt", typeof(DateTimeOffset)));
         AssertCommandContract<DietPlanUpdatedInAppNotificationCommand>(
+            "LgymApi.Application",
             "LgymApi.Application.Nutrition.Contracts.BackgroundCommands",
             ("DietPlanId", typeof(Id<DietPlan>)),
             ("TraineeId", typeof(Id<User>)),
@@ -140,6 +144,7 @@ public sealed class ReportingNutritionCommandContractTests
     }
 
     private static void AssertCommandContract<TCommand>(
+        string expectedAssembly,
         string expectedNamespace,
         params (string Name, Type Type)[] expectedProperties)
     {
@@ -152,7 +157,7 @@ public sealed class ReportingNutritionCommandContractTests
 
         Assert.Multiple(() =>
         {
-            commandType.Assembly.GetName().Name.Should().Be("LgymApi.Application");
+            commandType.Assembly.GetName().Name.Should().Be(expectedAssembly);
             commandType.Namespace.Should().Be(expectedNamespace);
             commandType.IsPublic.Should().BeTrue();
             commandType.IsSealed.Should().BeTrue();

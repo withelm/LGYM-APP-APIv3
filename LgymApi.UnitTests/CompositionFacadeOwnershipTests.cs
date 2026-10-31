@@ -5,6 +5,7 @@ using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Identity.ApiAdapters;
 using LgymApi.Application.Nutrition.DietPlans.CreateTraineePlan;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Reporting;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Platform.ReferenceData.AppConfig;
 using LgymApi.Application.Repositories;
@@ -58,13 +59,13 @@ public sealed class CompositionFacadeOwnershipTests
     }
 
     [Test]
-    public void AddApplication_RegistersOnlyReportingWorkoutCoachingAndNutritionServices()
+    public void AddApplication_RegistersOnlyWorkoutCoachingAndNutritionServices()
     {
         var services = new ServiceCollection();
 
         services.AddApplication();
 
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IReportingService));
+        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IReportingService));
         services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IWorkoutProgressReadWriteService));
         services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(ICoachingRelationshipAccessService));
         services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(ICreateTraineeDietPlanUseCase));
@@ -73,6 +74,16 @@ public sealed class CompositionFacadeOwnershipTests
         services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IPlanDayService));
         services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService));
         services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IAppConfigApiAdapter));
+    }
+
+    [Test]
+    public void AddReportingModule_RegistersReportingServices()
+    {
+        var services = new ServiceCollection();
+
+        services.AddReportingModule();
+
+        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IReportingService));
     }
 
     [Test]
@@ -141,7 +152,7 @@ public sealed class CompositionFacadeOwnershipTests
         new(typeof(ITokenService), ServiceLifetime.Scoped, typeof(AccountReference).Assembly),
         new(typeof(IPlanDayService), ServiceLifetime.Scoped, typeof(PlanReference).Assembly),
         new(typeof(IInAppNotificationService), ServiceLifetime.Scoped, typeof(NotificationReference).Assembly),
-        new(typeof(IReportingService), ServiceLifetime.Scoped, typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly),
+        new(typeof(IReportingService), ServiceLifetime.Scoped, typeof(LgymApi.Application.Reporting.ServiceCollectionExtensions).Assembly),
         new(typeof(IWorkoutProgressReadWriteService), ServiceLifetime.Scoped, typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly),
         new(typeof(ICoachingRelationshipAccessService), ServiceLifetime.Scoped, typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly),
         new(typeof(ICreateTraineeDietPlanUseCase), ServiceLifetime.Scoped, typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly),

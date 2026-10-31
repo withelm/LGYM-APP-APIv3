@@ -26,16 +26,13 @@ public sealed class ProjectReferenceDocumentationEvidenceTests
             Assert.That(markdown, Does.StartWith("# Issue #380: Approved Current Project-Reference Graph"));
             Assert.That(markdown, Does.Contain("after the completed issue #387 extraction"));
             Assert.That(scannedImports.ProjectNames, Is.EquivalentTo(ProjectReferenceGraphManifest.ProjectNames));
-            Assert.That(scannedImports.ProjectNames, Has.Count.EqualTo(18));
-            Assert.That(scannedImports.EdgeIdentities, Has.Count.EqualTo(90));
-            Assert.That(scannedImports.EdgeIdentities.Distinct(StringComparer.Ordinal).ToArray(), Has.Length.EqualTo(90));
-            Assert.That(ProjectReferenceGraphManifest.ForbiddenEdgeIdentities, Has.Count.EqualTo(216));
+            Assert.That(scannedImports.EdgeIdentities, Is.EquivalentTo(ProjectReferenceGraphManifest.EdgeIdentities));
+            Assert.That(
+                scannedImports.EdgeIdentities.Distinct(StringComparer.Ordinal).ToArray(),
+                Has.Length.EqualTo(ProjectReferenceGraphManifest.EdgeIdentities.Count));
             Assert.That(analysis.Violations, Is.Empty, string.Join(Environment.NewLine, analysis.Violations));
-            Assert.That(analysis.SemanticEvidenceByEdge, Has.Count.EqualTo(89));
-            Assert.That(analysis.AnalyzerEdgeIdentities, Is.EquivalentTo(new[]
-            {
-                "LgymApi.Resources -> LgymApi.Resources.Generator"
-            }));
+            Assert.That(analysis.SemanticEvidenceByEdge, Has.Count.EqualTo(ProjectReferenceGraphManifest.SemanticEdgeIdentities.Count));
+            Assert.That(analysis.AnalyzerEdgeIdentities, Is.EquivalentTo(ProjectReferenceGraphManifest.AnalyzerEdgeIdentities));
             Assert.That(analysis.TopologicalOrder, Is.EqualTo(ProjectReferenceGraphManifest.TopologicalOrder));
         });
 

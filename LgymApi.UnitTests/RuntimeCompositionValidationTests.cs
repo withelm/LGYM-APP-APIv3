@@ -3,6 +3,7 @@ using FluentAssertions;
 using Hangfire.Logging;
 using LgymApi.Application;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.Reporting;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.BackgroundWorker.Runtime;
@@ -150,7 +151,9 @@ public sealed class RuntimeCompositionValidationTests
             new FacadeMethodExpectation(typeof(LgymApi.Identity.IdentityModule), "AddIdentityModule"),
             new FacadeMethodExpectation(typeof(LgymApi.TrainingPlanning.TrainingPlanningModule), "AddTrainingPlanningModule"),
             new FacadeMethodExpectation(typeof(LgymApi.Application.Notifications.NotificationsModule), "AddNotificationsModule"),
-            new FacadeMethodExpectation(typeof(ServiceCollectionExtensions), "AddApplication"),
+            new FacadeMethodExpectation(typeof(LgymApi.Application.Reporting.ServiceCollectionExtensions), "AddReportingModule"),
+            new FacadeMethodExpectation(typeof(LgymApi.Application.Reporting.ServiceCollectionExtensions), "AddReportingApiAdapters"),
+            new FacadeMethodExpectation(typeof(LgymApi.Application.ServiceCollectionExtensions), "AddApplication"),
             new FacadeMethodExpectation(typeof(ApplicationApiAdapterServiceCollectionExtensions), "AddApplicationApiAdapters"),
             new FacadeMethodExpectation(typeof(LgymApi.Application.Notifications.NotificationsModule), "AddNotificationsApiAdapters"),
             new FacadeMethodExpectation(typeof(LgymApi.BackgroundWorker.ServiceProvider), "AddBackgroundWorkerServices")
@@ -274,7 +277,7 @@ public sealed class RuntimeCompositionValidationTests
                 && descriptor.ServiceType.Namespace == "LgymApi.Notifications.ApiAdapters")
             .ToArray();
 
-        AssertExactScopedInternalAdapters(applicationAdapters, expectedCount: 26, "Application API adapters");
+        AssertExactScopedInternalAdapters(applicationAdapters, expectedCount: 26, "Application and Reporting API adapters");
         AssertExactScopedInternalAdapters(notificationsAdapters, expectedCount: 3, "Notifications API adapters");
 
         var retainedIntegrationContracts = new HashSet<string>(StringComparer.Ordinal)

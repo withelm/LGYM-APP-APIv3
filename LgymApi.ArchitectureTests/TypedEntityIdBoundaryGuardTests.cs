@@ -176,6 +176,8 @@ public sealed class TypedEntityIdBoundaryGuardTests
         var (_, compilation, syntaxTrees) = ArchitectureTestHelpers.PrepareCompilation(
             "LgymApi.Domain",
             "LgymApi.Application",
+            "LgymApi.Notifications",
+            "LgymApi.Reporting",
             "LgymApi.Infrastructure",
             "LgymApi.BackgroundWorker",
             "LgymApi.BackgroundWorker.Common");

@@ -42,7 +42,7 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         var snapshot = await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync();
         snapshot.Provenance.Should().Be("MigrationCapture");
         snapshot.SourceTemplateId.Should().Be(fixture.Template.Id);
-        var runtimeType = System.Reflection.Assembly.Load("LgymApi.Application")
+        var runtimeType = System.Reflection.Assembly.Load("LgymApi.Reporting")
             .GetType("LgymApi.Application.Features.Reporting.Models.ReportTemplateSnapshotDocument", throwOnError: true)!;
         var runtimeReader = runtimeType.Assembly.GetType("LgymApi.Application.Features.Reporting.ReportTemplateSnapshotFactory", throwOnError: true)!
             .GetMethod("Deserialize", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;

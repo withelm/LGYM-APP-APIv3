@@ -87,6 +87,7 @@ public static class ArchitectureTestHelpers
     private static readonly string[] TestProjectPathMarkers =
     {
         "/LgymApi.UnitTests/",
+        "/LgymApi.Reporting.UnitTests/",
         "/LgymApi.IntegrationTests/",
         "/LgymApi.ArchitectureTests/",
         "/LgymApi.DataSeeder.Tests/",
@@ -163,8 +164,7 @@ public static class ArchitectureTestHelpers
 
     private static readonly string[] ReportingApplicationPathMarkers =
     {
-        "/LgymApi.Application/Reporting/",
-        "/LgymApi.Application/Features/Reporting/"
+        "/LgymApi.Reporting/"
     };
 
     private static readonly string[] NotificationsApplicationPathMarkers =
@@ -219,11 +219,11 @@ public static class ArchitectureTestHelpers
         ["/LgymApi.Notifications/IInAppNotificationRepository.cs"] = NotificationsModuleName,
         ["/LgymApi.Notifications/Repositories/IPushInstallationRepository.cs"] = NotificationsModuleName,
         ["/LgymApi.Notifications/Repositories/IPushNotificationMessageRepository.cs"] = NotificationsModuleName,
-        ["/LgymApi.Application/Reporting/Persistence/IReportTemplatePersistence.cs"] = ReportingModuleName,
-        ["/LgymApi.Application/Reporting/Persistence/IReportRequestSubmissionPersistence.cs"] = ReportingModuleName,
-        ["/LgymApi.Application/Reporting/Persistence/IRecurringReportAssignmentPersistence.cs"] = ReportingModuleName,
-        ["/LgymApi.Application/Reporting/Persistence/IReportPhotoPersistence.cs"] = ReportingModuleName,
-        ["/LgymApi.Application/Reporting/Persistence/IReportingRelationshipAccessPersistence.cs"] = ReportingModuleName,
+        ["/LgymApi.Reporting/Reporting/Persistence/IReportTemplatePersistence.cs"] = ReportingModuleName,
+        ["/LgymApi.Reporting/Reporting/Persistence/IReportRequestSubmissionPersistence.cs"] = ReportingModuleName,
+        ["/LgymApi.Reporting/Reporting/Persistence/IRecurringReportAssignmentPersistence.cs"] = ReportingModuleName,
+        ["/LgymApi.Reporting/Reporting/Persistence/IReportPhotoPersistence.cs"] = ReportingModuleName,
+        ["/LgymApi.Reporting/Reporting/Persistence/IReportingRelationshipAccessPersistence.cs"] = ReportingModuleName,
         ["/LgymApi.Application/Repositories/IPlanRepository.cs"] = TrainingPlanningModuleName,
         ["/LgymApi.Application/Repositories/IPlanDayRepository.cs"] = TrainingPlanningModuleName,
         ["/LgymApi.Application/Repositories/IPlanDayExerciseRepository.cs"] = TrainingPlanningModuleName,
@@ -242,7 +242,7 @@ public static class ArchitectureTestHelpers
         ["/LgymApi.Notifications/Repositories/IEmailNotificationLogRepository.cs"] = NotificationsModuleName,
         ["/LgymApi.Notifications/Repositories/IEmailNotificationSubscriptionRepository.cs"] = NotificationsModuleName,
         ["/LgymApi.Application/Repositories/IUnitOfWork.cs"] = PlatformModuleName,
-        ["/LgymApi.Application/Abstractions/Storage/IPhotoStorageProvider.cs"] = ReportingModuleName
+        ["/LgymApi.Reporting/Abstractions/Storage/IPhotoStorageProvider.cs"] = ReportingModuleName
     };
 
     private static readonly Dictionary<string, string> InfrastructureExactFileModuleMap = new(StringComparer.OrdinalIgnoreCase)
