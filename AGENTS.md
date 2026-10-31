@@ -7,14 +7,14 @@ This file applies repo-wide. Keep `AGENT.md` and `AGENTS.md` aligned. More speci
 Main areas:
 
 - API: `LgymApi.Api`
-- Application: `LgymApi.Application`
+- Application: `LgymApi.Application`; Reporting: `LgymApi.Reporting`
 - Domain: `LgymApi.Domain`
 - Infrastructure: `LgymApi.Infrastructure`
 - Resources: `LgymApi.Resources` and `LgymApi.Resources.Generator`
 - Module shells: `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, and `LgymApi.Notifications`
 - Background jobs: `LgymApi.BackgroundWorker` and `LgymApi.BackgroundWorker.Common`
 - Data seeding: `LgymApi.DataSeeder`
-- Tests: `LgymApi.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, `LgymApi.DataSeeder.Tests`, `LgymApi.TestUtils`
+- Tests: `LgymApi.UnitTests`, `LgymApi.Reporting.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, `LgymApi.DataSeeder.Tests`, `LgymApi.TestUtils`
 
 ## Instruction Hierarchy
 
@@ -59,7 +59,8 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 | Project | Why it exists | Rules for agents |
 | --- | --- | --- |
 | `LgymApi.Api/LgymApi.Api.csproj` | ASP.NET Core HTTP entrypoint: controllers, DTO contracts, validators, middleware, mapping profiles, auth, JSON setup, Swagger, CORS, rate limits, SignalR, and composition root. | Keep controllers thin and preserve legacy payload shapes. |
-| `LgymApi.Application/LgymApi.Application.csproj` | Use-case and business orchestration for the remaining Reporting, Workout & Progress, Coaching, and Nutrition capabilities, plus their application-facing contracts and DI facade; owns TZDB local-day history conversion via centrally pinned NodaTime. | Own business rules, authorization checks, transactions, and unit-of-work commits here. Never reference a `LgymApi.BackgroundWorker*` project or namespace. |
+| `LgymApi.Application/LgymApi.Application.csproj` | Use-case and business orchestration for the remaining Workout & Progress, Coaching, and Nutrition capabilities, plus their application-facing contracts and DI facade; owns TZDB local-day history conversion via centrally pinned NodaTime. | Own business rules, authorization checks, transactions, and unit-of-work commits here. Never reference a `LgymApi.BackgroundWorker*` project or namespace. |
+| `LgymApi.Reporting/LgymApi.Reporting.csproj` | Reporting workflows, focused ports, API adapters, mapping profiles, and owner registration facade with retained Application namespaces. | Keep direct references limited to Domain, Identity, Platform, and Resources; Infrastructure remains the single EF context and migration owner. |
 | `LgymApi.Domain/LgymApi.Domain.csproj` | Core domain: entities, enums, strongly typed IDs, domain helpers, and auth/security constants. | Keep free of HTTP, EF, API, and localization concerns. Domain is localization-neutral and must not reference `LgymApi.Resources`. Do not reorder or renumber existing enums. |
 | `LgymApi.Infrastructure/LgymApi.Infrastructure.csproj` | Shared technical composition: the EF Core `DbContext`, migrations, unit of work, Hangfire persistence, module persistence bridges, and remaining non-extracted persistence adapters. | Repositories must not call `SaveChangesAsync` or own transactions. Do not register extracted module services, providers, or select push schedulers here. |
 | `LgymApi.Resources/LgymApi.Resources.csproj` | Localized `.resx` resources for messages, enums, and emails, with generated strongly typed access. | Add or update English and Polish resources for user-facing text. |
@@ -72,6 +73,7 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 | `LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj` | Hangfire/background worker implementations for module ports and the bounded Common job seam. | Keep jobs idempotent where practical, register worker services here, and select no-op or Hangfire scheduling by testing mode. |
 | `LgymApi.DataSeeder/LgymApi.DataSeeder.csproj` | Console executable for deterministic data seeding/bootstrap using infrastructure and EF tooling. | Do not make API startup depend on this executable. |
 | `LgymApi.UnitTests/LgymApi.UnitTests.csproj` | Focused unit tests for service, domain, application, mapping, API, and infrastructure units. | Use NUnit, FluentAssertions, NSubstitute, and shared helpers from `LgymApi.TestUtils`. |
+| `LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj` | Focused unit tests for Reporting-owned services, persistence adapters, mapping, recurring assignments, and photo workflows. | Keep API, Worker, Workout & Progress consumer, integration, domain, and cross-cutting tests in their existing suites. |
 | `LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj` | End-to-end API tests with `WebApplicationFactory`, middleware, auth, serialization, localization, and test persistence. | Reuse integration helpers and validate legacy contract compatibility for changed endpoints. |
 | `LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj` | Roslyn guard tests for dependency direction, ID boundaries, DI placement, feature layout, mapping, enums, and unit-of-work rules. | Treat failures as architecture violations unless an intentional exception is documented. |
 | `LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj` | Tests for DataSeeder behavior, seeding assumptions, and SQLite-backed relational verification of offline maintenance tooling without an external database. | Update when seeder inputs, defaults, seeded entities, or offline maintenance behavior changes; keep SQLite test-only and centrally versioned. |
@@ -109,7 +111,7 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 - For runtime application persistence, use provider-neutral EF Core APIs. Do not use raw SQL or branch on `Database.ProviderName` or provider-name string literals.
 - Map between distinct layer models or results, including entities, application/read models, and DTOs, through registered custom `IMapper` mapping profiles (`IMapper`, `IMappingProfile`, `MappingContext`). AutoMapper, ad-hoc mapper implementations, and manual cross-layer mapping in controllers, services, or adapters are prohibited. Trivial scalar assignments without model transformation are allowed.
 - Use resource-backed messages from `LgymApi.Resources` for user-facing validation, errors, and emails.
-- The current project-reference graph is fixed at exactly 18 projects and 90 edges. The authoritative current graph is `docs/modular-monolith/issue-380-project-reference-graph.md`. No project-reference edge may be added, removed, duplicated, or made cyclic outside an approved topology change. `issue-375-project-reference-graph.md` is historical and must remain unchanged.
+- The project-reference graph is governed by the explicit project and approved-direct-target manifest in `LgymApi.ArchitectureTests/ProjectReferenceGraphManifest.cs`; the authoritative current graph is `docs/modular-monolith/issue-380-project-reference-graph.md`. Promote a project only by approving its identity, kind, exact direct targets, solution membership, purpose-map row, adjacent project doc, and graph evidence together. Unknown projects and unapproved, missing, duplicate, cyclic, unused, or transitively relied-on references fail architecture tests. No wildcard targets or exception-based permissions are allowed. `issue-375-project-reference-graph.md` is historical and must remain unchanged.
 - Register remaining Application services in `LgymApi.Application/ServiceCollectionExtensions.cs`, extracted module services through their public module facades, and shared technical services in `LgymApi.Infrastructure/ServiceCollectionExtensions.cs`.
 - Platform owns shared dispatcher, outbox, and persisted-payload serialization contracts. Extracted modules own their public contracts and providers. Application must not reference either Worker project or namespace.
 - Worker implements module contracts and chooses no-op schedulers for testing and Hangfire schedulers otherwise. Notifications owns FCM delivery, while Infrastructure owns Hangfire persistence and the shared EF runtime.
@@ -119,6 +121,8 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 - Enum-backed request values that need conversion to application enums must be mapped in API mapping profiles from lookup `id`/string inputs; controllers should not parse them manually.
 - Do not migrate to ASP.NET Identity unless a new ADR explicitly supersedes ADR-005.
 - Do not remove idempotency or uniqueness constraints in `AppDbContext` without an explicit replacement.
+- Do not use `goto`; express control flow with structured C# constructs.
+- When adding a module, audit and update Docker build/publish wiring as needed, including `.dockerignore`, Dockerfile inputs, and the root image workflow, so it reaches the published API image.
 - Follow the repository's `.editorconfig` and existing code style.
 
 ## Date and Time Contracts

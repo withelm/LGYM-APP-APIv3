@@ -13,7 +13,7 @@ gyms, measurements, records, scores, and application configuration.
 
 ## Solution structure
 
-The solution has 18 projects and 90 direct project references. The authoritative graph, dependency-first order, and forbidden complement are in `docs/modular-monolith/issue-380-project-reference-graph.md`.
+The solution graph is governed by an explicit allowlist of approved projects and exact direct targets. The current snapshot, dependency-first order, derived diagnostics, direct-use evidence, and project-promotion requirements are in `docs/modular-monolith/issue-380-project-reference-graph.md`.
 
 - `LgymApi.Api` is the HTTP host and composition root.
 - `LgymApi.Application` contains the remaining Reporting, Workout & Progress, Coaching, and Nutrition use cases.

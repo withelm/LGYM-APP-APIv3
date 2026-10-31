@@ -20,7 +20,7 @@ public sealed class ReportingProgressIntegrationCutoverGuardTests
     ];
 
     private const string AcceptedProgressCommandRelativePath =
-        "LgymApi.Application/Reporting/Contracts/BackgroundCommands/ReportSubmissionAcceptedProgressCommand.cs";
+        "LgymApi.Reporting/Reporting/Contracts/BackgroundCommands/ReportSubmissionAcceptedProgressCommand.cs";
 
     private const string ProgressConsumerRelativePath =
         "LgymApi.Application/WorkoutProgress/ReportingIntegration/ReportSubmissionAcceptedProgressConsumer.cs";
@@ -87,8 +87,8 @@ public sealed class ReportingProgressIntegrationCutoverGuardTests
     {
         var reportingRoots = new[]
         {
-            Path.Combine(repoRoot, "LgymApi.Application", "Features", "Reporting"),
-            Path.Combine(repoRoot, "LgymApi.Application", "Reporting")
+            Path.Combine(repoRoot, "LgymApi.Reporting", "Features", "Reporting"),
+            Path.Combine(repoRoot, "LgymApi.Reporting", "Reporting")
         };
 
         return reportingRoots

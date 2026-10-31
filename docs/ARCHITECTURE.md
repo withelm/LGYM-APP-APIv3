@@ -5,11 +5,13 @@ This document explains how the backend is structured and how to add a new module
 ## 1. Solution Structure
 
 - `LgymApi.Api` - HTTP layer (controllers, DTO contracts, validators, middleware, API mapping profiles).
-- `LgymApi.Application` - remaining Reporting, Workout & Progress, Coaching, and Nutrition use-case orchestration.
+- `LgymApi.Application` - remaining Workout & Progress, Coaching, and Nutrition use-case orchestration.
+- `LgymApi.Reporting` - extracted Reporting workflows, focused ports, API adapters, mapping profiles, and public registration facade, retaining compatible Application namespaces.
 - `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, and `LgymApi.Notifications` - stable module assemblies with public facades, explicit contracts, and internal implementations.
 - `LgymApi.Domain` - core domain types (entities, enums, domain-only helpers).
 - `LgymApi.Infrastructure` - shared persistence and technical runtime (EF Core `AppDbContext`, UoW, migrations, Hangfire persistence, and module context bridges).
 - `LgymApi.UnitTests` - focused unit tests.
+- `LgymApi.Reporting.UnitTests` - focused unit tests for Reporting-owned service, persistence, mapping, recurring-assignment, and photo behavior.
 - `LgymApi.ArchitectureTests` - Roslyn-based architecture guards.
 - `LgymApi.IntegrationTests` - end-to-end API tests with `WebApplicationFactory`, in-memory coverage, and prepared PostgreSQL coverage.
 - `LgymApi.Resources` and `LgymApi.Resources.Generator` - localized resources and source generators for strongly-typed message access.
@@ -71,7 +73,7 @@ The solution uses a custom mapping system (not AutoMapper):
 
 - Core contracts compile from `LgymApi.Platform/Mapping/Core` while retaining their established `LgymApi.Application.Mapping.Core` namespaces.
 - API mapping profiles implement `IMappingProfile` and are placed under `LgymApi.Api/Mapping/Profiles`.
-- Profiles are registered via `AddApplicationMapping(...)` with the exact API, Application, Platform, Identity, TrainingPlanning, and Notifications assembly markers in `Program.cs`; missing or duplicate markers fail fast.
+- Profiles are registered via `AddApplicationMapping(...)` with the exact API, Application, Reporting, Platform, Identity, TrainingPlanning, and Notifications assembly markers in `Program.cs`; missing or duplicate markers fail fast.
 - `MappingContext` with typed `ContextKey<T>` is used for contextual mapping inputs (e.g., translation dictionaries).
 
 When adding new responses, prefer profile-based mapping and keep controllers thin.
@@ -193,7 +195,7 @@ The boundary is handled at the mapping layer:
 
 The solution uses module-owned registration helpers composed by the host, enforced by architecture guards in unit tests.
 
-- **Application services**: `AddApplication` composes Reporting, Workout & Progress, Coaching, Nutrition, and the internal Platform command-envelope runtime helper; extracted modules keep their own public facades.
+- **Application services**: `AddApplication` composes Workout & Progress, Coaching, Nutrition, and the internal Platform command-envelope runtime helper; Reporting composes through `AddReportingModule()` and `AddReportingApiAdapters()` in its own public facade.
 - **Infrastructure dependencies**: `AddInfrastructure` composes shared persistence/Hangfire/post-commit roots and remaining persistence adapters, but no extracted implementation service or provider.
 - **Shared platform roots**: keep cross-cutting services in `AddPlatformServices(...)`.
 - **Host composition**: `Program.cs` composes Platform, Identity, Training Planning, Notifications, remaining Application, Infrastructure, API adapters, and Worker in that exact order. Narrow Infrastructure helpers are not host entrypoints.
@@ -290,8 +292,8 @@ Use the [Module Contribution Guide](MODULE_CONTRIBUTION_GUIDE.md) for owner-firs
 - `docs/modular-monolith/issue-393-platform-reference-data-boundary.md`
 - `docs/modular-monolith/issue-395-final-verification.md`
 
-The project-reference manifest fixes the current solution at 18 projects and 90 unique, justified direct edges: 89 have Roslyn-resolved source/import evidence and one is the Resources analyzer edge. The import guard rejects unused edges, missing direct imports, transitive reliance, forbidden edges, duplicates, cycles, and topological-order drift. The graph document also fixes the dependency-first order and 216-edge forbidden complement.
-The authoritative 18-project, 90-edge graph remains unchanged. The SignalR test client is centrally pinned and referenced by the integration-test project as a package, not as a project-reference edge.
+The project-reference manifest is an explicit project-promotion allowlist. Every approved project declares its identity, kind, and exact direct targets; those declarations derive the current edges, forbidden complement, and deterministic dependency-first order. Counts are diagnostic output rather than promotion constraints. The guards reject unknown projects, unapproved or missing edges, unused edges, missing direct imports, transitive reliance, duplicates, cycles, and order drift.
+A project promotion must update the manifest, solution membership, root Project Purpose Map, adjacent project document, and issue-380 graph and direct-use evidence in one reviewed change. Wildcard targets and exception-based permissions are forbidden. The current approved snapshot remains unchanged, and the SignalR test client remains a centrally pinned package reference rather than a project-reference edge.
 The production topology remains one `AppDbContext`, one PostgreSQL database, and one migration stream. The eight owner totals remain Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, and Platform / Reference Data 4, for 49 persisted entities.
 The compatibility, persistence, and Unit of Work guidance elsewhere in this guide continues to apply and is not restated here.
 

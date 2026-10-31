@@ -10,8 +10,8 @@ public sealed class ReportingProgressCompatibilityAdapterGuardTests
     [Test]
     public void Reporting_Feature_Files_Should_Not_Depend_On_Workout_Progress_Persistence_Or_The_Legacy_Adapter()
     {
-        var (repoRoot, compilation, syntaxTrees) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
-        var reportingDirectory = Path.Combine(repoRoot, "LgymApi.Application", "Features", "Reporting");
+        var (repoRoot, compilation, syntaxTrees) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application", "LgymApi.Reporting");
+        var reportingDirectory = Path.Combine(repoRoot, "LgymApi.Reporting", "Features", "Reporting");
         var reportingSourceFiles = EnumerateReportingSourceFiles(reportingDirectory);
         var reportingSourcePaths = reportingSourceFiles
             .Select(NormalizeFullPath)
@@ -43,7 +43,7 @@ public sealed class ReportingProgressCompatibilityAdapterGuardTests
     [Test]
     public void New_Reporting_Measurement_Repository_Or_Entity_Dependency_Should_Be_Rejected()
     {
-        var (repoRoot, compilation, _) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
+        var (repoRoot, compilation, _) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application", "LgymApi.Reporting");
         var fixture = CSharpSyntaxTree.ParseText("""
             using LgymApi.Application.Repositories;
             using MeasurementEntity = LgymApi.Domain.Entities.Measurement;
@@ -55,7 +55,7 @@ public sealed class ReportingProgressCompatibilityAdapterGuardTests
                 public IMeasurementRepository MeasurementRepository { get; init; } = default!;
                 public MeasurementEntity Measurement { get; init; } = default!;
             }
-            """, path: Path.Combine(repoRoot, "LgymApi.Application", "Features", "Reporting", "NewReportingMeasurementPersistenceDependency.cs"));
+            """, path: Path.Combine(repoRoot, "LgymApi.Reporting", "Features", "Reporting", "NewReportingMeasurementPersistenceDependency.cs"));
         var violations = CollectViolations(compilation.AddSyntaxTrees(fixture), [fixture], repoRoot);
 
         Assert.That(

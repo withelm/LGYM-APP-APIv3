@@ -63,10 +63,10 @@ public sealed class Issue395MigrationLedgerTests
         "Coaching/ApiAdapters/TrainerInvitationAndRelationshipApiAdapters.cs",
         "Coaching/ApiAdapters/TrainerDashboardProgressApiAdapter.cs",
         "Coaching/ApiAdapters/TraineeNotesApiAdapters.cs",
-        "Reporting/ApiAdapters/ReportingApiAdapterContracts.cs",
-        "Reporting/ApiAdapters/ReportingApiAdapterMappingProfile.cs",
-        "Reporting/ApiAdapters/ReportTemplateAndRequestApiAdapters.cs",
-        "Reporting/ApiAdapters/ReportPhotoAndRecurringApiAdapters.cs"
+        "../LgymApi.Reporting/Reporting/ApiAdapters/ReportingApiAdapterContracts.cs",
+        "../LgymApi.Reporting/Reporting/ApiAdapters/ReportingApiAdapterMappingProfile.cs",
+        "../LgymApi.Reporting/Reporting/ApiAdapters/ReportTemplateAndRequestApiAdapters.cs",
+        "../LgymApi.Reporting/Reporting/ApiAdapters/ReportPhotoAndRecurringApiAdapters.cs"
     ];
 
     private static readonly string[] Todo14OwnerAdapterContracts =
@@ -189,8 +189,8 @@ public sealed class Issue395MigrationLedgerTests
 
     private static readonly PartialRow[] PartialContributors =
     [
-        Partial("Application", "LgymApi.Application.Features.Reporting.ReportingService", "Features/Reporting", "ReportingService.cs", "ReportingService.Templates.cs", "ReportingService.PhotoTypes.cs", "ReportingService.Submissions.cs", "ReportingService.Submissions.Read.cs", "ReportingService.Submissions.PhotoHydration.cs", "ReportingService.Submissions.PhotoValidation.cs", "ReportingService.Submissions.Helpers.cs", "ReportingService.Requests.cs", "ReportingService.Photos.cs", "ReportingService.Photos.Support.cs", "ReportingService.Photos.Access.cs", "ReportingService.Photos.Completion.cs", "ReportingService.Photos.Read.cs"),
-        Partial("Application", "LgymApi.Application.Features.Reporting.RecurringReportAssignmentService", "Features/Reporting", "RecurringReportAssignmentService.cs", "RecurringReportAssignmentService.Support.cs", "RecurringReportAssignmentService.Processing.cs", "RecurringReportAssignmentService.ProcessingTypes.cs", "RecurringReportAssignmentService.RequestNow.cs"),
+        Partial("Reporting", "LgymApi.Application.Features.Reporting.ReportingService", "Features/Reporting", "ReportingService.cs", "ReportingService.Templates.cs", "ReportingService.PhotoTypes.cs", "ReportingService.Submissions.cs", "ReportingService.Submissions.Read.cs", "ReportingService.Submissions.PhotoHydration.cs", "ReportingService.Submissions.PhotoValidation.cs", "ReportingService.Submissions.Helpers.cs", "ReportingService.Requests.cs", "ReportingService.Photos.cs", "ReportingService.Photos.Support.cs", "ReportingService.Photos.Access.cs", "ReportingService.Photos.Completion.cs", "ReportingService.Photos.Read.cs"),
+        Partial("Reporting", "LgymApi.Application.Features.Reporting.RecurringReportAssignmentService", "Features/Reporting", "RecurringReportAssignmentService.cs", "RecurringReportAssignmentService.Support.cs", "RecurringReportAssignmentService.Processing.cs", "RecurringReportAssignmentService.ProcessingTypes.cs", "RecurringReportAssignmentService.RequestNow.cs"),
         Partial("Application", "LgymApi.Application.WorkoutProgress.ProgressData.WorkoutProgressReadWriteService", "WorkoutProgress/ProgressData", "WorkoutProgressReadWriteService.cs", "WorkoutProgressReadWriteService.Measurements.cs", "WorkoutProgressReadWriteService.MainRecords.cs"),
         Partial("Application", "LgymApi.Application.Features.Exercise.ExerciseService", "Exercise", "ExerciseService.cs", "ExerciseService.Scores.cs", "ExerciseService.Queries.cs", "ExerciseService.Management.cs"),
         Partial("Application", "LgymApi.Application.Features.Training.TrainingService", "Training", "TrainingService.cs", "TrainingService.Queries.cs", "TrainingService.AddTraining.cs"),
@@ -251,6 +251,7 @@ public sealed class Issue395MigrationLedgerTests
         var root = ArchitectureTestHelpers.ResolveRepositoryRoot();
         var applicationRoot = Path.Combine(root, "LgymApi.Application");
         var applicationAssembly = Assembly.Load("LgymApi.Application");
+        var reportingAssembly = Assembly.Load("LgymApi.Reporting");
         var exportedTypeNames = applicationAssembly.GetExportedTypes()
             .Select(type => type.FullName!)
             .ToHashSet(StringComparer.Ordinal);
@@ -273,14 +274,19 @@ public sealed class Issue395MigrationLedgerTests
 
         foreach (var contract in Todo14OwnerAdapterContracts)
         {
-            var contractType = applicationAssembly.GetType(contract, throwOnError: false);
+            var ownerAssembly = contract.StartsWith("LgymApi.Application.Reporting.", StringComparison.Ordinal)
+                ? reportingAssembly
+                : applicationAssembly;
+            var contractType = ownerAssembly.GetType(contract, throwOnError: false);
             Assert.That(contractType?.IsInterface, Is.True, contract);
-            Assert.That(exportedTypeNames, Does.Contain(contract), contract);
+            Assert.That(ownerAssembly.GetExportedTypes().Select(type => type.FullName!), Does.Contain(contract), contract);
         }
 
         foreach (var implementation in Todo14OwnerImplementationTypes)
         {
-            var implementationType = applicationAssembly.GetType(implementation, throwOnError: false);
+            var implementationType = (implementation.StartsWith("LgymApi.Application.Reporting.", StringComparison.Ordinal)
+                ? reportingAssembly
+                : applicationAssembly).GetType(implementation, throwOnError: false);
             Assert.That(implementationType, Is.Not.Null, implementation);
             Assert.That(implementationType!.IsPublic, Is.False, implementation);
         }
@@ -290,7 +296,13 @@ public sealed class Issue395MigrationLedgerTests
             .ToArray();
         EnsureUnique(expectedExports, "Todo 14 owner export");
         Assert.That(expectedExports, Has.Length.EqualTo(13));
-        Assert.That(expectedExports.Where(exportedTypeNames.Contains).ToArray(), Has.Length.EqualTo(13));
+        Assert.That(expectedExports.Where(exportName =>
+            (exportName.StartsWith("LgymApi.Application.Reporting.", StringComparison.Ordinal)
+                ? reportingAssembly
+                : applicationAssembly)
+            .GetExportedTypes()
+            .Select(type => type.FullName!)
+            .Contains(exportName, StringComparer.Ordinal)).ToArray(), Has.Length.EqualTo(13));
     }
 
     [Test]
@@ -405,7 +417,8 @@ public sealed class Issue395MigrationLedgerTests
             ["LgymApi.Identity"] = 69,
             ["LgymApi.TrainingPlanning"] = 69,
             ["LgymApi.Notifications"] = 79,
-            ["LgymApi.Application"] = 490
+            ["LgymApi.Application"] = 408,
+            ["LgymApi.Reporting"] = 81
         };
 
         var inventory = expectedCounts.ToDictionary(
@@ -443,13 +456,17 @@ public sealed class Issue395MigrationLedgerTests
         EnsureUnique(materialized.Select(row => row.DependencyType), "removed application dependency aggregate ledger key");
         var root = ArchitectureTestHelpers.ResolveRepositoryRoot();
         var applicationAssembly = Assembly.Load("LgymApi.Application");
-        var (_, _, syntaxTrees) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
+        var reportingAssembly = Assembly.Load("LgymApi.Reporting");
+        var (_, _, syntaxTrees) = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application", "LgymApi.Reporting");
 
         foreach (var row in materialized)
         {
             var sourcePath = Path.Combine(root, "LgymApi.Application", row.SourcePath);
             Assert.That(File.Exists(sourcePath), Is.False, $"Removed dependency aggregate source still exists: {row.SourcePath}");
-            Assert.That(applicationAssembly.GetType(row.DependencyType), Is.Null, $"Removed dependency aggregate still compiles: {row.DependencyType}");
+            var owningAssembly = row.DependencyType.StartsWith("LgymApi.Application.Features.Reporting.", StringComparison.Ordinal)
+                ? reportingAssembly
+                : applicationAssembly;
+            Assert.That(owningAssembly.GetType(row.DependencyType), Is.Null, $"Removed dependency aggregate still compiles: {row.DependencyType}");
 
             var aggregateName = row.DependencyType[(row.DependencyType.LastIndexOf('.') + 1)..];
             var references = syntaxTrees
@@ -460,8 +477,9 @@ public sealed class Issue395MigrationLedgerTests
                 .ToArray();
             Assert.That(references, Is.Empty, $"Removed dependency aggregate '{aggregateName}' is still referenced by: {string.Join(", ", references)}");
 
-            var facadePath = Path.Combine(root, "LgymApi.Application", row.FacadePath);
-            Assert.That(File.Exists(facadePath), Is.True, $"Missing application facade: {row.FacadePath}");
+            var facadeProject = owningAssembly == reportingAssembly ? "LgymApi.Reporting" : "LgymApi.Application";
+            var facadePath = Path.Combine(root, facadeProject, row.FacadePath);
+            Assert.That(File.Exists(facadePath), Is.True, $"Missing {facadeProject} facade: {row.FacadePath}");
             Assert.That(File.ReadAllText(facadePath), Does.Not.Contain(aggregateName), $"Removed dependency aggregate remains registered by: {row.FacadePath}");
         }
     }
@@ -527,7 +545,12 @@ public sealed class Issue395MigrationLedgerTests
     private static RemovedApiWrapperRow RemovedWorkoutProgressApiWrapper(string metadataName, string sourcePath) => new(metadataName, sourcePath);
     private static RelocatedApiAdapterRow RelocatedWorkoutProgressApiAdapter(string previousMetadataName, string previousSourcePath, string metadataName, string sourcePath) => new(previousMetadataName, previousSourcePath, metadataName, sourcePath);
     private static OwnerExportRow OwnerExports(string @namespace, params string[] typeNames) => new(@namespace, typeNames);
-    private static PartialRow Partial(string assembly, string type, string directory, params string[] files) => new(assembly == "Worker" ? "LgymApi.BackgroundWorker" : "LgymApi.Application", assembly == "Worker" ? "LgymApi.BackgroundWorker" : "LgymApi.Application", type, directory, files);
+    private static PartialRow Partial(string assembly, string type, string directory, params string[] files) => new(
+        assembly == "Worker" ? "LgymApi.BackgroundWorker" : assembly == "Reporting" ? "LgymApi.Reporting" : "LgymApi.Application",
+        assembly == "Worker" ? "LgymApi.BackgroundWorker" : assembly == "Reporting" ? "LgymApi.Reporting" : "LgymApi.Application",
+        type,
+        directory,
+        files);
 
     private static bool IsRemovedTodo13Identity(string? metadataName)
         => metadataName is not null

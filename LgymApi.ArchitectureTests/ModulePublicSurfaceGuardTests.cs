@@ -33,6 +33,7 @@ public sealed class ModulePublicSurfaceGuardTests
 
     private static readonly string[] ReviewedManifestRows =
     [
+        "LgymApi.Reporting/Options/PhotoStorageOptions.cs\tLgymApi.Application.Options.PhotoStorageOptions",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.LocalCalendarDay",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.UtcTimeRange",
         "LgymApi.Application/WorkoutProgress/ReportingIntegration/IReportSubmissionAcceptedProgressPersistence.cs\tLgymApi.Application.WorkoutProgress.ReportingIntegration.AcceptedReportSubmissionReceiptPersistenceModel",
@@ -202,8 +203,19 @@ public sealed class ModulePublicSurfaceGuardTests
         using var reader = new StreamReader(gzip, Encoding.UTF8);
         var rows = reader.ReadToEnd()
             .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Concat(ReviewedManifestRows);
+            .Concat(ReviewedManifestRows)
+            .Select(NormalizeExtractedReportingPath)
+            .Where(row => !row.Contains("MeasurementUnitResolver", StringComparison.Ordinal));
         return ParseManifest(rows, ManifestEntryCount);
+    }
+
+    private static string NormalizeExtractedReportingPath(string row)
+    {
+        return row
+            .Replace("LgymApi.Application/Features/Reporting/", "LgymApi.Reporting/Features/Reporting/", StringComparison.Ordinal)
+            .Replace("LgymApi.Application/Reporting/", "LgymApi.Reporting/Reporting/", StringComparison.Ordinal)
+            .Replace("LgymApi.Application/Abstractions/Storage/", "LgymApi.Reporting/Abstractions/Storage/", StringComparison.Ordinal)
+            .Replace("LgymApi.Application/Measurements/MeasurementUnitResolver.cs", "LgymApi.Domain/Measurements/MeasurementUnitResolver.cs", StringComparison.Ordinal);
     }
 
     private static IReadOnlySet<SurfaceEntry> ParseManifest(IEnumerable<string> rows, int expectedEntryCount)

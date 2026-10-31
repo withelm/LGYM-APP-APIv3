@@ -16,7 +16,14 @@ public sealed class SingleProductionDbContextGuardTests
     private const string SignalRClientTestPackageProject = "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj";
     private static readonly IReadOnlyDictionary<string, string> ApprovedProjectFileLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        ["LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj"] = "784fc7ec545ef354f14b14c3f9925298fed54a73429f78399fef9fd1b7ef7838"
+        ["LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj"] = "784fc7ec545ef354f14b14c3f9925298fed54a73429f78399fef9fd1b7ef7838",
+        ["LgymApi.Api/LgymApi.Api.csproj"] = "874e79fdd00d04c02203ca7c1937c6195c9906cc84aeff517876b5b8428711df",
+        ["LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj"] = "b0f1e355b313382f9a46f9e698eeb22204a702e7d01db5668fc5f0c2b9941517",
+        ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj"] = "9e37345ff9459e13b1cec859b2b394cee1961bfea379c0936b8861b1a23efe10",
+        ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "082c91ec55218916e80b8cb0394b1bc92306d54ee1157b9224b8637e74467207",
+        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "6bb868e3c3e8b27cd498b6d90228ccd6cf5a6d28e1bac992ec33605e5e75e1df",
+        ["LgymApi.sln"] = "deb6f355573abe841a0c740d7ec8a583ebfec40124cd1a5bd1f044db271a566f",
+        ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "4453c4766317025d9eefd24a05e6ff9841e7c0fcaf71c2d62c9a5622dad66339"
     };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {

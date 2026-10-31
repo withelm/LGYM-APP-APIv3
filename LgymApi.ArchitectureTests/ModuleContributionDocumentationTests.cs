@@ -57,7 +57,8 @@ public sealed class ModuleContributionDocumentationTests
         new("module-guide.policy.localization", "resources=en,pl"),
         new("module-guide.policy.tactical-ddd", "invariants=required"),
         new("module-guide.policy.architecture-tests", "focused-guards=true"),
-        new("module-guide.policy.prohibited-patterns", "ninth-module=false; application-to-worker=false; worker-common-feature-command=false")
+        new("module-guide.policy.project-promotion", "explicit-manifest=true; approved-direct-targets=true; wildcard=false; exceptions=false"),
+        new("module-guide.policy.prohibited-patterns", "unknown-project=false; unapproved-edge=false; application-to-worker=false; worker-common-feature-command=false")
     ];
 
     private static readonly PathExpectation[] TrainingPlanningPath =
@@ -75,10 +76,10 @@ public sealed class ModuleContributionDocumentationTests
     private static readonly PathExpectation[] ReportingPath =
     [
         new("module-guide.path.reporting-write.controller", 1, PersistedEntityOwnershipCatalog.ReportingModuleName, "LgymApi.Api/Features/Trainer/Controllers/TraineeReportingController.cs#TraineeReportingController.SubmitRequest"),
-        new("module-guide.path.reporting-write.compatibility-adapter", 2, PersistedEntityOwnershipCatalog.ReportingModuleName, "LgymApi.Application/Reporting/ApiAdapters/ReportTemplateAndRequestApiAdapters.cs#TraineeReportRequestApiAdapter.SubmitAsync"),
-        new("module-guide.path.reporting-write.service", 3, PersistedEntityOwnershipCatalog.ReportingModuleName, "LgymApi.Application/Features/Reporting/ReportingService.Submissions.cs#ReportingService.SubmitReportRequestAsync"),
-        new("module-guide.path.reporting-write.persistence-add", 4, PersistedEntityOwnershipCatalog.ReportingModuleName, "LgymApi.Application/Reporting/Persistence/IReportRequestSubmissionPersistence.cs#IReportRequestSubmissionPersistence.AddSubmissionAsync"),
-        new("module-guide.path.reporting-write.persistence-status", 5, PersistedEntityOwnershipCatalog.ReportingModuleName, "LgymApi.Application/Reporting/Persistence/IReportRequestSubmissionPersistence.cs#IReportRequestSubmissionPersistence.SetRequestSubmittedAsync"),
+        new("module-guide.path.reporting-write.compatibility-adapter", 2, PersistedEntityOwnershipCatalog.ReportingModuleName, "LgymApi.Reporting/Reporting/ApiAdapters/ReportTemplateAndRequestApiAdapters.cs#TraineeReportRequestApiAdapter.SubmitAsync"),
+        new("module-guide.path.reporting-write.service", 3, PersistedEntityOwnershipCatalog.ReportingModuleName, "LgymApi.Reporting/Features/Reporting/ReportingService.Submissions.cs#ReportingService.SubmitReportRequestAsync"),
+        new("module-guide.path.reporting-write.persistence-add", 4, PersistedEntityOwnershipCatalog.ReportingModuleName, "LgymApi.Reporting/Reporting/Persistence/IReportRequestSubmissionPersistence.cs#IReportRequestSubmissionPersistence.AddSubmissionAsync"),
+        new("module-guide.path.reporting-write.persistence-status", 5, PersistedEntityOwnershipCatalog.ReportingModuleName, "LgymApi.Reporting/Reporting/Persistence/IReportRequestSubmissionPersistence.cs#IReportRequestSubmissionPersistence.SetRequestSubmittedAsync"),
         new("module-guide.path.reporting-write.outbox-stage", 6, PersistedEntityOwnershipCatalog.PlatformModuleName, "LgymApi.Platform/Contracts/BackgroundCommands/ICommandOutboxWriter.cs#ICommandOutboxWriter.StageAsync"),
         new("module-guide.path.reporting-write.unit-of-work", 7, PersistedEntityOwnershipCatalog.PlatformModuleName, "LgymApi.Platform/Repositories/IUnitOfWork.cs#IUnitOfWork.SaveChangesAsync"),
         new("module-guide.path.reporting-write.post-commit-dispatch", 8, PersistedEntityOwnershipCatalog.PlatformModuleName, "LgymApi.Platform/Contracts/BackgroundCommands/ICommandDispatcher.cs#ICommandDispatcher.EnqueueAsync"),
@@ -152,6 +153,7 @@ public sealed class ModuleContributionDocumentationTests
         "LgymApi.Infrastructure",
         "LgymApi.Notifications",
         "LgymApi.Platform",
+        "LgymApi.Reporting",
         "LgymApi.Resources",
         "LgymApi.TrainingPlanning"
     ];
@@ -392,9 +394,21 @@ public sealed class ModuleContributionDocumentationTests
         }
 
         Ensure(PersistedEntityOwnershipCatalog.CanonicalOwners.Count == 8, "The canonical ownership authority must retain eight owners.");
-        var projects = File.ReadLines(Path.Combine(repositoryRoot, "LgymApi.sln")).Where(line => line.StartsWith("Project(", StringComparison.Ordinal)).ToArray();
-        var edges = projects.Select(line => line.Split('"')[5]).Select(path => Path.Combine(repositoryRoot, path)).SelectMany(ArchitectureTestHelpers.ParseProjectReferences).ToArray();
-        Ensure(projects.Length == 18 && edges.Length == 90, "The dependency authority must retain the 18-project, 90-edge graph.");
+        var projectPaths = File.ReadLines(Path.Combine(repositoryRoot, "LgymApi.sln"))
+            .Where(line => line.StartsWith("Project(", StringComparison.Ordinal))
+            .Select(line => line.Split('"'))
+            .Where(parts => parts.Length > 5 && parts[5].EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+            .Select(parts => Path.Combine(repositoryRoot, ArchitectureTestHelpers.ToHostPath(parts[5])))
+            .ToArray();
+        var projects = projectPaths.Select(path => Path.GetFileNameWithoutExtension(path)).ToArray();
+        var edges = projectPaths
+            .SelectMany(ArchitectureTestHelpers.ParseProjectReferences)
+            .Select(edge => $"{edge.SourceProject} -> {edge.TargetProject}")
+            .ToArray();
+        Ensure(
+            projects.ToHashSet(StringComparer.Ordinal).SetEquals(ProjectReferenceGraphManifest.ProjectNames) &&
+            edges.ToHashSet(StringComparer.Ordinal).SetEquals(ProjectReferenceGraphManifest.EdgeIdentities),
+            "The dependency authority must match the governed project-promotion manifest.");
     }
 
     private static IReadOnlyDictionary<string, BoundaryDocumentationRow> ValidateGuideTables(string markdown)
@@ -524,19 +538,19 @@ public sealed class ModuleContributionDocumentationTests
         AssertReceiverInvocation(consumer, "LgymApi.Application.WorkoutProgress.ReportingIntegration.IReportSubmissionAcceptedProgressPersistence", "AddAsync");
         AssertReceiverInvocation(consumer, "LgymApi.Application.Repositories.IUnitOfWork", "SaveChangesAsync");
 
-        var compilationInput = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application");
+        var compilationInput = ArchitectureTestHelpers.PrepareCompilation("LgymApi.Application", "LgymApi.Reporting");
         var reportingTrees = compilationInput.SyntaxTrees.Where(tree =>
         {
             var path = ArchitectureTestHelpers.NormalizePath(tree.FilePath);
-            return path.Contains("/LgymApi.Application/Features/Reporting/", StringComparison.Ordinal) ||
-                   path.Contains("/LgymApi.Application/Reporting/", StringComparison.Ordinal);
+        return path.Contains("/LgymApi.Reporting/Features/Reporting/", StringComparison.Ordinal) ||
+            path.Contains("/LgymApi.Reporting/Reporting/", StringComparison.Ordinal);
         }).ToArray();
         AssertNoForbiddenReportingReferences((compilationInput.Compilation, reportingTrees), "production Reporting sources");
 
         var registration = ResolveSourceMember(repositoryRoot, "LgymApi.Application/WorkoutProgress/ServiceCollectionExtensions.cs#ServiceCollectionExtensions.AddWorkoutAndProgressModule").AsMethod();
         AssertExactScopedRegistration(registration, "IReportSubmissionAcceptedProgressConsumer", "ReportSubmissionAcceptedProgressConsumer");
         AssertExactScopedRegistration(registration, "IReportSubmissionAcceptedProgressActionExecutionPort", "ReportSubmissionAcceptedProgressActionExecutionPort");
-        var reportingRegistration = ResolveSourceMember(repositoryRoot, "LgymApi.Application/Reporting/ServiceCollectionExtensions.cs#ServiceCollectionExtensions.AddReportingModule").AsMethod();
+        var reportingRegistration = ResolveSourceMember(repositoryRoot, "LgymApi.Reporting/Reporting/ServiceCollectionExtensions.cs#ServiceCollectionExtensions.AddReportingModule").AsMethod();
         AssertExactScopedRegistration(reportingRegistration, "IReportingService", "ReportingService");
     }
 
