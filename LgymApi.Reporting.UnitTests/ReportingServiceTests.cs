@@ -1,8 +1,10 @@
 using System.Text.Json;
 using FluentAssertions;
+#if UNIT_TESTS_API
 using FluentValidation.TestHelper;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Validation;
+#endif
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Reporting.Errors;
@@ -26,6 +28,7 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class ReportingServiceTests
 {
+    #if UNIT_TESTS_API
     private readonly UpsertReportTemplateRequestValidator _validator = new();
 
     [Test]
@@ -369,33 +372,6 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
-    public async Task SubmitReportRequest_WithInvalidPhotoModuleConfig_ShouldReturnValidationError()
-    {
-        var traineeId = Id<User>.New();
-        var requestId = Id<ReportRequest>.New();
-        var templateId = Id<ReportTemplate>.New();
-        var trainee = CreateUser(traineeId);
-        var template = CreateTemplateWithPhotos(templateId, new[] { "Frontt" });
-        var request = CreateReportRequest(requestId, traineeId, templateId, template);
-
-        var service = CreateReportingService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request));
-
-        var command = new SubmitReportRequestCommand
-        {
-            Answers = new Dictionary<string, JsonElement>
-            {
-                ["photos"] = JsonDocument.Parse("[]").RootElement
-            }
-        };
-
-        var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Be(Messages.ReportFieldValidationFailed);
-    }
-
-    [Test]
     public void ScalarField_WithModuleConfig_ShouldHaveError()
     {
         var request = new UpsertReportTemplateRequest
@@ -476,6 +452,35 @@ public sealed class ReportingServiceTests
 
         var result = _validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
+    }
+    #endif
+
+    #if REPORTING_UNIT_TESTS
+    [Test]
+    public async Task SubmitReportRequest_WithInvalidPhotoModuleConfig_ShouldReturnValidationError()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var trainee = CreateUser(traineeId);
+        var template = CreateTemplateWithPhotos(templateId, new[] { "Frontt" });
+        var request = CreateReportRequest(requestId, traineeId, templateId, template);
+
+        var service = CreateReportingService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request));
+
+        var command = new SubmitReportRequestCommand
+        {
+            Answers = new Dictionary<string, JsonElement>
+            {
+                ["photos"] = JsonDocument.Parse("[]").RootElement
+            }
+        };
+
+        var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidReportingError>();
+        result.Error.Message.Should().Be(Messages.ReportFieldValidationFailed);
     }
 
     #region Photo Validation Tests
@@ -1499,4 +1504,5 @@ public sealed class ReportingServiceTests
         => (await source(traineeId, cancellationToken)).Select(ReportingTestData.Submission).ToList();
 
     #endregion
+    #endif
 }

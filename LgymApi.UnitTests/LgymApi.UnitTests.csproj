@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <DefineConstants>$(DefineConstants);UNIT_TESTS_API</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -38,8 +39,13 @@
     <ProjectReference Include="..\LgymApi.Notifications\LgymApi.Notifications.csproj" />
     <ProjectReference Include="..\LgymApi.Platform\LgymApi.Platform.csproj" />
     <ProjectReference Include="..\LgymApi.Resources\LgymApi.Resources.csproj" />
+    <ProjectReference Include="..\LgymApi.Reporting\LgymApi.Reporting.csproj" />
     <ProjectReference Include="..\LgymApi.TestUtils\LgymApi.TestUtils.csproj" />
     <ProjectReference Include="..\LgymApi.TrainingPlanning\LgymApi.TrainingPlanning.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\LgymApi.Reporting.UnitTests\ReportingServiceTests.cs" Link="ReportingTemplateValidatorTests.cs" />
   </ItemGroup>
 
 </Project>

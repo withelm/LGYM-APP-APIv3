@@ -254,7 +254,7 @@ public sealed class AcceptedProgressCommandOutboxTests
         var handlerType = GetRequiredWorkerType(
             AcceptedProgressHandlerTypeName,
             "T9 must add ReportSubmissionAcceptedProgressCommandHandler.");
-        var commandType = GetRequiredApplicationType(
+        var commandType = GetRequiredReportingType(
             AcceptedProgressCommandTypeName,
             "T6 must add the Reporting-owned ReportSubmissionAcceptedProgressCommand.");
         var actionInterface = typeof(IBackgroundAction<>).MakeGenericType(commandType);
@@ -289,7 +289,7 @@ public sealed class AcceptedProgressCommandOutboxTests
         object handler,
         ReportSubmissionAcceptedProgressPayload? payload)
     {
-        var commandType = GetRequiredApplicationType(
+        var commandType = GetRequiredReportingType(
             AcceptedProgressCommandTypeName,
             "T6 must add ReportSubmissionAcceptedProgressCommand before the Worker handler can execute it.");
         var command = CreateAcceptedProgressCommand(commandType, payload);
@@ -328,9 +328,9 @@ public sealed class AcceptedProgressCommandOutboxTests
         return (bool)wasExisting!;
     }
 
-    private static Type GetRequiredApplicationType(string typeName, string because)
+    private static Type GetRequiredReportingType(string typeName, string because)
     {
-        var type = typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly.GetType(typeName);
+        var type = typeof(LgymApi.Application.Reporting.ServiceCollectionExtensions).Assembly.GetType(typeName);
         type.Should().NotBeNull(because);
         return type!;
     }
