@@ -204,10 +204,10 @@ try {
     Assert-CleanRepositorySnapshot -Snapshot $snapshot
 
     $buildStartedUtc = [System.DateTimeOffset]::UtcNow
-    $restore = Invoke-RecordedCommand -FilePath "dotnet" -Arguments @("restore", "LgymApi.sln") -LogPath (Join-Path $logsDirectory.FullName "restore.log")
+    $restore = Invoke-RecordedCommand -FilePath "dotnet" -Arguments @("restore", "LgymApi.slnx") -LogPath (Join-Path $logsDirectory.FullName "restore.log")
     $commandRecords.Add($restore)
     Assert-CommandSucceeded -Record $restore -Description "Restore"
-    $build = Invoke-RecordedCommand -FilePath "dotnet" -Arguments @("build", "LgymApi.sln", "--configuration", $Configuration, "--no-restore") -LogPath (Join-Path $logsDirectory.FullName "build-release.log")
+    $build = Invoke-RecordedCommand -FilePath "dotnet" -Arguments @("build", "LgymApi.slnx", "--configuration", $Configuration, "--no-restore") -LogPath (Join-Path $logsDirectory.FullName "build-release.log")
     $commandRecords.Add($build)
     Assert-CommandSucceeded -Record $build -Description "Release build"
     $buildCompletedUtc = [System.DateTimeOffset]::UtcNow

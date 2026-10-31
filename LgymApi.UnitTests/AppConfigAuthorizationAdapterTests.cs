@@ -142,7 +142,7 @@ public sealed class AppConfigAuthorizationAdapterTests
         var expectedException = new InvalidOperationException("User lookup failed.");
         _userRepository.FindById = (_, _) => Task.FromException<User?>(expectedException);
 
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await _adapter.CanManageAppConfigAsync(Id<ActorReference>.New()));
 
         exception.Should().BeSameAs(expectedException);
@@ -158,7 +158,7 @@ public sealed class AppConfigAuthorizationAdapterTests
         _userRepository.FindById = (_, _) => Task.FromResult<User?>(new User());
         _roleRepository.UserHasPermission = (_, _, _) => Task.FromException<bool>(expectedException);
 
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await _adapter.CanManageAppConfigAsync(actorId));
 
         exception.Should().BeSameAs(expectedException);
@@ -204,7 +204,7 @@ public sealed class AppConfigAuthorizationAdapterTests
         var expectedException = new InvalidOperationException("Permission lookup failed.");
         _roleRepository.UserHasPermission = (_, _, _) => Task.FromException<bool>(expectedException);
 
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await port.CanManageAppConfigAsync(actorId));
 
         exception.Should().BeSameAs(expectedException);

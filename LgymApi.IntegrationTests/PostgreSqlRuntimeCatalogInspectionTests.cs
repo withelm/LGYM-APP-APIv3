@@ -197,7 +197,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "LgymApi.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "LgymApi.slnx")))
             {
                 return directory.FullName;
             }

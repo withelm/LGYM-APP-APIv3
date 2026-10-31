@@ -65,5 +65,5 @@ To verify the gate locally, run:
 dotnet build LgymApi.Domain/LgymApi.Domain.csproj --configuration Release --no-restore
 
 # Build the entire solution (will show warnings for non-gated projects)
-dotnet build LgymApi.sln --configuration Release --no-restore
+dotnet build LgymApi.slnx --configuration Release --no-restore
 ```

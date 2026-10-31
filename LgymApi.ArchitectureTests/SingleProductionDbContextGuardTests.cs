@@ -14,6 +14,11 @@ public sealed class SingleProductionDbContextGuardTests
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
     private const string SignalRClientTestPackageProject = "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj";
+    private static readonly string[] ExpectedSolutionProjectPaths = ProjectReferenceGraphManifest.ProjectNames
+        .Select(name => name + "/" + name + ".csproj")
+        .OrderBy(path => path, StringComparer.Ordinal)
+        .ToArray();
+    private static readonly string[] ExpectedSolutionPlatforms = ["Any CPU", "x64", "x86"];
     private static readonly IReadOnlyDictionary<string, string> ApprovedProjectFileLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj"] = "784fc7ec545ef354f14b14c3f9925298fed54a73429f78399fef9fd1b7ef7838",
@@ -22,7 +27,6 @@ public sealed class SingleProductionDbContextGuardTests
         ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj"] = "9e37345ff9459e13b1cec859b2b394cee1961bfea379c0936b8861b1a23efe10",
         ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "082c91ec55218916e80b8cb0394b1bc92306d54ee1157b9224b8637e74467207",
         ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "200549f3f97f6672b7751fdb894de3c69c44bd55a90397b015f01beb9217b47c",
-        ["LgymApi.sln"] = "0da483decd3261f4a3ff0c0e23f2e7064286c1d8af1a8ef254c471ccd3aaffa8",
         ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "4453c4766317025d9eefd24a05e6ff9841e7c0fcaf71c2d62c9a5622dad66339"
     };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -126,7 +130,6 @@ public sealed class SingleProductionDbContextGuardTests
             "--name-only",
             "HEAD",
             "--",
-            "LgymApi.sln",
             ":(glob)**/*.csproj",
             MigrationRoot
         ]);
@@ -347,18 +350,75 @@ public sealed class SingleProductionDbContextGuardTests
     }
 
     [Test]
+    public void Solution_Membership_And_Platform_Configurations_Should_Match_The_Governed_Topology()
+    {
+        var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+
+        AssertSolutionTopology(LoadSolutionTopology(Path.Combine(repoRoot, "LgymApi.slnx")));
+    }
+
+    [Test]
+    public void Solution_Topology_Fixture_Should_Reject_An_Unexpected_Project_Or_Platform()
+    {
+        var unexpectedProject = new SolutionTopology(
+            [.. ExpectedSolutionProjectPaths, "LgymApi.Experimental/LgymApi.Experimental.csproj"],
+            ExpectedSolutionPlatforms);
+        var missingPlatform = new SolutionTopology(
+            ExpectedSolutionProjectPaths,
+            ["Any CPU", "x64"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                () => AssertSolutionTopology(unexpectedProject),
+                Throws.InstanceOf<AssertionException>().With.Message.Contains("LgymApi.Experimental"));
+            Assert.That(
+                () => AssertSolutionTopology(missingPlatform),
+                Throws.InstanceOf<AssertionException>().With.Message.Contains("x86"));
+        });
+    }
+
+    [Test]
     public void Physical_Topology_Worktree_Fixture_Should_Reject_A_Project_Or_Migration_Change()
     {
         Assert.That(
             () => AssertPhysicalTopologyWorktreeIsClean(
-                ["LgymApi.sln", "LgymApi.Infrastructure/Migrations/AppDbContextModelSnapshot.cs"],
+                ["LgymApi.Infrastructure/Migrations/AppDbContextModelSnapshot.cs"],
                 ["LgymApi.Reporting/LgymApi.Reporting.csproj"]),
-            Throws.InstanceOf<AssertionException>().With.Message.Contains("LgymApi.sln"));
+            Throws.InstanceOf<AssertionException>().With.Message.Contains("LgymApi.Infrastructure/Migrations/AppDbContextModelSnapshot.cs"));
     }
 
     private static PersistenceTopologyAnalysis AnalyzeFixture(string path, string source)
     {
         return PersistenceTopologyGuardTestHelpers.Analyze([new TopologySource(path, source)]);
+    }
+
+    private static SolutionTopology LoadSolutionTopology(string path)
+    {
+        var document = XDocument.Load(path);
+        var projectPaths = document
+            .Descendants("Project")
+            .Select(project => (string?)project.Attribute("Path") ?? throw new InvalidOperationException("Solution project is missing its path."))
+            .Where(projectPath => projectPath.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var platforms = document
+            .Descendants("Configurations")
+            .Elements("Platform")
+            .Select(platform => (string?)platform.Attribute("Name") ?? throw new InvalidOperationException("Solution platform is missing its name."))
+            .ToArray();
+
+        return new SolutionTopology(projectPaths, platforms);
+    }
+
+    private static void AssertSolutionTopology(SolutionTopology solution)
+    {
+        var projectPaths = solution.ProjectPaths
+            .Select(path => path.Replace('\\', '/'))
+            .ToArray();
+
+        Assert.That(projectPaths, Is.Unique, "Solution project paths must be unique.");
+        Assert.That(projectPaths, Is.EquivalentTo(ExpectedSolutionProjectPaths));
+        Assert.That(solution.Platforms, Is.EqualTo(ExpectedSolutionPlatforms));
     }
 
     private static List<string> FindMultiplicityViolations(IEnumerable<string> actualEntities, IReadOnlyCollection<string> expectedEntities)
@@ -512,4 +572,6 @@ public sealed class SingleProductionDbContextGuardTests
     {
         return $"using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Infrastructure; sealed class AppDbContext : DbContext {{ }} [DbContext(typeof(AppDbContext))] sealed class {typeName} : ModelSnapshot {{ protected override void BuildModel(ModelBuilder modelBuilder) {{ }} }}";
     }
+
+    private sealed record SolutionTopology(IReadOnlyList<string> ProjectPaths, IReadOnlyList<string> Platforms);
 }

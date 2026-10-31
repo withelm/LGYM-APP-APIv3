@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -394,11 +395,11 @@ public sealed class ModuleContributionDocumentationTests
         }
 
         Ensure(PersistedEntityOwnershipCatalog.CanonicalOwners.Count == 8, "The canonical ownership authority must retain eight owners.");
-        var projectPaths = File.ReadLines(Path.Combine(repositoryRoot, "LgymApi.sln"))
-            .Where(line => line.StartsWith("Project(", StringComparison.Ordinal))
-            .Select(line => line.Split('"'))
-            .Where(parts => parts.Length > 5 && parts[5].EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
-            .Select(parts => Path.Combine(repositoryRoot, ArchitectureTestHelpers.ToHostPath(parts[5])))
+        var projectPaths = XDocument.Load(Path.Combine(repositoryRoot, "LgymApi.slnx"))
+            .Descendants("Project")
+            .Select(project => (string?)project.Attribute("Path") ?? throw new InvalidOperationException("Solution project is missing its path."))
+            .Where(path => path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+            .Select(path => Path.Combine(repositoryRoot, ArchitectureTestHelpers.ToHostPath(path)))
             .ToArray();
         var projects = projectPaths.Select(path => Path.GetFileNameWithoutExtension(path)).ToArray();
         var edges = projectPaths
