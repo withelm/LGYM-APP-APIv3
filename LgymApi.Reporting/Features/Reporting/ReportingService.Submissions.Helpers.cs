@@ -3,7 +3,7 @@ using System.Text.Json;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
-using LgymApi.Application.Features.Measurements;
+using LgymApi.Domain.Measurements;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Enums;

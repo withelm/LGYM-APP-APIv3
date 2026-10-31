@@ -1,6 +1,6 @@
 using LgymApi.Domain.Enums;
 
-namespace LgymApi.Application.Features.Measurements;
+namespace LgymApi.Domain.Measurements;
 
 public static class MeasurementUnitResolver
 {

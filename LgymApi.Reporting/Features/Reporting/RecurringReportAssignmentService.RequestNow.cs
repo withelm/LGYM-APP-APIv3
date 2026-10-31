@@ -114,27 +114,26 @@ public sealed partial class RecurringReportAssignmentService
                         var rollback = await RollbackRequestNowDecisionAsync(transaction, cancellationToken);
                         phase = rollback.Phase;
                         abort = rollback.Abort;
-                        goto RequestNowDecisionComplete;
                     }
-
-                    var staged = stagedResult.Value;
-                    if (staged.EnvelopeId == null)
+                    else
                     {
-                        throw new InvalidOperationException(
-                            "The recurring report notification envelope was not staged.");
-                    }
+                        var staged = stagedResult.Value;
+                        if (staged.EnvelopeId == null)
+                        {
+                            throw new InvalidOperationException(
+                                "The recurring report notification envelope was not staged.");
+                        }
 
-                    var mapped = MapAssignment(staged.Assignment);
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    phase = TransactionPhase.CommitStarted;
-                    await transaction.CommitAsync(cancellationToken);
-                    phase = TransactionPhase.Committed;
-                    result = Result<RecurringReportAssignmentResult, AppError>.Success(mapped);
+                        var mapped = MapAssignment(staged.Assignment);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        phase = TransactionPhase.CommitStarted;
+                        await transaction.CommitAsync(cancellationToken);
+                        phase = TransactionPhase.Committed;
+                        result = Result<RecurringReportAssignmentResult, AppError>.Success(mapped);
+                    }
                 }
             }
-
-        RequestNowDecisionComplete:;
         }
         catch (OperationCanceledException exception)
             when (phase == TransactionPhase.PreCommit && cancellationToken.IsCancellationRequested)
