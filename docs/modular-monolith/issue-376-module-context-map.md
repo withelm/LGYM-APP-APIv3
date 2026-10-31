@@ -179,7 +179,7 @@ Platform / Reference Data may host application startup, composition-root wiring,
 
 It must not absorb feature-specific commands, business workflows, or module-owned write models, because those belong to the fixed feature modules and stay under their own contract surfaces.
 
-Provider and registration ownership remains module-specific: Notifications owns email registration and Dummy or SMTP selection and owns FCM registration; Reporting owns Local or Cloudflare R2 photo-storage registration; Identity owns Google-token validation registration; API logging owns the optional Elasticsearch sink. Provider SDKs, credentials, and raw provider responses remain outside Application and BuildingBlocks.
+Provider and registration ownership remains module-specific: Notifications owns email registration and Dummy or SMTP selection and owns FCM registration; Reporting owns the `IPhotoStorageProvider` abstraction and photo lifecycle policy, while Infrastructure owns private Local and Cloudflare R2 implementations, option binding and validation, provider selection, and DI registration; Identity owns Google-token validation registration; API logging owns the optional Elasticsearch sink. Provider SDKs, credentials, and raw provider responses remain outside Application and BuildingBlocks.
 
 ### Background-contract path rules
 
@@ -242,7 +242,7 @@ The nine-module catalog is the current baseline for those checks, and any later 
 
 ## Executable topology and concern matrix
 
-`ProjectReferenceGraphGuardTests` fixes the current graph at 19 projects and 97 edges, while the direct-import guard verifies 96 source edges plus the Resources analyzer edge and the dependency-first order. The system remains one production `AppDbContext`, one PostgreSQL database, and one migration stream; Payments owns two persisted entities.
+`ProjectReferenceGraphGuardTests` fixes the current graph at 22 projects and 116 edges, while the direct-import guard verifies 115 source edges plus the Resources analyzer edge and the dependency-first order. The system remains one production `AppDbContext`, one PostgreSQL database, and one migration stream; Payments owns two persisted entities.
 
 `issue-393-platform-reference-data-boundary.md` is the executable concern-owner matrix for authentication, authorization, serialization, localization, logging, providers, pagination, clock, correlation, idempotency, enum lookup, AppConfig, and persistence topology. It supplements this map without adding an owner, project, provider, or persistence root.
 

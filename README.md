@@ -13,7 +13,7 @@ gyms, measurements, records, scores, and application configuration.
 
 ## Solution structure
 
-The solution graph is governed by an explicit allowlist of 21 approved projects and 113 exact direct targets. The current snapshot, dependency-first order, derived diagnostics, direct-use evidence, and project-promotion requirements are in `docs/modular-monolith/issue-380-project-reference-graph.md`.
+The solution graph is governed by an explicit allowlist of 22 approved projects and 116 exact direct targets. The current snapshot, dependency-first order, derived diagnostics, direct-use evidence, and project-promotion requirements are in `docs/modular-monolith/issue-380-project-reference-graph.md`.
 
 - `LgymApi.Api` is the HTTP host and composition root.
 - `LgymApi.Application` contains the remaining Workout & Progress, Coaching, and Nutrition use cases.
@@ -22,7 +22,7 @@ The solution graph is governed by an explicit allowlist of 21 approved projects 
 - `LgymApi.Infrastructure` owns the shared EF runtime: one `AppDbContext`, one migration stream, the Unit of Work, Hangfire persistence, and module persistence bridges.
 - `LgymApi.BackgroundWorker` executes durable jobs and selects no-op or Hangfire schedulers. `LgymApi.BackgroundWorker.Common` is the closed persisted-job and email-wire seam.
 - `LgymApi.Resources` and `LgymApi.Resources.Generator` provide localized resources and their analyzer.
-- `LgymApi.DataSeeder`, `LgymApi.DataSeeder.Tests`, `LgymApi.UnitTests`, `LgymApi.Reporting.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, and `LgymApi.TestUtils` provide bootstrap and verification support.
+- `LgymApi.DataSeeder`, `LgymApi.DataSeeder.Tests`, `LgymApi.UnitTests`, `LgymApi.Payments.UnitTests`, `LgymApi.Reporting.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, and `LgymApi.TestUtils` provide bootstrap and verification support.
 - Project-level docs live next to each `.csproj` as `<ProjectName>.md`.
 
 For contributor workflow, use the [module contribution guide](docs/MODULE_CONTRIBUTION_GUIDE.md) and [architecture overview](docs/ARCHITECTURE.md). [ADR-007](docs/adr/007-final-modular-monolith-compatibility-commitments.md) records final compatibility commitments, while [issue-395 verification](docs/modular-monolith/issue-395-final-verification.md) records the Todo 22 same-SHA evidence workflow. [New modules usage notes](docs/NEW_MODULES_USAGE.md) cover feature and API usage, not contribution workflow.

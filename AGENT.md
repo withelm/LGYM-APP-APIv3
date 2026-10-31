@@ -14,7 +14,7 @@ Main areas:
 - Module shells: `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, `LgymApi.Notifications`, and `LgymApi.Payments`
 - Background jobs: `LgymApi.BackgroundWorker` and `LgymApi.BackgroundWorker.Common`
 - Data seeding: `LgymApi.DataSeeder`
-- Tests: `LgymApi.UnitTests`, `LgymApi.Reporting.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, `LgymApi.DataSeeder.Tests`, `LgymApi.TestUtils`
+- Tests: `LgymApi.UnitTests`, `LgymApi.Payments.UnitTests`, `LgymApi.Reporting.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, `LgymApi.DataSeeder.Tests`, `LgymApi.TestUtils`
 
 ## Instruction Hierarchy
 
@@ -74,6 +74,7 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 | `LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj` | Hangfire/background worker implementations for module ports and the bounded Common job seam. | Keep jobs idempotent where practical, register worker services here, and select no-op or Hangfire scheduling by testing mode. |
 | `LgymApi.DataSeeder/LgymApi.DataSeeder.csproj` | Console executable for deterministic data seeding/bootstrap using infrastructure and EF tooling. | Do not make API startup depend on this executable. |
 | `LgymApi.UnitTests/LgymApi.UnitTests.csproj` | Focused unit tests for service, domain, application, mapping, API, and infrastructure units. | Use NUnit, FluentAssertions, NSubstitute, and shared helpers from `LgymApi.TestUtils`. |
+| `LgymApi.Payments.UnitTests/LgymApi.Payments.UnitTests.csproj` | Focused unit tests for Payments-owned persistence lifecycle and private Stripe test-mode behavior. | Keep direct references limited to Domain, Infrastructure, and Payments; leave host composition and integration coverage in their existing suites. |
 | `LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj` | Focused unit tests for Reporting-owned services, persistence adapters, mapping, recurring assignments, and photo workflows. | Keep API, Worker, Workout & Progress consumer, integration, domain, and cross-cutting tests in their existing suites. |
 | `LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj` | End-to-end API tests with `WebApplicationFactory`, middleware, auth, serialization, localization, and test persistence. | Reuse integration helpers and validate legacy contract compatibility for changed endpoints. |
 | `LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj` | Roslyn guard tests for dependency direction, ID boundaries, DI placement, feature layout, mapping, enums, and unit-of-work rules. | Treat failures as architecture violations unless an intentional exception is documented. |

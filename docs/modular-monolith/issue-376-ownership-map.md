@@ -69,7 +69,7 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 | Persistence port | `IRecurringReportAssignmentPersistence / RecurringReportAssignmentPersistenceRepository` | `Reporting` | Recurring assignment rows belong to Reporting orchestration. | Non-owners reach them only through the Reporting service. |
 | Persistence port | `IReportPhotoPersistence / ReportPhotoPersistenceRepository` | `Reporting` | Photo metadata and upload-session state belong to the Reporting evidence lifecycle. | Non-owners use the Reporting photo workflow only. |
 | Persistence port | `IReportingRelationshipAccessPersistence / ReportingRelationshipAccessPersistenceRepository` | `Reporting` | Reporting consumes active relationship facts through marker-safe account IDs. | Identity and Coaching entities or repositories do not cross this port. |
-| Service contract | `IPhotoStorageProvider` | `Reporting` | Photo storage is part of the reporting photo workflow. | Non-owners consume it through the reporting upload flow only. |
+| Service contract | `IPhotoStorageProvider` | `Reporting` | The Reporting abstraction and evidence lifecycle own photo storage policy. Infrastructure owns private provider implementations, option binding and validation, provider selection, and DI registration. | Non-owners consume it through the reporting upload flow only. |
 | Table | `ReportTemplates` | `Reporting` | Templates are owned by reporting. | Non-owners read templates through reporting contracts only. |
 | Table | `ReportRequests` | `Reporting` | Report requests are owned by reporting. | Non-owners do not write requests directly. |
 | Table | `ReportSubmissions` | `Reporting` | Report submissions are owned by reporting. | Non-owners consume submission state through reporting contracts only. |
@@ -124,7 +124,7 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 - The exact BuildingBlocks manifest is `Result<T, TError>`, `Result`, `Unit`, `AppError`, `NotFoundError`, `BadRequestError`, `UnauthorizedError`, `ForbiddenError`, `ConflictError`, `UnprocessableEntityError`, and `InternalServerError`.
 - AppConfig protected operations cross the Identity boundary only through its ID-only authorization port. The Identity adapter owns active-user and `ManageAppConfig` permission checks, while latest-by-platform remains unauthenticated.
 - Reference Data owns the enum lookup service and concrete mappings. API consumers do not duplicate enum formatting.
-- The current project-reference manifest is 19 projects and 97 edges. Payments is the ninth canonical owner and owns two persisted entities; it does not change the physical persistence topology or the single migration stream.
+- The current project-reference manifest is 22 projects and 116 edges. Payments is the ninth canonical owner and owns two persisted entities; it does not change the physical persistence topology or the single migration stream.
 - Application, Identity, and Notifications business services use direct constructor injection. High constructor arity has no numeric cap when it keeps focused collaborators explicit. Dependency aggregates and service-locator wrappers are prohibited and must not be restored.
 
 ## Persisted Entity Ownership Catalog
@@ -189,7 +189,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `PaymentCheckout` | `Payments` |
 | `PaymentEventReceipt` | `Payments` |
 
-Totals are fixed: Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, Platform / Reference Data 4, and Payments 2.
+Totals are fixed: Identity & Accounts 9, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, Platform / Reference Data 4, and Payments 2.
 
 ## Ownership tie-breaker
 

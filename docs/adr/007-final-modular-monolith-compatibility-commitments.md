@@ -14,7 +14,7 @@ LGYM remains one deployable application with one production `AppDbContext`, one 
 
 External behavior means every established route, verb, authorization policy, request and response DTO shape, JSON property name, status code, localized message, endpoint alias, idempotency behavior, and legacy field that applies to that endpoint. `_id`, `msg`, and `req` are endpoint-specific compatibility fields, not universal response fields. Reporting retains `_id` and `msg` and has no `req` field.
 
-The owner-oriented API handoff has exactly 25 scoped Application adapter contracts and exactly 3 scoped Notifications adapter contracts. Migration-era `Task7`, `ApiCompatibility`, and `Compatibility.Task7` CLR adapter identities are removed. This is an approved CLR-name cleanup only. It does not alter public HTTP or JSON contracts.
+The owner-oriented API handoff has exactly 19 scoped Application adapter contracts, 7 scoped Reporting adapter contracts, and 3 scoped Notifications adapter contracts. Migration-era `Task7`, `ApiCompatibility`, and `Compatibility.Task7` CLR adapter identities are removed. This is an approved CLR-name cleanup only. It does not alter public HTTP or JSON contracts.
 
 Established non-Task7 `LgymApi.Application.*` namespaces remain where a source or wire contract depends on them. Their physical owner project is authoritative. A retained namespace may be removed only through a separately approved compatibility change with a complete consumer inventory, serialized-payload evidence where applicable, and a replacement or removal window.
 

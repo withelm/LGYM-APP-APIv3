@@ -563,10 +563,11 @@ function Assert-Task4EvidenceProducerContract {
 
     $nonPostgreSqlJob = $Workflow.jobs.'non-postgresql'
     $matrix = @($nonPostgreSqlJob.strategy.matrix.include)
-    Assert-True -Condition ($matrix.Count -eq 5) -Message 'The non-PostgreSQL matrix must contain exactly five suites.'
-    Assert-StringSet -Expected @('Architecture', 'DataSeeder', 'InMemoryIntegration', 'ReportingUnit', 'Unit') -Actual @($matrix | ForEach-Object { [string]$_.suite }) -Description 'non-PostgreSQL suite matrix'
+    Assert-True -Condition ($matrix.Count -eq 6) -Message 'The non-PostgreSQL matrix must contain exactly six suites.'
+    Assert-StringSet -Expected @('Architecture', 'DataSeeder', 'InMemoryIntegration', 'PaymentsUnit', 'ReportingUnit', 'Unit') -Actual @($matrix | ForEach-Object { [string]$_.suite }) -Description 'non-PostgreSQL suite matrix'
     $expectedProjects = @{
         Unit = 'LgymApi.UnitTests/LgymApi.UnitTests.csproj'
+        PaymentsUnit = 'LgymApi.Payments.UnitTests/LgymApi.Payments.UnitTests.csproj'
         ReportingUnit = 'LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj'
         Architecture = 'LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj'
         InMemoryIntegration = 'LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj'
@@ -1031,7 +1032,7 @@ function Assert-StagedSonarInputs {
         [Parameter(Mandatory)][string]$MergeSha
     )
 
-    $expectedSuites = @('Architecture', 'DataSeeder', 'InMemoryIntegration', 'PostgreSqlIntegration', 'ReportingUnit', 'Unit')
+    $expectedSuites = @('Architecture', 'DataSeeder', 'InMemoryIntegration', 'PaymentsUnit', 'PostgreSqlIntegration', 'ReportingUnit', 'Unit')
     $expectedFiles = @('manifest.json')
     foreach ($suite in $expectedSuites) {
         $expectedFiles += @(
@@ -1045,7 +1046,7 @@ function Assert-StagedSonarInputs {
             ForEach-Object { $_.FullName.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar).Replace('\', '/') }
     )
     Assert-StringSet -Expected $expectedFiles -Actual $actualFiles -Description 'staged Sonar input files'
-    Assert-True -Condition ($actualFiles.Count -eq 13) -Message 'The staged Sonar input tree must contain exactly thirteen files.'
+    Assert-True -Condition ($actualFiles.Count -eq 15) -Message 'The staged Sonar input tree must contain exactly fifteen files.'
     Assert-StringSet -Expected @('manifest.json', 'TestResults') -Actual @(Get-ChildItem -LiteralPath $Path -Force | ForEach-Object { $_.Name }) -Description 'consumer-compatible artifact root entries'
     $testResultsDirectory = Join-Path $Path 'TestResults'
     Assert-StringSet -Expected @('SonarInputs') -Actual @(Get-ChildItem -LiteralPath $testResultsDirectory -Force | ForEach-Object { $_.Name }) -Description 'consumer-compatible TestResults entries'
@@ -1102,7 +1103,7 @@ function New-EvidenceFixture {
         })
 
     $buildSha256 = (Get-FileHash -LiteralPath $buildPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    foreach ($suite in @('Unit', 'ReportingUnit', 'Architecture', 'InMemoryIntegration', 'PostgreSqlIntegration', 'DataSeeder')) {
+    foreach ($suite in @('Unit', 'PaymentsUnit', 'ReportingUnit', 'Architecture', 'InMemoryIntegration', 'PostgreSqlIntegration', 'DataSeeder')) {
         $directory = New-Item -ItemType Directory -Path (Join-Path $Root $suite) -Force
         $evidenceDirectory = New-Item -ItemType Directory -Path (Join-Path $directory.FullName 'evidence') -Force
         $trxName = "$suite-fixture.trx"
@@ -1175,9 +1176,10 @@ Assert-StringSet -Expected $expectedBranches -Actual @($prWorkflow.on.pull_reque
 Assert-StringSet -Expected $expectedBranches -Actual @($prWorkflow.on.push.branches) -Description 'PR workflow push branches'
 
 $matrix = @($prWorkflow.jobs.'non-postgresql'.strategy.matrix.include)
-Assert-True -Condition ($matrix.Count -eq 5) -Message 'The non-PostgreSQL matrix must contain exactly five suites.'
+Assert-True -Condition ($matrix.Count -eq 6) -Message 'The non-PostgreSQL matrix must contain exactly six suites.'
 $expectedMatrix = @{
     Unit = ''
+    PaymentsUnit = ''
     ReportingUnit = ''
     Architecture = ''
     InMemoryIntegration = 'TestCategory!=PostgreSql'
@@ -1185,6 +1187,7 @@ $expectedMatrix = @{
 }
 $expectedProjects = @{
     Unit = 'LgymApi.UnitTests/LgymApi.UnitTests.csproj'
+    PaymentsUnit = 'LgymApi.Payments.UnitTests/LgymApi.Payments.UnitTests.csproj'
     ReportingUnit = 'LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj'
     Architecture = 'LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj'
     InMemoryIntegration = 'LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj'
@@ -1262,7 +1265,7 @@ try {
     $unprotectedPushHeadPath = Join-Path $task4FixtureRoot.FullName 'unprotected-push-head.yml'
 
     $duplicateSuiteExecutionText = [regex]::Replace($prWorkflowText, '(?m)^(\s*)& dotnet @arguments\s*$', "`$1& dotnet @arguments`r`n`$1& dotnet @arguments", 1)
-    $missingSuiteText = [regex]::Replace($prWorkflowText, '(?ms)\r?\n          - suite: ReportingUnit.*?(?=\r?\n          - suite: Architecture)', '', 1)
+    $missingSuiteText = [regex]::Replace($prWorkflowText, '(?ms)\r?\n          - suite: PaymentsUnit.*?(?=\r?\n          - suite: ReportingUnit)', '', 1)
     $missingCoverageText = [regex]::Replace($prWorkflowText, "(?m)^\s*'/p:UseSourceLink=false'\r?\n", '', 1)
     $postgreSqlRunnerInvocation = [regex]::Match($prWorkflowText, '(?ms)^\s*& pwsh -NoProfile -File scripts/run-postgresql-integration-tests\.ps1\s+.*?^\s+-NoBuild\s*$')
     Assert-True -Condition $postgreSqlRunnerInvocation.Success -Message 'The second-PostgreSQL-runner fixture could not locate the existing runner invocation.'
@@ -1359,7 +1362,7 @@ try {
     Assert-True -Condition ($missingTrxExitCode -ne 0) -Message 'The final evidence gate accepted a missing TRX artifact.'
 
     New-EvidenceFixture -Root $temporaryRoot -Head $fixtureHead -RepositorySourcePath $evidenceGatePath
-    Remove-Item -LiteralPath (Join-Path $temporaryRoot 'ReportingUnit/evidence/trx-summary.json') -Force
+    Remove-Item -LiteralPath (Join-Path $temporaryRoot 'PaymentsUnit/evidence/trx-summary.json') -Force
     $missingSuiteExitCode = Invoke-FinalEvidenceGate -EvidenceGatePath $evidenceGatePath -EvidenceRoot $temporaryRoot -MergeSha $fixtureHead 2>$null
     Assert-True -Condition ($missingSuiteExitCode -ne 0) -Message 'The final evidence gate accepted a missing suite artifact.'
 
@@ -1465,7 +1468,7 @@ try {
     Assert-True -Condition ($existingOutputExitCode -ne 0) -Message 'The final evidence gate accepted an existing Sonar input destination.'
     Assert-True -Condition ([System.IO.File]::ReadAllText((Join-Path $existingOutputPath 'sentinel.txt')) -ceq 'do not overwrite') -Message 'The final evidence gate overwrote the existing Sonar input destination.'
 
-    Write-Host 'CI workflow fixture matrix passed: yaml=1, events=7, unified-sonar-happy=1, sonar-consumer-binding-pr-push=2, sonar-mutations=20, compatibility-happy=1, compatibility-missing=1, compatibility-miswired=1, compatibility-permissive=1, task4-producer-happy=1, task4-push-nullability-happy=1, task4-push-nullability-rejected=1, task4-duplicate-suite-execution=1, task4-missing-suite=1, task4-missing-coverage=1, task4-second-postgresql-runner=1, task4-sha-only-artifact=1, task4-broken-provenance=1, task4-artifact-layout=1, task4-flattened-artifact-topology=1, evidence-happy=1, staging-files=13, consumer-root-shape=1, manifest-run-types=string, missing-trx=1, missing-artifact=1, missing-discovery=1, malformed-trx=1, hash-tamper=1, counter-mismatch=1, name-mismatch=1, missing-coverage=1, missing-coverage-metadata=1, empty-coverage=1, malformed-coverage=1, tampered-coverage=1, duplicate-coverage=1, extra-coverage=1, wrong-suite-coverage=1, wrong-coverage-sha=1, wrong-run=1, noncanonical-run=1, noncanonical-run-attempt=1, wrong-repository=1, existing-output=1, no-partial-publish=13.'
+    Write-Host 'CI workflow fixture matrix passed: yaml=1, events=7, unified-sonar-happy=1, sonar-consumer-binding-pr-push=2, sonar-mutations=20, compatibility-happy=1, compatibility-missing=1, compatibility-miswired=1, compatibility-permissive=1, task4-producer-happy=1, task4-push-nullability-happy=1, task4-push-nullability-rejected=1, task4-duplicate-suite-execution=1, task4-missing-suite=1, task4-missing-coverage=1, task4-second-postgresql-runner=1, task4-sha-only-artifact=1, task4-broken-provenance=1, task4-artifact-layout=1, task4-flattened-artifact-topology=1, evidence-happy=1, staging-files=15, consumer-root-shape=1, manifest-run-types=string, missing-trx=1, missing-artifact=1, missing-discovery=1, malformed-trx=1, hash-tamper=1, counter-mismatch=1, name-mismatch=1, missing-coverage=1, missing-coverage-metadata=1, empty-coverage=1, malformed-coverage=1, tampered-coverage=1, duplicate-coverage=1, extra-coverage=1, wrong-suite-coverage=1, wrong-coverage-sha=1, wrong-run=1, noncanonical-run=1, noncanonical-run-attempt=1, wrong-repository=1, existing-output=1, no-partial-publish=15.'
 }
 finally {
     if (Test-Path -LiteralPath $temporaryRoot) {

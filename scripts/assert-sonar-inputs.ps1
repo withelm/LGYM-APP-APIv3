@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 
 Import-Module (Join-Path $PSScriptRoot "VerificationEvidence.psm1") -Force
 
-$ExpectedSuites = @("Unit", "ReportingUnit", "Architecture", "InMemoryIntegration", "PostgreSqlIntegration", "DataSeeder")
+$ExpectedSuites = @("Unit", "PaymentsUnit", "ReportingUnit", "Architecture", "InMemoryIntegration", "PostgreSqlIntegration", "DataSeeder")
 $MinimumFreshnessUtc = [System.DateTimeOffset]::UtcNow.AddHours(-24)
 
 function Assert-NotReparsePoint {

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
 
-namespace LgymApi.UnitTests.Payments.Stripe;
+namespace LgymApi.Payments.UnitTests.Stripe;
 
 [TestFixture]
 public sealed class PaymentsStripeBoundaryTests

@@ -8,7 +8,7 @@ Implementation commitments complete. Final clean same-SHA evidence is pending To
 
 | Disposition ID | Subject | Owner | Final fact | Verification surface |
 | --- | --- | --- | --- | --- |
-| `issue395.dependency.graph` | Project topology | Platform / Reference Data | `projects=21; direct-edges=113; semantic-edges=112; analyzer-edges=1; forbidden-complement=307` | `issue-380-project-reference-graph.md` |
+| `issue395.dependency.graph` | Project topology | Platform / Reference Data | `projects=22; direct-edges=116; semantic-edges=115; analyzer-edges=1; forbidden-complement=346` | `issue-380-project-reference-graph.md` |
 | `issue395.dependency.persistence` | Physical persistence | Infrastructure | `AppDbContext=1; PostgreSQL-database=1; migration-stream=1; deployables=1` | `SingleProductionDbContextGuardTests` |
 | `issue395.dependency.ownership` | Persisted ownership | Nine canonical owners | `entities=53; owners=9; payments-entities=2` | `PersistedEntityOwnershipCatalog.cs` |
 | `issue395.dependency.mapping` | Registered mapping profiles | Platform / Reference Data | `profiles=47` | API composition guards |
@@ -18,7 +18,8 @@ Implementation commitments complete. Final clean same-SHA evidence is pending To
 
 | Adapter ID | Category | Count | Owner | Disposition |
 | --- | --- | --- | --- | --- |
-| `issue395.adapter.application-api` | Controller-facing API adapters | `25` | Application owners | Owner-oriented scoped contracts remain registered after Infrastructure composition. |
+| `issue395.adapter.application-api` | Controller-facing API adapters | `19` | Application owners | Owner-oriented scoped contracts remain registered after Infrastructure composition. |
+| `issue395.adapter.reporting-api` | Controller-facing API adapters | `7` | Reporting | Reporting-owned scoped contracts remain registered through `AddReportingApiAdapters` after Infrastructure composition. |
 | `issue395.adapter.notifications-api` | Controller-facing API adapters | `3` | Notifications | `IInAppNotificationApiAdapter`, `INotificationEventApiAdapter`, and `IPushInstallationApiAdapter` remain registered by `AddNotificationsApiAdapters`. |
 | `issue395.adapter.notifications-integration` | Retained owner-to-owner integration adapters | `3` | Notifications | `PushInstallationSessionDisassociationAdapter`, `CoachingEmailNotificationSchedulerAdapter`, and `PasswordRecoveryEmailSchedulerAdapter` remain because their focused contracts and durable behavior have no approved replacement. |
 | `issue395.adapter.migration-clr-removal` | Migration-era adapter CLR identities | `0` | Final cutover | `Task7`, `ApiCompatibility`, and `Compatibility.Task7` adapter CLR identities are absent. External HTTP and JSON contracts remain unchanged. |
@@ -123,7 +124,7 @@ Direct local API process smoke remains blocked by operator-provided JWT and Post
 
 | Locator ID | Owner | Source locator | Verified fact |
 | --- | --- | --- | --- |
-| `issue395.locator.application-api-registration` | Application | `LgymApi.Application/ApiAdapters/ServiceCollectionExtensions.cs#ApplicationApiAdapterServiceCollectionExtensions.AddApplicationApiAdapters` | Registers the 25 Application API adapter contracts. |
+| `issue395.locator.application-api-registration` | Application | `LgymApi.Application/ApiAdapters/ServiceCollectionExtensions.cs#ApplicationApiAdapterServiceCollectionExtensions.AddApplicationApiAdapters` | Registers the 19 Application API adapter contracts. |
 | `issue395.locator.notifications-api-registration` | Notifications | `LgymApi.Notifications/ServiceCollectionExtensions.cs#ServiceCollectionExtensions.AddNotificationsApiAdapters` | Registers the three Notifications API adapter contracts. |
 | `issue395.locator.migration-ledger` | ArchitectureTests | `LgymApi.ArchitectureTests/Issue395MigrationLedgerTests.cs#Issue395MigrationLedgerTests` | Records removed migration-era adapter identities and partial disposition. |
 | `issue395.locator.persistence-catalog` | ArchitectureTests | `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs#PersistedEntityOwnershipCatalog` | Defines 53 persisted entities across nine owners; Payments owns two. |

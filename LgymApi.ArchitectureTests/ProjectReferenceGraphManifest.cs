@@ -45,6 +45,8 @@ internal static class ProjectReferenceGraphManifest
         new("LgymApi.Notifications", ProjectKind.Production,
         ["LgymApi.BackgroundWorker.Common", "LgymApi.Domain", "LgymApi.Identity", "LgymApi.Platform", "LgymApi.Resources"]),
         new("LgymApi.Payments", ProjectKind.Production, ["LgymApi.Domain", "LgymApi.Identity"]),
+        new("LgymApi.Payments.UnitTests", ProjectKind.Test,
+        ["LgymApi.Domain", "LgymApi.Infrastructure", "LgymApi.Payments"]),
         new("LgymApi.Platform", ProjectKind.Production, ["LgymApi.Domain", "LgymApi.Resources"]),
         new("LgymApi.Reporting", ProjectKind.Production,
         ["LgymApi.Domain", "LgymApi.Identity", "LgymApi.Platform", "LgymApi.Resources"]),

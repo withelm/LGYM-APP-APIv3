@@ -25,6 +25,7 @@ public sealed class UnitOfWorkCommitGuardTests
     private static readonly string[] TestSegments =
     {
         "/LgymApi.UnitTests/",
+        "/LgymApi.Payments.UnitTests/",
         "/LgymApi.Reporting.UnitTests/",
         "/LgymApi.IntegrationTests/",
         "/LgymApi.DataSeeder.Tests/",

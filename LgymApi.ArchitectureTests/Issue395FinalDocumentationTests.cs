@@ -20,7 +20,8 @@ public sealed class Issue395FinalDocumentationTests
         var rows = ParseRows(verification);
 
         Assert.That(adr, Does.Contain("## Status\n\nAccepted"));
-        Assert.That(adr, Does.Contain("25 scoped Application adapter contracts"));
+        Assert.That(adr, Does.Contain("19 scoped Application adapter contracts"));
+        Assert.That(adr, Does.Contain("7 scoped Reporting adapter contracts"));
         Assert.That(adr, Does.Contain("3 scoped Notifications adapter contracts"));
         Assert.That(adr, Does.Contain("Task7`, `ApiCompatibility`, and `Compatibility.Task7` CLR adapter identities are removed"));
         Assert.That(adr, Does.Contain("one production `AppDbContext`, one PostgreSQL database"));
@@ -59,12 +60,12 @@ public sealed class Issue395FinalDocumentationTests
             "LgymApi.ArchitectureTests/Missing.cs#Missing",
             StringComparison.Ordinal))));
         Assert.Throws<AssertionException>(() => ValidateFinalDisposition(ParseRows(valid.Replace(
-            "projects=21; direct-edges=113; semantic-edges=112; analyzer-edges=1; forbidden-complement=307",
-            "projects=20; direct-edges=113; semantic-edges=112; analyzer-edges=1; forbidden-complement=307",
+            "projects=22; direct-edges=116; semantic-edges=115; analyzer-edges=1; forbidden-complement=346",
+            "projects=21; direct-edges=116; semantic-edges=115; analyzer-edges=1; forbidden-complement=346",
             StringComparison.Ordinal))));
         Assert.Throws<AssertionException>(() => ValidateAdapterDisposition(ParseRows(valid.Replace(
-            "| `issue395.adapter.application-api` | Controller-facing API adapters | `25` |",
-            "| `issue395.adapter.application-api` | Controller-facing API adapters | `24` |",
+            "| `issue395.adapter.application-api` | Controller-facing API adapters | `19` |",
+            "| `issue395.adapter.application-api` | Controller-facing API adapters | `18` |",
             StringComparison.Ordinal))));
         Assert.Throws<AssertionException>(() => ValidatePartialDisposition(ParseRows(valid.Replace(
             "| `issue395.namespace.application-compatible` | Established non-Task7 `LgymApi.Application.*` namespaces in extracted owners | Physical owner project | Retained for source or wire compatibility |",
@@ -87,7 +88,7 @@ public sealed class Issue395FinalDocumentationTests
     private static void ValidateFinalDisposition(IReadOnlyList<Row> rows)
     {
         var disposition = RequirePrefix(rows, "issue395.dependency.", 5);
-        Assert.That(disposition["issue395.dependency.graph"]["Final fact"], Is.EqualTo("projects=21; direct-edges=113; semantic-edges=112; analyzer-edges=1; forbidden-complement=307"));
+        Assert.That(disposition["issue395.dependency.graph"]["Final fact"], Is.EqualTo("projects=22; direct-edges=116; semantic-edges=115; analyzer-edges=1; forbidden-complement=346"));
         Assert.That(disposition["issue395.dependency.persistence"]["Final fact"], Is.EqualTo("AppDbContext=1; PostgreSQL-database=1; migration-stream=1; deployables=1"));
         Assert.That(disposition["issue395.dependency.ownership"]["Final fact"], Is.EqualTo("entities=53; owners=9; payments-entities=2"));
         Assert.That(disposition["issue395.dependency.mapping"]["Final fact"], Is.EqualTo("profiles=47"));
@@ -96,9 +97,12 @@ public sealed class Issue395FinalDocumentationTests
 
     private static void ValidateAdapterDisposition(IReadOnlyList<Row> rows)
     {
-        var adapters = RequirePrefix(rows, "issue395.adapter.", 4);
-        Assert.That(adapters["issue395.adapter.application-api"]["Count"], Is.EqualTo("25"));
+        var adapters = RequirePrefix(rows, "issue395.adapter.", 5);
+        Assert.That(adapters["issue395.adapter.application-api"]["Count"], Is.EqualTo("19"));
         Assert.That(adapters["issue395.adapter.application-api"]["Owner"], Is.EqualTo("Application owners"));
+        Assert.That(adapters["issue395.adapter.reporting-api"]["Count"], Is.EqualTo("7"));
+        Assert.That(adapters["issue395.adapter.reporting-api"]["Owner"], Is.EqualTo("Reporting"));
+        Assert.That(adapters["issue395.adapter.reporting-api"]["Disposition"], Does.Contain("AddReportingApiAdapters"));
         Assert.That(adapters["issue395.adapter.notifications-api"]["Count"], Is.EqualTo("3"));
         Assert.That(adapters["issue395.adapter.notifications-integration"]["Count"], Is.EqualTo("3"));
         Assert.That(adapters["issue395.adapter.migration-clr-removal"]["Count"], Is.EqualTo("0"));

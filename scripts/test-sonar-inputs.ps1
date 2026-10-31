@@ -5,7 +5,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ExpectedSuites = @("Unit", "ReportingUnit", "Architecture", "InMemoryIntegration", "PostgreSqlIntegration", "DataSeeder")
+$ExpectedSuites = @("Unit", "PaymentsUnit", "ReportingUnit", "Architecture", "InMemoryIntegration", "PostgreSqlIntegration", "DataSeeder")
 $script:FailureResults = [System.Collections.Generic.List[object]]::new()
 
 function Write-FixtureJson {
@@ -374,12 +374,12 @@ function Assert-ValidArtifact {
     )
 
     if ($Result.exitCode -ne 0) {
-    throw "The valid six-suite artifact was rejected: $($Result.output)"
+    throw "The valid seven-suite artifact was rejected: $($Result.output)"
     }
 
     $records = @($Result.output -split "`r?`n" | Where-Object { $_ -match "^SONAR_INPUT " })
     if ($records.Count -ne $ExpectedSuites.Count) {
-    throw "The valid six-suite artifact emitted $($records.Count) SONAR_INPUT records instead of $($ExpectedSuites.Count)."
+    throw "The valid seven-suite artifact emitted $($records.Count) SONAR_INPUT records instead of $($ExpectedSuites.Count)."
     }
 
     for ($index = 0; $index -lt $ExpectedSuites.Count; $index++) {
@@ -469,7 +469,7 @@ try {
     if ($missingGeneratedReleaseResult.exitCode -ne 0 -or
         $missingGeneratedReleaseRecords.Count -ne $ExpectedSuites.Count -or
         $missingGeneratedReleaseRecords[0] -notmatch "^SONAR_INPUT suite=Unit coveragePath=.+ sha256=[0-9a-f]{64} bytes=[1-9][0-9]* modules=1 files=2$") {
-        throw "The six-suite artifact with a missing repository-contained generated Release source was not accepted with six deterministic SONAR_INPUT records."
+        throw "The seven-suite artifact with a missing repository-contained generated Release source was not accepted with seven deterministic SONAR_INPUT records."
     }
 
     Invoke-FailureCase -Fixture $fixture -CasesRoot $casesRoot -Name "missing-coverage-report" -Mutate {

@@ -2,7 +2,7 @@
 
 ## Status
 
-Reporting is a logical capability boundary in the modular monolith. This document records its current ownership and lifecycle seams. It does not move physical projects or change the persistence topology.
+Reporting is a logical capability boundary with its implementation physically extracted into `LgymApi.Reporting`. This document records its current ownership and lifecycle seams without changing the shared persistence topology.
 
 ## Ownership
 
@@ -42,7 +42,7 @@ Reporting owns the business lifecycle for evidence attached to report requests a
 
 `PhotoUploadSession` tracks the pending upload agreement, including the initiating user, owner, report request, view type, declared content type and size, storage key, status, and expiry. Completion must match that session before the photo metadata is persisted. An invalid uploaded object is rejected and cleaned up. `ExpiredPhotoUploadCleanupService` deletes expired provider objects before marking their upload sessions expired, and commits only after successful state changes. A failed provider deletion is logged and does not mark that session expired.
 
-`IPhotoStorageProvider` is the application abstraction used by this workflow. Generic storage implementation stays behind module and application abstractions. Local storage, Cloudflare R2 behavior, provider credentials, raw provider responses, bucket details, and other provider-specific implementation details remain Infrastructure-private. Reporting owns the evidence lifecycle, not the generic storage provider implementation.
+`IPhotoStorageProvider` is the Reporting-owned application abstraction used by this workflow. Infrastructure owns the private Local and Cloudflare R2 implementations, option binding and validation, provider selection, and DI registration. Provider credentials, raw provider responses, bucket details, and other provider-specific implementation details remain Infrastructure-private. Reporting owns the evidence lifecycle and abstraction policy, not the generic provider implementations.
 
 ## Recurring Assignment and Cleanup Jobs
 
@@ -66,9 +66,9 @@ Operational records and logs expose event ID, report submission ID, correlation 
 
 Reporting API routes, HTTP verbs, action aliases, DTO type and property names, `JsonPropertyName` values, declared response types, and required legacy fields are compatibility contracts. The guarded API contract surface is maintained by architecture tests, including `ReportingApiContractImmutabilityGuardTests`, which fail on silent drift. Existing aliases and legacy fields, including `_id` and `msg`, remain part of the guarded surface. The current Reporting DTO contract has no `req` JSON property.
 
-The six controller-facing Reporting API ports, their adapters, and their mapping profile reside under `LgymApi.Application/Reporting/ApiAdapters`. They preserve the existing controller-to-owner boundary without introducing routes, persistence access, or a new public service surface.
+The seven controller-facing Reporting API ports, their adapters, and their mapping profile reside under `LgymApi.Reporting/Reporting/ApiAdapters`. They preserve the existing controller-to-owner boundary without introducing routes, persistence access, or a new public service surface.
 
-Reporting contributes six owner-oriented Application API adapters to the final 25-adapter Application handoff. Migration-era adapter CLR identities are removed under ADR-007, while the guarded Reporting route and payload contracts remain unchanged.
+The final API handoff has 19 Application-owned adapters, seven Reporting-owned adapters, and three Notifications-owned adapters. Migration-era adapter CLR identities are removed under ADR-007, while the guarded Reporting route and payload contracts remain unchanged.
 
 ## Persistence and Deployment Boundary
 

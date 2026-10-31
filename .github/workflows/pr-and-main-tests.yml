@@ -114,6 +114,7 @@ jobs:
 
           $suites = @(
               [pscustomobject]@{ name = 'Unit'; project = 'LgymApi.UnitTests/LgymApi.UnitTests.csproj'; filters = @() },
+              [pscustomobject]@{ name = 'PaymentsUnit'; project = 'LgymApi.Payments.UnitTests/LgymApi.Payments.UnitTests.csproj'; filters = @() },
               [pscustomobject]@{ name = 'ReportingUnit'; project = 'LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj'; filters = @() },
                [pscustomobject]@{ name = 'Architecture'; project = 'LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj'; filters = @() },
               [pscustomobject]@{ name = 'InMemoryIntegration'; project = 'LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj'; filters = @('TestCategory!=PostgreSql') },
@@ -175,6 +176,9 @@ jobs:
         include:
           - suite: Unit
             project: LgymApi.UnitTests/LgymApi.UnitTests.csproj
+            filter: ''
+          - suite: PaymentsUnit
+            project: LgymApi.Payments.UnitTests/LgymApi.Payments.UnitTests.csproj
             filter: ''
           - suite: ReportingUnit
             project: LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj

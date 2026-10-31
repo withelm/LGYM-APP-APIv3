@@ -3,7 +3,7 @@
 ## Purpose and topology
 
 - Purpose: provider-neutral Payments capability boundary with a private Stripe Checkout test-mode spike.
-- Solution topology: the solution has 19 projects and 97 direct project-reference edges. Payments directly references only Domain and Identity. API composes Payments; Infrastructure, ArchitectureTests, IntegrationTests, and UnitTests consume its focused persistence contracts. The authoritative graph is `docs/modular-monolith/issue-380-project-reference-graph.md`.
+- Solution topology: the solution has 22 projects and 116 direct project-reference edges. Payments directly references only Domain and Identity. API composes Payments; Infrastructure, ArchitectureTests, IntegrationTests, UnitTests, and Payments.UnitTests consume its focused persistence contracts. The authoritative graph is `docs/modular-monolith/issue-380-project-reference-graph.md`.
 - Rules: do not add direct references to API, Application, Infrastructure, Worker, Notifications, Platform, Resources, or HTTP adapters. Stripe SDK types, event names, signatures, raw payloads, secrets, and provider-specific workflow types remain private under `Providers/Stripe`.
 
 ## Persistence and workflow

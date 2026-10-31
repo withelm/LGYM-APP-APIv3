@@ -185,7 +185,7 @@ Thumbnails should be generated asynchronously after upload completion.
 
 ## 1. Add a real cloud storage provider
 
-Create a new provider, for example:
+Infrastructure owns private provider implementations, option binding and validation, provider selection, and DI registration. Reporting owns the `IPhotoStorageProvider` abstraction and photo lifecycle policy. A new provider implementation can be added under Infrastructure, for example:
 
 - `LgymApi.Infrastructure/Services/CloudflareR2PhotoStorageProvider.cs`
 
@@ -198,7 +198,7 @@ This provider must implement `IPhotoStorageProvider`:
 
 ## 2. Replace dev-only DI registration
 
-Current registration in `LgymApi.Infrastructure/ServiceCollectionExtensions.cs` points to `LocalPhotoStorageProvider`.
+Current provider selection and registration are Infrastructure-owned. The Reporting module consumes only `IPhotoStorageProvider` and keeps lifecycle policy separate from provider implementation.
 
 Production should select provider by config, for example:
 
@@ -330,7 +330,7 @@ Responsibilities:
 
 ## Step 4 - Register provider conditionally
 
-In the infrastructure composition layer, keep this branch inside the reporting module helper or the shared platform helper that owns photo storage wiring:
+In the Infrastructure composition layer, keep this branch in the helper that owns photo storage wiring:
 
 - `Development` -> local provider,
 - `Production` -> R2 provider.

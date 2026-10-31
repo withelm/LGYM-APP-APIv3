@@ -8,7 +8,7 @@ using LgymApi.Payments.Workflows;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 
-namespace LgymApi.UnitTests.Payments.Stripe;
+namespace LgymApi.Payments.UnitTests.Stripe;
 
 [TestFixture]
 public sealed class PaymentsStripeIdempotencyRecoveryTests

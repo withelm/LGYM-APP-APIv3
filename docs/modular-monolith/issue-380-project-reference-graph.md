@@ -1,6 +1,6 @@
 # Issue #380: Approved Current Project-Reference Graph
 
-This is the authoritative current graph after the completed issue #387 extraction, Reporting extraction, and Payments composition addition. It contains 21 projects, 113 direct edges, 112 semantic source/import edges, one Resources analyzer edge, and a 307-edge forbidden complement. Payments directly references Domain and Identity; API composes its public facade, while Infrastructure, ArchitectureTests, IntegrationTests, and UnitTests directly reference its persistence contracts. Stripe is a private Payments implementation, with no public provider-specific API surface or Worker implementation. The graph is derived only from tracked `.csproj` `ProjectReference` items. Namespace imports, runtime registration, and transitive build dependencies are not graph edges.
+This is the authoritative current graph after the completed issue #387 extraction, Reporting extraction, Payments composition addition, and Payments unit-test extraction. It contains 22 projects, 116 direct edges, 115 semantic source/import edges, one Resources analyzer edge, and a 346-edge forbidden complement. Payments directly references Domain and Identity; API composes its public facade, while Infrastructure, ArchitectureTests, IntegrationTests, UnitTests, and Payments.UnitTests directly reference its persistence contracts. Stripe is a private Payments implementation, with no public provider-specific API surface or Worker implementation. The graph is derived only from tracked `.csproj` `ProjectReference` items. Namespace imports, runtime registration, and transitive build dependencies are not graph edges.
 
 ## Governed project promotion
 
@@ -23,14 +23,15 @@ A project promotion must update the descriptor, solution membership, root Projec
 11. `LgymApi.IntegrationTests` (`Test`)
 12. `LgymApi.Notifications` (`Production`)
 13. `LgymApi.Payments` (`Production`)
-14. `LgymApi.Platform` (`Production`)
-15. `LgymApi.Reporting` (`Production`)
-16. `LgymApi.Reporting.UnitTests` (`Test`)
-17. `LgymApi.Resources` (`Production`)
-18. `LgymApi.Resources.Generator` (`Tooling`)
-19. `LgymApi.TestUtils` (`Test`)
-20. `LgymApi.TrainingPlanning` (`Production`)
-21. `LgymApi.UnitTests` (`Test`)
+14. `LgymApi.Payments.UnitTests` (`Test`)
+15. `LgymApi.Platform` (`Production`)
+16. `LgymApi.Reporting` (`Production`)
+17. `LgymApi.Reporting.UnitTests` (`Test`)
+18. `LgymApi.Resources` (`Production`)
+19. `LgymApi.Resources.Generator` (`Tooling`)
+20. `LgymApi.TestUtils` (`Test`)
+21. `LgymApi.TrainingPlanning` (`Production`)
+22. `LgymApi.UnitTests` (`Test`)
 
 ## Canonical direct edge manifest
 
@@ -112,6 +113,9 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Notifications` -> `LgymApi.Resources`
 - `LgymApi.Payments` -> `LgymApi.Domain`
 - `LgymApi.Payments` -> `LgymApi.Identity`
+- `LgymApi.Payments.UnitTests` -> `LgymApi.Domain`
+- `LgymApi.Payments.UnitTests` -> `LgymApi.Infrastructure`
+- `LgymApi.Payments.UnitTests` -> `LgymApi.Payments`
 - `LgymApi.Reporting` -> `LgymApi.Domain`
 - `LgymApi.Reporting` -> `LgymApi.Identity`
 - `LgymApi.Reporting` -> `LgymApi.Platform`
@@ -232,6 +236,9 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Notifications -> LgymApi.Resources` | `LgymApi.Notifications/CoachingNotificationIntentService.cs:52` |
 | `LgymApi.Payments -> LgymApi.Domain` | `LgymApi.Payments/Contracts/PaymentAccountReference.cs:1` |
 | `LgymApi.Payments -> LgymApi.Identity` | `LgymApi.Payments/Contracts/PaymentAccountReference.cs:2` |
+| `LgymApi.Payments.UnitTests -> LgymApi.Domain` | `LgymApi.Payments.UnitTests/PaymentsPersistenceLifecycleTests.cs:2` |
+| `LgymApi.Payments.UnitTests -> LgymApi.Infrastructure` | `LgymApi.Payments.UnitTests/PaymentsPersistenceLifecycleTests.cs:16` |
+| `LgymApi.Payments.UnitTests -> LgymApi.Payments` | `LgymApi.Payments.UnitTests/PaymentsStripeBoundaryTests.cs:7` |
 | `LgymApi.Reporting -> LgymApi.Domain` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:4` |
 | `LgymApi.Reporting -> LgymApi.Identity` | `LgymApi.Reporting/Features/Reporting/IRecurringReportAssignmentService.cs:6` |
 | `LgymApi.Reporting -> LgymApi.Platform` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:13` |
@@ -263,7 +270,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.UnitTests -> LgymApi.Identity` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:16` |
 | `LgymApi.UnitTests -> LgymApi.Infrastructure` | `LgymApi.UnitTests/ActorRowSecurityScopeTests.cs:7` |
 | `LgymApi.UnitTests -> LgymApi.Notifications` | `LgymApi.UnitTests/ApplicationPushContractCompatibilityTests.cs:7` |
-| `LgymApi.UnitTests -> LgymApi.Payments` | `LgymApi.UnitTests/PaymentsStripeBoundaryTests.cs:7` |
+| `LgymApi.UnitTests -> LgymApi.Payments` | `LgymApi.UnitTests/PaymentsCompositionTests.cs:3` |
 | `LgymApi.UnitTests -> LgymApi.Platform` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:4` |
 | `LgymApi.UnitTests -> LgymApi.Resources` | `LgymApi.UnitTests/CoachingNotificationIntentInAppTests.cs:99` |
 | `LgymApi.UnitTests -> LgymApi.Reporting` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:14` |
@@ -272,9 +279,9 @@ Each row is one representative source location whose symbol resolves to the targ
 
 ## Locked topology
 
-Current derived snapshot: 21 approved projects, 113 approved direct `ProjectReference` edges, and 307 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 112 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
+Current derived snapshot: 22 approved projects, 116 approved direct `ProjectReference` edges, and 346 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 115 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
 
-Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Identity` -> `LgymApi.Notifications` -> `LgymApi.Payments` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
+Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Identity` -> `LgymApi.Notifications` -> `LgymApi.Payments` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Payments.UnitTests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
 
 This topology retains one `AppDbContext`, migration root, snapshot, database, schema, and migration stream. Worker selects environment-specific scheduling and delegates hosted Hangfire server registration to the Infrastructure-owned persistence helper.
 

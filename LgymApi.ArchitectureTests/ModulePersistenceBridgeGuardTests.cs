@@ -107,7 +107,7 @@ public sealed class ModulePersistenceBridgeGuardTests
         {
             var assemblyInfo = Path.Combine(repoRoot, modulePath, "Properties", "AssemblyInfo.cs");
             var expectedFriends = modulePath == "LgymApi.Payments"
-                ? ApprovedFriends.Concat(["DynamicProxyGenAssembly2"]).ToArray()
+                ? ApprovedFriends.Concat(["LgymApi.Payments.UnitTests", "DynamicProxyGenAssembly2"]).ToArray()
                 : ApprovedFriends;
             Assert.That(ReadFriends(File.ReadAllText(assemblyInfo)), Is.EqualTo(expectedFriends), modulePath);
         }

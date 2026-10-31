@@ -76,7 +76,7 @@ Infrastructure supplies technical composition and stage-only adapters. It doesn'
 | module-guide.policy.ef-migrations | AppDbContext=1; PostgreSQL database=1; migration stream=1; physical split=None | Shared persistence topology |
 | module-guide.policy.di | owner-facade=true; service-locator=false | Module facade registration |
 | module-guide.policy.api-compatibility | endpoint-specific=true | Existing endpoint contracts |
-| module-guide.policy.api-adapters | application=25; notifications=3; migration-clr-identities=removed | Owner API adapter facades |
+| module-guide.policy.api-adapters | application=19; reporting=7; notifications=3; migration-clr-identities=removed | Owner API adapter facades |
 | module-guide.policy.localization | resources=en,pl | Resource-backed user text |
 | module-guide.policy.tactical-ddd | invariants=required | Aggregate policy where justified |
 | module-guide.policy.architecture-tests | focused-guards=true | Relevant Roslyn guards |
@@ -97,7 +97,7 @@ Register extracted workflows through their owner facade. Register remaining Appl
 
 ### API, Localization, And DDD
 
-Compatibility is endpoint-specific. Preserve the existing route, verb, alias, status, DTO, JSON property names, and legacy fields where that endpoint has them. `ContractCompatibilityTests.Register_ReturnsLegacyMsgField`, `Login_ReturnsLegacyReqField`, and `Gym_GetGyms_ReturnsListWithLegacyIdFields` show distinct legacy shapes. The Reporting guard retains `_id` and `msg`, and has no `req` field. API IDs remain strings, cancellation flows through the call chain, and registered mapping profiles handle cross-layer transformation. The final owner handoff has 25 Application and three Notifications API adapters. Do not reintroduce `Task7`, `ApiCompatibility`, or `Compatibility.Task7` CLR adapter identities to preserve an external contract.
+Compatibility is endpoint-specific. Preserve the existing route, verb, alias, status, DTO, JSON property names, and legacy fields where that endpoint has them. `ContractCompatibilityTests.Register_ReturnsLegacyMsgField`, `Login_ReturnsLegacyReqField`, and `Gym_GetGyms_ReturnsListWithLegacyIdFields` show distinct legacy shapes. The Reporting guard retains `_id` and `msg`, and has no `req` field. API IDs remain strings, cancellation flows through the call chain, and registered mapping profiles handle cross-layer transformation. The final owner handoff has 19 Application, seven Reporting, and three Notifications API adapters. Do not reintroduce `Task7`, `ApiCompatibility`, or `Compatibility.Task7` CLR adapter identities to preserve an external contract.
 
 Add new user-facing text to English and Polish resources. Don't hardcode messages. Use tactical DDD only when it protects a real invariant. Don't move business policy into controllers, repositories, or generic technical roots.
 

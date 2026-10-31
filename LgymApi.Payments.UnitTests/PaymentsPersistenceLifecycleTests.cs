@@ -4,7 +4,7 @@ using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace LgymApi.UnitTests;
+namespace LgymApi.Payments.UnitTests;
 
 [TestFixture]
 public sealed class PaymentsPersistenceLifecycleTests

@@ -54,7 +54,7 @@ public sealed class ModuleContributionDocumentationTests
         new("module-guide.policy.ef-migrations", "AppDbContext=1; PostgreSQL database=1; migration stream=1; physical split=None"),
         new("module-guide.policy.di", "owner-facade=true; service-locator=false"),
         new("module-guide.policy.api-compatibility", "endpoint-specific=true"),
-        new("module-guide.policy.api-adapters", "application=25; notifications=3; migration-clr-identities=removed"),
+        new("module-guide.policy.api-adapters", "application=19; reporting=7; notifications=3; migration-clr-identities=removed"),
         new("module-guide.policy.localization", "resources=en,pl"),
         new("module-guide.policy.tactical-ddd", "invariants=required"),
         new("module-guide.policy.architecture-tests", "focused-guards=true"),
