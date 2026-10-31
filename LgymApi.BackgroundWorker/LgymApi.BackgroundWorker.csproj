@@ -17,5 +17,6 @@
     <ProjectReference Include="..\LgymApi.Infrastructure\LgymApi.Infrastructure.csproj" />
     <ProjectReference Include="..\LgymApi.Notifications\LgymApi.Notifications.csproj" />
     <ProjectReference Include="..\LgymApi.Platform\LgymApi.Platform.csproj" />
+    <ProjectReference Include="..\LgymApi.Reporting\LgymApi.Reporting.csproj" />
   </ItemGroup>
 </Project>
