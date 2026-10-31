@@ -110,6 +110,11 @@ public sealed class ModuleBoundaryArchitectureTestHelpersTests
         },
         new object[]
         {
+            Path.Combine("LgymApi.Reporting.UnitTests", "Reporting", "ReportingServiceTests.cs"),
+            ModuleBoundaryExclusionKind.TestProject
+        },
+        new object[]
+        {
             Path.Combine("LgymApi.Infrastructure", "Users", "Migrations", "202607140001_Init.cs"),
             ModuleBoundaryExclusionKind.GeneratedCode
         }

@@ -21,8 +21,8 @@ public sealed class SingleProductionDbContextGuardTests
         ["LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj"] = "b0f1e355b313382f9a46f9e698eeb22204a702e7d01db5668fc5f0c2b9941517",
         ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj"] = "9e37345ff9459e13b1cec859b2b394cee1961bfea379c0936b8861b1a23efe10",
         ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "082c91ec55218916e80b8cb0394b1bc92306d54ee1157b9224b8637e74467207",
-        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "6bb868e3c3e8b27cd498b6d90228ccd6cf5a6d28e1bac992ec33605e5e75e1df",
-        ["LgymApi.sln"] = "deb6f355573abe841a0c740d7ec8a583ebfec40124cd1a5bd1f044db271a566f",
+        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "200549f3f97f6672b7751fdb894de3c69c44bd55a90397b015f01beb9217b47c",
+        ["LgymApi.sln"] = "0da483decd3261f4a3ff0c0e23f2e7064286c1d8af1a8ef254c471ccd3aaffa8",
         ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "4453c4766317025d9eefd24a05e6ff9841e7c0fcaf71c2d62c9a5622dad66339"
     };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

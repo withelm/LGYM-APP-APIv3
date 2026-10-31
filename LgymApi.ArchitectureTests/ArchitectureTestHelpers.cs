@@ -87,6 +87,7 @@ public static class ArchitectureTestHelpers
     private static readonly string[] TestProjectPathMarkers =
     {
         "/LgymApi.UnitTests/",
+        "/LgymApi.Reporting.UnitTests/",
         "/LgymApi.IntegrationTests/",
         "/LgymApi.ArchitectureTests/",
         "/LgymApi.DataSeeder.Tests/",
