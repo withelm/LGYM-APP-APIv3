@@ -27,6 +27,7 @@ using LgymApi.Application.Pagination;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Reporting.Persistence;
+using LgymApi.Application.Reporting;
 using LgymApi.Application.Services;
 using LgymApi.Application.TrainingPlanning.ApiAdapters;
 using LgymApi.Application.WorkoutProgress.Adapters;
@@ -395,12 +396,14 @@ public sealed class CompositionRootConvergenceTests
         services.AddIdentityModule();
         services.AddTrainingPlanningModule();
         services.AddNotificationsModule(configuration);
+        services.AddReportingModule();
         services.AddApplication();
         services.AddInfrastructure(
             configuration,
             enableSensitiveLogging: false,
             isTesting,
             hostBackgroundServer: true);
+        services.AddReportingApiAdapters();
         services.AddApplicationApiAdapters();
         services.AddNotificationsApiAdapters();
         services.AddSignalR();

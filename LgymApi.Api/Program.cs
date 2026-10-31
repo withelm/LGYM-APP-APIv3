@@ -5,6 +5,7 @@ using LgymApi.BackgroundWorker;
 using LgymApi.Application;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Application.Reporting;
 using LgymApi.Identity;
 using LgymApi.Application.Notifications;
 using LgymApi.Payments;
@@ -81,12 +82,14 @@ builder.Services
     .AddTrainingPlanningModule()
     .AddNotificationsModule(builder.Configuration)
     .AddPaymentsModule(builder.Configuration, builder.Environment)
+    .AddReportingModule()
     .AddApplication()
     .AddInfrastructure(
         builder.Configuration,
         builder.Environment.IsDevelopment(),
         isTesting,
         hostBackgroundServer: false)
+    .AddReportingApiAdapters()
     .AddApplicationApiAdapters();
 builder.Services.AddNotificationsApiAdapters();
 

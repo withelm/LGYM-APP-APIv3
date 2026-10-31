@@ -1,6 +1,6 @@
 using FluentValidation;
 using LgymApi.Api.Features.Measurements.Contracts;
-using LgymApi.Application.Features.Measurements;
+using LgymApi.Domain.Measurements;
 using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 

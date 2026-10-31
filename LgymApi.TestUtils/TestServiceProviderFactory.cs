@@ -32,8 +32,10 @@ public static class TestServiceProviderFactory
         composition.AddTrainingPlanningModule(services);
         composition.AddNotificationsModule(services);
         composition.AddPaymentsModule(services);
+        composition.AddReportingModule(services);
         composition.AddApplication(services);
         composition.AddInfrastructure(services);
+        composition.AddReportingApiAdapters(services);
         composition.AddApplicationApiAdapters(services);
         composition.AddNotificationsApiAdapters(services);
         composition.AddWorker?.Invoke(services);
@@ -60,8 +62,10 @@ public sealed record TestHostServiceComposition(
     Action<IServiceCollection> AddTrainingPlanningModule,
     Action<IServiceCollection> AddNotificationsModule,
     Action<IServiceCollection> AddPaymentsModule,
+    Action<IServiceCollection> AddReportingModule,
     Action<IServiceCollection> AddApplication,
     Action<IServiceCollection> AddInfrastructure,
+    Action<IServiceCollection> AddReportingApiAdapters,
     Action<IServiceCollection> AddApplicationApiAdapters,
     Action<IServiceCollection> AddNotificationsApiAdapters,
     Action<IServiceCollection>? AddWorker);

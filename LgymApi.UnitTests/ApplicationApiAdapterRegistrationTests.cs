@@ -12,6 +12,7 @@ using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.Application.Nutrition.ApiAdapters;
 using LgymApi.Application.Platform.ReferenceData.ApiAdapters;
 using LgymApi.Application.Reporting.ApiAdapters;
+using LgymApi.Application.Reporting;
 using LgymApi.Application.TrainingPlanning.ApiAdapters;
 using LgymApi.Application.WorkoutProgress.ApiAdapters;
 using LgymApi.Notifications;
@@ -53,7 +54,12 @@ public sealed class ApplicationApiAdapterRegistrationTests
             [typeof(ITrainerDashboardProgressApiPort)] = typeof(TrainerDashboardProgressApiAdapter),
             [typeof(ITrainerTraineeNotesApiPort)] = typeof(TrainerTraineeNotesApiAdapter),
             [typeof(ITraineeNotesApiPort)] = typeof(TraineeNotesApiAdapter),
-            [typeof(ITraineeRelationshipApiPort)] = typeof(TraineeRelationshipApiAdapter),
+            [typeof(ITraineeRelationshipApiPort)] = typeof(TraineeRelationshipApiAdapter)
+        };
+
+    private static readonly IReadOnlyDictionary<Type, Type> ExpectedReportingRegistrations =
+        new Dictionary<Type, Type>
+        {
             [typeof(ITrainerReportTemplateApiPort)] = typeof(TrainerReportTemplateApiAdapter),
             [typeof(ITrainerPhotoTypeApiPort)] = typeof(TrainerPhotoTypeApiAdapter),
             [typeof(ITrainerReportRequestApiPort)] = typeof(TrainerReportRequestApiAdapter),
@@ -72,7 +78,7 @@ public sealed class ApplicationApiAdapterRegistrationTests
         };
 
     private static readonly IReadOnlyDictionary<Type, Type> ExpectedRegistrations =
-        ExpectedApplicationRegistrations.Concat(ExpectedNotificationsApiRegistrations)
+        ExpectedApplicationRegistrations.Concat(ExpectedReportingRegistrations).Concat(ExpectedNotificationsApiRegistrations)
             .ToDictionary(pair => pair.Key, pair => pair.Value);
 
     [SetUp]
@@ -88,9 +94,10 @@ public sealed class ApplicationApiAdapterRegistrationTests
     }
 
     [Test]
-    public void ApiAdapterFacades_RegisterTheExact26Plus3ManifestExactlyOnceAsScoped()
+    public void ApiAdapterFacades_RegisterTheExact19Plus7Plus3ManifestExactlyOnceAsScoped()
     {
         var services = new ServiceCollection();
+        services.AddReportingApiAdapters();
         services.AddApplicationApiAdapters();
         services.AddNotificationsApiAdapters();
 
@@ -98,7 +105,8 @@ public sealed class ApplicationApiAdapterRegistrationTests
 
         var discoveredContracts = new[]
             {
-                typeof(ServiceCollectionExtensions).Assembly,
+                typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly,
+                typeof(LgymApi.Application.Reporting.ServiceCollectionExtensions).Assembly,
                 typeof(NotificationReference).Assembly
             }
             .SelectMany(assembly => assembly.GetTypes())
@@ -107,7 +115,8 @@ public sealed class ApplicationApiAdapterRegistrationTests
             .ToArray();
 
         discoveredContracts.Should().Equal(ExpectedRegistrations.Keys.OrderBy(type => type.FullName, StringComparer.Ordinal));
-        ExpectedApplicationRegistrations.Should().HaveCount(26);
+        ExpectedApplicationRegistrations.Should().HaveCount(19);
+        ExpectedReportingRegistrations.Should().HaveCount(7);
         ExpectedNotificationsApiRegistrations.Should().HaveCount(3);
         ExpectedRegistrations.Should().HaveCount(29);
     }
@@ -152,6 +161,7 @@ public sealed class ApplicationApiAdapterRegistrationTests
     public void HostCompositionLedgerFixture_Rejects_An_Omitted_Owner_Api_Adapter_Registration()
     {
         var services = new ServiceCollection();
+        services.AddReportingApiAdapters();
         services.AddApplicationApiAdapters();
         services.AddNotificationsApiAdapters();
         var descriptor = services.Single(candidate => candidate.ServiceType == typeof(ITrainerInvitationApiPort));

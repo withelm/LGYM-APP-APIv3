@@ -101,26 +101,25 @@ public sealed partial class RecurringReportAssignmentService
                         phase = rollback.Failure == null
                             ? TransactionPhase.RolledBack
                             : TransactionPhase.RollbackFailed;
-                        goto ProcessingDecisionComplete;
                     }
-
-                    var staged = stagedResult.Value;
-                    if (staged.EnvelopeId == null)
+                    else
                     {
-                        preCommitReason = ProcessingReason.EnvelopeMissing;
-                        throw new InvalidOperationException("The recurring report notification envelope was not staged.");
-                    }
+                        var staged = stagedResult.Value;
+                        if (staged.EnvelopeId == null)
+                        {
+                            preCommitReason = ProcessingReason.EnvelopeMissing;
+                            throw new InvalidOperationException("The recurring report notification envelope was not staged.");
+                        }
 
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    phase = TransactionPhase.CommitStarted;
-                    await transaction.CommitAsync(cancellationToken);
-                    phase = TransactionPhase.Committed;
-            result = CreateProcessingResult(assignmentId, staged.RequestId, staged.EnvelopeId);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        phase = TransactionPhase.CommitStarted;
+                        await transaction.CommitAsync(cancellationToken);
+                        phase = TransactionPhase.Committed;
+                        result = CreateProcessingResult(assignmentId, staged.RequestId, staged.EnvelopeId);
+                    }
                 }
             }
-
-        ProcessingDecisionComplete:;
         }
         catch (OperationCanceledException exception)
             when (phase == TransactionPhase.PreCommit && cancellationToken.IsCancellationRequested)

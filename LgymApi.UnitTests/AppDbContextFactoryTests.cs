@@ -81,7 +81,7 @@ public sealed class AppDbContextFactoryTests
         var migrationsAssembly = context.GetService<IMigrationsAssembly>();
 
         context.Database.ProviderName.Should().Be("Npgsql.EntityFrameworkCore.PostgreSQL");
-        context.Model.GetEntityTypes().Should().HaveCount(51);
+        context.Model.GetEntityTypes().Should().HaveCount(53);
         context.Database.HasPendingModelChanges().Should().BeFalse();
         migrationsAssembly.Assembly.Should().BeSameAs(typeof(AppDbContext).Assembly);
         migrationsAssembly.ModelSnapshot.Should().NotBeNull();

@@ -3,6 +3,7 @@ using LgymApi.Api.Hubs;
 using LgymApi.Application;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Reporting;
 using LgymApi.BackgroundWorker;
 using LgymApi.Identity;
 using LgymApi.Infrastructure;
@@ -24,8 +25,10 @@ public enum CompositionFacade
     TrainingPlanning,
     Notifications,
     Payments,
+    Reporting,
     Application,
     Infrastructure,
+    ReportingApiAdapters,
     ApplicationApiAdapters,
     NotificationsApiAdapters,
     Worker
@@ -56,6 +59,7 @@ internal static class CompositionRootTestHost
                 CompositionFacade.Payments,
                 omittedFacade,
                 () => services.AddPaymentsModule(configuration, new TestHostEnvironment())),
+            AddReportingModule: services => AddUnlessOmitted(CompositionFacade.Reporting, omittedFacade, services.AddReportingModule),
             AddApplication: services => AddUnlessOmitted(CompositionFacade.Application, omittedFacade, services.AddApplication),
             AddInfrastructure: services => AddUnlessOmitted(
                 CompositionFacade.Infrastructure,
@@ -65,6 +69,10 @@ internal static class CompositionRootTestHost
                     enableSensitiveLogging: false,
                     isTesting,
                     hostBackgroundServer: true)),
+            AddReportingApiAdapters: services => AddUnlessOmitted(
+                CompositionFacade.ReportingApiAdapters,
+                omittedFacade,
+                services.AddReportingApiAdapters),
             AddApplicationApiAdapters: services => AddUnlessOmitted(
                 CompositionFacade.ApplicationApiAdapters,
                 omittedFacade,
@@ -111,6 +119,7 @@ internal static class CompositionRootTestHost
             CompositionFacade.Payments,
             omittedFacade,
             () => services.AddPaymentsModule(configuration, new TestHostEnvironment()));
+        AddUnlessOmitted(CompositionFacade.Reporting, omittedFacade, services.AddReportingModule);
         AddUnlessOmitted(CompositionFacade.Application, omittedFacade, services.AddApplication);
 
         if (registerWorkerBeforeInfrastructure)
@@ -129,6 +138,10 @@ internal static class CompositionRootTestHost
                 enableSensitiveLogging: false,
                 isTesting: true,
                 hostBackgroundServer: true));
+        AddUnlessOmitted(
+            CompositionFacade.ReportingApiAdapters,
+            omittedFacade,
+            services.AddReportingApiAdapters);
         AddUnlessOmitted(
             CompositionFacade.ApplicationApiAdapters,
             omittedFacade,

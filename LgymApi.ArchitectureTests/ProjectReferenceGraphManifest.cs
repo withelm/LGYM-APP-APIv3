@@ -2,152 +2,83 @@ namespace LgymApi.ArchitectureTests;
 
 internal static class ProjectReferenceGraphManifest
 {
-    public static readonly string[] ProjectNames =
+    public static readonly ApprovedProject[] Projects =
     [
-        "LgymApi.Api",
-        "LgymApi.Application",
-        "LgymApi.ArchitectureTests",
-        "LgymApi.BackgroundWorker",
-        "LgymApi.BackgroundWorker.Common",
-        "LgymApi.DataSeeder",
-        "LgymApi.DataSeeder.Tests",
-        "LgymApi.Domain",
-        "LgymApi.Identity",
-        "LgymApi.Infrastructure",
-        "LgymApi.IntegrationTests",
-        "LgymApi.Notifications",
-        "LgymApi.Payments",
-        "LgymApi.Platform",
-        "LgymApi.Resources",
-        "LgymApi.Resources.Generator",
-        "LgymApi.TestUtils",
-        "LgymApi.TrainingPlanning",
-        "LgymApi.UnitTests"
+        new("LgymApi.Api", ProjectKind.Host,
+        [
+            "LgymApi.Application", "LgymApi.BackgroundWorker", "LgymApi.Domain", "LgymApi.Identity",
+            "LgymApi.Infrastructure", "LgymApi.Notifications", "LgymApi.Payments", "LgymApi.Platform",
+            "LgymApi.Reporting", "LgymApi.Resources", "LgymApi.TrainingPlanning"
+        ]),
+        new("LgymApi.Application", ProjectKind.Production,
+        ["LgymApi.Domain", "LgymApi.Identity", "LgymApi.Platform", "LgymApi.Resources", "LgymApi.TrainingPlanning"]),
+        new("LgymApi.ArchitectureTests", ProjectKind.Test,
+        [
+            "LgymApi.Api", "LgymApi.Application", "LgymApi.BackgroundWorker.Common", "LgymApi.Domain",
+            "LgymApi.Identity", "LgymApi.Infrastructure", "LgymApi.Notifications", "LgymApi.Payments",
+            "LgymApi.Platform", "LgymApi.Reporting", "LgymApi.Resources", "LgymApi.TrainingPlanning"
+        ]),
+        new("LgymApi.BackgroundWorker", ProjectKind.Host,
+        [
+            "LgymApi.Application", "LgymApi.BackgroundWorker.Common", "LgymApi.Identity", "LgymApi.Infrastructure",
+            "LgymApi.Notifications", "LgymApi.Platform", "LgymApi.Reporting"
+        ]),
+        new("LgymApi.BackgroundWorker.Common", ProjectKind.Production, ["LgymApi.Domain"]),
+        new("LgymApi.DataSeeder", ProjectKind.Tooling, ["LgymApi.Domain", "LgymApi.Identity", "LgymApi.Infrastructure"]),
+        new("LgymApi.DataSeeder.Tests", ProjectKind.Test,
+        ["LgymApi.DataSeeder", "LgymApi.Domain", "LgymApi.Identity", "LgymApi.Infrastructure"]),
+        new("LgymApi.Domain", ProjectKind.Production, []),
+        new("LgymApi.Identity", ProjectKind.Production, ["LgymApi.Domain", "LgymApi.Platform", "LgymApi.Resources"]),
+        new("LgymApi.Infrastructure", ProjectKind.Production,
+        [
+            "LgymApi.Application", "LgymApi.BackgroundWorker.Common", "LgymApi.Domain", "LgymApi.Identity",
+            "LgymApi.Notifications", "LgymApi.Payments", "LgymApi.Platform", "LgymApi.Reporting",
+            "LgymApi.TrainingPlanning"
+        ]),
+        new("LgymApi.IntegrationTests", ProjectKind.Test,
+        [
+            "LgymApi.Api", "LgymApi.Application", "LgymApi.BackgroundWorker", "LgymApi.BackgroundWorker.Common",
+            "LgymApi.Domain", "LgymApi.Identity", "LgymApi.Infrastructure", "LgymApi.Notifications",
+            "LgymApi.Payments", "LgymApi.Platform", "LgymApi.Reporting", "LgymApi.Resources", "LgymApi.TestUtils",
+            "LgymApi.TrainingPlanning"
+        ]),
+        new("LgymApi.Notifications", ProjectKind.Production,
+        ["LgymApi.BackgroundWorker.Common", "LgymApi.Domain", "LgymApi.Identity", "LgymApi.Platform", "LgymApi.Resources"]),
+        new("LgymApi.Payments", ProjectKind.Production, ["LgymApi.Domain", "LgymApi.Identity"]),
+        new("LgymApi.Platform", ProjectKind.Production, ["LgymApi.Domain", "LgymApi.Resources"]),
+        new("LgymApi.Reporting", ProjectKind.Production,
+        ["LgymApi.Domain", "LgymApi.Identity", "LgymApi.Platform", "LgymApi.Resources"]),
+        new("LgymApi.Reporting.UnitTests", ProjectKind.Test,
+        ["LgymApi.Domain", "LgymApi.Identity", "LgymApi.Infrastructure", "LgymApi.Platform", "LgymApi.Reporting", "LgymApi.Resources"]),
+        new("LgymApi.Resources", ProjectKind.Production, ["LgymApi.Resources.Generator"]),
+        new("LgymApi.Resources.Generator", ProjectKind.Tooling, []),
+        new("LgymApi.TestUtils", ProjectKind.Test,
+        ["LgymApi.Application", "LgymApi.BackgroundWorker", "LgymApi.BackgroundWorker.Common", "LgymApi.Domain", "LgymApi.Identity", "LgymApi.Infrastructure"]),
+        new("LgymApi.TrainingPlanning", ProjectKind.Production,
+        ["LgymApi.Domain", "LgymApi.Identity", "LgymApi.Platform", "LgymApi.Resources"]),
+        new("LgymApi.UnitTests", ProjectKind.Test,
+        [
+            "LgymApi.Api", "LgymApi.Application", "LgymApi.BackgroundWorker", "LgymApi.BackgroundWorker.Common",
+            "LgymApi.Domain", "LgymApi.Identity", "LgymApi.Infrastructure", "LgymApi.Notifications",
+            "LgymApi.Payments", "LgymApi.Platform", "LgymApi.Reporting", "LgymApi.Resources", "LgymApi.TestUtils",
+            "LgymApi.TrainingPlanning"
+        ])
     ];
 
-    public static readonly string[] EdgeIdentities =
-    [
-        "LgymApi.Api -> LgymApi.Application",
-        "LgymApi.Api -> LgymApi.BackgroundWorker",
-        "LgymApi.Api -> LgymApi.Domain",
-        "LgymApi.Api -> LgymApi.Identity",
-        "LgymApi.Api -> LgymApi.Infrastructure",
-        "LgymApi.Api -> LgymApi.Notifications",
-        "LgymApi.Api -> LgymApi.Payments",
-        "LgymApi.Api -> LgymApi.Platform",
-        "LgymApi.Api -> LgymApi.Resources",
-        "LgymApi.Api -> LgymApi.TrainingPlanning",
-        "LgymApi.Application -> LgymApi.Domain",
-        "LgymApi.Application -> LgymApi.Identity",
-        "LgymApi.Application -> LgymApi.Platform",
-        "LgymApi.Application -> LgymApi.Resources",
-        "LgymApi.Application -> LgymApi.TrainingPlanning",
-        "LgymApi.ArchitectureTests -> LgymApi.Api",
-        "LgymApi.ArchitectureTests -> LgymApi.Application",
-        "LgymApi.ArchitectureTests -> LgymApi.BackgroundWorker.Common",
-        "LgymApi.ArchitectureTests -> LgymApi.Domain",
-        "LgymApi.ArchitectureTests -> LgymApi.Identity",
-        "LgymApi.ArchitectureTests -> LgymApi.Infrastructure",
-        "LgymApi.ArchitectureTests -> LgymApi.Notifications",
-        "LgymApi.ArchitectureTests -> LgymApi.Payments",
-        "LgymApi.ArchitectureTests -> LgymApi.Platform",
-        "LgymApi.ArchitectureTests -> LgymApi.Resources",
-        "LgymApi.ArchitectureTests -> LgymApi.TrainingPlanning",
-        "LgymApi.BackgroundWorker -> LgymApi.Application",
-        "LgymApi.BackgroundWorker -> LgymApi.BackgroundWorker.Common",
-        "LgymApi.BackgroundWorker -> LgymApi.Identity",
-        "LgymApi.BackgroundWorker -> LgymApi.Infrastructure",
-        "LgymApi.BackgroundWorker -> LgymApi.Notifications",
-        "LgymApi.BackgroundWorker -> LgymApi.Platform",
-        "LgymApi.BackgroundWorker.Common -> LgymApi.Domain",
-        "LgymApi.DataSeeder -> LgymApi.Domain",
-        "LgymApi.DataSeeder -> LgymApi.Identity",
-        "LgymApi.DataSeeder -> LgymApi.Infrastructure",
-        "LgymApi.DataSeeder.Tests -> LgymApi.DataSeeder",
-        "LgymApi.DataSeeder.Tests -> LgymApi.Domain",
-        "LgymApi.DataSeeder.Tests -> LgymApi.Identity",
-        "LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure",
-        "LgymApi.Identity -> LgymApi.Domain",
-        "LgymApi.Identity -> LgymApi.Platform",
-        "LgymApi.Identity -> LgymApi.Resources",
-        "LgymApi.Infrastructure -> LgymApi.Application",
-        "LgymApi.Infrastructure -> LgymApi.BackgroundWorker.Common",
-        "LgymApi.Infrastructure -> LgymApi.Domain",
-        "LgymApi.Infrastructure -> LgymApi.Identity",
-        "LgymApi.Infrastructure -> LgymApi.Notifications",
-        "LgymApi.Infrastructure -> LgymApi.Payments",
-        "LgymApi.Infrastructure -> LgymApi.Platform",
-        "LgymApi.Infrastructure -> LgymApi.TrainingPlanning",
-        "LgymApi.IntegrationTests -> LgymApi.Api",
-        "LgymApi.IntegrationTests -> LgymApi.Application",
-        "LgymApi.IntegrationTests -> LgymApi.BackgroundWorker",
-        "LgymApi.IntegrationTests -> LgymApi.BackgroundWorker.Common",
-        "LgymApi.IntegrationTests -> LgymApi.Domain",
-        "LgymApi.IntegrationTests -> LgymApi.Identity",
-        "LgymApi.IntegrationTests -> LgymApi.Infrastructure",
-        "LgymApi.IntegrationTests -> LgymApi.Notifications",
-        "LgymApi.IntegrationTests -> LgymApi.Payments",
-        "LgymApi.IntegrationTests -> LgymApi.Platform",
-        "LgymApi.IntegrationTests -> LgymApi.Resources",
-        "LgymApi.IntegrationTests -> LgymApi.TestUtils",
-        "LgymApi.IntegrationTests -> LgymApi.TrainingPlanning",
-        "LgymApi.Notifications -> LgymApi.BackgroundWorker.Common",
-        "LgymApi.Notifications -> LgymApi.Domain",
-        "LgymApi.Notifications -> LgymApi.Identity",
-        "LgymApi.Notifications -> LgymApi.Platform",
-        "LgymApi.Notifications -> LgymApi.Resources",
-        "LgymApi.Payments -> LgymApi.Domain",
-        "LgymApi.Payments -> LgymApi.Identity",
-        "LgymApi.Platform -> LgymApi.Domain",
-        "LgymApi.Platform -> LgymApi.Resources",
-        "LgymApi.Resources -> LgymApi.Resources.Generator",
-        "LgymApi.TestUtils -> LgymApi.Application",
-        "LgymApi.TestUtils -> LgymApi.BackgroundWorker",
-        "LgymApi.TestUtils -> LgymApi.BackgroundWorker.Common",
-        "LgymApi.TestUtils -> LgymApi.Domain",
-        "LgymApi.TestUtils -> LgymApi.Identity",
-        "LgymApi.TestUtils -> LgymApi.Infrastructure",
-        "LgymApi.TrainingPlanning -> LgymApi.Domain",
-        "LgymApi.TrainingPlanning -> LgymApi.Identity",
-        "LgymApi.TrainingPlanning -> LgymApi.Platform",
-        "LgymApi.TrainingPlanning -> LgymApi.Resources",
-        "LgymApi.UnitTests -> LgymApi.Api",
-        "LgymApi.UnitTests -> LgymApi.Application",
-        "LgymApi.UnitTests -> LgymApi.BackgroundWorker",
-        "LgymApi.UnitTests -> LgymApi.BackgroundWorker.Common",
-        "LgymApi.UnitTests -> LgymApi.Domain",
-        "LgymApi.UnitTests -> LgymApi.Identity",
-        "LgymApi.UnitTests -> LgymApi.Infrastructure",
-        "LgymApi.UnitTests -> LgymApi.Notifications",
-        "LgymApi.UnitTests -> LgymApi.Payments",
-        "LgymApi.UnitTests -> LgymApi.Platform",
-        "LgymApi.UnitTests -> LgymApi.Resources",
-        "LgymApi.UnitTests -> LgymApi.TestUtils",
-        "LgymApi.UnitTests -> LgymApi.TrainingPlanning"
-    ];
+    public static readonly IReadOnlyList<string> ProjectNames = Projects.Select(project => project.Name).ToArray();
 
-    public static readonly string[] TopologicalOrder =
-    [
-        "LgymApi.Domain",
-        "LgymApi.BackgroundWorker.Common",
-        "LgymApi.Resources.Generator",
-        "LgymApi.Resources",
-        "LgymApi.Platform",
-        "LgymApi.Identity",
-        "LgymApi.Notifications",
-        "LgymApi.Payments",
-        "LgymApi.TrainingPlanning",
-        "LgymApi.Application",
-        "LgymApi.Infrastructure",
-        "LgymApi.BackgroundWorker",
-        "LgymApi.Api",
-        "LgymApi.ArchitectureTests",
-        "LgymApi.DataSeeder",
-        "LgymApi.DataSeeder.Tests",
-        "LgymApi.TestUtils",
-        "LgymApi.IntegrationTests",
-        "LgymApi.UnitTests"
-    ];
+    public static readonly IReadOnlyList<string> EdgeIdentities = Projects
+        .SelectMany(project => project.ApprovedDirectTargets.Select(target => $"{project.Name} -> {target}"))
+        .ToArray();
+
+    public static readonly IReadOnlySet<string> AnalyzerEdgeIdentities = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "LgymApi.Resources -> LgymApi.Resources.Generator"
+    };
+
+    public static readonly IReadOnlySet<string> SemanticEdgeIdentities = EdgeIdentities
+        .Except(AnalyzerEdgeIdentities, StringComparer.Ordinal)
+        .ToHashSet(StringComparer.Ordinal);
 
     public static readonly IReadOnlySet<string> ForbiddenEdgeIdentities = ProjectNames
         .SelectMany(source => ProjectNames
@@ -155,4 +86,91 @@ internal static class ProjectReferenceGraphManifest
             .Select(target => $"{source} -> {target}"))
         .Except(EdgeIdentities, StringComparer.Ordinal)
         .ToHashSet(StringComparer.Ordinal);
+
+    public static readonly IReadOnlyList<string> TopologicalOrder = BuildTopologicalOrder();
+
+    private static IReadOnlyList<string> BuildTopologicalOrder()
+    {
+        var duplicateProjects = Projects
+            .GroupBy(project => project.Name, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToArray();
+        if (duplicateProjects.Length != 0)
+        {
+            throw new InvalidOperationException("Duplicate approved projects: " + string.Join(", ", duplicateProjects));
+        }
+
+        var projectNames = ProjectNames.ToHashSet(StringComparer.Ordinal);
+        foreach (var project in Projects)
+        {
+            var duplicateTargets = project.ApprovedDirectTargets
+                .GroupBy(target => target, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToArray();
+            if (duplicateTargets.Length != 0)
+            {
+                throw new InvalidOperationException($"Duplicate approved direct targets for '{project.Name}': {string.Join(", ", duplicateTargets)}");
+            }
+
+            var unknownTargets = project.ApprovedDirectTargets.Where(target => !projectNames.Contains(target)).ToArray();
+            if (unknownTargets.Length != 0)
+            {
+                throw new InvalidOperationException($"Unknown approved direct targets for '{project.Name}': {string.Join(", ", unknownTargets)}");
+            }
+
+            if (project.ApprovedDirectTargets.Contains(project.Name, StringComparer.Ordinal))
+            {
+                throw new InvalidOperationException($"Project '{project.Name}' cannot approve a reference to itself.");
+            }
+        }
+
+        var unknownAnalyzerEdges = AnalyzerEdgeIdentities.Except(EdgeIdentities, StringComparer.Ordinal).ToArray();
+        if (unknownAnalyzerEdges.Length != 0)
+        {
+            throw new InvalidOperationException("Analyzer edges are not approved direct targets: " + string.Join(", ", unknownAnalyzerEdges));
+        }
+
+        var dependencyCounts = Projects.ToDictionary(project => project.Name, project => project.ApprovedDirectTargets.Count, StringComparer.Ordinal);
+        var dependents = Projects
+            .SelectMany(project => project.ApprovedDirectTargets.Select(target => (Source: project.Name, Target: target)))
+            .GroupBy(edge => edge.Target, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Select(edge => edge.Source).OrderBy(source => source, StringComparer.Ordinal).ToArray(), StringComparer.Ordinal);
+        var ready = new SortedSet<string>(dependencyCounts.Where(pair => pair.Value == 0).Select(pair => pair.Key), StringComparer.Ordinal);
+        var order = new List<string>();
+
+        while (ready.Count != 0)
+        {
+            var project = ready.Min!;
+            ready.Remove(project);
+            order.Add(project);
+
+            foreach (var dependent in dependents.GetValueOrDefault(project, []))
+            {
+                dependencyCounts[dependent]--;
+                if (dependencyCounts[dependent] == 0)
+                {
+                    ready.Add(dependent);
+                }
+            }
+        }
+
+        if (order.Count != Projects.Length)
+        {
+            throw new InvalidOperationException("The approved project-reference manifest contains a cycle.");
+        }
+
+        return order;
+    }
+}
+
+internal sealed record ApprovedProject(string Name, ProjectKind Kind, IReadOnlyList<string> ApprovedDirectTargets);
+
+internal enum ProjectKind
+{
+    Production,
+    Host,
+    Test,
+    Tooling
 }

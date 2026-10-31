@@ -1,5 +1,5 @@
 using System.Text.Json;
-using LgymApi.Application.Features.Measurements;
+using LgymApi.Domain.Measurements;
 using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Enums;

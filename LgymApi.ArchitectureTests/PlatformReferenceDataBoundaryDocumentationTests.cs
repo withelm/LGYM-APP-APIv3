@@ -160,13 +160,19 @@ public sealed class PlatformReferenceDataBoundaryDocumentationTests
         Assert.That(PersistedEntityOwnershipCatalog.Entries, Has.Count.EqualTo(53));
 
         var root = ArchitectureTestHelpers.ResolveRepositoryRoot();
-        var projects = File.ReadLines(Path.Combine(root, "LgymApi.sln"))
-            .Where(line => line.StartsWith("Project(", StringComparison.Ordinal)).ToList();
-        var edges = projects.Select(line => line.Split('"')[5])
-            .Select(path => Path.Combine(root, path))
-            .SelectMany(ArchitectureTestHelpers.ParseProjectReferences).ToList();
-        Assert.That(projects, Has.Count.EqualTo(19));
-        Assert.That(edges, Has.Count.EqualTo(97));
+        var projectPaths = File.ReadLines(Path.Combine(root, "LgymApi.sln"))
+            .Where(line => line.StartsWith("Project(", StringComparison.Ordinal))
+            .Select(line => line.Split('"'))
+            .Where(parts => parts.Length > 5 && parts[5].EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+            .Select(parts => Path.Combine(root, ArchitectureTestHelpers.ToHostPath(parts[5])))
+            .ToArray();
+        var projects = projectPaths.Select(path => Path.GetFileNameWithoutExtension(path)).ToArray();
+        var edges = projectPaths
+            .SelectMany(ArchitectureTestHelpers.ParseProjectReferences)
+            .Select(edge => $"{edge.SourceProject} -> {edge.TargetProject}")
+            .ToArray();
+        Assert.That(projects, Is.EquivalentTo(ProjectReferenceGraphManifest.ProjectNames));
+        Assert.That(edges, Is.EquivalentTo(ProjectReferenceGraphManifest.EdgeIdentities));
         Assert.That(PersistenceIdentityContract.DbContextSourcePath, Is.EqualTo("LgymApi.Infrastructure/Data/AppDbContext.cs"));
         Assert.That(PersistenceIdentityContract.DbSets, Has.Count.EqualTo(53));
     }

@@ -2,6 +2,7 @@ using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.WorkoutProgress.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.Measurements;
 using LgymApi.Resources;
 using MeasurementEntity = LgymApi.Domain.Entities.Measurement;
 

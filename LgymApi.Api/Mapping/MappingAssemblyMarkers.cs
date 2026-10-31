@@ -12,6 +12,7 @@ public static class MappingAssemblyMarkers
     [
         typeof(Program).Assembly,
         typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly,
+        typeof(LgymApi.Application.Reporting.ServiceCollectionExtensions).Assembly,
         typeof(ActorReference).Assembly,
         typeof(AccountReference).Assembly,
         typeof(PlanReference).Assembly,

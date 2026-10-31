@@ -11,6 +11,7 @@ public sealed class ModuleBoundaryProductionScanGuardTests
         "LgymApi.Domain",
         "LgymApi.Platform",
         "LgymApi.Identity",
+        "LgymApi.Reporting",
         "LgymApi.TrainingPlanning",
         "LgymApi.Notifications",
         "LgymApi.Payments"

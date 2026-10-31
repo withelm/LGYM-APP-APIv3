@@ -81,7 +81,7 @@ public sealed class ModuleBoundaryArchitectureTestHelpersTests
 
     private static readonly object[] ReportingErrorPathCases =
     {
-        Path.Combine("LgymApi.Application", "Reporting", "Errors", "ReportingErrors.cs")
+        Path.Combine("LgymApi.Reporting", "Reporting", "Errors", "ReportingErrors.cs")
     };
 
     private static readonly object[] MisplacedReportingErrorPathCases =
@@ -106,6 +106,11 @@ public sealed class ModuleBoundaryArchitectureTestHelpersTests
         new object[]
         {
             Path.Combine("LgymApi.UnitTests", "Users", "UsersServiceTests.cs"),
+            ModuleBoundaryExclusionKind.TestProject
+        },
+        new object[]
+        {
+            Path.Combine("LgymApi.Reporting.UnitTests", "Reporting", "ReportingServiceTests.cs"),
             ModuleBoundaryExclusionKind.TestProject
         },
         new object[]

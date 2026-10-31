@@ -25,7 +25,7 @@ public sealed class ModuleMappingDiscoveryFailureTests
         var action = () => services.AddApplicationMapping(assemblies);
 
         action.Should().Throw<ArgumentException>()
-            .WithMessage("Mapping discovery requires exactly six module assemblies.*");
+            .WithMessage("Mapping discovery requires exactly seven module assemblies.*");
     }
 
     [Test]

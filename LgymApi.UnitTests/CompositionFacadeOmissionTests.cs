@@ -24,7 +24,7 @@ public sealed class CompositionFacadeOmissionTests
         new(CompositionFacade.TrainingPlanning, typeof(IPlanDayService)),
         new(CompositionFacade.Notifications, typeof(IInAppNotificationService)),
         new(CompositionFacade.Payments, typeof(IPaymentCheckoutRepository)),
-        new(CompositionFacade.Application, typeof(IReportingService)),
+        new(CompositionFacade.Reporting, typeof(IReportingService)),
         new(CompositionFacade.Infrastructure, typeof(LgymApi.Application.Repositories.IUnitOfWork)),
         new(CompositionFacade.ApplicationApiAdapters, typeof(IAppConfigApiAdapter)),
         new(CompositionFacade.NotificationsApiAdapters, typeof(IPushInstallationApiAdapter)),

@@ -12,6 +12,7 @@
 !LgymApi.Notifications/**
 !LgymApi.Payments/**
 !LgymApi.Platform/**
+!LgymApi.Reporting/**
 !LgymApi.Resources/**
 !LgymApi.Resources.Generator/**
 !LgymApi.TrainingPlanning/**

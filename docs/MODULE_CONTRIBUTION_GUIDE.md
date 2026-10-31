@@ -21,10 +21,10 @@ This guide owns the contribution workflow. [ADR-006](adr/006-lgym-evolves-as-mod
 
 ## Start With The Owner
 
-The nine canonical owners are `Platform / Reference Data`, `Identity & Accounts`, `Notifications`, `Reporting`, `Training Planning`, `Workout & Progress`, `Coaching`, `Nutrition`, and `Payments`. The stable extracted owners are Platform, Identity, Training Planning, Notifications, and Payments. Reporting, Workout & Progress, Coaching, and Nutrition remain Application-owned capabilities. Payments owns checkout and event-receipt persistence through the shared context. The catalog, not this list, decides persisted ownership. In particular, completed `Training` is owned by Workout & Progress, even when it references a Training Planning plan day.
+The nine canonical owners are `Platform / Reference Data`, `Identity & Accounts`, `Notifications`, `Reporting`, `Training Planning`, `Workout & Progress`, `Coaching`, `Nutrition`, and `Payments`. The stable extracted owners are Platform, Identity, Training Planning, Notifications, Reporting, and Payments. Payments owns checkout and event-receipt persistence through the shared context. The catalog, not this list, decides persisted ownership. In particular, completed `Training` is owned by Workout & Progress, even when it references a Training Planning plan day.
 
 1. Identify the capability and its canonical owner. Don't start from a familiar project or repository.
-2. Check the locked graph before proposing a dependency. There are 19 projects and 97 direct edges. A new edge needs a separately approved topology change.
+2. Check the governed graph before proposing a dependency. A project or direct target is allowed only when explicitly declared in the project-promotion manifest; counts are derived diagnostics, not permission thresholds.
 3. If the owner is extracted, use the extracted-owner layout. If it is Application-owned, use the Application-owned layout. If the work crosses owners, consume the owner's focused contract or consumer-owned port.
 4. Keep physical files in the owner project. Retained `LgymApi.Application.*` namespaces can remain for source and wire compatibility.
 5. Stop when the applicable owner seams are complete. Don't turn a focused change into a global layer sweep.
@@ -80,7 +80,8 @@ Infrastructure supplies technical composition and stage-only adapters. It doesn'
 | module-guide.policy.localization | resources=en,pl | Resource-backed user text |
 | module-guide.policy.tactical-ddd | invariants=required | Aggregate policy where justified |
 | module-guide.policy.architecture-tests | focused-guards=true | Relevant Roslyn guards |
-| module-guide.policy.prohibited-patterns | tenth-module=false; application-to-worker=false; worker-common-feature-command=false | Locked topology and messaging boundary |
+| module-guide.policy.project-promotion | explicit-manifest=true; approved-direct-targets=true; wildcard=false; exceptions=false | Issue-380 graph and architecture guards |
+| module-guide.policy.prohibited-patterns | unknown-project=false; unapproved-edge=false; application-to-worker=false; worker-common-feature-command=false | Governed topology and messaging boundary |
 
 ### Commands, Queries, And Unit Of Work
 
@@ -92,7 +93,7 @@ Use no-tracking by default; tracking is permitted only when the same unit of wor
 
 The production topology is one `AppDbContext`, one PostgreSQL database, and one migration stream. Logical ownership doesn't create a context, schema, database, migration stream, broker, or deployment split. Add a configuration or migration only when an approved owner change needs it, using the existing fixed registrar and shared Infrastructure bridge.
 
-Register extracted workflows through their owner facade. Register remaining Application services in their owner helper, and technical services in Infrastructure. API composition follows the guarded facade order: Platform, Identity, Training Planning, Notifications, Payments, remaining Application, Infrastructure, API adapters, then Worker. Application must not reference Worker or Worker.Common.
+Register extracted workflows through their owner facade. Register remaining Application services in their owner helper, and technical services in Infrastructure. API composition follows the guarded facade order: Platform, Identity, Training Planning, Notifications, Payments, Reporting, remaining Application, Infrastructure, Reporting API adapters, Application API adapters, Notifications API adapters, then Worker. Application must not reference Worker or Worker.Common.
 
 ### API, Localization, And DDD
 
@@ -128,10 +129,10 @@ Reporting owns accepting the submission, validating its measurement payload, sta
 | Path ID | Step | Canonical owner | Source locator | Verified invariant |
 | --- | --- | --- | --- | --- |
 | module-guide.path.reporting-write.controller | 1 | Reporting | LgymApi.Api/Features/Trainer/Controllers/TraineeReportingController.cs#TraineeReportingController.SubmitRequest | Controller calls the Reporting API port |
-| module-guide.path.reporting-write.compatibility-adapter | 2 | Reporting | LgymApi.Application/Reporting/ApiAdapters/ReportTemplateAndRequestApiAdapters.cs#TraineeReportRequestApiAdapter.SubmitAsync | Adapter calls Reporting service ownership |
-| module-guide.path.reporting-write.service | 3 | Reporting | LgymApi.Application/Features/Reporting/ReportingService.Submissions.cs#ReportingService.SubmitReportRequestAsync | Accepted slice stages persistence before outbox, save, and dispatch |
-| module-guide.path.reporting-write.persistence-add | 4 | Reporting | LgymApi.Application/Reporting/Persistence/IReportRequestSubmissionPersistence.cs#IReportRequestSubmissionPersistence.AddSubmissionAsync | Submission write is stage-only |
-| module-guide.path.reporting-write.persistence-status | 5 | Reporting | LgymApi.Application/Reporting/Persistence/IReportRequestSubmissionPersistence.cs#IReportRequestSubmissionPersistence.SetRequestSubmittedAsync | Request status write is stage-only |
+| module-guide.path.reporting-write.compatibility-adapter | 2 | Reporting | LgymApi.Reporting/Reporting/ApiAdapters/ReportTemplateAndRequestApiAdapters.cs#TraineeReportRequestApiAdapter.SubmitAsync | Adapter calls Reporting service ownership |
+| module-guide.path.reporting-write.service | 3 | Reporting | LgymApi.Reporting/Features/Reporting/ReportingService.Submissions.cs#ReportingService.SubmitReportRequestAsync | Accepted slice stages persistence before outbox, save, and dispatch |
+| module-guide.path.reporting-write.persistence-add | 4 | Reporting | LgymApi.Reporting/Reporting/Persistence/IReportRequestSubmissionPersistence.cs#IReportRequestSubmissionPersistence.AddSubmissionAsync | Submission write is stage-only |
+| module-guide.path.reporting-write.persistence-status | 5 | Reporting | LgymApi.Reporting/Reporting/Persistence/IReportRequestSubmissionPersistence.cs#IReportRequestSubmissionPersistence.SetRequestSubmittedAsync | Request status write is stage-only |
 | module-guide.path.reporting-write.outbox-stage | 6 | Platform / Reference Data | LgymApi.Platform/Contracts/BackgroundCommands/ICommandOutboxWriter.cs#ICommandOutboxWriter.StageAsync | Command envelope stages before the accepted-submission save |
 | module-guide.path.reporting-write.unit-of-work | 7 | Platform / Reference Data | LgymApi.Platform/Repositories/IUnitOfWork.cs#IUnitOfWork.SaveChangesAsync | One save commits the accepted-submission operation slice |
 | module-guide.path.reporting-write.post-commit-dispatch | 8 | Platform / Reference Data | LgymApi.Platform/Contracts/BackgroundCommands/ICommandDispatcher.cs#ICommandDispatcher.EnqueueAsync | Dispatcher runs after commit |
@@ -153,7 +154,7 @@ The accepted-submission operation is the slice beginning with the Reporting pers
 | module-guide.exception.query-side-compatibility-cleanup | compatibility-adapter-only | owner-path=unchanged |
 | module-guide.exception.shared-physical-persistence | single-context-shared-database | AppDbContext=1; migration stream=1 |
 
-Don't add a tenth module or project, a new project-reference edge, a second production context, a schema per module, a database per module, or a separate migration stream. Don't use foreign entities or repositories, direct Worker dependencies, Worker.Common feature commands, provider leakage, manual controller or service cross-layer mapping, hardcoded messages, a global hotspot workflow, service location, dependency aggregates, or unapproved debt exemptions. Provider SDK types, secrets, signatures, and raw payloads remain private to their owner module.
+Don't add an unknown project, an unapproved project-reference edge, a second production context, a schema per module, a database per module, or a separate migration stream. A project promotion must declare the project identity, kind, exact direct targets, solution membership, purpose-map row, adjacent project doc, and graph evidence together; wildcard targets and exception-based permissions are forbidden. Don't use foreign entities or repositories, direct Worker dependencies, Worker.Common feature commands, provider leakage, manual controller or service cross-layer mapping, hardcoded messages, a global hotspot workflow, service location, dependency aggregates, or unapproved debt exemptions. Provider SDK types, secrets, signatures, and raw payloads remain private to their owner module.
 
 ## Contributor And Verification Checklist
 

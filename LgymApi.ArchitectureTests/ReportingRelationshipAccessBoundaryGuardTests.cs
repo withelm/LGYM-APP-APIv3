@@ -12,11 +12,11 @@ public sealed class ReportingRelationshipAccessBoundaryGuardTests
 {
     private static readonly string[] AffectedTestFactories =
     [
-        "LgymApi.UnitTests/PhotoServiceTestFactory.cs",
-        "LgymApi.UnitTests/RecurringReportAssignmentServiceRelationalTests.cs",
-        "LgymApi.UnitTests/RecurringReportAssignmentServiceTests.cs",
-        "LgymApi.UnitTests/ReportingServiceAcceptedProgressOutboxTests.cs",
-        "LgymApi.UnitTests/ReportingServiceTests.cs"
+        "LgymApi.Reporting.UnitTests/PhotoServiceTestFactory.cs",
+        "LgymApi.Reporting.UnitTests/RecurringReportAssignmentServiceRelationalTests.cs",
+        "LgymApi.Reporting.UnitTests/RecurringReportAssignmentServiceTests.cs",
+        "LgymApi.Reporting.UnitTests/ReportingServiceAcceptedProgressOutboxTests.cs",
+        "LgymApi.Reporting.UnitTests/ReportingServiceTests.cs"
     ];
 
     [Test]
@@ -93,7 +93,10 @@ public sealed class ReportingRelationshipAccessBoundaryGuardTests
         foreach (var relativePath in AffectedTestFactories)
         {
             var path = Path.Combine(repoRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
-            var identifiers = CSharpSyntaxTree.ParseText(File.ReadAllText(path), path: path)
+            var identifiers = CSharpSyntaxTree.ParseText(
+                    File.ReadAllText(path),
+                    CSharpParseOptions.Default.WithPreprocessorSymbols("REPORTING_UNIT_TESTS"),
+                    path: path)
                 .GetRoot()
                 .DescendantNodes()
                 .OfType<IdentifierNameSyntax>()

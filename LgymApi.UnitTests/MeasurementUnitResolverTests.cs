@@ -1,5 +1,5 @@
 using FluentAssertions;
-using LgymApi.Application.Features.Measurements;
+using LgymApi.Domain.Measurements;
 using LgymApi.Domain.Enums;
 using NUnit.Framework;
 

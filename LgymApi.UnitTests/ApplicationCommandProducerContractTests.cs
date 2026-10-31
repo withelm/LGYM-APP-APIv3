@@ -9,21 +9,21 @@ public sealed class ApplicationCommandProducerContractTests
 {
     public static IEnumerable<TestCaseData> ProducerContractCases()
     {
-        yield return CreateCase("WorkoutProgress/TrainingExecution/CompleteTrainingUseCase.cs", "LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands");
-        yield return CreateCase("Nutrition/DietPlans/CreateTraineePlan/CreateTraineeDietPlanUseCase.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands", "LgymApi.Application.Nutrition.Contracts.BackgroundCommands");
-        yield return CreateCase("Nutrition/DietPlans/UpdateTraineePlan/UpdateTraineeDietPlanUseCase.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands", "LgymApi.Application.Nutrition.Contracts.BackgroundCommands");
-        yield return CreateCase("Nutrition/DietPlans/ActivateTraineePlan/ActivateTraineeDietPlanUseCase.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands", "LgymApi.Application.Nutrition.Contracts.BackgroundCommands");
-        yield return CreateCase("Features/Reporting/ReportingService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
-        yield return CreateCase("Features/Reporting/ReportingService.Requests.cs", "LgymApi.Application.Reporting.Contracts.BackgroundCommands");
-        yield return CreateCase("Features/Reporting/ReportingService.Submissions.cs", "LgymApi.Application.Reporting.Contracts.BackgroundCommands");
-        yield return CreateCase("Features/Reporting/RecurringReportAssignmentService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
-        yield return CreateCase("Features/Reporting/RecurringReportAssignmentService.RequestNow.cs", "LgymApi.Application.Reporting.Contracts.BackgroundCommands");
+        yield return CreateCase("LgymApi.Application/WorkoutProgress/TrainingExecution/CompleteTrainingUseCase.cs", "LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands");
+        yield return CreateCase("LgymApi.Application/Nutrition/DietPlans/CreateTraineePlan/CreateTraineeDietPlanUseCase.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands", "LgymApi.Application.Nutrition.Contracts.BackgroundCommands");
+        yield return CreateCase("LgymApi.Application/Nutrition/DietPlans/UpdateTraineePlan/UpdateTraineeDietPlanUseCase.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands", "LgymApi.Application.Nutrition.Contracts.BackgroundCommands");
+        yield return CreateCase("LgymApi.Application/Nutrition/DietPlans/ActivateTraineePlan/ActivateTraineeDietPlanUseCase.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands", "LgymApi.Application.Nutrition.Contracts.BackgroundCommands");
+        yield return CreateCase("LgymApi.Reporting/Features/Reporting/ReportingService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
+        yield return CreateCase("LgymApi.Reporting/Features/Reporting/ReportingService.Requests.cs", "LgymApi.Application.Reporting.Contracts.BackgroundCommands");
+        yield return CreateCase("LgymApi.Reporting/Features/Reporting/ReportingService.Submissions.cs", "LgymApi.Application.Reporting.Contracts.BackgroundCommands");
+        yield return CreateCase("LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.cs", "LgymApi.Application.Platform.Contracts.BackgroundCommands");
+        yield return CreateCase("LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.RequestNow.cs", "LgymApi.Application.Reporting.Contracts.BackgroundCommands");
     }
 
     [TestCaseSource(nameof(ProducerContractCases))]
     public void Producer_UsesOnlyPlatformAndModuleOwnedCommandContracts(ProducerContractExpectation expectation)
     {
-        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "LgymApi.Application", expectation.RelativePath));
+        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), expectation.RelativePath));
 
         source.Should().NotContain("LgymApi.BackgroundWorker.Common");
         foreach (var requiredNamespace in expectation.RequiredNamespaces)
