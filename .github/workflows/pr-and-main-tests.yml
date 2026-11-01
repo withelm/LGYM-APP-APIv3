@@ -18,7 +18,7 @@ env:
   SONAR_HOST_URL: https://sonarcloud.io
   SONAR_ORG: ${{ vars.SONAR_ORG != '' && vars.SONAR_ORG || secrets.SONAR_ORG }}
   SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY != '' && vars.SONAR_PROJECT_KEY || secrets.SONAR_PROJECT_KEY }}
-  SONAR_COVERAGE_EXCLUSIONS: "**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs"
+  SONAR_COVERAGE_EXCLUSIONS: "**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs,scripts/run-verification-matrix.ps1,scripts/test-ci-verification-workflows.ps1"
 
 jobs:
   release-build:

@@ -360,7 +360,7 @@ function Assert-UnifiedSonarContract {
     Assert-True -Condition ([string]$Workflow.env.SONAR_HOST_URL -ceq 'https://sonarcloud.io') -Message 'The unified workflow must retain the SonarCloud host URL.'
     Assert-True -Condition ([string]$Workflow.env.SONAR_ORG -ceq '${{ vars.SONAR_ORG != '''' && vars.SONAR_ORG || secrets.SONAR_ORG }}') -Message 'The unified workflow must retain the Sonar organization variable/secret binding.'
     Assert-True -Condition ([string]$Workflow.env.SONAR_PROJECT_KEY -ceq '${{ vars.SONAR_PROJECT_KEY != '''' && vars.SONAR_PROJECT_KEY || secrets.SONAR_PROJECT_KEY }}') -Message 'The unified workflow must retain the Sonar project-key variable/secret binding.'
-    Assert-True -Condition ([string]$Workflow.env.SONAR_COVERAGE_EXCLUSIONS -ceq '**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs') -Message 'The unified workflow must retain Sonar coverage exclusions.'
+    Assert-True -Condition ([string]$Workflow.env.SONAR_COVERAGE_EXCLUSIONS -ceq '**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs,scripts/run-verification-matrix.ps1,scripts/test-ci-verification-workflows.ps1') -Message 'The unified workflow must retain Sonar coverage exclusions.'
 
     $expectedArtifactName = 'sonar-inputs-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}'
     $expectedDownloadRoot = '${{ runner.temp }}/sonar-inputs-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}'
