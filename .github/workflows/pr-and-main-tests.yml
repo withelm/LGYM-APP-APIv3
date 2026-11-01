@@ -18,7 +18,7 @@ env:
   SONAR_HOST_URL: https://sonarcloud.io
   SONAR_ORG: ${{ vars.SONAR_ORG != '' && vars.SONAR_ORG || secrets.SONAR_ORG }}
   SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY != '' && vars.SONAR_PROJECT_KEY || secrets.SONAR_PROJECT_KEY }}
-  SONAR_COVERAGE_EXCLUSIONS: "**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs"
+  SONAR_COVERAGE_EXCLUSIONS: "**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs,scripts/run-verification-matrix.ps1,scripts/test-ci-verification-workflows.ps1"
 
 jobs:
   release-build:
@@ -88,8 +88,8 @@ jobs:
           }
 
           $buildStartedUtc = [System.DateTimeOffset]::UtcNow
-          $restore = Invoke-RequiredDotnet -Arguments @('restore', 'LgymApi.sln')
-          $build = Invoke-RequiredDotnet -Arguments @('build', 'LgymApi.sln', '--configuration', 'Release', '--no-restore')
+          $restore = Invoke-RequiredDotnet -Arguments @('restore', 'LgymApi.slnx')
+          $build = Invoke-RequiredDotnet -Arguments @('build', 'LgymApi.slnx', '--configuration', 'Release', '--no-restore')
           $buildCompletedUtc = [System.DateTimeOffset]::UtcNow
           $postBuildSnapshot = Get-RepositorySnapshot -RepositoryRoot $env:GITHUB_WORKSPACE
           Assert-CleanRepositorySnapshot -Snapshot $postBuildSnapshot
@@ -205,7 +205,7 @@ jobs:
           dotnet-version: 10.0.102
 
       - name: Restore packages for no-build execution
-        run: dotnet restore LgymApi.sln
+        run: dotnet restore LgymApi.slnx
 
       - name: Download Release build and discovery evidence
         uses: actions/download-artifact@v4
@@ -308,7 +308,7 @@ jobs:
           dotnet-version: 10.0.102
 
       - name: Restore packages for no-build execution
-        run: dotnet restore LgymApi.sln
+        run: dotnet restore LgymApi.slnx
 
       - name: Download Release build and discovery evidence
         uses: actions/download-artifact@v4
@@ -513,10 +513,10 @@ jobs:
         run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.qualitygate.wait=true /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cpd.exclusions="deploy/postgres/activate-tutorial-row-security.sql,deploy/postgres/deactivate-tutorial-row-security.sql" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
 
       - name: Restore
-        run: dotnet restore LgymApi.sln
+        run: dotnet restore LgymApi.slnx
 
       - name: Build
-        run: dotnet build LgymApi.sln --configuration Release --no-restore
+        run: dotnet build LgymApi.slnx --configuration Release --no-restore
 
       - name: Download validated Sonar inputs
         uses: actions/download-artifact@v4
@@ -585,10 +585,10 @@ jobs:
         run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cpd.exclusions="deploy/postgres/activate-tutorial-row-security.sql,deploy/postgres/deactivate-tutorial-row-security.sql" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
 
       - name: Restore
-        run: dotnet restore LgymApi.sln
+        run: dotnet restore LgymApi.slnx
 
       - name: Build
-        run: dotnet build LgymApi.sln --configuration Release --no-restore
+        run: dotnet build LgymApi.slnx --configuration Release --no-restore
 
       - name: Download validated Sonar inputs
         uses: actions/download-artifact@v4

@@ -360,7 +360,7 @@ function Assert-UnifiedSonarContract {
     Assert-True -Condition ([string]$Workflow.env.SONAR_HOST_URL -ceq 'https://sonarcloud.io') -Message 'The unified workflow must retain the SonarCloud host URL.'
     Assert-True -Condition ([string]$Workflow.env.SONAR_ORG -ceq '${{ vars.SONAR_ORG != '''' && vars.SONAR_ORG || secrets.SONAR_ORG }}') -Message 'The unified workflow must retain the Sonar organization variable/secret binding.'
     Assert-True -Condition ([string]$Workflow.env.SONAR_PROJECT_KEY -ceq '${{ vars.SONAR_PROJECT_KEY != '''' && vars.SONAR_PROJECT_KEY || secrets.SONAR_PROJECT_KEY }}') -Message 'The unified workflow must retain the Sonar project-key variable/secret binding.'
-    Assert-True -Condition ([string]$Workflow.env.SONAR_COVERAGE_EXCLUSIONS -ceq '**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs') -Message 'The unified workflow must retain Sonar coverage exclusions.'
+    Assert-True -Condition ([string]$Workflow.env.SONAR_COVERAGE_EXCLUSIONS -ceq '**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs,scripts/run-verification-matrix.ps1,scripts/test-ci-verification-workflows.ps1') -Message 'The unified workflow must retain Sonar coverage exclusions.'
 
     $expectedArtifactName = 'sonar-inputs-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}'
     $expectedDownloadRoot = '${{ runner.temp }}/sonar-inputs-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}'
@@ -422,8 +422,8 @@ function Assert-UnifiedSonarContract {
         }
         Assert-True -Condition (@([regex]::Matches($beginRun, $waitPropertyPattern)).Count -eq $expectedWaitCounts[$jobId]) -Message "Sonar job '$jobId' has an incorrect Quality Gate wait policy."
         Assert-True -Condition (@([regex]::Matches($jobText, $qualityGateTimeoutPattern)).Count -eq 0) -Message "Sonar job '$jobId' must retain the scanner's default Quality Gate timeout."
-        Assert-True -Condition ([string]$restoreStep.run -ceq 'dotnet restore LgymApi.sln') -Message "Sonar job '$jobId' must restore after Begin."
-        Assert-True -Condition ([string]$buildStep.run -ceq 'dotnet build LgymApi.sln --configuration Release --no-restore') -Message "Sonar job '$jobId' must perform the scanner-instrumented Release build after restore."
+        Assert-True -Condition ([string]$restoreStep.run -ceq 'dotnet restore LgymApi.slnx') -Message "Sonar job '$jobId' must restore after Begin."
+        Assert-True -Condition ([string]$buildStep.run -ceq 'dotnet build LgymApi.slnx --configuration Release --no-restore') -Message "Sonar job '$jobId' must perform the scanner-instrumented Release build after restore."
         Assert-True -Condition ([string]$endStep.run -ceq 'dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"') -Message "Sonar job '$jobId' must retain its End invocation."
 
         Assert-True -Condition ([string]$downloadStep.uses -ceq 'actions/download-artifact@v4') -Message "Sonar job '$jobId' must download through download-artifact v4."
@@ -1310,9 +1310,9 @@ try {
     $missingNeedsText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?    needs:) final-evidence-gate', '${1} release-build', 1)
     $removedDraftGuardText = [regex]::Replace($prWorkflowText, '(?m)^      github\.event\.pull_request\.draft == false &&\r?\n', '', 1)
     $removedForkGuardText = [regex]::Replace($prWorkflowText, '(?m)^      github\.event\.pull_request\.head\.repo\.fork == false\r?\n', '', 1)
-    $sonarTestText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?      - name: Restore\r?\n        run: dotnet restore LgymApi\.sln)', '$1 && dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj', 1)
-    $sonarRunnerText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?      - name: Restore\r?\n        run: dotnet restore LgymApi\.sln)', '$1 && pwsh -NoProfile -File scripts/run-postgresql-integration-tests.ps1', 1)
-    $coverageDirectoryText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?      - name: Restore\r?\n        run: dotnet restore LgymApi\.sln)', '$1 && mkdir -p TestResults/Unit', 1)
+    $sonarTestText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?      - name: Restore\r?\n        run: dotnet restore LgymApi\.slnx)', '$1 && dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj', 1)
+    $sonarRunnerText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?      - name: Restore\r?\n        run: dotnet restore LgymApi\.slnx)', '$1 && pwsh -NoProfile -File scripts/run-postgresql-integration-tests.ps1', 1)
+    $coverageDirectoryText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?      - name: Restore\r?\n        run: dotnet restore LgymApi\.slnx)', '$1 && mkdir -p TestResults/Unit', 1)
     $sonarPostgreSqlText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?    runs-on: ubuntu-latest)\r?\n', "`$1`r`n    services:`r`n      postgres: {}`r`n", 1)
     $crossRunSelectorText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?          name: sonar-inputs-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}-\$\{\{ github\.sha \}\}\r?\n)', "`$1          repository: another/repository`r`n", 1)
     $wrongArtifactNameText = [regex]::Replace($prWorkflowText, '(?ms)(  sonar-required:.*?          name: )sonar-inputs-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}-\$\{\{ github\.sha \}\}', '${1}sonar-inputs-${{ github.sha }}', 1)

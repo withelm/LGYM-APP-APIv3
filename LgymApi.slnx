@@ -1,0 +1,29 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="LgymApi.Api/LgymApi.Api.csproj" />
+  <Project Path="LgymApi.Application/LgymApi.Application.csproj" />
+  <Project Path="LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj" />
+  <Project Path="LgymApi.BackgroundWorker.Common/LgymApi.BackgroundWorker.Common.csproj" />
+  <Project Path="LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj" />
+  <Project Path="LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj" />
+  <Project Path="LgymApi.DataSeeder/LgymApi.DataSeeder.csproj" />
+  <Project Path="LgymApi.Domain/LgymApi.Domain.csproj" />
+  <Project Path="LgymApi.Identity/LgymApi.Identity.csproj" />
+  <Project Path="LgymApi.Infrastructure/LgymApi.Infrastructure.csproj" />
+  <Project Path="LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj" />
+  <Project Path="LgymApi.Notifications/LgymApi.Notifications.csproj" />
+  <Project Path="LgymApi.Payments.UnitTests/LgymApi.Payments.UnitTests.csproj" />
+  <Project Path="LgymApi.Payments/LgymApi.Payments.csproj" />
+  <Project Path="LgymApi.Platform/LgymApi.Platform.csproj" />
+  <Project Path="LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj" />
+  <Project Path="LgymApi.Reporting/LgymApi.Reporting.csproj" />
+  <Project Path="LgymApi.Resources.Generator/LgymApi.Resources.Generator.csproj" />
+  <Project Path="LgymApi.Resources/LgymApi.Resources.csproj" />
+  <Project Path="LgymApi.TestUtils/LgymApi.TestUtils.csproj" />
+  <Project Path="LgymApi.TrainingPlanning/LgymApi.TrainingPlanning.csproj" />
+  <Project Path="LgymApi.UnitTests/LgymApi.UnitTests.csproj" />
+</Solution>

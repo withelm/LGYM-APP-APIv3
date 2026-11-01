@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+
 namespace LgymApi.ArchitectureTests;
 
 [TestFixture]
@@ -160,11 +162,11 @@ public sealed class PlatformReferenceDataBoundaryDocumentationTests
         Assert.That(PersistedEntityOwnershipCatalog.Entries, Has.Count.EqualTo(53));
 
         var root = ArchitectureTestHelpers.ResolveRepositoryRoot();
-        var projectPaths = File.ReadLines(Path.Combine(root, "LgymApi.sln"))
-            .Where(line => line.StartsWith("Project(", StringComparison.Ordinal))
-            .Select(line => line.Split('"'))
-            .Where(parts => parts.Length > 5 && parts[5].EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
-            .Select(parts => Path.Combine(root, ArchitectureTestHelpers.ToHostPath(parts[5])))
+        var projectPaths = XDocument.Load(Path.Combine(root, "LgymApi.slnx"))
+            .Descendants("Project")
+            .Select(project => (string?)project.Attribute("Path") ?? throw new InvalidOperationException("Solution project is missing its path."))
+            .Where(path => path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+            .Select(path => Path.Combine(root, ArchitectureTestHelpers.ToHostPath(path)))
             .ToArray();
         var projects = projectPaths.Select(path => Path.GetFileNameWithoutExtension(path)).ToArray();
         var edges = projectPaths

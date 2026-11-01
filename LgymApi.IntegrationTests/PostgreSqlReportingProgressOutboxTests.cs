@@ -488,7 +488,7 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
                     failingScope.ServiceProvider.GetRequiredService<IReportSubmissionAcceptedProgressPersistence>(),
                     failingScope.ServiceProvider.GetRequiredService<AppDbContext>()),
                 unitOfWork);
-            Assert.ThrowsAsync<DbUpdateException>(() => consumer.ConsumeAsync(progressEvent));
+            await Assert.ThrowsAsync<DbUpdateException>(() => consumer.ConsumeAsync(progressEvent));
         }
 
         await AssertReceiptAndMeasurementCountAsync(trainee.Id, 0, 0);

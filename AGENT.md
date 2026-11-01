@@ -46,7 +46,7 @@ Every `.csproj` in the solution must be documented in the project map below.
 When adding, renaming, deleting, or materially changing a `.csproj`:
 
 1. inspect all project files, for example with `git ls-files '*.csproj'`;
-2. update `LgymApi.sln` if solution membership changes;
+2. update `LgymApi.slnx` if solution membership changes;
 3. update the project map in this file with why each project exists;
 4. create or update the matching project doc next to that `.csproj` as `<ProjectName>.md`;
 5. update project references, test commands, workflows, and `Directory.Packages.props` when needed;
@@ -91,8 +91,8 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 ## Build Rules
 
 - Prefer repository-owned entry points and existing solution builds.
-- Restore with `dotnet restore LgymApi.sln`.
-- Sanity-check with `dotnet build LgymApi.sln --configuration Release --no-restore`.
+- Restore with `dotnet restore LgymApi.slnx`.
+- Sanity-check with `dotnet build LgymApi.slnx --configuration Release --no-restore`.
 - Run the API with `dotnet run --project LgymApi.Api`.
 - Do not retarget frameworks or change solution wiring unless the task requires it.
 - Restore normally runs in locked mode; do not update lock state unless the task requires it.
@@ -160,8 +160,8 @@ These are the implemented LGYM-102 local-day rules. History requests accept eith
 
 ```powershell
 git submodule update --init --recursive
-dotnet restore LgymApi.sln
-dotnet build LgymApi.sln --configuration Release --no-restore
+dotnet restore LgymApi.slnx
+dotnet build LgymApi.slnx --configuration Release --no-restore
 dotnet run --project LgymApi.Api
 ```
 

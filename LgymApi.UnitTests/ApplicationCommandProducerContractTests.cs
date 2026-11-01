@@ -40,7 +40,7 @@ public sealed class ApplicationCommandProducerContractTests
     {
         for (var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory); directory != null; directory = directory.Parent)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "LgymApi.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "LgymApi.slnx")))
             {
                 return directory.FullName;
             }

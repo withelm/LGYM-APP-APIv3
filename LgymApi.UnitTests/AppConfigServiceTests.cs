@@ -215,7 +215,7 @@ public sealed class AppConfigServiceTests
         var unitOfWork = new RecordingUnitOfWork();
         var service = CreateService(port, repository, unitOfWork);
 
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await service.CreateNewAppVersionAsync(Id<User>.New(), ValidCreateInput()));
 
         exception.Should().BeSameAs(expected);

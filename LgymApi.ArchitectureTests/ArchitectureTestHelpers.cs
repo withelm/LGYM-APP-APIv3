@@ -310,7 +310,7 @@ public static class ArchitectureTestHelpers
 
     /// <summary>
     /// Resolves the solution root directory by walking up from the current test execution directory
-    /// until it finds a file named "LgymApi.sln".
+    /// until it finds a file named "LgymApi.slnx".
     /// </summary>
     /// <returns>The absolute path to the solution root directory.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the repository root cannot be located.</exception>
@@ -319,7 +319,7 @@ public static class ArchitectureTestHelpers
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current != null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "LgymApi.sln")))
+            if (File.Exists(Path.Combine(current.FullName, "LgymApi.slnx")))
             {
                 return current.FullName;
             }

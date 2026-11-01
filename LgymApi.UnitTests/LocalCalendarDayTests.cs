@@ -51,7 +51,7 @@ public sealed class LocalCalendarDayTests
     [TestCase("Etc/GMT-14", "0001-01-01")]
     [TestCase("Pacific/Apia", "2011-12-30")]
     [TestCase("America/Havana", "2026-03-08")]
-    [TestCase("America/Havana", "2026-11-01")]
+    [TestCase("America/Havana", "2025-11-02")]
     public void Constructor_RejectsDatesWithoutRepresentablePositiveUtcRange(string timeZone, string date)
     {
         var localDate = DateOnly.Parse(date);

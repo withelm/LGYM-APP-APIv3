@@ -118,11 +118,11 @@ internal static class ProjectReferenceSourceScanner
 
     private static string[] LoadSolutionProjectPaths(string repositoryRoot)
     {
-        return File.ReadLines(Path.Combine(repositoryRoot, "LgymApi.sln"))
-            .Where(line => line.StartsWith("Project(", StringComparison.Ordinal))
-            .Select(line => line.Split('"'))
-            .Where(parts => parts.Length > 5 && parts[5].EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
-            .Select(parts => Path.GetFullPath(Path.Combine(repositoryRoot, ArchitectureTestHelpers.ToHostPath(parts[5]))))
+        return XDocument.Load(Path.Combine(repositoryRoot, "LgymApi.slnx"))
+            .Descendants("Project")
+            .Select(project => (string?)project.Attribute("Path") ?? throw new InvalidOperationException("Solution project is missing its path."))
+            .Where(path => path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+            .Select(path => Path.GetFullPath(Path.Combine(repositoryRoot, ArchitectureTestHelpers.ToHostPath(path))))
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
     }
@@ -208,7 +208,7 @@ internal static class ProjectReferenceSourceScanner
             .FirstOrDefault();
 
         return assemblyPath ?? throw new InvalidOperationException(
-            $"Release assembly for '{projectName}' was not found. Build LgymApi.sln before running import guards.");
+            $"Release assembly for '{projectName}' was not found. Build LgymApi.slnx before running import guards.");
     }
 
     private static bool IsBuildArtifact(string path)

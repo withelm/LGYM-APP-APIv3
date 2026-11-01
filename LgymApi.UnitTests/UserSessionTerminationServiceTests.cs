@@ -172,7 +172,7 @@ public sealed class UserSessionTerminationServiceTests
                 disassociationPort,
                 new EfUnitOfWork(mutationContext));
 
-            var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await service.LogoutAsync(
                     new User { Id = userId, Name = "session-failure", Email = "session-failure@example.com" },
                     sessionId,

@@ -111,7 +111,7 @@ public sealed class DataSeederProgramTests
     {
         var root = Path.Combine(Path.GetTempPath(), "lgym-seeder-tests", Id<DataSeederProgramTests>.New().ToString());
         Directory.CreateDirectory(root);
-        File.WriteAllText(Path.Combine(root, "LgymApi.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(root, "LgymApi.slnx"), string.Empty);
 
         var apiRoot = Path.Combine(root, "LgymApi.Api");
         Directory.CreateDirectory(apiRoot);

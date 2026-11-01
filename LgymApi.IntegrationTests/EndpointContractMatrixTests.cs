@@ -1011,7 +1011,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         {
             for (var directory = new DirectoryInfo(start); directory is not null; directory = directory.Parent)
             {
-                if (File.Exists(Path.Combine(directory.FullName, "LgymApi.sln")))
+                if (File.Exists(Path.Combine(directory.FullName, "LgymApi.slnx")))
                 {
                     return directory.FullName;
                 }
