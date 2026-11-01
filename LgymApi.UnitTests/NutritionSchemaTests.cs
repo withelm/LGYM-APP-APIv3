@@ -172,7 +172,7 @@ public sealed class NutritionSchemaTests
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "LgymApi.sln"))) return directory.FullName;
+            if (File.Exists(Path.Combine(directory.FullName, "LgymApi.slnx"))) return directory.FullName;
             directory = directory.Parent;
         }
         throw new InvalidOperationException("Unable to locate repository root.");

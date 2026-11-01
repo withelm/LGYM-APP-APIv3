@@ -151,7 +151,7 @@ public sealed class UnitOfWorkCommitGuardTests
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current != null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "LgymApi.sln")))
+            if (File.Exists(Path.Combine(current.FullName, "LgymApi.slnx")))
             {
                 return current.FullName;
             }

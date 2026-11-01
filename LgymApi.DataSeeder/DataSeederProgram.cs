@@ -34,7 +34,7 @@ public static class DataSeederProgram
         var current = new DirectoryInfo(startPath);
         while (current != null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "LgymApi.sln")))
+            if (File.Exists(Path.Combine(current.FullName, "LgymApi.slnx")))
             {
                 return current.FullName;
             }

@@ -29,12 +29,12 @@ public sealed class ApiAuthenticationRegistrationExtractionTests
     {
         for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "LgymApi.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "LgymApi.slnx")))
             {
                 return directory.FullName;
             }
         }
 
-        throw new DirectoryNotFoundException("Could not find the repository root containing LgymApi.sln.");
+        throw new DirectoryNotFoundException("Could not find the repository root containing LgymApi.slnx.");
     }
 }

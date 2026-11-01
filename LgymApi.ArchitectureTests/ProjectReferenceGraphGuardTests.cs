@@ -152,13 +152,12 @@ public sealed class ProjectReferenceGraphGuardTests
     private static ProjectGraphFixture LoadSolutionGraph()
     {
         var repositoryRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
-        var solutionPath = Path.Combine(repositoryRoot, "LgymApi.sln");
-        var projectPaths = File
-            .ReadLines(solutionPath)
-            .Where(line => line.StartsWith("Project(", StringComparison.Ordinal))
-            .Select(line => line.Split('"'))
-            .Where(parts => parts.Length > 5 && parts[5].EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
-            .Select(parts => Path.GetFullPath(Path.Combine(repositoryRoot, ArchitectureTestHelpers.ToHostPath(parts[5]))))
+        var solutionPath = Path.Combine(repositoryRoot, "LgymApi.slnx");
+        var projectPaths = System.Xml.Linq.XDocument.Load(solutionPath)
+            .Descendants("Project")
+            .Select(project => (string?)project.Attribute("Path") ?? throw new InvalidOperationException("Solution project is missing its path."))
+            .Where(path => path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+            .Select(path => Path.GetFullPath(Path.Combine(repositoryRoot, ArchitectureTestHelpers.ToHostPath(path))))
             .ToArray();
 
         return new ProjectGraphFixture(
