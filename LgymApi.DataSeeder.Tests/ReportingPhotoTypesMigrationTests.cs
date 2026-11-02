@@ -226,7 +226,7 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         trainee.IsDeleted.Should().BeTrue();
         trainee.Name.Should().StartWith("anonymized_user_");
         (await fixture.Context.TrainerPhotoTypes.SingleAsync(photoType => photoType.SystemKey == "Back"))
-            .IsArchived.Should().BeTrue();
+            .IsArchived.Should().BeFalse("the surviving trainer still references this type in a live template");
     }
 
     private static ReportingPhotoTypesMigrationOptions Options(
