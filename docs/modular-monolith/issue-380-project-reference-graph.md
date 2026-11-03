@@ -227,7 +227,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Reporting.UnitTests -> LgymApi.Infrastructure` | `LgymApi.Reporting.UnitTests/CloudflareR2PhotoStorageProviderTests.cs:24` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Platform` | `LgymApi.Reporting.UnitTests/ExpiredPhotoUploadCleanupServiceTests.cs:27` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Reporting` | `LgymApi.Reporting.UnitTests/ReportingServiceTests.cs:10` |
-| `LgymApi.Reporting.UnitTests -> LgymApi.Resources` | `LgymApi.Reporting.UnitTests/PhotoCompleteUploadServiceTests.cs:213` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Resources` | `LgymApi.Reporting.UnitTests/PhotoCompleteUploadServiceTests.cs:215` |
 | `LgymApi.Platform -> LgymApi.Domain` | `LgymApi.Platform/Contracts/Serialization/TypedIdJsonConverter.cs:3` |
 | `LgymApi.Platform -> LgymApi.Resources` | `LgymApi.Platform/ReferenceData/AppConfig/AppConfigService.cs:35` |
 | `LgymApi.Resources -> LgymApi.Resources.Generator` | `LgymApi.Resources/LgymApi.Resources.csproj:16` analyzer reference |

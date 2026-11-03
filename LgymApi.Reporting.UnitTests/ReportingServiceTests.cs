@@ -18,6 +18,7 @@ using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts.Accounts;
 using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -1472,6 +1473,7 @@ public sealed class ReportingServiceTests
             recurringAssignmentPersistence,
             photoPersistence,
             relationshipAccessPersistence,
+            Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             commandDispatcher,
             commandOutboxWriter,

@@ -12,6 +12,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 
@@ -165,6 +166,7 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             Substitute.For<IReportPhotoPersistence>(),
             Substitute.For<IReportingRelationshipAccessPersistence>(),
+            Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             dispatcher,
             outbox,

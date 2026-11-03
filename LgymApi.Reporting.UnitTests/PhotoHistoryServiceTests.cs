@@ -8,6 +8,8 @@ using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -187,5 +189,28 @@ public sealed class PhotoHistoryServiceTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value[0].ThumbnailUrl.Should().Be("https://storage.example.com/thumb-url");
+    }
+
+    [Test]
+    public async Task GetPhotoHistoryAsync_WhenSubjectIsMissing_ReturnsNotFoundWithoutDisclosingMetadataOrUrls()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var accountLookup = Substitute.For<IAccountLookupService>();
+        accountLookup.GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+            .Returns((AccountLookup?)null);
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId)),
+            photoStorageProvider: storageProvider,
+            accountLookupService: accountLookup);
+
+        var result = await service.GetPhotoHistoryAsync(
+            PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com"),
+            new GetPhotoHistoryCommand { RequestId = requestId });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 }

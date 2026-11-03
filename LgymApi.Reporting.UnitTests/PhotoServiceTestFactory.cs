@@ -72,7 +72,8 @@ internal static class PhotoServiceTestFactory
         PendingPhotoUpload? pendingUpload = null,
         IUnitOfWork? unitOfWork = null,
         IReportPhotoPersistence? photoUploadInitTracker = null,
-        PhotoStorageOptions? photoStorageOptions = null)
+        PhotoStorageOptions? photoStorageOptions = null,
+        IAccountLookupService? accountLookupService = null)
     {
         var requestPersistence = Substitute.For<IReportRequestSubmissionPersistence>();
         if (findRequestById != null)
@@ -97,8 +98,10 @@ internal static class PhotoServiceTestFactory
                         callInfo.ArgAt<Id<AccountReference>>(0).Rebind<User>(),
                         callInfo.ArgAt<Id<AccountReference>>(1).Rebind<User>(),
                         callInfo.ArgAt<CancellationToken>(2));
-                return new ReportingRelationshipAccessFact(hasAccess);
-            });
+             return new ReportingRelationshipAccessFact(hasAccess);
+         });
+
+        var accountLookup = accountLookupService ?? CreateActiveAccountLookup();
 
         var photoPersistence = reportingRepository ?? photoUploadInitTracker ?? Substitute.For<IReportPhotoPersistence>();
         photoPersistence.CountRecentUploadInitsAsync(
@@ -118,6 +121,7 @@ internal static class PhotoServiceTestFactory
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             photoPersistence,
             relationshipPersistence,
+            accountLookup,
             new ReportSubmissionAcceptedProgressCommandFactory(),
             Substitute.For<ICommandDispatcher>(),
             Substitute.For<ICommandOutboxWriter>(),
@@ -126,5 +130,20 @@ internal static class PhotoServiceTestFactory
             ReportingTestData.Mapper(),
             Substitute.For<ILogger<ReportingService>>(),
             photoStorageOptions ?? new PhotoStorageOptions());
+    }
+
+    private static IAccountLookupService CreateActiveAccountLookup()
+    {
+        var accountLookup = Substitute.For<IAccountLookupService>();
+        accountLookup.GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+            .Returns(call => new AccountLookup(
+                call.ArgAt<Id<AccountReference>>(0),
+                "Active subject",
+                "active-subject@example.test",
+                null,
+                "en",
+                "UTC",
+                DateTimeOffset.UtcNow));
+        return accountLookup;
     }
 }

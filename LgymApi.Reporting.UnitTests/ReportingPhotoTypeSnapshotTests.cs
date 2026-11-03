@@ -175,6 +175,7 @@ public sealed class ReportingPhotoTypeSnapshotTests
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             Substitute.For<IReportPhotoPersistence>(),
             relationships ?? Substitute.For<IReportingRelationshipAccessPersistence>(),
+            Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             Substitute.For<ICommandDispatcher>(),
             Substitute.For<ICommandOutboxWriter>(),

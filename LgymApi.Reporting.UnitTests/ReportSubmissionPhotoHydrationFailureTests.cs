@@ -10,6 +10,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 
@@ -127,6 +128,7 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             photoPersistence,
             Substitute.For<IReportingRelationshipAccessPersistence>(),
+            Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             Substitute.For<ICommandDispatcher>(),
             Substitute.For<ICommandOutboxWriter>(),
