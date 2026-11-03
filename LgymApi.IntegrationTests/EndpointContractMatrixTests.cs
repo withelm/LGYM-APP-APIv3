@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
+using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.IntegrationTests.Authorization;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -54,6 +55,31 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         "current-manager-allow", "stale-manager-denial", "ordinary-manager-denial"
     ];
 
+    private static readonly string[] ApprovedAuthorizationOwners =
+    [
+        "identity", "platform-reference-data", "training-planning", "workout-progress",
+        "coaching", "nutrition", "reporting", "notifications"
+    ];
+
+    private static readonly string[] ApprovedAuthorizationOperations =
+    ["read", "create", "update", "delete", "command", "authentication"];
+
+    private static readonly string[] ApprovedCollectionScopes =
+    ["public", "actor", "resource-owner", "relationship", "admin", "global", "opaque-capability", "technical"];
+
+    private static readonly string[] ApprovedSensitiveReplayDispositions =
+    [
+        "credential-or-token-current;future-replay-review", "idempotent-current;future-replay-review",
+        "private-photo-current;future-replay-review", "private-response-current;no-replay-contract",
+        "non-sensitive-current;no-replay-contract", "opaque-capability-current-contract"
+    ];
+
+    private static readonly string[] ApprovedMigrationTasks =
+    [
+        "AUTH-K05", "AUTH-P01", "AUTH-P02", "AUTH-A01", "AUTH-A02", "AUTH-A03", "AUTH-A04",
+        "AUTH-A05", "AUTH-A06", "AUTH-A07", "AUTH-A08", "AUTH-A09", "AUTH-A10", "AUTH-A11"
+    ];
+
     [Test]
     public void MatrixParser_NormalizesACompleteRowAndRejectsMissingFields()
     {
@@ -62,9 +88,9 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         missingField.Should().Throw<AssertionException>()
             .WithMessage("*must define every contract column*");
 
-        var parsed = ParseMatrixRow("| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | no | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |");
+        var parsed = ParseMatrixRow("| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | no | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles | identity | read | public | non-sensitive-current;no-replay-contract | AUTH-A08 |");
 
-        parsed.ToDocumentRow().Should().Be("| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | no | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |");
+        parsed.ToDocumentRow().Should().Be("| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | no | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles | identity | read | public | non-sensitive-current;no-replay-contract | AUTH-A08 |");
     }
 
     [TestCaseSource(nameof(CompleteSemanticAuthorizationRows))]
@@ -143,6 +169,9 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         matrix.Should().Contain($"Route count: `{rows.Length}`");
         AssertRowsMatch(matrixRows, rows.Select(row => row.Row).ToArray());
 
+        matrixRows.Should().OnlyContain(row => row.HasAuthorizationMigrationInventory,
+            "every live controller route must explicitly carry the AUTH-K01 ownership inventory");
+
         foreach (var row in matrixRows)
         {
             AssertEvidenceLocatorResolves(row.EvidenceLocator, row.EndpointKey);
@@ -167,6 +196,128 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
                 "Tasks 8-10 must replace every unresolved value with executable semantic evidence. " +
                 $"First unresolved route: '{unresolved[0]}'.");
         }
+    }
+
+    [Test]
+    public void MatrixParser_RejectsUnknownAuthorizationInventoryClassifications()
+    {
+        const string valid = "| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | no | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles | identity | read | public | non-sensitive-current;no-replay-contract | AUTH-A08 |";
+
+        Action unknownOwner = () => ParseMatrixRow(valid.Replace("| identity |", "| unknown-owner |", StringComparison.Ordinal), true);
+        Action unknownTask = () => ParseMatrixRow(valid.Replace("| AUTH-A08 |", "| AUTH-Z99 |", StringComparison.Ordinal), true);
+
+        unknownOwner.Should().Throw<AssertionException>().WithMessage("*field 'owner'*unknown-owner*");
+        unknownTask.Should().Throw<AssertionException>().WithMessage("*approved migration tasks*");
+    }
+
+    [Test]
+    public void NonControllerHostSurfaces_AreExactlyClassifiedByTheLinkedTechnicalInventory()
+    {
+        var endpoints = Factory.Services.GetServices<EndpointDataSource>()
+            .SelectMany(source => source.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Where(endpoint => endpoint.Metadata.GetMetadata<ControllerActionDescriptor>() is null)
+            .Select(endpoint => new
+            {
+                Route = "/" + endpoint.RoutePattern.RawText!.TrimStart('/'),
+                Methods = endpoint.Metadata.GetMetadata<HttpMethodMetadata>() is { } metadata
+                    ? string.Join(',', metadata.HttpMethods)
+                    : "none",
+                Authorization = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null
+                    ? "anonymous"
+                    : string.Join(',', endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>()
+                        .Select(data => data.Policy ?? data.Roles ?? "authorize")),
+                DisplayName = endpoint.DisplayName ?? ""
+            })
+            .OrderBy(endpoint => endpoint.Route, StringComparer.Ordinal)
+            .ThenBy(endpoint => endpoint.Methods, StringComparer.Ordinal)
+            .ToArray();
+
+        var documented = ReadTechnicalInventory(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "docs", "validation", "issue-395-validation-matrix.md")))
+            .Where(row => row.Kind == "http-endpoint")
+            .ToArray();
+        endpoints.Select(endpoint => $"{endpoint.Methods} {endpoint.Route}").OrderBy(value => value, StringComparer.Ordinal)
+            .Should().Equal(documented.Select(row => $"{row.Methods} {row.Route}").OrderBy(value => value, StringComparer.Ordinal),
+                "every non-controller host endpoint must have one explicit technical-inventory row");
+        AssertTechnicalRowsAreUnique(documented);
+
+        foreach (var row in documented)
+        {
+            AssertTechnicalAuthorization(
+                endpoints.Single(endpoint => endpoint.Methods == row.Methods && endpoint.Route == row.Route).Authorization,
+                row.ActionPolicy,
+                row.Route);
+            ApprovedAuthorizationOwners.Should().Contain(row.Owner, $"{row.Route} needs a known owner");
+            ApprovedCollectionScopes.Should().Contain(row.Scope, $"{row.Route} needs a known scope");
+            ApprovedSensitiveReplayDispositions.Should().Contain(row.SensitiveReplay, $"{row.Route} needs a known response/replay disposition");
+            AssertMigrationTasks(row.MigrationTasks, row.Route);
+        }
+    }
+
+    [Test]
+    public void TechnicalInventory_RejectsDuplicateRowsAndWrongAuthorizationMetadata()
+    {
+        var row = new TechnicalInventoryRow("http-endpoint", "GET", "/health/live", "Program.health-live", "platform-reference-data", "anonymous", "public", "non-sensitive-current;no-replay-contract", "AUTH-A11");
+
+        Action duplicate = () => AssertTechnicalRowsAreUnique([row, row]);
+        Action wrongAuthorization = () => AssertTechnicalAuthorization("authorize", "anonymous", "/health/live");
+
+        duplicate.Should().Throw<AssertionException>().WithMessage("*duplicate a host surface*");
+        wrongAuthorization.Should().Throw<AssertionException>().WithMessage("*/health/live*authorization metadata*authorize*anonymous*");
+    }
+
+    [Test]
+    public void HostMiddlewareInventory_IsClosedToTheDeclaredAuthorizationBoundaries()
+    {
+        var middleware = ReadTechnicalInventory(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "docs", "validation", "issue-395-validation-matrix.md")))
+            .Where(row => row.Kind == "host-middleware")
+            .Select(row => $"{row.Methods}|{row.Route}|{row.EntryPoint}|{row.ActionPolicy}")
+            .ToArray();
+
+        middleware.Should().Equal(
+        [
+            "GET|/swagger/v1/swagger.json|Program.swagger-json|anonymous-development-only",
+            "GET|/swagger/{**path}|Program.swagger-ui|anonymous-development-only",
+            "GET|/hangfire|ProgramHangfire.ConfigureRecurringJobs|admin-role-or-permission"
+        ]);
+    }
+
+    private static void AssertTechnicalRowsAreUnique(IReadOnlyCollection<TechnicalInventoryRow> rows)
+    {
+        rows.Select(row => $"{row.Kind}|{row.Methods}|{row.Route}")
+            .Should().OnlyHaveUniqueItems("technical endpoint rows must not duplicate a host surface");
+    }
+
+    private static void AssertTechnicalAuthorization(string actual, string expected, string route) =>
+        actual.Should().Be(expected, $"{route} technical authorization metadata must match the documented policy");
+
+    [Test]
+    public void RegisteredInternalJobEntrypoints_AreExactlyClassifiedByTheLinkedTechnicalInventory()
+    {
+        var registered = typeof(IActionMessageJob).Assembly.GetExportedTypes()
+            .Where(type => type.IsInterface && type.Namespace == "LgymApi.BackgroundWorker.Common.Jobs" && type.GetMethods().Length > 0)
+            .OrderBy(type => type.Name, StringComparer.Ordinal)
+            .ToArray();
+
+        var documented = ReadTechnicalInventory(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "docs", "validation", "issue-395-validation-matrix.md")))
+            .Where(row => row.Kind == "internal-job")
+            .ToArray();
+        documented.Select(row => row.EntryPoint).Should().Equal(registered.Select(type => type.Name));
+
+        foreach (var type in registered)
+        {
+            Factory.Services.GetRequiredService(type).Should().NotBeNull($"{type.Name} is a registered Worker entrypoint");
+            var documentedRow = documented.Single(row => row.EntryPoint == type.Name);
+            documentedRow.Methods.Should().Be(GetPublicJobSignature(type), $"{type.Name} must keep its persisted public job signature");
+        }
+    }
+
+    private static string GetPublicJobSignature(Type type)
+    {
+        var methods = type.GetMethods();
+        methods.Should().ContainSingle($"{type.Name} must expose one persisted entrypoint");
+        var method = methods[0];
+        return $"{method.ReturnType.Name} {method.Name}({string.Join(',', method.GetParameters().Select(parameter => parameter.ParameterType.Name))})";
     }
 
     [Test]
@@ -387,6 +538,11 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
                 "EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix",
                 string.Empty,
                 string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
                 string.Empty),
             matchingDescriptions.Length);
     }
@@ -428,8 +584,45 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
 
         return lines.Skip(headerIndex + 2)
             .TakeWhile(line => line.StartsWith("| ", StringComparison.Ordinal))
-            .Select(ParseMatrixRow)
+            .Select(line => ParseMatrixRow(line, requireAuthorizationMigrationInventory: true))
             .ToArray();
+    }
+
+    private static IReadOnlyList<TechnicalInventoryRow> ReadTechnicalInventory(string matrix)
+    {
+        var lines = matrix.Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
+        var headerIndex = Array.FindIndex(lines, line => line.StartsWith("| kind | methods | route | entry point |", StringComparison.Ordinal));
+        headerIndex.Should().BeGreaterThanOrEqualTo(0, "the matrix must include its linked technical inventory header");
+
+        return lines.Skip(headerIndex + 2)
+            .TakeWhile(line => line.StartsWith("| ", StringComparison.Ordinal))
+            .Select(ParseTechnicalInventoryRow)
+            .OrderBy(row => row.Kind, StringComparer.Ordinal)
+            .ThenBy(row => row.EntryPoint, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static TechnicalInventoryRow ParseTechnicalInventoryRow(string line)
+    {
+        var values = line.Trim().Trim('|').Split('|').Select(value => value.Trim()).ToArray();
+        values.Should().HaveCount(9, $"technical inventory row '{line}' must define every classification column");
+        values.Should().NotContain(string.Empty, "technical inventory never permits unclassified values");
+
+        var row = new TechnicalInventoryRow(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]);
+        row.Kind.Should().BeOneOf("http-endpoint", "internal-job", "host-middleware");
+        ApprovedAuthorizationOwners.Should().Contain(row.Owner, $"{row.EntryPoint} needs a known owner");
+        ApprovedCollectionScopes.Should().Contain(row.Scope, $"{row.EntryPoint} needs a known scope");
+        ApprovedSensitiveReplayDispositions.Should().Contain(row.SensitiveReplay, $"{row.EntryPoint} needs a known response/replay disposition");
+        AssertMigrationTasks(row.MigrationTasks, row.EntryPoint);
+        return row;
+    }
+
+    private static void AssertMigrationTasks(string value, string identity)
+    {
+        var tasks = value.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        tasks.Should().NotBeEmpty($"{identity} needs at least one migration task");
+        tasks.Should().OnlyHaveUniqueItems($"{identity} must not duplicate migration tasks");
+        tasks.Should().OnlyContain(task => ApprovedMigrationTasks.Contains(task, StringComparer.Ordinal), $"{identity} must only name approved migration tasks");
     }
 
     private static void AssertRowsMatch(IReadOnlyList<MatrixRow> expectedRows, IReadOnlyList<MatrixRow> actualRows)
@@ -815,13 +1008,17 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         return method;
     }
 
-    private static MatrixRow ParseMatrixRow(string line)
+    private static MatrixRow ParseMatrixRow(string line, bool requireAuthorizationMigrationInventory = false)
     {
         var values = line.Trim().Trim('|').Split('|').Select(value => value.Trim()).ToArray();
         var routeKey = values.Length >= 2 ? $"{values[0]} {values[1]}" : line;
-        if (values.Length != 16)
+        if (!requireAuthorizationMigrationInventory && values.Length == 16)
         {
-            var columns = values.Length >= 13 ? "every semantic authorization column" : "every contract column";
+            values = [.. values, "identity", "read", "public", "non-sensitive-current;no-replay-contract", "AUTH-A08"];
+        }
+        if (values.Length != 21)
+        {
+            var columns = values.Length >= 16 ? "every AUTH-K01 authorization inventory column" : "every contract column";
             throw new AssertionException($"Matrix row '{routeKey}' must define {columns}; found {values.Length} columns.");
         }
 
@@ -855,9 +1052,32 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             throw new AssertionException($"Matrix row '{routeKey}' field 'authorization evidence' is required.");
         }
 
+        if (requireAuthorizationMigrationInventory)
+        {
+            ValidateAuthorizationMigrationInventory(values, routeKey);
+        }
+
         return new MatrixRow(
             values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7],
-            values[8], values[9], values[10], values[11], values[12], values[13], values[14], values[15]);
+            values[8], values[9], values[10], values[11], values[12], values[13], values[14], values[15],
+            values[16], values[17], values[18], values[19], values[20]);
+    }
+
+    private static void ValidateAuthorizationMigrationInventory(IReadOnlyList<string> values, string routeKey)
+    {
+        ValidateClosedValue(values[16], ApprovedAuthorizationOwners, "owner", routeKey);
+        ValidateClosedValue(values[17], ApprovedAuthorizationOperations, "operation", routeKey);
+        ValidateClosedValue(values[18], ApprovedCollectionScopes, "collection scope", routeKey);
+        ValidateClosedValue(values[19], ApprovedSensitiveReplayDispositions, "sensitive response/replay", routeKey);
+        AssertMigrationTasks(values[20], routeKey);
+    }
+
+    private static void ValidateClosedValue(string value, IReadOnlyCollection<string> approved, string field, string routeKey)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !approved.Contains(value, StringComparer.Ordinal))
+        {
+            throw new AssertionException($"Matrix row '{routeKey}' field '{field}' must be one of: {string.Join(", ", approved)}; actual '{value}'.");
+        }
     }
 
     private static string[] ParseFacets(string value, string? routeKey = null)
@@ -961,7 +1181,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .SetName("missing authorization evidence identifies route and field");
         yield return new TestCaseData(
                 "| GET | /api/example | ExampleController.Get | authorize | none | 200 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | own | none |",
-                "*GET /api/example*must define every semantic authorization column*")
+                "*GET /api/example*must define every contract column*")
             .SetName("malformed semantic row identifies route");
     }
 
@@ -1003,7 +1223,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .SetName("mixed Exercise visibility requires class and every facet category");
     }
 
-    private static MatrixRow ExampleRow() => ParseMatrixRow("| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |");
+    private static MatrixRow ExampleRow() => ParseMatrixRow("| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles | identity | read | public | non-sensitive-current;no-replay-contract | AUTH-A08 |");
 
     private static string FindRepositoryRoot()
     {
@@ -1023,6 +1243,17 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
 
     private sealed record EndpointMatrixRow(MatrixRow Row, int ApiDescriptionCount);
 
+    private sealed record TechnicalInventoryRow(
+        string Kind,
+        string Methods,
+        string Route,
+        string EntryPoint,
+        string Owner,
+        string ActionPolicy,
+        string Scope,
+        string SensitiveReplay,
+        string MigrationTasks);
+
     private sealed record MatrixRow(
         string Method,
         string Route,
@@ -1039,7 +1270,12 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         string EvidenceLocator,
         string AccessClass,
         string AccessFacets,
-        string AuthorizationEvidence)
+        string AuthorizationEvidence,
+        string Owner,
+        string Operation,
+        string CollectionScope,
+        string SensitiveReplay,
+        string MigrationTasks)
     {
         public string Controller => Action.Split('.', 2, StringSplitOptions.None)[0];
 
@@ -1060,6 +1296,13 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             && !string.IsNullOrWhiteSpace(EvidenceLocator)
             && Action.Contains('.', StringComparison.Ordinal);
 
-        public string ToDocumentRow() => $"| {Method} | {Route} | {Action} | {Authorization} | {RequestDto} | {StatusCodes} | {ContentTypes} | {LegacyFieldsEvidence} | {UuidStringEvidence} | {EnumPolicyEvidence} | {LocalizationEvidence} | {Idempotency} | {EvidenceLocator} | {AccessClass} | {AccessFacets} | {AuthorizationEvidence} |";
+        public bool HasAuthorizationMigrationInventory =>
+            !string.IsNullOrWhiteSpace(Owner)
+            && !string.IsNullOrWhiteSpace(Operation)
+            && !string.IsNullOrWhiteSpace(CollectionScope)
+            && !string.IsNullOrWhiteSpace(SensitiveReplay)
+            && !string.IsNullOrWhiteSpace(MigrationTasks);
+
+        public string ToDocumentRow() => $"| {Method} | {Route} | {Action} | {Authorization} | {RequestDto} | {StatusCodes} | {ContentTypes} | {LegacyFieldsEvidence} | {UuidStringEvidence} | {EnumPolicyEvidence} | {LocalizationEvidence} | {Idempotency} | {EvidenceLocator} | {AccessClass} | {AccessFacets} | {AuthorizationEvidence} | {Owner} | {Operation} | {CollectionScope} | {SensitiveReplay} | {MigrationTasks} |";
     }
 }
