@@ -1,20 +1,26 @@
 using System.Text.Json;
+using LgymApi.Application.BuildingBlocks.Errors;
+using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Resources;
 
 namespace LgymApi.Application.Features.Reporting;
 
 public sealed partial class ReportingService
 {
     private async Task HydrateSubmissionPhotosAsync(
+        AuthenticatedAccountContext currentUser,
         IReadOnlyList<ReportSubmissionResult> submissions,
         CancellationToken cancellationToken)
     {
         var hydratableSubmissions = submissions
-            .Select(submission => (Submission: submission, AnswerKeys: ResolvePhotoEnvelopeAnswerKeys(submission)))
+            .Select(submission => (Submission: submission, AnswerKeys: ResolveDeclaredPhotoAnswerKeys(submission)))
             .Where(candidate => candidate.AnswerKeys.Count > 0)
             .ToList();
         if (hydratableSubmissions.Count == 0)
@@ -31,24 +37,53 @@ public sealed partial class ReportingService
             .GroupBy(photo => photo.ReportRequestId)
             .ToDictionary(group => group.Key, group => group.ToList());
         var capabilities = new Dictionary<Id<Photo>, ReportSubmissionPhotoCapabilityResult>();
+        var sourceRequests = new Dictionary<Id<ReportRequest>, ReportRequestPersistenceModel?>();
 
         foreach (var (submission, answerKeys) in hydratableSubmissions)
         {
+            if (!sourceRequests.TryGetValue(submission.ReportRequestId, out var sourceRequest))
+            {
+                sourceRequest = await _requestSubmissionPersistence.FindRequestByIdAsync(submission.ReportRequestId, cancellationToken);
+                sourceRequests[submission.ReportRequestId] = sourceRequest;
+            }
+
             photosByRequest.TryGetValue(submission.ReportRequestId, out var requestPhotos);
-            var ownedPhotos = (requestPhotos ?? [])
-                .Where(photo => photo.OwnerAccountId == submission.TraineeId)
-                .ToList();
+            var ownedPhotos = requestPhotos ?? [];
+            var sourceAccess = await ValidateSubmissionPhotoSourceAccessAsync(currentUser, submission, sourceRequest, cancellationToken);
             foreach (var answerKey in answerKeys)
             {
                 var answer = submission.Answers[answerKey];
-                submission.Answers[answerKey] = answer.ValueKind == JsonValueKind.Array
-                    ? await HydratePhotoArrayAsync(answer, ownedPhotos, capabilities, cancellationToken)
-                    : await HydratePhotoObjectAsync(answer, ownedPhotos, capabilities, cancellationToken);
+                submission.Answers[answerKey] = sourceAccess.IsFailure
+                    ? RedactPhotoAnswer(answer)
+                    : answer.ValueKind == JsonValueKind.Array
+                        ? await HydratePhotoArrayAsync(currentUser, sourceRequest, answer, ownedPhotos, capabilities, cancellationToken)
+                        : await HydratePhotoObjectAsync(currentUser, sourceRequest, answer, ownedPhotos, capabilities, cancellationToken);
             }
         }
     }
 
+    private async Task<Result<Unit, AppError>> ValidateSubmissionPhotoSourceAccessAsync(
+        AuthenticatedAccountContext currentUser,
+        ReportSubmissionResult submission,
+        ReportRequestPersistenceModel? sourceRequest,
+        CancellationToken cancellationToken)
+    {
+        if (sourceRequest == null
+            || sourceRequest.Id != submission.ReportRequestId
+            || sourceRequest.TraineeId != submission.TraineeId
+            || sourceRequest.Id != submission.Request.Id
+            || sourceRequest.TraineeId != submission.Request.TraineeId
+            || sourceRequest.TrainerId != submission.Request.TrainerId)
+        {
+            return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        return await ValidatePhotoRequestSourceAccessAsync(currentUser, sourceRequest, cancellationToken);
+    }
+
     private async Task<JsonElement> HydratePhotoArrayAsync(
+        AuthenticatedAccountContext currentUser,
+        ReportRequestPersistenceModel? sourceRequest,
         JsonElement answer,
         IReadOnlyList<ReportPhotoPersistenceModel> requestPhotos,
         Dictionary<Id<Photo>, ReportSubmissionPhotoCapabilityResult> capabilities,
@@ -62,10 +97,11 @@ public sealed partial class ReportingService
             {
                 if (IsPhotoEnvelope(item))
                 {
-                    WriteHydratedPhotoEnvelope(
-                        writer,
-                        item,
-                        await ResolvePhotoCapabilityAsync(item, requestPhotos, capabilities, cancellationToken));
+                    var capability = await ResolvePhotoCapabilityAsync(currentUser, sourceRequest, item, requestPhotos, capabilities, cancellationToken);
+                    if (capability.StorageKey != null)
+                    {
+                        WriteHydratedPhotoEnvelope(writer, item, capability);
+                    }
                 }
                 else
                 {
@@ -81,16 +117,25 @@ public sealed partial class ReportingService
     }
 
     private async Task<JsonElement> HydratePhotoObjectAsync(
+        AuthenticatedAccountContext currentUser,
+        ReportRequestPersistenceModel? sourceRequest,
         JsonElement answer,
         IReadOnlyList<ReportPhotoPersistenceModel> requestPhotos,
         Dictionary<Id<Photo>, ReportSubmissionPhotoCapabilityResult> capabilities,
         CancellationToken cancellationToken)
     {
-        var capability = await ResolvePhotoCapabilityAsync(answer, requestPhotos, capabilities, cancellationToken);
+        var capability = await ResolvePhotoCapabilityAsync(currentUser, sourceRequest, answer, requestPhotos, capabilities, cancellationToken);
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream))
         {
-            WriteHydratedPhotoEnvelope(writer, answer, capability);
+            if (capability.StorageKey == null)
+            {
+                writer.WriteNullValue();
+            }
+            else
+            {
+                WriteHydratedPhotoEnvelope(writer, answer, capability);
+            }
             writer.Flush();
         }
 
@@ -98,6 +143,8 @@ public sealed partial class ReportingService
     }
 
     private async Task<ReportSubmissionPhotoCapabilityResult> ResolvePhotoCapabilityAsync(
+        AuthenticatedAccountContext currentUser,
+        ReportRequestPersistenceModel? sourceRequest,
         JsonElement photoEnvelope,
         IReadOnlyList<ReportPhotoPersistenceModel> requestPhotos,
         Dictionary<Id<Photo>, ReportSubmissionPhotoCapabilityResult> capabilities,
@@ -105,6 +152,17 @@ public sealed partial class ReportingService
     {
         var canonicalPhoto = ResolveCanonicalPhoto(photoEnvelope, requestPhotos);
         if (canonicalPhoto == null)
+        {
+            return MapPhotoCapability(new ReportPhotoCapabilitySource(null, null, null));
+        }
+
+        if (sourceRequest == null)
+        {
+            return MapPhotoCapability(new ReportPhotoCapabilitySource(null, null, null));
+        }
+
+        var accessCheck = await ValidatePhotoSourceAccessAsync(currentUser, canonicalPhoto, sourceRequest, cancellationToken);
+        if (accessCheck.IsFailure)
         {
             return MapPhotoCapability(new ReportPhotoCapabilitySource(null, null, null));
         }
@@ -140,7 +198,7 @@ public sealed partial class ReportingService
         JsonElement photoEnvelope,
         ReportSubmissionPhotoCapabilityResult capability)
     {
-        var overwrittenProperties = capability.StorageKey == null ? UrlOutputPropertyNames : CanonicalOutputPropertyNames;
+        var overwrittenProperties = capability.StorageKey == null ? RedactedOutputPropertyNames : CanonicalOutputPropertyNames;
         writer.WriteStartObject();
         foreach (var property in photoEnvelope.EnumerateObject())
         {
@@ -249,21 +307,34 @@ public sealed partial class ReportingService
         return document.RootElement.Clone();
     }
 
-    private static List<string> ResolvePhotoEnvelopeAnswerKeys(ReportSubmissionResult submission)
+    private static JsonElement RedactPhotoAnswer(JsonElement answer)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            if (answer.ValueKind == JsonValueKind.Array)
+            {
+                writer.WriteStartArray();
+                writer.WriteEndArray();
+            }
+            else
+            {
+                writer.WriteNullValue();
+            }
+
+            writer.Flush();
+        }
+
+        return ParseJsonElement(stream);
+    }
+
+    private static List<string> ResolveDeclaredPhotoAnswerKeys(ReportSubmissionResult submission)
         => submission.Request.Template.Fields
             .Where(field => field.Type == ReportFieldType.Photos)
             .Select(field => field.Key)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Where(key => submission.Answers.TryGetValue(key, out var answer) && ContainsPhotoEnvelope(answer))
+            .Where(submission.Answers.ContainsKey)
             .ToList();
-
-    private static bool ContainsPhotoEnvelope(JsonElement answer)
-        => answer.ValueKind switch
-        {
-            JsonValueKind.Object => IsPhotoEnvelope(answer),
-            JsonValueKind.Array => answer.EnumerateArray().Any(IsPhotoEnvelope),
-            _ => false
-        };
 
     private static bool IsPhotoEnvelope(JsonElement item)
     {
@@ -272,22 +343,17 @@ public sealed partial class ReportingService
             return false;
         }
 
-        var declaresCapabilitySlot = false;
-        var declaresPhotoIdentifier = false;
         foreach (var property in item.EnumerateObject())
         {
-            if (UrlOutputPropertyNames.Contains(property.Name))
+            if (UrlOutputPropertyNames.Contains(property.Name)
+                || PhotoIdentifierPropertyNames.Contains(property.Name)
+                || string.Equals(property.Name, "storageKey", StringComparison.OrdinalIgnoreCase))
             {
-                declaresCapabilitySlot |= property.Value.ValueKind is JsonValueKind.String or JsonValueKind.Null;
-            }
-            else if (PhotoIdentifierPropertyNames.Contains(property.Name))
-            {
-                declaresPhotoIdentifier |= property.Value.ValueKind == JsonValueKind.String
-                    && ParsePhotoId(property.Value.GetString()).HasValue;
+                return true;
             }
         }
 
-        return declaresCapabilitySlot || declaresPhotoIdentifier;
+        return false;
     }
 
     private static Id<Photo>? ParsePhotoId(string? value)
@@ -296,4 +362,5 @@ public sealed partial class ReportingService
     private static readonly HashSet<string> PhotoIdentifierPropertyNames = new(["photoId", "_id"], StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> UrlOutputPropertyNames = new(["readUrl", "thumbnailUrl"], StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> CanonicalOutputPropertyNames = new(["storageKey", "readUrl", "thumbnailUrl"], StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> RedactedOutputPropertyNames = new(["photoId", "_id", "storageKey", "readUrl", "thumbnailUrl"], StringComparer.OrdinalIgnoreCase);
 }

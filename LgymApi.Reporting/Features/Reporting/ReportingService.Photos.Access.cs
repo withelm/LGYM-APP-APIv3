@@ -48,6 +48,51 @@ public sealed partial class ReportingService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
+    private async Task<Result<Unit, AppError>> ValidatePhotoSourceAccessAsync(
+        AuthenticatedAccountContext currentUser,
+        ReportPhotoPersistenceModel photo,
+        ReportRequestPersistenceModel request,
+        CancellationToken cancellationToken)
+    {
+        if (photo.IsDeleted
+            || request.IsDeleted
+            || photo.ReportRequestId != request.Id
+            || photo.OwnerAccountId != request.TraineeId
+            || request.TrainerId.IsEmpty
+            || request.TraineeId.IsEmpty)
+        {
+            return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        return await ValidatePhotoRequestSourceAccessAsync(currentUser, request, cancellationToken);
+    }
+
+    private async Task<Result<Unit, AppError>> ValidatePhotoRequestSourceAccessAsync(
+        AuthenticatedAccountContext currentUser,
+        ReportRequestPersistenceModel request,
+        CancellationToken cancellationToken)
+    {
+        if (request.IsDeleted || request.TrainerId.IsEmpty || request.TraineeId.IsEmpty)
+        {
+            return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        if (currentUser.Id == request.TraineeId)
+        {
+            return Result<Unit, AppError>.Success(Unit.Value);
+        }
+
+        if (currentUser.Id != request.TrainerId)
+        {
+            var trainerCheck = EnsureTrainer(currentUser);
+            return trainerCheck.IsFailure
+                ? Result<Unit, AppError>.Failure(new ReportingForbiddenError(Messages.TrainerRoleRequired))
+                : Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        return await ValidatePhotoAccessAsync(currentUser, request.TraineeId, cancellationToken);
+    }
+
     private static string GenerateStorageKey(
         Id<AccountReference> traineeId,
         Id<ReportRequest> reportRequestId,

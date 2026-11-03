@@ -19,12 +19,12 @@ internal static class PhotoServiceTestFactory
     public static AuthenticatedAccountContext CreateUser(Id<User> id, string email)
         => ReportingTestData.Account(id, email.Contains("trainer", StringComparison.OrdinalIgnoreCase));
 
-    public static ReportRequest CreateReportRequest(Id<ReportRequest> id, Id<User> traineeId)
+    public static ReportRequest CreateReportRequest(Id<ReportRequest> id, Id<User> traineeId, Id<User>? trainerId = null)
     {
         var template = new ReportTemplate
         {
             Id = Id<ReportTemplate>.New(),
-            TrainerId = Id<User>.New(),
+            TrainerId = trainerId ?? Id<User>.New(),
             Name = "Photo report",
             Fields = []
         };

@@ -87,7 +87,7 @@ public sealed class PhotoHistoryServiceTests
         var trainerId = Id<User>.New();
         var requestId = Id<ReportRequest>.New();
         var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com");
-        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId, trainerId);
         var photos = new List<Photo> { new() { Id = Id<Photo>.New(), ReportRequestId = requestId, OwnerUserId = traineeId, UploaderUserId = traineeId, ViewType = PhotoViewType.Side.ToString(), StorageKey = "photos/side.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "def456", IsDeleted = false } };
 
         var repo = Substitute.For<IReportPhotoPersistence>();
@@ -106,6 +106,44 @@ public sealed class PhotoHistoryServiceTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().HaveCount(1);
         result.Value[0].ViewType.Should().Be("Side");
+    }
+
+    [Test]
+    public async Task GetPhotoHistoryAsync_WhenActiveSuccessorRequestsTraineeHistory_OmitsSourcePhotoWithoutSigningOriginalOrThumbnail()
+    {
+        var traineeId = Id<User>.New();
+        var sourceTrainerId = Id<User>.New();
+        var successorTrainerId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var successor = PhotoServiceTestFactory.CreateUser(successorTrainerId, "successor-trainer@example.com");
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId, sourceTrainerId);
+        var photo = new Photo
+        {
+            Id = Id<Photo>.New(),
+            ReportRequestId = requestId,
+            OwnerUserId = traineeId,
+            UploaderUserId = traineeId,
+            ViewType = PhotoViewType.Front.ToString(),
+            StorageKey = "photos/source.jpg",
+            ThumbnailStorageKey = "photos/source-thumb.jpg",
+            MimeType = "image/jpeg",
+            SizeBytes = 1024,
+            Checksum = "etag"
+        };
+        var repository = Substitute.For<IReportPhotoPersistence>();
+        repository.ListByTraineeAsync(ReportingTestData.AccountId(traineeId), Arg.Any<CancellationToken>()).Returns([ReportingTestData.Photo(photo)]);
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            relationshipAccess: (trainerId, linkedTraineeId, _) => Task.FromResult(trainerId == successorTrainerId && linkedTraineeId == traineeId),
+            reportingRepository: repository,
+            photoStorageProvider: storageProvider);
+
+        var result = await service.GetPhotoHistoryAsync(successor, new GetPhotoHistoryCommand { TraineeId = ReportingTestData.AccountId(traineeId) });
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeEmpty();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
     [Test]

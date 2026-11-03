@@ -5,6 +5,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Data.SeedData;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.IntegrationTests;
@@ -41,7 +42,7 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
     }
 
     [Test]
-    public async Task GetOwnReportSubmissions_WhenPhotoIdAliasesConflict_ClearsPersistedUrls()
+    public async Task GetOwnReportSubmissions_WhenPhotoIdAliasesConflict_OmitsPhotoEnvelope()
     {
         var scenario = await SeedScenarioAsync(conflictingPhotoId: Id<Photo>.New().ToString());
         SetAuthorizationHeader(scenario.TraineeId);
@@ -50,9 +51,7 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var unresolved = document.RootElement[0].GetProperty("answers").GetProperty("photos")[0];
-        unresolved.GetProperty("readUrl").ValueKind.Should().Be(JsonValueKind.Null);
-        unresolved.GetProperty("thumbnailUrl").ValueKind.Should().Be(JsonValueKind.Null);
+        document.RootElement[0].GetProperty("answers").GetProperty("photos").GetArrayLength().Should().Be(0);
     }
 
     [Test]
@@ -69,7 +68,7 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
     }
 
     [Test]
-    public async Task GetOwnReportSubmissions_WhenPhotoArrayContainsMetadata_PreservesMetadataObject()
+    public async Task GetOwnReportSubmissions_WhenPhotoArrayContainsStorageMetadata_OmitsUnboundEnvelope()
     {
         var scenario = await SeedScenarioAsync(includeMetadataObject: true);
         SetAuthorizationHeader(scenario.TraineeId);
@@ -78,11 +77,128 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var metadata = document.RootElement[0].GetProperty("answers").GetProperty("photos")[1];
-        metadata.EnumerateObject().Select(property => property.Name).Should().Equal("caption", "_id", "storageKey");
-        metadata.GetProperty("caption").GetString().Should().Be("front");
-        metadata.GetProperty("_id").GetString().Should().Be("caption-1");
-        metadata.GetProperty("storageKey").GetString().Should().Be("captions/front.txt");
+        document.RootElement[0].GetProperty("answers").GetProperty("photos").GetArrayLength().Should().Be(1);
+    }
+
+    [Test]
+    public async Task SignedPhotoRead_ActiveSuccessorTrainerCannotReadAnotherTrainersSourcePhoto()
+    {
+        var scenario = await SeedScenarioAsync();
+        var successor = await SeedUserAsync("photo-hydration-successor", "photo-hydration-successor@example.test");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.UserRoles.Add(new UserRole { UserId = successor.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId });
+            database.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = successor.Id, TraineeId = scenario.TraineeId });
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(scenario.TrainerId);
+        using var sourceResponse = await Client.GetAsync($"/api/trainer/reporting/photos/{scenario.Photo.Id}/signed-url");
+        sourceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        SetAuthorizationHeader(successor.Id);
+        using var successorResponse = await Client.GetAsync($"/api/trainer/reporting/photos/{scenario.Photo.Id}/signed-url");
+        successorResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var body = await successorResponse.Content.ReadAsStringAsync();
+        body.Should().NotContain(scenario.Photo.Id.ToString());
+        body.Should().NotContain(scenario.Photo.StorageKey);
+    }
+
+    [Test]
+    public async Task PhotoHistory_SourceTraineeAndActiveSourceTrainerCanReadWhileSuccessorOutsiderAndAdminCannotSeePhotoMetadata()
+    {
+        var scenario = await SeedScenarioAsync();
+        var successor = await SeedUserAsync("photo-history-successor", "photo-history-successor@example.test");
+        var outsider = await SeedUserAsync("photo-history-outsider", "photo-history-outsider@example.test");
+        var admin = await SeedUserAsync("photo-history-admin", "photo-history-admin@example.test");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.UserRoles.AddRange(
+                new UserRole { UserId = successor.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
+                new UserRole { UserId = outsider.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
+                new UserRole { UserId = admin.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
+                new UserRole { UserId = admin.Id, RoleId = RoleSeedDataConfiguration.AdminRoleSeedId });
+            database.TrainerTraineeLinks.AddRange(
+                new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = successor.Id, TraineeId = scenario.TraineeId },
+                new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = admin.Id, TraineeId = scenario.TraineeId });
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(scenario.TraineeId);
+        using var traineeResponse = await Client.GetAsync($"/api/trainee/reporting/photos/history?requestId={scenario.RequestId}");
+        traineeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await PhotoCountAsync(traineeResponse)).Should().Be(1);
+
+        SetAuthorizationHeader(scenario.TrainerId);
+        using var sourceResponse = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={scenario.TraineeId}");
+        sourceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await PhotoCountAsync(sourceResponse)).Should().Be(1);
+
+        foreach (var actorId in new[] { successor.Id, admin.Id })
+        {
+            SetAuthorizationHeader(actorId);
+            using var response = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={scenario.TraineeId}");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var body = await response.Content.ReadAsStringAsync();
+            body.Should().NotContain(scenario.Photo.Id.ToString());
+            body.Should().NotContain(scenario.Photo.StorageKey);
+            using var document = JsonDocument.Parse(body);
+            document.RootElement.GetProperty("photos").GetArrayLength().Should().Be(0);
+        }
+
+        SetAuthorizationHeader(outsider.Id);
+        using var outsiderResponse = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={scenario.TraineeId}");
+        outsiderResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task SubmissionHydration_SourceTraineeAndActiveSourceTrainerCanReadWhileSuccessorOutsiderAndAdminCannotReceivePhotoData()
+    {
+        var scenario = await SeedScenarioAsync();
+        var successor = await SeedUserAsync("photo-submission-successor", "photo-submission-successor@example.test");
+        var outsider = await SeedUserAsync("photo-submission-outsider", "photo-submission-outsider@example.test");
+        var admin = await SeedUserAsync("photo-submission-admin", "photo-submission-admin@example.test");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.UserRoles.AddRange(
+                new UserRole { UserId = successor.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
+                new UserRole { UserId = outsider.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
+                new UserRole { UserId = admin.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
+                new UserRole { UserId = admin.Id, RoleId = RoleSeedDataConfiguration.AdminRoleSeedId });
+            database.TrainerTraineeLinks.AddRange(
+                new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = successor.Id, TraineeId = scenario.TraineeId },
+                new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = admin.Id, TraineeId = scenario.TraineeId });
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(scenario.TraineeId);
+        using var traineeResponse = await Client.GetAsync("/api/trainee/report-submissions");
+        traineeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await SubmissionCountAsync(traineeResponse)).Should().Be(1);
+
+        SetAuthorizationHeader(scenario.TrainerId);
+        using var sourceResponse = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
+        sourceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await SubmissionCountAsync(sourceResponse)).Should().Be(1);
+
+        foreach (var actorId in new[] { successor.Id, admin.Id })
+        {
+            SetAuthorizationHeader(actorId);
+            using var response = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var body = await response.Content.ReadAsStringAsync();
+            body.Should().NotContain(scenario.Photo.Id.ToString());
+            body.Should().NotContain(scenario.Photo.StorageKey);
+            using var document = JsonDocument.Parse(body);
+            document.RootElement.GetArrayLength().Should().Be(0);
+        }
+
+        SetAuthorizationHeader(outsider.Id);
+        using var outsiderResponse = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
+        outsiderResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     private async Task<Scenario> SeedScenarioAsync(
@@ -181,13 +297,15 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         {
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             database.ReportTemplates.Add(template);
+            database.UserRoles.Add(new UserRole { UserId = trainer.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId });
+            database.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id });
             database.ReportRequests.Add(request);
             database.Photos.Add(photo);
             database.ReportSubmissions.Add(submission);
             await database.SaveChangesAsync();
         }
 
-        return new Scenario(trainee.Id, photo, submission.Id);
+        return new Scenario(trainer.Id, trainee.Id, request.Id, photo, submission.Id);
     }
 
     private static void AssertHydratedPhoto(JsonElement submission, string canonicalStorageKey)
@@ -199,5 +317,17 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         hydrated.GetProperty("thumbnailUrl").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
-    private sealed record Scenario(Id<User> TraineeId, Photo Photo, Id<ReportSubmission> SubmissionId);
+    private static async Task<int> PhotoCountAsync(HttpResponseMessage response)
+    {
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.GetProperty("photos").GetArrayLength();
+    }
+
+    private static async Task<int> SubmissionCountAsync(HttpResponseMessage response)
+    {
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.GetArrayLength();
+    }
+
+    private sealed record Scenario(Id<User> TrainerId, Id<User> TraineeId, Id<ReportRequest> RequestId, Photo Photo, Id<ReportSubmission> SubmissionId);
 }

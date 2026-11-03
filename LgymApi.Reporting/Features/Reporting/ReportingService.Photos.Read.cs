@@ -30,7 +30,14 @@ public sealed partial class ReportingService
                 new ReportingNotFoundError(Messages.DidntFind));
         }
 
-        var authCheck = await ValidatePhotoAccessAsync(currentUser, photo.OwnerAccountId, cancellationToken);
+        var request = await _requestSubmissionPersistence.FindRequestByIdAsync(photo.ReportRequestId, cancellationToken);
+        if (request == null)
+        {
+            return Result<SignedReadUrlResult, AppError>.Failure(
+                new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        var authCheck = await ValidatePhotoSourceAccessAsync(currentUser, photo, request, cancellationToken);
         if (authCheck.IsFailure)
         {
             return Result<SignedReadUrlResult, AppError>.Failure(authCheck.Error);
@@ -65,7 +72,7 @@ public sealed partial class ReportingService
                     new InvalidReportingError("Report request not found"));
             }
 
-            var authCheck = await ValidatePhotoAccessAsync(currentUser, reportRequest.TraineeId, cancellationToken);
+            var authCheck = await ValidatePhotoRequestSourceAccessAsync(currentUser, reportRequest, cancellationToken);
             if (authCheck.IsFailure)
             {
                 return Result<List<PhotoHistoryItemResult>, AppError>.Failure(authCheck.Error);
@@ -100,6 +107,11 @@ public sealed partial class ReportingService
                 {
                     requests[photo.ReportRequestId] = request;
                 }
+            }
+
+            if (request == null || (await ValidatePhotoSourceAccessAsync(currentUser, photo, request, cancellationToken)).IsFailure)
+            {
+                continue;
             }
 
             var readUrl = await _photoStorageProvider.GenerateSignedReadUrlAsync(
