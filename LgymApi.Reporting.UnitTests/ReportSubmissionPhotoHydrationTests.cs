@@ -82,7 +82,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
     }
 
     [Test]
-    public async Task GetOwnSubmissionsAsync_WhenPayloadHasMalformedId_DoesNotFallbackToStorageKey()
+    public async Task GetOwnSubmissionsAsync_WhenPayloadHasMalformedId_OmitsPhotoEnvelopeWithoutSigning()
     {
         var fixture = CreateFixture();
         fixture.ReturnSubmissions(CreateSubmission(fixture.RequestId, fixture.TraineeId, new Dictionary<string, object?>
@@ -95,14 +95,12 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        var unresolved = GetOnlyPhoto(result.Value.Single());
-        unresolved.GetProperty("readUrl").ValueKind.Should().Be(JsonValueKind.Null);
-        unresolved.GetProperty("thumbnailUrl").ValueKind.Should().Be(JsonValueKind.Null);
+        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(fixture.Photos[0].StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task GetOwnSubmissionsAsync_WhenCanonicalPhotoIsMissing_DegradesWithoutSigningPayloadValues()
+    public async Task GetOwnSubmissionsAsync_WhenCanonicalPhotoIsMissing_OmitsPhotoEnvelopeWithoutSigning()
     {
         var fixture = CreateFixture(photos: []);
         fixture.ReturnSubmissions(CreateSubmission(fixture.RequestId, fixture.TraineeId, new Dictionary<string, object?>
@@ -115,7 +113,80 @@ public sealed class ReportSubmissionPhotoHydrationTests
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
         result.IsSuccess.Should().BeTrue();
-        GetOnlyPhoto(result.Value.Single()).GetProperty("readUrl").ValueKind.Should().Be(JsonValueKind.Null);
+        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetOwnSubmissionsAsync_WhenCanonicalPhotoOwnerDoesNotMatchSourceRequest_OmitsMetadataWithoutSigning()
+    {
+        var fixture = CreateFixture();
+        var inconsistentPhoto = fixture.Photos[0] with { OwnerAccountId = ReportingTestData.AccountId(Id<User>.New()) };
+        var inconsistentFixture = new Fixture(fixture.TraineeId, fixture.RequestId, [inconsistentPhoto]);
+        inconsistentFixture.ReturnSubmissions(CreateSubmission(fixture.RequestId, fixture.TraineeId, new Dictionary<string, object?>
+        {
+            ["photoId"] = inconsistentPhoto.Id.ToString(),
+            ["storageKey"] = inconsistentPhoto.StorageKey,
+            ["readUrl"] = "https://expired.example/read",
+            ["thumbnailUrl"] = "https://expired.example/thumb"
+        }));
+
+        var result = await inconsistentFixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(inconsistentFixture.TraineeId));
+
+        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        await inconsistentFixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetOwnSubmissionsAsync_WhenAuthoritativeSourceRequestIsMissing_OmitsPhotoEnvelopeWithoutSigning()
+    {
+        var fixture = CreateFixture();
+        var photo = fixture.Photos[0];
+        fixture.ReturnSubmissions(CreateSubmission(fixture.RequestId, fixture.TraineeId, new Dictionary<string, object?>
+        {
+            ["photoId"] = photo.Id.ToString(),
+            ["storageKey"] = photo.StorageKey,
+            ["readUrl"] = "https://expired.example/read"
+        }, additionalPhotoItems: [new Dictionary<string, object?> { ["storageKey"] = "photos/leaked.jpg", ["caption"] = "front" }]));
+        fixture.RequestPersistence.FindRequestByIdAsync(fixture.RequestId, Arg.Any<CancellationToken>()).Returns((ReportRequestPersistenceModel?)null);
+
+        var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
+
+        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetOwnSubmissionsAsync_WhenAuthoritativeRequestDisagreesWithSubmissionBinding_OmitsPhotoEnvelopeWithoutSigning()
+    {
+        var traineeId = Id<User>.New();
+        var firstRequestId = Id<ReportRequest>.New();
+        var secondRequestId = Id<ReportRequest>.New();
+        var firstPhoto = CreatePhoto(firstRequestId, traineeId, "photos/first.jpg");
+        var fixture = new Fixture(traineeId, firstRequestId, [firstPhoto]);
+        var mismatchedSource = CreateSubmission(secondRequestId, traineeId, new Dictionary<string, object?> { ["photoId"] = firstPhoto.Id.ToString() });
+        var inconsistentSubmission = mismatchedSource with { ReportRequestId = firstRequestId };
+        fixture.ReturnSubmissions(inconsistentSubmission);
+
+        var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(traineeId));
+
+        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetOwnSubmissionsAsync_WhenAuthoritativeRequestTraineeDisagreesWithSubmission_OmitsPhotoEnvelopeWithoutSigning()
+    {
+        var fixture = CreateFixture();
+        var photo = fixture.Photos[0];
+        var submission = CreateSubmission(fixture.RequestId, fixture.TraineeId, new Dictionary<string, object?> { ["photoId"] = photo.Id.ToString() });
+        fixture.ReturnSubmissions(submission);
+        var mismatchedSource = submission.ReportRequest with { TraineeId = ReportingTestData.AccountId(Id<User>.New()) };
+        fixture.RequestPersistence.FindRequestByIdAsync(fixture.RequestId, Arg.Any<CancellationToken>()).Returns(mismatchedSource);
+
+        var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
+
+        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -159,24 +230,24 @@ public sealed class ReportSubmissionPhotoHydrationTests
     }
 
     [Test]
-    public async Task GetOwnSubmissionsAsync_WhenPhotosArrayContainsMetadataWithLegacyIdAlias_PreservesMetadataObject()
+    public async Task GetOwnSubmissionsAsync_WhenPhotosArrayContainsCaptionMetadata_PreservesMetadataObject()
     {
         var fixture = CreateFixture();
         fixture.ReturnSubmissions(CreateSubmission(
             fixture.RequestId,
             fixture.TraineeId,
             new Dictionary<string, object?> { ["photoId"] = fixture.Photos[0].Id.ToString(), ["readUrl"] = "https://expired.example/read" },
-            additionalPhotoItems: [new Dictionary<string, object?> { ["_id"] = "caption-1" }]));
+            additionalPhotoItems: [new Dictionary<string, object?> { ["caption"] = "front" }]));
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
         var metadata = result.Value.Single().Answers["photos"].EnumerateArray().Last();
-        metadata.EnumerateObject().Select(property => property.Name).Should().Equal("_id");
-        metadata.GetProperty("_id").GetString().Should().Be("caption-1");
+        metadata.EnumerateObject().Select(property => property.Name).Should().Equal("caption");
+        metadata.GetProperty("caption").GetString().Should().Be("front");
     }
 
     [Test]
-    public async Task GetOwnSubmissionsAsync_WhenPhotosArrayContainsMetadataWithStorageKey_PreservesMetadataObject()
+    public async Task GetOwnSubmissionsAsync_WhenPhotosArrayContainsStorageOnlyEnvelope_OmitsItWithoutSigning()
     {
         var fixture = CreateFixture();
         fixture.ReturnSubmissions(CreateSubmission(
@@ -187,9 +258,8 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        var metadata = result.Value.Single().Answers["photos"].EnumerateArray().Last();
-        metadata.EnumerateObject().Select(property => property.Name).Should().Equal("storageKey", "caption");
-        metadata.GetProperty("storageKey").GetString().Should().Be("captions/front.txt");
+        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(1);
+        await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync("captions/front.txt", Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -330,11 +400,16 @@ public sealed class ReportSubmissionPhotoHydrationTests
         public Id<ReportRequest> RequestId { get; }
         public IReadOnlyList<ReportPhotoPersistenceModel> Photos { get; }
         public IReportPhotoPersistence PhotoPersistence => _photos;
+        public IReportRequestSubmissionPersistence RequestPersistence => _submissions;
         public IPhotoStorageProvider Storage { get; }
         public ReportingService Service { get; }
 
         public void ReturnSubmissions(params ReportSubmissionPersistenceModel[] submissions)
-            => _submissions.ListSubmissionsByTraineeAsync(ReportingTestData.AccountId(TraineeId), Arg.Any<CancellationToken>())
+        {
+            _submissions.ListSubmissionsByTraineeAsync(ReportingTestData.AccountId(TraineeId), Arg.Any<CancellationToken>())
                 .Returns(submissions);
+            _submissions.FindRequestByIdAsync(Arg.Any<Id<ReportRequest>>(), Arg.Any<CancellationToken>())
+                .Returns(call => submissions.FirstOrDefault(submission => submission.ReportRequestId == call.ArgAt<Id<ReportRequest>>(0))?.ReportRequest);
+        }
     }
 }

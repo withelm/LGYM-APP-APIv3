@@ -26,7 +26,7 @@ public sealed partial class ReportingService
             traineeId,
             cancellationToken);
         var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(submissions);
-        await HydrateSubmissionPhotosAsync(results, cancellationToken);
+        await HydrateSubmissionPhotosAsync(currentTrainer, results, cancellationToken);
         return Result<List<ReportSubmissionResult>, AppError>.Success(results);
     }
 
@@ -36,7 +36,7 @@ public sealed partial class ReportingService
     {
         var submissions = await _requestSubmissionPersistence.ListSubmissionsByTraineeAsync(currentTrainee.Id, cancellationToken);
         var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(submissions);
-        await HydrateSubmissionPhotosAsync(results, cancellationToken);
+        await HydrateSubmissionPhotosAsync(currentTrainee, results, cancellationToken);
         return Result<List<ReportSubmissionResult>, AppError>.Success(results);
     }
 
@@ -44,11 +44,12 @@ public sealed partial class ReportingService
         => _mapper.Map<ReportSubmissionPersistenceModel, ReportSubmissionResult>(submission);
 
     private async Task<ReportSubmissionResult> MapAndHydrateSubmissionAsync(
+        AuthenticatedAccountContext currentUser,
         ReportSubmissionPersistenceModel submission,
         CancellationToken cancellationToken)
     {
         var result = MapSubmission(submission);
-        await HydrateSubmissionPhotosAsync([result], cancellationToken);
+        await HydrateSubmissionPhotosAsync(currentUser, [result], cancellationToken);
         return result;
     }
 

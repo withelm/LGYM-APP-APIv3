@@ -87,6 +87,7 @@ public sealed partial class ReportingService : IReportingService
 
         var submittedRequest = request with { Status = ReportRequestStatus.Submitted, SubmittedAt = submittedAtUtc, Template = effectiveTemplate };
         var result = await MapAndHydrateSubmissionAsync(
+            currentTrainee,
             ToPersistenceModel(submission, submittedRequest),
             cancellationToken);
 
@@ -179,7 +180,7 @@ public sealed partial class ReportingService : IReportingService
             }
         }
 
-        var result = await MapAndHydrateSubmissionAsync(submission with
+        var result = await MapAndHydrateSubmissionAsync(currentTrainer, submission with
         {
             TrainerOverallComment = overallComment,
             TrainerFieldCommentsJson = fieldCommentsJson,
@@ -231,7 +232,7 @@ public sealed partial class ReportingService : IReportingService
         if (submission.TrainerFeedbackReadAt.HasValue)
         {
             return Result<ReportSubmissionResult, AppError>.Success(
-                await MapAndHydrateSubmissionAsync(submission, cancellationToken));
+                await MapAndHydrateSubmissionAsync(currentTrainee, submission, cancellationToken));
         }
 
         var readAt = DateTimeOffset.UtcNow;
@@ -257,6 +258,7 @@ public sealed partial class ReportingService : IReportingService
         }
 
         var result = await MapAndHydrateSubmissionAsync(
+            currentTrainee,
             submission with { TrainerFeedbackReadAt = readAt },
             cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

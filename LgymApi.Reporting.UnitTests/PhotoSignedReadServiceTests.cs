@@ -39,7 +39,11 @@ public sealed class PhotoSignedReadServiceTests
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         storageProvider.GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns("https://storage.example.com/read-url");
 
-        var service = PhotoServiceTestFactory.CreateService(reportingRepository: repo, photoStorageProvider: storageProvider);
+        var request = PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, ownerId);
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            reportingRepository: repo,
+            photoStorageProvider: storageProvider);
         var result = await service.GetSignedReadUrlAsync(currentUser, photoId);
 
         result.IsSuccess.Should().BeTrue();
@@ -84,7 +88,11 @@ public sealed class PhotoSignedReadServiceTests
         repo.FindByIdAsync(photoId, Arg.Any<CancellationToken>()).Returns(ReportingTestData.Photo(photo));
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
 
-        var service = PhotoServiceTestFactory.CreateService(reportingRepository: repo, photoStorageProvider: storageProvider);
+        var request = PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, ownerId);
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            reportingRepository: repo,
+            photoStorageProvider: storageProvider);
         var result = await service.GetSignedReadUrlAsync(otherUser, photoId);
 
         result.IsFailure.Should().BeTrue();
@@ -93,7 +101,7 @@ public sealed class PhotoSignedReadServiceTests
     }
 
     [Test]
-    public async Task GetSignedReadUrlAsync_WhenAssignedTrainerRequestsTraineePhoto_ReturnsSignedUrl()
+    public async Task GetSignedReadUrlAsync_WhenActiveSourceTrainerRequestsTraineePhoto_ReturnsSignedUrl()
     {
         var traineeId = Id<User>.New();
         var trainerId = Id<User>.New();
@@ -117,6 +125,7 @@ public sealed class PhotoSignedReadServiceTests
         storageProvider.GenerateSignedReadUrlAsync(photo.StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns("https://storage.example.com/read-url");
         var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, traineeId, trainerId)),
             reportingRepository: repository,
             photoStorageProvider: storageProvider,
             relationshipAccess: (currentTrainerId, currentTraineeId, _) => Task.FromResult(
@@ -130,10 +139,12 @@ public sealed class PhotoSignedReadServiceTests
     }
 
     [Test]
-    public async Task GetSignedReadUrlAsync_WhenNonAssignedTrainerRequestsTraineePhoto_ReturnsNotFoundWithoutSignedUrl()
+    public async Task GetSignedReadUrlAsync_WhenActiveSuccessorTrainerRequestsSourcePhoto_ReturnsNotFoundWithoutSignedUrl()
     {
         var traineeId = Id<User>.New();
-        var trainer = PhotoServiceTestFactory.CreateUser(Id<User>.New(), "non-assigned-trainer@example.com");
+        var sourceTrainerId = Id<User>.New();
+        var successorTrainerId = Id<User>.New();
+        var trainer = PhotoServiceTestFactory.CreateUser(successorTrainerId, "successor-trainer@example.com");
         var photoId = Id<Photo>.New();
         var photo = new Photo
         {
@@ -151,9 +162,119 @@ public sealed class PhotoSignedReadServiceTests
         repository.FindByIdAsync(photoId, Arg.Any<CancellationToken>()).Returns(ReportingTestData.Photo(photo));
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
         var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, traineeId, sourceTrainerId)),
             reportingRepository: repository,
             photoStorageProvider: storageProvider,
-            relationshipAccess: (_, _, _) => Task.FromResult(false));
+            relationshipAccess: (currentTrainerId, currentTraineeId, _) => Task.FromResult(
+                currentTrainerId == successorTrainerId && currentTraineeId == traineeId));
+
+        var result = await service.GetSignedReadUrlAsync(trainer, photoId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetSignedReadUrlAsync_WhenFormerSourceTrainerRequestsPhoto_ReturnsNotFoundWithoutSigning()
+    {
+        var traineeId = Id<User>.New();
+        var sourceTrainerId = Id<User>.New();
+        var sourceTrainer = PhotoServiceTestFactory.CreateUser(sourceTrainerId, "source-trainer@example.com");
+        var photoId = Id<Photo>.New();
+        var photo = new Photo
+        {
+            Id = photoId,
+            OwnerUserId = traineeId,
+            UploaderUserId = traineeId,
+            ReportRequestId = Id<ReportRequest>.New(),
+            ViewType = PhotoViewType.Front.ToString(),
+            StorageKey = "photos/former-source.jpg",
+            MimeType = "image/jpeg",
+            SizeBytes = 1024,
+            Checksum = "etag"
+        };
+        var repository = Substitute.For<IReportPhotoPersistence>();
+        repository.FindByIdAsync(photoId, Arg.Any<CancellationToken>()).Returns(ReportingTestData.Photo(photo));
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, traineeId, sourceTrainerId)),
+            relationshipAccess: (_, _, _) => Task.FromResult(false),
+            reportingRepository: repository,
+            photoStorageProvider: storageProvider);
+
+        var result = await service.GetSignedReadUrlAsync(sourceTrainer, photoId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetSignedReadUrlAsync_WhenPhotoOwnerDoesNotMatchSourceRequest_DoesNotSign()
+    {
+        var traineeId = Id<User>.New();
+        var otherTraineeId = Id<User>.New();
+        var trainerId = Id<User>.New();
+        var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com");
+        var photoId = Id<Photo>.New();
+        var photo = new Photo
+        {
+            Id = photoId,
+            OwnerUserId = otherTraineeId,
+            UploaderUserId = otherTraineeId,
+            ReportRequestId = Id<ReportRequest>.New(),
+            ViewType = PhotoViewType.Front.ToString(),
+            StorageKey = "photos/inconsistent.jpg",
+            MimeType = "image/jpeg",
+            SizeBytes = 1024,
+            Checksum = "etag"
+        };
+        var repository = Substitute.For<IReportPhotoPersistence>();
+        repository.FindByIdAsync(photoId, Arg.Any<CancellationToken>()).Returns(ReportingTestData.Photo(photo));
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, traineeId, trainerId)),
+            relationshipAccess: (currentTrainerId, currentTraineeId, _) => Task.FromResult(currentTrainerId == trainerId && currentTraineeId == traineeId),
+            reportingRepository: repository,
+            photoStorageProvider: storageProvider);
+
+        var result = await service.GetSignedReadUrlAsync(trainer, photoId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetSignedReadUrlAsync_WhenSourceRequestIsDeleted_ReturnsNotFoundWithoutSigning()
+    {
+        var traineeId = Id<User>.New();
+        var trainerId = Id<User>.New();
+        var trainer = PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com");
+        var photoId = Id<Photo>.New();
+        var photo = new Photo
+        {
+            Id = photoId,
+            OwnerUserId = traineeId,
+            UploaderUserId = traineeId,
+            ReportRequestId = Id<ReportRequest>.New(),
+            ViewType = PhotoViewType.Front.ToString(),
+            StorageKey = "photos/deleted-source.jpg",
+            MimeType = "image/jpeg",
+            SizeBytes = 1024,
+            Checksum = "etag"
+        };
+        var sourceRequest = PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, traineeId, trainerId);
+        sourceRequest.IsDeleted = true;
+        var repository = Substitute.For<IReportPhotoPersistence>();
+        repository.FindByIdAsync(photoId, Arg.Any<CancellationToken>()).Returns(ReportingTestData.Photo(photo));
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(sourceRequest),
+            relationshipAccess: (_, _, _) => Task.FromResult(true),
+            reportingRepository: repository,
+            photoStorageProvider: storageProvider);
 
         var result = await service.GetSignedReadUrlAsync(trainer, photoId);
 
