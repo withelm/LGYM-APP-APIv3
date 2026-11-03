@@ -27,6 +27,7 @@ public sealed partial class ReportingService : IReportingService
     private readonly IRecurringReportAssignmentPersistence _recurringAssignmentPersistence;
     private readonly IReportPhotoPersistence _photoPersistence;
     private readonly IReportingRelationshipAccessPersistence _relationshipAccessPersistence;
+    private readonly IAccountLookupService _accountLookupService;
     private readonly IReportSubmissionAcceptedProgressCommandFactory _reportSubmissionAcceptedProgressCommandFactory;
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly ICommandOutboxWriter _commandOutboxWriter;
@@ -42,6 +43,7 @@ public sealed partial class ReportingService : IReportingService
         IRecurringReportAssignmentPersistence recurringAssignmentPersistence,
         IReportPhotoPersistence photoPersistence,
         IReportingRelationshipAccessPersistence relationshipAccessPersistence,
+        IAccountLookupService accountLookupService,
         IReportSubmissionAcceptedProgressCommandFactory reportSubmissionAcceptedProgressCommandFactory,
         ICommandDispatcher commandDispatcher,
         ICommandOutboxWriter commandOutboxWriter,
@@ -56,6 +58,7 @@ public sealed partial class ReportingService : IReportingService
         _recurringAssignmentPersistence = recurringAssignmentPersistence;
         _photoPersistence = photoPersistence;
         _relationshipAccessPersistence = relationshipAccessPersistence;
+        _accountLookupService = accountLookupService;
         _reportSubmissionAcceptedProgressCommandFactory = reportSubmissionAcceptedProgressCommandFactory;
         _commandDispatcher = commandDispatcher;
         _commandOutboxWriter = commandOutboxWriter;

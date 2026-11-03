@@ -9,6 +9,8 @@ using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -211,5 +213,42 @@ public sealed class PhotoCompleteUploadServiceTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidReportingError>();
         result.Error.Message.Should().Be(LgymApi.Resources.Messages.ReportRequestNotPending);
+    }
+
+    [Test]
+    public async Task CompletePhotoUploadAsync_WhenSubjectIsMissing_DoesNotInspectOrDeleteStoredObject()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var storageKey = $"photos/{traineeId}/{requestId}/Front/existing.jpg";
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var repository = Substitute.For<IReportPhotoPersistence>();
+        var accountLookup = Substitute.For<IAccountLookupService>();
+        accountLookup.GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+            .Returns((AccountLookup?)null);
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId)),
+            reportingRepository: repository,
+            photoStorageProvider: storageProvider,
+            pendingUpload: PhotoServiceTestFactory.CreatePendingUpload(storageKey, traineeId, traineeId, requestId, PhotoViewType.Front.ToString(), "image/jpeg", 1024),
+            accountLookupService: accountLookup);
+
+        var result = await service.CompletePhotoUploadAsync(
+            PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com"),
+            new CompletePhotoUploadCommand
+            {
+                ReportRequestId = requestId,
+                StorageKey = storageKey,
+                ViewType = "Front",
+                MimeType = "image/jpeg",
+                SizeBytes = 1024,
+                Checksum = "etag"
+            });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await storageProvider.DidNotReceive().GetMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await storageProvider.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await repository.DidNotReceive().SaveAsync(Arg.Any<NewReportPhotoPersistenceModel>(), Arg.Any<CancellationToken>());
     }
 }

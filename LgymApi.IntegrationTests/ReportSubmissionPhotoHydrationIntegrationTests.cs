@@ -6,6 +6,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Data.SeedData;
+using LgymApi.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.IntegrationTests;
@@ -199,6 +200,57 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         SetAuthorizationHeader(outsider.Id);
         using var outsiderResponse = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
         outsiderResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task DeletedSubject_CutsOffExistingTrainerSessionFromPhotoUrlsAndNestedMetadataWithoutDeletingStoredObject()
+    {
+        var scenario = await SeedScenarioAsync();
+        LocalPhotoDevelopmentStore store;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            store = scope.ServiceProvider.GetRequiredService<LocalPhotoDevelopmentStore>();
+        }
+
+        var storedBytes = new byte[] { 1, 2, 3 };
+        await using (var content = new MemoryStream(storedBytes))
+        {
+            await store.SaveAsync(scenario.Photo.StorageKey, content);
+        }
+
+        try
+        {
+            SetAuthorizationHeader(scenario.TrainerId);
+            using (var scope = Factory.Services.CreateScope())
+            {
+                var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                database.Users.Single(user => user.Id == scenario.TraineeId).IsDeleted = true;
+                await database.SaveChangesAsync();
+            }
+
+            using var signedResponse = await Client.GetAsync($"/api/trainer/reporting/photos/{scenario.Photo.Id}/signed-url");
+            signedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            var signedBody = await signedResponse.Content.ReadAsStringAsync();
+            signedBody.Should().NotContain(scenario.Photo.Id.ToString());
+            signedBody.Should().NotContain(scenario.Photo.StorageKey);
+
+            using var historyResponse = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={scenario.TraineeId}");
+            historyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            var historyBody = await historyResponse.Content.ReadAsStringAsync();
+            historyBody.Should().NotContain(scenario.Photo.Id.ToString());
+            historyBody.Should().NotContain(scenario.Photo.StorageKey);
+
+            using var submissionsResponse = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
+            submissionsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var submissionsBody = await submissionsResponse.Content.ReadAsStringAsync();
+            submissionsBody.Should().NotContain(scenario.Photo.Id.ToString());
+            submissionsBody.Should().NotContain(scenario.Photo.StorageKey);
+            (await store.ReadAsync(scenario.Photo.StorageKey)).Should().Equal(storedBytes);
+        }
+        finally
+        {
+            await store.DeleteAsync(scenario.Photo.StorageKey);
+        }
     }
 
     private async Task<Scenario> SeedScenarioAsync(

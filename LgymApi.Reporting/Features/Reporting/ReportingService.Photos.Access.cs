@@ -28,11 +28,25 @@ public sealed partial class ReportingService
         Id<AccountReference> traineeId,
         CancellationToken cancellationToken)
     {
+        var subjectAvailability = await ValidatePhotoSubjectAvailabilityAsync(traineeId, cancellationToken);
+        if (subjectAvailability.IsFailure)
+        {
+            return subjectAvailability;
+        }
+
         if (currentUser.Id == traineeId)
         {
             return Result<Unit, AppError>.Success(Unit.Value);
         }
 
+        return await ValidateTrainerPhotoAccessAsync(currentUser, traineeId, cancellationToken);
+    }
+
+    private async Task<Result<Unit, AppError>> ValidateTrainerPhotoAccessAsync(
+        AuthenticatedAccountContext currentUser,
+        Id<AccountReference> traineeId,
+        CancellationToken cancellationToken)
+    {
         var trainerCheck = EnsureTrainer(currentUser);
         if (trainerCheck.IsFailure)
         {
@@ -41,6 +55,18 @@ public sealed partial class ReportingService
 
         var access = await _relationshipAccessPersistence.GetAccessAsync(currentUser.Id, traineeId, cancellationToken);
         if (!access.HasActiveRelationship)
+        {
+            return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    private async Task<Result<Unit, AppError>> ValidatePhotoSubjectAvailabilityAsync(
+        Id<AccountReference> traineeId,
+        CancellationToken cancellationToken)
+    {
+        if (await _accountLookupService.GetByIdAsync(traineeId, cancellationToken) is null)
         {
             return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
@@ -77,6 +103,12 @@ public sealed partial class ReportingService
             return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
 
+        var subjectAvailability = await ValidatePhotoSubjectAvailabilityAsync(request.TraineeId, cancellationToken);
+        if (subjectAvailability.IsFailure)
+        {
+            return subjectAvailability;
+        }
+
         if (currentUser.Id == request.TraineeId)
         {
             return Result<Unit, AppError>.Success(Unit.Value);
@@ -90,7 +122,7 @@ public sealed partial class ReportingService
                 : Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
 
-        return await ValidatePhotoAccessAsync(currentUser, request.TraineeId, cancellationToken);
+        return await ValidateTrainerPhotoAccessAsync(currentUser, request.TraineeId, cancellationToken);
     }
 
     private static string GenerateStorageKey(

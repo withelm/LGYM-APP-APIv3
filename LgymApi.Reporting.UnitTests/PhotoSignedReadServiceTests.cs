@@ -6,6 +6,8 @@ using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 using LgymApi.Resources;
 using NSubstitute;
 using NUnit.Framework;
@@ -277,6 +279,44 @@ public sealed class PhotoSignedReadServiceTests
             photoStorageProvider: storageProvider);
 
         var result = await service.GetSignedReadUrlAsync(trainer, photoId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetSignedReadUrlAsync_WhenSubjectIsSoftDeleted_DoesNotIssueFreshUrlToAnExistingTrainerSession()
+    {
+        var traineeId = Id<User>.New();
+        var trainerId = Id<User>.New();
+        var photoId = Id<Photo>.New();
+        var photo = new Photo
+        {
+            Id = photoId,
+            OwnerUserId = traineeId,
+            UploaderUserId = traineeId,
+            ReportRequestId = Id<ReportRequest>.New(),
+            ViewType = PhotoViewType.Front.ToString(),
+            StorageKey = "photos/deleted-subject.jpg",
+            MimeType = "image/jpeg",
+            SizeBytes = 1024,
+            Checksum = "etag"
+        };
+        var repository = Substitute.For<IReportPhotoPersistence>();
+        repository.FindByIdAsync(photoId, Arg.Any<CancellationToken>()).Returns(ReportingTestData.Photo(photo));
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var accountLookup = Substitute.For<IAccountLookupService>();
+        accountLookup.GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+            .Returns((AccountLookup?)null);
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, traineeId, trainerId)),
+            relationshipAccess: (currentTrainerId, currentTraineeId, _) => Task.FromResult(currentTrainerId == trainerId && currentTraineeId == traineeId),
+            reportingRepository: repository,
+            photoStorageProvider: storageProvider,
+            accountLookupService: accountLookup);
+
+        var result = await service.GetSignedReadUrlAsync(PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com"), photoId);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ReportingNotFoundError>();

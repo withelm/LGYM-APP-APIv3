@@ -11,6 +11,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 
@@ -282,12 +283,36 @@ public sealed class ReportSubmissionPhotoHydrationTests
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
-    private static Fixture CreateFixture(string? thumbnailStorageKey = "photos/thumb.jpg", IReadOnlyList<ReportPhotoPersistenceModel>? photos = null)
+    [Test]
+    public async Task GetOwnSubmissionsAsync_WhenSubjectIsSoftDeleted_RedactsNestedPhotoMetadataWithoutSigning()
+    {
+        var accountLookup = Substitute.For<IAccountLookupService>();
+        accountLookup.GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+            .Returns((AccountLookup?)null);
+        var fixture = CreateFixture(accountLookupService: accountLookup);
+        fixture.ReturnSubmissions(CreateSubmission(fixture.RequestId, fixture.TraineeId, new Dictionary<string, object?>
+        {
+            ["photoId"] = fixture.Photos[0].Id.ToString(),
+            ["storageKey"] = fixture.Photos[0].StorageKey,
+            ["readUrl"] = "https://expired.example/read"
+        }));
+
+        var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    private static Fixture CreateFixture(
+        string? thumbnailStorageKey = "photos/thumb.jpg",
+        IReadOnlyList<ReportPhotoPersistenceModel>? photos = null,
+        IAccountLookupService? accountLookupService = null)
     {
         var traineeId = Id<User>.New();
         var requestId = Id<ReportRequest>.New();
         photos ??= [CreatePhoto(requestId, traineeId, "photos/canonical.jpg", thumbnailStorageKey)];
-        return new Fixture(traineeId, requestId, photos);
+        return new Fixture(traineeId, requestId, photos, accountLookupService);
     }
 
     private static ReportPhotoPersistenceModel CreatePhoto(
@@ -367,7 +392,11 @@ public sealed class ReportSubmissionPhotoHydrationTests
         private readonly IReportRequestSubmissionPersistence _submissions;
         private readonly IReportPhotoPersistence _photos;
 
-        public Fixture(Id<User> traineeId, Id<ReportRequest> requestId, IReadOnlyList<ReportPhotoPersistenceModel> photos)
+        public Fixture(
+            Id<User> traineeId,
+            Id<ReportRequest> requestId,
+            IReadOnlyList<ReportPhotoPersistenceModel> photos,
+            IAccountLookupService? accountLookupService = null)
         {
             TraineeId = traineeId;
             RequestId = requestId;
@@ -380,12 +409,14 @@ public sealed class ReportSubmissionPhotoHydrationTests
                 .Returns(call => Photos.Where(photo => call.ArgAt<IReadOnlyCollection<Id<ReportRequest>>>(0).Contains(photo.ReportRequestId)).ToList());
             Storage.GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
                 .Returns(call => $"fresh:{call.ArgAt<string>(0)}");
+            var accountLookup = accountLookupService ?? CreateActiveAccountLookup();
             Service = new ReportingService(
                 Substitute.For<IReportTemplatePersistence>(),
                 _submissions,
                 Substitute.For<IRecurringReportAssignmentPersistence>(),
                 _photos,
                 Substitute.For<IReportingRelationshipAccessPersistence>(),
+                accountLookup,
                 new ReportSubmissionAcceptedProgressCommandFactory(),
                 Substitute.For<ICommandDispatcher>(),
                 Substitute.For<ICommandOutboxWriter>(),
@@ -410,6 +441,21 @@ public sealed class ReportSubmissionPhotoHydrationTests
                 .Returns(submissions);
             _submissions.FindRequestByIdAsync(Arg.Any<Id<ReportRequest>>(), Arg.Any<CancellationToken>())
                 .Returns(call => submissions.FirstOrDefault(submission => submission.ReportRequestId == call.ArgAt<Id<ReportRequest>>(0))?.ReportRequest);
+        }
+
+        private static IAccountLookupService CreateActiveAccountLookup()
+        {
+            var accountLookup = Substitute.For<IAccountLookupService>();
+            accountLookup.GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+                .Returns(call => new AccountLookup(
+                    call.ArgAt<Id<AccountReference>>(0),
+                    "Active subject",
+                    "active-subject@example.test",
+                    null,
+                    "en",
+                    "UTC",
+                    DateTimeOffset.UtcNow));
+            return accountLookup;
         }
     }
 }
