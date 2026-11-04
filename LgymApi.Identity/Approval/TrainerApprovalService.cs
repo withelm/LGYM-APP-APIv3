@@ -150,7 +150,7 @@ internal sealed class TrainerApprovalService(
     private static Result<TrainerApplication, AppError> Conflict() =>
         Result<TrainerApplication, AppError>.Failure(ApprovalConflict());
 
-    private static AppError ApprovalConflict() =>
+    private static TrainerApprovalError ApprovalConflict() =>
         new TrainerApprovalError("TrainerApprovalConflict", Messages.TrainerApprovalConflict, 409);
 
     private static bool CanUpdate(TrainerApplicationAttempt application, TrainerApprovalStatus expected) =>
