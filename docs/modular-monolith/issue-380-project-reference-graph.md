@@ -191,7 +191,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:90` |
 | `LgymApi.Identity -> LgymApi.Domain` | `LgymApi.Identity/Access/AccountReadService.cs:4` |
 | `LgymApi.Identity -> LgymApi.Platform` | `LgymApi.Identity/Access/AccountReadService.cs:2` |
-| `LgymApi.Identity -> LgymApi.Resources` | `LgymApi.Identity/Administration/UserRoleAdministrationService.cs:39` |
+| `LgymApi.Identity -> LgymApi.Resources` | `LgymApi.Identity/Administration/UserRoleAdministrationService.cs:42` |
 | `LgymApi.Infrastructure -> LgymApi.Application` | `LgymApi.Infrastructure/CoachingServiceCollectionExtensions.cs:1` |
 | `LgymApi.Infrastructure -> LgymApi.BackgroundWorker.Common` | `LgymApi.Infrastructure/Services/CommittedIntentDispatcher.cs:3` |
 | `LgymApi.Infrastructure -> LgymApi.Domain` | `LgymApi.Infrastructure/Configuration/InfrastructureMappingRegistration.cs:4` |
