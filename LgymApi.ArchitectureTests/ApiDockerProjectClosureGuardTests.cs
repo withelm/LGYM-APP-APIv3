@@ -328,6 +328,65 @@ public sealed class ApiDockerProjectClosureGuardTests
     }
 
     [Test]
+    [Category("Issue427Fixture")]
+    public void AuthorizationPublishStages_Should_Reject_Dependency_Omissions_Before_And_After_Restore()
+    {
+        var repositoryRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
+        var authorizationClosure = ResolveProjectClosure(
+            repositoryRoot,
+            "LgymApi.Authorization/LgymApi.Authorization.csproj",
+            path => File.Exists(ArchitectureTestHelpers.ToHostPath(path))
+                ? File.ReadAllText(ArchitectureTestHelpers.ToHostPath(path))
+                : null);
+        var rootWithoutDomainProjectCopy = File.ReadAllText(Path.Combine(repositoryRoot, "Dockerfile"))
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace(
+                "COPY LgymApi.Authorization/*.csproj LgymApi.Authorization/\nCOPY LgymApi.Domain/*.csproj LgymApi.Domain/\nCOPY LgymApi.Platform/*.csproj LgymApi.Platform/",
+                "COPY LgymApi.Authorization/*.csproj LgymApi.Authorization/\nCOPY LgymApi.Platform/*.csproj LgymApi.Platform/",
+                StringComparison.Ordinal);
+        var rootWithoutDomainSourceCopy = File.ReadAllText(Path.Combine(repositoryRoot, "Dockerfile"))
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace(
+                "COPY LgymApi.Authorization/ LgymApi.Authorization/\nCOPY LgymApi.Domain/ LgymApi.Domain/\nCOPY LgymApi.Platform/ LgymApi.Platform/",
+                "COPY LgymApi.Authorization/ LgymApi.Authorization/\nCOPY LgymApi.Platform/ LgymApi.Platform/",
+                StringComparison.Ordinal);
+        var alternateWithoutDomainSourceCopy = File.ReadAllText(Path.Combine(repositoryRoot, "LgymApi.Api", "Dockerfile"))
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace(
+                "COPY [\"LgymApi.Domain/\", \"LgymApi.Domain/\"]\nCOPY [\"LgymApi.Platform/\", \"LgymApi.Platform/\"]",
+                "COPY [\"LgymApi.Platform/\", \"LgymApi.Platform/\"]",
+                StringComparison.Ordinal);
+
+        var rootViolations = ValidateDockerfile(
+            rootWithoutDomainProjectCopy,
+            DockerSurface.Root,
+            authorizationClosure,
+            authorizationClosure,
+            "LgymApi.Authorization/LgymApi.Authorization.csproj",
+            true);
+        var rootPostRestoreViolations = ValidateDockerfile(
+            rootWithoutDomainSourceCopy,
+            DockerSurface.Root,
+            authorizationClosure,
+            authorizationClosure,
+            "LgymApi.Authorization/LgymApi.Authorization.csproj",
+            true);
+        var alternateViolations = ValidateDockerfile(
+            alternateWithoutDomainSourceCopy,
+            DockerSurface.Alternate,
+            authorizationClosure,
+            authorizationClosure,
+            "LgymApi.Authorization/LgymApi.Authorization.csproj");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rootViolations, Does.Contain("root-pre-restore|missing|LgymApi.Domain/LgymApi.Domain.csproj"));
+            Assert.That(rootPostRestoreViolations, Does.Contain("root-post-restore-source|missing|LgymApi.Domain/LgymApi.Domain.csproj"));
+            Assert.That(alternateViolations, Does.Contain("alternate-post-restore-source|missing|LgymApi.Domain/LgymApi.Domain.csproj"));
+        });
+    }
+
+    [Test]
     [Category("Issue427Repository")]
     public void Repository_Docker_Surfaces_Should_Match_Api_ProjectReference_Closure()
     {
@@ -375,6 +434,20 @@ public sealed class ApiDockerProjectClosureGuardTests
             closure,
             repositoryProjects,
             "LgymApi.Api/LgymApi.Api.csproj"));
+        violations.AddRange(ValidateDockerfile(
+            rootDockerfile,
+            DockerSurface.Root,
+            authorizationClosure,
+            repositoryProjects,
+            "LgymApi.Authorization/LgymApi.Authorization.csproj",
+            true));
+        violations.AddRange(ValidateDockerfile(
+            alternateDockerfile,
+            DockerSurface.Alternate,
+            authorizationClosure,
+            repositoryProjects,
+            "LgymApi.Authorization/LgymApi.Authorization.csproj",
+            true));
         violations.AddRange(ValidateDockerIgnore(
             rootDockerIgnore,
             ReadDockerfileSpecificIgnore(Path.Combine(repositoryRoot, "Dockerfile")),
@@ -478,7 +551,8 @@ public sealed class ApiDockerProjectClosureGuardTests
         DockerSurface surface,
         IReadOnlyCollection<string> closureProjects,
         IReadOnlyCollection<string> repositoryProjects,
-        string? rootProjectPath = null)
+        string? rootProjectPath = null,
+        bool requireExplicitPostRestoreCopies = false)
     {
         var closure = closureProjects.OrderBy(path => path, StringComparer.Ordinal).ToArray();
         var repositoryProjectSet = repositoryProjects.ToHashSet(StringComparer.Ordinal);
@@ -529,14 +603,15 @@ public sealed class ApiDockerProjectClosureGuardTests
             repositoryProjectSet,
             violations);
 
-        if (surface == DockerSurface.Root)
+        if (surface == DockerSurface.Root && !requireExplicitPostRestoreCopies)
         {
             ValidateRootPostRestoreCopy(build, violations);
         }
         else
         {
-            ValidateAlternatePostRestoreCopies(
+            ValidateExplicitPostRestoreCopies(
                 build,
+                surface,
                 closure,
                 closureSet,
                 repositoryProjectSet,
@@ -705,14 +780,17 @@ public sealed class ApiDockerProjectClosureGuardTests
         }
     }
 
-    private static void ValidateAlternatePostRestoreCopies(
+    private static void ValidateExplicitPostRestoreCopies(
         BuildStage build,
+        DockerSurface surface,
         IReadOnlyCollection<string> closure,
         IReadOnlySet<string> closureSet,
         IReadOnlySet<string> repositoryProjects,
         ICollection<string> violations)
     {
-        const string prefix = "alternate-post-restore-source";
+        var prefix = surface == DockerSurface.Root
+            ? "root-post-restore-source"
+            : "alternate-post-restore-source";
         var copied = new Dictionary<string, int>(StringComparer.Ordinal);
 
         foreach (var copy in build.Stage.Commands
