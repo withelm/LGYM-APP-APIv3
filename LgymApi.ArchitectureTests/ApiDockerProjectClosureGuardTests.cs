@@ -463,7 +463,7 @@ public sealed class ApiDockerProjectClosureGuardTests
         {
             Assert.That(rootDockerfile, Does.Contain("dotnet publish \"LgymApi.Authorization/LgymApi.Authorization.csproj\""));
             Assert.That(rootDockerfile, Does.Contain("COPY --from=authorization-build /app/authorization/LgymApi.Authorization.dll ./"));
-            Assert.That(alternateDockerfile, Does.Contain("FROM mcr.microsoft.com/dotnet/sdk:10.0 AS authorization-build\nARG BUILD_CONFIGURATION=Release"));
+            Assert.That(alternateDockerfile.Replace("\r\n", "\n", StringComparison.Ordinal), Does.Contain("FROM mcr.microsoft.com/dotnet/sdk:10.0 AS authorization-build\nARG BUILD_CONFIGURATION=Release"));
             Assert.That(alternateDockerfile, Does.Contain("dotnet publish \"LgymApi.Authorization/LgymApi.Authorization.csproj\""));
             Assert.That(alternateDockerfile, Does.Contain("COPY --from=authorization-build /app/authorization/LgymApi.Authorization.dll ."));
         });
