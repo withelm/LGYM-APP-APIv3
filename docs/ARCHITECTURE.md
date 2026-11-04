@@ -6,6 +6,8 @@ This document explains how the backend is structured and how to add a new module
 
 - `LgymApi.Api` - HTTP layer (controllers, DTO contracts, validators, middleware, API mapping profiles).
 - `LgymApi.Application` - remaining Workout & Progress, Coaching, and Nutrition use-case orchestration.
+- `LgymApi.Authorization` - framework-neutral typed authorization kernel; owner policies and Identity/API adoption remain outside the kernel.
+- `LgymApi.Authorization.UnitTests` - focused unit tests for Authorization-owned kernel behavior and closed registration.
 - `LgymApi.Reporting` - extracted Reporting workflows, focused ports, API adapters, mapping profiles, and public registration facade, retaining compatible Application namespaces.
 - `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, and `LgymApi.Notifications` - stable module assemblies with public facades, explicit contracts, and internal implementations.
 - `LgymApi.Domain` - core domain types (entities, enums, domain-only helpers).

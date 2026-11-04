@@ -7,6 +7,8 @@
   <Project Path="LgymApi.Api/LgymApi.Api.csproj" />
   <Project Path="LgymApi.Application/LgymApi.Application.csproj" />
   <Project Path="LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj" />
+  <Project Path="LgymApi.Authorization/LgymApi.Authorization.csproj" />
+  <Project Path="LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj" />
   <Project Path="LgymApi.BackgroundWorker.Common/LgymApi.BackgroundWorker.Common.csproj" />
   <Project Path="LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj" />
   <Project Path="LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj" />

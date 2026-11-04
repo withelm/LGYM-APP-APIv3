@@ -23,7 +23,9 @@ public sealed class SingleProductionDbContextGuardTests
     {
         ["LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj"] = "784fc7ec545ef354f14b14c3f9925298fed54a73429f78399fef9fd1b7ef7838",
         ["LgymApi.Api/LgymApi.Api.csproj"] = "874e79fdd00d04c02203ca7c1937c6195c9906cc84aeff517876b5b8428711df",
-        ["LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj"] = "b0f1e355b313382f9a46f9e698eeb22204a702e7d01db5668fc5f0c2b9941517",
+        ["LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj"] = "583b80cc08387417b6f5c92b3a3a31eba558d12b7e32fefe82a523878b545a14",
+        ["LgymApi.Authorization/LgymApi.Authorization.csproj"] = "0c39e15658290889c3dd0b540c854a9971d4f4e87b920c9460ab985936b96545",
+        ["LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj"] = "c300f972bd132330f0ead1dac11bd40168b7ebc28184cf0f249373eaabb09eca",
         ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj"] = "9e37345ff9459e13b1cec859b2b394cee1961bfea379c0936b8861b1a23efe10",
         ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "082c91ec55218916e80b8cb0394b1bc92306d54ee1157b9224b8637e74467207",
         ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "200549f3f97f6672b7751fdb894de3c69c44bd55a90397b015f01beb9217b47c",

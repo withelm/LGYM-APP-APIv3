@@ -339,6 +339,17 @@ public sealed class ApiDockerProjectClosureGuardTests
                 ? File.ReadAllText(ArchitectureTestHelpers.ToHostPath(path))
                 : null);
         Assert.That(closure, Has.Count.EqualTo(13), "The API project-reference closure must contain exactly 13 projects.");
+        var authorizationClosure = ResolveProjectClosure(
+            repositoryRoot,
+            "LgymApi.Authorization/LgymApi.Authorization.csproj",
+            path => File.Exists(ArchitectureTestHelpers.ToHostPath(path))
+                ? File.ReadAllText(ArchitectureTestHelpers.ToHostPath(path))
+                : null);
+        Assert.That(authorizationClosure, Has.Count.EqualTo(5), "The standalone authorization publish closure must contain exactly 5 projects.");
+        var dockerContextProjects = closure
+            .Concat(authorizationClosure)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
 
         var repositoryProjects = Directory
             .EnumerateFiles(repositoryRoot, "*.csproj", SearchOption.AllDirectories)
@@ -367,13 +378,22 @@ public sealed class ApiDockerProjectClosureGuardTests
         violations.AddRange(ValidateDockerIgnore(
             rootDockerIgnore,
             ReadDockerfileSpecificIgnore(Path.Combine(repositoryRoot, "Dockerfile")),
-            closure,
+            dockerContextProjects,
             repositoryProjects));
         violations.AddRange(ValidateDockerIgnore(
             rootDockerIgnore,
             ReadDockerfileSpecificIgnore(alternateDockerfilePath),
-            closure,
+            dockerContextProjects,
             repositoryProjects));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rootDockerfile, Does.Contain("dotnet publish \"LgymApi.Authorization/LgymApi.Authorization.csproj\""));
+            Assert.That(rootDockerfile, Does.Contain("COPY --from=authorization-build /app/authorization/LgymApi.Authorization.dll ./"));
+            Assert.That(alternateDockerfile, Does.Contain("FROM mcr.microsoft.com/dotnet/sdk:10.0 AS authorization-build\nARG BUILD_CONFIGURATION=Release"));
+            Assert.That(alternateDockerfile, Does.Contain("dotnet publish \"LgymApi.Authorization/LgymApi.Authorization.csproj\""));
+            Assert.That(alternateDockerfile, Does.Contain("COPY --from=authorization-build /app/authorization/LgymApi.Authorization.dll ."));
+        });
 
         var issueTuples = violations
             .Distinct(StringComparer.Ordinal)
