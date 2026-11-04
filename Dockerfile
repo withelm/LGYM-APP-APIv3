@@ -2,6 +2,30 @@
 
 ARG DOTNET_VERSION=10.0
 
+FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS authorization-build
+WORKDIR /src
+
+COPY Directory.Build.props Directory.Packages.props ./
+COPY LgymApi.Authorization/*.csproj LgymApi.Authorization/
+COPY LgymApi.Domain/*.csproj LgymApi.Domain/
+COPY LgymApi.Platform/*.csproj LgymApi.Platform/
+COPY LgymApi.Resources/*.csproj LgymApi.Resources/
+COPY LgymApi.Resources.Generator/*.csproj LgymApi.Resources.Generator/
+
+RUN dotnet restore "LgymApi.Authorization/LgymApi.Authorization.csproj"
+
+COPY LgymApi.Authorization/ LgymApi.Authorization/
+COPY LgymApi.Domain/ LgymApi.Domain/
+COPY LgymApi.Platform/ LgymApi.Platform/
+COPY LgymApi.Resources/ LgymApi.Resources/
+COPY LgymApi.Resources.Generator/ LgymApi.Resources.Generator/
+
+RUN dotnet publish "LgymApi.Authorization/LgymApi.Authorization.csproj" \
+    --configuration Release \
+    --no-restore \
+    --output /app/authorization \
+    /p:UseAppHost=false
+
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS build
 WORKDIR /src
 
@@ -44,6 +68,7 @@ RUN apt-get update \
 RUN mkdir -p /run/config
 
 COPY --from=build /app/publish/ ./
+COPY --from=authorization-build /app/authorization/LgymApi.Authorization.dll ./
 
 USER $APP_UID
 EXPOSE 8080

@@ -29,6 +29,7 @@ internal static class ProjectReferenceGraphManifest
         [
             "LgymApi.Api",
             "LgymApi.Application",
+            "LgymApi.Authorization",
             "LgymApi.BackgroundWorker.Common",
             "LgymApi.Domain",
             "LgymApi.Identity",
@@ -38,6 +39,17 @@ internal static class ProjectReferenceGraphManifest
             "LgymApi.Resources",
             "LgymApi.Reporting",
             "LgymApi.TrainingPlanning"
+        ]),
+        new("LgymApi.Authorization", ProjectKind.Production,
+        [
+            "LgymApi.Domain",
+            "LgymApi.Platform"
+        ]),
+        new("LgymApi.Authorization.UnitTests", ProjectKind.Test,
+        [
+            "LgymApi.Authorization",
+            "LgymApi.Domain",
+            "LgymApi.Platform"
         ]),
         new("LgymApi.BackgroundWorker", ProjectKind.Host,
         [

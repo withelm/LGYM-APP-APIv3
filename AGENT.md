@@ -14,7 +14,7 @@ Main areas:
 - Module shells: `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, and `LgymApi.Notifications`
 - Background jobs: `LgymApi.BackgroundWorker` and `LgymApi.BackgroundWorker.Common`
 - Data seeding: `LgymApi.DataSeeder`
-- Tests: `LgymApi.UnitTests`, `LgymApi.Reporting.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, `LgymApi.DataSeeder.Tests`, `LgymApi.TestUtils`
+- Tests: `LgymApi.UnitTests`, `LgymApi.Authorization.UnitTests`, `LgymApi.Reporting.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, `LgymApi.DataSeeder.Tests`, `LgymApi.TestUtils`
 
 ## Instruction Hierarchy
 
@@ -54,12 +54,21 @@ When adding, renaming, deleting, or materially changing a `.csproj`:
 
 Final responses for such tasks should mention which `.csproj` files changed and whether this map was updated.
 
+## Test Ownership Rule
+
+- Each project must receive a dedicated test project as it is introduced or materially changed; place behavior tests owned by that project there whenever possible.
+- Keep cross-project architecture and topology guards in `LgymApi.ArchitectureTests`, and API-host/end-to-end tests in `LgymApi.IntegrationTests`.
+- When introducing a dedicated test project, update CI suite matrices and the matching evidence, coverage, Sonar, and guard inventories in the same change.
+- Apply this rule to ongoing work. Do not mass-migrate unrelated existing tests solely to restructure the current suite.
+
 ## Project Purpose Map
 
 | Project | Why it exists | Rules for agents |
 | --- | --- | --- |
 | `LgymApi.Api/LgymApi.Api.csproj` | ASP.NET Core HTTP entrypoint: controllers, DTO contracts, validators, middleware, mapping profiles, auth, JSON setup, Swagger, CORS, rate limits, SignalR, and composition root. | Keep controllers thin and preserve legacy payload shapes. |
 | `LgymApi.Application/LgymApi.Application.csproj` | Use-case and business orchestration for the remaining Workout & Progress, Coaching, and Nutrition capabilities, plus their application-facing contracts and DI facade; owns TZDB local-day history conversion via centrally pinned NodaTime. | Own business rules, authorization checks, transactions, and unit-of-work commits here. Never reference a `LgymApi.BackgroundWorker*` project or namespace. |
+| `LgymApi.Authorization/LgymApi.Authorization.csproj` | Framework-neutral authorization kernel with immutable actor/decision contracts, typed policy evaluation, and closed registration. | Keep direct references limited to Domain and Platform. Do not add HTTP, persistence, feature types, resource dispatch, reflection dispatch, service location, user-facing errors, or generic role/admin/system bypasses. |
+| `LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj` | Focused unit tests for Authorization-owned kernel behavior and closed DI registration. | Keep direct references limited to Authorization and contracts used by the fixture; leave cross-project guards and API-host behavior in their centralized suites. |
 | `LgymApi.Reporting/LgymApi.Reporting.csproj` | Reporting workflows, focused ports, API adapters, mapping profiles, and owner registration facade with retained Application namespaces. | Keep direct references limited to Domain, Identity, Platform, and Resources; Infrastructure remains the single EF context and migration owner. |
 | `LgymApi.Domain/LgymApi.Domain.csproj` | Core domain: entities, enums, strongly typed IDs, domain helpers, and auth/security constants. | Keep free of HTTP, EF, API, and localization concerns. Domain is localization-neutral and must not reference `LgymApi.Resources`. Do not reorder or renumber existing enums. |
 | `LgymApi.Infrastructure/LgymApi.Infrastructure.csproj` | Shared technical composition: the EF Core `DbContext`, migrations, unit of work, Hangfire persistence, module persistence bridges, and remaining non-extracted persistence adapters. | Repositories must not call `SaveChangesAsync` or own transactions. Do not register extracted module services, providers, or select push schedulers here. |
@@ -165,6 +174,7 @@ dotnet run --project LgymApi.Api
 
 ```powershell
 dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build
+dotnet test LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj --configuration Release --no-build
 dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build
 dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build
 dotnet test LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj --configuration Release --no-build

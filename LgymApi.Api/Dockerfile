@@ -1,3 +1,29 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS authorization-build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+
+COPY ["Directory.Build.props", "."]
+COPY ["Directory.Packages.props", "."]
+COPY ["LgymApi.Authorization/LgymApi.Authorization.csproj", "LgymApi.Authorization/"]
+COPY ["LgymApi.Domain/LgymApi.Domain.csproj", "LgymApi.Domain/"]
+COPY ["LgymApi.Platform/LgymApi.Platform.csproj", "LgymApi.Platform/"]
+COPY ["LgymApi.Resources/LgymApi.Resources.csproj", "LgymApi.Resources/"]
+COPY ["LgymApi.Resources.Generator/LgymApi.Resources.Generator.csproj", "LgymApi.Resources.Generator/"]
+
+RUN dotnet restore "LgymApi.Authorization/LgymApi.Authorization.csproj"
+
+COPY ["LgymApi.Authorization/", "LgymApi.Authorization/"]
+COPY ["LgymApi.Domain/", "LgymApi.Domain/"]
+COPY ["LgymApi.Platform/", "LgymApi.Platform/"]
+COPY ["LgymApi.Resources/", "LgymApi.Resources/"]
+COPY ["LgymApi.Resources.Generator/", "LgymApi.Resources.Generator/"]
+
+RUN dotnet publish "LgymApi.Authorization/LgymApi.Authorization.csproj" \
+    --configuration $BUILD_CONFIGURATION \
+    --no-restore \
+    --output /app/authorization \
+    /p:UseAppHost=false
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
@@ -53,5 +79,6 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD ["curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/health/live"]
 
 COPY --from=build /app/publish .
+COPY --from=authorization-build /app/authorization/LgymApi.Authorization.dll .
 
 ENTRYPOINT ["dotnet", "LgymApi.Api.dll"]
