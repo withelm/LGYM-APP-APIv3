@@ -75,7 +75,8 @@ public sealed class UserServiceAuthTests
             _unitOfWork,
             new AppDefaultsOptions { PreferredLanguage = "en-US", PreferredTimeZone = "UTC" },
             _tutorialService,
-            BuildMapper());
+            BuildMapper(),
+            new TrainerApplicationRepositoryStub());
     }
 
     [Test]
@@ -193,7 +194,6 @@ public sealed class UserServiceAuthTests
         result.IsSuccess.Should().BeTrue();
         addedUser.Should().NotBeNull();
         addedUser!.IsVisibleInRanking.Should().BeFalse();
-        addedUser.TrainerApprovalStatus.Should().Be(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval);
         addedUser.TrainerApplications.Should().ContainSingle()
             .Which.Status.Should().Be(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval);
         addedUser.PreferredLanguage.Should().Be("en-US");

@@ -35,6 +35,12 @@ internal sealed class TrainerApplicationRepository(IIdentityPersistenceContext c
 
     public void Add(TrainerApplicationAttempt application) => context.TrainerApplications.Add(application);
 
+    public Task<TrainerApprovalStatus?> GetLatestStatusAsync(Id<User> id, CancellationToken cancellationToken) =>
+        context.TrainerApplications.AsNoTracking().Where(application => application.ApplicantId == id)
+            .OrderByDescending(application => application.Attempt)
+            .Select(application => (TrainerApprovalStatus?)application.Status)
+            .FirstOrDefaultAsync(cancellationToken);
+
     private IQueryable<TrainerApplicationAttempt> ActiveApplications() =>
         context.TrainerApplications.Where(application => !application.Applicant.IsDeleted);
 }

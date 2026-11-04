@@ -8,16 +8,16 @@ namespace LgymApi.Identity.Approval;
 
 internal static class TrainerApprovalPolicy
 {
-    internal static bool IsApproved(User user) =>
-        !user.IsDeleted && !user.IsBlocked && user.TrainerApprovalStatus == TrainerApprovalStatus.Approved;
+    internal static bool IsApproved(User user, TrainerApprovalStatus? status) =>
+        !user.IsDeleted && !user.IsBlocked && status == TrainerApprovalStatus.Approved;
 
-    internal static List<string> EffectiveRoles(User user, IEnumerable<string> roles) =>
-        roles.Where(role => role != AuthConstants.Roles.Trainer || IsApproved(user)).ToList();
+    internal static List<string> EffectiveRoles(List<string> roles, bool isApproved) =>
+        isApproved ? roles : roles.Where(role => role != AuthConstants.Roles.Trainer).ToList();
 
-    internal static List<string> EffectivePermissions(User user, IEnumerable<string> permissions) =>
-        permissions.Where(permission => permission != AuthConstants.Permissions.TrainerAccess || IsApproved(user)).ToList();
+    internal static List<string> EffectivePermissions(List<string> permissions, bool isApproved) =>
+        isApproved ? permissions : permissions.Where(permission => permission != AuthConstants.Permissions.TrainerAccess).ToList();
 
-    internal static AppError? LoginError(User user) => user.TrainerApprovalStatus switch
+    internal static TrainerApprovalError? LoginError(TrainerApprovalStatus? status) => status switch
     {
         TrainerApprovalStatus.PendingApproval => new TrainerApprovalError(
             "TrainerPendingApproval", Messages.TrainerPendingApproval, 403),

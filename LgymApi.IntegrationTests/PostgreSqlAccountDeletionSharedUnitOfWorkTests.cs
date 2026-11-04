@@ -56,7 +56,8 @@ internal sealed class PostgreSqlAccountDeletionSharedUnitOfWorkTests : PostgreSq
                     unitOfWork)),
                 new AppDefaultsOptions(),
                 serviceScope.ServiceProvider.GetRequiredService<ITutorialService>(),
-                serviceScope.ServiceProvider.GetRequiredService<IMapper>());
+                serviceScope.ServiceProvider.GetRequiredService<IMapper>(),
+                serviceScope.ServiceProvider.GetRequiredService<LgymApi.Identity.Approval.ITrainerApplicationRepository>());
 
             var result = await profileService.DeleteAccountAsync(scopedUser);
 

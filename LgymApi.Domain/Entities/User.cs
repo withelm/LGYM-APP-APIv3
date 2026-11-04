@@ -1,4 +1,3 @@
-using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
@@ -14,9 +13,6 @@ public sealed class User : EntityBase<User>
     public string? Avatar { get; set; }
     public bool IsVisibleInRanking { get; set; } = true;
     public bool IsBlocked { get; set; }
-
-    // Current access state, updated with the application in the same transaction.
-    public TrainerApprovalStatus? TrainerApprovalStatus { get; set; }
 
     public string? LegacyHash { get; set; }
     public string? LegacySalt { get; set; }

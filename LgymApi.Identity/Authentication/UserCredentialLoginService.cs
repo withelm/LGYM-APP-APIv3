@@ -29,6 +29,7 @@ internal sealed class UserCredentialLoginService : IUserCredentialLoginService
     private readonly AppDefaultsOptions _appDefaultsOptions;
     private readonly ITutorialService _tutorialService;
     private readonly IMapper _mapper;
+    private readonly ITrainerApplicationRepository _trainerApplications;
 
     public UserCredentialLoginService(
         IUserRepository userRepository,
@@ -40,7 +41,8 @@ internal sealed class UserCredentialLoginService : IUserCredentialLoginService
         IUnitOfWork unitOfWork,
         AppDefaultsOptions appDefaultsOptions,
         ITutorialService tutorialService,
-        IMapper mapper)
+        IMapper mapper,
+        ITrainerApplicationRepository trainerApplications)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -52,6 +54,7 @@ internal sealed class UserCredentialLoginService : IUserCredentialLoginService
         _appDefaultsOptions = appDefaultsOptions;
         _tutorialService = tutorialService;
         _mapper = mapper;
+        _trainerApplications = trainerApplications;
     }
 
     public Task<Result<LoginResult, AppError>> LoginAsync(
@@ -105,20 +108,22 @@ internal sealed class UserCredentialLoginService : IUserCredentialLoginService
             return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
-        if (requiredRole == AuthConstants.Roles.Trainer && TrainerApprovalPolicy.LoginError(user) is { } approvalError)
+        var approvalStatus = await _trainerApplications.GetLatestStatusAsync(user.Id, cancellationToken);
+        if (requiredRole == AuthConstants.Roles.Trainer && TrainerApprovalPolicy.LoginError(approvalStatus) is { } approvalError)
         {
             return Result<LoginResult, AppError>.Failure(approvalError);
         }
 
-        var roles = TrainerApprovalPolicy.EffectiveRoles(user,
-            await _roleRepository.GetRoleNamesByUserIdAsync(user.Id, cancellationToken));
+        var isApproved = TrainerApprovalPolicy.IsApproved(user, approvalStatus);
+        var roles = TrainerApprovalPolicy.EffectiveRoles(
+            await _roleRepository.GetRoleNamesByUserIdAsync(user.Id, cancellationToken), isApproved);
         if (!string.IsNullOrWhiteSpace(requiredRole) && !roles.Contains(requiredRole, StringComparer.Ordinal))
         {
             return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
-        var permissionClaims = TrainerApprovalPolicy.EffectivePermissions(user,
-            await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken));
+        var permissionClaims = TrainerApprovalPolicy.EffectivePermissions(
+            await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken), isApproved);
         var session = await _userSessionStore.CreateSessionAsync(user.Id, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -132,6 +137,7 @@ internal sealed class UserCredentialLoginService : IUserCredentialLoginService
         mappingContext.Set(IdentityUserMappingProfile.Keys.Roles, roles);
         mappingContext.Set(IdentityUserMappingProfile.Keys.PermissionClaims, permissionClaims);
         mappingContext.Set(IdentityUserMappingProfile.Keys.HasActiveTutorials, hasActiveTutorials);
+        mappingContext.Set(IdentityUserMappingProfile.Keys.TrainerApprovalStatus, approvalStatus);
 
         return Result<LoginResult, AppError>.Success(new LoginResult
         {

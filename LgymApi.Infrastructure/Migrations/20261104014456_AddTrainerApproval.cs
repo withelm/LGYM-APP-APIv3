@@ -11,12 +11,6 @@ namespace LgymApi.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "TrainerApprovalStatus",
-                table: "Users",
-                type: "text",
-                nullable: true);
-
             migrationBuilder.CreateTable(
                 name: "TrainerApplications",
                 columns: table => new
@@ -25,6 +19,7 @@ namespace LgymApi.Infrastructure.Migrations
                     ApplicantId = table.Column<Guid>(type: "uuid", nullable: false),
                     Attempt = table.Column<int>(type: "integer", nullable: false),
                     Status = table.Column<string>(type: "text", nullable: false),
+                    Revision = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     ReviewedBy = table.Column<Guid>(type: "uuid", nullable: true),
                     DecidedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -73,21 +68,15 @@ namespace LgymApi.Infrastructure.Migrations
 
             // Preserve access only for existing accounts with the canonical Trainer role.
             migrationBuilder.Sql("""
-                WITH approved AS (
-                    UPDATE "Users" AS u
-                    SET "TrainerApprovalStatus" = 'Approved'
-                    WHERE u."IsDeleted" = FALSE AND u."TrainerApprovalStatus" IS NULL
-                      AND EXISTS (
-                        SELECT 1 FROM "UserRoles" ur JOIN "Roles" r ON r."Id" = ur."RoleId"
-                        WHERE ur."UserId" = u."Id" AND r."Name" = 'Trainer' AND r."IsDeleted" = FALSE
-                      )
-                    RETURNING u."Id", u."CreatedAt"
-                )
                 INSERT INTO "TrainerApplications"
                     ("Id", "ApplicantId", "Attempt", "Status", "DecidedAt", "CreatedAt", "UpdatedAt", "IsDeleted")
-                SELECT "Id", "Id", 1, 'Approved', TIMESTAMPTZ '2026-11-04 00:00:00+00',
-                    "CreatedAt", TIMESTAMPTZ '2026-11-04 00:00:00+00', FALSE
-                FROM approved;
+                SELECT u."Id", u."Id", 1, 'Approved', TIMESTAMPTZ '2026-11-04 00:00:00+00',
+                    u."CreatedAt", TIMESTAMPTZ '2026-11-04 00:00:00+00', FALSE
+                FROM "Users" u
+                WHERE u."IsDeleted" = FALSE AND EXISTS (
+                    SELECT 1 FROM "UserRoles" ur JOIN "Roles" r ON r."Id" = ur."RoleId"
+                    WHERE ur."UserId" = u."Id" AND r."Name" = 'Trainer' AND r."IsDeleted" = FALSE
+                );
                 """);
         }
 

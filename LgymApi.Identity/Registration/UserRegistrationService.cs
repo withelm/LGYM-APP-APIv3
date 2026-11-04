@@ -114,8 +114,7 @@ internal sealed class UserRegistrationService : IUserRegistrationService
             LegacyKeyLength = passwordData.KeyLength,
             LegacyDigest = passwordData.Digest,
             PreferredLanguage = ResolvePreferredLanguage(input.PreferredLanguage),
-            PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone,
-            TrainerApprovalStatus = trainer ? LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval : null
+            PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone
         };
         if (trainer)
         {

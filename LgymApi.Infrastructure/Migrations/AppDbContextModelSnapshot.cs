@@ -2062,6 +2062,12 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid?>("ReviewedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("Status")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -2341,10 +2347,6 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<string>("ProfileRank")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TrainerApprovalStatus")
-                        .IsConcurrencyToken()
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("UpdatedAt")

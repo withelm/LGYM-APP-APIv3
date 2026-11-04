@@ -19,8 +19,7 @@ public static class TestDataFactory
     public static UserRole ApprovedTrainerRole(AppDbContext database, Id<User> accountId)
     {
         var user = database.Users.Local.FirstOrDefault(user => user.Id == accountId)
-            ?? database.Users.Single(user => user.Id == accountId);
-        user.TrainerApprovalStatus = LgymApi.Domain.Enums.TrainerApprovalStatus.Approved;
+            ?? database.Users.AsNoTracking().Single(user => user.Id == accountId);
         var application = TrainerApplicationAttempt.Submit(accountId, 1);
         application.Status = LgymApi.Domain.Enums.TrainerApprovalStatus.Approved;
         application.CreatedAt = user.CreatedAt;

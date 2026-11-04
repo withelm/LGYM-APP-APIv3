@@ -78,7 +78,6 @@ internal sealed class TrainerApprovalService(
         application.Status = decision;
         application.ReviewedBy = actor.Id.Rebind<User>();
         application.DecidedAt = DateTimeOffset.UtcNow;
-        application.Applicant.TrainerApprovalStatus = decision;
         try
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -111,18 +110,11 @@ internal sealed class TrainerApprovalService(
             return Result<Unit, AppError>.Failure(ApprovalConflict());
 
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
-        application.Applicant.TrainerApprovalStatus = TrainerApprovalStatus.PendingApproval;
+        application.Revision++;
         try
         {
-            // Claim the account transition before inserting the next numbered attempt.
+            // Claim this rejected attempt before inserting its successor.
             await unitOfWork.SaveChangesAsync(cancellationToken);
-            var latest = await applications.FindLatestAsync(application.ApplicantId, false, cancellationToken);
-            if (latest?.Id != application.Id)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                return Result<Unit, AppError>.Failure(ApprovalConflict());
-            }
-
             applications.Add(TrainerApplicationAttempt.Submit(application.ApplicantId, application.Attempt + 1));
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -154,8 +146,7 @@ internal sealed class TrainerApprovalService(
         new TrainerApprovalError("TrainerApprovalConflict", Messages.TrainerApprovalConflict, 409);
 
     private static bool CanUpdate(TrainerApplicationAttempt application, TrainerApprovalStatus expected) =>
-        application.Status == expected && application.Applicant.TrainerApprovalStatus == expected
-        && !application.Applicant.IsBlocked;
+        application.Status == expected && !application.Applicant.IsBlocked;
 
     private Result<TrainerApplication, AppError> MapResult(TrainerApplicationAttempt application) =>
         Result<TrainerApplication, AppError>.Success(mapper.Map<TrainerApplicationAttempt, TrainerApplication>(application));

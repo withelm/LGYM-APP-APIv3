@@ -9,6 +9,7 @@ public sealed class TrainerApplicationAttempt : EntityBase<TrainerApplicationAtt
     public User Applicant { get; set; } = null!;
     public int Attempt { get; set; }
     public TrainerApprovalStatus Status { get; set; }
+    public int Revision { get; set; }
     public Id<User>? ReviewedBy { get; set; }
     public DateTimeOffset? DecidedAt { get; set; }
 

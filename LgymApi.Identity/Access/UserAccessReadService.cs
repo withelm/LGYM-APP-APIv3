@@ -10,11 +10,14 @@ internal sealed class UserAccessReadService : IUserAccessReadService
 {
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
+    private readonly ITrainerApplicationRepository _trainerApplications;
 
-    public UserAccessReadService(IUserRepository userRepository, IRoleRepository roleRepository)
+    public UserAccessReadService(IUserRepository userRepository, IRoleRepository roleRepository,
+        ITrainerApplicationRepository trainerApplications)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
+        _trainerApplications = trainerApplications;
     }
 
     public async Task<bool> UserExistsAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
@@ -23,7 +26,8 @@ internal sealed class UserAccessReadService : IUserAccessReadService
     public async Task<bool> IsTrainerAsync(Id<LgymApi.Domain.Entities.User> userId, CancellationToken cancellationToken = default)
     {
         var user = userId.IsEmpty ? null : await _userRepository.FindByIdAsync(userId, cancellationToken);
-        return user is not null && TrainerApprovalPolicy.IsApproved(user)
+        return user is not null
+            && TrainerApprovalPolicy.IsApproved(user, await _trainerApplications.GetLatestStatusAsync(user.Id, cancellationToken))
             && await _roleRepository.UserHasRoleAsync(userId, AuthConstants.Roles.Trainer, cancellationToken);
     }
 }

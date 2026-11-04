@@ -21,6 +21,7 @@ internal sealed class LoginResultBuilder : ILoginResultBuilder
     private readonly IUserRepository _userRepository;
     private readonly IUserSessionStore _userSessionStore;
     private readonly IMapper _mapper;
+    private readonly ITrainerApplicationRepository _trainerApplications;
 
     public LoginResultBuilder(
         IUserRepository userRepository,
@@ -28,7 +29,8 @@ internal sealed class LoginResultBuilder : ILoginResultBuilder
         ITokenService tokenService,
         IRankService rankService,
         ITutorialService tutorialService,
-        IMapper mapper)
+        IMapper mapper,
+        ITrainerApplicationRepository trainerApplications)
     {
         _userRepository = userRepository;
         _userSessionStore = userSessionStore;
@@ -36,6 +38,7 @@ internal sealed class LoginResultBuilder : ILoginResultBuilder
         _rankService = rankService;
         _tutorialService = tutorialService;
         _mapper = mapper;
+        _trainerApplications = trainerApplications;
     }
 
     public async Task<Result<LoginResult, AppError>> BuildAsync(User user, string preferredTimeZone, CancellationToken cancellationToken)
@@ -55,8 +58,10 @@ internal sealed class LoginResultBuilder : ILoginResultBuilder
             .OrderBy(value => value)
             .ToList();
 
-        roles = TrainerApprovalPolicy.EffectiveRoles(userWithRoles, roles);
-        permissionClaims = TrainerApprovalPolicy.EffectivePermissions(userWithRoles, permissionClaims);
+        var approvalStatus = await _trainerApplications.GetLatestStatusAsync(user.Id, cancellationToken);
+        var isApproved = TrainerApprovalPolicy.IsApproved(userWithRoles, approvalStatus);
+        roles = TrainerApprovalPolicy.EffectiveRoles(roles, isApproved);
+        permissionClaims = TrainerApprovalPolicy.EffectivePermissions(permissionClaims, isApproved);
 
         var session = await _userSessionStore.CreateSessionAsync(userWithRoles.Id, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
 
@@ -69,6 +74,7 @@ internal sealed class LoginResultBuilder : ILoginResultBuilder
         context.Set(IdentityUserMappingProfile.Keys.Roles, roles);
         context.Set(IdentityUserMappingProfile.Keys.PermissionClaims, permissionClaims);
         context.Set(IdentityUserMappingProfile.Keys.HasActiveTutorials, hasActiveTutorials);
+        context.Set(IdentityUserMappingProfile.Keys.TrainerApprovalStatus, approvalStatus);
 
         return Result<LoginResult, AppError>.Success(new LoginResult
         {

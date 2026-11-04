@@ -35,7 +35,8 @@ public sealed class UserServiceProfileFailureTests
             _accountPushInstallationCleanupPort,
             new LgymApi.Application.Options.AppDefaultsOptions(),
             Substitute.For<LgymApi.Application.Features.Tutorial.ITutorialService>(),
-            Substitute.For<IMapper>());
+            Substitute.For<IMapper>(),
+            new TrainerApplicationRepositoryStub());
     }
 
     [Test]

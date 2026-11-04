@@ -4,15 +4,15 @@
 
 ## State and access
 
-`TrainerApplications` stores one row per attempt with an applicant ID, attempt number, state, UTC submission and decision timestamps, and reviewer ID. Each applicant can have one pending attempt and one row per attempt number. `Users.TrainerApprovalStatus` holds the current access state for existing session and authorization reads. A null account status means the account has never applied.
+`TrainerApplications` stores one row per attempt with an applicant ID, attempt number, state, UTC submission and decision timestamps, and reviewer ID. Each applicant can have one pending attempt and one row per attempt number. Identity reads the status from the highest attempt number using the applicant and attempt index. An account without an application has no approval state.
 
 The application rows are authorization audit records. The general data seeder does not create them or grant approval. Integration tests stage explicit application fixtures; the migration alone backfills existing trainers.
 
 Trainer registration preserves validation, idempotency, password handling, tutorial initialization and the existing registration transaction. It assigns only User, records PendingApproval, and returns the existing 200 `{msg}` envelope with localized pending confirmation. It creates no session. The existing registration command remains; no approval/rejection email or push event is added.
 
-Administrators can decide only the current pending attempt. EF concurrency checks both its state and the current account status. A transaction commits the decision, account status and Trainer role together. Identical retries for the same current attempt return its original decision. Conflicting decisions and concurrent losers return 409.
+Administrators can decide only the current pending attempt. EF concurrency checks its state and revision. A transaction commits the decision and Trainer role together. Identical retries for the same current attempt return its original decision. Conflicting decisions and concurrent losers return 409.
 
-A rejected applicant can submit again with a current regular account session. The API updates the current account status and inserts a new pending row in one transaction. The previous row keeps its decision and audit data. Duplicate submissions while the new attempt is pending leave it unchanged.
+A rejected applicant can submit again with a current regular account session. The service claims the previous attempt by advancing its concurrency revision and inserts the next pending row in one transaction. The previous decision and its audit values are preserved. Duplicate submissions while the new attempt is pending leave it unchanged.
 
 Approval still requires the existing role/permission and valid, unblocked account/session. It does not override role removal, blocking, deletion or revocation. Independently permitted athlete operations remain available.
 
@@ -58,9 +58,9 @@ Errors retain `{msg}` and add `code`. Unauthorized sessions/policies retain exis
 
 ## Migration and rollout
 
-`20261104014456_AddTrainerApproval` creates `TrainerApplications` and adds the nullable current status to `Users`. Backfill creates an approved first attempt only for non-deleted accounts already holding the non-deleted canonical Trainer role. Blocked trainers retain their classification and remain blocked.
+`20261104014456_AddTrainerApproval` creates `TrainerApplications`. Backfill creates an approved first attempt only for non-deleted accounts already holding the non-deleted canonical Trainer role. Blocked trainers retain their classification and remain blocked.
 
-Backfill uses account creation time, null reviewer and the fixed classification timestamp `2026-11-04T00:00:00Z`. This denotes migration classification, not human review. Human decisions use actual current UTC time and the reviewer ID. Migration history and `status IS NULL` make reruns deterministic/idempotent; a rerun cannot approve new pending applicants.
+Backfill uses account creation time, null reviewer and the fixed classification timestamp `2026-11-04T00:00:00Z`. This denotes migration classification, not human review. Human decisions use actual current UTC time and the reviewer ID. The EF migration history prevents a rerun from classifying newly registered applicants.
 
 The unpublished approval migration was consolidated before rollout. A disposable development database with an earlier draft already applied needs to be recreated from the pre-approval baseline to test this schema.
 

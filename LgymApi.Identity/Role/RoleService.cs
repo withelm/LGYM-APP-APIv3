@@ -26,12 +26,15 @@ internal sealed class RoleService : IRoleService
     private readonly IRoleRepository _roleRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITrainerApplicationRepository _trainerApplications;
 
-    public RoleService(IRoleRepository roleRepository, IUserRepository userRepository, IUnitOfWork unitOfWork)
+    public RoleService(IRoleRepository roleRepository, IUserRepository userRepository, IUnitOfWork unitOfWork,
+        ITrainerApplicationRepository trainerApplications)
     {
         _roleRepository = roleRepository;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _trainerApplications = trainerApplications;
     }
 
     public async Task<Result<List<RoleResult>, AppError>> GetRolesAsync(CancellationToken cancellationToken = default)
@@ -246,8 +249,8 @@ internal sealed class RoleService : IRoleService
             return Result<Unit, AppError>.Failure(new InvalidRoleError(Messages.InvalidRoleSelection));
         }
 
-        if (user.TrainerApprovalStatus != TrainerApprovalStatus.Approved &&
-            rolesToSet.Any(role => role.Name == AuthConstants.Roles.Trainer))
+        if (rolesToSet.Any(role => role.Name == AuthConstants.Roles.Trainer) &&
+            await _trainerApplications.GetLatestStatusAsync(user.Id, cancellationToken) != TrainerApprovalStatus.Approved)
         {
             return Result<Unit, AppError>.Failure(new TrainerApprovalError(
                 "TrainerApprovalRequired", Messages.TrainerApprovalRequired, 409));

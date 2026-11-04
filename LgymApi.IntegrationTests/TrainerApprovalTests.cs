@@ -49,8 +49,6 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var user = await db.Users.SingleAsync(item => item.Id == applicant.Id);
-            user.TrainerApprovalStatus.Should().Be(TrainerApprovalStatus.PendingApproval);
             var attempts = await db.TrainerApplications.Where(item => item.ApplicantId == applicant.Id)
                 .OrderBy(item => item.Attempt).ToListAsync();
             attempts.Should().HaveCount(2);
@@ -156,8 +154,6 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var user = await db.Users.SingleAsync(user => user.Id == applicant.Id);
-            user.TrainerApprovalStatus = status;
             var application = await db.TrainerApplications.SingleAsync(item => item.ApplicantId == applicant.Id);
             application.Status = status;
             db.UserRoles.Add(new UserRole { UserId = applicant.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId });

@@ -11,7 +11,6 @@ internal sealed class UserEntityTypeConfiguration : IEntityTypeConfiguration<Use
     {
         builder.ToTable("Users");
 
-        builder.Property(u => u.TrainerApprovalStatus).HasConversion<string>().IsConcurrencyToken();
 
         builder.Property(u => u.Email)
             .HasConversion(email => email.Value, value => new Email(value));

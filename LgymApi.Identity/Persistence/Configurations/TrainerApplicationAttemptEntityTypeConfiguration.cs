@@ -10,6 +10,7 @@ internal sealed class TrainerApplicationAttemptEntityTypeConfiguration : IEntity
     {
         builder.ToTable("TrainerApplications");
         builder.Property(application => application.Status).HasConversion<string>().IsConcurrencyToken();
+        builder.Property(application => application.Revision).HasDefaultValue(0).IsConcurrencyToken();
         builder.HasIndex(application => new { application.ApplicantId, application.Attempt }).IsUnique();
         builder.HasIndex(application => new { application.Status, application.CreatedAt });
         builder.HasIndex(application => application.ApplicantId)

@@ -24,9 +24,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var account = await db.Users.SingleAsync(account => account.Id == user.Id);
-            account.TrainerApprovalStatus = status;
-            var application = TrainerApplicationAttempt.Submit(account.Id, 1);
+            var application = TrainerApplicationAttempt.Submit(user.Id, 1);
             application.Status = status;
             db.TrainerApplications.Add(application);
             db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = Id<Role>.TryParse(Identity.Contracts.IdentitySeedIds.TrainerRole, out var roleId) ? roleId : throw new InvalidOperationException() });

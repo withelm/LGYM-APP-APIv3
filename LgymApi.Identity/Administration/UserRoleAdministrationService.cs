@@ -18,15 +18,18 @@ internal sealed class UserRoleAdministrationService : IUserRoleAdministrationSer
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITrainerApplicationRepository _trainerApplications;
 
     public UserRoleAdministrationService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ITrainerApplicationRepository trainerApplications)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _unitOfWork = unitOfWork;
+        _trainerApplications = trainerApplications;
     }
 
     public async Task<Result<Unit, AppError>> UpdateUserRolesAsync(
@@ -57,8 +60,8 @@ internal sealed class UserRoleAdministrationService : IUserRoleAdministrationSer
             return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.InvalidRoleSelection));
         }
 
-        if (user.TrainerApprovalStatus != TrainerApprovalStatus.Approved &&
-            rolesToSet.Any(role => role.Name == AuthConstants.Roles.Trainer))
+        if (rolesToSet.Any(role => role.Name == AuthConstants.Roles.Trainer) &&
+            await _trainerApplications.GetLatestStatusAsync(user.Id, cancellationToken) != TrainerApprovalStatus.Approved)
         {
             return Result<Unit, AppError>.Failure(new TrainerApprovalError(
                 "TrainerApprovalRequired", Messages.TrainerApprovalRequired, 409));

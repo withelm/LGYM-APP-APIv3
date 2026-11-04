@@ -158,25 +158,24 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         await using (var after = new AppDbContext(options))
         {
             after.Database.HasPendingModelChanges().Should().BeFalse();
-            var trainer = await after.Users.SingleAsync(user => user.Id == trainerId);
-            trainer.TrainerApprovalStatus.Should().Be(TrainerApprovalStatus.Approved);
+            after.Model.FindEntityType(typeof(User))!.FindProperty("TrainerApprovalStatus").Should().BeNull();
             var legacy = await after.TrainerApplications.SingleAsync(application => application.ApplicantId == trainerId);
             legacy.Attempt.Should().Be(1);
             legacy.Status.Should().Be(TrainerApprovalStatus.Approved);
             legacy.CreatedAt.Should().Be(created);
             legacy.ReviewedBy.Should().BeNull();
             legacy.DecidedAt.Should().NotBeNull();
-            (await after.Users.SingleAsync(user => user.Id == athleteId)).TrainerApprovalStatus.Should().BeNull();
-            (await after.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == deletedId)).TrainerApprovalStatus.Should().BeNull();
-            var pending = new User { Id = Id<User>.New(), Name = "new-pending", Email = "new-pending@example.test",
-                TrainerApprovalStatus = TrainerApprovalStatus.PendingApproval };
+            (await after.TrainerApplications.AnyAsync(application =>
+                application.ApplicantId == athleteId || application.ApplicantId == deletedId)).Should().BeFalse();
+            var pending = new User { Id = Id<User>.New(), Name = "new-pending", Email = "new-pending@example.test" };
             pending.TrainerApplications.Add(TrainerApplicationAttempt.Submit(pending.Id, 1));
             after.Users.Add(pending);
             await after.SaveChangesAsync();
             await after.Database.MigrateAsync();
         }
         await using var verify = new AppDbContext(options);
-        (await verify.Users.SingleAsync(user => user.Name == "new-pending")).TrainerApprovalStatus.Should().Be(TrainerApprovalStatus.PendingApproval);
+        (await verify.TrainerApplications.SingleAsync(application => application.Applicant.Name == "new-pending"))
+            .Status.Should().Be(TrainerApprovalStatus.PendingApproval);
         (await verify.TrainerApplications.CountAsync()).Should().Be(2);
         (await verify.UserRoles.CountAsync()).Should().Be(2);
     }
@@ -187,8 +186,6 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         var applicant = await SeedUserAsync("applicant", "applicant@example.test");
         await using var scope = Factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var pending = await db.Users.SingleAsync(user => user.Id == applicant.Id);
-        pending.TrainerApprovalStatus = TrainerApprovalStatus.PendingApproval;
         db.TrainerApplications.Add(TrainerApplicationAttempt.Submit(applicant.Id, 1));
         var session = new UserSession { Id = Id<UserSession>.New(), UserId = admin.Id, Jti = "approval-test", ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1) };
         db.UserSessions.Add(session);
@@ -202,8 +199,6 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
     {
         await using var scope = Factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var actual = await db.Users.AsNoTracking().SingleAsync(user => user.Id == applicant);
-        actual.TrainerApprovalStatus.Should().Be(expected);
         var latest = await db.TrainerApplications.Where(item => item.ApplicantId == applicant)
             .OrderByDescending(item => item.Attempt).FirstAsync();
         latest.Status.Should().Be(expected);
@@ -263,6 +258,9 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         }
 
         public void Add(TrainerApplicationAttempt application) => inner.Add(application);
+
+        public Task<TrainerApprovalStatus?> GetLatestStatusAsync(Id<User> id, CancellationToken cancellationToken) =>
+            inner.GetLatestStatusAsync(id, cancellationToken);
     }
 
 }

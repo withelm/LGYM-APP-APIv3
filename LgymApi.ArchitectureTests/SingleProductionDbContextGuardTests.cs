@@ -38,9 +38,9 @@ public sealed class SingleProductionDbContextGuardTests
         [ReportReceiptMigrationDesigner] = "a6ab655fcc346b2f12b17baea223f58c3f2d70f63e2df6d589c483025f2991b5",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.cs"] = "4f22bc2418831f276588d568ab40da6ce742ca781577eb42774e7724d19a0d82",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.Designer.cs"] = "ee6deb9e9ccaab9a5a9efbd5e6857c44c2fc679747ae8a9d538755c675b08d5a",
-        [MigrationRoot + "/20261104014456_AddTrainerApproval.cs"] = "73673134f981f2a903600fe64029d7c65a312543f1cf68c771b369a0cd20a3c4",
-        [MigrationRoot + "/20261104014456_AddTrainerApproval.Designer.cs"] = "8762d4201ae909b2d4a9697939c65c1b23eed9a74d47ddd09fd5d3e58ff7c5e3",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "78e0d4fafe80046d5a425304341b420bcac1319258622579727828f77200e2dd"
+        [MigrationRoot + "/20261104014456_AddTrainerApproval.cs"] = "75591f32d31f999a58e1514c90ed63e9716c9aee9720c2582d5bdbbeafa53fe0",
+        [MigrationRoot + "/20261104014456_AddTrainerApproval.Designer.cs"] = "f1e0374b7b54cd4918d81cf7c1c6718ed2498edceb35b3b655c6a08bd8503b01",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "5287810ca2b0eb339867f46886a51ae0b93f50cf7221795955ce4dbe36ba8aca"
     };
 
     [Test]
