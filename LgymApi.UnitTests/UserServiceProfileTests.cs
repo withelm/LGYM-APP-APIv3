@@ -61,6 +61,7 @@ public sealed class UserServiceProfileTests
         var cancellationToken = cancellationSource.Token;
         var user = CreateUser();
         user.PreferredTimeZone = string.Empty;
+        user.TrainerApprovalStatus = LgymApi.Domain.Enums.TrainerApprovalStatus.Approved;
         _roleRepository.GetRoleNamesByUserId = (_, _) => Task.FromResult<List<string>>(["User", "Trainer"]);
         _roleRepository.GetPermissionClaimsByUserId = (_, _) => Task.FromResult<List<string>>(["users.read"]);
         _tutorialService.HasActiveTutorialsAsync(user.Id, cancellationToken).Returns(true);

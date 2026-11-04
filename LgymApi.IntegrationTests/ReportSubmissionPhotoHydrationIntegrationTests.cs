@@ -89,7 +89,7 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         using (var scope = Factory.Services.CreateScope())
         {
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            database.UserRoles.Add(new UserRole { UserId = successor.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId });
+            database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, successor.Id));
             database.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = successor.Id, TraineeId = scenario.TraineeId });
             await database.SaveChangesAsync();
         }
@@ -117,9 +117,9 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         {
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             database.UserRoles.AddRange(
-                new UserRole { UserId = successor.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
-                new UserRole { UserId = outsider.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
-                new UserRole { UserId = admin.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
+                LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, successor.Id),
+                LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, outsider.Id),
+                LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, admin.Id),
                 new UserRole { UserId = admin.Id, RoleId = RoleSeedDataConfiguration.AdminRoleSeedId });
             database.TrainerTraineeLinks.AddRange(
                 new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = successor.Id, TraineeId = scenario.TraineeId },
@@ -165,9 +165,9 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         {
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             database.UserRoles.AddRange(
-                new UserRole { UserId = successor.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
-                new UserRole { UserId = outsider.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
-                new UserRole { UserId = admin.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId },
+                LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, successor.Id),
+                LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, outsider.Id),
+                LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, admin.Id),
                 new UserRole { UserId = admin.Id, RoleId = RoleSeedDataConfiguration.AdminRoleSeedId });
             database.TrainerTraineeLinks.AddRange(
                 new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = successor.Id, TraineeId = scenario.TraineeId },
@@ -349,7 +349,7 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         {
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             database.ReportTemplates.Add(template);
-            database.UserRoles.Add(new UserRole { UserId = trainer.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId });
+            database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
             database.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id });
             database.ReportRequests.Add(request);
             database.Photos.Add(photo);

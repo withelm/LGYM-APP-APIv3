@@ -55,7 +55,7 @@ internal sealed class UserRegistrationService : IUserRegistrationService
         RegisterUserInput input,
         CancellationToken cancellationToken = default)
     {
-        return RegisterCoreAsync(input, [AuthConstants.Roles.User], cancellationToken);
+        return RegisterCoreAsync(input, trainer: false, cancellationToken);
     }
 
     public Task<Result<Id<UserEntity>, AppError>> RegisterTrainerAsync(
@@ -63,12 +63,12 @@ internal sealed class UserRegistrationService : IUserRegistrationService
         CancellationToken cancellationToken = default)
     {
         var trainerInput = input with { IsVisibleInRanking = false, PreferredLanguage = null };
-        return RegisterCoreAsync(trainerInput, [AuthConstants.Roles.User, AuthConstants.Roles.Trainer], cancellationToken);
+        return RegisterCoreAsync(trainerInput, trainer: true, cancellationToken);
     }
 
     private async Task<Result<Id<UserEntity>, AppError>> RegisterCoreAsync(
         RegisterUserInput input,
-        IReadOnlyCollection<string> roleNames,
+        bool trainer,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(input.Name))
@@ -114,11 +114,14 @@ internal sealed class UserRegistrationService : IUserRegistrationService
             LegacyKeyLength = passwordData.KeyLength,
             LegacyDigest = passwordData.Digest,
             PreferredLanguage = ResolvePreferredLanguage(input.PreferredLanguage),
-            PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone
+            PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone,
+            TrainerApprovalStatus = trainer ? LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval : null,
+            TrainerApplicationCreatedAt = trainer ? DateTimeOffset.UtcNow : null
         };
 
         await _userRepository.AddAsync(user, cancellationToken);
 
+        IReadOnlyCollection<string> roleNames = [AuthConstants.Roles.User];
         var rolesToAssign = await _roleRepository.GetByNamesAsync(roleNames, cancellationToken);
         if (rolesToAssign.Count != roleNames.Count)
         {

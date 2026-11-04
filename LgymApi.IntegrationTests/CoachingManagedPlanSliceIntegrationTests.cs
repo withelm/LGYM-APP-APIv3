@@ -266,11 +266,7 @@ public sealed class CoachingManagedPlanSliceIntegrationTests : IntegrationTestBa
         var database = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
         if (addTrainerRole)
         {
-            database.UserRoles.Add(new UserRole
-            {
-                UserId = trainerId,
-                RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
-            });
+            database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainerId));
         }
 
         database.TrainerTraineeLinks.Add(new TrainerTraineeLink
@@ -286,11 +282,7 @@ public sealed class CoachingManagedPlanSliceIntegrationTests : IntegrationTestBa
     {
         using var seedScope = Factory.Services.CreateScope();
         var database = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        database.UserRoles.Add(new UserRole
-        {
-            UserId = trainerId,
-            RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
-        });
+        database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainerId));
         await database.SaveChangesAsync();
     }
 }

@@ -348,4 +348,22 @@
   <data name="ReportingProtocolPayloadTooLarge" xml:space="preserve">
     <value>The reporting request is too large for protocol validation.</value>
   </data>
+  <data name="TrainerPendingApproval" xml:space="preserve">
+    <value>Your trainer account has been created and is awaiting approval by an LGYM administrator. You can sign in to the Trainer Panel after approval.</value>
+  </data>
+  <data name="TrainerRejected" xml:space="preserve">
+    <value>Your trainer application was rejected. Trainer access is unavailable.</value>
+  </data>
+  <data name="TrainerApprovalRequired" xml:space="preserve">
+    <value>Approve this account through trainer application review before assigning the Trainer role.</value>
+  </data>
+  <data name="TrainerApprovalConflict" xml:space="preserve">
+    <value>This application has already been decided or is unavailable for review. Refresh to see its current state.</value>
+  </data>
+  <data name="TrainerApprovalDecisionInvalid" xml:space="preserve">
+    <value>Choose approval or rejection.</value>
+  </data>
+  <data name="TrainerApplicationPagingInvalid" xml:space="preserve">
+    <value>Page must be positive and page size must be between 1 and 100.</value>
+  </data>
 </root>

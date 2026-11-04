@@ -175,7 +175,7 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
         emailTemplateComposers.Should().HaveCount(6);
         emailTemplateComposers.Select(composer => composer.GetType()).Should().OnlyHaveUniqueItems();
         var mappingProfiles = services.GetServices<IMappingProfile>().ToArray();
-        mappingProfiles.Should().HaveCount(46);
+        mappingProfiles.Should().HaveCount(47);
         mappingProfiles.Select(profile => profile.GetType()).Should().OnlyHaveUniqueItems();
         mappingProfiles.OfType<EnumLookupMappingProfile>().Should().ContainSingle();
         mappingProfiles.OfType<PlanExerciseWorkoutAdapterMappingProfile>().Should().ContainSingle();

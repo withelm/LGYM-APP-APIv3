@@ -17,7 +17,7 @@ namespace LgymApi.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -2296,6 +2296,19 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("TrainerApplicationCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("TrainerApprovalDecidedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("TrainerApprovalReviewedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TrainerApprovalStatus")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2310,6 +2323,10 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.HasIndex("PlanId");
+
+                    b.HasIndex("TrainerApprovalReviewedBy");
+
+                    b.HasIndex("TrainerApprovalStatus", "TrainerApplicationCreatedAt");
 
                     b.ToTable("Users", (string)null);
                 });
@@ -3151,6 +3168,11 @@ namespace LgymApi.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("PlanId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LgymApi.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("TrainerApprovalReviewedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Plan");
                 });

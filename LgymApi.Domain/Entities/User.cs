@@ -15,6 +15,12 @@ public sealed class User : EntityBase<User>
     public bool IsVisibleInRanking { get; set; } = true;
     public bool IsBlocked { get; set; }
 
+    // Null means this account has never applied for trainer access.
+    public TrainerApprovalStatus? TrainerApprovalStatus { get; set; }
+    public DateTimeOffset? TrainerApplicationCreatedAt { get; set; }
+    public Id<User>? TrainerApprovalReviewedBy { get; set; }
+    public DateTimeOffset? TrainerApprovalDecidedAt { get; set; }
+
     public string? LegacyHash { get; set; }
     public string? LegacySalt { get; set; }
     public int? LegacyIterations { get; set; }

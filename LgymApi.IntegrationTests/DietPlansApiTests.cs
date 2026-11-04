@@ -958,11 +958,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == trainer.Id && ur.RoleId == RoleSeedDataConfiguration.TrainerRoleSeedId);
         if (!alreadyLinked)
         {
-            db.UserRoles.Add(new UserRole
-            {
-                UserId = trainer.Id,
-                RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
-            });
+            db.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(db, trainer.Id));
             await db.SaveChangesAsync();
         }
 

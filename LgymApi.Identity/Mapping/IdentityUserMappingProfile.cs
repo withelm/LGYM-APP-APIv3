@@ -55,7 +55,8 @@ internal sealed class IdentityUserMappingProfile : IMappingProfile
                 IsVisibleInRanking = source.IsVisibleInRanking,
                 Roles = context?.Get(Keys.Roles) ?? [],
                 PermissionClaims = context?.Get(Keys.PermissionClaims) ?? [],
-                HasActiveTutorials = context?.Get(Keys.HasActiveTutorials) ?? false
+                HasActiveTutorials = context?.Get(Keys.HasActiveTutorials) ?? false,
+                TrainerApprovalStatus = source.TrainerApprovalStatus
             };
         });
 

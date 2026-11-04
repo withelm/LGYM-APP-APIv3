@@ -16,6 +16,34 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class GoogleAuthTests : IntegrationTestBase
 {
+    [TestCase(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval)]
+    [TestCase(LgymApi.Domain.Enums.TrainerApprovalStatus.Rejected)]
+    public async Task GoogleLinkedApplicant_PreservesAthleteSessionWithoutTrainerCapabilities(LgymApi.Domain.Enums.TrainerApprovalStatus status)
+    {
+        var user = await SeedUserAsync(name: "google-applicant", email: "google-applicant@example.test");
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var account = await db.Users.SingleAsync(account => account.Id == user.Id);
+            account.TrainerApprovalStatus = status;
+            account.TrainerApplicationCreatedAt = DateTimeOffset.UtcNow;
+            db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = Id<Role>.TryParse(Identity.Contracts.IdentitySeedIds.TrainerRole, out var roleId) ? roleId : throw new InvalidOperationException() });
+            db.UserExternalLogins.Add(new UserExternalLogin { Id = Id<UserExternalLogin>.New(), UserId = user.Id,
+                Provider = AuthConstants.ExternalProviders.Google, ProviderKey = "applicant-subject", ProviderEmail = user.Email.Value });
+            await db.SaveChangesAsync();
+        }
+        _googleTokenValidator.ReturnFor("applicant-token", new GoogleTokenPayload("applicant-subject", user.Email.Value, true, "Applicant", null));
+        var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "applicant-token" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        json.GetProperty("req").GetProperty("trainerApprovalStatus").GetString().Should().Be(status.ToString());
+        json.GetProperty("req").GetProperty("roles").EnumerateArray().Select(role => role.GetString()).Should().NotContain("Trainer");
+        json.GetProperty("permissionClaims").EnumerateArray().Select(claim => claim.GetString()).Should().NotContain("trainer.access");
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", json.GetProperty("token").GetString());
+        (await _client.GetAsync("/api/trainer/checkToken")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await _client.GetAsync("/api/checkToken")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private ConfigurableGoogleTokenValidator _googleTokenValidator = null!;
     private CustomWebApplicationFactory _baseFactory = null!;
     private HttpClient _client = null!;

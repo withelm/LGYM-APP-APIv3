@@ -7,6 +7,7 @@ using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
+using LgymApi.Identity.Approval;
 
 namespace LgymApi.Application.ExternalAuth;
 
@@ -49,6 +50,9 @@ internal sealed class LoginResultBuilder : ILoginResultBuilder
             .OrderBy(value => value)
             .ToList();
 
+        roles = TrainerApprovalPolicy.EffectiveRoles(userWithRoles, roles);
+        permissionClaims = TrainerApprovalPolicy.EffectivePermissions(userWithRoles, permissionClaims);
+
         var session = await _userSessionStore.CreateSessionAsync(userWithRoles.Id, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
 
         var token = _tokenService.CreateToken(userWithRoles.Id, session.Id, session.Jti, roles, permissionClaims);
@@ -75,7 +79,8 @@ internal sealed class LoginResultBuilder : ILoginResultBuilder
                 IsVisibleInRanking = userWithRoles.IsVisibleInRanking,
                 Roles = roles,
                 PermissionClaims = permissionClaims,
-                HasActiveTutorials = hasActiveTutorials
+                HasActiveTutorials = hasActiveTutorials,
+                TrainerApprovalStatus = userWithRoles.TrainerApprovalStatus
             }
         });
     }

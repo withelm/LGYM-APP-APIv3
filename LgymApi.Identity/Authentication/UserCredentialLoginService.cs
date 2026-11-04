@@ -6,6 +6,7 @@ using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Identity.Contracts.Authentication;
 using LgymApi.Application.Identity.Mapping;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Identity.Approval;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
@@ -99,13 +100,25 @@ internal sealed class UserCredentialLoginService : IUserCredentialLoginService
             return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
-        var roles = await _roleRepository.GetRoleNamesByUserIdAsync(user.Id, cancellationToken);
+        if (user.IsDeleted || user.IsBlocked)
+        {
+            return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
+        }
+
+        if (requiredRole == AuthConstants.Roles.Trainer && TrainerApprovalPolicy.LoginError(user) is { } approvalError)
+        {
+            return Result<LoginResult, AppError>.Failure(approvalError);
+        }
+
+        var roles = TrainerApprovalPolicy.EffectiveRoles(user,
+            await _roleRepository.GetRoleNamesByUserIdAsync(user.Id, cancellationToken));
         if (!string.IsNullOrWhiteSpace(requiredRole) && !roles.Contains(requiredRole, StringComparer.Ordinal))
         {
             return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
-        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken);
+        var permissionClaims = TrainerApprovalPolicy.EffectivePermissions(user,
+            await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken));
         var session = await _userSessionStore.CreateSessionAsync(user.Id, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

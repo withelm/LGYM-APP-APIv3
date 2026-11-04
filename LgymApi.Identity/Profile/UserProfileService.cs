@@ -7,6 +7,7 @@ using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Identity.Contracts.Profile;
 using LgymApi.Application.Identity.Mapping;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Identity.Approval;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
@@ -57,8 +58,10 @@ internal sealed class UserProfileService : IUserProfileService
         }
 
         var nextRank = _rankService.GetNextRank(currentUser.ProfileRank);
-        var roles = await _roleRepository.GetRoleNamesByUserIdAsync(currentUser.Id, cancellationToken);
-        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(currentUser.Id, cancellationToken);
+        var roles = TrainerApprovalPolicy.EffectiveRoles(currentUser,
+            await _roleRepository.GetRoleNamesByUserIdAsync(currentUser.Id, cancellationToken));
+        var permissionClaims = TrainerApprovalPolicy.EffectivePermissions(currentUser,
+            await _roleRepository.GetPermissionClaimsByUserIdAsync(currentUser.Id, cancellationToken));
         var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(currentUser.Id, cancellationToken);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(IdentityUserMappingProfile.Keys.DefaultPreferredTimeZone, _appDefaultsOptions.PreferredTimeZone);

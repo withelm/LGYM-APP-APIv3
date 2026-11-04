@@ -6,6 +6,9 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
+using LgymApi.Identity.Approval;
+using LgymApi.Domain.Enums;
+using LgymApi.Domain.Security;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Identity.Administration;
@@ -52,6 +55,13 @@ internal sealed class UserRoleAdministrationService : IUserRoleAdministrationSer
         if (rolesToSet.Count != normalizedRoleNames.Count)
         {
             return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.InvalidRoleSelection));
+        }
+
+        if (user.TrainerApprovalStatus != TrainerApprovalStatus.Approved &&
+            rolesToSet.Any(role => role.Name == AuthConstants.Roles.Trainer))
+        {
+            return Result<Unit, AppError>.Failure(new TrainerApprovalError(
+                "TrainerApprovalRequired", Messages.TrainerApprovalRequired, 409));
         }
 
         await _roleRepository.ReplaceUserRolesAsync(targetUserId, rolesToSet.Select(role => role.Id).ToList(), cancellationToken);

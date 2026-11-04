@@ -1,4 +1,5 @@
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Identity.Approval;
 using LgymApi.Application.Identity.Mapping;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
@@ -78,8 +79,10 @@ internal sealed class AccountAccessReader : IAccountAccessReader
             return null;
         }
 
-        var roles = await _roleRepository.GetRoleNamesByUserIdAsync(user.Id, cancellationToken);
-        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken);
+        var roles = TrainerApprovalPolicy.EffectiveRoles(user,
+            await _roleRepository.GetRoleNamesByUserIdAsync(user.Id, cancellationToken));
+        var permissionClaims = TrainerApprovalPolicy.EffectivePermissions(user,
+            await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken));
         var context = _mapper.CreateContext();
         context.Set(IdentityAccountContractMappingProfile.Keys.Roles, roles);
         context.Set(IdentityAccountContractMappingProfile.Keys.PermissionClaims, permissionClaims);

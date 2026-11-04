@@ -58,12 +58,13 @@ public sealed class TrainerAuthController : ControllerBase
             return result.ToActionResult();
         }
 
-        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Created));
+        return Ok(_mapper.Map<string, ResponseMessageDto>(Messages.TrainerPendingApproval));
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(TrainerApprovalErrorDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken = default)
     {
         var result = await _userCredentialLoginService.LoginTrainerAsync(request.Name, request.Password, cancellationToken);

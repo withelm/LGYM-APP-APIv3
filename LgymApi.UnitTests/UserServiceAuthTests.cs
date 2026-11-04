@@ -170,12 +170,11 @@ public sealed class UserServiceAuthTests
     }
 
     [Test]
-    public async Task RegisterTrainerAsync_AssignsTrainerRolesAndHidesRanking()
+    public async Task RegisterTrainerAsync_CreatesPendingApplicationWithOnlyUserRoleAndHidesRanking()
     {
         var roles = new List<Role>
         {
-            new() { Id = Id<Role>.New(), Name = AuthConstants.Roles.User },
-            new() { Id = Id<Role>.New(), Name = AuthConstants.Roles.Trainer }
+            new() { Id = Id<Role>.New(), Name = AuthConstants.Roles.User }
         };
         User? addedUser = null;
         _userRepository.FindByNameOrEmail = (_, _, _) => Task.FromResult<User?>(null);
@@ -194,6 +193,8 @@ public sealed class UserServiceAuthTests
         result.IsSuccess.Should().BeTrue();
         addedUser.Should().NotBeNull();
         addedUser!.IsVisibleInRanking.Should().BeFalse();
+        addedUser.TrainerApprovalStatus.Should().Be(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval);
+        addedUser.TrainerApplicationCreatedAt.Should().NotBeNull();
         addedUser.PreferredLanguage.Should().Be("en-US");
         _roleRepository.Calls
             .Where(call =>

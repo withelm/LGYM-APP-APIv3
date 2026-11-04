@@ -70,6 +70,7 @@ public sealed class UserServiceAdminTests
         using var cancellationSource = new CancellationTokenSource();
         var cancellationToken = cancellationSource.Token;
         var user = new User { Id = Id<User>.New(), Name = "user", Email = "user@example.com" };
+        user.TrainerApprovalStatus = LgymApi.Domain.Enums.TrainerApprovalStatus.Approved;
         var trainerRole = new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.Trainer };
         _userRepository.FindById = (_, _) => Task.FromResult<User?>(user);
         _roleRepository.GetByNames = (_, _) => Task.FromResult<List<Role>>([trainerRole]);

@@ -20,11 +20,8 @@ public sealed class StartupMigrationBootstrapPostgreSqlTests
     [Test]
     public async Task ApplyAsync_InStaging_AppliesPendingMigrationWithRuntimeRole()
     {
-        await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync(activate: false);
-        await using (var database = CreateDbContext(environment.RuntimeConnectionString))
-        {
-            await database.Database.GetService<IMigrator>().MigrateAsync(PrePolicyMigrationId);
-        }
+        await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync(
+            activate: false, targetMigration: PrePolicyMigrationId);
 
         await using var app = CreateApp(environment);
 

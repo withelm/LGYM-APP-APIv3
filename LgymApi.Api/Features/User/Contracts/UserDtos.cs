@@ -92,6 +92,8 @@ public sealed class RankDto : IResultDto
 
 public sealed class UserInfoDto : IResultDto
 {
+    public LgymApi.Domain.Enums.TrainerApprovalStatus? TrainerApprovalStatus { get; set; }
+
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
