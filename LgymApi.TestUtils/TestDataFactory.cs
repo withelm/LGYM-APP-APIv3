@@ -148,13 +148,16 @@ public static class TestDataFactory
         bool isTester = false,
         bool isDeleted = false,
         int elo = 1000,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Id<User>? userId = null,
+        DateTimeOffset? timestamp = null,
+        IReadOnlyCollection<string>? additionalRoles = null)
     {
         password ??= DefaultUserSecret;
         var passwordData = CreateLegacyPasswordData(password);
         var user = new User
         {
-            Id = Id<User>.New(),
+            Id = userId ?? Id<User>.New(),
             Name = name,
             Email = email,
             IsVisibleInRanking = isVisibleInRanking,
@@ -170,21 +173,41 @@ public static class TestDataFactory
         dbContext.Users.Add(user);
         dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = ParseSeedId<Role>(IdentitySeedIds.UserRole) });
 
+        var roles = additionalRoles is null
+            ? new HashSet<string>(StringComparer.Ordinal)
+            : additionalRoles.ToHashSet(StringComparer.Ordinal);
         if (isAdmin)
         {
-            dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = ParseSeedId<Role>(IdentitySeedIds.AdminRole) });
+            roles.Add(AuthConstants.Roles.Admin);
         }
 
         if (isTester)
         {
-            dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = ParseSeedId<Role>(IdentitySeedIds.TesterRole) });
+            roles.Add(AuthConstants.Roles.Tester);
+        }
+
+        foreach (var role in roles)
+        {
+            var roleId = role switch
+            {
+                AuthConstants.Roles.Admin => ParseSeedId<Role>(IdentitySeedIds.AdminRole),
+                AuthConstants.Roles.Tester => ParseSeedId<Role>(IdentitySeedIds.TesterRole),
+                AuthConstants.Roles.Trainer => ParseSeedId<Role>(IdentitySeedIds.TrainerRole),
+                AuthConstants.Roles.User => ParseSeedId<Role>(IdentitySeedIds.UserRole),
+                _ => throw new InvalidOperationException($"Unknown test fixture role '{role}'.")
+            };
+
+            if (role != AuthConstants.Roles.User)
+            {
+                dbContext.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = roleId });
+            }
         }
 
         dbContext.EloRegistries.Add(new EloRegistry
         {
             Id = Id<EloRegistry>.New(),
             UserId = user.Id,
-            Date = DateTimeOffset.UtcNow,
+            Date = timestamp ?? DateTimeOffset.UtcNow,
             Elo = elo
         });
 

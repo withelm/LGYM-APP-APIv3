@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "AUTH-Q01-v1",
+  "syntheticOnly": true,
+  "actors": [
+    { "alias": "U", "id": "23600000-0000-0000-0000-000000000001", "email": "u@auth-q01.invalid", "roles": ["User"] },
+    { "alias": "T1", "id": "23600000-0000-0000-0000-000000000002", "email": "t1@auth-q01.invalid", "roles": ["User", "Trainer"] },
+    { "alias": "T2", "id": "23600000-0000-0000-0000-000000000003", "email": "t2@auth-q01.invalid", "roles": ["User", "Trainer"] },
+    { "alias": "T3", "id": "23600000-0000-0000-0000-000000000004", "email": "t3@auth-q01.invalid", "roles": ["User", "Trainer"] },
+    { "alias": "Admin", "id": "23600000-0000-0000-0000-000000000005", "email": "admin@auth-q01.invalid", "roles": ["User", "Admin"] },
+    { "alias": "AdminTrainer", "id": "23600000-0000-0000-0000-000000000006", "email": "admin-trainer@auth-q01.invalid", "roles": ["User", "Admin", "Trainer"] },
+    { "alias": "A", "id": "23600000-0000-0000-0000-000000000007", "email": "a@auth-q01.invalid", "roles": ["User", "Trainer"] },
+    { "alias": "B", "id": "23600000-0000-0000-0000-000000000008", "email": "b@auth-q01.invalid", "roles": ["User", "Trainer"] },
+    { "alias": "C", "id": "23600000-0000-0000-0000-000000000009", "email": "c@auth-q01.invalid", "roles": ["User"] }
+  ],
+  "timeline": {
+    "startedAt": "2026-10-01T08:00:00Z",
+    "reportAcceptedAt": "2026-10-10T09:00:00Z",
+    "relationshipEndedAt": "2026-10-10T10:00:00Z",
+    "measurementPersistedAt": "2026-10-10T11:00:00Z",
+    "postUnlinkObservedAt": "2026-10-10T12:00:00Z",
+    "returnedAt": "2026-10-20T08:00:00Z",
+    "referenceNow": "2026-10-21T12:00:00Z"
+  },
+  "relationshipScenarios": {
+    "initial": [{ "trainer": "T1", "trainee": "U" }],
+    "successor": [{ "trainer": "T2", "trainee": "U" }],
+    "coachless": [],
+    "returned": [{ "trainer": "T1", "trainee": "U" }],
+    "chain": [{ "trainer": "A", "trainee": "B" }, { "trainer": "B", "trainee": "C" }]
+  },
+  "reports": [
+    { "id": "23600000-0000-0000-0001-000000000001", "sourceTrainer": "T1", "trainee": "U", "acceptedAt": "2026-10-10T09:00:00Z", "answer": "synthetic-t1-answer" },
+    { "id": "23600000-0000-0000-0001-000000000002", "sourceTrainer": "T2", "trainee": "U", "acceptedAt": "2026-10-12T09:00:00Z", "answer": "synthetic-t2-answer" }
+  ],
+  "noteVersions": [
+    { "version": 1, "author": "T1", "trainee": "U", "visibleToTrainee": false, "content": "synthetic-private-version" },
+    { "version": 2, "author": "T1", "trainee": "U", "visibleToTrainee": true, "content": "synthetic-shared-version" },
+    { "version": 3, "author": "T1", "trainee": "U", "visibleToTrainee": false, "content": "synthetic-hidden-version" }
+  ],
+  "diets": [
+    { "id": "23600000-0000-0000-0002-000000000001", "author": "T1", "trainee": "U", "isActive": true, "startDate": "2026-10-01", "endDate": "2026-10-31" },
+    { "id": "23600000-0000-0000-0002-000000000002", "author": "T1", "trainee": "U", "isActive": false, "startDate": "2026-09-01", "endDate": "2026-09-30" }
+  ],
+  "plans": [
+    { "id": "23600000-0000-0000-0003-000000000001", "owner": "T1", "name": "synthetic-source-template" },
+    { "id": "23600000-0000-0000-0003-000000000002", "owner": "U", "name": "synthetic-independent-copy" },
+    { "id": "23600000-0000-0000-0003-000000000003", "owner": "B", "name": "synthetic-b-professional-template" },
+    { "id": "23600000-0000-0000-0003-000000000004", "owner": "C", "name": "synthetic-c-personal-copy" }
+  ],
+  "measurements": [
+    { "sourceReportId": "23600000-0000-0000-0001-000000000001", "observedAt": "2026-10-10T09:00:00Z", "acceptedAt": "2026-10-10T09:00:00Z", "persistedAt": "2026-10-10T11:00:00Z", "value": 80.5 },
+    { "sourceReportId": null, "observedAt": "2026-10-10T12:00:00Z", "acceptedAt": "2026-10-10T12:00:00Z", "persistedAt": "2026-10-10T12:01:00Z", "value": 81.0 }
+  ],
+  "shareCodes": [
+    { "code": "AUTHQ01VALID", "sourcePlanId": "23600000-0000-0000-0003-000000000001", "expiresAt": "2026-10-22T12:00:00Z" },
+    { "code": "AUTHQ01EXPIRED", "sourcePlanId": "23600000-0000-0000-0003-000000000001", "expiresAt": "2026-10-20T12:00:00Z" }
+  ],
+  "photos": [
+    { "id": "23600000-0000-0000-0004-000000000001", "sourceReportId": "23600000-0000-0000-0001-000000000001", "storageKey": "auth-q01/synthetic-t1.png", "thumbnailKey": "auth-q01/synthetic-t1-thumb.png" },
+    { "id": "23600000-0000-0000-0004-000000000002", "sourceReportId": "23600000-0000-0000-0001-000000000002", "storageKey": "auth-q01/synthetic-t2.png", "thumbnailKey": "auth-q01/synthetic-t2-thumb.png" }
+  ],
+  "syntheticPngBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAX+XDSwAAAABJRU5ErkJggg=="
+}

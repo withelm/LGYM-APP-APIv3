@@ -104,10 +104,6 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     [AuthorizationEvidence("GET", "/api/own/{id}", "own", "owner-allow")]
     [AuthorizationEvidence("GET", "/api/own/{id}", "own", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/own/{id}", "own", "foreign-object-denial-no-mutation")]
-    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/plans", "trainer-shared", "active-relationship-allow")]
-    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/plans", "trainer-shared", "unrelated-relationship-denial")]
-    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/plans", "trainer-shared", "former-relationship-denial")]
-    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/plans", "trainer-shared", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/admin/users/{id}", "admin", "current-permission-allow")]
     [AuthorizationEvidence("GET", "/api/admin/users/{id}", "admin", "ordinary-user-denial")]
     [AuthorizationEvidence("GET", "/api/admin/users/{id}", "admin", "stale-token-demotion-denial")]
@@ -1149,7 +1145,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .SetName("own actor-derived-subject profile is complete");
         yield return new TestCaseData("| GET | /api/own/{id} | ExampleController.GetOwn | authorize | none | 200,404 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | own | foreign-object | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")
             .SetName("own foreign-object profile is complete");
-        yield return new TestCaseData("| GET | /api/trainer/trainees/{traineeId}/plans | TrainerManagedPlansController.GetTraineePlans | policy.trainer.access | none | 200 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | trainer-shared | relationship-revocable | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")
+        yield return new TestCaseData("| GET | /api/trainer/trainees/{traineeId}/plans | TrainerManagedPlansController.GetTraineePlans | policy.trainer.access | none | 200 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | trainer-shared | relationship-revocable | AuthQ01FixtureTests.ManagedPlanList_UsesCanonicalActorsAndRelationshipStates |")
             .SetName("trainer-shared relationship-revocable profile is complete");
         yield return new TestCaseData("| GET | /api/admin/users/{id} | AdminUserController.GetUser | policy.admin.access | none | 200,404 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | admin | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")
             .SetName("admin profile is complete");
