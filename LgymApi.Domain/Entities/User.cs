@@ -20,6 +20,8 @@ public sealed class User : EntityBase<User>
     public DateTimeOffset? TrainerApplicationCreatedAt { get; set; }
     public Id<User>? TrainerApprovalReviewedBy { get; set; }
     public DateTimeOffset? TrainerApprovalDecidedAt { get; set; }
+    public int TrainerApplicationAttempt { get; set; } = 1;
+    public string? TrainerRejectionHistory { get; set; }
 
     public string? LegacyHash { get; set; }
     public string? LegacySalt { get; set; }

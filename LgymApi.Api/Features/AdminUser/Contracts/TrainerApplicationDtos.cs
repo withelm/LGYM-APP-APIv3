@@ -10,6 +10,7 @@ public sealed class TrainerApplicationDto : IResultDto
     public string Email { get; set; } = string.Empty;
     public TrainerApprovalStatus Status { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    public int Attempt { get; set; }
     public string? ReviewedBy { get; set; }
     public DateTimeOffset? DecidedAt { get; set; }
 }

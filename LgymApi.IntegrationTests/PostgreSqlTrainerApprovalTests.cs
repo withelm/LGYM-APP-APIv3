@@ -7,6 +7,7 @@ using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Approval;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts.Approval;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Data.SeedData;
 using Microsoft.EntityFrameworkCore;
@@ -31,8 +32,8 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         await using var secondScope = Factory.Services.CreateAsyncScope();
         var first = CreateGatedService(firstScope.ServiceProvider);
         var second = CreateGatedService(secondScope.ServiceProvider);
-        var firstTask = first.Service.DecideAsync(actor, applicant.Id.Rebind<AccountReference>(), winner, timeout.Token);
-        var secondTask = second.Service.DecideAsync(actor, applicant.Id.Rebind<AccountReference>(), loser, timeout.Token);
+        var firstTask = first.Service.DecideAsync(actor, applicant.Id.Rebind<AccountReference>(), winner, cancellationToken: timeout.Token);
+        var secondTask = second.Service.DecideAsync(actor, applicant.Id.Rebind<AccountReference>(), loser, cancellationToken: timeout.Token);
         await Task.WhenAll(first.Loaded.Task, second.Loaded.Task).WaitAsync(timeout.Token);
         first.Release.SetResult();
         (await firstTask).IsSuccess.Should().BeTrue();
@@ -41,6 +42,48 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         losingResult.IsFailure.Should().BeTrue();
         losingResult.Error.HttpStatusCode.Should().Be(409);
         await AssertStateAsync(applicant.Id, winner, actor.Id.Rebind<User>());
+    }
+
+    [Test]
+    public async Task DecisionLoadedBeforeResubmission_CannotApproveNewAttempt()
+    {
+        var (applicant, admin) = await SeedScenarioAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var staleScope = Factory.Services.CreateAsyncScope();
+        var stale = CreateGatedService(staleScope.ServiceProvider);
+        var target = applicant.Id.Rebind<AccountReference>();
+        var staleDecision = stale.Service.DecideAsync(admin, target, TrainerApprovalStatus.Approved,
+            cancellationToken: timeout.Token);
+        await stale.Loaded.Task.WaitAsync(timeout.Token);
+
+        await using (var rejection = Factory.Services.CreateAsyncScope())
+        {
+            var service = rejection.ServiceProvider.GetRequiredService<ITrainerApprovalService>();
+            (await service.DecideAsync(admin, target, TrainerApprovalStatus.Rejected,
+                cancellationToken: timeout.Token)).IsSuccess.Should().BeTrue();
+        }
+        await using (var submission = Factory.Services.CreateAsyncScope())
+        {
+            var provider = submission.ServiceProvider;
+            var db = provider.GetRequiredService<AppDbContext>();
+            var session = new UserSession { Id = Id<UserSession>.New(), UserId = applicant.Id,
+                Jti = "resubmission-test", ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1) };
+            db.UserSessions.Add(session);
+            await db.SaveChangesAsync(timeout.Token);
+            var actor = await provider.GetRequiredService<IAuthenticatedAccountContextResolver>()
+                .ResolveAsync(target, session.Id.Rebind<AccountSessionReference>(), timeout.Token);
+            var service = provider.GetRequiredService<ITrainerApprovalService>();
+            (await service.ResubmitAsync(actor.Context!, timeout.Token)).IsSuccess.Should().BeTrue();
+        }
+
+        stale.Release.SetResult();
+        (await staleDecision).Error.HttpStatusCode.Should().Be(409);
+        await AssertStateAsync(applicant.Id, TrainerApprovalStatus.PendingApproval, null);
+        await using var verify = Factory.Services.CreateAsyncScope();
+        var current = await verify.ServiceProvider.GetRequiredService<AppDbContext>().Users
+            .SingleAsync(user => user.Id == applicant.Id, timeout.Token);
+        current.TrainerApplicationAttempt.Should().Be(2);
+        current.TrainerRejectionHistory.Should().Contain(admin.Id.ToString());
     }
 
     [Test]

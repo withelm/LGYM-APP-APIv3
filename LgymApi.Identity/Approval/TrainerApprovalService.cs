@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Mapping.Core;
@@ -50,7 +51,7 @@ internal sealed class TrainerApprovalService(
 
     public async Task<Result<TrainerApplication, AppError>> DecideAsync(
         AuthenticatedAccountContext actor, Id<AccountReference> accountId, TrainerApprovalStatus decision,
-        CancellationToken cancellationToken = default)
+        int attempt = 1, CancellationToken cancellationToken = default)
     {
         if (!await IsCurrentAdminAsync(actor, cancellationToken) || actor.Id == accountId)
             return Result<TrainerApplication, AppError>.Failure(new ForbiddenError(Messages.Forbidden));
@@ -63,6 +64,8 @@ internal sealed class TrainerApprovalService(
         var user = await applications.FindAsync(accountId.Rebind<User>(), true, cancellationToken);
         if (user is null)
             return Result<TrainerApplication, AppError>.Failure(new NotFoundError(Messages.DidntFind));
+        if (user.TrainerApplicationAttempt != attempt)
+            return Conflict();
         if (user.TrainerApprovalStatus == decision)
             return Result<TrainerApplication, AppError>.Success(mapper.Map<User, TrainerApplication>(user));
         if (user.TrainerApprovalStatus != TrainerApprovalStatus.PendingApproval || user.IsBlocked)
@@ -95,15 +98,58 @@ internal sealed class TrainerApprovalService(
         return Result<TrainerApplication, AppError>.Success(mapper.Map<User, TrainerApplication>(user));
     }
 
-    private async Task<bool> IsCurrentAdminAsync(AuthenticatedAccountContext actor, CancellationToken cancellationToken)
+    public async Task<Result<Unit, AppError>> ResubmitAsync(
+        AuthenticatedAccountContext actor, CancellationToken cancellationToken = default)
     {
-        if (actor.SessionId is not { } sessionId) return false;
-        var current = await accounts.ResolveAsync(actor.Id, sessionId, cancellationToken);
-        return current.Status == AuthenticatedAccountResolutionStatus.Active
-            && current.Context?.PermissionClaims.Contains(AuthConstants.Permissions.AdminAccess, StringComparer.Ordinal) == true;
+        if (await ResolveCurrentAccountAsync(actor, cancellationToken) is null)
+            return Result<Unit, AppError>.Failure(new UnauthorizedError(Messages.Unauthorized));
+
+        var user = await applications.FindAsync(actor.Id.Rebind<User>(), true, cancellationToken);
+        if (user is { IsBlocked: false, TrainerApprovalStatus: TrainerApprovalStatus.PendingApproval, TrainerApplicationAttempt: > 1 })
+            return Result<Unit, AppError>.Success(Unit.Value);
+        if (user is not { IsBlocked: false, TrainerApprovalStatus: TrainerApprovalStatus.Rejected })
+            return Result<Unit, AppError>.Failure(ApprovalConflict());
+
+        List<RejectedAttempt> history = user.TrainerRejectionHistory is { } json
+            ? JsonSerializer.Deserialize<List<RejectedAttempt>>(json)!
+            : [];
+        history.Add(new RejectedAttempt(user.TrainerApplicationAttempt, user.TrainerApplicationCreatedAt,
+            user.TrainerApprovalReviewedBy?.ToString(), user.TrainerApprovalDecidedAt));
+        user.TrainerRejectionHistory = JsonSerializer.Serialize(history);
+        user.TrainerApplicationAttempt++;
+        user.TrainerApprovalStatus = TrainerApprovalStatus.PendingApproval;
+        user.TrainerApplicationCreatedAt = DateTimeOffset.UtcNow;
+        user.TrainerApprovalReviewedBy = null;
+        user.TrainerApprovalDecidedAt = null;
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<Unit, AppError>.Failure(ApprovalConflict());
+        }
+        return Result<Unit, AppError>.Success(Unit.Value);
     }
 
+    private async Task<AuthenticatedAccountContext?> ResolveCurrentAccountAsync(
+        AuthenticatedAccountContext actor, CancellationToken cancellationToken)
+    {
+        if (actor.SessionId is not { } sessionId) return null;
+        var current = await accounts.ResolveAsync(actor.Id, sessionId, cancellationToken);
+        return current.Status == AuthenticatedAccountResolutionStatus.Active ? current.Context : null;
+    }
+
+    private async Task<bool> IsCurrentAdminAsync(AuthenticatedAccountContext actor, CancellationToken cancellationToken) =>
+        (await ResolveCurrentAccountAsync(actor, cancellationToken))?.PermissionClaims
+            .Contains(AuthConstants.Permissions.AdminAccess, StringComparer.Ordinal) == true;
+
     private static Result<TrainerApplication, AppError> Conflict() =>
-        Result<TrainerApplication, AppError>.Failure(new TrainerApprovalError(
-            "TrainerApprovalConflict", Messages.TrainerApprovalConflict, 409));
+        Result<TrainerApplication, AppError>.Failure(ApprovalConflict());
+
+    private static AppError ApprovalConflict() =>
+        new TrainerApprovalError("TrainerApprovalConflict", Messages.TrainerApprovalConflict, 409);
+
+    private sealed record RejectedAttempt(int Attempt, DateTimeOffset? CreatedAt, string? ReviewedBy, DateTimeOffset? DecidedAt);
 }

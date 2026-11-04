@@ -40,7 +40,9 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.Designer.cs"] = "ee6deb9e9ccaab9a5a9efbd5e6857c44c2fc679747ae8a9d538755c675b08d5a",
         [MigrationRoot + "/20261104014456_AddTrainerApproval.cs"] = "709dfbe0da0b312c0cf453693fe441f318beb33a3f86e1648ec922d7e46bdbfa",
         [MigrationRoot + "/20261104014456_AddTrainerApproval.Designer.cs"] = "46dd9fb392d5dc5e03190ef8c177be0a7bc872f5d358e069cc1135c96ba50444",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "34077c788052307be4bd364472dac4abf2b5243af60814a5ae93f6ca7374919e"
+        [MigrationRoot + "/20261104102647_AddTrainerApplicationResubmission.cs"] = "5a804d33e0f56e5d05d0d574a098437dd35fff3b8f78018615e8205178448fa2",
+        [MigrationRoot + "/20261104102647_AddTrainerApplicationResubmission.Designer.cs"] = "6d05fc23e59a5edef77db09df2455cdbb277a6bb119274f303fee1a2a8b55ae6",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "6f86972c359fd284f4b32d9566c90357f57bf706bc9a836ef9524d23e3412f77"
     };
 
     [Test]

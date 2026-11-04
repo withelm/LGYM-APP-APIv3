@@ -62,22 +62,26 @@ public sealed class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(TrainerApprovalErrorDto), StatusCodes.Status409Conflict)]
-    public Task<IActionResult> ApproveTrainerApplication([FromRoute] string id, CancellationToken cancellationToken = default)
-        => DecideTrainerApplication(id, TrainerApprovalStatus.Approved, cancellationToken);
+    public Task<IActionResult> ApproveTrainerApplication([FromRoute] string id, [FromQuery] int attempt = 1,
+        CancellationToken cancellationToken = default)
+        => DecideTrainerApplication(id, TrainerApprovalStatus.Approved, attempt, cancellationToken);
 
     [HttpPost("{id}/trainer-application/reject")]
     [ProducesResponseType(typeof(TrainerApplicationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(TrainerApprovalErrorDto), StatusCodes.Status409Conflict)]
-    public Task<IActionResult> RejectTrainerApplication([FromRoute] string id, CancellationToken cancellationToken = default)
-        => DecideTrainerApplication(id, TrainerApprovalStatus.Rejected, cancellationToken);
+    public Task<IActionResult> RejectTrainerApplication([FromRoute] string id, [FromQuery] int attempt = 1,
+        CancellationToken cancellationToken = default)
+        => DecideTrainerApplication(id, TrainerApprovalStatus.Rejected, attempt, cancellationToken);
 
-    private async Task<IActionResult> DecideTrainerApplication(string id, TrainerApprovalStatus decision, CancellationToken cancellationToken)
+    private async Task<IActionResult> DecideTrainerApplication(string id, TrainerApprovalStatus decision, int attempt,
+        CancellationToken cancellationToken)
     {
         Response.Headers.CacheControl = "private, no-store";
         if (!TryParseUserId(id, out var accountId, out var error)) return error;
-        var result = await _trainerApproval.DecideAsync(HttpContext.GetAuthenticatedAccountContext()!, accountId, decision, cancellationToken);
+        var result = await _trainerApproval.DecideAsync(HttpContext.GetAuthenticatedAccountContext()!, accountId,
+            decision, attempt, cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<TrainerApplication, TrainerApplicationDto>(result.Value));
     }
 

@@ -9,6 +9,7 @@ using LgymApi.Application.Identity.ApiAdapters;
 using LgymApi.Application.Identity.Contracts.Authentication;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Security;
+using LgymApi.Identity.Contracts.Approval;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,19 +24,22 @@ public sealed class TrainerAuthController : ControllerBase
     private readonly IAccountEloApiAdapter _accountEloApiAdapter;
     private readonly IEloRegistryService _eloRegistryService;
     private readonly IMapper _mapper;
+    private readonly ITrainerApprovalService _trainerApproval;
 
     public TrainerAuthController(
         IUserCredentialLoginService userCredentialLoginService,
         IAuthenticatedAccountApiAdapter authenticatedAccountApiAdapter,
         IAccountEloApiAdapter accountEloApiAdapter,
         IEloRegistryService eloRegistryService,
-        IMapper mapper)
+        IMapper mapper,
+        ITrainerApprovalService trainerApproval)
     {
         _userCredentialLoginService = userCredentialLoginService;
         _authenticatedAccountApiAdapter = authenticatedAccountApiAdapter;
         _accountEloApiAdapter = accountEloApiAdapter;
         _eloRegistryService = eloRegistryService;
         _mapper = mapper;
+        _trainerApproval = trainerApproval;
     }
 
     [HttpPost("register")]
@@ -75,6 +79,19 @@ public sealed class TrainerAuthController : ControllerBase
 
         await _eloRegistryService.PopulateLatestEloAsync(result.Value.User, cancellationToken);
         return Ok(_mapper.Map<LgymApi.Application.Features.User.Models.LoginResult, LoginResponseDto>(result.Value));
+    }
+
+    [HttpPost("application/resubmit")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(TrainerApprovalErrorDto), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ResubmitApplication(CancellationToken cancellationToken = default)
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        if (HttpContext.GetAuthenticatedAccountContext() is not { } actor) return Unauthorized();
+        var result = await _trainerApproval.ResubmitAsync(actor, cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : NoContent();
     }
 
     [HttpGet("checkToken")]

@@ -17,6 +17,61 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class TrainerApprovalTests : IntegrationTestBase
 {
+    [Test]
+    [AuthorizationEvidence("POST", "/api/trainer/application/resubmit", "own", "owner-allow")]
+    [AuthorizationEvidence("POST", "/api/trainer/application/resubmit", "own", "anonymous-denial")]
+    [AuthorizationEvidence("POST", "/api/trainer/application/resubmit", "own", "no-client-subject")]
+    public async Task RejectedApplicant_CanResubmit_WithoutGrantingAccessOrLosingRejection()
+    {
+        const string resubmit = "/api/trainer/application/resubmit";
+        var applicant = await RegisterAsync();
+        var admin = await SeedAdminAsync();
+        var decision = $"/api/admin/users/{applicant.Id}/trainer-application";
+        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        SetAuthorizationHeader(applicant.Id);
+        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        SetAuthorizationHeader(admin.Id);
+        var rejection = await Body(await Client.PostAsync(decision + "/reject", null));
+        (await Client.PostAsJsonAsync(resubmit, new { accountId = applicant.Id.ToString() }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        ClearAuthorizationHeader();
+        var login = await Client.PostAsJsonAsync("/api/login", new { name = applicant.Name, password = "password123" });
+        login.StatusCode.Should().Be(HttpStatusCode.OK);
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", (await Body(login)).GetProperty("token").GetString());
+        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync("/api/trainer/checkToken")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = await db.Users.SingleAsync(item => item.Id == applicant.Id);
+            user.TrainerApprovalStatus.Should().Be(TrainerApprovalStatus.PendingApproval);
+            user.TrainerApplicationAttempt.Should().Be(2);
+            user.TrainerApprovalReviewedBy.Should().BeNull();
+            user.TrainerApprovalDecidedAt.Should().BeNull();
+            using var archive = JsonDocument.Parse(user.TrainerRejectionHistory!);
+            archive.RootElement.GetArrayLength().Should().Be(1);
+            var archived = archive.RootElement[0];
+            archived.GetProperty("Attempt").GetInt32().Should().Be(1);
+            archived.GetProperty("CreatedAt").GetDateTimeOffset().Should().Be(rejection.GetProperty("createdAt").GetDateTimeOffset());
+            archived.GetProperty("ReviewedBy").GetString().Should().Be(admin.Id.ToString());
+            archived.GetProperty("DecidedAt").GetDateTimeOffset().Should().Be(rejection.GetProperty("decidedAt").GetDateTimeOffset());
+        }
+
+        SetAuthorizationHeader(admin.Id);
+        var queue = await Body(await Client.GetAsync("/api/admin/users/trainer-applications"));
+        queue.GetProperty("items")[0].GetProperty("attempt").GetInt32().Should().Be(2);
+        (await Client.PostAsync(decision + "/approve?attempt=1", null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await Client.PostAsync(decision + "/reject", null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await Client.PostAsync(decision + "/approve?attempt=2", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        SetAuthorizationHeader(applicant.Id);
+        (await Client.GetAsync("/api/trainer/checkToken")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
     [TestCase("approve", "Approved")]
     [TestCase("reject", "Rejected")]
     [AuthorizationEvidence("GET", "/api/admin/users/trainer-applications", "admin", "current-permission-allow")]

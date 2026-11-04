@@ -309,6 +309,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "attempt",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
           }
         ],
         "responses": {
@@ -407,6 +416,15 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "attempt",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
             }
           }
         ],
@@ -8901,6 +8919,58 @@
         }
       }
     },
+    "/api/trainer/application/resubmit": {
+      "post": {
+        "tags": [
+          "TrainerAuth"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainerApprovalErrorDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainerApprovalErrorDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainerApprovalErrorDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/trainer/checkToken": {
       "get": {
         "tags": [
@@ -16840,6 +16910,10 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "attempt": {
+            "type": "integer",
+            "format": "int32"
           },
           "reviewedBy": {
             "type": "string",

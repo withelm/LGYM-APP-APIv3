@@ -8,7 +8,9 @@
 
 Trainer registration preserves validation, idempotency, password handling, tutorial initialization and the existing registration transaction. It assigns only User, records PendingApproval, and returns the existing 200 `{msg}` envelope with localized pending confirmation. It creates no session. The existing registration command remains; no approval/rejection email or push event is added.
 
-Only PendingApproval → Approved and PendingApproval → Rejected are supported. The state is an EF concurrency token. The service saves decision/audit, then adds Trainer on approval, inside the same existing unit-of-work transaction. Failure rolls everything back. Identical retries return the original audit without changing reviewer/time or re-granting a subsequently removed role. Conflicting decisions and concurrent losers return 409; callers can reload/retry. Reopening and reapplication are unsupported.
+Administrators can decide only the current pending attempt. The state and attempt number are EF concurrency tokens. The service saves decision/audit, then adds Trainer on approval, inside the same existing unit-of-work transaction. Identical retries for the same attempt return the original audit. Conflicting decisions and concurrent losers return 409.
+
+A rejected applicant can submit again with a current regular account session. The API archives the previous application date, reviewer, and decision timestamp in `Users.TrainerRejectionHistory` and creates the next pending attempt on the same account in one save. The archived records represent rejections. Duplicate submissions while the new attempt is pending leave it unchanged. Trainer access stays disabled until the new attempt is approved.
 
 Approval still requires the existing role/permission and valid, unblocked account/session. It does not override role removal, blocking, deletion or revocation. Independently permitted athlete operations remain available.
 
@@ -35,8 +37,11 @@ New operations extend AdminUserController and return `private, no-store` respons
 | --- | --- | --- |
 | List | GET `/api/admin/users/trainer-applications?page=1&pageSize=20&includeReviewed=false` | Paged applications; pending by default; page size 1–100 |
 | Detail | GET `/api/admin/users/{id}/trainer-application` | ID, name, email, state, application timestamp, reviewer ID and decision timestamp |
-| Approve | POST `/api/admin/users/{id}/trainer-application/approve` | Audited resulting state; no body |
-| Reject | POST `/api/admin/users/{id}/trainer-application/reject` | Audited resulting state; no body |
+| Approve | POST `/api/admin/users/{id}/trainer-application/approve?attempt=2` | Audited resulting state; no body |
+| Reject | POST `/api/admin/users/{id}/trainer-application/reject?attempt=2` | Audited resulting state; no body |
+| Resubmit own rejection | POST `/api/trainer/application/resubmit` | 204 for a new or already pending resubmission; 401 for an invalid session; 409 for other application states |
+
+Admin results include the current `attempt`. Omitting it on a decision targets attempt 1 for existing clients. A request targeting a previous attempt receives 409 even if the new application is pending.
 
 Authenticated self-profile/login responses add nullable `trainerApprovalStatus`. Ordinary accounts have no application state; null is omitted under the existing JSON conventions. No endpoint reveals application state before credential/provider/session validation. Invalid credentials retain generic unauthorized responses.
 
@@ -54,6 +59,8 @@ Errors retain `{msg}` and add `code`. Unauthorized sessions/policies retain exis
 `20261104014456_AddTrainerApproval` adds four nullable columns, two indexes and a reviewer foreign key to Users. Backfill approves **only non-deleted accounts already holding the non-deleted canonical Trainer role**. Ordinary accounts and deleted trainers remain null. Blocked trainers retain their classification and remain blocked. No roles, relationships, plans or ownership are changed.
 
 Backfill uses account creation time, null reviewer and the fixed classification timestamp `2026-11-04T00:00:00Z`. This denotes migration classification, not human review. Human decisions use actual current UTC time and the reviewer ID. Migration history and `status IS NULL` make reruns deterministic/idempotent; a rerun cannot approve new pending applicants.
+
+`20261104102647_AddTrainerApplicationResubmission` adds the attempt number (default 1) and nullable JSON rejection history. Existing applications keep their status, reviewer, dates and roles. Its down migration refuses to delete decision history.
 
 Deployment ordering (documented only, not performed here):
 
@@ -75,4 +82,4 @@ dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configura
 
 Page passes that file as ORVAL_SWAGGER_URL to its existing `npm run orval`. HTTP tests cover real status/error/audit/role/provider contracts and revocation. PostgreSQL tests cover selective migration/rerun, competing decisions and rollback. Historical migration tests seed historical user columns explicitly and target the migration under test instead of downgrading across later irreversible migrations. The disposable Docker test runner mounts SQL fixtures read-only so psql relative includes work.
 
-Follow-up decisions: notification contracts (LGYM-146), rejection reasons, reopening/reapplication, and broader capability administration (LGYM-210/220/225). None is implemented here.
+Follow-up decisions include notification contracts (LGYM-146), rejection reasons, and broader capability administration (LGYM-210/220/225).

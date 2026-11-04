@@ -2296,6 +2296,12 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("TrainerApplicationAttempt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<DateTimeOffset?>("TrainerApplicationCreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2308,6 +2314,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<string>("TrainerApprovalStatus")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
+
+                    b.Property<string>("TrainerRejectionHistory")
+                        .HasColumnType("jsonb");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

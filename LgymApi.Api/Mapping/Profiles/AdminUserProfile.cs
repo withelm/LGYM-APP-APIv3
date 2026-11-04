@@ -14,7 +14,7 @@ public sealed class AdminUserProfile : IMappingProfile
         configuration.CreateMap<TrainerApplication, TrainerApplicationDto>((source, _) => new TrainerApplicationDto
         {
             AccountId = source.AccountId.ToString(), Name = source.Name, Email = source.Email,
-            Status = source.Status, CreatedAt = source.CreatedAt,
+            Status = source.Status, CreatedAt = source.CreatedAt, Attempt = source.Attempt,
             ReviewedBy = source.ReviewedBy?.ToString(), DecidedAt = source.DecidedAt
         });
         configuration.CreateMap<Pagination<TrainerApplication>, PaginatedTrainerApplicationsDto>((source, context) => new PaginatedTrainerApplicationsDto
