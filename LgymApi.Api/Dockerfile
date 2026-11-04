@@ -18,7 +18,11 @@ COPY ["LgymApi.Platform/", "LgymApi.Platform/"]
 COPY ["LgymApi.Resources/", "LgymApi.Resources/"]
 COPY ["LgymApi.Resources.Generator/", "LgymApi.Resources.Generator/"]
 
-RUN dotnet publish "LgymApi.Authorization/LgymApi.Authorization.csproj" --configuration $BUILD_CONFIGURATION --no-restore --output /app/authorization /p:UseAppHost=false
+RUN dotnet publish "LgymApi.Authorization/LgymApi.Authorization.csproj" \
+    --configuration $BUILD_CONFIGURATION \
+    --no-restore \
+    --output /app/authorization \
+    /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
