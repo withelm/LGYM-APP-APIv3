@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 51;
+    private const int PersistedEntityCount = 52;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
@@ -38,11 +38,9 @@ public sealed class SingleProductionDbContextGuardTests
         [ReportReceiptMigrationDesigner] = "a6ab655fcc346b2f12b17baea223f58c3f2d70f63e2df6d589c483025f2991b5",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.cs"] = "4f22bc2418831f276588d568ab40da6ce742ca781577eb42774e7724d19a0d82",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.Designer.cs"] = "ee6deb9e9ccaab9a5a9efbd5e6857c44c2fc679747ae8a9d538755c675b08d5a",
-        [MigrationRoot + "/20261104014456_AddTrainerApproval.cs"] = "709dfbe0da0b312c0cf453693fe441f318beb33a3f86e1648ec922d7e46bdbfa",
-        [MigrationRoot + "/20261104014456_AddTrainerApproval.Designer.cs"] = "46dd9fb392d5dc5e03190ef8c177be0a7bc872f5d358e069cc1135c96ba50444",
-        [MigrationRoot + "/20261104102647_AddTrainerApplicationResubmission.cs"] = "5a804d33e0f56e5d05d0d574a098437dd35fff3b8f78018615e8205178448fa2",
-        [MigrationRoot + "/20261104102647_AddTrainerApplicationResubmission.Designer.cs"] = "6d05fc23e59a5edef77db09df2455cdbb277a6bb119274f303fee1a2a8b55ae6",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "6f86972c359fd284f4b32d9566c90357f57bf706bc9a836ef9524d23e3412f77"
+        [MigrationRoot + "/20261104014456_AddTrainerApproval.cs"] = "73673134f981f2a903600fe64029d7c65a312543f1cf68c771b369a0cd20a3c4",
+        [MigrationRoot + "/20261104014456_AddTrainerApproval.Designer.cs"] = "8762d4201ae909b2d4a9697939c65c1b23eed9a74d47ddd09fd5d3e58ff7c5e3",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "78e0d4fafe80046d5a425304341b420bcac1319258622579727828f77200e2dd"
     };
 
     [Test]

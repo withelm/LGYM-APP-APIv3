@@ -22,7 +22,7 @@ public sealed class TrainerApprovalOpenApiTests : IntegrationTestBase
         root.GetProperty("paths").TryGetProperty("/api/admin/users/{id}/trainer-application/approve", out _).Should().BeTrue();
         root.GetProperty("paths").TryGetProperty("/api/admin/users/{id}/trainer-application/reject", out _).Should().BeTrue();
         root.GetProperty("paths").GetProperty("/api/trainer/application/resubmit").GetProperty("post").GetProperty("responses")
-            .TryGetProperty("204", out _).Should().BeTrue();
+            .TryGetProperty("200", out _).Should().BeTrue();
         var properties = root.GetProperty("components").GetProperty("schemas").GetProperty("TrainerApplicationDto").GetProperty("properties");
         properties.GetProperty("status").GetProperty("enum").EnumerateArray().Select(item => item.GetString())
             .Should().BeEquivalentTo("PendingApproval", "Approved", "Rejected");

@@ -115,9 +115,12 @@ internal sealed class UserRegistrationService : IUserRegistrationService
             LegacyDigest = passwordData.Digest,
             PreferredLanguage = ResolvePreferredLanguage(input.PreferredLanguage),
             PreferredTimeZone = _appDefaultsOptions.PreferredTimeZone,
-            TrainerApprovalStatus = trainer ? LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval : null,
-            TrainerApplicationCreatedAt = trainer ? DateTimeOffset.UtcNow : null
+            TrainerApprovalStatus = trainer ? LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval : null
         };
+        if (trainer)
+        {
+            user.TrainerApplications.Add(TrainerApplicationAttempt.Submit(user.Id, 1));
+        }
 
         await _userRepository.AddAsync(user, cancellationToken);
 

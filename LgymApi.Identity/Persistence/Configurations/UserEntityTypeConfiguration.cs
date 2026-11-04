@@ -12,11 +12,6 @@ internal sealed class UserEntityTypeConfiguration : IEntityTypeConfiguration<Use
         builder.ToTable("Users");
 
         builder.Property(u => u.TrainerApprovalStatus).HasConversion<string>().IsConcurrencyToken();
-        builder.Property(u => u.TrainerApplicationAttempt).HasDefaultValue(1).IsConcurrencyToken();
-        builder.Property(u => u.TrainerRejectionHistory).HasColumnType("jsonb");
-        builder.HasIndex(u => new { u.TrainerApprovalStatus, u.TrainerApplicationCreatedAt });
-        builder.HasOne<User>().WithMany().HasForeignKey(u => u.TrainerApprovalReviewedBy)
-            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(u => u.Email)
             .HasConversion(email => email.Value, value => new Email(value));

@@ -194,7 +194,8 @@ public sealed class UserServiceAuthTests
         addedUser.Should().NotBeNull();
         addedUser!.IsVisibleInRanking.Should().BeFalse();
         addedUser.TrainerApprovalStatus.Should().Be(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval);
-        addedUser.TrainerApplicationCreatedAt.Should().NotBeNull();
+        addedUser.TrainerApplications.Should().ContainSingle()
+            .Which.Status.Should().Be(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval);
         addedUser.PreferredLanguage.Should().Be("en-US");
         _roleRepository.Calls
             .Where(call =>

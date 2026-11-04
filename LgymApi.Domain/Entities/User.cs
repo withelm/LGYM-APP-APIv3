@@ -15,13 +15,8 @@ public sealed class User : EntityBase<User>
     public bool IsVisibleInRanking { get; set; } = true;
     public bool IsBlocked { get; set; }
 
-    // Null means this account has never applied for trainer access.
+    // Current access state, updated with the application in the same transaction.
     public TrainerApprovalStatus? TrainerApprovalStatus { get; set; }
-    public DateTimeOffset? TrainerApplicationCreatedAt { get; set; }
-    public Id<User>? TrainerApprovalReviewedBy { get; set; }
-    public DateTimeOffset? TrainerApprovalDecidedAt { get; set; }
-    public int TrainerApplicationAttempt { get; set; } = 1;
-    public string? TrainerRejectionHistory { get; set; }
 
     public string? LegacyHash { get; set; }
     public string? LegacySalt { get; set; }
@@ -39,4 +34,5 @@ public sealed class User : EntityBase<User>
     public ICollection<UserExternalLogin> ExternalLogins { get; set; } = new List<UserExternalLogin>();
     public ICollection<Gym> Gyms { get; set; } = new List<Gym>();
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    public ICollection<TrainerApplicationAttempt> TrainerApplications { get; set; } = new List<TrainerApplicationAttempt>();
 }

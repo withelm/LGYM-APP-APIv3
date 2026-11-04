@@ -2042,6 +2042,53 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("TraineeNoteHistories", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.TrainerApplicationAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApplicantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicantId")
+                        .IsUnique()
+                        .HasFilter(" \"Status\" = 'PendingApproval' AND \"IsDeleted\" = FALSE ");
+
+                    b.HasIndex("ReviewedBy");
+
+                    b.HasIndex("ApplicantId", "Attempt")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("TrainerApplications", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.TrainerInvitation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2299,15 +2346,6 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTimeOffset?>("TrainerApplicationCreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("TrainerApprovalDecidedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("TrainerApprovalReviewedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("TrainerApprovalStatus")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -2326,10 +2364,6 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.HasIndex("PlanId");
-
-                    b.HasIndex("TrainerApprovalReviewedBy");
-
-                    b.HasIndex("TrainerApprovalStatus", "TrainerApplicationCreatedAt");
 
                     b.ToTable("Users", (string)null);
                 });
@@ -3071,6 +3105,22 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("TraineeNote");
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.TrainerApplicationAttempt", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Applicant")
+                        .WithMany("TrainerApplications")
+                        .HasForeignKey("ApplicantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Applicant");
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.TrainerInvitation", b =>
                 {
                     b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
@@ -3171,11 +3221,6 @@ namespace LgymApi.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("PlanId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("LgymApi.Domain.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("TrainerApprovalReviewedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Plan");
                 });
@@ -3324,6 +3369,8 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Navigation("Measurements");
 
                     b.Navigation("Plans");
+
+                    b.Navigation("TrainerApplications");
 
                     b.Navigation("Trainings");
 

@@ -14,4 +14,4 @@
 - Credential and Google account creation commit only after initializing the incomplete onboarding tutorial, so every successful new-account response can expose active onboarding immediately.
 - The tutorial RLS pilot protects only the tutorial parent and child tables and remains staging-only. Its operational gate and rollback procedure are in [`tutorial-rls-pilot.md`](../docs/security/tutorial-rls-pilot.md); Application authorization remains required.
 
-Trainer approval is Identity-owned. ITrainerApprovalService exposes marker-ID review operations; effective roles and permissions require approved account state. See [trainer account approval](../docs/security/trainer-account-approval.md).
+Identity owns `TrainerApplications` and the current trainer access status on `Users`. `ITrainerApprovalService` exposes marker-ID review operations. Registration, resubmission and decisions keep the current status and application rows consistent in the existing unit of work. See [trainer account approval](../docs/security/trainer-account-approval.md).

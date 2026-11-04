@@ -21,8 +21,11 @@ public static class TestDataFactory
         var user = database.Users.Local.FirstOrDefault(user => user.Id == accountId)
             ?? database.Users.Single(user => user.Id == accountId);
         user.TrainerApprovalStatus = LgymApi.Domain.Enums.TrainerApprovalStatus.Approved;
-        user.TrainerApplicationCreatedAt = user.CreatedAt;
-        user.TrainerApprovalDecidedAt = user.CreatedAt;
+        var application = TrainerApplicationAttempt.Submit(accountId, 1);
+        application.Status = LgymApi.Domain.Enums.TrainerApprovalStatus.Approved;
+        application.CreatedAt = user.CreatedAt;
+        application.DecidedAt = user.CreatedAt;
+        database.TrainerApplications.Add(application);
         return new UserRole { UserId = accountId, RoleId = ParseSeedId<Role>(IdentitySeedIds.TrainerRole) };
     }
 

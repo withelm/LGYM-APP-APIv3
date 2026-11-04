@@ -45,7 +45,8 @@ public sealed class TrainerAuthTests : IntegrationTestBase
 
         roleNames.Should().BeEquivalentTo(ExpectedTrainerRoles);
         user!.TrainerApprovalStatus.Should().Be(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval);
-        user.TrainerApplicationCreatedAt.Should().NotBeNull();
+        var application = await db.TrainerApplications.SingleAsync(item => item.ApplicantId == user.Id);
+        application.CreatedAt.Should().NotBe(default);
         (await db.UserSessions.CountAsync()).Should().Be(0);
     }
 

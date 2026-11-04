@@ -83,7 +83,7 @@ public sealed class TrainerAuthController : ControllerBase
 
     [HttpPost("application/resubmit")]
     [Authorize]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(TrainerApprovalErrorDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> ResubmitApplication(CancellationToken cancellationToken = default)
@@ -91,7 +91,8 @@ public sealed class TrainerAuthController : ControllerBase
         Response.Headers.CacheControl = "private, no-store";
         if (HttpContext.GetAuthenticatedAccountContext() is not { } actor) return Unauthorized();
         var result = await _trainerApproval.ResubmitAsync(actor, cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : NoContent();
+        return result.IsFailure ? result.ToActionResult()
+            : Ok(_mapper.Map<string, ResponseMessageDto>(Messages.TrainerPendingApproval));
     }
 
     [HttpGet("checkToken")]

@@ -10,14 +10,13 @@ internal sealed class TrainerApplicationMappingProfile : IMappingProfile
 {
     public void Configure(MappingConfiguration configuration)
     {
-        configuration.CreateMap<User, TrainerApplication>((source, _) => new TrainerApplication(
-            source.Id.Rebind<AccountReference>(), source.Name, source.Email,
-            source.TrainerApprovalStatus.GetValueOrDefault(), source.TrainerApplicationCreatedAt.GetValueOrDefault(),
-            source.TrainerApprovalReviewedBy?.Rebind<AccountReference>(), source.TrainerApprovalDecidedAt,
-            source.TrainerApplicationAttempt));
-        configuration.CreateMap<Pagination<User>, Pagination<TrainerApplication>>((source, context) => new Pagination<TrainerApplication>
+        configuration.CreateMap<TrainerApplicationAttempt, TrainerApplication>((source, _) => new TrainerApplication(
+            source.ApplicantId.Rebind<AccountReference>(), source.Applicant?.Name ?? string.Empty,
+            source.Applicant?.Email.Value ?? string.Empty,
+            source.Status, source.CreatedAt, source.ReviewedBy?.Rebind<AccountReference>(), source.DecidedAt, source.Attempt));
+        configuration.CreateMap<Pagination<TrainerApplicationAttempt>, Pagination<TrainerApplication>>((source, context) => new Pagination<TrainerApplication>
         {
-            Items = context!.MapList<User, TrainerApplication>(source.Items),
+            Items = context!.MapList<TrainerApplicationAttempt, TrainerApplication>(source.Items),
             Page = source.Page, PageSize = source.PageSize, TotalCount = source.TotalCount
         });
     }

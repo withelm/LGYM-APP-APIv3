@@ -30,6 +30,7 @@ internal static class PersistedEntityOwnershipCatalog
     internal static IReadOnlyList<PersistedEntityOwnership> Entries { get; } =
     [
         new(typeof(User), IdentityModuleName),
+        new(typeof(TrainerApplicationAttempt), IdentityModuleName),
         new(typeof(Role), IdentityModuleName),
         new(typeof(UserRole), IdentityModuleName),
         new(typeof(RoleClaim), IdentityModuleName),
@@ -84,7 +85,7 @@ internal static class PersistedEntityOwnershipCatalog
 
     private static readonly IReadOnlyDictionary<string, int> ExpectedEntityCountByOwner = new Dictionary<string, int>(StringComparer.Ordinal)
     {
-        [IdentityModuleName] = 9,
+        [IdentityModuleName] = 10,
         [NotificationsModuleName] = 5,
         [ReportingModuleName] = 9,
         [TrainingPlanningModuleName] = 3,

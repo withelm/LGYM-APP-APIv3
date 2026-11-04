@@ -1,4 +1,3 @@
-using System.Text.Json;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Mapping.Core;
@@ -34,7 +33,7 @@ internal sealed class TrainerApprovalService(
 
         var result = await applications.ListAsync(page, pageSize, includeReviewed, cancellationToken);
         return Result<Pagination<TrainerApplication>, AppError>.Success(
-            mapper.Map<Pagination<User>, Pagination<TrainerApplication>>(result));
+            mapper.Map<Pagination<TrainerApplicationAttempt>, Pagination<TrainerApplication>>(result));
     }
 
     public async Task<Result<TrainerApplication, AppError>> GetAsync(
@@ -43,10 +42,10 @@ internal sealed class TrainerApprovalService(
     {
         if (!await IsCurrentAdminAsync(actor, cancellationToken))
             return Result<TrainerApplication, AppError>.Failure(new ForbiddenError(Messages.Forbidden));
-        var user = await applications.FindAsync(accountId.Rebind<User>(), false, cancellationToken);
-        return user is null
+        var application = await applications.FindLatestAsync(accountId.Rebind<User>(), false, cancellationToken);
+        return application is null
             ? Result<TrainerApplication, AppError>.Failure(new NotFoundError(Messages.DidntFind))
-            : Result<TrainerApplication, AppError>.Success(mapper.Map<User, TrainerApplication>(user));
+            : MapResult(application);
     }
 
     public async Task<Result<TrainerApplication, AppError>> DecideAsync(
@@ -61,14 +60,14 @@ internal sealed class TrainerApprovalService(
         // Claim the pending transition before staging a role insert. Both saves belong
         // to one transaction; no caller can observe approval without the role/audit.
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
-        var user = await applications.FindAsync(accountId.Rebind<User>(), true, cancellationToken);
-        if (user is null)
+        var application = await applications.FindLatestAsync(accountId.Rebind<User>(), true, cancellationToken);
+        if (application is null)
             return Result<TrainerApplication, AppError>.Failure(new NotFoundError(Messages.DidntFind));
-        if (user.TrainerApplicationAttempt != attempt)
+        if (application.Attempt != attempt)
             return Conflict();
-        if (user.TrainerApprovalStatus == decision)
-            return Result<TrainerApplication, AppError>.Success(mapper.Map<User, TrainerApplication>(user));
-        if (user.TrainerApprovalStatus != TrainerApprovalStatus.PendingApproval || user.IsBlocked)
+        if (application.Status == decision)
+            return MapResult(application);
+        if (!CanUpdate(application, TrainerApprovalStatus.PendingApproval))
             return Conflict();
 
         var trainerRole = decision == TrainerApprovalStatus.Approved
@@ -76,15 +75,16 @@ internal sealed class TrainerApprovalService(
         if (decision == TrainerApprovalStatus.Approved && trainerRole is null)
             return Result<TrainerApplication, AppError>.Failure(new InternalServerError(Messages.DefaultRoleMissing));
 
-        user.TrainerApprovalStatus = decision;
-        user.TrainerApprovalReviewedBy = actor.Id.Rebind<User>();
-        user.TrainerApprovalDecidedAt = DateTimeOffset.UtcNow;
+        application.Status = decision;
+        application.ReviewedBy = actor.Id.Rebind<User>();
+        application.DecidedAt = DateTimeOffset.UtcNow;
+        application.Applicant.TrainerApprovalStatus = decision;
         try
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
             if (trainerRole is not null)
             {
-                await roles.AddUserRolesAsync(user.Id, [trainerRole.Id], cancellationToken);
+                await roles.AddUserRolesAsync(application.ApplicantId, [trainerRole.Id], cancellationToken);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
             }
             await transaction.CommitAsync(cancellationToken);
@@ -95,7 +95,7 @@ internal sealed class TrainerApprovalService(
             return Conflict();
         }
 
-        return Result<TrainerApplication, AppError>.Success(mapper.Map<User, TrainerApplication>(user));
+        return MapResult(application);
     }
 
     public async Task<Result<Unit, AppError>> ResubmitAsync(
@@ -104,30 +104,32 @@ internal sealed class TrainerApprovalService(
         if (await ResolveCurrentAccountAsync(actor, cancellationToken) is null)
             return Result<Unit, AppError>.Failure(new UnauthorizedError(Messages.Unauthorized));
 
-        var user = await applications.FindAsync(actor.Id.Rebind<User>(), true, cancellationToken);
-        if (user is { IsBlocked: false, TrainerApprovalStatus: TrainerApprovalStatus.PendingApproval, TrainerApplicationAttempt: > 1 })
+        var application = await applications.FindLatestAsync(actor.Id.Rebind<User>(), true, cancellationToken);
+        if (application is { Attempt: > 1 } && CanUpdate(application, TrainerApprovalStatus.PendingApproval))
             return Result<Unit, AppError>.Success(Unit.Value);
-        if (user is not { IsBlocked: false, TrainerApprovalStatus: TrainerApprovalStatus.Rejected })
+        if (application is null || !CanUpdate(application, TrainerApprovalStatus.Rejected))
             return Result<Unit, AppError>.Failure(ApprovalConflict());
 
-        List<RejectedAttempt> history = user.TrainerRejectionHistory is { } json
-            ? JsonSerializer.Deserialize<List<RejectedAttempt>>(json)!
-            : [];
-        history.Add(new RejectedAttempt(user.TrainerApplicationAttempt, user.TrainerApplicationCreatedAt,
-            user.TrainerApprovalReviewedBy?.ToString(), user.TrainerApprovalDecidedAt));
-        user.TrainerRejectionHistory = JsonSerializer.Serialize(history);
-        user.TrainerApplicationAttempt++;
-        user.TrainerApprovalStatus = TrainerApprovalStatus.PendingApproval;
-        user.TrainerApplicationCreatedAt = DateTimeOffset.UtcNow;
-        user.TrainerApprovalReviewedBy = null;
-        user.TrainerApprovalDecidedAt = null;
-
+        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
+        application.Applicant.TrainerApprovalStatus = TrainerApprovalStatus.PendingApproval;
         try
         {
+            // Claim the account transition before inserting the next numbered attempt.
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            var latest = await applications.FindLatestAsync(application.ApplicantId, false, cancellationToken);
+            if (latest?.Id != application.Id)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return Result<Unit, AppError>.Failure(ApprovalConflict());
+            }
+
+            applications.Add(TrainerApplicationAttempt.Submit(application.ApplicantId, application.Attempt + 1));
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
+            await transaction.RollbackAsync(cancellationToken);
             return Result<Unit, AppError>.Failure(ApprovalConflict());
         }
         return Result<Unit, AppError>.Success(Unit.Value);
@@ -151,5 +153,10 @@ internal sealed class TrainerApprovalService(
     private static AppError ApprovalConflict() =>
         new TrainerApprovalError("TrainerApprovalConflict", Messages.TrainerApprovalConflict, 409);
 
-    private sealed record RejectedAttempt(int Attempt, DateTimeOffset? CreatedAt, string? ReviewedBy, DateTimeOffset? DecidedAt);
+    private static bool CanUpdate(TrainerApplicationAttempt application, TrainerApprovalStatus expected) =>
+        application.Status == expected && application.Applicant.TrainerApprovalStatus == expected
+        && !application.Applicant.IsBlocked;
+
+    private Result<TrainerApplication, AppError> MapResult(TrainerApplicationAttempt application) =>
+        Result<TrainerApplication, AppError>.Success(mapper.Map<TrainerApplicationAttempt, TrainerApplication>(application));
 }

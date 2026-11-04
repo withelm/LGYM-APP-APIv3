@@ -17,6 +17,8 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class TrainerApprovalTests : IntegrationTestBase
 {
+    private static readonly string[] UserAndTrainerRoles = [AuthConstants.Roles.User, AuthConstants.Roles.Trainer];
+
     [Test]
     [AuthorizationEvidence("POST", "/api/trainer/application/resubmit", "own", "owner-allow")]
     [AuthorizationEvidence("POST", "/api/trainer/application/resubmit", "own", "anonymous-denial")]
@@ -40,8 +42,8 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         var login = await Client.PostAsJsonAsync("/api/login", new { name = applicant.Name, password = "password123" });
         login.StatusCode.Should().Be(HttpStatusCode.OK);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", (await Body(login)).GetProperty("token").GetString());
-        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.OK);
         (await Client.GetAsync("/api/trainer/checkToken")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         using (var scope = Factory.Services.CreateScope())
@@ -49,21 +51,25 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var user = await db.Users.SingleAsync(item => item.Id == applicant.Id);
             user.TrainerApprovalStatus.Should().Be(TrainerApprovalStatus.PendingApproval);
-            user.TrainerApplicationAttempt.Should().Be(2);
-            user.TrainerApprovalReviewedBy.Should().BeNull();
-            user.TrainerApprovalDecidedAt.Should().BeNull();
-            using var archive = JsonDocument.Parse(user.TrainerRejectionHistory!);
-            archive.RootElement.GetArrayLength().Should().Be(1);
-            var archived = archive.RootElement[0];
-            archived.GetProperty("Attempt").GetInt32().Should().Be(1);
-            archived.GetProperty("CreatedAt").GetDateTimeOffset().Should().Be(rejection.GetProperty("createdAt").GetDateTimeOffset());
-            archived.GetProperty("ReviewedBy").GetString().Should().Be(admin.Id.ToString());
-            archived.GetProperty("DecidedAt").GetDateTimeOffset().Should().Be(rejection.GetProperty("decidedAt").GetDateTimeOffset());
+            var attempts = await db.TrainerApplications.Where(item => item.ApplicantId == applicant.Id)
+                .OrderBy(item => item.Attempt).ToListAsync();
+            attempts.Should().HaveCount(2);
+            attempts[0].Status.Should().Be(TrainerApprovalStatus.Rejected);
+            attempts[0].CreatedAt.Should().Be(rejection.GetProperty("createdAt").GetDateTimeOffset());
+            attempts[0].ReviewedBy.Should().Be(admin.Id);
+            attempts[0].DecidedAt.Should().Be(rejection.GetProperty("decidedAt").GetDateTimeOffset());
+            attempts[1].Status.Should().Be(TrainerApprovalStatus.PendingApproval);
+            attempts[1].ReviewedBy.Should().BeNull();
+            attempts[1].DecidedAt.Should().BeNull();
         }
 
         SetAuthorizationHeader(admin.Id);
         var queue = await Body(await Client.GetAsync("/api/admin/users/trainer-applications"));
+        queue.GetProperty("totalCount").GetInt32().Should().Be(1);
         queue.GetProperty("items")[0].GetProperty("attempt").GetInt32().Should().Be(2);
+        var history = await Body(await Client.GetAsync("/api/admin/users/trainer-applications?includeReviewed=true"));
+        history.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("status").GetString())
+            .Should().BeEquivalentTo("Rejected", "PendingApproval");
         (await Client.PostAsync(decision + "/approve?attempt=1", null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await Client.PostAsync(decision + "/reject", null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await Client.PostAsync(decision + "/approve?attempt=2", null)).StatusCode.Should().Be(HttpStatusCode.OK);
@@ -152,6 +158,8 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var user = await db.Users.SingleAsync(user => user.Id == applicant.Id);
             user.TrainerApprovalStatus = status;
+            var application = await db.TrainerApplications.SingleAsync(item => item.ApplicantId == applicant.Id);
+            application.Status = status;
             db.UserRoles.Add(new UserRole { UserId = applicant.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId });
             await db.SaveChangesAsync();
         }
@@ -213,7 +221,7 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         var applicant = await RegisterAsync();
         var admin = await SeedAdminAsync();
         SetAuthorizationHeader(admin.Id);
-        var direct = await Client.PostAsJsonAsync($"/api/roles/users/{applicant.Id}/roles", new { roles = new[] { "User", "Trainer" } });
+        var direct = await Client.PostAsJsonAsync($"/api/roles/users/{applicant.Id}/roles", new { roles = UserAndTrainerRoles });
         direct.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await Body(direct)).GetProperty("code").GetString().Should().Be("TrainerApprovalRequired");
         using (var scope = Factory.Services.CreateScope())
@@ -236,10 +244,10 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         var applicant = await RegisterAsync();
         var repeated = await RegisterAsync();
         repeated.Id.Should().Be(applicant.Id);
-        repeated.TrainerApplicationCreatedAt.Should().Be(applicant.TrainerApplicationCreatedAt);
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         (await db.Users.CountAsync()).Should().Be(1);
+        (await db.TrainerApplications.CountAsync()).Should().Be(1);
         (await db.UserSessions.CountAsync()).Should().Be(0);
         (await db.UserRoles.AnyAsync(role => role.Role.Name == "Trainer")).Should().BeFalse();
     }
