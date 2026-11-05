@@ -267,6 +267,37 @@ jobs:
               exit $LASTEXITCODE
           }
 
+      - name: Run AUTH-Q01 focused authorization slice with nonzero TRX proof
+        if: matrix.suite == 'InMemoryIntegration'
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $sliceDirectory = Join-Path $env:GITHUB_WORKSPACE (Join-Path $env:EVIDENCE_ROOT 'AUTH-Q01')
+          $null = New-Item -ItemType Directory -Path $sliceDirectory -Force
+          $trxPath = Join-Path $sliceDirectory 'auth-q01.trx'
+          & dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build --filter 'FullyQualifiedName~AuthQ01FixtureTests|FullyQualifiedName~EndpointContractMatrixTests' --logger "trx;LogFileName=auth-q01.trx" --results-directory $sliceDirectory
+          if ($LASTEXITCODE -ne 0) {
+            throw "AUTH-Q01 focused test slice exited with code $LASTEXITCODE."
+          }
+          if (-not (Test-Path -LiteralPath $trxPath)) {
+            throw "AUTH-Q01 focused test slice did not produce a TRX file."
+          }
+          $trx = [xml][System.IO.File]::ReadAllText($trxPath)
+          $counters = $trx.TestRun.ResultSummary.Counters
+          if ([int]$counters.executed -le 0 -or [int]$counters.passed -ne [int]$counters.total -or [int]$counters.failed -ne 0) {
+            throw "AUTH-Q01 focused TRX counters are not a nonzero green execution: $($counters.OuterXml)"
+          }
+          $fixtureDefinitions = @($trx.TestRun.TestDefinitions.UnitTest | Where-Object { $_.TestMethod.className -like '*AuthQ01FixtureTests*' })
+          $requiredCases = @('CanonicalFixture_LoadsAndSatisfiesSchemaInvariants', 'AuthQ01CoverageMap_IsClosedAndExecutable', 'ManagedPlanList_UsesCanonicalActorsAndRelationshipStates', 'DirectPlanActorMatrix_AllDeclaredActorsPreserveOwnershipAndPayloadBoundaries', 'ManagedPlanChain_AccessToBDoesNotGrantAccessToC')
+          foreach ($case in $requiredCases) {
+            $definition = @($fixtureDefinitions | Where-Object { $_.TestMethod.name -eq $case })
+            if ($definition.Count -ne 1) { throw "AUTH-Q01 required case missing or duplicated: $case" }
+            $result = @($trx.TestRun.Results.UnitTestResult | Where-Object { $_.testId -eq $definition[0].id -and $_.outcome -eq 'Passed' })
+            if ($result.Count -ne 1) { throw "AUTH-Q01 required case did not pass: $case" }
+          }
+          Write-Host "AUTH-Q01 focused TRX counters: executed=$($counters.executed), passed=$($counters.passed), failed=$($counters.failed)."
+
       - name: Upload same-SHA suite evidence
         uses: actions/upload-artifact@v4
         with:
