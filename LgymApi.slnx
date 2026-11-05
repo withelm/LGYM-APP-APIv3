@@ -15,6 +15,7 @@
   <Project Path="LgymApi.DataSeeder/LgymApi.DataSeeder.csproj" />
   <Project Path="LgymApi.Domain/LgymApi.Domain.csproj" />
   <Project Path="LgymApi.Identity/LgymApi.Identity.csproj" />
+  <Project Path="LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj" />
   <Project Path="LgymApi.Infrastructure/LgymApi.Infrastructure.csproj" />
   <Project Path="LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj" />
   <Project Path="LgymApi.Notifications/LgymApi.Notifications.csproj" />

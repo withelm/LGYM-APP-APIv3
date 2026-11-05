@@ -104,7 +104,10 @@ public sealed class ModulePersistenceBridgeGuardTests
         foreach (var modulePath in modulePaths)
         {
             var assemblyInfo = Path.Combine(repoRoot, modulePath, "Properties", "AssemblyInfo.cs");
-            Assert.That(ReadFriends(File.ReadAllText(assemblyInfo)), Is.EqualTo(ApprovedFriends), modulePath);
+            var expectedFriends = modulePath == "LgymApi.Identity"
+                ? ApprovedFriends.Append("LgymApi.Identity.UnitTests").OrderBy(friend => friend, StringComparer.Ordinal).ToArray()
+                : ApprovedFriends;
+            Assert.That(ReadFriends(File.ReadAllText(assemblyInfo)), Is.EqualTo(expectedFriends), modulePath);
         }
 
         Assert.That(

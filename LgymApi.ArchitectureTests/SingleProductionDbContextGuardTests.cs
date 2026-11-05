@@ -28,6 +28,8 @@ public sealed class SingleProductionDbContextGuardTests
         ["LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj"] = "c300f972bd132330f0ead1dac11bd40168b7ebc28184cf0f249373eaabb09eca",
         ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj"] = "9e37345ff9459e13b1cec859b2b394cee1961bfea379c0936b8861b1a23efe10",
         ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "082c91ec55218916e80b8cb0394b1bc92306d54ee1157b9224b8637e74467207",
+        ["LgymApi.Identity/LgymApi.Identity.csproj"] = "5fe4c97db85e1ce49ce16156a8f0f33ddf1716e207fc58aaef743f2489cb8752",
+        ["LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj"] = "c7e286bce4f001c43b3458ae8e2265677d19f4f2f16738766124afadda874199",
         ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "200549f3f97f6672b7751fdb894de3c69c44bd55a90397b015f01beb9217b47c",
         ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "4453c4766317025d9eefd24a05e6ff9841e7c0fcaf71c2d62c9a5622dad66339"
     };

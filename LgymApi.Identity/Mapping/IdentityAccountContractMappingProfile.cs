@@ -1,8 +1,10 @@
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Authorization.Contracts;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Platform.Contracts;
 
 namespace LgymApi.Application.Identity.Mapping;
 
@@ -44,5 +46,8 @@ internal sealed class IdentityAccountContractMappingProfile : IMappingProfile
             source.PermissionClaims,
             source.IsBlocked,
             source.IsDeleted));
+
+        configuration.CreateMap<AuthenticatedAccountContext, AuthorizationActor>((source, _) =>
+            new AuthorizationActor(source.Id.Rebind<ActorReference>()));
     }
 }

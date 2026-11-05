@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 797;
+    private const int ManifestEntryCount = 799;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -54,6 +54,8 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Application/Reporting/Errors/ReportingErrors.cs\tLgymApi.Application.Reporting.Errors.ReportingConflictError",
         "LgymApi.Platform/Repositories/IActorRowSecurityScopeFactory.cs\tLgymApi.Application.Repositories.IActorRowSecurityScopeFactory",
         "LgymApi.Identity/Contracts/Accounts/IAccountPushInstallationCleanupPort.cs\tLgymApi.Application.Identity.Contracts.Accounts.IAccountPushInstallationCleanupPort",
+        "LgymApi.Identity/Contracts/Authorization/AuthenticatedAccountAuthorizationContracts.cs\tLgymApi.Identity.Contracts.Authorization.GlobalPermissionAuthorizationContext",
+        "LgymApi.Identity/Contracts/Authorization/AuthenticatedAccountAuthorizationContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAuthenticatedAccountAuthorizationService",
         "LgymApi.Notifications/IDisabledPushInstallationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IDisabledPushInstallationRetentionCleanupService",
         "LgymApi.Notifications/IInAppNotificationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IInAppNotificationRetentionCleanupService",
         "LgymApi.Notifications/IPushNotificationMessageRetentionCleanupService.cs\tLgymApi.Application.Notifications.IPushNotificationMessageRetentionCleanupService",

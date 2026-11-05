@@ -359,7 +359,8 @@ public sealed class GoogleAuthTests : IntegrationTestBase
         bool isVisibleInRanking = true,
         bool isTester = false,
         bool isDeleted = false,
-        int elo = 1000)
+        int elo = 1000,
+        IReadOnlyCollection<string>? additionalRoles = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -372,7 +373,8 @@ public sealed class GoogleAuthTests : IntegrationTestBase
             isVisibleInRanking,
             isTester,
             isDeleted,
-            elo);
+            elo,
+            additionalRoles: additionalRoles);
         await db.SaveChangesAsync();
         return user;
     }

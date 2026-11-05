@@ -78,9 +78,17 @@ internal static class ProjectReferenceGraphManifest
         new("LgymApi.Domain", ProjectKind.Production, []),
         new("LgymApi.Identity", ProjectKind.Production,
         [
+            "LgymApi.Authorization",
             "LgymApi.Domain",
             "LgymApi.Platform",
             "LgymApi.Resources"
+        ]),
+        new("LgymApi.Identity.UnitTests", ProjectKind.Test,
+        [
+            "LgymApi.Authorization",
+            "LgymApi.Domain",
+            "LgymApi.Identity",
+            "LgymApi.Platform"
         ]),
         new("LgymApi.Infrastructure", ProjectKind.Production,
         [

@@ -31,6 +31,7 @@ WORKDIR /src
 COPY ["Directory.Build.props", "."]
 COPY ["Directory.Packages.props", "."]
 COPY ["LgymApi.Api/LgymApi.Api.csproj", "LgymApi.Api/"]
+COPY ["LgymApi.Authorization/LgymApi.Authorization.csproj", "LgymApi.Authorization/"]
 COPY ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj", "LgymApi.BackgroundWorker/"]
 COPY ["LgymApi.BackgroundWorker.Common/LgymApi.BackgroundWorker.Common.csproj", "LgymApi.BackgroundWorker.Common/"]
 COPY ["LgymApi.Application/LgymApi.Application.csproj", "LgymApi.Application/"]
@@ -47,6 +48,7 @@ COPY ["LgymApi.TrainingPlanning/LgymApi.TrainingPlanning.csproj", "LgymApi.Train
 RUN dotnet restore "LgymApi.Api/LgymApi.Api.csproj"
 
 COPY ["LgymApi.Api/", "LgymApi.Api/"]
+COPY ["LgymApi.Authorization/", "LgymApi.Authorization/"]
 COPY ["LgymApi.BackgroundWorker/", "LgymApi.BackgroundWorker/"]
 COPY ["LgymApi.BackgroundWorker.Common/", "LgymApi.BackgroundWorker.Common/"]
 COPY ["LgymApi.Application/", "LgymApi.Application/"]

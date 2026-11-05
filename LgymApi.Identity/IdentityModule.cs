@@ -11,6 +11,7 @@ using LgymApi.Application.Identity.Contracts.Ranking;
 using LgymApi.Application.Identity.Contracts.Sessions;
 using LgymApi.Application.Identity.Administration;
 using LgymApi.Application.Identity.Access;
+using LgymApi.Application.Identity.Authorization;
 using LgymApi.Application.Identity.Registration;
 using LgymApi.Application.Identity.Profile;
 using LgymApi.Application.Identity.Ranking;
@@ -25,6 +26,8 @@ using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts.Authorization;
+using LgymApi.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.Identity;
@@ -33,6 +36,8 @@ public static class IdentityModule
 {
     public static IServiceCollection AddIdentityModule(this IServiceCollection services)
     {
+        services.AddAuthorizationPolicy<GlobalPermissionAuthorizationContext, GlobalPermissionAuthorizationPolicy>();
+
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
         services.AddScoped<ILegacyPasswordService, LegacyPasswordService>();
@@ -62,6 +67,7 @@ public static class IdentityModule
         services.AddScoped<IAccountAccessReader, AccountAccessReader>();
         services.AddScoped<IAccountSessionValidator, AccountSessionValidator>();
         services.AddScoped<IAuthenticatedAccountContextResolver, AuthenticatedAccountContextResolver>();
+        services.AddScoped<IAuthenticatedAccountAuthorizationService, AuthenticatedAccountAuthorizationService>();
         services.AddScoped<IAuthenticatedAccountCompatibilityPort, AuthenticatedAccountCompatibilityPort>();
         services.AddScoped<IUserRoleAdministrationService, UserRoleAdministrationService>();
         services.AddScoped<IExternalAuthService, ExternalAuthService>();

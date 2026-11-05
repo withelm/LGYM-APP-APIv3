@@ -14,7 +14,7 @@ Main areas:
 - Module shells: `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, and `LgymApi.Notifications`
 - Background jobs: `LgymApi.BackgroundWorker` and `LgymApi.BackgroundWorker.Common`
 - Data seeding: `LgymApi.DataSeeder`
-- Tests: `LgymApi.UnitTests`, `LgymApi.Authorization.UnitTests`, `LgymApi.Reporting.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, `LgymApi.DataSeeder.Tests`, `LgymApi.TestUtils`
+- Tests: `LgymApi.UnitTests`, `LgymApi.Authorization.UnitTests`, `LgymApi.Identity.UnitTests`, `LgymApi.Reporting.UnitTests`, `LgymApi.IntegrationTests`, `LgymApi.ArchitectureTests`, `LgymApi.DataSeeder.Tests`, `LgymApi.TestUtils`
 
 ## Instruction Hierarchy
 
@@ -69,13 +69,14 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 | `LgymApi.Application/LgymApi.Application.csproj` | Use-case and business orchestration for the remaining Workout & Progress, Coaching, and Nutrition capabilities, plus their application-facing contracts and DI facade; owns TZDB local-day history conversion via centrally pinned NodaTime. | Own business rules, authorization checks, transactions, and unit-of-work commits here. Never reference a `LgymApi.BackgroundWorker*` project or namespace. |
 | `LgymApi.Authorization/LgymApi.Authorization.csproj` | Framework-neutral authorization kernel with immutable actor/decision contracts, typed policy evaluation, and closed registration. | Keep direct references limited to Domain and Platform. Do not add HTTP, persistence, feature types, resource dispatch, reflection dispatch, service location, user-facing errors, or generic role/admin/system bypasses. |
 | `LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj` | Focused unit tests for Authorization-owned kernel behavior and closed DI registration. | Keep direct references limited to Authorization and contracts used by the fixture; leave cross-project guards and API-host behavior in their centralized suites. |
+| `LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj` | Focused unit tests for Identity-owned actor bridging, permission policy behavior, and facade registration. | Keep behavior tests owner-scoped; leave kernel behavior in Authorization.UnitTests and HTTP behavior in IntegrationTests. |
 | `LgymApi.Reporting/LgymApi.Reporting.csproj` | Reporting workflows, focused ports, API adapters, mapping profiles, and owner registration facade with retained Application namespaces. | Keep direct references limited to Domain, Identity, Platform, and Resources; Infrastructure remains the single EF context and migration owner. |
 | `LgymApi.Domain/LgymApi.Domain.csproj` | Core domain: entities, enums, strongly typed IDs, domain helpers, and auth/security constants. | Keep free of HTTP, EF, API, and localization concerns. Domain is localization-neutral and must not reference `LgymApi.Resources`. Do not reorder or renumber existing enums. |
 | `LgymApi.Infrastructure/LgymApi.Infrastructure.csproj` | Shared technical composition: the EF Core `DbContext`, migrations, unit of work, Hangfire persistence, module persistence bridges, and remaining non-extracted persistence adapters. | Repositories must not call `SaveChangesAsync` or own transactions. Do not register extracted module services, providers, or select push schedulers here. |
 | `LgymApi.Resources/LgymApi.Resources.csproj` | Localized `.resx` resources for messages, enums, and emails, with generated strongly typed access. | Add or update English and Polish resources for user-facing text. |
 | `LgymApi.Resources.Generator/LgymApi.Resources.Generator.csproj` | Roslyn source generator/analyzer used by `LgymApi.Resources`; targets `netstandard2.0` for analyzer compatibility. | Keep deterministic and free of runtime app dependencies. |
 | `LgymApi.Platform/LgymApi.Platform.csproj` | Stable code boundary for shared platform services and contracts; contains the `ActorReference` contract-only typed-ID marker. | Keep direct references limited to Domain and Resources; do not add feature workflows, a DbContext, migrations, or Worker dependencies. |
-| `LgymApi.Identity/LgymApi.Identity.csproj` | Stable code boundary for identity and account capabilities; contains account, session, and role contract-only typed-ID markers. | Keep direct references limited to Domain, Platform, and Resources; do not reference Notifications, Infrastructure, or Worker. |
+| `LgymApi.Identity/LgymApi.Identity.csproj` | Stable code boundary for identity and account capabilities; contains account, session, and role contract-only typed-ID markers and global permission-policy ownership. | Keep direct references limited to Authorization, Domain, Platform, and Resources; do not reference Notifications, Infrastructure, or Worker. |
 | `LgymApi.TrainingPlanning/LgymApi.TrainingPlanning.csproj` | Stable code boundary for training-plan definition and planning workflows; contains plan, plan-day, and consumer-owned plan-exercise contract-only typed-ID markers. | Keep direct references limited to Domain, Identity, Platform, and Resources; do not add a DbContext or take ownership of completed workout execution. |
 | `LgymApi.Notifications/LgymApi.Notifications.csproj` | Stable code boundary for provider-neutral notification capabilities; contains notification and push-installation contract-only typed-ID markers. | Keep direct references limited to BackgroundWorker.Common, Domain, Identity, Platform, and Resources; do not add a DbContext, migrations, or provider credentials. |
 | `LgymApi.BackgroundWorker.Common/LgymApi.BackgroundWorker.Common.csproj` | Exact bounded Worker/Infrastructure seam for persisted job interfaces, scheduler bridges, idempotency policy, and email wire contracts. | Do not add Application-facing contracts, commands, serialization, or push delivery types. |
@@ -175,6 +176,7 @@ dotnet run --project LgymApi.Api
 ```powershell
 dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build
 dotnet test LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj --configuration Release --no-build
+dotnet test LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj --configuration Release --no-build
 dotnet test LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj --configuration Release --no-build
 dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build
 dotnet test LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj --configuration Release --no-build
