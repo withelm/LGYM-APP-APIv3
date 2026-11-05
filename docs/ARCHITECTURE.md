@@ -8,6 +8,7 @@ This document explains how the backend is structured and how to add a new module
 - `LgymApi.Application` - remaining Workout & Progress, Coaching, and Nutrition use-case orchestration.
 - `LgymApi.Authorization` - framework-neutral typed authorization kernel; Identity owns the authenticated-account actor bridge and global permission policy, while API remains the ASP.NET adapter.
 - `LgymApi.Authorization.UnitTests` - focused unit tests for Authorization-owned kernel behavior and closed registration.
+- `LgymApi.Identity.UnitTests` - focused unit tests for Identity-owned actor bridging, permission policy behavior, and facade registration.
 - `LgymApi.Reporting` - extracted Reporting workflows, focused ports, API adapters, mapping profiles, and public registration facade, retaining compatible Application namespaces.
 - `LgymApi.Platform`, `LgymApi.Identity`, `LgymApi.TrainingPlanning`, and `LgymApi.Notifications` - stable module assemblies with public facades, explicit contracts, and internal implementations.
 - `LgymApi.Domain` - core domain types (entities, enums, domain-only helpers).
