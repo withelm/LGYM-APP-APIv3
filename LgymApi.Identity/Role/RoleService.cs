@@ -8,6 +8,8 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
+using LgymApi.Identity.Approval;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Features.Role;
 
@@ -17,18 +19,22 @@ internal sealed class RoleService : IRoleService
     [
         AuthConstants.Roles.User,
         AuthConstants.Roles.Admin,
-        AuthConstants.Roles.Tester
+        AuthConstants.Roles.Tester,
+        AuthConstants.Roles.Trainer
     ];
 
     private readonly IRoleRepository _roleRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITrainerApplicationRepository _trainerApplications;
 
-    public RoleService(IRoleRepository roleRepository, IUserRepository userRepository, IUnitOfWork unitOfWork)
+    public RoleService(IRoleRepository roleRepository, IUserRepository userRepository, IUnitOfWork unitOfWork,
+        ITrainerApplicationRepository trainerApplications)
     {
         _roleRepository = roleRepository;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _trainerApplications = trainerApplications;
     }
 
     public async Task<Result<List<RoleResult>, AppError>> GetRolesAsync(CancellationToken cancellationToken = default)
@@ -241,6 +247,13 @@ internal sealed class RoleService : IRoleService
         if (rolesToSet.Count != normalizedRoleNames.Count)
         {
             return Result<Unit, AppError>.Failure(new InvalidRoleError(Messages.InvalidRoleSelection));
+        }
+
+        if (rolesToSet.Any(role => role.Name == AuthConstants.Roles.Trainer) &&
+            await _trainerApplications.GetLatestStatusAsync(user.Id, cancellationToken) != TrainerApprovalStatus.Approved)
+        {
+            return Result<Unit, AppError>.Failure(new TrainerApprovalError(
+                "TrainerApprovalRequired", Messages.TrainerApprovalRequired, 409));
         }
 
         await _roleRepository.ReplaceUserRolesAsync(userId, rolesToSet.Select(r => r.Id).ToList(), cancellationToken);

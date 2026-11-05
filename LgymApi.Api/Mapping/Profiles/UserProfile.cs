@@ -33,7 +33,8 @@ public sealed class UserProfile : IMappingProfile
             IsVisibleInRanking = source.IsVisibleInRanking,
             Roles = source.Roles,
             PermissionClaims = source.PermissionClaims,
-            HasActiveTutorials = source.HasActiveTutorials
+            HasActiveTutorials = source.HasActiveTutorials,
+            TrainerApprovalStatus = source.TrainerApprovalStatus
         });
 
         configuration.CreateMap<LoginResult, LoginResponseDto>((source, context) => new LoginResponseDto
@@ -75,7 +76,8 @@ public sealed class UserProfile : IMappingProfile
             IsVisibleInRanking = source.IsVisibleInRanking,
             Roles = source.Roles.ToList(),
             PermissionClaims = source.PermissionClaims.ToList(),
-            HasActiveTutorials = source.HasActiveTutorials
+            HasActiveTutorials = source.HasActiveTutorials,
+            TrainerApprovalStatus = source.TrainerApprovalStatus
         });
 
         configuration.CreateMap<RankingReadModel, UserBaseInfoDto>((source, _) => new UserBaseInfoDto

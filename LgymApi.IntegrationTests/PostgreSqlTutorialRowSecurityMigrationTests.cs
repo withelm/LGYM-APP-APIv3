@@ -67,7 +67,7 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
 
         await using (var forwardContext = CreateDbContext(lease))
         {
-            await forwardContext.Database.MigrateAsync();
+            await MigrateAsync(forwardContext, GetPolicyMigrationId(forwardContext.Database.GetMigrations()));
         }
 
         await using (var downgradeContext = CreateDbContext(lease))
@@ -125,7 +125,8 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
             UpdatedAt = now
         };
 
-        dbContext.AddRange(user, progress, step);
+        await PostgreSqlHistoricalUserSeed.AddAsync(dbContext, user);
+        dbContext.AddRange(progress, step);
         await dbContext.SaveChangesAsync();
     }
 

@@ -327,4 +327,22 @@
   <data name="ReportingProtocolPayloadTooLarge" xml:space="preserve">
     <value>Żądanie raportowania jest zbyt duże, aby zweryfikować protokół.</value>
   </data>
+  <data name="TrainerPendingApproval" xml:space="preserve">
+    <value>Twoje konto trenera zostało utworzone i oczekuje na zatwierdzenie przez administratora LGYM. Po zatwierdzeniu możesz zalogować się do Panelu Trenera.</value>
+  </data>
+  <data name="TrainerRejected" xml:space="preserve">
+    <value>Twój wniosek o konto trenera został odrzucony. Dostęp do Panelu Trenera jest niedostępny.</value>
+  </data>
+  <data name="TrainerApprovalRequired" xml:space="preserve">
+    <value>Przed nadaniem roli Trenera zatwierdź konto w sekcji wniosków trenerów.</value>
+  </data>
+  <data name="TrainerApprovalConflict" xml:space="preserve">
+    <value>Ten wniosek został już rozpatrzony lub nie można go teraz rozpatrzyć. Odśwież listę, aby zobaczyć aktualny stan.</value>
+  </data>
+  <data name="TrainerApprovalDecisionInvalid" xml:space="preserve">
+    <value>Wybierz zatwierdzenie lub odrzucenie.</value>
+  </data>
+  <data name="TrainerApplicationPagingInvalid" xml:space="preserve">
+    <value>Numer strony musi być dodatni, a rozmiar strony musi wynosić od 1 do 100.</value>
+  </data>
 </root>

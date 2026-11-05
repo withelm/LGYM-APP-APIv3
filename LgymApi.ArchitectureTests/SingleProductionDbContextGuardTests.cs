@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 51;
+    private const int PersistedEntityCount = 52;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
@@ -40,7 +40,9 @@ public sealed class SingleProductionDbContextGuardTests
         [ReportReceiptMigrationDesigner] = "a6ab655fcc346b2f12b17baea223f58c3f2d70f63e2df6d589c483025f2991b5",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.cs"] = "4f22bc2418831f276588d568ab40da6ce742ca781577eb42774e7724d19a0d82",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.Designer.cs"] = "ee6deb9e9ccaab9a5a9efbd5e6857c44c2fc679747ae8a9d538755c675b08d5a",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "ae8e3dc3a4e61960d239a9872cb4862a71e0fb74c42bbd68a771f08e261654a7"
+        [MigrationRoot + "/20261104014456_AddTrainerApproval.cs"] = "75591f32d31f999a58e1514c90ed63e9716c9aee9720c2582d5bdbbeafa53fe0",
+        [MigrationRoot + "/20261104014456_AddTrainerApproval.Designer.cs"] = "f1e0374b7b54cd4918d81cf7c1c6718ed2498edceb35b3b655c6a08bd8503b01",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "5287810ca2b0eb339867f46886a51ae0b93f50cf7221795955ce4dbe36ba8aca"
     };
 
     [Test]

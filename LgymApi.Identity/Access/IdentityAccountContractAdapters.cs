@@ -1,8 +1,10 @@
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Identity.Approval;
 using LgymApi.Application.Identity.Mapping;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
@@ -60,12 +62,15 @@ internal sealed class AccountAccessReader : IAccountAccessReader
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IMapper _mapper;
+    private readonly ITrainerApplicationRepository _trainerApplications;
 
-    public AccountAccessReader(IUserRepository userRepository, IRoleRepository roleRepository, IMapper mapper)
+    public AccountAccessReader(IUserRepository userRepository, IRoleRepository roleRepository, IMapper mapper,
+        ITrainerApplicationRepository trainerApplications)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _mapper = mapper;
+        _trainerApplications = trainerApplications;
     }
 
     public async Task<AccountAccessFacts?> GetByIdAsync(
@@ -80,6 +85,13 @@ internal sealed class AccountAccessReader : IAccountAccessReader
 
         var roles = await _roleRepository.GetRoleNamesByUserIdAsync(user.Id, cancellationToken);
         var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(user.Id, cancellationToken);
+        if (roles.Contains(AuthConstants.Roles.Trainer) || permissionClaims.Contains(AuthConstants.Permissions.TrainerAccess))
+        {
+            var status = await _trainerApplications.GetLatestStatusAsync(user.Id, cancellationToken);
+            var isApproved = TrainerApprovalPolicy.IsApproved(user, status);
+            roles = TrainerApprovalPolicy.EffectiveRoles(roles, isApproved);
+            permissionClaims = TrainerApprovalPolicy.EffectivePermissions(permissionClaims, isApproved);
+        }
         var context = _mapper.CreateContext();
         context.Set(IdentityAccountContractMappingProfile.Keys.Roles, roles);
         context.Set(IdentityAccountContractMappingProfile.Keys.PermissionClaims, permissionClaims);

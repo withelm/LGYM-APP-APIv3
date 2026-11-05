@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -198,4 +198,7 @@
   <data name="PhotoTypeNameMode_TrainerProvided" xml:space="preserve">
     <value>Nazwa trenera</value>
   </data>
+  <data name="TrainerApprovalStatus_PendingApproval" xml:space="preserve"><value>Oczekuje na zatwierdzenie</value></data>
+  <data name="TrainerApprovalStatus_Approved" xml:space="preserve"><value>Zatwierdzony</value></data>
+  <data name="TrainerApprovalStatus_Rejected" xml:space="preserve"><value>Odrzucony</value></data>
 </root>

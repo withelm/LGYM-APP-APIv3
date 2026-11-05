@@ -7,6 +7,7 @@ using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Identity.Contracts.Profile;
 using LgymApi.Application.Identity.Mapping;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Identity.Approval;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
@@ -26,6 +27,7 @@ internal sealed class UserProfileService : IUserProfileService
     private readonly AppDefaultsOptions _appDefaultsOptions;
     private readonly ITutorialService _tutorialService;
     private readonly IMapper _mapper;
+    private readonly ITrainerApplicationRepository _trainerApplications;
 
     public UserProfileService(
         IUserRepository userRepository,
@@ -35,7 +37,8 @@ internal sealed class UserProfileService : IUserProfileService
         IAccountPushInstallationCleanupPort accountPushInstallationCleanupPort,
         AppDefaultsOptions appDefaultsOptions,
         ITutorialService tutorialService,
-        IMapper mapper)
+        IMapper mapper,
+        ITrainerApplicationRepository trainerApplications)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -45,6 +48,7 @@ internal sealed class UserProfileService : IUserProfileService
         _appDefaultsOptions = appDefaultsOptions;
         _tutorialService = tutorialService;
         _mapper = mapper;
+        _trainerApplications = trainerApplications;
     }
 
     public async Task<Result<UserInfoResult, AppError>> CheckTokenAsync(
@@ -57,8 +61,12 @@ internal sealed class UserProfileService : IUserProfileService
         }
 
         var nextRank = _rankService.GetNextRank(currentUser.ProfileRank);
-        var roles = await _roleRepository.GetRoleNamesByUserIdAsync(currentUser.Id, cancellationToken);
-        var permissionClaims = await _roleRepository.GetPermissionClaimsByUserIdAsync(currentUser.Id, cancellationToken);
+        var approvalStatus = await _trainerApplications.GetLatestStatusAsync(currentUser.Id, cancellationToken);
+        var isApproved = TrainerApprovalPolicy.IsApproved(currentUser, approvalStatus);
+        var roles = TrainerApprovalPolicy.EffectiveRoles(
+            await _roleRepository.GetRoleNamesByUserIdAsync(currentUser.Id, cancellationToken), isApproved);
+        var permissionClaims = TrainerApprovalPolicy.EffectivePermissions(
+            await _roleRepository.GetPermissionClaimsByUserIdAsync(currentUser.Id, cancellationToken), isApproved);
         var hasActiveTutorials = await _tutorialService.HasActiveTutorialsAsync(currentUser.Id, cancellationToken);
         var mappingContext = _mapper.CreateContext();
         mappingContext.Set(IdentityUserMappingProfile.Keys.DefaultPreferredTimeZone, _appDefaultsOptions.PreferredTimeZone);
@@ -67,6 +75,7 @@ internal sealed class UserProfileService : IUserProfileService
         mappingContext.Set(IdentityUserMappingProfile.Keys.Roles, roles);
         mappingContext.Set(IdentityUserMappingProfile.Keys.PermissionClaims, permissionClaims);
         mappingContext.Set(IdentityUserMappingProfile.Keys.HasActiveTutorials, hasActiveTutorials);
+        mappingContext.Set(IdentityUserMappingProfile.Keys.TrainerApprovalStatus, approvalStatus);
 
         return Result<UserInfoResult, AppError>.Success(_mapper.Map<UserEntity, UserInfoResult>(currentUser, mappingContext));
     }

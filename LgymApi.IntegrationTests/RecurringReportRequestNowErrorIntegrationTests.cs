@@ -287,11 +287,7 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
         var trainer = await SeedUserAsync("request-now-error-trainer", "request-now-error-trainer@example.com");
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        database.UserRoles.Add(new UserRole
-        {
-            UserId = trainer.Id,
-            RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
-        });
+        database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
         await database.SaveChangesAsync();
         return trainer;
     }

@@ -182,7 +182,7 @@ public sealed class RuntimeCompositionValidationTests
         {
             [typeof(LgymApi.Application.WorkoutProgress.Scoring.Elo.IExerciseEloCalculator)] = 4,
             [typeof(LgymApi.BackgroundWorker.Common.Notifications.IEmailTemplateComposer)] = 6,
-            [typeof(LgymApi.Application.Mapping.Core.IMappingProfile)] = 46
+            [typeof(LgymApi.Application.Mapping.Core.IMappingProfile)] = 47
         };
 
         foreach (var group in moduleDescriptors)

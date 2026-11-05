@@ -885,11 +885,7 @@ public sealed class PlanDayTests : IntegrationTestBase
     {
         using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        dbContext.UserRoles.Add(new UserRole
-        {
-            UserId = trainerId,
-            RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
-        });
+        dbContext.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(dbContext, trainerId));
         dbContext.TrainerTraineeLinks.Add(new TrainerTraineeLink
         {
             Id = Id<TrainerTraineeLink>.New(),

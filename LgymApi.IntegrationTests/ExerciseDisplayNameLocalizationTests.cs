@@ -111,11 +111,7 @@ public sealed class ExerciseDisplayNameLocalizationTests : IntegrationTestBase
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.UserRoles.Add(new UserRole
-        {
-            UserId = trainerId,
-            RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
-        });
+        db.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(db, trainerId));
         db.TrainerTraineeLinks.Add(new TrainerTraineeLink
         {
             Id = Id<TrainerTraineeLink>.New(),

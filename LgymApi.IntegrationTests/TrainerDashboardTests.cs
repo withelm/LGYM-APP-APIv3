@@ -95,7 +95,7 @@ public sealed class TrainerDashboardTests : IntegrationTestBase
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.UserRoles.Add(new UserRole { UserId = trainer, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId });
+        db.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(db, trainer));
         db.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer, TraineeId = trainee });
         var plan = new Plan { Id = Id<Plan>.New(), UserId = trainee, Name = "Local history" };
         var day = new PlanDay { Id = Id<PlanDay>.New(), PlanId = plan.Id, Name = "Local day" };

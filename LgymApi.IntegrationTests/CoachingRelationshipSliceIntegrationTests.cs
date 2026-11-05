@@ -29,11 +29,7 @@ public sealed class CoachingRelationshipSliceIntegrationTests : IntegrationTestB
         using (var seedScope = Factory.Services.CreateScope())
         {
             var database = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            database.UserRoles.Add(new UserRole
-            {
-                UserId = trainer.Id,
-                RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
-            });
+            database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
             database.TrainerTraineeLinks.Add(new TrainerTraineeLink
             {
                 Id = Id<TrainerTraineeLink>.New(),

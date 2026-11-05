@@ -27,6 +27,7 @@ internal static class PersistenceIdentityContract
     internal static IReadOnlyList<PersistedDbSetIdentity> DbSets { get; } =
     [
         DbSet("Users", "User"),
+        DbSet("TrainerApplications", "TrainerApplicationAttempt"),
         DbSet("Plans", "Plan"),
         DbSet("PlanDays", "PlanDay"),
         DbSet("PlanDayExercises", "PlanDayExercise"),
@@ -82,6 +83,7 @@ internal static class PersistenceIdentityContract
     internal static IReadOnlyList<string> RegistrarConfigurationTypes { get; } =
     [
         "UserEntityTypeConfiguration",
+        "TrainerApplicationAttemptEntityTypeConfiguration",
         "RoleEntityTypeConfiguration",
         "UserRoleEntityTypeConfiguration",
         "RoleClaimEntityTypeConfiguration",

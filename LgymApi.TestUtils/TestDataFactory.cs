@@ -15,6 +15,19 @@ namespace LgymApi.TestUtils;
 /// </summary>
 public static class TestDataFactory
 {
+    /// <summary>Explicitly stages a legitimate, already-approved trainer fixture.</summary>
+    public static UserRole ApprovedTrainerRole(AppDbContext database, Id<User> accountId)
+    {
+        var user = database.Users.Local.FirstOrDefault(user => user.Id == accountId)
+            ?? database.Users.AsNoTracking().Single(user => user.Id == accountId);
+        var application = TrainerApplicationAttempt.Submit(accountId, 1);
+        application.Status = LgymApi.Domain.Enums.TrainerApprovalStatus.Approved;
+        application.CreatedAt = user.CreatedAt;
+        application.DecidedAt = user.CreatedAt;
+        database.TrainerApplications.Add(application);
+        return new UserRole { UserId = accountId, RoleId = ParseSeedId<Role>(IdentitySeedIds.TrainerRole) };
+    }
+
     /// <summary>
     /// Default username for admin test accounts.
     /// </summary>

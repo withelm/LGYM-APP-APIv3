@@ -6,6 +6,9 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
+using LgymApi.Identity.Approval;
+using LgymApi.Domain.Enums;
+using LgymApi.Domain.Security;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Identity.Administration;
@@ -15,15 +18,18 @@ internal sealed class UserRoleAdministrationService : IUserRoleAdministrationSer
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITrainerApplicationRepository _trainerApplications;
 
     public UserRoleAdministrationService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ITrainerApplicationRepository trainerApplications)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _unitOfWork = unitOfWork;
+        _trainerApplications = trainerApplications;
     }
 
     public async Task<Result<Unit, AppError>> UpdateUserRolesAsync(
@@ -52,6 +58,13 @@ internal sealed class UserRoleAdministrationService : IUserRoleAdministrationSer
         if (rolesToSet.Count != normalizedRoleNames.Count)
         {
             return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.InvalidRoleSelection));
+        }
+
+        if (rolesToSet.Any(role => role.Name == AuthConstants.Roles.Trainer) &&
+            await _trainerApplications.GetLatestStatusAsync(user.Id, cancellationToken) != TrainerApprovalStatus.Approved)
+        {
+            return Result<Unit, AppError>.Failure(new TrainerApprovalError(
+                "TrainerApprovalRequired", Messages.TrainerApprovalRequired, 409));
         }
 
         await _roleRepository.ReplaceUserRolesAsync(targetUserId, rolesToSet.Select(role => role.Id).ToList(), cancellationToken);

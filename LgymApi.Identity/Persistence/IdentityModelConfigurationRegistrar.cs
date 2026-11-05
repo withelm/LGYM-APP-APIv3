@@ -8,6 +8,7 @@ internal static class IdentityModelConfigurationRegistrar
     internal static void Apply(ModelBuilder modelBuilder)
     {
         Register(modelBuilder, new UserEntityTypeConfiguration());
+        Register(modelBuilder, new TrainerApplicationAttemptEntityTypeConfiguration());
         Register(modelBuilder, new RoleEntityTypeConfiguration());
         Register(modelBuilder, new UserRoleEntityTypeConfiguration());
         Register(modelBuilder, new RoleClaimEntityTypeConfiguration());

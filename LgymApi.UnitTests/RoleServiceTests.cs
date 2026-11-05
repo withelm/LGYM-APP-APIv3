@@ -30,7 +30,8 @@ public sealed class RoleServiceTests
         _roleRepository = new InMemoryRoleRepository();
         _userRepository = new InMemoryUserRepository();
         _unitOfWork = new FakeUnitOfWork();
-        _service = new RoleService(_roleRepository, _userRepository, _unitOfWork);
+        _service = new RoleService(_roleRepository, _userRepository, _unitOfWork,
+            new LgymApi.UnitTests.Fakes.TrainerApplicationRepositoryStub());
     }
 
     [Test]
