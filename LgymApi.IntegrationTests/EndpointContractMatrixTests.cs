@@ -71,7 +71,10 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     [
         "credential-or-token-current;future-replay-review", "idempotent-current;future-replay-review",
         "private-photo-current;future-replay-review", "private-response-current;no-replay-contract",
-        "non-sensitive-current;no-replay-contract", "opaque-capability-current-contract"
+        "non-sensitive-current;no-replay-contract", "opaque-capability-current-contract",
+        "credential-or-token-current;generic-idempotency-foundation-complete;public-replay-policy-current",
+        "idempotent-current;generic-idempotency-foundation-complete;identity-replay-policy-current",
+        "idempotent-current;generic-idempotency-foundation-complete;workout-progress-replay-policy-deferred"
     ];
 
     private static readonly string[] ApprovedMigrationTasks =
