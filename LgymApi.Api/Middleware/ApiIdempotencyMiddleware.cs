@@ -5,6 +5,7 @@ using LgymApi.Api.Idempotency;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Resources;
 using Microsoft.AspNetCore.Http.Extensions;
 
 namespace LgymApi.Api.Middleware;
@@ -25,8 +26,10 @@ public sealed class ApiIdempotencyMiddleware
     public async Task InvokeAsync(
         HttpContext context,
         IApiIdempotencyRecordRepository idempotencyRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ApiIdempotencyReplayAccessEvaluator? replayAccessEvaluator = null)
     {
+        replayAccessEvaluator ??= new ApiIdempotencyReplayAccessEvaluator([]);
         var endpoint = context.GetEndpoint();
         var idempotencyMetadata = endpoint?.Metadata.GetMetadata<ApiIdempotencyAttribute>();
 
@@ -73,57 +76,40 @@ public sealed class ApiIdempotencyMiddleware
             idempotencyKey,
             context.RequestAborted);
 
-        ApiIdempotencyRecord? record = null;
-
-        if (existingRecord != null)
+        if (existingRecord is not null)
         {
-            // If response not yet captured (in-progress), do not replay - let request proceed normally
-            // This handles crash-window scenario where record was persisted but response not yet captured
-            if (existingRecord.ResponseStatusCode < 100)
-            {
-                // Record exists but is in-progress - this is a concurrent request or crash-window recovery
-                // Update our local reference to the existing record and continue processing
-                record = existingRecord;
-            }
-            else
-            {
-                // Same fingerprint = replay completed response
-                if (existingRecord.RequestFingerprint == requestFingerprint)
-                {
-                    context.Response.StatusCode = existingRecord.ResponseStatusCode;
-                    context.Response.ContentType = "application/json";
-                    await context.Response.WriteAsync(existingRecord.ResponseBodyJson, context.RequestAborted);
-                    return;
-                }
-
-                // Different fingerprint = conflict
-                context.Response.StatusCode = StatusCodes.Status409Conflict;
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    message = "Idempotency key reused with different request payload.",
-                    code = "IDEMPOTENCY_KEY_FINGERPRINT_MISMATCH"
-                }, context.RequestAborted);
-                return;
-            }
+            await HandleExistingRecordAsync(
+                context,
+                existingRecord,
+                requestFingerprint,
+                idempotencyMetadata,
+                replayAccessEvaluator);
+            return;
         }
 
-        // Create in-progress idempotency record (if not already exists from concurrent request)
-        if (record == null)
+        var newRecord = new ApiIdempotencyRecord
         {
-            record = new ApiIdempotencyRecord
-            {
-                Id = Id<ApiIdempotencyRecord>.New(),
-                IdempotencyKey = idempotencyKey,
-                ScopeTuple = scopeTuple,
-                RequestFingerprint = requestFingerprint,
-                ResponseStatusCode = 0,
-                ResponseBodyJson = string.Empty,
-                ProcessedAt = DateTimeOffset.UtcNow
-            };
+            Id = Id<ApiIdempotencyRecord>.New(),
+            IdempotencyKey = idempotencyKey,
+            ScopeTuple = scopeTuple,
+            RequestFingerprint = requestFingerprint,
+            ResponseStatusCode = 0,
+            ResponseBodyJson = string.Empty,
+            ProcessedAt = DateTimeOffset.UtcNow
+        };
 
-            // Persist idempotency record (capture return value in case existing record found during race)
-            record = await idempotencyRepository.AddOrGetExistingAsync(record, context.RequestAborted);
-            await unitOfWork.SaveChangesAsync(context.RequestAborted);
+        var record = await idempotencyRepository.AddOrGetExistingAsync(newRecord, context.RequestAborted);
+        await unitOfWork.SaveChangesAsync(context.RequestAborted);
+
+        if (record.Id != newRecord.Id)
+        {
+            await HandleExistingRecordAsync(
+                context,
+                record,
+                requestFingerprint,
+                idempotencyMetadata,
+                replayAccessEvaluator);
+            return;
         }
 
         // Capture response
@@ -153,6 +139,49 @@ public sealed class ApiIdempotencyMiddleware
         {
             context.Response.Body = originalBodyStream;
         }
+    }
+
+    private static async Task HandleExistingRecordAsync(
+        HttpContext context,
+        ApiIdempotencyRecord record,
+        string requestFingerprint,
+        ApiIdempotencyAttribute metadata,
+        ApiIdempotencyReplayAccessEvaluator replayAccessEvaluator)
+    {
+        if (record.ResponseStatusCode < 100)
+        {
+            await ErrorResponseWriter.WriteAsync(
+                context,
+                StatusCodes.Status409Conflict,
+                Messages.TryAgain,
+                context.RequestAborted);
+            return;
+        }
+
+        if (record.RequestFingerprint != requestFingerprint)
+        {
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                message = "Idempotency key reused with different request payload.",
+                code = "IDEMPOTENCY_KEY_FINGERPRINT_MISMATCH"
+            }, context.RequestAborted);
+            return;
+        }
+
+        if (!await replayAccessEvaluator.CanReplayAsync(context, metadata, context.RequestAborted))
+        {
+            await ErrorResponseWriter.WriteAsync(
+                context,
+                StatusCodes.Status403Forbidden,
+                Messages.Forbidden,
+                context.RequestAborted);
+            return;
+        }
+
+        context.Response.StatusCode = record.ResponseStatusCode;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(record.ResponseBodyJson, context.RequestAborted);
     }
 
     private static async Task<string> BuildScopeTupleAsync(

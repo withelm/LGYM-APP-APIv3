@@ -1,4 +1,5 @@
 using LgymApi.Api.Authorization;
+using LgymApi.Api.Idempotency;
 using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,8 @@ public static class ApiAuthorizationExtensions
     public static IServiceCollection AddApiAuthorizationPolicies(this IServiceCollection services)
     {
         services.AddScoped<IAuthorizationHandler, CurrentPermissionAuthorizationHandler>();
+        services.AddScoped<IApiIdempotencyReplayAccessPort, IdentityIdempotencyReplayAccessPort>();
+        services.AddScoped<ApiIdempotencyReplayAccessEvaluator>();
 
         services
             .AddAuthorizationBuilder()
