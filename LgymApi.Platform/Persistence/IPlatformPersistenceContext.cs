@@ -12,4 +12,5 @@ internal interface IPlatformPersistenceContext
     DbSet<ApiIdempotencyRecord> ApiIdempotencyRecords { get; }
 
     EntityEntry<CommandEnvelope> Entry(CommandEnvelope entity);
+    EntityEntry<ApiIdempotencyRecord> Entry(ApiIdempotencyRecord entity);
 }

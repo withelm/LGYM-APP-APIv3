@@ -164,7 +164,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | --- | --- |
 | `LgymApi.Api -> LgymApi.Application` | `LgymApi.Api/Features/Account/Controllers/AccountController.cs:5` |
 | `LgymApi.Api -> LgymApi.BackgroundWorker` | `LgymApi.Api/Program.Hangfire.cs:21` |
-| `LgymApi.Api -> LgymApi.Domain` | `LgymApi.Api/Configuration/ApiAuthorizationExtensions.cs:2` |
+| `LgymApi.Api -> LgymApi.Domain` | `LgymApi.Api/Configuration/ApiAuthorizationExtensions.cs:3` |
 | `LgymApi.Api -> LgymApi.Identity` | `LgymApi.Api/Features/Account/Controllers/AccountController.cs:8` |
 | `LgymApi.Api -> LgymApi.Infrastructure` | `LgymApi.Api/Configuration/LocalPhotoDevelopmentEndpoints.cs:27` |
 | `LgymApi.Api -> LgymApi.Notifications` | `LgymApi.Api/Features/InAppNotification/Controllers/InAppNotificationController.cs:6` |

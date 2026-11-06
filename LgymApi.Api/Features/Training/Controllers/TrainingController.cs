@@ -30,7 +30,11 @@ public sealed class TrainingController : ControllerBase
     }
 
     [HttpPost("{id}/addTraining")]
-    [ApiIdempotency("/api/{id}/addTraining", ApiIdempotencyScopeSource.AuthenticatedUser)]
+    [ApiIdempotency(
+        "/api/{id}/addTraining",
+        ApiIdempotencyScopeSource.AuthenticatedUser,
+        ApiIdempotencyReplayOwner.Identity,
+        ApiIdempotencyReplayResourceBinding.RouteAccount)]
     [ProducesResponseType(typeof(TrainingSummaryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]

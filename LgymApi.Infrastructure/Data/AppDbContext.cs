@@ -75,6 +75,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     DbSet<CommandEnvelope> IPlatformPersistenceContext.CommandEnvelopes => CommandEnvelopes;
     DbSet<ApiIdempotencyRecord> IPlatformPersistenceContext.ApiIdempotencyRecords => ApiIdempotencyRecords;
     EntityEntry<CommandEnvelope> IPlatformPersistenceContext.Entry(CommandEnvelope entity) => Entry(entity);
+    EntityEntry<ApiIdempotencyRecord> IPlatformPersistenceContext.Entry(ApiIdempotencyRecord entity) => Entry(entity);
 
     DbSet<User> IIdentityPersistenceContext.Users => Users;
     DbSet<Role> IIdentityPersistenceContext.Roles => Roles;

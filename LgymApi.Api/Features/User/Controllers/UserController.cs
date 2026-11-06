@@ -54,7 +54,7 @@ public sealed class UserController : ControllerBase
     }
 
     [HttpPost("register")]
-    [ApiIdempotency("/api/register", ApiIdempotencyScopeSource.NormalizedEmail)]
+    [ApiIdempotency("/api/register", ApiIdempotencyScopeSource.NormalizedEmail, ApiIdempotencyReplayOwner.Public)]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request, CancellationToken cancellationToken = default)

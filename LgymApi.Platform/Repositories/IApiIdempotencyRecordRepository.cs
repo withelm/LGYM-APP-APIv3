@@ -27,6 +27,15 @@ public interface IApiIdempotencyRecordRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Detaches a failed insert and returns the winning record only when the commit failed because
+    /// another request inserted the same active scope and key.
+    /// </summary>
+    Task<ApiIdempotencyRecord?> TryRecoverDuplicateAsync(
+        ApiIdempotencyRecord stagedRecord,
+        Exception commitFailure,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Updates an existing idempotency record. Used to persist response snapshot after first execution.
     /// </summary>
     Task UpdateAsync(
