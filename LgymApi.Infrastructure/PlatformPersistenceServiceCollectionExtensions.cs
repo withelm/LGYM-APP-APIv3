@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using IIdentityPersistenceContext = LgymApi.Identity.Persistence.IIdentityPersistenceContext;
 using INotificationsPersistenceContext = LgymApi.Notifications.Persistence.INotificationsPersistenceContext;
+using IApiIdempotencyRecordDuplicateFailureClassifier = LgymApi.Platform.Persistence.IApiIdempotencyRecordDuplicateFailureClassifier;
 using IPlatformPersistenceContext = LgymApi.Platform.Persistence.IPlatformPersistenceContext;
 using ICommandEnvelopeDuplicateFailureClassifier = LgymApi.Platform.Persistence.ICommandEnvelopeDuplicateFailureClassifier;
 using ITrainingPlanningPersistenceContext = LgymApi.TrainingPlanning.Persistence.ITrainingPlanningPersistenceContext;
@@ -43,6 +44,7 @@ public static partial class ServiceCollectionExtensions
 
     private static void AddPlatformUnitOfWork(IServiceCollection services)
     {
+        services.AddScoped<IApiIdempotencyRecordDuplicateFailureClassifier, CommandRuntime.NpgsqlApiIdempotencyRecordDuplicateFailureClassifier>();
         services.AddScoped<ICommandEnvelopeDuplicateFailureClassifier, CommandRuntime.NpgsqlCommandEnvelopeDuplicateFailureClassifier>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
     }

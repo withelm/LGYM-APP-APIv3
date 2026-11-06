@@ -8,10 +8,14 @@ namespace LgymApi.Infrastructure.Repositories;
 internal sealed class ApiIdempotencyRecordRepository : IApiIdempotencyRecordRepository
 {
     private readonly IPlatformPersistenceContext _persistenceContext;
+    private readonly IApiIdempotencyRecordDuplicateFailureClassifier _duplicateFailureClassifier;
 
-    public ApiIdempotencyRecordRepository(IPlatformPersistenceContext persistenceContext)
+    public ApiIdempotencyRecordRepository(
+        IPlatformPersistenceContext persistenceContext,
+        IApiIdempotencyRecordDuplicateFailureClassifier duplicateFailureClassifier)
     {
         _persistenceContext = persistenceContext;
+        _duplicateFailureClassifier = duplicateFailureClassifier;
     }
 
     public Task<ApiIdempotencyRecord?> FindByScopeAndKeyAsync(
@@ -41,6 +45,23 @@ internal sealed class ApiIdempotencyRecordRepository : IApiIdempotencyRecordRepo
 
         await _persistenceContext.ApiIdempotencyRecords.AddAsync(record, cancellationToken);
         return record;
+    }
+
+    public Task<ApiIdempotencyRecord?> TryRecoverDuplicateAsync(
+        ApiIdempotencyRecord stagedRecord,
+        Exception commitFailure,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_duplicateFailureClassifier.IsDuplicateScopeAndKeyFailure(commitFailure))
+        {
+            return Task.FromResult<ApiIdempotencyRecord?>(null);
+        }
+
+        _persistenceContext.Entry(stagedRecord).State = EntityState.Detached;
+        return FindByScopeAndKeyAsync(
+            stagedRecord.ScopeTuple,
+            stagedRecord.IdempotencyKey,
+            cancellationToken);
     }
 
     public Task UpdateAsync(

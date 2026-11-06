@@ -29,7 +29,7 @@ public sealed class ModulePersistenceBridgeGuardTests
     {
         var contexts = new[]
         {
-            Context(typeof(ActorReference).Assembly, "LgymApi.Platform.Persistence.IPlatformPersistenceContext", ["AppConfigs", "ActionExecutionLogs", "CommandEnvelopes", "ApiIdempotencyRecords"], ["CommandEnvelope"]),
+            Context(typeof(ActorReference).Assembly, "LgymApi.Platform.Persistence.IPlatformPersistenceContext", ["AppConfigs", "ActionExecutionLogs", "CommandEnvelopes", "ApiIdempotencyRecords"], ["CommandEnvelope", "ApiIdempotencyRecord"]),
             Context(typeof(AccountReference).Assembly, "LgymApi.Identity.Persistence.IIdentityPersistenceContext", ["Users", "Roles", "UserRoles", "RoleClaims", "PasswordResetTokens", "UserExternalLogins", "UserSessions", "UserTutorialProgresses", "UserTutorialStepProgresses", "ProviderName"], []),
             Context(typeof(PlanReference).Assembly, "LgymApi.TrainingPlanning.Persistence.ITrainingPlanningPersistenceContext", ["Plans", "PlanDays", "PlanDayExercises"], []),
             Context(typeof(NotificationReference).Assembly, "LgymApi.Notifications.Persistence.INotificationsPersistenceContext", ["NotificationMessages", "EmailNotificationSubscriptions", "PushInstallations", "PushNotificationMessages", "InAppNotifications"], ["InAppNotification", "PushNotificationMessage"])

@@ -7,6 +7,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Api.Middleware;
 
@@ -99,7 +100,29 @@ public sealed class ApiIdempotencyMiddleware
         };
 
         var record = await idempotencyRepository.AddOrGetExistingAsync(newRecord, context.RequestAborted);
-        await unitOfWork.SaveChangesAsync(context.RequestAborted);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(context.RequestAborted);
+        }
+        catch (DbUpdateException exception)
+        {
+            var recoveredRecord = await idempotencyRepository.TryRecoverDuplicateAsync(
+                newRecord,
+                exception,
+                context.RequestAborted);
+            if (recoveredRecord is null)
+            {
+                throw;
+            }
+
+            await HandleExistingRecordAsync(
+                context,
+                recoveredRecord,
+                requestFingerprint,
+                idempotencyMetadata,
+                replayAccessEvaluator);
+            return;
+        }
 
         if (record.Id != newRecord.Id)
         {
