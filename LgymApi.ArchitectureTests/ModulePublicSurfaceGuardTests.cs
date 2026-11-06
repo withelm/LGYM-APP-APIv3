@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 799;
+    private const int ManifestEntryCount = 806;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -56,6 +56,13 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Identity/Contracts/Accounts/IAccountPushInstallationCleanupPort.cs\tLgymApi.Application.Identity.Contracts.Accounts.IAccountPushInstallationCleanupPort",
         "LgymApi.Identity/Contracts/Authorization/AuthenticatedAccountAuthorizationContracts.cs\tLgymApi.Identity.Contracts.Authorization.GlobalPermissionAuthorizationContext",
         "LgymApi.Identity/Contracts/Authorization/AuthenticatedAccountAuthorizationContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAuthenticatedAccountAuthorizationService",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessCapabilityOwner",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessOwnerCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAccountAccessOwnerCapabilityExtension",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessApplicationCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessOwnerExtensions",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAuthenticatedAccountAccessCapabilitiesService",
         "LgymApi.Notifications/IDisabledPushInstallationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IDisabledPushInstallationRetentionCleanupService",
         "LgymApi.Notifications/IInAppNotificationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IInAppNotificationRetentionCleanupService",
         "LgymApi.Notifications/IPushNotificationMessageRetentionCleanupService.cs\tLgymApi.Application.Notifications.IPushNotificationMessageRetentionCleanupService",

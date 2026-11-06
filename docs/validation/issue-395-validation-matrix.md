@@ -1,11 +1,12 @@
 # Issue 395 HTTP Validation Matrix
 
 Todo 1 baseline SHA: `b22198b1509bf0e68f9e85dcd7b1375c768e2713`
-Route count: `189`
-Route inventory SHA-256: `5ff7f0b0b538828082487d729b90a1b87448f49998ac5fb1a3bb91e416aef88c`
+Route count: `190`
+Route inventory SHA-256: `379af07247d291289ebe0ff71565109d2c8ef6b50d230b15f6bbe2cdf652a29a`
 
 | method | route | action | authorization | request DTO | statuses | content types | legacy fields | UUID strings | enum policy | localization | idempotency | evidence | access class | access facets | authorization evidence | owner | operation | collection scope | sensitive response/replay | migration task |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| GET | /api/account/access | AccountController.GetAccess | authorize | none | 200,401,403 | text/plain,application/json,text/json | ContractCompatibilityTests | PostgreSqlApiCompatibilityTests; TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | own | actor-derived-subject | AuthorizationCapabilitiesContractTests.GetAccess_ReturnsCurrentIdentityPolicyCapabilitiesAndFailClosedOwnerExtensions;AuthorizationCapabilitiesContractTests.GetAccess_WithoutAuthentication_Returns401 | identity | read | actor | private-response-current;no-replay-contract | AUTH-K04 |
 | GET | /api/account/external-logins | AccountController.GetExternalLogins | authorize | none | 200 | text/plain,application/json,text/json | ContractCompatibilityTests | PostgreSqlApiCompatibilityTests; TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | own | actor-derived-subject | GoogleAuthTests.GET_ExternalLogins_Authenticated_ReturnsProviders;EndpointContractMatrixTests.Task8_IdentityAndReferenceRoutes_AnonymousRequestsAreDenied | identity | read | actor | private-response-current;no-replay-contract | AUTH-A08 |
 | GET | /api/admin/users/{id} | AdminUserController.GetUser | policy.admin.access | none | 200,404 | text/plain,application/json,text/json | ContractCompatibilityTests | PostgreSqlApiCompatibilityTests; TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | admin | none | AdminUserIntegrationTests.GetUser_WhenCalledAsAdmin_ReturnsUser;EndpointContractMatrixTests.Task8_AdminRoutes_OrdinaryUserIsDenied;EndpointContractMatrixTests.Task8_AdminRoutes_PreIssuedTokenIsDeniedAfterDemotion | identity | read | admin | private-response-current;no-replay-contract | AUTH-A08 |
 | GET | /api/appconfig/{id} | AppConfigAdminController.GetById | policy.appconfig.manage | none | 200,404 | text/plain,application/json,text/json | ContractCompatibilityTests | PostgreSqlApiCompatibilityTests; TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | admin | none | AppConfigAdminTests.GetById_ReturnsExpectedJsonShape;EndpointContractMatrixTests.Task8_AdminRoutes_OrdinaryUserIsDenied;EndpointContractMatrixTests.Task8_AdminRoutes_PreIssuedTokenIsDeniedAfterDemotion | platform-reference-data | read | admin | non-sensitive-current;no-replay-contract | AUTH-A08 |
@@ -207,6 +208,7 @@ The controller rows above remain the sole HTTP manifest. Every row explicitly ca
 | migration task | Linear issue | current migration responsibility |
 | --- | --- | --- |
 | AUTH-K01 | [LGYM-208](https://linear.app/lgym/issue/LGYM-208) | Inventory and executable matrix guard |
+| AUTH-K04 | [LGYM-211](https://linear.app/lgym/issue/LGYM-211) | Authorization capabilities API contract |
 | AUTH-K05 | [LGYM-212](https://linear.app/lgym/issue/LGYM-212) | Private replay protection |
 | AUTH-P01 | [LGYM-205](https://linear.app/lgym/issue/LGYM-205) | Photo source isolation |
 | AUTH-P02 | [LGYM-206](https://linear.app/lgym/issue/LGYM-206) | Deleted-subject photo cutoff |
@@ -256,9 +258,9 @@ The linked technical inventory below is intentionally not a second HTTP manifest
 
 ## Semantic Authorization Evidence Staging
 
-- The matrix has one semantic schema for all 189 live controller routes. `access class` accepts only `public`, `own`, `trainer-shared`, `admin`, or `authenticated-global`; `access facets` accepts only the seven approved facets or explicit `none`.
+- The matrix has one semantic schema for all 190 live controller routes. `access class` accepts only `public`, `own`, `trainer-shared`, `admin`, or `authenticated-global`; `access facets` accepts only the seven approved facets or explicit `none`.
 - `authorization evidence` is fail-closed. A value must resolve to an executable NUnit method carrying repeatable `AuthorizationEvidenceAttribute` metadata whose method, route, access class, and complete class-plus-facet category profile match the row. `unresolved` is deliberately not accepted as an executable locator.
-- All 189 rows are classified and have resolving evidence locators. AUTH-Q01 replaces the former parser-only managed-plan list locator with a route-level fixture test covering active, unrelated, former, and anonymous callers. The guard verifies the live controller-route inventory, the fixed SHA-256 above, and every evidence locator. There are zero unclassified rows or literal `unresolved` entries.
+- All 190 rows are classified and have resolving evidence locators. AUTH-Q01 replaces the former parser-only managed-plan list locator with a route-level fixture test covering active, unrelated, former, and anonymous callers. The guard verifies the live controller-route inventory, the fixed SHA-256 above, and every evidence locator. There are zero unclassified rows or literal `unresolved` entries.
 - `GET /api/trainer/trainees/{traineeId}/plans` now executes through `AuthQ01FixtureTests.ManagedPlanList_UsesCanonicalActorsAndRelationshipStates`; the parser remains schema-only coverage and is no longer used as this route's behavioral evidence.
 
 ## Executable Cutover Coverage

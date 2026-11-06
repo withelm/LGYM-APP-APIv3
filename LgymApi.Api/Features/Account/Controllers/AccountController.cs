@@ -6,6 +6,7 @@ using LgymApi.Application.Identity.ApiAdapters;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,12 +18,36 @@ namespace LgymApi.Api.Features.Account.Controllers;
 public sealed class AccountController : ControllerBase
 {
     private readonly IAccountExternalLoginApiAdapter _accountExternalLoginApiAdapter;
+    private readonly IAuthenticatedAccountAccessCapabilitiesService _accountAccessCapabilitiesService;
     private readonly IMapper _mapper;
 
-    public AccountController(IAccountExternalLoginApiAdapter accountExternalLoginApiAdapter, IMapper mapper)
+    public AccountController(
+        IAccountExternalLoginApiAdapter accountExternalLoginApiAdapter,
+        IAuthenticatedAccountAccessCapabilitiesService accountAccessCapabilitiesService,
+        IMapper mapper)
     {
         _accountExternalLoginApiAdapter = accountExternalLoginApiAdapter;
+        _accountAccessCapabilitiesService = accountAccessCapabilitiesService;
         _mapper = mapper;
+    }
+
+    /// <summary>Returns schema-versioned capabilities for the authenticated account only.</summary>
+    [HttpGet("access")]
+    [Tags("Authorization")]
+    [ProducesResponseType(typeof(AccountAccessResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    public IActionResult GetAccess()
+    {
+        var accountContext = HttpContext.GetAuthenticatedAccountContext();
+        if (accountContext is null)
+        {
+            return Unauthorized();
+        }
+
+        Response.Headers.CacheControl = "private, no-store";
+        var capabilities = _accountAccessCapabilitiesService.GetCapabilities(accountContext);
+        return Ok(_mapper.Map<AccountAccessCapabilities, AccountAccessResponseDto>(capabilities));
     }
 
     [HttpPost("link-google")]
