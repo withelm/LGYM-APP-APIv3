@@ -32,6 +32,7 @@ WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props ./
 COPY LgymApi.Api/*.csproj LgymApi.Api/
 COPY LgymApi.Application/*.csproj LgymApi.Application/
+COPY LgymApi.Authorization/*.csproj LgymApi.Authorization/
 COPY LgymApi.BackgroundWorker/*.csproj LgymApi.BackgroundWorker/
 COPY LgymApi.BackgroundWorker.Common/*.csproj LgymApi.BackgroundWorker.Common/
 COPY LgymApi.Domain/*.csproj LgymApi.Domain/

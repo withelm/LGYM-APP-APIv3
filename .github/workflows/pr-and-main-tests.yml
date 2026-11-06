@@ -115,8 +115,9 @@ jobs:
 
           $suites = @(
               [pscustomobject]@{ name = 'Unit'; project = 'LgymApi.UnitTests/LgymApi.UnitTests.csproj'; filters = @() },
-              [pscustomobject]@{ name = 'AuthorizationUnit'; project = 'LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj'; filters = @() },
-              [pscustomobject]@{ name = 'ReportingUnit'; project = 'LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj'; filters = @() },
+               [pscustomobject]@{ name = 'AuthorizationUnit'; project = 'LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj'; filters = @() },
+               [pscustomobject]@{ name = 'IdentityUnit'; project = 'LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj'; filters = @() },
+               [pscustomobject]@{ name = 'ReportingUnit'; project = 'LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj'; filters = @() },
                [pscustomobject]@{ name = 'Architecture'; project = 'LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj'; filters = @() },
               [pscustomobject]@{ name = 'InMemoryIntegration'; project = 'LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj'; filters = @('TestCategory!=PostgreSql') },
               [pscustomobject]@{ name = 'PostgreSqlIntegration'; project = 'LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj'; filters = @() },
@@ -180,6 +181,9 @@ jobs:
             filter: ''
           - suite: AuthorizationUnit
             project: LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj
+            filter: ''
+          - suite: IdentityUnit
+            project: LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj
             filter: ''
           - suite: ReportingUnit
             project: LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj

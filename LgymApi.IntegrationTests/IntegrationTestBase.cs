@@ -93,7 +93,8 @@ public abstract class IntegrationTestBase : IDisposable
         bool isVisibleInRanking = true,
         bool isTester = false,
         bool isDeleted = false,
-        int elo = 1000)
+        int elo = 1000,
+        IReadOnlyCollection<string>? additionalRoles = null)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -106,7 +107,8 @@ public abstract class IntegrationTestBase : IDisposable
             isVisibleInRanking,
             isTester,
             isDeleted,
-            elo);
+            elo,
+            additionalRoles: additionalRoles);
         await db.SaveChangesAsync();
         return user;
     }

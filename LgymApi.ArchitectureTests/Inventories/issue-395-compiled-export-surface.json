@@ -8,8 +8,8 @@
     },
     {
       "name": "LgymApi.Identity",
-      "exportedTypeCount": 69,
-      "sha256": "57ab7d2a554763ed2426581cd39647197e86053ba539441073716cdfac057080"
+      "exportedTypeCount": 71,
+      "sha256": "d9c948ac89d3e89d7060145a312415bc6b327678ea90f7ca69c7254c6bc961a2"
     },
     {
       "name": "LgymApi.Notifications",

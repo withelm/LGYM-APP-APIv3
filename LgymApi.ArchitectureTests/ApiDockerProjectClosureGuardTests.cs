@@ -397,7 +397,7 @@ public sealed class ApiDockerProjectClosureGuardTests
             path => File.Exists(ArchitectureTestHelpers.ToHostPath(path))
                 ? File.ReadAllText(ArchitectureTestHelpers.ToHostPath(path))
                 : null);
-        Assert.That(closure, Has.Count.EqualTo(13), "The API project-reference closure must contain exactly 13 projects.");
+        Assert.That(closure, Has.Count.EqualTo(14), "The API project-reference closure must contain exactly 14 projects.");
         var authorizationClosure = ResolveProjectClosure(
             repositoryRoot,
             "LgymApi.Authorization/LgymApi.Authorization.csproj",

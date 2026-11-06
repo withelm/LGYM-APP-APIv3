@@ -3,6 +3,7 @@
 - Purpose: end-to-end API tests.
 - Contains: `WebApplicationFactory`, middleware/auth/serialization/localization coverage, and test persistence.
 - API host characterization resolves the real `Program` options and exercises authentication/localization pipeline behavior without changing production composition.
+- Authentication integration coverage verifies a current persisted permission decision for stale-token demotion, account block and session revoke, mismatched account/session pairs, and legitimate multi-role actors.
 - Rules: reuse integration helpers, prefer NSubstitute mocks for touched collaborators, and validate legacy contract compatibility for changed endpoints.
 - Boundary: keep these tests at the API boundary, not unit-test scope.
 - `TrainerDashboardTests` exercises both account and trainer history HTTP routes against stored boundary rows (inclusive start/exclusive end), legacy UTC-day queries, local DST/fractional-offset days, foreign-account isolation, and malformed/incomplete/mixed request bodies. `TrainingTests` includes registration and the Warsaw midnight-crossing workout reproduction.

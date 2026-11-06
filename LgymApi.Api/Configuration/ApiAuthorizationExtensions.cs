@@ -9,7 +9,7 @@ public static class ApiAuthorizationExtensions
 {
     public static IServiceCollection AddApiAuthorizationPolicies(this IServiceCollection services)
     {
-        services.AddSingleton<IAuthorizationHandler, CurrentPermissionAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, CurrentPermissionAuthorizationHandler>();
 
         services
             .AddAuthorizationBuilder()

@@ -7,6 +7,7 @@ using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -94,6 +95,7 @@ public sealed class ApiAuthorizationExtensionsTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddScoped<IAuthenticatedAccountAuthorizationService, TestAuthenticatedAccountAuthorizationService>();
         services.AddApiAuthorizationPolicies();
         return services.BuildServiceProvider();
     }
@@ -126,4 +128,10 @@ public sealed class ApiAuthorizationExtensionsTests
 
     private sealed record TestAuthenticatedAccountContextFeature(AuthenticatedAccountContext Context)
         : IAuthenticatedAccountContextFeature;
+
+    private sealed class TestAuthenticatedAccountAuthorizationService : IAuthenticatedAccountAuthorizationService
+    {
+        public bool HasPermission(AuthenticatedAccountContext accountContext, string permission) =>
+            accountContext.PermissionClaims.Contains(permission, StringComparer.Ordinal);
+    }
 }
