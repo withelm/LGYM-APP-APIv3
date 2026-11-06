@@ -36,6 +36,7 @@ public sealed class AccountController : ControllerBase
     [Tags("Authorization")]
     [ProducesResponseType(typeof(AccountAccessResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     public IActionResult GetAccess()
     {
         var accountContext = HttpContext.GetAuthenticatedAccountContext();

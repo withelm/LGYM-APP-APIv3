@@ -95,6 +95,32 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         using var response = await Client.GetAsync("/api/account/access");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        payload.RootElement.GetProperty("msg").GetString().Should().NotBeNullOrWhiteSpace();
+        payload.RootElement.TryGetProperty("req", out _).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task GetAccess_BlockedAccount_Returns403WithoutCapabilities()
+    {
+        var account = await SeedUserAsync("access-blocked", "access-blocked@example.com", isAdmin: true);
+        SetAuthorizationHeader(account.Id);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var persistedAccount = await database.Users.SingleAsync(user => user.Id == account.Id);
+            persistedAccount.IsBlocked = true;
+            await database.SaveChangesAsync();
+        }
+
+        using var response = await Client.GetAsync("/api/account/access");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        payload.RootElement.GetProperty("msg").GetString().Should().NotBeNullOrWhiteSpace();
+        payload.RootElement.TryGetProperty("req", out _).Should().BeFalse();
+        payload.RootElement.TryGetProperty("application", out _).Should().BeFalse();
+        payload.RootElement.TryGetProperty("extensions", out _).Should().BeFalse();
     }
 
     [Test]
@@ -106,6 +132,12 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         var operation = payload.RootElement.GetProperty("paths").GetProperty("/api/account/access").GetProperty("get");
         operation.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).Should().Contain("Authorization");
         operation.TryGetProperty("parameters", out _).Should().BeFalse();
+        foreach (var status in new[] { "401", "403" })
+        {
+            operation.GetProperty("responses").GetProperty(status).GetProperty("content")
+                .GetProperty("application/json").GetProperty("schema").GetProperty("$ref").GetString()
+                .Should().Be("#/components/schemas/ResponseMessageDto");
+        }
         operation.GetProperty("responses").GetProperty("200").GetProperty("content")
             .GetProperty("application/json").GetProperty("schema").GetProperty("$ref").GetString()
             .Should().Be("#/components/schemas/AccountAccessResponseDto");

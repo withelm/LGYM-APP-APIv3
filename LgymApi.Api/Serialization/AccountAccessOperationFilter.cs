@@ -23,7 +23,8 @@ public sealed class AccountAccessOperationFilter : IOperationFilter
             + "Collection/create capabilities belong to owner collection-access contracts, never dummy records. "
             + "Capabilities are not grants: commands re-evaluate access and state. Existing resource 403/concealed 404 and "
             + "documented 409 state-conflict semantics remain unchanged; this self read introduces no resource conflict or new error code. "
-            + "Missing/invalid/expired sessions retain existing localized 401 msg/req errors; blocked accounts retain 403. "
+            + "Missing/invalid/expired sessions retain existing localized 401 ResponseMessageDto errors (msg, optional isNew); "
+            + "blocked accounts retain the same error envelope with 403. "
             + "Errors never expose internal denial reasons or foreign resource existence.";
     }
 }
