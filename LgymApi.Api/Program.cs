@@ -53,6 +53,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.UseInlineDefinitionsForEnums();
     options.SchemaFilter<EnumAsStringSchemaFilter>();
+    options.OperationFilter<AccountAccessOperationFilter>();
 });
 var configuredCorsOrigins = builder.Configuration.GetSection(ConfigKeys.CorsAllowedOrigins).Get<string[]>();
 var corsAllowedOrigins = CorsOriginResolver.ResolveAllowedOrigins(configuredCorsOrigins, builder.Environment.IsDevelopment());

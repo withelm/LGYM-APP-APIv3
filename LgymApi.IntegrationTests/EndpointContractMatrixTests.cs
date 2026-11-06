@@ -76,7 +76,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
 
     private static readonly string[] ApprovedMigrationTasks =
     [
-        "AUTH-K05", "AUTH-P01", "AUTH-P02", "AUTH-A01", "AUTH-A02", "AUTH-A03", "AUTH-A04",
+        "AUTH-K04", "AUTH-K05", "AUTH-P01", "AUTH-P02", "AUTH-A01", "AUTH-A02", "AUTH-A03", "AUTH-A04",
         "AUTH-A05", "AUTH-A06", "AUTH-A07", "AUTH-A08", "AUTH-A09", "AUTH-A10", "AUTH-A11"
     ];
 
@@ -802,6 +802,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     }
 
     [Test]
+    [AuthorizationEvidence("GET", "/api/account/access", "own", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/account/external-logins", "own", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/checkToken", "own", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/deleteAccount", "own", "anonymous-denial")]
@@ -827,6 +828,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         var id = Id<AccountReference>.New().ToString();
         var requests = new Func<Task<HttpResponseMessage>>[]
         {
+            () => Client.GetAsync("/api/account/access"),
             () => Client.GetAsync("/api/account/external-logins"),
             () => Client.GetAsync("/api/checkToken"),
             () => Client.GetAsync("/api/deleteAccount"),

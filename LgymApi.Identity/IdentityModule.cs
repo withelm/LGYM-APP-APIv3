@@ -68,6 +68,7 @@ public static class IdentityModule
         services.AddScoped<IAccountSessionValidator, AccountSessionValidator>();
         services.AddScoped<IAuthenticatedAccountContextResolver, AuthenticatedAccountContextResolver>();
         services.AddScoped<IAuthenticatedAccountAuthorizationService, AuthenticatedAccountAuthorizationService>();
+        services.AddScoped<IAuthenticatedAccountAccessCapabilitiesService, AuthenticatedAccountAccessCapabilitiesService>();
         services.AddScoped<IAuthenticatedAccountCompatibilityPort, AuthenticatedAccountCompatibilityPort>();
         services.AddScoped<IUserRoleAdministrationService, UserRoleAdministrationService>();
         services.AddScoped<IExternalAuthService, ExternalAuthService>();

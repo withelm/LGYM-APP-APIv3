@@ -162,7 +162,7 @@ Each row is one representative source location whose symbol resolves to the targ
 
 | Edge | Roslyn-resolved source or analyzer evidence |
 | --- | --- |
-| `LgymApi.Api -> LgymApi.Application` | `LgymApi.Api/Features/Account/Controllers/AccountController.cs:19` |
+| `LgymApi.Api -> LgymApi.Application` | `LgymApi.Api/Features/Account/Controllers/AccountController.cs:5` |
 | `LgymApi.Api -> LgymApi.BackgroundWorker` | `LgymApi.Api/Program.Hangfire.cs:21` |
 | `LgymApi.Api -> LgymApi.Domain` | `LgymApi.Api/Configuration/ApiAuthorizationExtensions.cs:2` |
 | `LgymApi.Api -> LgymApi.Identity` | `LgymApi.Api/Features/Account/Controllers/AccountController.cs:8` |
