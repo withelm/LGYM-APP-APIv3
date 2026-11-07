@@ -61,10 +61,14 @@ public sealed class SeederSmokeExtensionTests
         seedContext.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Trainer" });
         seedContext.DemoUsers.Add(new User { Id = Id<User>.New(), Name = "Trainee" });
 
+        var episodeSeeder = new CoachingEpisodeSeeder();
+        await episodeSeeder.SeedAsync(context, seedContext, CancellationToken.None);
+
         var seeder = new TrainerTraineeLinkSeeder();
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
+        (await context.CoachingEpisodes.CountAsync()).Should().Be(1);
         (await context.TrainerTraineeLinks.CountAsync()).Should().Be(1);
     }
 

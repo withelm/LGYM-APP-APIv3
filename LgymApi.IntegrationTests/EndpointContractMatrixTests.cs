@@ -42,14 +42,14 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     private static readonly string[] ApprovedAccessFacets =
     [
         "actor-derived-subject", "foreign-object", "owned-resource", "global-visible",
-        "manager-override", "opaque-capability", "relationship-revocable"
+        "manager-override", "opaque-capability", "relationship-revocable", "source-episode-history"
     ];
 
     private static readonly string[] ApprovedEvidenceCategories =
     [
         "anonymous-intended-behavior", "invalid-capability-denial", "expired-capability-denial", "tampered-capability-denial",
         "owner-allow", "anonymous-denial", "no-client-subject", "foreign-object-denial-no-mutation",
-        "active-relationship-allow", "unrelated-relationship-denial", "former-relationship-denial",
+        "active-relationship-allow", "unrelated-relationship-denial", "former-relationship-denial", "source-episode-history-allow",
         "current-permission-allow", "ordinary-user-denial", "stale-token-demotion-denial",
         "ordinary-authenticated-allow", "owner-custom-allow", "foreign-custom-denial", "global-resource-allow",
         "current-manager-allow", "stale-manager-denial", "ordinary-manager-denial"
@@ -107,6 +107,9 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     [AuthorizationEvidence("GET", "/api/own/{id}", "own", "owner-allow")]
     [AuthorizationEvidence("GET", "/api/own/{id}", "own", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/own/{id}", "own", "foreign-object-denial-no-mutation")]
+    [AuthorizationEvidence("GET", "/api/source-history/{id}", "own", "owner-allow")]
+    [AuthorizationEvidence("GET", "/api/source-history/{id}", "own", "anonymous-denial")]
+    [AuthorizationEvidence("GET", "/api/source-history/{id}", "own", "source-episode-history-allow")]
     [AuthorizationEvidence("GET", "/api/admin/users/{id}", "admin", "current-permission-allow")]
     [AuthorizationEvidence("GET", "/api/admin/users/{id}", "admin", "ordinary-user-denial")]
     [AuthorizationEvidence("GET", "/api/admin/users/{id}", "admin", "stale-token-demotion-denial")]
@@ -1133,6 +1136,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
                 "manager-override" => ["current-manager-allow", "stale-manager-denial", "ordinary-manager-denial"],
                 "opaque-capability" => ["invalid-capability-denial", "expired-capability-denial", "tampered-capability-denial"],
                 "relationship-revocable" => ["former-relationship-denial"],
+                "source-episode-history" => ["source-episode-history-allow"],
                 _ => []
             };
             foreach (var category in facetCategories)
@@ -1150,6 +1154,8 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .SetName("own actor-derived-subject profile is complete");
         yield return new TestCaseData("| GET | /api/own/{id} | ExampleController.GetOwn | authorize | none | 200,404 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | own | foreign-object | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")
             .SetName("own foreign-object profile is complete");
+        yield return new TestCaseData("| GET | /api/source-history/{id} | ExampleController.GetSourceHistory | authorize | none | 200,404 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | own | source-episode-history | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")
+            .SetName("own source-episode-history profile is complete");
         yield return new TestCaseData("| GET | /api/trainer/trainees/{traineeId}/plans | TrainerManagedPlansController.GetTraineePlans | policy.trainer.access | none | 200 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | trainer-shared | relationship-revocable | AuthQ01FixtureTests.ManagedPlanList_UsesCanonicalActorsAndRelationshipStates |")
             .SetName("trainer-shared relationship-revocable profile is complete");
         yield return new TestCaseData("| GET | /api/admin/users/{id} | AdminUserController.GetUser | policy.admin.access | none | 200,404 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | admin | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")

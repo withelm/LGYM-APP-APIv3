@@ -1,10 +1,13 @@
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Identity.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace LgymApi.Infrastructure.Repositories.Coaching;
 
@@ -21,17 +24,108 @@ public sealed class CoachingActiveLinkPersistenceRepository : ICoachingActiveLin
 
     public Task AddAsync(CoachingActiveLinkWriteModel link, CancellationToken cancellationToken = default)
     {
-        var entity = _mapper.Map<CoachingActiveLinkWriteModel, TrainerTraineeLink>(link, _mapper.CreateContext());
+        var episodeId = link.EpisodeId.IsEmpty ? Id<CoachingEpisode>.New() : link.EpisodeId;
+        var startedAt = link.StartedAt == default ? DateTimeOffset.UtcNow : link.StartedAt;
+        var normalizedLink = link with { EpisodeId = episodeId, StartedAt = startedAt };
+        _dbContext.CoachingEpisodes.Add(new CoachingEpisode
+        {
+            Id = normalizedLink.EpisodeId,
+            TrainerId = normalizedLink.TrainerId,
+            TraineeId = normalizedLink.TraineeId,
+            StartedAt = normalizedLink.StartedAt,
+            StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation,
+            AuthorizationRevision = 0
+        });
+        var entity = _mapper.Map<CoachingActiveLinkWriteModel, TrainerTraineeLink>(normalizedLink, _mapper.CreateContext());
         return _dbContext.TrainerTraineeLinks.AddAsync(entity, cancellationToken).AsTask();
     }
 
-    public async Task RemoveAsync(Id<TrainerTraineeLink> linkId, CancellationToken cancellationToken = default)
+    public async Task<bool> StageRevisionCheckAsync(
+        CoachingEpisodeAuthorizationGrant grant,
+        CancellationToken cancellationToken = default)
     {
-        var link = await _dbContext.TrainerTraineeLinks.FirstOrDefaultAsync(candidate => candidate.Id == linkId, cancellationToken);
-        if (link is not null)
+        var episode = await _dbContext.CoachingEpisodes.FirstOrDefaultAsync(
+            candidate => candidate.Id == grant.EpisodeId
+                && candidate.TrainerId == grant.TrainerId
+                && candidate.TraineeId == grant.TraineeId
+                && candidate.EndedAt == null
+                && candidate.AuthorizationRevision == grant.AuthorizationRevision,
+            cancellationToken);
+        if (episode is null)
         {
-            _dbContext.TrainerTraineeLinks.Remove(link);
+            return false;
         }
+
+        _dbContext.Entry(episode).Property(candidate => candidate.AuthorizationRevision).IsModified = true;
+        return true;
+    }
+
+    public async Task RemoveAsync(
+        CoachingEpisodeAuthorizationGrant grant,
+        CancellationToken cancellationToken = default)
+    {
+        var link = await _dbContext.TrainerTraineeLinks.FirstOrDefaultAsync(
+                candidate => candidate.Id == grant.LinkId
+                    && candidate.EpisodeId == grant.EpisodeId,
+                cancellationToken);
+        var episode = await _dbContext.CoachingEpisodes.FirstOrDefaultAsync(
+            candidate => candidate.Id == grant.EpisodeId,
+            cancellationToken);
+        if (link is null
+            || episode is null
+            || episode.EndedAt is not null
+            || episode.AuthorizationRevision != grant.AuthorizationRevision)
+        {
+            return;
+        }
+
+        episode.EndedAt = DateTimeOffset.UtcNow;
+        episode.AuthorizationRevision++;
+        _dbContext.TrainerTraineeLinks.Remove(link);
+    }
+
+    public async Task<bool> TryRecoverCompletedUnlinkAsync(
+        CoachingEpisodeAuthorizationGrant grant,
+        Exception commitFailure,
+        CancellationToken cancellationToken = default)
+    {
+        if (commitFailure is not DbUpdateConcurrencyException concurrencyFailure
+            || !concurrencyFailure.Entries.Any(entry => entry.Entity is CoachingEpisode))
+        {
+            return false;
+        }
+
+        var linkStillActive = await _dbContext.TrainerTraineeLinks.AsNoTracking().AnyAsync(
+            link => link.Id == grant.LinkId,
+            cancellationToken);
+        var closedEpisode = await _dbContext.CoachingEpisodes.AsNoTracking().AnyAsync(
+            episode => episode.Id == grant.EpisodeId
+                && episode.EndedAt != null
+                && episode.AuthorizationRevision > grant.AuthorizationRevision,
+            cancellationToken);
+        return !linkStillActive && closedEpisode;
+    }
+
+    public async Task<bool> TryRecoverDuplicateLinkAsync(
+        Id<User> traineeId,
+        Exception commitFailure,
+        CancellationToken cancellationToken = default)
+    {
+        if (commitFailure is not DbUpdateException
+            {
+                InnerException: PostgresException
+                {
+                    SqlState: PostgresErrorCodes.UniqueViolation,
+                    ConstraintName: "IX_TrainerTraineeLinks_TraineeId"
+                }
+            })
+        {
+            return false;
+        }
+
+        return await _dbContext.TrainerTraineeLinks.AsNoTracking().AnyAsync(
+            link => link.TraineeId == traineeId,
+            cancellationToken);
     }
 
     public Task<bool> HasForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
@@ -59,6 +153,10 @@ public sealed class CoachingActiveLinkPersistenceRepository : ICoachingActiveLin
     private async Task<CoachingActiveLinkFact?> FindAsync(IQueryable<TrainerTraineeLink> query, CancellationToken cancellationToken)
     {
         var link = await query.FirstOrDefaultAsync(cancellationToken);
+        if (link?.EpisodeId is not null)
+        {
+            await _dbContext.Entry(link).Reference(candidate => candidate.Episode).LoadAsync(cancellationToken);
+        }
         return link is null
             ? null
             : _mapper.Map<TrainerTraineeLink, CoachingActiveLinkFact>(link, _mapper.CreateContext());

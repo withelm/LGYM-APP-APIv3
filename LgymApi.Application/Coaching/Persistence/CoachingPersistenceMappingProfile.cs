@@ -2,6 +2,7 @@ using LgymApi.Application.Mapping.Core;
 using TraineeNoteEntity = LgymApi.Domain.Entities.TraineeNote;
 using TraineeNoteHistoryEntity = LgymApi.Domain.Entities.TraineeNoteHistory;
 using TrainerInvitationEntity = LgymApi.Domain.Entities.TrainerInvitation;
+using CoachingEpisodeEntity = LgymApi.Domain.Entities.CoachingEpisode;
 using TrainerTraineeLinkEntity = LgymApi.Domain.Entities.TrainerTraineeLink;
 
 namespace LgymApi.Application.Coaching.Persistence;
@@ -45,14 +46,24 @@ public sealed class CoachingPersistenceMappingProfile : IMappingProfile
         {
             Id = source.Id,
             TrainerId = source.TrainerId,
-            TraineeId = source.TraineeId
+            TraineeId = source.TraineeId,
+            EpisodeId = source.EpisodeId
         });
         configuration.CreateMap<TrainerTraineeLinkEntity, CoachingActiveLinkFact>((source, _) => new CoachingActiveLinkFact(
             source.Id,
             source.TrainerId,
             source.TraineeId,
             source.CreatedAt,
-            source.UpdatedAt));
+            source.UpdatedAt,
+            source.EpisodeId,
+            source.Episode?.AuthorizationRevision));
+        configuration.CreateMap<CoachingEpisodeEntity, CoachingEpisodeFact>((source, _) => new CoachingEpisodeFact(
+            source.Id,
+            source.TrainerId,
+            source.TraineeId,
+            source.StartedAt,
+            source.EndedAt,
+            source.AuthorizationRevision));
         configuration.CreateMap<CoachingDashboardSource, CoachingDashboardFact>((source, _) => new CoachingDashboardFact(
             source.TraineeId,
             source.ActiveLink,

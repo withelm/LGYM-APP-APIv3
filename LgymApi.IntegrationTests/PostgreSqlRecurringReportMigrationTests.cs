@@ -164,8 +164,8 @@ public sealed class PostgreSqlRecurringReportMigrationTests
 
         await using (var forwardContext = CreateDbContext(lease))
         {
-            await forwardContext.Database.MigrateAsync();
             repairMigrationId = GetRepairMigrationId(forwardContext.Database.GetMigrations());
+            await MigrateAsync(forwardContext, repairMigrationId);
         }
 
         await using (var writeContext = CreateDbContext(lease))

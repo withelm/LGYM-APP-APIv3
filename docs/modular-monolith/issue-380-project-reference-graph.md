@@ -49,6 +49,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Api` -> `LgymApi.Resources`
 - `LgymApi.Api` -> `LgymApi.TrainingPlanning`
 - `LgymApi.Application` -> `LgymApi.Domain`
+- `LgymApi.Application` -> `LgymApi.Authorization`
 - `LgymApi.Application` -> `LgymApi.Identity`
 - `LgymApi.Application` -> `LgymApi.Platform`
 - `LgymApi.Application` -> `LgymApi.Resources`
@@ -173,9 +174,10 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Api -> LgymApi.Resources` | `LgymApi.Api/Configuration/ApiAuthenticationExtensions.cs:49` |
 | `LgymApi.Api -> LgymApi.TrainingPlanning` | `LgymApi.Api/Features/PlanDay/Controllers/PlanDayController.cs:9` |
 | `LgymApi.Application -> LgymApi.Domain` | `LgymApi.Application/Coaching/Access/CoachingRelationshipAccessService.cs:4` |
+| `LgymApi.Application -> LgymApi.Authorization` | `LgymApi.Application/Coaching/Access/CoachingEpisodeAuthorizationService.cs:3` |
 | `LgymApi.Application -> LgymApi.Identity` | `LgymApi.Application/Coaching/Access/CoachingRelationshipAccessService.cs:3` |
 | `LgymApi.Application -> LgymApi.Platform` | `LgymApi.Application/Coaching/ApiAdapters/CoachingApiAdapterMappingProfile.cs:24` |
-| `LgymApi.Application -> LgymApi.Resources` | `LgymApi.Application/Coaching/Invitations/Accept/AcceptInvitationUseCase.cs:48` |
+| `LgymApi.Application -> LgymApi.Resources` | `LgymApi.Application/Coaching/Invitations/Accept/AcceptInvitationUseCase.cs:49` |
 | `LgymApi.Application -> LgymApi.TrainingPlanning` | `LgymApi.Application/Coaching/Adapters/PlanDayRelationshipAccessAdapter.cs:2` |
 | `LgymApi.ArchitectureTests -> LgymApi.Api` | `LgymApi.ArchitectureTests/CoachingApiContractImmutabilityGuardTests.cs:2` |
 | `LgymApi.ArchitectureTests -> LgymApi.Application` | `LgymApi.ArchitectureTests/CanonicalRepositoryRegistrationDiTests.cs:41` |
@@ -208,7 +210,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.DataSeeder.Tests -> LgymApi.DataSeeder` | `LgymApi.DataSeeder.Tests/ConsolePromptTests.cs:37` |
 | `LgymApi.DataSeeder.Tests -> LgymApi.Domain` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:3` |
 | `LgymApi.DataSeeder.Tests -> LgymApi.Identity` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:1` |
-| `LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:90` |
+| `LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:91` |
 | `LgymApi.Identity -> LgymApi.Authorization` | `LgymApi.Identity/Mapping/IdentityAccountContractMappingProfile.cs:2` |
 | `LgymApi.Identity -> LgymApi.Domain` | `LgymApi.Identity/Access/AccountReadService.cs:4` |
 | `LgymApi.Identity -> LgymApi.Platform` | `LgymApi.Identity/Access/AccountReadService.cs:2` |
@@ -221,10 +223,10 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Infrastructure -> LgymApi.BackgroundWorker.Common` | `LgymApi.Infrastructure/Services/CommittedIntentDispatcher.cs:3` |
 | `LgymApi.Infrastructure -> LgymApi.Domain` | `LgymApi.Infrastructure/Configuration/InfrastructureMappingRegistration.cs:4` |
 | `LgymApi.Infrastructure -> LgymApi.Identity` | `LgymApi.Infrastructure/Configuration/InfrastructureMappingRegistration.cs:12` |
-| `LgymApi.Infrastructure -> LgymApi.Notifications` | `LgymApi.Infrastructure/Data/AppDbContext.cs:9` |
+| `LgymApi.Infrastructure -> LgymApi.Notifications` | `LgymApi.Infrastructure/Data/AppDbContext.cs:11` |
 | `LgymApi.Infrastructure -> LgymApi.Platform` | `LgymApi.Infrastructure/Configuration/InfrastructureMappingRegistration.cs:1` |
 | `LgymApi.Infrastructure -> LgymApi.Reporting` | `LgymApi.Infrastructure/ReportingServiceCollectionExtensions.cs:5` |
-| `LgymApi.Infrastructure -> LgymApi.TrainingPlanning` | `LgymApi.Infrastructure/Data/AppDbContext.cs:11` |
+| `LgymApi.Infrastructure -> LgymApi.TrainingPlanning` | `LgymApi.Infrastructure/Data/AppDbContext.cs:13` |
 | `LgymApi.IntegrationTests -> LgymApi.Api` | `LgymApi.IntegrationTests/ApiHostConfigurationCharacterizationTests.cs:8` |
 | `LgymApi.IntegrationTests -> LgymApi.Application` | `LgymApi.IntegrationTests/CoachingDashboardProgressSliceIntegrationTests.cs:5` |
 | `LgymApi.IntegrationTests -> LgymApi.BackgroundWorker` | `LgymApi.IntegrationTests/CoachingLegacyEnvelopeReplayIntegrationTests.cs:245` |
@@ -282,7 +284,7 @@ Each row is one representative source location whose symbol resolves to the targ
 
 ## Locked topology
 
-Current derived snapshot: 23 approved projects, 117 approved direct `ProjectReference` edges, and 389 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 116 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
+Current derived snapshot: 23 approved projects, 118 approved direct `ProjectReference` edges, and 388 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 117 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
 
 Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Authorization` -> `LgymApi.Authorization.UnitTests` -> `LgymApi.Identity` -> `LgymApi.Identity.UnitTests` -> `LgymApi.Notifications` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
 

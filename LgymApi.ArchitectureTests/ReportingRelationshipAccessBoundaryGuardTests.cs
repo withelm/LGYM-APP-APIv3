@@ -1,5 +1,6 @@
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Reporting.Persistence;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using Microsoft.CodeAnalysis.CSharp;
@@ -34,7 +35,14 @@ public sealed class ReportingRelationshipAccessBoundaryGuardTests
                 typeof(CancellationToken)
             }));
             Assert.That(typeof(ReportingRelationshipAccessFact).GetProperties().Select(property => property.PropertyType),
-                Is.EqualTo(new[] { typeof(bool) }));
+                Is.EqualTo(new[] { typeof(bool), typeof(IReadOnlyList<ReportingRelationshipPeriodFact>) }));
+            Assert.That(typeof(ReportingRelationshipPeriodFact).GetProperties().Select(property => property.PropertyType),
+                Is.EqualTo(new[]
+                {
+                    typeof(DateTimeOffset?),
+                    typeof(DateTimeOffset?),
+                    typeof(CoachingEpisodeStartProvenance)
+                }));
         });
     }
 

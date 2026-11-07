@@ -36,6 +36,7 @@ using LgymApi.Application.Coaching.Progress.MainRecordsHistory;
 using LgymApi.Application.Coaching.Notifications;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.WorkoutProgress.Contracts.Measurements;
+using LgymApi.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.Application.Coaching;
@@ -46,6 +47,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICoachingRelationshipAccessService, CoachingRelationshipAccessService>();
         services.AddScoped<IMarkerCoachingRelationshipAccessService, CoachingRelationshipAccessService>();
+        services.AddScoped<ICoachingEpisodeAuthorizationService, CoachingEpisodeAuthorizationService>();
+        services.AddAuthorizationPolicy<CoachingEpisodeAuthorizationContext, CoachingEpisodeAuthorizationPolicy>();
         services.AddScoped<ICoachingNotificationReadService, CoachingNotificationReadService>();
         services.AddScoped<IInvitationCreatedEmailPreparationPort, InvitationCreatedEmailPreparationPort>();
         services.AddScoped<ITrainerInvitationCreatedInAppPreparationPort, TrainerInvitationCreatedInAppPreparationPort>();

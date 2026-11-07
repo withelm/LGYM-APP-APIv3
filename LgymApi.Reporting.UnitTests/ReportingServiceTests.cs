@@ -1122,6 +1122,7 @@ public sealed class ReportingServiceTests
         var traineeId = Id<User>.New();
         var templateId = Id<ReportTemplate>.New();
         var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        request.TrainerId = trainerId;
         var submission = CreateSubmission(Id<ReportSubmission>.New(), traineeId, request);
         var service = CreateReportingService(
             getSubmissionsByTrainerAndTrainee: (_, _, _) => Task.FromResult(new List<ReportSubmission> { submission }),
@@ -1132,6 +1133,36 @@ public sealed class ReportingServiceTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task GetTraineeSubmissionsAsync_AfterUnlink_ReturnsOnlySubmissionsFromSourceRelationshipPeriod()
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var startedAt = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
+        var endedAt = startedAt.AddDays(10);
+        var historicalRequest = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        historicalRequest.TrainerId = trainerId;
+        historicalRequest.CreatedAt = startedAt.AddDays(1);
+        var laterRequest = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        laterRequest.TrainerId = trainerId;
+        laterRequest.CreatedAt = endedAt.AddDays(1);
+        var service = CreateReportingService(
+            getSubmissionsByTrainerAndTrainee: (_, _, _) => Task.FromResult(new List<ReportSubmission>
+            {
+                CreateSubmission(Id<ReportSubmission>.New(), traineeId, historicalRequest),
+                CreateSubmission(Id<ReportSubmission>.New(), traineeId, laterRequest)
+            }),
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: false,
+            relationshipPeriods: [new ReportingRelationshipPeriodFact(startedAt, endedAt)]);
+
+        var result = await service.GetTraineeSubmissionsAsync(CreateUser(trainerId), traineeId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle(item => item.ReportRequestId == historicalRequest.Id);
     }
 
     [Test]
@@ -1305,7 +1336,8 @@ public sealed class ReportingServiceTests
         ICommandDispatcher? commandDispatcher = null,
         IUnitOfWork? unitOfWork = null,
         bool userHasTrainerRole = false,
-        bool hasActiveTrainerLink = false)
+        bool hasActiveTrainerLink = false,
+        IReadOnlyList<ReportingRelationshipPeriodFact>? relationshipPeriods = null)
     {
         var templatePersistence = Substitute.For<IReportTemplatePersistence>();
         var requestSubmissionPersistence = Substitute.For<IReportRequestSubmissionPersistence>();
@@ -1423,7 +1455,9 @@ public sealed class ReportingServiceTests
                 Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(),
                 Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new ReportingRelationshipAccessFact(hasActiveTrainerLink));
+            .Returns(relationshipPeriods is null
+                ? new ReportingRelationshipAccessFact(hasActiveTrainerLink)
+                : new ReportingRelationshipAccessFact(hasActiveTrainerLink, relationshipPeriods));
 
         if (recurringAssignmentByRequestId != null)
         {

@@ -27,6 +27,13 @@ public sealed class TrainerTraineeLinkSeeder : IEntitySeeder
 
         var trainer = demoUsers[0];
         var trainee = demoUsers[1];
+        var episode = seedContext.CoachingEpisodes.SingleOrDefault(candidate =>
+            candidate.TrainerId == trainer.Id && candidate.TraineeId == trainee.Id && candidate.EndedAt == null);
+        if (episode is null)
+        {
+            SeedOperationConsole.Skip("trainer trainee links");
+            return;
+        }
 
         var existing = await context.TrainerTraineeLinks
             .AsNoTracking()
@@ -40,7 +47,8 @@ public sealed class TrainerTraineeLinkSeeder : IEntitySeeder
         {
             Id = Id<TrainerTraineeLink>.New(),
             TrainerId = trainer.Id,
-            TraineeId = trainee.Id
+            TraineeId = trainee.Id,
+            EpisodeId = episode.Id
         };
 
         if (!existingSet.Add((link.TrainerId, link.TraineeId)))

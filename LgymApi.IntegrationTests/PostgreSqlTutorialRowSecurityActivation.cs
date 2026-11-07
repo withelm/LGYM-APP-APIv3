@@ -103,16 +103,13 @@ internal static class PostgreSqlTutorialRowSecurityActivation
         var standardOutput = process.StandardOutput.ReadToEndAsync();
         var standardError = process.StandardError.ReadToEndAsync();
         IOException? standardInputFailure = null;
-        await using (var script = File.OpenRead(scriptPath))
+        try
         {
-            try
-            {
-                await script.CopyToAsync(process.StandardInput.BaseStream);
-            }
-            catch (IOException exception) when (process.HasExited && process.ExitCode != 0)
-            {
-                standardInputFailure = exception;
-            }
+            await WriteScriptAsync(process.StandardInput, scriptPath);
+        }
+        catch (IOException exception) when (process.HasExited && process.ExitCode != 0)
+        {
+            standardInputFailure = exception;
         }
 
         process.StandardInput.Close();
@@ -120,8 +117,25 @@ internal static class PostgreSqlTutorialRowSecurityActivation
         if (process.ExitCode != 0)
         {
             throw new InvalidOperationException(
-                $"Tutorial RLS activation command failed with exit code {process.ExitCode}.",
+                $"Tutorial RLS activation command failed with exit code {process.ExitCode}: {await standardError}",
                 standardInputFailure);
+        }
+    }
+
+    private static async Task WriteScriptAsync(StreamWriter standardInput, string scriptPath)
+    {
+        foreach (var line in await File.ReadAllLinesAsync(scriptPath))
+        {
+            var trimmedLine = line.TrimStart();
+            const string relativeInclude = @"\ir ";
+            if (trimmedLine.StartsWith(relativeInclude, StringComparison.Ordinal))
+            {
+                var includedFile = trimmedLine[relativeInclude.Length..].Trim();
+                await WriteScriptAsync(standardInput, Path.Combine(Path.GetDirectoryName(scriptPath)!, includedFile));
+                continue;
+            }
+
+            await standardInput.WriteLineAsync(line);
         }
     }
 

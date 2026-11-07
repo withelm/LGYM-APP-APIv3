@@ -5,6 +5,8 @@ using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.TestUtils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql;
 
 namespace LgymApi.IntegrationTests;
@@ -50,7 +52,8 @@ internal sealed partial class PostgreSqlTutorialRowSecurityTestEnvironment : IAs
 
     public static async Task<PostgreSqlTutorialRowSecurityTestEnvironment> CreateAsync(
         string databaseEnvironment = "Staging",
-        bool activate = true)
+        bool activate = true,
+        string? targetMigration = null)
     {
         var lease = await PostgreSqlDatabaseLease.CreateAsync();
         var maintenanceRole = $"lgym_maintenance_it_{Id<PostgreSqlTutorialRowSecurityTestEnvironment>.New().ToString().Replace("-", "", StringComparison.Ordinal)}";
@@ -68,7 +71,7 @@ internal sealed partial class PostgreSqlTutorialRowSecurityTestEnvironment : IAs
 
         try
         {
-            await environment.ProvisionAsync(maintenancePassword, runtimePassword, databaseEnvironment, activate);
+            await environment.ProvisionAsync(maintenancePassword, runtimePassword, databaseEnvironment, activate, targetMigration);
             environment._factory = PostgreSqlWebApplicationFactory.CreateForPreparedDatabase(lease, runtimeConnectionString);
             return environment;
         }
@@ -139,7 +142,8 @@ internal sealed partial class PostgreSqlTutorialRowSecurityTestEnvironment : IAs
         string maintenancePassword,
         string runtimePassword,
         string databaseEnvironment,
-        bool activate)
+        bool activate,
+        string? targetMigration)
     {
         await using (var adminConnection = new NpgsqlConnection(_lease.AdminConnectionString))
         {
@@ -158,7 +162,7 @@ internal sealed partial class PostgreSqlTutorialRowSecurityTestEnvironment : IAs
 
         await using (var database = CreateDbContext(MaintenanceConnectionString))
         {
-            await database.Database.MigrateAsync();
+            await database.Database.GetService<IMigrator>().MigrateAsync(targetMigration);
             await PrepareHangfireAsync();
             await GrantRuntimeAccessAsync();
             await TestDataFactory.SeedDefaultRolesAsync(database);

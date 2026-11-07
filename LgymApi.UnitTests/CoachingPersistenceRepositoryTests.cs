@@ -84,7 +84,7 @@ public sealed class CoachingPersistenceRepositoryTests
         await noteRepository.AddHistoryEntryAsync(new CoachingTraineeNoteHistoryWriteModel(
             historyId, noteId, trainerId, now, null, "Content", "Created"));
 
-        database.ChangeTracker.Entries().Where(entry => entry.State == EntityState.Added).Should().HaveCount(4);
+        database.ChangeTracker.Entries().Where(entry => entry.State == EntityState.Added).Should().HaveCount(5);
         await database.SaveChangesAsync();
         database.ChangeTracker.Clear();
 

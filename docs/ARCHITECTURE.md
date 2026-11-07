@@ -50,7 +50,7 @@ If you add a repository method that mutates data, make it stage-only and ensure 
 
 ### Persistence ownership and identifier contract
 
-The production system has one `AppDbContext`, one design-time `AppDbContextFactory`, one `AppDbContextModelSnapshot`, one database, and one migration stream rooted in Infrastructure. The factory constructs the same Npgsql model without API/runtime DI. Each of the 49 persisted entities still has exactly one module owner. This is logical write ownership only; it does not introduce a physical database, `DbContext`, schema, or migration-stream split. `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable ownership source of truth, and `docs/modular-monolith/issue-376-ownership-map.md` is its tested documentation view.
+The production system has one `AppDbContext`, one design-time `AppDbContextFactory`, one `AppDbContextModelSnapshot`, one database, and one migration stream rooted in Infrastructure. The factory constructs the same Npgsql model without API/runtime DI. Each of the 52 persisted entities still has exactly one module owner. This is logical write ownership only; it does not introduce a physical database, `DbContext`, schema, or migration-stream split. `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable ownership source of truth, and `docs/modular-monolith/issue-376-ownership-map.md` is its tested documentation view.
 
 Workout execution and completed-training history belong to `Workout & Progress`. `Training.TypePlanDayId` may reference the `Training Planning` definition used to perform a workout, but that reference does not give Training Planning write ownership over the completed `Training` row.
 
@@ -58,7 +58,7 @@ Nutrition owns six persisted entities and 18 focused actions: Diet D1 through D9
 
 Workout & Progress exposes its cross-module surface through `ProgressData`, dashboard, ranking, training execution/history, and accepted-progress contracts with explicit read/write models. Its seven focused persistence ports use `Id<AccountReference>` and immutable persistence models; only Infrastructure adapters convert those IDs to persisted `Id<User>` foreign keys through `WorkoutPersistenceAccountIds`. Foreign modules must not consume its entities, repositories, or implementation classes directly. Existing legacy routes and payloads remain unchanged. For #386, Reporting stages a Reporting-owned accepted-progress command in the existing `CommandEnvelope` outbox, and Workout & Progress owns delivery-side measurement persistence.
 
-Reporting uses exactly five focused persistence ports for templates, requests/submissions, recurring assignments, photos/upload sessions, and relationship access. Their Infrastructure adapters are stage-only and no-tracking for reads; Reporting services retain authorization, transaction, and UoW commit ownership. The separate Workout & Progress accepted-progress persistence port is not a sixth Reporting port.
+Reporting uses exactly five focused persistence ports for templates, requests/submissions, recurring assignments, photos/upload sessions, and relationship access. Their Infrastructure adapters are stage-only and no-tracking for reads; Reporting services retain authorization, transaction, and UoW commit ownership. The relationship-access port exposes Reporting-owned active-state and bounded period facts projected from durable Coaching episodes. Generic temporal authorization denies episodes whose start is unknown. Historical submissions and source photos use a separate trainer-authored-source check: request ownership must match the trainer, known periods remain start-inclusive/end-exclusive, and migration-observed provenance may preserve that trainer's own source readability without claiming an unbounded historical relationship. Current writes continue to require active state. The separate Workout & Progress accepted-progress persistence port is not a sixth Reporting port.
 
 Known internal entity references use `Id<T>`. Reporting and Workout & Progress Application persistence contracts use `Id<AccountReference>` for account identity; only their Infrastructure adapters rebind those values to persisted `Id<User>` foreign keys. EF Core stores provider values in PostgreSQL `uuid` columns, while HTTP and JSON UUID values remain strings. The only polymorphic string ID exceptions are `PushNotificationMessage.EntityId` and `PushEventPayload.EntityId`.
 
@@ -69,6 +69,24 @@ Training Planning's PlanDay service accepts marker-only commands and read models
 Coaching owns 31 focused actions, 30 HTTP-backed and the application-only `GetTrainerInvitationsAsync`. Its invitation and dashboard reads enrich complete Coaching facts with active Identity accounts before search, filtering, sorting, totals, and paging. An expired pending email invitation records `Expired` and `RespondedAt`, remains unbound, creates no link, and queues no notification command. The cutover changed neither the single `AppDbContext`, PostgreSQL database, nor migration stream.
 
 Application services own the transaction proof: a staged write becomes visible only after `IUnitOfWork` commits, and a forced failure in a multi-step service transaction must leave no write after rollback. PostgreSQL transaction integration tests enforce both outcomes.
+
+Coaching relationship rollout is additive, but it is not mixed-writer compatible. Migration `20261107094438_AddCoachingEpisodes` backfills every active legacy link with a deterministic episode whose unknown start remains `NULL` and whose provenance is `ExistingActiveLinkObservedDuringMigration`; it never invents a historical start. Its trigger fences only `TrainerTraineeLinks`: it rejects identity rewrites, requires a matching open episode for active inserts/updates, and closes plus revises an episode on direct delete or soft-delete. It does not revision-fence old note, plan, report, or other protected feature writes.
+
+The deployment gate is therefore mandatory: stop ingress, scheduled work, and every old API/worker process that can create relationships or perform protected writes; drain all in-flight protected requests and database transactions; and record deployment-control evidence showing zero old-revision processes and zero active protected requests before applying the migration or starting a new writer. After migration, verify that the migration ID is present and that this invariant query returns zero rows before enabling traffic:
+
+```sql
+SELECT l."Id"
+FROM "TrainerTraineeLinks" AS l
+LEFT JOIN "CoachingEpisodes" AS e ON e."Id" = l."EpisodeId"
+WHERE l."IsDeleted" = FALSE
+  AND (e."Id" IS NULL
+       OR e."IsDeleted" = TRUE
+       OR e."EndedAt" IS NOT NULL
+       OR e."TrainerId" <> l."TrainerId"
+       OR e."TraineeId" <> l."TraineeId");
+```
+
+Activation is blocked if any old process or in-flight protected request remains, if any old-revision database transaction is still open, if the migration is absent, or if the invariant query returns a row. Start only the revision-aware binary after all checks pass. A safe binary rollback keeps the additive table, column, foreign key, indexes, trigger, and episode rows and may target only another revision-aware binary that stages episode authorization revisions. Never roll back to a pre-LGYM-213 writer. EF migration downgrade remains explicitly unsupported because removing or unrecording the schema would discard or detach durable history. The acceptance evidence and operator gate are recorded in [`lgym-55-auth-a01.md`](evidence/lgym-55-auth-a01.md).
 
 ## 4. Mapping Approach
 
@@ -298,7 +316,7 @@ Use the [Module Contribution Guide](MODULE_CONTRIBUTION_GUIDE.md) for owner-firs
 
 The project-reference manifest is an explicit project-promotion allowlist. Every approved project declares its identity, kind, and exact direct targets; those declarations derive the current edges, forbidden complement, and deterministic dependency-first order. Counts are diagnostic output rather than promotion constraints. The guards reject unknown projects, unapproved or missing edges, unused edges, missing direct imports, transitive reliance, duplicates, cycles, and order drift.
 A project promotion must update the manifest, solution membership, root Project Purpose Map, adjacent project document, and issue-380 graph and direct-use evidence in one reviewed change. Wildcard targets and exception-based permissions are forbidden. The current approved snapshot remains unchanged, and the SignalR test client remains a centrally pinned package reference rather than a project-reference edge.
-The production topology remains one `AppDbContext`, one PostgreSQL database, and one migration stream. The eight owner totals remain Identity & Accounts 9, Notifications 5, Reporting 7, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, and Platform / Reference Data 4, for 49 persisted entities.
+The production topology remains one `AppDbContext`, one PostgreSQL database, and one migration stream. The eight owner totals remain Identity & Accounts 9, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 11, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 52 persisted entities. Coaching protected writes receive a typed grant for the active `CoachingEpisode` and stage its optimistic authorization revision in the same unit-of-work commit; unlink closes the episode and removes the active link atomically.
 The compatibility, persistence, and Unit of Work guidance elsewhere in this guide continues to apply and is not restated here.
 
 The final handoff has 25 scoped Application API adapters and three scoped Notifications API adapters. Migration-era `Task7`, `ApiCompatibility`, and `Compatibility.Task7` adapter CLR identities are removed, but established HTTP, JSON, DTO, route, policy, and endpoint-specific legacy-field contracts remain unchanged. The three retained Notifications integration adapters are owner-to-owner seams, not API adapters: `PushInstallationSessionDisassociationAdapter`, `CoachingEmailNotificationSchedulerAdapter`, and `PasswordRecoveryEmailSchedulerAdapter`. See ADR-007 and issue-395 final verification for their removal conditions and the Todo 22 clean same-SHA evidence workflow.

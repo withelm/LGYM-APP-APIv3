@@ -60,7 +60,7 @@ public sealed class ProjectReferenceGraphGuardTests
             Assert.That(addedEdgeException!.Message, Does.Contain("Forbidden project-reference edge: LgymApi.Resources.Generator -> LgymApi.Domain"));
             Assert.That(missingEdgeException!.Message, Does.Contain("Missing project-reference edge: LgymApi.Api -> LgymApi.Resources"));
             Assert.That(duplicateEdgeException!.Message, Does.Contain("Duplicate project-reference edge: LgymApi.Api -> LgymApi.Application"));
-            Assert.That(cyclicEdgeException!.Message, Does.Contain("Project-reference cycle: LgymApi.Application -> LgymApi.Domain -> LgymApi.Application"));
+            Assert.That(cyclicEdgeException!.Message, Does.Contain("Project-reference cycle: LgymApi.Application -> LgymApi.Authorization -> LgymApi.Domain -> LgymApi.Application"));
         });
     }
 

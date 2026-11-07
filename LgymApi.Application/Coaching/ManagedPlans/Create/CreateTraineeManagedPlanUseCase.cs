@@ -11,15 +11,18 @@ namespace LgymApi.Application.Coaching.ManagedPlans.Create;
 internal sealed class CreateTraineeManagedPlanUseCase : ICreateTraineeManagedPlanUseCase
 {
     private readonly IMarkerCoachingRelationshipAccessService _relationshipAccess;
+    private readonly ICoachingEpisodeAuthorizationService _episodeAuthorization;
     private readonly OwnerCreateUseCase _owner;
     private readonly IMapper _mapper;
 
     public CreateTraineeManagedPlanUseCase(
         IMarkerCoachingRelationshipAccessService relationshipAccess,
+        ICoachingEpisodeAuthorizationService episodeAuthorization,
         OwnerCreateUseCase owner,
         IMapper mapper)
     {
         _relationshipAccess = relationshipAccess;
+        _episodeAuthorization = episodeAuthorization;
         _owner = owner;
         _mapper = mapper;
     }
@@ -36,6 +39,11 @@ internal sealed class CreateTraineeManagedPlanUseCase : ICreateTraineeManagedPla
         if (accessError is not null)
         {
             return Result<ManagedPlanReadModel, AppError>.Failure(accessError);
+        }
+
+        if (await _episodeAuthorization.AuthorizeAndStageAsync(command.TrainerId, command.TrainerId, command.TraineeId, CoachingEpisodeAuthorizationAction.ProtectedWrite, cancellationToken) is null)
+        {
+            return Result<ManagedPlanReadModel, AppError>.Failure(new LgymApi.Application.Coaching.Errors.TrainerRelationshipNotFoundError(LgymApi.Resources.Messages.DidntFind));
         }
 
         var ownerCommand = _mapper.Map<CreateTraineeManagedPlanCommand, OwnerCreateCommand>(command, _mapper.CreateContext());

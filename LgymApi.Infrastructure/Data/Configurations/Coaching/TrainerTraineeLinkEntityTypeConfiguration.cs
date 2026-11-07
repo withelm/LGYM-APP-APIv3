@@ -15,6 +15,7 @@ internal sealed class TrainerTraineeLinkEntityTypeConfiguration : IEntityTypeCon
             .HasFilter(CoachingConfigurationFilters.ActiveRowsFilter);
 
         builder.HasIndex(e => new { e.TrainerId, e.TraineeId });
+        builder.HasIndex(e => e.EpisodeId).IsUnique();
 
         builder.HasOne(e => e.Trainer)
             .WithMany()
@@ -25,5 +26,10 @@ internal sealed class TrainerTraineeLinkEntityTypeConfiguration : IEntityTypeCon
             .WithMany()
             .HasForeignKey(e => e.TraineeId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(e => e.Episode)
+            .WithMany()
+            .HasForeignKey(e => e.EpisodeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

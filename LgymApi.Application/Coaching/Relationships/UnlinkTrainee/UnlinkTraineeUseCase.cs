@@ -11,15 +11,18 @@ namespace LgymApi.Application.Coaching.Relationships.UnlinkTrainee;
 internal sealed class UnlinkTraineeUseCase : IUnlinkTraineeUseCase
 {
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
+    private readonly ICoachingEpisodeAuthorizationService _authorization;
     private readonly ICoachingActiveLinkPersistence _activeLinks;
     private readonly IUnitOfWork _unitOfWork;
 
     public UnlinkTraineeUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
+        ICoachingEpisodeAuthorizationService authorization,
         ICoachingActiveLinkPersistence activeLinks,
         IUnitOfWork unitOfWork)
     {
         _relationshipAccess = relationshipAccess;
+        _authorization = authorization;
         _activeLinks = activeLinks;
         _unitOfWork = unitOfWork;
     }
@@ -47,17 +50,29 @@ internal sealed class UnlinkTraineeUseCase : IUnlinkTraineeUseCase
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
-        var link = await _activeLinks.FindByTrainerAndTraineeAsync(
+        var grant = await _authorization.AuthorizeAndStageAsync(
+            command.TrainerId,
             command.TrainerId,
             command.TraineeId,
+            CoachingEpisodeAuthorizationAction.TrainerUnlink,
             cancellationToken);
-        if (link is null)
+        if (grant is null)
         {
             return Result<Unit, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
-        await _activeLinks.RemoveAsync(link.Id, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _activeLinks.RemoveAsync(grant, cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception commitFailure)
+        {
+            if (!await _activeLinks.TryRecoverCompletedUnlinkAsync(grant, commitFailure, cancellationToken))
+            {
+                throw;
+            }
+        }
 
         return Result<Unit, AppError>.Success(Unit.Value);
     }

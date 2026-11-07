@@ -5,7 +5,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class CoachingBoundaryDocumentationTests
 {
-    private static readonly string[] OwnerIds = SplitIds("coaching.owner.trainer-invitation coaching.owner.trainer-trainee-link coaching.owner.trainee-note coaching.owner.trainee-note-history");
+    private static readonly string[] OwnerIds = SplitIds("coaching.owner.trainer-invitation coaching.owner.coaching-episode coaching.owner.trainer-trainee-link coaching.owner.trainee-note coaching.owner.trainee-note-history");
 
     private static readonly string[] ActionIds = SplitIds("""
         coaching.action.create-trainer-invitation coaching.action.create-trainer-invitation-by-email coaching.action.get-trainer-invitations coaching.action.get-trainer-invitations-paginated coaching.action.get-public-invitation-status coaching.action.accept-trainer-invitation coaching.action.reject-trainer-invitation coaching.action.revoke-trainer-invitation
@@ -179,7 +179,7 @@ public sealed class CoachingBoundaryDocumentationTests
             .ToList();
         var documentedNames = ownerRows.Values.Select(row => row.GetField("Entity name")).ToHashSet(StringComparer.Ordinal);
 
-        catalogEntries.Should().HaveCount(4);
+        catalogEntries.Should().HaveCount(5);
         documentedNames.Should().BeEquivalentTo(catalogEntries.Select(entry => entry.EntityType.Name));
         foreach (var row in ownerRows.Values)
         {

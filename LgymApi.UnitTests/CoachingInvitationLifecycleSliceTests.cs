@@ -119,7 +119,8 @@ public sealed class CoachingInvitationLifecycleSliceTests
         var invitation = Invitation(trainerId, traineeId, "trainee@example.test");
         var services = CreateServices(out _, out _, out var invitations, out var links, out var commands, out var unitOfWork);
         invitations.FindByIdAsync(invitation.Id, Arg.Any<CancellationToken>()).Returns(invitation);
-        links.HasForTraineeAsync(traineeId, Arg.Any<CancellationToken>()).Returns(false, true);
+        links.HasForTraineeAsync(traineeId, Arg.Any<CancellationToken>()).Returns(false);
+        links.TryRecoverDuplicateLinkAsync(traineeId, Arg.Any<Exception>(), Arg.Any<CancellationToken>()).Returns(true);
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException<int>(new InvalidOperationException("duplicate link")));
 
         var result = await Resolve<IAcceptInvitationUseCase>(services).ExecuteAsync(new AcceptInvitationCommand(traineeId, invitation.Id));

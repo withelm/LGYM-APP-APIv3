@@ -1,10 +1,12 @@
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Resources;
 
 namespace LgymApi.Application.Features.Reporting;
 
@@ -15,17 +17,25 @@ public sealed partial class ReportingService
         Id<AccountReference> traineeId,
         CancellationToken cancellationToken = default)
     {
-        var ownershipCheck = await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
-        if (ownershipCheck.IsFailure)
+        var trainerCheck = EnsureTrainer(currentTrainer);
+        if (trainerCheck.IsFailure)
         {
-            return Result<List<ReportSubmissionResult>, AppError>.Failure(ownershipCheck.Error);
+            return Result<List<ReportSubmissionResult>, AppError>.Failure(trainerCheck.Error);
         }
-
+        var access = await _relationshipAccessPersistence.GetAccessAsync(currentTrainer.Id, traineeId, cancellationToken);
+        if (!access.HasActiveRelationship && access.RelationshipPeriods.Count == 0)
+        {
+            return Result<List<ReportSubmissionResult>, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
         var submissions = await _requestSubmissionPersistence.ListSubmissionsByTrainerAndTraineeAsync(
             currentTrainer.Id,
             traineeId,
             cancellationToken);
-        var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(submissions);
+        var authorizedSubmissions = submissions
+            .Where(submission => submission.ReportRequest.TrainerId == currentTrainer.Id
+                && access.CanReadTrainerAuthoredRecordAt(submission.ReportRequest.CreatedAt))
+            .ToList();
+        var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(authorizedSubmissions);
         await HydrateSubmissionPhotosAsync(currentTrainer, results, cancellationToken);
         return Result<List<ReportSubmissionResult>, AppError>.Success(results);
     }

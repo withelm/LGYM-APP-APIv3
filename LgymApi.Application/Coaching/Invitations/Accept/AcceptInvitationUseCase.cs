@@ -11,6 +11,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using TrainerInvitationEntity = LgymApi.Domain.Entities.TrainerInvitation;
+using CoachingEpisodeEntity = LgymApi.Domain.Entities.CoachingEpisode;
 using TrainerTraineeLinkEntity = LgymApi.Domain.Entities.TrainerTraineeLink;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -107,7 +108,12 @@ internal sealed class AcceptInvitationUseCase : IAcceptInvitationUseCase
         try
         {
             var link = _mapper.Map<InvitationActiveLinkSource, CoachingActiveLinkWriteModel>(
-                new InvitationActiveLinkSource(Id<TrainerTraineeLinkEntity>.New(), invitation.TrainerId, command.TraineeId),
+                new InvitationActiveLinkSource(
+                    Id<TrainerTraineeLinkEntity>.New(),
+                    invitation.TrainerId,
+                    command.TraineeId,
+                    Id<CoachingEpisodeEntity>.New(),
+                    now),
                 _mapper.CreateContext());
             await _activeLinks.AddAsync(link, cancellationToken);
             await _invitations.UpdateResponseAsync(
@@ -115,9 +121,12 @@ internal sealed class AcceptInvitationUseCase : IAcceptInvitationUseCase
                 cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
-        catch
+        catch (Exception commitFailure)
         {
-            if (await _activeLinks.HasForTraineeAsync(command.TraineeId, cancellationToken))
+            if (await _activeLinks.TryRecoverDuplicateLinkAsync(
+                    command.TraineeId,
+                    commitFailure,
+                    cancellationToken))
             {
                 return Result<Unit, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.TraineeAlreadyLinked));
             }

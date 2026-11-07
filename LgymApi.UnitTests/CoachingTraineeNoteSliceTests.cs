@@ -457,15 +457,29 @@ public sealed class CoachingTraineeNoteSliceTests
         var trainerId = Id<User>.New();
         var traineeId = Id<User>.New();
         var access = Substitute.For<ICoachingRelationshipAccessService>();
+        var episodeAuthorization = Substitute.For<ICoachingEpisodeAuthorizationService>();
         var commands = Substitute.For<ICommandDispatcher>();
         access.GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(true, true));
+        episodeAuthorization.AuthorizeAndStageAsync(
+                trainerId,
+                trainerId,
+                traineeId,
+                CoachingEpisodeAuthorizationAction.ProtectedWrite,
+                Arg.Any<CancellationToken>())
+            .Returns(new CoachingEpisodeAuthorizationGrant(
+                Id<TrainerTraineeLink>.New(),
+                Id<CoachingEpisode>.New(),
+                trainerId,
+                traineeId,
+                0));
         var services = new ServiceCollection();
         services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         services.AddCoachingModule();
         services.AddScoped(_ => database);
         services.AddScoped<ICoachingTraineeNotePersistence, CoachingTraineeNotePersistenceRepository>();
         services.AddScoped(_ => access);
+        services.AddScoped(_ => episodeAuthorization);
         services.AddScoped(_ => commands);
         services.AddScoped<IUnitOfWork>(_ => new ThrowingUnitOfWork());
         using var provider = services.BuildServiceProvider();
@@ -535,9 +549,26 @@ public sealed class CoachingTraineeNoteSliceTests
     private sealed class Dependencies
     {
         public ICoachingRelationshipAccessService Access { get; } = Substitute.For<ICoachingRelationshipAccessService>();
+        public ICoachingEpisodeAuthorizationService EpisodeAuthorization { get; } = Substitute.For<ICoachingEpisodeAuthorizationService>();
         public ICoachingTraineeNotePersistence Notes { get; } = Substitute.For<ICoachingTraineeNotePersistence>();
         public ICommandDispatcher Commands { get; } = Substitute.For<ICommandDispatcher>();
         public IUnitOfWork UnitOfWork { get; } = Substitute.For<IUnitOfWork>();
+
+        public Dependencies()
+        {
+            EpisodeAuthorization.AuthorizeAndStageAsync(
+                    Arg.Any<Id<User>>(),
+                    Arg.Any<Id<User>>(),
+                    Arg.Any<Id<User>>(),
+                    CoachingEpisodeAuthorizationAction.ProtectedWrite,
+                    Arg.Any<CancellationToken>())
+                .Returns(call => new CoachingEpisodeAuthorizationGrant(
+                    Id<TrainerTraineeLink>.New(),
+                    Id<CoachingEpisode>.New(),
+                    call.ArgAt<Id<User>>(1),
+                    call.ArgAt<Id<User>>(2),
+                    0));
+        }
 
         public void GrantAccess(Id<User> trainerId, Id<User> traineeId)
             => Access.GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
@@ -549,6 +580,7 @@ public sealed class CoachingTraineeNoteSliceTests
             services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
             services.AddCoachingModule();
             services.AddScoped(_ => Access);
+            services.AddScoped(_ => EpisodeAuthorization);
             services.AddScoped(_ => Notes);
             services.AddScoped(_ => Commands);
             services.AddScoped(_ => UnitOfWork);
