@@ -171,7 +171,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Api -> LgymApi.Notifications` | `LgymApi.Api/Features/InAppNotification/Controllers/InAppNotificationController.cs:6` |
 | `LgymApi.Api -> LgymApi.Platform` | `LgymApi.Api/Extensions/ApiJsonOptionsExtensions.cs:3` |
 | `LgymApi.Api -> LgymApi.Reporting` | `LgymApi.Api/Program.cs:8` |
-| `LgymApi.Api -> LgymApi.Resources` | `LgymApi.Api/Configuration/ApiAuthenticationExtensions.cs:49` |
+| `LgymApi.Api -> LgymApi.Resources` | `LgymApi.Api/Configuration/ApiAuthenticationExtensions.cs:50` |
 | `LgymApi.Api -> LgymApi.TrainingPlanning` | `LgymApi.Api/Features/PlanDay/Controllers/PlanDayController.cs:9` |
 | `LgymApi.Application -> LgymApi.Domain` | `LgymApi.Application/Coaching/Access/CoachingRelationshipAccessService.cs:4` |
 | `LgymApi.Application -> LgymApi.Authorization` | `LgymApi.Application/Coaching/Access/CoachingEpisodeAuthorizationService.cs:3` |

@@ -432,6 +432,25 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         localizedBody.RootElement.GetProperty("errors").GetProperty("platform")[0].GetString().Should().NotBeNullOrWhiteSpace();
     }
 
+    [TestCase("POST", "/api/appConfig/createNewAppVersion/{id}", "policy.appconfig.manage")]
+    public void AuthA08_ScopedRoutes_DeclareTheirAuthenticationOrPermissionBoundary(
+        string method,
+        string route,
+        string? policy)
+    {
+        var endpoint = Factory.Services.GetServices<EndpointDataSource>()
+            .SelectMany(source => source.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(candidate =>
+                candidate.RoutePattern.RawText == route.TrimStart('/')
+                && candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains(method) == true);
+
+        var authorization = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>();
+        endpoint.Metadata.GetMetadata<IAllowAnonymous>().Should().BeNull();
+        authorization.Should().ContainSingle();
+        authorization.Single().Policy.Should().Be(policy);
+    }
+
     [Test]
     public void MatrixComparison_RejectsRouteDriftWithTheFieldAndValues()
     {
