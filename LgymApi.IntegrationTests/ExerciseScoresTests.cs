@@ -274,6 +274,54 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetLastExerciseScores_WithForeignGym_PreservesScoreAndRedactsGymName()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "foreign-gym-last-scores-user",
+            email: "foreign-gym-last-scores@example.com",
+            password: "password123");
+        var foreignOwner = await SeedUserAsync(
+            name: "foreign-gym-last-scores-owner",
+            email: "foreign-gym-last-scores-owner@example.com");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Foreign Gym Last Scores Exercise", BodyParts.Back);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Foreign Gym Last Scores");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Foreign Gym Last Scores Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Foreign Gym Last Scores Day", [
+            new PlanDayExerciseInput { ExerciseId = exerciseId.ToString(), Series = 1, Reps = "10" }
+        ]);
+        var trainingResponse = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 60.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        });
+        trainingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        await ReassignGymOwnerAsync(gymId, foreignOwner.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/getLastExerciseScores", new
+        {
+            exerciseId = exerciseId.ToString(),
+            exerciseName = "Foreign Gym Last Scores Exercise",
+            series = 1,
+            gymId = gymId.ToString()
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<LastExerciseScoresResponse>();
+        body!.SeriesScores.Should().ContainSingle();
+        body.SeriesScores[0].Score!.Weight.Should().Be(60.0);
+        body.SeriesScores[0].Score!.GymName.Should().BeNull();
+    }
+
+    [Test]
     public async Task GetExerciseScoresFromTrainingByExercise_WithNoScores_ReturnsEmptyList()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(
@@ -337,6 +385,53 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseHistoryItem>>();
         body.Should().NotBeNull();
         body.Should().HaveCountGreaterThanOrEqualTo(1);
+    }
+
+    [Test]
+    public async Task GetExerciseScoresFromTrainingByExercise_WithForeignGym_PreservesScoreAndRedactsGymName()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync(
+            name: "foreign-gym-history-user",
+            email: "foreign-gym-history@example.com",
+            password: "password123");
+        var foreignOwner = await SeedUserAsync(
+            name: "foreign-gym-history-owner",
+            email: "foreign-gym-history-owner@example.com");
+
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Foreign Gym History Exercise", BodyParts.Quads);
+        var gymId = await CreateGymViaEndpointAsync(userId, "Foreign Gym History");
+        var planId = await CreatePlanViaEndpointAsync(userId, "Foreign Gym History Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Foreign Gym History Day", [
+            new PlanDayExerciseInput { ExerciseId = exerciseId.ToString(), Series = 1, Reps = "10" }
+        ]);
+        var trainingResponse = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = gymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[]
+            {
+                new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 100.0, unit = WeightUnits.Kilograms.ToString() }
+            }
+        });
+        trainingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        await ReassignGymOwnerAsync(gymId, foreignOwner.Id);
+
+        var response = await Client.PostAsJsonAsync("/api/exercise/getExerciseScoresFromTrainingByExercise", new
+        {
+            exerciseId = exerciseId.ToString()
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<ExerciseHistoryItem>>();
+        body.Should().ContainSingle();
+        body![0].GymName.Should().BeEmpty();
+        body[0].SeriesScores.Should().ContainSingle();
+        body[0].SeriesScores[0].Score!.Weight.Should().Be(100.0);
+        body[0].SeriesScores[0].Score!.GymName.Should().BeNull();
     }
 
     [Test]
@@ -554,5 +649,14 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
 
         [JsonPropertyName("seriesScores")]
         public List<SeriesScoreItem> SeriesScores { get; set; } = new();
+    }
+
+    private async Task ReassignGymOwnerAsync(Id<Gym> gymId, Id<User> ownerId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var gym = await database.Gyms.FindAsync(gymId);
+        gym!.UserId = ownerId;
+        await database.SaveChangesAsync();
     }
 }

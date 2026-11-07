@@ -288,11 +288,13 @@ public sealed class ExerciseServiceTests
         var accountId = Id<AccountReference>.New();
         var exerciseId = Id<Exercise>.New();
         var context = Context(accountId, [AuthConstants.Permissions.ManageGlobalExercises]);
-        _exercises.FindUnrestrictedByIdAsync(exerciseId, Arg.Any<CancellationToken>()).Returns(Model(exerciseId, null));
+        _exercises.FindGlobalByIdAsync(exerciseId, Arg.Any<CancellationToken>()).Returns(Model(exerciseId, null));
 
         var result = await _service.AddGlobalTranslationAsync(context, new AddGlobalTranslationInput(accountId, exerciseId, "pl-PL", "Przysiad"));
 
         result.IsSuccess.Should().BeTrue();
+        await _exercises.Received(1).FindGlobalByIdAsync(exerciseId, Arg.Any<CancellationToken>());
+        await _exercises.DidNotReceive().FindUnrestrictedByIdAsync(exerciseId, Arg.Any<CancellationToken>());
         await _exercises.Received(1).UpsertTranslationAsync(exerciseId, "pl-pl", "Przysiad", Arg.Any<CancellationToken>());
         await _accounts.DidNotReceive().GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
