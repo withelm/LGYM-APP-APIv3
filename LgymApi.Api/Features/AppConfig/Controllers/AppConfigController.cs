@@ -2,9 +2,11 @@ using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.AppConfig.Contracts;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Middleware;
+using LgymApi.Api.Authorization;
 using LgymApi.Application.Platform.ReferenceData.AppConfig;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Platform.ReferenceData.ApiAdapters;
+using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -47,6 +49,8 @@ public sealed class AppConfigController : ControllerBase
     }
 
     [HttpPost("appConfig/createNewAppVersion/{id}")]
+    [Authorize(Policy = AuthConstants.Policies.ManageAppConfig)]
+    [LegacyForbiddenResponse]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
