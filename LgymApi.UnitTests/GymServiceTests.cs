@@ -3,6 +3,7 @@ using LgymApi.Application.Features.Gym;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.WorkoutProgress.Errors;
+using LgymApi.Application.WorkoutProgress.Authorization;
 using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -19,6 +20,7 @@ public sealed class GymServiceTests
     private IWorkoutTrainingPersistence _trainings = null!;
     private IPlanDayReferenceReadService _planDays = null!;
     private IUnitOfWork _unitOfWork = null!;
+    private IWorkoutProgressOwnershipAuthorizationService _ownershipAuthorization = null!;
     private GymService _service = null!;
 
     [SetUp]
@@ -28,7 +30,14 @@ public sealed class GymServiceTests
         _trainings = Substitute.For<IWorkoutTrainingPersistence>();
         _planDays = Substitute.For<IPlanDayReferenceReadService>();
         _unitOfWork = Substitute.For<IUnitOfWork>();
-        _service = new GymService(_gyms, _trainings, _planDays, _unitOfWork);
+        _ownershipAuthorization = Substitute.For<IWorkoutProgressOwnershipAuthorizationService>();
+        _ownershipAuthorization.IsOwner(Arg.Any<AuthenticatedAccountContext?>(), Arg.Any<Id<AccountReference>>())
+            .Returns(call =>
+            {
+                var actor = call.ArgAt<AuthenticatedAccountContext?>(0);
+                return actor is not null && actor.Id == call.ArgAt<Id<AccountReference>>(1);
+            });
+        _service = new GymService(_gyms, _trainings, _planDays, _unitOfWork, _ownershipAuthorization);
     }
 
     [Test]

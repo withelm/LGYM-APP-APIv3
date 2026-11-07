@@ -281,6 +281,33 @@ public sealed class TrainingTests : IntegrationTestBase
     }
 
     [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/{id}/addTraining", "own", "foreign-object-denial-no-mutation")]
+    public async Task Should_ReturnNotFoundWithoutWrites_When_GymBelongsToAnotherAccount()
+    {
+        var (userId, userToken) = await RegisterUserViaEndpointAsync("foreign-gym-user", "foreign-gym-user@example.com", "password123");
+        var (gymOwnerId, _) = await RegisterUserViaEndpointAsync("foreign-gym-owner", "foreign-gym-owner@example.com", "password123");
+        var exerciseId = await CreateExerciseViaEndpointAsync(userId, "Foreign Gym Exercise", BodyParts.Back);
+        var planId = await CreatePlanViaEndpointAsync(userId, "Foreign Gym Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(userId, planId, "Foreign Gym Day", [new PlanDayExerciseInput { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "5" }]);
+        var foreignGymId = await CreateGymViaEndpointAsync(gymOwnerId, "Foreign Gym");
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userToken);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", new
+        {
+            gym = foreignGymId.ToString(),
+            type = planDayId.ToString(),
+            createdAt = DateTime.UtcNow,
+            exercises = new[] { new { exercise = exerciseId.ToString(), series = 1, reps = 5, weight = 100.0, unit = WeightUnits.Kilograms.ToString() } }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var scope = Factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await database.Trainings.CountAsync(training => training.UserId == userId)).Should().Be(0);
+        (await database.ExerciseScores.CountAsync(score => score.UserId == userId)).Should().Be(0);
+    }
+
+    [Test]
     public async Task Should_UpdateEloAndRank_When_Called()
     {
         var (userId, token) = await RegisterUserViaEndpointAsync(

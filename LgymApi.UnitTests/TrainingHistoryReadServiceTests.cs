@@ -5,6 +5,7 @@ using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
@@ -99,15 +100,41 @@ public sealed class TrainingHistoryReadServiceTests
             CancellationToken.None);
     }
 
+    [Test]
+    public async Task GetTrainingByDateAsync_HidesLegacyForeignExerciseAndGymMetadata()
+    {
+        var accountId = Id<AccountReference>.New();
+        var foreignAccountId = Id<AccountReference>.New();
+        var planDayId = Id<PlanDayReference>.New();
+        var foreignGym = new WorkoutGymPersistenceModel(Id<Gym>.New(), foreignAccountId, "Foreign Gym", null, false, default, default);
+        var training = new WorkoutTrainingPersistenceModel(Id<Training>.New(), accountId, planDayId, foreignGym.Id, DateTimeOffset.UtcNow, foreignGym);
+        var foreignExercise = new WorkoutExercisePersistenceModel(Id<Exercise>.New(), foreignAccountId, "Foreign Exercise", BodyParts.Back, ExerciseEloFormula.Standard, null, null, false, default, default);
+        var score = new WorkoutExerciseScorePersistenceModel(Id<ExerciseScore>.New(), foreignExercise.Id, accountId, 8, 1, 80, WeightUnits.Kilograms, training.Id, 0, training.CreatedAt, foreignExercise, training);
+        var planDays = Substitute.For<IPlanDayReferenceReadService>();
+        var scores = Substitute.For<IWorkoutExerciseScorePersistence>();
+        var service = CreateService(accountId, [training], planDays, out var persistence, scores);
+        persistence.GetExerciseScoreLinksAsync(Arg.Any<IReadOnlyCollection<Id<Training>>>(), CancellationToken.None)
+            .Returns([new WorkoutTrainingExerciseScorePersistenceModel(Id<TrainingExerciseScore>.New(), training.Id, score.Id, 0)]);
+        scores.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Id<ExerciseScore>>>(), CancellationToken.None).Returns([score]);
+
+        var result = await service.GetTrainingByDateAsync(accountId, UtcTimeRange.ForLegacyUtcDay(training.CreatedAt.UtcDateTime));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle();
+        result.Value[0].Gym.Should().BeNull();
+        result.Value[0].Exercises.Should().BeEmpty();
+    }
+
     private static TrainingHistoryReadService CreateService(
         Id<AccountReference> accountId,
         IReadOnlyList<WorkoutTrainingPersistenceModel> trainings,
         IPlanDayReferenceReadService planDays,
-        out IWorkoutTrainingPersistence trainingPersistence)
+        out IWorkoutTrainingPersistence trainingPersistence,
+        IWorkoutExerciseScorePersistence? scorePersistence = null)
     {
         var accountAccess = Substitute.For<IAccountAccessReader>();
         trainingPersistence = Substitute.For<IWorkoutTrainingPersistence>();
-        var scores = Substitute.For<IWorkoutExerciseScorePersistence>();
+        var scores = scorePersistence ?? Substitute.For<IWorkoutExerciseScorePersistence>();
         accountAccess.GetByIdAsync(accountId, CancellationToken.None)
             .Returns(new AccountAccessFacts(accountId, false, false, [], []));
         trainingPersistence.GetByAccountIdAndDateAsync(accountId, Arg.Any<UtcTimeRange>(), CancellationToken.None)

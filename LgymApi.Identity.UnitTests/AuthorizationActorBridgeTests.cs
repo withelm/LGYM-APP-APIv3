@@ -4,6 +4,7 @@ using LgymApi.Application.Mapping.Core;
 using LgymApi.Authorization;
 using LgymApi.Authorization.Contracts;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Security;
 using LgymApi.Identity;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
@@ -52,6 +53,20 @@ public sealed class AuthorizationActorBridgeTests
         var result = service.HasPermission(accountContext, "permissions.manage");
 
         result.Should().BeFalse();
+    }
+
+    [Test]
+    public void Evaluate_AllowsManageGlobalExercisesOnlyWithItsExplicitPermissionClaim()
+    {
+        var accountContext = CreateAccountContext([AuthConstants.Permissions.ManageGlobalExercises]);
+        var actor = new AuthorizationActor(accountContext.Id.Rebind<ActorReference>());
+        var mapper = Substitute.For<IMapper>();
+        mapper.Map<AuthenticatedAccountContext, AuthorizationActor>(accountContext, null).Returns(actor);
+        var evaluator = new AuthorizationPolicyEvaluator<GlobalPermissionAuthorizationContext>([new GlobalPermissionAuthorizationPolicy()]);
+        var service = new AuthenticatedAccountAuthorizationService(mapper, evaluator);
+
+        service.HasPermission(accountContext, AuthConstants.Permissions.ManageGlobalExercises).Should().BeTrue();
+        service.HasPermission(accountContext, "permissions.other").Should().BeFalse();
     }
 
     [Test]

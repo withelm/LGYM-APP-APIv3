@@ -190,6 +190,35 @@ public sealed class GymTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetGyms_LegacyForeignTrainingDoesNotDiscloseLastTrainingInfo()
+    {
+        var owner = await SeedUserAsync(name: "gym-legacy-owner", email: "gym-legacy-owner@example.com");
+        var foreignOwner = await SeedUserAsync(name: "gym-legacy-foreign", email: "gym-legacy-foreign@example.com");
+        var gym = await SeedGymAsync(owner.Id, "Legacy Shared Gym");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.Trainings.Add(new Training
+            {
+                Id = Id<Training>.New(),
+                UserId = foreignOwner.Id,
+                TypePlanDayId = Id<PlanDay>.New(),
+                GymId = gym.Id,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(owner.Id);
+        var response = await Client.GetAsync($"/api/gym/{owner.Id}/getGyms");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<GymChoiceInfoResponse>>();
+        body.Should().ContainSingle();
+        body!.Single().LastTrainingInfo.Should().BeNull();
+    }
+
+    [Test]
     public async Task GetGyms_WhenLatestTrainingsSharePlanDay_ReturnsBothGyms()
     {
         var (userId, _) = await RegisterUserViaEndpointAsync(

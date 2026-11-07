@@ -28,6 +28,11 @@ public sealed class PlanDayServiceAccessTests
 
         result.IsSuccess.Should().BeTrue();
         await harness.RelationshipAccess.DidNotReceiveWithAnyArgs().HasActiveRelationshipAsync(default, default);
+        await harness.ExerciseCatalog.Received(1).GetByIdsAsync(
+            Arg.Is<IReadOnlyCollection<Id<PlanExerciseReference>>>(exerciseIds => exerciseIds.Count == 1),
+            ownerId,
+            Arg.Any<IReadOnlyList<string>>(),
+            Arg.Any<CancellationToken>());
         await harness.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -44,6 +49,11 @@ public sealed class PlanDayServiceAccessTests
 
         result.IsSuccess.Should().BeTrue();
         await harness.RelationshipAccess.Received(1).HasActiveRelationshipAsync(trainerId, ownerId, cancellation.Token);
+        await harness.ExerciseCatalog.Received(1).GetByIdsAsync(
+            Arg.Is<IReadOnlyCollection<Id<PlanExerciseReference>>>(exerciseIds => exerciseIds.Count == 1),
+            ownerId,
+            Arg.Any<IReadOnlyList<string>>(),
+            cancellation.Token);
         await harness.UnitOfWork.Received(1).SaveChangesAsync(cancellation.Token);
     }
 
@@ -120,6 +130,15 @@ public sealed class PlanDayServiceAccessTests
 
         var relationshipAccess = Substitute.For<IPlanDayRelationshipAccessPort>();
         var exerciseCatalog = Substitute.For<IPlanExerciseCatalogPort>();
+        exerciseCatalog.GetByIdsAsync(
+                Arg.Any<IReadOnlyCollection<Id<PlanExerciseReference>>>(),
+                ownerId,
+                Arg.Any<IReadOnlyList<string>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult<IReadOnlyDictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>>(
+                call.ArgAt<IReadOnlyCollection<Id<PlanExerciseReference>>>(0).ToDictionary(
+                    exerciseId => exerciseId,
+                    exerciseId => new PlanExerciseCatalogItem(exerciseId, "Global exercise", null, default, default, null, null))));
         var trainingActivity = Substitute.For<IPlanTrainingActivityPort>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
@@ -129,6 +148,7 @@ public sealed class PlanDayServiceAccessTests
             planId,
             persistence,
             relationshipAccess,
+            exerciseCatalog,
             unitOfWork);
     }
 
@@ -137,6 +157,7 @@ public sealed class PlanDayServiceAccessTests
         Id<PlanReference> PlanId,
         PlanDayPersistenceFake Persistence,
         IPlanDayRelationshipAccessPort RelationshipAccess,
+        IPlanExerciseCatalogPort ExerciseCatalog,
         IUnitOfWork UnitOfWork);
 }
 

@@ -24,6 +24,11 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<LastExerciseScoresResult, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
         }
 
+        if (await _exerciseRepository.FindVisibleToAccountAsync(exerciseId, currentUserId, cancellationToken) is null)
+        {
+            return Result<LastExerciseScoresResult, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
+        }
+
         var latestScores = await _exerciseScoreRepository.GetLatestByAccountExerciseSeriesAsync(
             currentUserId,
             exerciseId,
@@ -40,7 +45,7 @@ public sealed partial class ExerciseService : IExerciseService
             seriesScores.Add(new SeriesScoreResult
             {
                 Series = i,
-            Score = score == null ? null : MapScore(score)
+                Score = score == null ? null : MapScore(score, currentUserId)
             });
         }
 
@@ -91,7 +96,11 @@ public sealed partial class ExerciseService : IExerciseService
             var trainingId = score.Training.Id;
             if (!tempMap.TryGetValue(trainingId, out var entry))
             {
-                entry = (score.Training.CreatedAt, score.Training.Gym.Name, trainingName, new List<(int, WorkoutProgress.Persistence.WorkoutExerciseScorePersistenceModel)>(), 0);
+                entry = (score.Training.CreatedAt,
+                    IsGymOwnedByAccount(score.Training.Gym, currentUserId) ? score.Training.Gym.Name : string.Empty,
+                    trainingName,
+                    new List<(int, WorkoutProgress.Persistence.WorkoutExerciseScorePersistenceModel)>(),
+                    0);
             }
 
             entry.RawScores.Add((score.Series, score));
@@ -110,7 +119,7 @@ public sealed partial class ExerciseService : IExerciseService
             for (var i = 1; i <= entry.MaxSeries; i++)
             {
                 scoreMap.TryGetValue(i, out var score);
-                seriesScores.Add(new SeriesScoreResult { Series = i, Score = score == null ? null : MapScore(score) });
+                seriesScores.Add(new SeriesScoreResult { Series = i, Score = score == null ? null : MapScore(score, currentUserId) });
             }
 
             result.Add(new ExerciseTrainingHistoryItem

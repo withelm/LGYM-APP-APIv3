@@ -24,6 +24,7 @@ using LgymApi.Application.Platform.ReferenceData.Units;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Application.TrainingPlanning.Plan.CreatePlan;
 using LgymApi.Application.WorkoutProgress.ProgressData;
+using LgymApi.Application.WorkoutProgress.Authorization;
 using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -133,7 +134,8 @@ public sealed class ServiceCommitBehaviorTests
             Substitute.For<IAccountAccessReader>(),
             Substitute.For<IUnitConverter<HeightUnits>>(),
             Substitute.For<IUnitConverter<WeightUnits>>(),
-            unitOfWork);
+            unitOfWork,
+            Substitute.For<IWorkoutProgressOwnershipAuthorizationService>());
         var service = new EloRegistryService(progress, userRegistrationService, unitOfWork);
 
         var registerResult = await service.RegisterUserAsync(new RegisterUserInput(

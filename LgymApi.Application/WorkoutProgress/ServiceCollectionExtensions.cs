@@ -17,6 +17,8 @@ using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.WorkoutProgress.Adapters;
 using LgymApi.Application.WorkoutProgress.Contracts.BackgroundActions;
 using LgymApi.Application.WorkoutProgress.BackgroundActions;
+using LgymApi.Application.WorkoutProgress.Authorization;
+using LgymApi.Authorization;
 using LgymApi.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +28,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkoutAndProgressModule(this IServiceCollection services)
     {
+        services.AddAuthorizationPolicy<WorkoutProgressOwnershipAuthorizationContext, WorkoutProgressOwnershipAuthorizationPolicy>();
+        services.AddScoped<IWorkoutProgressOwnershipAuthorizationService, WorkoutProgressOwnershipAuthorizationService>();
         services.AddScoped<IWorkoutProgressReadWriteService, WorkoutProgressReadWriteService>();
         services.AddScoped<IWorkoutProgressDashboardReadService, WorkoutProgressDashboardReadService>();
         services.AddScoped<IWorkoutProgressRankingReadService, WorkoutProgressRankingReadService>();

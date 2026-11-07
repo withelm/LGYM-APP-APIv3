@@ -19,7 +19,7 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<ExercisesWithTranslations, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
         }
 
-        if (currentAccount == null || currentAccount.Id.IsEmpty || currentAccount.Id != routeAccountId)
+        if (currentAccount is null || !IsOwner(currentAccount, routeAccountId))
         {
             return Result<ExercisesWithTranslations, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
@@ -45,7 +45,7 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<ExercisesWithTranslations, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
         }
 
-        if (currentAccount == null || currentAccount.Id.IsEmpty || currentAccount.Id != routeAccountId)
+        if (currentAccount is null || !IsOwner(currentAccount, routeAccountId))
         {
             return Result<ExercisesWithTranslations, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
@@ -97,7 +97,7 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<ExercisesWithTranslations, AppError>.Failure(new InvalidExerciseError(Messages.FieldRequired));
         }
 
-        if (currentAccount == null || currentAccount.Id.IsEmpty || currentAccount.Id != routeAccountId)
+        if (currentAccount is null || !IsOwner(currentAccount, routeAccountId))
         {
             return Result<ExercisesWithTranslations, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
@@ -128,9 +128,7 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<ExerciseWithTranslations, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
 
-        var exercise = CanManageGlobalExercises(currentAccount)
-            ? await _exerciseRepository.FindUnrestrictedByIdAsync(exerciseId, cancellationToken)
-            : await _exerciseRepository.FindVisibleToAccountAsync(exerciseId, currentAccount.Id, cancellationToken);
+        var exercise = await _exerciseRepository.FindVisibleToAccountAsync(exerciseId, currentAccount.Id, cancellationToken);
         if (exercise == null)
         {
             return Result<ExerciseWithTranslations, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));

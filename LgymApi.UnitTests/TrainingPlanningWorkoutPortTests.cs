@@ -22,13 +22,13 @@ public sealed class TrainingPlanningWorkoutPortTests
     public async Task Catalog_ReturnsBatchedCultureAwareItemsAndForwardsCancellation()
     {
         var globalId = Id<Exercise>.New();
-        var accountId = Id<User>.New();
+        var accountId = Id<AccountReference>.New();
         var accountExerciseId = Id<Exercise>.New();
         var exercises = Substitute.For<IWorkoutExercisePersistence>();
         exercises.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Id<Exercise>>>(), Arg.Any<CancellationToken>())
             .Returns([
                 new WorkoutExercisePersistenceModel(globalId, null, "Global", BodyParts.Chest, ExerciseEloFormula.Standard, null, null, false, default, default),
-                new WorkoutExercisePersistenceModel(accountExerciseId, accountId.Rebind<AccountReference>(), "Custom", BodyParts.Back, ExerciseEloFormula.Standard, null, null, false, default, default)
+                new WorkoutExercisePersistenceModel(accountExerciseId, accountId, "Custom", BodyParts.Back, ExerciseEloFormula.Standard, null, null, false, default, default)
             ]);
         using var cancellation = new CancellationTokenSource();
         var cultures = new[] { "pl-PL", "pl", "en" };
@@ -37,6 +37,7 @@ public sealed class TrainingPlanningWorkoutPortTests
 
         var result = await new PlanExerciseCatalogAdapter(exercises, CreateMapper()).GetByIdsAsync(
             [globalId.Rebind<PlanExerciseReference>(), accountExerciseId.Rebind<PlanExerciseReference>()],
+            accountId,
             cultures,
             cancellation.Token);
 

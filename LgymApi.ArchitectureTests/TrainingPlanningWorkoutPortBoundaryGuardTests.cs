@@ -15,7 +15,7 @@ public sealed class TrainingPlanningWorkoutPortBoundaryGuardTests
         {
             Assert.That(typeof(IPlanExerciseCatalogPort).GetMethods().Single().GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[]
             {
-                typeof(IReadOnlyCollection<Id<PlanExerciseReference>>), typeof(IReadOnlyList<string>), typeof(CancellationToken)
+                typeof(IReadOnlyCollection<Id<PlanExerciseReference>>), typeof(Id<AccountReference>), typeof(IReadOnlyList<string>), typeof(CancellationToken)
             }));
             Assert.That(typeof(IPlanExerciseClonePort).GetMethods().Single().GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[]
             {

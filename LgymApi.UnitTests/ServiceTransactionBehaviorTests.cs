@@ -414,7 +414,7 @@ public sealed class ServiceTransactionBehaviorTests
         PlanDayToReturn = new PlanDayPersistenceModel(planDayId, planId, "Day", false),
             ExercisesToReturn = [new PlanDayExercisePersistenceModel(planDayId, Id<PlanExerciseReference>.New(), 0, 3, "8")]
         };
-        var service = CreatePlanDayService(persistence, new RecordingUnitOfWork());
+        var service = CreatePlanDayService(persistence, new RecordingUnitOfWork(), new Dictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>());
 
         var result = await service.GetAsync(new GetPlanDayQuery(accountId, planDayId, ["en"]), CancellationToken.None);
 
@@ -472,15 +472,19 @@ public sealed class ServiceTransactionBehaviorTests
 
     private static PlanDayService CreatePlanDayService(
         IPlanDayPersistence persistence,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IReadOnlyDictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>? catalogItems = null)
     {
         var catalog = Substitute.For<IPlanExerciseCatalogPort>();
         catalog.GetByIdsAsync(
                 Arg.Any<IReadOnlyCollection<Id<PlanExerciseReference>>>(),
+                Arg.Any<Id<AccountReference>>(),
                 Arg.Any<IReadOnlyList<string>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyDictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>>(
-                new Dictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>()));
+            .Returns(call => Task.FromResult<IReadOnlyDictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>>(
+                catalogItems ?? call.ArgAt<IReadOnlyCollection<Id<PlanExerciseReference>>>(0).ToDictionary(
+                    id => id,
+                    id => new PlanExerciseCatalogItem(id, "Exercise", null, BodyParts.Chest, ExerciseEloFormula.Standard, null, null))));
         var activity = Substitute.For<IPlanTrainingActivityPort>();
         activity.GetLastTrainingDatesAsync(
                 Arg.Any<IReadOnlyCollection<Id<PlanDayReference>>>(),
