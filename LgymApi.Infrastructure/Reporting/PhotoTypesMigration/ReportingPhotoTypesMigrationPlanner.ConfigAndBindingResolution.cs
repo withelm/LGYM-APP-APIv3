@@ -39,7 +39,6 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
         IReadOnlyDictionary<(Id<User> TrainerId, string SystemKey), TrainerPhotoType> sharedPlannedTypes,
         IDictionary<(Id<User> TrainerId, string SystemKey), TrainerPhotoType> localTypes,
         IDictionary<string, List<MigrationPhotoBindingDocument>> bindingsByView,
-        bool historyOnly,
         ReportingPhotoTypesMigrationReport report,
         ref bool unsafeRequest)
     {
@@ -60,7 +59,7 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
         }
 
         var bindings = hasLegacyViews
-            ? ResolveLegacyBindings(request, field, requiredViews, existingTypes, sharedPlannedTypes, localTypes, historyOnly, report, ref unsafeRequest)
+            ? ResolveLegacyBindings(request, field, requiredViews, existingTypes, sharedPlannedTypes, localTypes, report, ref unsafeRequest)
             : ResolveCurrentBindings(request, field, requiredPhotoTypeIds, existingTypes, sharedPlannedTypes, localTypes, report, ref unsafeRequest);
         if (unsafeRequest)
         {
@@ -88,7 +87,6 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
         IReadOnlyDictionary<(Id<User> TrainerId, string SystemKey), List<TrainerPhotoType>> existingTypes,
         IReadOnlyDictionary<(Id<User> TrainerId, string SystemKey), TrainerPhotoType> sharedPlannedTypes,
         IDictionary<(Id<User> TrainerId, string SystemKey), TrainerPhotoType> localTypes,
-        bool historyOnly,
         ReportingPhotoTypesMigrationReport report,
         ref bool unsafeRequest)
     {
@@ -120,7 +118,6 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
                 existingTypes,
                 sharedPlannedTypes,
                 localTypes,
-                historyOnly,
                 report,
                 ref unsafeRequest);
             if (photoType is null)
@@ -152,7 +149,6 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
         IReadOnlyDictionary<(Id<User> TrainerId, string SystemKey), List<TrainerPhotoType>> existingTypes,
         IReadOnlyDictionary<(Id<User> TrainerId, string SystemKey), TrainerPhotoType> sharedPlannedTypes,
         IDictionary<(Id<User> TrainerId, string SystemKey), TrainerPhotoType> localTypes,
-        bool historyOnly,
         ReportingPhotoTypesMigrationReport report,
         ref bool unsafeRequest)
     {
@@ -171,18 +167,10 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
 
         if (localTypes.TryGetValue(key, out var localType))
         {
-            if (field.IsRequired && !historyOnly)
-            {
-                localType.IsArchived = false;
-            }
             return localType;
         }
         if (sharedPlannedTypes.TryGetValue(key, out var sharedType))
         {
-            if (field.IsRequired && !historyOnly)
-            {
-                sharedType.IsArchived = false;
-            }
             return sharedType;
         }
 
@@ -194,7 +182,8 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
             Name = labels.En,
             NormalizedName = labels.En.Trim().ToUpperInvariant(),
             NameMode = PhotoTypeNameMode.SystemLocalized,
-            IsArchived = historyOnly || !field.IsRequired
+            // Final archive state is assigned from all surviving trainer templates.
+            IsArchived = true
         };
         localTypes.Add(key, created);
         return created;

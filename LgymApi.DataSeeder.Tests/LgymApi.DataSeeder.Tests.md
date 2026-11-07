@@ -6,3 +6,4 @@
 - Rules: update when seeder behavior changes.
 - Boundary: keep these tests focused on seeder-specific behavior.
 - Reporting migration coverage uses SQLite without an external database and verifies preservation, runtime snapshot deserialization, fingerprint/fence refusal, pending-upload blocking, retained-owner approval, and idempotent reruns.
+- Template-usage regressions cover required/optional photo fields, all five legacy views including `Side` / `Bok`, templates without issued requests, deleted templates/fields, owner isolation, deleted-owner retention and preservation of existing archive choices/snapshot bytes in automatic startup and offline migration paths.
