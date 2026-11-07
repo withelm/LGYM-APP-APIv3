@@ -216,6 +216,7 @@ public sealed class CoachingManagedPlanSliceTests
     private sealed class Dependencies
     {
         public IMarkerCoachingRelationshipAccessService Access { get; } = Substitute.For<IMarkerCoachingRelationshipAccessService>();
+        public ICoachingEpisodeAuthorizationService EpisodeAuthorization { get; } = Substitute.For<ICoachingEpisodeAuthorizationService>();
         public ICoachingActiveLinkPersistence ActiveLinks { get; } = Substitute.For<ICoachingActiveLinkPersistence>();
         public OwnerListUseCase List { get; } = Substitute.For<OwnerListUseCase>();
         public OwnerCreateUseCase Create { get; } = Substitute.For<OwnerCreateUseCase>();
@@ -225,12 +226,29 @@ public sealed class CoachingManagedPlanSliceTests
         public OwnerUnassignUseCase Unassign { get; } = Substitute.For<OwnerUnassignUseCase>();
         public OwnerGetActiveUseCase GetActive { get; } = Substitute.For<OwnerGetActiveUseCase>();
 
+        public Dependencies()
+        {
+            EpisodeAuthorization.AuthorizeAndStageAsync(
+                    Arg.Any<Id<AccountReference>>(),
+                    Arg.Any<Id<AccountReference>>(),
+                    Arg.Any<Id<AccountReference>>(),
+                    CoachingEpisodeAuthorizationAction.ProtectedWrite,
+                    Arg.Any<CancellationToken>())
+                .Returns(new CoachingEpisodeAuthorizationGrant(
+                    Id<TrainerTraineeLink>.New(),
+                    Id<CoachingEpisode>.New(),
+                    Id<User>.New(),
+                    Id<User>.New(),
+                    0));
+        }
+
         public ServiceCollection CreateServices()
         {
             var services = new ServiceCollection();
             services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
             services.AddCoachingModule();
             services.AddScoped(_ => Access);
+            services.AddScoped(_ => EpisodeAuthorization);
             services.AddScoped(_ => ActiveLinks);
             services.AddScoped(_ => List);
             services.AddScoped(_ => Create);
