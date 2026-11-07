@@ -16,6 +16,7 @@ namespace LgymApi.Application.Coaching.TraineeNotes.Create;
 internal sealed class CreateTraineeNoteUseCase : ICreateTraineeNoteUseCase
 {
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
+    private readonly ICoachingEpisodeAuthorizationService _episodeAuthorization;
     private readonly ICoachingTraineeNotePersistence _notes;
     private readonly ICommandDispatcher _commands;
     private readonly IUnitOfWork _unitOfWork;
@@ -23,12 +24,14 @@ internal sealed class CreateTraineeNoteUseCase : ICreateTraineeNoteUseCase
 
     public CreateTraineeNoteUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
+        ICoachingEpisodeAuthorizationService episodeAuthorization,
         ICoachingTraineeNotePersistence notes,
         ICommandDispatcher commands,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
         _relationshipAccess = relationshipAccess;
+        _episodeAuthorization = episodeAuthorization;
         _notes = notes;
         _commands = commands;
         _unitOfWork = unitOfWork;
@@ -47,6 +50,11 @@ internal sealed class CreateTraineeNoteUseCase : ICreateTraineeNoteUseCase
         if (accessError is not null)
         {
             return Result<TraineeNoteReadModel, AppError>.Failure(accessError);
+        }
+
+        if (await _episodeAuthorization.AuthorizeAndStageAsync(command.TrainerId, command.TrainerId, command.TraineeId, CoachingEpisodeAuthorizationAction.ProtectedWrite, cancellationToken) is null)
+        {
+            return Result<TraineeNoteReadModel, AppError>.Failure(new LgymApi.Application.Coaching.Errors.TrainerRelationshipNotFoundError(LgymApi.Resources.Messages.DidntFind));
         }
 
         var upsertError = TraineeNoteRules.GetUpsertError(command.Data);

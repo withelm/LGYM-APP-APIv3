@@ -1192,6 +1192,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await db.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainer.Id && x.TraineeId == trainee.Id);
         link.Should().NotBeNull();
+        link!.EpisodeId.Should().NotBeNull();
+        var episode = await db.CoachingEpisodes.SingleAsync(candidate => candidate.Id == link.EpisodeId);
+        episode.StartedAt.Should().NotBeNull();
+        episode.StartedAtProvenance.Should().Be(CoachingEpisodeStartProvenance.ServerAcceptedInvitation);
+        episode.EndedAt.Should().BeNull();
+        episode.AuthorizationRevision.Should().Be(0);
     }
 
     [Test]
@@ -1360,16 +1366,19 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var ordinaryUser = await SeedUserAsync(name: "user-unlink-ordinary", email: "user-unlink-ordinary@example.com", password: "password123");
         var trainee = await SeedUserAsync(name: "trainee-unlink", email: "trainee-unlink@example.com", password: "password123");
 
+        Id<CoachingEpisode> episodeId;
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+            var seededLink = new TrainerTraineeLink
             {
                 Id = Id<TrainerTraineeLink>.New(),
                 TrainerId = trainer.Id,
                 TraineeId = trainee.Id
-            });
+            };
+            db.TrainerTraineeLinks.Add(seededLink);
             await db.SaveChangesAsync();
+            episodeId = seededLink.EpisodeId!.Value;
         }
 
         SetAuthorizationHeader(otherTrainer.Id);
@@ -1390,6 +1399,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await verifyDb.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainer.Id && x.TraineeId == trainee.Id);
         link.Should().BeNull();
+        var episode = await verifyDb.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
+        episode.EndedAt.Should().NotBeNull();
+        episode.AuthorizationRevision.Should().Be(1);
         var formerResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
         formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -1450,16 +1462,19 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var trainer = await SeedTrainerAsync("trainer-detach", "trainer-detach@example.com");
         var trainee = await SeedUserAsync(name: "trainee-detach", email: "trainee-detach@example.com", password: "password123");
 
+        Id<CoachingEpisode> episodeId;
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.TrainerTraineeLinks.Add(new TrainerTraineeLink
+            var seededLink = new TrainerTraineeLink
             {
                 Id = Id<TrainerTraineeLink>.New(),
                 TrainerId = trainer.Id,
                 TraineeId = trainee.Id
-            });
+            };
+            db.TrainerTraineeLinks.Add(seededLink);
             await db.SaveChangesAsync();
+            episodeId = seededLink.EpisodeId!.Value;
         }
 
         SetAuthorizationHeader(trainee.Id);
@@ -1471,6 +1486,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await verifyDb.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainer.Id && x.TraineeId == trainee.Id);
         link.Should().BeNull();
+        var episode = await verifyDb.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
+        episode.EndedAt.Should().NotBeNull();
+        episode.AuthorizationRevision.Should().Be(1);
     }
 
     [Test]

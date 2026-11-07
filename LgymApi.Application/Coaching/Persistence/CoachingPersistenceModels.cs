@@ -3,6 +3,7 @@ using LgymApi.Domain.ValueObjects;
 using TraineeNoteEntity = LgymApi.Domain.Entities.TraineeNote;
 using TraineeNoteHistoryEntity = LgymApi.Domain.Entities.TraineeNoteHistory;
 using TrainerInvitationEntity = LgymApi.Domain.Entities.TrainerInvitation;
+using CoachingEpisodeEntity = LgymApi.Domain.Entities.CoachingEpisode;
 using TrainerTraineeLinkEntity = LgymApi.Domain.Entities.TrainerTraineeLink;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -40,14 +41,26 @@ public sealed record CoachingInvitationResponseUpdateModel(
 public sealed record CoachingActiveLinkWriteModel(
     Id<TrainerTraineeLinkEntity> Id,
     Id<UserEntity> TrainerId,
-    Id<UserEntity> TraineeId);
+    Id<UserEntity> TraineeId,
+    Id<CoachingEpisodeEntity> EpisodeId = default,
+    DateTimeOffset StartedAt = default);
 
 public sealed record CoachingActiveLinkFact(
     Id<TrainerTraineeLinkEntity> Id,
     Id<UserEntity> TrainerId,
     Id<UserEntity> TraineeId,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    Id<CoachingEpisodeEntity>? EpisodeId = null,
+    long? AuthorizationRevision = null);
+
+public sealed record CoachingEpisodeFact(
+    Id<CoachingEpisodeEntity> Id,
+    Id<UserEntity> TrainerId,
+    Id<UserEntity> TraineeId,
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? EndedAt,
+    long AuthorizationRevision);
 
 public sealed record CoachingDashboardFact(
     Id<UserEntity> TraineeId,

@@ -67,6 +67,7 @@ internal static class PersistedEntityOwnershipCatalog
         new(typeof(Address), WorkoutProgressModuleName),
         new(typeof(EloRegistry), WorkoutProgressModuleName),
         new(typeof(TrainerInvitation), CoachingModuleName),
+        new(typeof(CoachingEpisode), CoachingModuleName),
         new(typeof(TrainerTraineeLink), CoachingModuleName),
         new(typeof(TraineeNote), CoachingModuleName),
         new(typeof(TraineeNoteHistory), CoachingModuleName),
@@ -89,7 +90,7 @@ internal static class PersistedEntityOwnershipCatalog
         [ReportingModuleName] = 9,
         [TrainingPlanningModuleName] = 3,
         [WorkoutProgressModuleName] = 11,
-        [CoachingModuleName] = 4,
+        [CoachingModuleName] = 5,
         [NutritionModuleName] = 6,
         [PlatformModuleName] = 4
     };

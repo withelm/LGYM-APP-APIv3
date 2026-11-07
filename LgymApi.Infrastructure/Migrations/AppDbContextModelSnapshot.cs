@@ -17,7 +17,7 @@ namespace LgymApi.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -227,6 +227,49 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AppConfigs", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.CoachingEpisode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AuthorizationRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("StartedAtProvenance")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TraineeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TraineeId");
+
+                    b.HasIndex("TrainerId", "TraineeId");
+
+                    b.ToTable("CoachingEpisodes", (string)null);
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.CommandEnvelope", b =>
@@ -2149,6 +2192,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("EpisodeId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -2162,6 +2208,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EpisodeId")
+                        .IsUnique();
 
                     b.HasIndex("TraineeId")
                         .IsUnique()
@@ -2492,6 +2541,25 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("CommandEnvelope");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.CoachingEpisode", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
+                        .WithMany()
+                        .HasForeignKey("TraineeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Trainee");
+
+                    b.Navigation("Trainer");
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.DietMeal", b =>
@@ -3082,6 +3150,11 @@ namespace LgymApi.Infrastructure.Migrations
 
             modelBuilder.Entity("LgymApi.Domain.Entities.TrainerTraineeLink", b =>
                 {
+                    b.HasOne("LgymApi.Domain.Entities.CoachingEpisode", "Episode")
+                        .WithMany()
+                        .HasForeignKey("EpisodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("LgymApi.Domain.Entities.User", "Trainee")
                         .WithMany()
                         .HasForeignKey("TraineeId")
@@ -3093,6 +3166,8 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasForeignKey("TrainerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Episode");
 
                     b.Navigation("Trainee");
 

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Coaching.Relationships.DetachFromTrainer;
 using LgymApi.Application.Coaching.Relationships.GetCurrentTrainer;
@@ -38,7 +39,9 @@ public sealed class CoachingRelationshipLifecycleSliceTests
             new UnlinkTraineeCommand(trainerId, traineeId));
 
         result.IsSuccess.Should().BeTrue();
-        await links.Received(1).RemoveAsync(link.Id, Arg.Any<CancellationToken>());
+        await links.Received(1).RemoveAsync(
+            Arg.Is<CoachingEpisodeAuthorizationGrant>(grant => grant.LinkId == link.Id),
+            Arg.Any<CancellationToken>());
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
     }
@@ -60,7 +63,7 @@ public sealed class CoachingRelationshipLifecycleSliceTests
             Arg.Any<Id<User>>(),
             Arg.Any<Id<User>>(),
             Arg.Any<CancellationToken>());
-        await links.DidNotReceive().RemoveAsync(Arg.Any<Id<TrainerTraineeLink>>(), Arg.Any<CancellationToken>());
+        await links.DidNotReceive().RemoveAsync(Arg.Any<CoachingEpisodeAuthorizationGrant>(), Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
     }
@@ -100,7 +103,7 @@ public sealed class CoachingRelationshipLifecycleSliceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
-        await links.DidNotReceive().RemoveAsync(Arg.Any<Id<TrainerTraineeLink>>(), Arg.Any<CancellationToken>());
+        await links.DidNotReceive().RemoveAsync(Arg.Any<CoachingEpisodeAuthorizationGrant>(), Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -113,7 +116,7 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var operations = new List<string>();
         var services = CreateServices(out _, out _, out var links, out var commands, out var unitOfWork);
         links.FindByTraineeAsync(traineeId, Arg.Any<CancellationToken>()).Returns(link);
-        links.RemoveAsync(link.Id, Arg.Any<CancellationToken>())
+        links.RemoveAsync(Arg.Is<CoachingEpisodeAuthorizationGrant>(grant => grant.LinkId == link.Id), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask)
             .AndDoes(_ => operations.Add("remove"));
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
@@ -146,7 +149,7 @@ public sealed class CoachingRelationshipLifecycleSliceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
-        await links.DidNotReceive().RemoveAsync(Arg.Any<Id<TrainerTraineeLink>>(), Arg.Any<CancellationToken>());
+        await links.DidNotReceive().RemoveAsync(Arg.Any<CoachingEpisodeAuthorizationGrant>(), Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
     }
@@ -252,6 +255,8 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         userAccess = Substitute.For<IUserAccessReadService>();
         accounts = Substitute.For<IAccountReadService>();
         links = Substitute.For<ICoachingActiveLinkPersistence>();
+        links.StageRevisionCheckAsync(Arg.Any<CoachingEpisodeAuthorizationGrant>(), Arg.Any<CancellationToken>())
+            .Returns(true);
         commands = Substitute.For<ICommandDispatcher>();
         unitOfWork = Substitute.For<IUnitOfWork>();
         var userAccessService = userAccess;
@@ -289,6 +294,8 @@ public sealed class CoachingRelationshipLifecycleSliceTests
             trainerId,
             traineeId,
             timestamp,
-            timestamp);
+            timestamp,
+            Id<CoachingEpisode>.New(),
+            0);
     }
 }

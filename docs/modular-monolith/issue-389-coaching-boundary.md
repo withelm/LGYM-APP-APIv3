@@ -30,6 +30,7 @@ The executable persisted-entity catalog remains authoritative. These stable rows
 | Owner ID | Entity name | Owner | Write boundary |
 | --- | --- | --- | --- |
 | `coaching.owner.trainer-invitation` | `TrainerInvitation` | `Coaching` | Owns invitation creation, pending-state transitions, response state, and invitation-specific compatibility facts. |
+| `coaching.owner.coaching-episode` | `CoachingEpisode` | `Coaching` | Owns immutable relationship episode history, observed start provenance, closure time, and the active authorization revision. |
 | `coaching.owner.trainer-trainee-link` | `TrainerTraineeLink` | `Coaching` | Owns active trainer-trainee relationship facts and lifecycle transitions. |
 | `coaching.owner.trainee-note` | `TraineeNote` | `Coaching` | Owns trainer-authored note lifecycle, visibility, pinning, and soft-delete facts. |
 | `coaching.owner.trainee-note-history` | `TraineeNoteHistory` | `Coaching` | Owns immutable note-change history associated with Coaching note transitions. |

@@ -13,17 +13,20 @@ namespace LgymApi.Application.Coaching.TraineeNotes.Delete;
 internal sealed class DeleteTraineeNoteUseCase : IDeleteTraineeNoteUseCase
 {
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
+    private readonly ICoachingEpisodeAuthorizationService _episodeAuthorization;
     private readonly ICoachingTraineeNotePersistence _notes;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
     public DeleteTraineeNoteUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
+        ICoachingEpisodeAuthorizationService episodeAuthorization,
         ICoachingTraineeNotePersistence notes,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
         _relationshipAccess = relationshipAccess;
+        _episodeAuthorization = episodeAuthorization;
         _notes = notes;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -41,6 +44,11 @@ internal sealed class DeleteTraineeNoteUseCase : IDeleteTraineeNoteUseCase
         if (accessError is not null)
         {
             return Result<Unit, AppError>.Failure(accessError);
+        }
+
+        if (await _episodeAuthorization.AuthorizeAndStageAsync(command.TrainerId, command.TrainerId, command.TraineeId, CoachingEpisodeAuthorizationAction.ProtectedWrite, cancellationToken) is null)
+        {
+            return Result<Unit, AppError>.Failure(new LgymApi.Application.Coaching.Errors.TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
         if (command.NoteId.IsEmpty)

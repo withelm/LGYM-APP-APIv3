@@ -517,7 +517,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     [Test]
     [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/report-submissions", "trainer-shared", "active-relationship-allow")]
     [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/report-submissions", "trainer-shared", "unrelated-relationship-denial")]
-    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/report-submissions", "trainer-shared", "former-relationship-denial")]
+    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/report-submissions", "trainer-shared", "source-episode-history-allow")]
     [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/report-submissions", "trainer-shared", "foreign-object-denial-no-mutation")]
     [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/report-submissions", "trainer-shared", "anonymous-denial")]
     public async Task TrainerReportSubmissionsRoute_IsRelationshipScopedAndNonDisclosing()
@@ -586,10 +586,11 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         }
 
         using var formerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/report-submissions");
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        var formerText = await formerResponse.Content.ReadAsStringAsync();
-        formerText.Should().NotContain(submission.Id);
-        formerText.Should().NotContain("HTTP trainer submissions answer");
+        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var formerSubmissions = await formerResponse.Content.ReadFromJsonAsync<List<ReportSubmissionResponse>>();
+        formerSubmissions.Should().ContainSingle(item => item.Id == submission.Id);
+        formerSubmissions!.Single().Answers["httpTrainerSubmissionsField"].GetString()
+            .Should().Be("HTTP trainer submissions answer");
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/report-submissions");
@@ -692,8 +693,9 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     [Test]
     [AuthorizationEvidence("GET", "/api/trainer/reporting/photos/history", "own", "owner-allow")]
     [AuthorizationEvidence("GET", "/api/trainer/reporting/photos/history", "own", "no-client-subject")]
+    [AuthorizationEvidence("GET", "/api/trainer/reporting/photos/history", "own", "source-episode-history-allow")]
     [AuthorizationEvidence("GET", "/api/trainer/reporting/photos/history", "own", "anonymous-denial")]
-    public async Task TrainerPhotoHistoryRoute_RequiresActiveRelationshipAndNonDiscloses()
+    public async Task TrainerPhotoHistoryRoute_AllowsSourceEpisodeHistoryAndNonDiscloses()
     {
         var trainer = await SeedTrainerAsync("task10-trainer-photo-history-owner", "task10-trainer-photo-history-owner@example.test");
         var otherTrainer = await SeedTrainerAsync("task10-trainer-photo-history-other", "task10-trainer-photo-history-other@example.test");
@@ -774,9 +776,10 @@ public sealed class ReportingEngineTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainer.Id);
         using var formerResponse = await Client.GetAsync(route);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        var formerText = await formerResponse.Content.ReadAsStringAsync();
-        AssertPhotoHistoryDenialDoesNotDisclose(formerText, photo, request, ownerHistory.Photos[0]);
+        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var formerHistory = await formerResponse.Content.ReadFromJsonAsync<PhotoHistoryResponse>();
+        formerHistory.Should().NotBeNull();
+        formerHistory!.Photos.Should().ContainSingle(item => item.Id == photo.Id.ToString());
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync(route);
@@ -801,8 +804,9 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     [Test]
     [AuthorizationEvidence("GET", "/api/trainer/reporting/photos/{photoId}/signed-url", "own", "owner-allow")]
     [AuthorizationEvidence("GET", "/api/trainer/reporting/photos/{photoId}/signed-url", "own", "foreign-object-denial-no-mutation")]
+    [AuthorizationEvidence("GET", "/api/trainer/reporting/photos/{photoId}/signed-url", "own", "source-episode-history-allow")]
     [AuthorizationEvidence("GET", "/api/trainer/reporting/photos/{photoId}/signed-url", "own", "anonymous-denial")]
-    public async Task TrainerPhotoSignedUrlRoute_RequiresAuthorizedPhotoAccessAndNonDiscloses()
+    public async Task TrainerPhotoSignedUrlRoute_AllowsSourceEpisodeHistoryAndNonDiscloses()
     {
         var trainer = await SeedTrainerAsync("task10-signed-url-trainer", "task10-signed-url-trainer@example.test");
         var otherTrainer = await SeedTrainerAsync("task10-signed-url-other-trainer", "task10-signed-url-other-trainer@example.test");
@@ -906,9 +910,10 @@ public sealed class ReportingEngineTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainer.Id);
         using var formerResponse = await Client.GetAsync(protectedRoute);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        var formerText = await formerResponse.Content.ReadAsStringAsync();
-        AssertSignedUrlDenialDoesNotDisclose(formerText, photo, request, ownerCapability, foreignPhoto);
+        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var formerCapability = await formerResponse.Content.ReadFromJsonAsync<SignedReadUrlResponse>();
+        formerCapability.Should().NotBeNull();
+        formerCapability!.ReadUrl.Should().Contain("task10-signed-url");
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync(protectedRoute);

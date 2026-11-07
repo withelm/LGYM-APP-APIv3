@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 806;
+    private const int ManifestEntryCount = 811;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -33,6 +33,11 @@ public sealed class ModulePublicSurfaceGuardTests
 
     private static readonly string[] ReviewedManifestRows =
     [
+        "LgymApi.Application/Coaching/Contracts/Access/ICoachingEpisodeAuthorizationService.cs\tLgymApi.Application.Coaching.Contracts.Access.CoachingEpisodeAuthorizationAction",
+        "LgymApi.Application/Coaching/Contracts/Access/ICoachingEpisodeAuthorizationService.cs\tLgymApi.Application.Coaching.Contracts.Access.CoachingEpisodeAuthorizationGrant",
+        "LgymApi.Application/Coaching/Contracts/Access/ICoachingEpisodeAuthorizationService.cs\tLgymApi.Application.Coaching.Contracts.Access.ICoachingEpisodeAuthorizationService",
+        "LgymApi.Application/Coaching/Persistence/CoachingPersistenceModels.cs\tLgymApi.Application.Coaching.Persistence.CoachingEpisodeFact",
+        "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.ReportingRelationshipPeriodFact",
         "LgymApi.Reporting/Options/PhotoStorageOptions.cs\tLgymApi.Application.Options.PhotoStorageOptions",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.LocalCalendarDay",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.UtcTimeRange",

@@ -19,6 +19,7 @@ internal static class ProjectReferenceGraphManifest
         ]),
         new("LgymApi.Application", ProjectKind.Production,
         [
+            "LgymApi.Authorization",
             "LgymApi.Domain",
             "LgymApi.Identity",
             "LgymApi.Platform",

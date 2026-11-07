@@ -192,8 +192,9 @@ public static class Program
         services.AddScoped<IEntitySeeder, MeasurementSeeder>();
         services.AddScoped<IEntitySeeder, MainRecordSeeder>();
         services.AddScoped<IEntitySeeder, AppConfigSeeder>();
-        services.AddScoped<IEntitySeeder, TrainerInvitationSeeder>();
-        services.AddScoped<IEntitySeeder, TrainerTraineeLinkSeeder>();
+services.AddScoped<IEntitySeeder, TrainerInvitationSeeder>();
+services.AddScoped<IEntitySeeder, CoachingEpisodeSeeder>();
+services.AddScoped<IEntitySeeder, TrainerTraineeLinkSeeder>();
         services.AddScoped<IEntitySeeder, InAppNotificationSeeder>();
         services.AddScoped<IEntitySeeder, NotificationMessageSeeder>();
         services.AddScoped<IEntitySeeder, EmailNotificationSubscriptionSeeder>();
