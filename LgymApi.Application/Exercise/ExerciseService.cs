@@ -58,9 +58,13 @@ public sealed partial class ExerciseService : IExerciseService
     private static ProgressExerciseReadModel MapExercise(WorkoutExercisePersistenceModel exercise)
         => new(exercise.Id, exercise.Name, exercise.OwnerId, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image);
 
-    private static WorkoutExerciseScoreReadModel MapScore(WorkoutExerciseScorePersistenceModel score)
+    private static WorkoutExerciseScoreReadModel MapScore(WorkoutExerciseScorePersistenceModel score, Id<AccountReference> accountId)
         => new(score.Id, score.ExerciseId, score.Weight, score.Unit, score.Reps, score.Series,
-            score.Training is null ? null : new WorkoutScoreTrainingReadModel(score.Training.Id, score.Training.GymId, score.Training.Gym?.Name, score.Training.CreatedAt));
+            score.Training is null ? null : new WorkoutScoreTrainingReadModel(score.Training.Id, score.Training.GymId,
+                IsGymOwnedByAccount(score.Training.Gym, accountId) ? score.Training.Gym!.Name : null, score.Training.CreatedAt));
+
+    private static bool IsGymOwnedByAccount(WorkoutGymPersistenceModel? gym, Id<AccountReference> accountId)
+        => gym is not null && gym.OwnerId == accountId;
 
     private bool CanManageGlobalExercises(AuthenticatedAccountContext? currentAccount)
         => currentAccount is not null && _accountAuthorization.HasPermission(currentAccount, AuthConstants.Permissions.ManageGlobalExercises);

@@ -186,6 +186,58 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         }
     }
 
+    [Test]
+    [AuthorizationEvidence("POST", "/api/exercise/updateExercise", "own", "current-manager-allow")]
+    [AuthorizationEvidence("POST", "/api/exercise/updateExercise", "own", "stale-manager-denial")]
+    [AuthorizationEvidence("POST", "/api/exercise/updateExercise", "own", "ordinary-manager-denial")]
+    [AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "own", "current-manager-allow")]
+    [AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "own", "stale-manager-denial")]
+    [AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "own", "ordinary-manager-denial")]
+    public async Task Task9_GlobalExerciseManagerOverridesRequireCurrentPermission()
+    {
+        var manager = await SeedAdminAsync();
+        var ordinaryUser = await SeedUserAsync("task9-global-mutation-user", "task9-global-mutation-user@example.com");
+        SetAuthorizationHeader(manager.Id);
+        var globalExercise = await CreateGlobalExerciseViaEndpointAsync(manager.Id, "Task9 Mutable Global");
+
+        SetAuthorizationHeader(ordinaryUser.Id);
+        using (var ordinaryUpdate = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", new { _id = globalExercise.ToString(), name = "Denied update", bodyPart = "Back" }))
+        {
+            ordinaryUpdate.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+        using (var ordinaryDelete = await Client.PostAsJsonAsync($"/api/exercise/{ordinaryUser.Id}/deleteExercise", new { id = globalExercise.ToString() }))
+        {
+            ordinaryDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        SetAuthorizationHeader(manager.Id);
+        using (var managerUpdate = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", new { _id = globalExercise.ToString(), name = "Manager update", bodyPart = "Back" }))
+        {
+            managerUpdate.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        using (var managerDelete = await Client.PostAsJsonAsync($"/api/exercise/{manager.Id}/deleteExercise", new { id = globalExercise.ToString() }))
+        {
+            managerDelete.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        var retainedGlobalExercise = await CreateGlobalExerciseViaEndpointAsync(manager.Id, "Task9 Retained Global");
+        var preIssuedToken = Client.DefaultRequestHeaders.Authorization;
+        var currentAdmin = await SeedAdminAsync();
+        SetAuthorizationHeader(currentAdmin.Id);
+        using (var demotion = await Client.PostAsJsonAsync($"/api/roles/users/{manager.Id}/roles", new { roles = new[] { "User" } }))
+        {
+            demotion.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        Client.DefaultRequestHeaders.Authorization = preIssuedToken;
+        using (var staleUpdate = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", new { _id = retainedGlobalExercise.ToString(), name = "Stale update", bodyPart = "Back" }))
+        {
+            staleUpdate.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+        using var staleDelete = await Client.PostAsJsonAsync($"/api/exercise/{manager.Id}/deleteExercise", new { id = retainedGlobalExercise.ToString() });
+        staleDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     private IEnumerable<Func<Task<HttpResponseMessage>>> CreateGlobalExerciseRouteRequests(string accountId, string exerciseId)
     {
         yield return () => Client.PostAsJsonAsync("/api/exercise/addExercise", new { name = "Denied Global", bodyPart = "Chest" });

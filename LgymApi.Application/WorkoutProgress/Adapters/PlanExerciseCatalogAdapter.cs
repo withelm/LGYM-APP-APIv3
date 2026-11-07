@@ -2,6 +2,7 @@ using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
 using LgymApi.TrainingPlanning.Contracts;
 using LgymApi.Application.WorkoutProgress.Persistence;
 
@@ -13,6 +14,7 @@ internal sealed class PlanExerciseCatalogAdapter(
 {
     public async Task<IReadOnlyDictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>> GetByIdsAsync(
         IReadOnlyCollection<Id<PlanExerciseReference>> exerciseIds,
+        Id<AccountReference> accountId,
         IReadOnlyList<string> cultures,
         CancellationToken cancellationToken = default)
     {
@@ -25,6 +27,7 @@ internal sealed class PlanExerciseCatalogAdapter(
         var exercisesById = (await exercises.GetByIdsAsync(
                 requestedIds.Select(id => id.Rebind<Exercise>()).ToList(),
                 cancellationToken))
+            .Where(exercise => !exercise.OwnerId.HasValue || exercise.OwnerId.Value == accountId)
             .ToDictionary(exercise => exercise.Id);
         var globalExerciseIds = exercisesById.Values
             .Where(exercise => exercise.OwnerId is null)

@@ -30,7 +30,15 @@ public sealed partial class WorkoutProgressReadWriteService
         if (userId.IsEmpty) return Result<List<MainRecordReadModel>, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         if (await _accountAccess.GetByIdAsync(userId, cancellationToken) is null) return Result<List<MainRecordReadModel>, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
         var records = await _mainRecordRepository.GetByAccountIdAsync(userId, cancellationToken);
-        return records.Count == 0 ? Result<List<MainRecordReadModel>, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind)) : Result<List<MainRecordReadModel>, AppError>.Success(records.OrderBy(record => record.Date).Select(MapMainRecord).ToList());
+        if (records.Count == 0) return Result<List<MainRecordReadModel>, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+        var visibleExerciseIds = (await _exerciseRepository.GetByIdsAsync(records.Select(record => record.ExerciseId).Distinct().ToList(), cancellationToken))
+            .Where(exercise => !exercise.OwnerId.HasValue || exercise.OwnerId.Value == userId)
+            .Select(exercise => exercise.Id)
+            .ToHashSet();
+        var visibleRecords = records.Where(record => visibleExerciseIds.Contains(record.ExerciseId)).OrderBy(record => record.Date).Select(MapMainRecord).ToList();
+        return visibleRecords.Count == 0
+            ? Result<List<MainRecordReadModel>, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind))
+            : Result<List<MainRecordReadModel>, AppError>.Success(visibleRecords);
     }
 
     public async Task<Result<List<MainRecordBestReadModel>, AppError>> GetBestMainRecordsAsync(Id<LgymApi.Identity.Contracts.AccountReference> userId, CancellationToken cancellationToken = default)

@@ -56,6 +56,12 @@ internal sealed class PlanDayService : IPlanDayService
             return Result<Unit, AppError>.Failure(new InvalidPlanDayError(Messages.FieldRequired));
         }
 
+        var catalogResult = await GetCatalogAsync(command.Input.Exercises.Select(exercise => exercise.ExerciseId).Distinct().ToArray(), plan.OwnerId, [], cancellationToken);
+        if (catalogResult.IsFailure)
+        {
+            return Result<Unit, AppError>.Failure(catalogResult.Error);
+        }
+
         await _persistence.CreatePlanDayAsync(command.PlanId, command.Input, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
@@ -93,6 +99,12 @@ internal sealed class PlanDayService : IPlanDayService
         if (!await CanAccessPlanAsync(command.CurrentAccountId, plan.OwnerId, cancellationToken))
         {
             return Result<Unit, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
+        }
+
+        var catalogResult = await GetCatalogAsync(command.Input.Exercises.Select(exercise => exercise.ExerciseId).Distinct().ToArray(), plan.OwnerId, [], cancellationToken);
+        if (catalogResult.IsFailure)
+        {
+            return Result<Unit, AppError>.Failure(catalogResult.Error);
         }
 
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -136,7 +148,7 @@ internal sealed class PlanDayService : IPlanDayService
         }
 
         var exercises = await _persistence.GetPlanDayExercisesAsync([planDay.Id], cancellationToken);
-        return await BuildReadModelAsync(planDay, exercises, query.Cultures, cancellationToken);
+        return await BuildReadModelAsync(planDay, exercises, plan.OwnerId, query.Cultures, cancellationToken);
     }
 
     public async Task<Result<IReadOnlyList<PlanDayReadModel>, AppError>> GetForPlanAsync(GetPlanDaysQuery query, CancellationToken cancellationToken = default)
@@ -166,6 +178,7 @@ internal sealed class PlanDayService : IPlanDayService
         var exercises = await _persistence.GetPlanDayExercisesAsync(planDays.Select(planDay => planDay.Id).ToArray(), cancellationToken);
         var catalogResult = await GetCatalogAsync(
             exercises.Select(exercise => exercise.ExerciseId).Distinct().ToArray(),
+            plan.OwnerId,
             query.Cultures,
             cancellationToken);
         if (catalogResult.IsFailure)
@@ -275,12 +288,13 @@ internal sealed class PlanDayService : IPlanDayService
     private async Task<Result<PlanDayReadModel, AppError>> BuildReadModelAsync(
         PlanDayPersistenceModel planDay,
         IReadOnlyList<PlanDayExercisePersistenceModel> allExercises,
+        Id<AccountReference> accountId,
         IReadOnlyList<string> cultures,
         CancellationToken cancellationToken)
     {
         var exercises = allExercises.Where(exercise => exercise.PlanDayId == planDay.Id).ToArray();
         var exerciseIds = exercises.Select(exercise => exercise.ExerciseId).Distinct().ToArray();
-        var catalogResult = await GetCatalogAsync(exerciseIds, cultures, cancellationToken);
+        var catalogResult = await GetCatalogAsync(exerciseIds, accountId, cultures, cancellationToken);
         return catalogResult.IsFailure
             ? Result<PlanDayReadModel, AppError>.Failure(catalogResult.Error)
             : Result<PlanDayReadModel, AppError>.Success(BuildReadModel(planDay, allExercises, catalogResult.Value));
@@ -315,10 +329,11 @@ internal sealed class PlanDayService : IPlanDayService
 
     private async Task<Result<IReadOnlyDictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>, AppError>> GetCatalogAsync(
         IReadOnlyCollection<Id<PlanExerciseReference>> exerciseIds,
+        Id<AccountReference> accountId,
         IReadOnlyList<string> cultures,
         CancellationToken cancellationToken)
     {
-        var catalog = await _exerciseCatalog.GetByIdsAsync(exerciseIds, cultures, cancellationToken);
+        var catalog = await _exerciseCatalog.GetByIdsAsync(exerciseIds, accountId, cultures, cancellationToken);
         return exerciseIds.All(catalog.ContainsKey)
             ? Result<IReadOnlyDictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>, AppError>.Success(catalog)
             : Result<IReadOnlyDictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>, AppError>.Failure(

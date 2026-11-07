@@ -112,6 +112,7 @@ public sealed class GymService : IGymService
         var gymIds = gyms.Select(g => g.Id).ToList();
         var trainings = await _trainingRepository.GetByGymIdsAsync(gymIds, cancellationToken);
         var lastTrainings = trainings
+            .Where(training => training.AccountId == currentUser.Id)
             .GroupBy(t => t.GymId)
             .Select(g => g.OrderByDescending(t => t.CreatedAt).FirstOrDefault())
             .Where(t => t != null)

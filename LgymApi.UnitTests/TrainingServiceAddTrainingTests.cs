@@ -131,15 +131,15 @@ public sealed class TrainingServiceAddTrainingTests
         var accountId = Id<AccountReference>.New();
         var gymId = Id<Gym>.New();
         var foreignExerciseId = Id<Exercise>.New();
+        var foreignOwnerId = Id<AccountReference>.New();
         ArrangeAccountAndGym(accountId, gymId);
         _exercises.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Id<Exercise>>>(), Arg.Any<CancellationToken>())
-            .Returns([]);
+            .Returns([new WorkoutExercisePersistenceModel(foreignExerciseId, foreignOwnerId, "Foreign exercise", BodyParts.Chest, ExerciseEloFormula.Standard, null, null, false, default, default)]);
 
         var result = await _service.AddTrainingAsync(accountId, Input(gymId, Id<PlanDayReference>.New(), foreignExerciseId));
 
         result.Error.Should().BeOfType<TrainingNotFoundError>();
-        await _exercises.Received(1).GetByIdsAsync(Arg.Any<IReadOnlyCollection<Id<Exercise>>>(), Arg.Any<CancellationToken>());
-        await _exercises.DidNotReceive().FindVisibleToAccountAsync(Arg.Any<Id<Exercise>>(), Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
+        await _exercises.Received(1).GetByIdsAsync(Arg.Is<IReadOnlyCollection<Id<Exercise>>>(ids => ids.Contains(foreignExerciseId)), Arg.Any<CancellationToken>());
         await _trainings.DidNotReceive().AddAsync(Arg.Any<WorkoutTrainingWriteModel>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
     }

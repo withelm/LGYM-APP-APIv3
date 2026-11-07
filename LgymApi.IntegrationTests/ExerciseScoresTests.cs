@@ -3,7 +3,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
+using LgymApi.Infrastructure.Data;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.IntegrationTests;
 
@@ -237,6 +241,36 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         body!.SeriesScores[0].Score.Should().NotBeNull();
         body.SeriesScores[0].Score!.Weight.Should().Be(60.0);
         body.SeriesScores[0].Score!.GymName.Should().Be("LastScores Gym");
+    }
+
+    [Test]
+    public async Task GetLastExerciseScores_WithForeignCustomExercise_ReturnsNotFound()
+    {
+        var requester = await SeedUserAsync(name: "last-scores-requester", email: "last-scores-requester@example.com");
+        var foreignOwner = await SeedUserAsync(name: "last-scores-foreign", email: "last-scores-foreign@example.com");
+        var foreignExercise = new Exercise
+        {
+            Id = Id<Exercise>.New(),
+            UserId = foreignOwner.Id,
+            Name = "Foreign Last Scores Exercise",
+            BodyPart = BodyParts.Back
+        };
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.Exercises.Add(foreignExercise);
+            await database.SaveChangesAsync();
+        }
+        SetAuthorizationHeader(requester.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{requester.Id}/getLastExerciseScores", new
+        {
+            exerciseId = foreignExercise.Id.ToString(),
+            exerciseName = foreignExercise.Name,
+            series = 1
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Test]

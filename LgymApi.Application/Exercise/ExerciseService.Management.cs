@@ -241,15 +241,14 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.FieldRequired));
         }
 
-        var exercise = await _exerciseRepository.FindUnrestrictedByIdAsync(exerciseId, cancellationToken);
-        if (exercise == null)
-        {
-            return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
-        }
-
-        if (exercise.OwnerId != null)
+        if (await _exerciseRepository.FindOwnedByAccountAsync(exerciseId, currentUser.Id, cancellationToken) is not null)
         {
             return Result<Unit, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
+        }
+
+        if (await _exerciseRepository.FindGlobalByIdAsync(exerciseId, cancellationToken) is null)
+        {
+            return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
         }
 
         var normalizedCulture = cultureInput.ToLowerInvariant();

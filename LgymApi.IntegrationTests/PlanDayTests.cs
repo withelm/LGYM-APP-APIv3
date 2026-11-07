@@ -130,6 +130,42 @@ public sealed class PlanDayTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreatePlanDay_WithForeignCustomExercise_ReturnsNotFoundWithoutCreatingPlanDay()
+    {
+        var (ownerId, token) = await RegisterUserViaEndpointAsync(
+            name: "plan-day-foreign-catalog-owner",
+            email: "plan-day-foreign-catalog-owner@example.com",
+            password: "password123");
+        var foreignOwner = await SeedUserAsync(name: "plan-day-foreign-catalog-exercise-owner", email: "plan-day-foreign-catalog-exercise-owner@example.com");
+        var foreignExercise = new Exercise
+        {
+            Id = Id<Exercise>.New(),
+            UserId = foreignOwner.Id,
+            Name = "Foreign Plan Exercise",
+            BodyPart = BodyParts.Back
+        };
+        using (var seedScope = Factory.Services.CreateScope())
+        {
+            var seedDatabase = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            seedDatabase.Exercises.Add(foreignExercise);
+            await seedDatabase.SaveChangesAsync();
+        }
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "Foreign Catalog Plan");
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", new
+        {
+            name = "Foreign Catalog Day",
+            exercises = new[] { new { exercise = foreignExercise.Id.ToString(), series = 3, reps = "10" } }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var verificationScope = Factory.Services.CreateScope();
+        var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await verificationDatabase.PlanDays.CountAsync(planDay => planDay.PlanId == planId)).Should().Be(0);
+    }
+
+    [Test]
     public async Task GetPlanDay_WithMalformedId_ReturnsLegacyNotFoundPayload()
     {
         var (_, token) = await RegisterUserViaEndpointAsync(
@@ -356,6 +392,46 @@ public sealed class PlanDayTests : IntegrationTestBase
         var updatedPlanDay = await verifyResponse.Content.ReadFromJsonAsync<PlanDayVmResponse>();
         updatedPlanDay!.Name.Should().Be("Updated Name");
         updatedPlanDay.Exercises.Should().HaveCount(2);
+    }
+
+    [Test]
+    public async Task UpdatePlanDay_WithForeignCustomExercise_ReturnsNotFoundWithoutReplacingExercises()
+    {
+        var (ownerId, token) = await RegisterUserViaEndpointAsync(
+            name: "plan-day-update-foreign-owner",
+            email: "plan-day-update-foreign-owner@example.com",
+            password: "password123");
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var ownExercise = await CreateExerciseViaEndpointAsync(ownerId, "Owned Update Plan Exercise", BodyParts.Chest);
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "Update Foreign Catalog Plan");
+        var planDayId = await CreatePlanDayViaEndpointAsync(ownerId, planId, "Existing Day", [new PlanDayExerciseInput { ExerciseId = ownExercise.ToString(), Series = 3, Reps = "10" }]);
+        var foreignOwner = await SeedUserAsync(name: "plan-day-update-foreign-exercise-owner", email: "plan-day-update-foreign-exercise-owner@example.com");
+        var foreignExercise = new Exercise
+        {
+            Id = Id<Exercise>.New(),
+            UserId = foreignOwner.Id,
+            Name = "Foreign Update Plan Exercise",
+            BodyPart = BodyParts.Back
+        };
+        using (var seedScope = Factory.Services.CreateScope())
+        {
+            var seedDatabase = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            seedDatabase.Exercises.Add(foreignExercise);
+            await seedDatabase.SaveChangesAsync();
+        }
+
+        var response = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", new
+        {
+            _id = planDayId.ToString(),
+            name = "Changed Day",
+            exercises = new[] { new { exercise = foreignExercise.Id.ToString(), series = 4, reps = "8" } }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var verificationScope = Factory.Services.CreateScope();
+        var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persistedExercise = await verificationDatabase.PlanDayExercises.SingleAsync(exercise => exercise.PlanDayId == planDayId);
+        persistedExercise.ExerciseId.Should().Be(ownExercise);
     }
 
     [Test]

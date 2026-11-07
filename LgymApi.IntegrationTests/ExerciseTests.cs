@@ -226,6 +226,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
     [Test]
     [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "own", "owner-allow")]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "own", "owner-custom-allow")]
     public async Task DeleteExercise_AsOwner_MarksAsDeleted()
     {
         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
@@ -295,7 +296,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     }
 
     [Test]
-    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "manager", "foreign-custom-denial-no-mutation")]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "own", "foreign-custom-denial")]
     public async Task DeleteExercise_AsManager_CannotDeleteForeignCustomExercise()
     {
         var manager = await SeedAdminAsync();
@@ -360,6 +361,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
     [Test]
     [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/updateExercise", "own", "owner-allow")]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/updateExercise", "own", "owner-custom-allow")]
     public async Task UpdateExercise_WithValidData_UpdatesExercise()
     {
         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
@@ -449,6 +451,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     }
 
     [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/updateExercise", "own", "foreign-custom-denial")]
     public async Task UpdateExercise_WhenUserIsNotOwnerAndHasNoPermission_ReturnsNotFoundWithoutMutation()
     {
         var (attacker, victim, victimExercise) = await SeedForeignExerciseScenarioAsync(
@@ -983,6 +986,27 @@ public sealed class ExerciseTests : IntegrationTestBase
     }
 
     [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/addUserExerciseWithFormula", "admin", "foreign-object-denial-no-mutation")]
+    public async Task AddUserExerciseWithFormula_AsAdmin_WithForeignRoute_ReturnsForbiddenWithoutCreatingExercise()
+    {
+        var admin = await SeedAdminAsync();
+        var foreignOwner = await SeedUserAsync(name: "formula-foreign-route-owner", email: "formula-foreign-route-owner@example.com");
+        SetAuthorizationHeader(admin.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{foreignOwner.Id}/addUserExerciseWithFormula", new
+        {
+            name = "Unauthorized Formula Exercise",
+            bodyPart = BodyParts.Chest.ToString(),
+            eloFormula = ExerciseEloFormula.Standard.ToString()
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var scope = Factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await database.Exercises.AnyAsync(exercise => exercise.Name == "Unauthorized Formula Exercise")).Should().BeFalse();
+    }
+
+    [Test]
     public async Task AddGlobalTranslation_AsNonAdmin_ReturnsForbidden()
     {
         var user = await SeedUserAsync(name: "normaluser", email: "normal@example.com");
@@ -1052,6 +1076,24 @@ public sealed class ExerciseTests : IntegrationTestBase
             persistedExercise.Name.Should().Be(exercise.Name);
             persistedExercise.IsDeleted.Should().BeFalse();
         }
+    }
+
+    [Test]
+    public async Task AddGlobalTranslation_ForForeignUserExercise_ReturnsNotFound()
+    {
+        var admin = await SeedAdminAsync();
+        var foreignOwner = await SeedUserAsync(name: "translation-foreign-owner", email: "translation-foreign-owner@example.com");
+        var exercise = await SeedExerciseAsync(foreignOwner.Id, "Foreign Exercise for Translation", "Chest");
+        SetAuthorizationHeader(admin.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", new
+        {
+            exerciseId = exercise.Id.ToString(),
+            culture = "pl",
+            name = "Obce cwiczenie"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Test]
