@@ -214,9 +214,14 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         var customExercise = await CreateExerciseViaEndpointAsync(owner.Id, "Task9 Detail Custom");
         var manager = await SeedAdminAsync();
         SetAuthorizationHeader(manager.Id);
-        using (var managerResponse = await Client.GetAsync($"/api/exercise/{customExercise}/getExercise"))
+        using (var managerGlobalResponse = await Client.GetAsync($"/api/exercise/{globalExercise}/getExercise"))
         {
-            managerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            managerGlobalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        using (var managerForeignCustomResponse = await Client.GetAsync($"/api/exercise/{customExercise}/getExercise"))
+        {
+            managerForeignCustomResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
         var preIssuedToken = Client.DefaultRequestHeaders.Authorization;
@@ -228,8 +233,13 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         }
 
         Client.DefaultRequestHeaders.Authorization = preIssuedToken;
-        using var demotedResponse = await Client.GetAsync($"/api/exercise/{customExercise}/getExercise");
-        demotedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using (var demotedGlobalResponse = await Client.GetAsync($"/api/exercise/{globalExercise}/getExercise"))
+        {
+            demotedGlobalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        using var demotedForeignCustomResponse = await Client.GetAsync($"/api/exercise/{customExercise}/getExercise");
+        demotedForeignCustomResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Test]

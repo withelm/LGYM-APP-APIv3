@@ -17,7 +17,7 @@ public sealed partial class WorkoutProgressReadWriteService
     public async Task<Result<Unit, AppError>> AddMainRecordAsync(MainRecordCreateWriteModel input, CancellationToken cancellationToken = default)
     {
         if (input.UserId.IsEmpty || input.ExerciseId.IsEmpty) return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
-        var exercise = await _exerciseRepository.FindByIdAsync(input.ExerciseId, cancellationToken);
+        var exercise = await _exerciseRepository.FindVisibleToAccountAsync(input.ExerciseId, input.UserId, cancellationToken);
         if (await _accountAccess.GetByIdAsync(input.UserId, cancellationToken) is null || exercise == null) return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
         if (input.Unit == WeightUnits.Unknown) return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.FieldRequired));
         await _mainRecordRepository.AddAsync(new WorkoutMainRecordWriteModel(Id<MainRecordEntity>.New(), input.UserId, exercise.Id, input.Weight, input.Unit, new DateTimeOffset(DateTime.SpecifyKind(input.Date, DateTimeKind.Utc))), cancellationToken);
@@ -39,9 +39,14 @@ public sealed partial class WorkoutProgressReadWriteService
         if (await _accountAccess.GetByIdAsync(userId, cancellationToken) is null) return Result<List<MainRecordBestReadModel>, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
         var records = (await _mainRecordRepository.GetBestByAccountGroupedByExerciseAndUnitAsync(userId, null, cancellationToken)).Where(record => record.Unit != WeightUnits.Unknown).GroupBy(record => record.ExerciseId).Select(group => GetBestRecord(group.ToList())).ToList();
         if (records.Count == 0) return Result<List<MainRecordBestReadModel>, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
-        var exercises = await _exerciseRepository.GetByIdsAsync(records.Select(record => record.ExerciseId).Distinct().ToList(), cancellationToken);
+        var exercises = (await _exerciseRepository.GetByIdsAsync(records.Select(record => record.ExerciseId).Distinct().ToList(), cancellationToken))
+            .Where(exercise => !exercise.OwnerId.HasValue || exercise.OwnerId.Value == userId)
+            .ToList();
         var map = exercises.ToDictionary(exercise => exercise.Id);
-        return Result<List<MainRecordBestReadModel>, AppError>.Success(records.Where(record => map.ContainsKey(record.ExerciseId)).Select(record => new MainRecordBestReadModel(MapMainRecord(record), MapExercise(map[record.ExerciseId]))).ToList());
+        var visibleRecords = records.Where(record => map.ContainsKey(record.ExerciseId)).ToList();
+        return visibleRecords.Count == 0
+            ? Result<List<MainRecordBestReadModel>, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind))
+            : Result<List<MainRecordBestReadModel>, AppError>.Success(visibleRecords.Select(record => new MainRecordBestReadModel(MapMainRecord(record), MapExercise(map[record.ExerciseId]))).ToList());
     }
 
     public async Task<Result<Unit, AppError>> DeleteMainRecordAsync(Id<LgymApi.Identity.Contracts.AccountReference> currentUserId, Id<MainRecordEntity> recordId, CancellationToken cancellationToken = default)
@@ -49,17 +54,19 @@ public sealed partial class WorkoutProgressReadWriteService
         if (currentUserId.IsEmpty || recordId.IsEmpty) return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
         var record = await _mainRecordRepository.FindByIdAsync(recordId, cancellationToken);
         if (record == null) return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
-        if (record.AccountId != currentUserId) return Result<Unit, AppError>.Failure(new MainRecordsForbiddenError(Messages.Forbidden));
+        if (!_ownershipAuthorization.IsOwner(currentUserId, record.AccountId)) return Result<Unit, AppError>.Failure(new MainRecordsForbiddenError(Messages.Forbidden));
         await _mainRecordRepository.DeleteAsync(record.Id, cancellationToken); await _unitOfWork.SaveChangesAsync(cancellationToken); return Result<Unit, AppError>.Success(Unit.Value);
     }
 
     public async Task<Result<Unit, AppError>> UpdateMainRecordAsync(MainRecordUpdateWriteModel input, CancellationToken cancellationToken = default)
     {
         if (input.RouteUserId.IsEmpty || input.CurrentUserId.IsEmpty || input.RecordId.IsEmpty || input.ExerciseId.IsEmpty) return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
-        if (input.RouteUserId != input.CurrentUserId) return Result<Unit, AppError>.Failure(new MainRecordsForbiddenError(Messages.Forbidden));
-        var record = await _mainRecordRepository.FindByIdAsync(input.RecordId, cancellationToken); var exercise = await _exerciseRepository.FindByIdAsync(input.ExerciseId, cancellationToken);
-        if (record == null || exercise == null) return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
-        if (record.AccountId != input.CurrentUserId) return Result<Unit, AppError>.Failure(new MainRecordsForbiddenError(Messages.Forbidden));
+        if (!_ownershipAuthorization.IsOwner(input.CurrentUserId, input.RouteUserId)) return Result<Unit, AppError>.Failure(new MainRecordsForbiddenError(Messages.Forbidden));
+        var record = await _mainRecordRepository.FindByIdAsync(input.RecordId, cancellationToken);
+        if (record == null) return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+        if (!_ownershipAuthorization.IsOwner(input.CurrentUserId, record.AccountId)) return Result<Unit, AppError>.Failure(new MainRecordsForbiddenError(Messages.Forbidden));
+        var exercise = await _exerciseRepository.FindVisibleToAccountAsync(input.ExerciseId, input.CurrentUserId, cancellationToken);
+        if (exercise == null) return Result<Unit, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
         if (input.Unit == WeightUnits.Unknown) return Result<Unit, AppError>.Failure(new InvalidMainRecordsError(Messages.FieldRequired));
         var updated = new WorkoutMainRecordWriteModel(record.Id, record.AccountId, exercise.Id, input.Weight, input.Unit, new DateTimeOffset(DateTime.SpecifyKind(input.Date, DateTimeKind.Utc)));
         await _mainRecordRepository.UpdateAsync(updated, cancellationToken); await _unitOfWork.SaveChangesAsync(cancellationToken); return Result<Unit, AppError>.Success(Unit.Value);
@@ -68,6 +75,10 @@ public sealed partial class WorkoutProgressReadWriteService
     public async Task<Result<PossibleRecordReadModel, AppError>> GetRecordOrPossibleRecordAsync(Id<LgymApi.Identity.Contracts.AccountReference> userId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty || exerciseId.IsEmpty) return Result<PossibleRecordReadModel, AppError>.Failure(new InvalidMainRecordsError(Messages.InvalidId));
+        if (await _exerciseRepository.FindVisibleToAccountAsync(exerciseId, userId, cancellationToken) is null)
+        {
+            return Result<PossibleRecordReadModel, AppError>.Failure(new MainRecordsNotFoundError(Messages.DidntFind));
+        }
         var records = await _mainRecordRepository.GetBestByAccountGroupedByExerciseAndUnitAsync(userId, [exerciseId], cancellationToken);
         var comparable = records.Where(record => record.Unit != WeightUnits.Unknown).ToList();
         if (comparable.Count > 0) { var best = GetBestRecord(comparable); return Result<PossibleRecordReadModel, AppError>.Success(new PossibleRecordReadModel(best.Weight, 1, best.Unit, best.Date.UtcDateTime)); }

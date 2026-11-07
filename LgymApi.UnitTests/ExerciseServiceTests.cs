@@ -4,6 +4,7 @@ using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.WorkoutProgress.Errors;
+using LgymApi.Application.WorkoutProgress.Authorization;
 using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -11,6 +12,7 @@ using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts.Authorization;
 using LgymApi.TrainingPlanning.Contracts;
 using NSubstitute;
 
@@ -24,6 +26,8 @@ public sealed class ExerciseServiceTests
     private IWorkoutExerciseScorePersistence _scores = null!;
     private IPlanDayReferenceReadService _planDays = null!;
     private IUnitOfWork _unitOfWork = null!;
+    private IAuthenticatedAccountAuthorizationService _accountAuthorization = null!;
+    private IWorkoutProgressOwnershipAuthorizationService _ownershipAuthorization = null!;
     private ExerciseService _service = null!;
 
     [SetUp]
@@ -34,7 +38,17 @@ public sealed class ExerciseServiceTests
         _scores = Substitute.For<IWorkoutExerciseScorePersistence>();
         _planDays = Substitute.For<IPlanDayReferenceReadService>();
         _unitOfWork = Substitute.For<IUnitOfWork>();
-        _service = new ExerciseService(_accounts, _exercises, _scores, _planDays, _unitOfWork);
+        _accountAuthorization = Substitute.For<IAuthenticatedAccountAuthorizationService>();
+        _ownershipAuthorization = Substitute.For<IWorkoutProgressOwnershipAuthorizationService>();
+        _accountAuthorization.HasPermission(Arg.Any<AuthenticatedAccountContext>(), Arg.Any<string>())
+            .Returns(call => call.ArgAt<AuthenticatedAccountContext>(0).PermissionClaims.Contains(call.ArgAt<string>(1), StringComparer.Ordinal));
+        _ownershipAuthorization.IsOwner(Arg.Any<AuthenticatedAccountContext?>(), Arg.Any<Id<AccountReference>>())
+            .Returns(call =>
+            {
+                var actor = call.ArgAt<AuthenticatedAccountContext?>(0);
+                return actor is not null && actor.Id == call.ArgAt<Id<AccountReference>>(1);
+            });
+        _service = new ExerciseService(_accounts, _exercises, _scores, _planDays, _unitOfWork, _accountAuthorization, _ownershipAuthorization);
     }
 
     [Test]
@@ -97,21 +111,34 @@ public sealed class ExerciseServiceTests
     }
 
     [Test]
-    public async Task AddUserExerciseWithFormula_AsManager_CanTargetExistingAccount()
+    public async Task AddUserExerciseWithFormula_AsManager_CannotTargetForeignAccount()
     {
         var manager = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
         var targetId = Id<AccountReference>.New();
-        _accounts.GetByIdAsync(targetId, Arg.Any<CancellationToken>()).Returns(Facts(targetId));
-
         var result = await _service.AddUserExerciseWithFormulaAsync(
             manager,
             new AddUserExerciseWithFormulaInput(targetId, "Squat", BodyParts.Quads, ExerciseEloFormula.VolumeWeighted, null, null));
 
+        result.Error.Should().BeOfType<ExerciseForbiddenError>();
+        await _accounts.DidNotReceive().GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
+        await _exercises.DidNotReceive().AddAsync(Arg.Any<WorkoutExerciseWriteModel>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task AddUserExerciseWithFormula_AsManagerForOwnAccount_StagesOwnedExercise()
+    {
+        var manager = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
+        _accounts.GetByIdAsync(manager.Id, Arg.Any<CancellationToken>()).Returns(Facts(manager.Id));
+
+        var result = await _service.AddUserExerciseWithFormulaAsync(
+            manager,
+            new AddUserExerciseWithFormulaInput(manager.Id, "Squat", BodyParts.Quads, ExerciseEloFormula.VolumeWeighted, null, null));
+
         result.IsSuccess.Should().BeTrue();
         await _exercises.Received(1).AddAsync(
-            Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.OwnerId == targetId && exercise.EloFormula == ExerciseEloFormula.VolumeWeighted),
+            Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.OwnerId == manager.Id && exercise.EloFormula == ExerciseEloFormula.VolumeWeighted),
             Arg.Any<CancellationToken>());
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -145,21 +172,33 @@ public sealed class ExerciseServiceTests
     }
 
     [Test]
-    public async Task DeleteExercise_AsManager_UsesUnrestrictedLookupAndCommits()
+    public async Task DeleteExercise_AsManager_DeletesGlobalExerciseAndCommits()
     {
         var managerId = Id<AccountReference>.New();
-        var ownerId = Id<AccountReference>.New();
         var exerciseId = Id<Exercise>.New();
         var manager = Context(managerId, [AuthConstants.Permissions.ManageGlobalExercises]);
-        _exercises.FindUnrestrictedByIdAsync(exerciseId, Arg.Any<CancellationToken>()).Returns(Model(exerciseId, ownerId));
+        _exercises.FindGlobalByIdAsync(exerciseId, Arg.Any<CancellationToken>()).Returns(Model(exerciseId, null));
 
         var result = await _service.DeleteExerciseAsync(manager, managerId, exerciseId);
 
         result.IsSuccess.Should().BeTrue();
         await _exercises.Received(1).UpdateAsync(
-            Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.Id == exerciseId && exercise.OwnerId == ownerId && exercise.IsDeleted),
+            Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.Id == exerciseId && exercise.OwnerId == null && exercise.IsDeleted),
             Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task DeleteExercise_AsManager_DeletesOwnCustomExercise()
+    {
+        var manager = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
+        var exerciseId = Id<Exercise>.New();
+        _exercises.FindOwnedByAccountAsync(exerciseId, manager.Id, Arg.Any<CancellationToken>()).Returns(Model(exerciseId, manager.Id));
+
+        var result = await _service.DeleteExerciseAsync(manager, manager.Id, exerciseId);
+
+        result.IsSuccess.Should().BeTrue();
+        await _exercises.DidNotReceive().FindGlobalByIdAsync(exerciseId, Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -198,18 +237,17 @@ public sealed class ExerciseServiceTests
     }
 
     [Test]
-    public async Task GetExercise_AsManager_UsesUnrestrictedLookup()
+    public async Task GetExercise_AsManager_CannotReadForeignCustomExercise()
     {
         var manager = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
-        var ownerId = Id<AccountReference>.New();
         var exerciseId = Id<Exercise>.New();
-        _exercises.FindUnrestrictedByIdAsync(exerciseId, Arg.Any<CancellationToken>()).Returns(Model(exerciseId, ownerId));
+        _exercises.FindVisibleToAccountAsync(exerciseId, manager.Id, Arg.Any<CancellationToken>()).Returns((WorkoutExercisePersistenceModel?)null);
 
         var result = await _service.GetExerciseAsync(manager, exerciseId, []);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Exercise.UserId.Should().Be(ownerId);
-        await _exercises.DidNotReceive().FindVisibleToAccountAsync(Arg.Any<Id<Exercise>>(), Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
+        result.Error.Should().BeOfType<ExerciseNotFoundError>();
+        await _exercises.Received(1).FindVisibleToAccountAsync(exerciseId, manager.Id, Arg.Any<CancellationToken>());
+        await _exercises.DidNotReceive().FindUnrestrictedByIdAsync(Arg.Any<Id<Exercise>>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -226,6 +264,22 @@ public sealed class ExerciseServiceTests
         result.Error.Should().BeOfType<ExerciseNotFoundError>();
         await _exercises.DidNotReceive().UpdateAsync(Arg.Any<WorkoutExerciseWriteModel>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task UpdateExercise_AsManager_UpdatesOwnCustomExercise()
+    {
+        var manager = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
+        var exerciseId = Id<Exercise>.New();
+        _exercises.FindOwnedByAccountAsync(exerciseId, manager.Id, Arg.Any<CancellationToken>()).Returns(Model(exerciseId, manager.Id));
+
+        var result = await _service.UpdateExerciseAsync(manager, new UpdateExerciseInput(exerciseId, "Changed", BodyParts.Back, null, null));
+
+        result.IsSuccess.Should().BeTrue();
+        await _exercises.DidNotReceive().FindGlobalByIdAsync(exerciseId, Arg.Any<CancellationToken>());
+        await _exercises.Received(1).UpdateAsync(
+            Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.OwnerId == manager.Id && exercise.Name == "Changed"),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]

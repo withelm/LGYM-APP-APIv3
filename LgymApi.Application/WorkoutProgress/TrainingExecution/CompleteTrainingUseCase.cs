@@ -71,7 +71,7 @@ internal sealed class CompleteTrainingUseCase : ICompleteTrainingUseCase
         }
 
         var gym = await _gymRepository.FindByIdAsync(gymId, cancellationToken);
-        if (gym == null)
+        if (gym == null || gym.OwnerId != userId)
         {
             return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }
@@ -88,6 +88,11 @@ internal sealed class CompleteTrainingUseCase : ICompleteTrainingUseCase
             .Distinct()
             .ToList();
         var exerciseDetails = await _exerciseRepository.GetByIdsAsync(uniqueExerciseIds, cancellationToken);
+        if (exerciseDetails.Count != uniqueExerciseIds.Count
+            || exerciseDetails.Any(exercise => exercise.OwnerId.HasValue && exercise.OwnerId.Value != userId))
+        {
+            return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
+        }
         var exerciseDetailsMap = exerciseDetails.ToDictionary(exercise => exercise.Id, exercise => exercise.Name);
         var exerciseFormulaMap = exerciseDetails.ToDictionary(exercise => exercise.Id, exercise => exercise.EloFormula);
         var previousScoresMap = await FetchPreviousScoresAsync(userId, gym.Id, uniqueExerciseIds, cancellationToken);

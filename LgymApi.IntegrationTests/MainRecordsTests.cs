@@ -5,6 +5,9 @@ using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.IntegrationTests;
 
@@ -206,6 +209,38 @@ public sealed class MainRecordsTests : IntegrationTestBase
         var response = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("GET", "/api/mainRecords/{id}/getLastMainRecords", "own", "foreign-object-denial")]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/mainRecords/getRecordOrPossibleRecordInExercise", "own", "foreign-object-denial")]
+    public async Task LegacyForeignExerciseRecords_AreNotExposedByBestOrPossibleRecordReads()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync("legacy-record-owner", "legacy-record-owner@example.com", "password123");
+        var (foreignOwnerId, _) = await RegisterUserViaEndpointAsync("legacy-record-foreign", "legacy-record-foreign@example.com", "password123");
+        var foreignExerciseId = Id<Exercise>.New();
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.Exercises.Add(new Exercise { Id = foreignExerciseId, UserId = foreignOwnerId, Name = "Foreign legacy exercise", BodyPart = BodyParts.Back });
+            database.MainRecords.Add(new MainRecord
+            {
+                Id = Id<MainRecord>.New(),
+                UserId = userId,
+                ExerciseId = foreignExerciseId,
+                Weight = 100,
+                Unit = WeightUnits.Kilograms,
+                Date = DateTimeOffset.UtcNow
+            });
+            await database.SaveChangesAsync();
+        }
+
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var bestResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
+        var possibleResponse = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", new { exerciseId = foreignExerciseId.ToString() });
+
+        bestResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        possibleResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Test]

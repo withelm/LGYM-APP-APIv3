@@ -5,6 +5,7 @@ using LgymApi.Application.Features.Gym.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.WorkoutProgress.Persistence;
+using LgymApi.Application.WorkoutProgress.Authorization;
 using LgymApi.Resources;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
@@ -19,17 +20,20 @@ public sealed class GymService : IGymService
     private readonly IWorkoutTrainingPersistence _trainingRepository;
     private readonly IPlanDayReferenceReadService _planDayReferences;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IWorkoutProgressOwnershipAuthorizationService _ownershipAuthorization;
 
     public GymService(
         IWorkoutGymPersistence gymRepository,
         IWorkoutTrainingPersistence trainingRepository,
         IPlanDayReferenceReadService planDayReferences,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IWorkoutProgressOwnershipAuthorizationService ownershipAuthorization)
     {
         _gymRepository = gymRepository;
         _trainingRepository = trainingRepository;
         _planDayReferences = planDayReferences;
         _unitOfWork = unitOfWork;
+        _ownershipAuthorization = ownershipAuthorization;
     }
 
     public async Task<Result<Unit, AppError>> AddGymAsync(AuthenticatedAccountContext? currentUser, Id<AccountReference> routeUserId, string name, string? address, CancellationToken cancellationToken = default)
@@ -39,7 +43,7 @@ public sealed class GymService : IGymService
             return Result<Unit, AppError>.Failure(new InvalidGymError(Messages.InvalidId));
         }
 
-        if (currentUser.Id != routeUserId)
+        if (!_ownershipAuthorization.IsOwner(currentUser, routeUserId))
         {
             return Result<Unit, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }
@@ -81,7 +85,7 @@ public sealed class GymService : IGymService
             return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
-        if (gym.OwnerId != currentUser.Id)
+        if (!_ownershipAuthorization.IsOwner(currentUser, gym.OwnerId))
         {
             return Result<Unit, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }
@@ -99,7 +103,7 @@ public sealed class GymService : IGymService
             return Result<GymListContext, AppError>.Failure(new InvalidGymError(Messages.InvalidId));
         }
 
-        if (currentUser.Id != routeUserId)
+        if (!_ownershipAuthorization.IsOwner(currentUser, routeUserId))
         {
             return Result<GymListContext, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }
@@ -142,7 +146,7 @@ public sealed class GymService : IGymService
             return Result<WorkoutGymPersistenceModel, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
-        if (gym.OwnerId != currentUser.Id)
+        if (!_ownershipAuthorization.IsOwner(currentUser, gym.OwnerId))
         {
             return Result<WorkoutGymPersistenceModel, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }
@@ -168,7 +172,7 @@ public sealed class GymService : IGymService
             return Result<Unit, AppError>.Failure(new GymNotFoundError(Messages.DidntFind));
         }
 
-        if (gym.OwnerId != currentUser.Id)
+        if (!_ownershipAuthorization.IsOwner(currentUser, gym.OwnerId))
         {
             return Result<Unit, AppError>.Failure(new GymForbiddenError(Messages.Forbidden));
         }

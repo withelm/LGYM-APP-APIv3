@@ -126,6 +126,42 @@ public sealed class TrainingServiceAddTrainingTests
     }
 
     [Test]
+    public async Task ForeignCustomExercise_ShouldReturnNotFoundWithoutStagingWrites()
+    {
+        var accountId = Id<AccountReference>.New();
+        var gymId = Id<Gym>.New();
+        var foreignExerciseId = Id<Exercise>.New();
+        ArrangeAccountAndGym(accountId, gymId);
+        _exercises.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Id<Exercise>>>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var result = await _service.AddTrainingAsync(accountId, Input(gymId, Id<PlanDayReference>.New(), foreignExerciseId));
+
+        result.Error.Should().BeOfType<TrainingNotFoundError>();
+        await _exercises.Received(1).GetByIdsAsync(Arg.Any<IReadOnlyCollection<Id<Exercise>>>(), Arg.Any<CancellationToken>());
+        await _exercises.DidNotReceive().FindVisibleToAccountAsync(Arg.Any<Id<Exercise>>(), Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
+        await _trainings.DidNotReceive().AddAsync(Arg.Any<WorkoutTrainingWriteModel>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ForeignGym_ShouldReturnNotFoundWithoutStagingWrites()
+    {
+        var accountId = Id<AccountReference>.New();
+        var foreignOwnerId = Id<AccountReference>.New();
+        var gymId = Id<Gym>.New();
+        _accountAccess.GetByIdAsync(accountId, Arg.Any<CancellationToken>()).Returns(new AccountAccessFacts(accountId, false, false, [], []));
+        _gyms.FindByIdAsync(gymId, Arg.Any<CancellationToken>())
+            .Returns(new WorkoutGymPersistenceModel(gymId, foreignOwnerId, "Foreign gym", null, false, default, default));
+
+        var result = await _service.AddTrainingAsync(accountId, Input(gymId, Id<PlanDayReference>.New()));
+
+        result.Error.Should().BeOfType<TrainingNotFoundError>();
+        await _trainings.DidNotReceive().AddAsync(Arg.Any<WorkoutTrainingWriteModel>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task SaveFailure_ShouldRollbackAndPropagateAfterStagingWrites()
     {
         var accountId = Id<AccountReference>.New();

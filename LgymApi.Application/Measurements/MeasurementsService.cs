@@ -11,6 +11,7 @@ using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
+using LgymApi.Application.WorkoutProgress.Authorization;
 
 namespace LgymApi.Application.Features.Measurements;
 
@@ -19,15 +20,18 @@ public sealed class MeasurementsService : IMeasurementsService
     private readonly IWorkoutProgressReadWriteService _progress;
     private readonly IAccountAccessReader _accountAccess;
     private readonly IMeasurementsRelationshipAccessPort _relationshipAccess;
+    private readonly IWorkoutProgressOwnershipAuthorizationService _ownershipAuthorization;
 
     public MeasurementsService(
         IWorkoutProgressReadWriteService progress,
         IAccountAccessReader accountAccess,
-        IMeasurementsRelationshipAccessPort relationshipAccess)
+        IMeasurementsRelationshipAccessPort relationshipAccess,
+        IWorkoutProgressOwnershipAuthorizationService ownershipAuthorization)
     {
         _progress = progress;
         _accountAccess = accountAccess;
         _relationshipAccess = relationshipAccess;
+        _ownershipAuthorization = ownershipAuthorization;
     }
 
     public Task<Result<Unit, AppError>> AddMeasurementAsync(AuthenticatedAccountContext? currentUser, BodyParts bodyPart, MeasurementUnits unit, double value, CancellationToken cancellationToken = default)
@@ -84,7 +88,7 @@ public sealed class MeasurementsService : IMeasurementsService
             return Result<Unit, AppError>.Failure(new InvalidMeasurementError(Messages.InvalidId));
         }
 
-        if (currentUser.Id == routeUserId)
+        if (_ownershipAuthorization.IsOwner(currentUser, routeUserId))
         {
             return Result<Unit, AppError>.Success(Unit.Value);
         }

@@ -10,6 +10,7 @@ using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Application.WorkoutProgress.Authorization;
 using LgymApi.Resources;
 using ExerciseEntity = LgymApi.Domain.Entities.Exercise;
 
@@ -37,6 +38,7 @@ public sealed partial class WorkoutProgressReadWriteService : IWorkoutProgressRe
     private readonly IUnitConverter<HeightUnits> _heightUnitConverter;
     private readonly IUnitConverter<WeightUnits> _weightUnitConverter;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IWorkoutProgressOwnershipAuthorizationService _ownershipAuthorization;
 
     public WorkoutProgressReadWriteService(
         IWorkoutExercisePersistence exerciseRepository,
@@ -47,7 +49,8 @@ public sealed partial class WorkoutProgressReadWriteService : IWorkoutProgressRe
         IAccountAccessReader accountAccess,
         IUnitConverter<HeightUnits> heightUnitConverter,
         IUnitConverter<WeightUnits> weightUnitConverter,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IWorkoutProgressOwnershipAuthorizationService ownershipAuthorization)
     {
         _exerciseRepository = exerciseRepository;
         _exerciseScoreRepository = exerciseScoreRepository;
@@ -58,6 +61,7 @@ public sealed partial class WorkoutProgressReadWriteService : IWorkoutProgressRe
         _heightUnitConverter = heightUnitConverter;
         _weightUnitConverter = weightUnitConverter;
         _unitOfWork = unitOfWork;
+        _ownershipAuthorization = ownershipAuthorization;
     }
 
     public async Task<Result<List<ExerciseScoreChartPoint>, AppError>> GetExerciseScoreChartAsync(Id<LgymApi.Identity.Contracts.AccountReference> userId, Id<ExerciseEntity> exerciseId, CancellationToken cancellationToken = default)
@@ -68,6 +72,11 @@ public sealed partial class WorkoutProgressReadWriteService : IWorkoutProgressRe
         }
 
         if (await _accountAccess.GetByIdAsync(userId, cancellationToken) is null)
+        {
+            return Result<List<ExerciseScoreChartPoint>, AppError>.Failure(new ExerciseScoreNotFoundError(Messages.DidntFind));
+        }
+
+        if (await _exerciseRepository.FindVisibleToAccountAsync(exerciseId, userId, cancellationToken) is null)
         {
             return Result<List<ExerciseScoreChartPoint>, AppError>.Failure(new ExerciseScoreNotFoundError(Messages.DidntFind));
         }

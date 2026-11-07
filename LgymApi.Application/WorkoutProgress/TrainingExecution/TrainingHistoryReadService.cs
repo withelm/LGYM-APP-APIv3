@@ -84,7 +84,10 @@ internal sealed class TrainingHistoryReadService : ITrainingHistoryReadService
             var exerciseOrderMap = new Dictionary<Id<Exercise>, int>();
             foreach (var reference in trainingScoreRefs.Where(reference => reference.TrainingId == training.Id))
             {
-                if (!scoreMap.TryGetValue(reference.ExerciseScoreId, out var score) || score.Exercise == null)
+                if (!scoreMap.TryGetValue(reference.ExerciseScoreId, out var score)
+                    || score.AccountId != userId
+                    || score.Exercise is null
+                    || !IsVisibleToAccount(score.Exercise, userId))
                 {
                     continue;
                 }
@@ -105,7 +108,7 @@ internal sealed class TrainingHistoryReadService : ITrainingHistoryReadService
                     exerciseOrderMap[score.ExerciseId] = Math.Min(exerciseOrderMap[score.ExerciseId], reference.Order);
                 }
 
-                group.ScoresDetails.Add(MapScore(score));
+                group.ScoresDetails.Add(MapScore(score, userId));
             }
 
             result.Add(new TrainingByDateDetails
@@ -116,7 +119,7 @@ internal sealed class TrainingHistoryReadService : ITrainingHistoryReadService
                 PlanDay = planDaysById.TryGetValue(training.TypePlanDayId, out var planDay) && planDay.Exists && !planDay.IsDeleted
                     ? planDay
                     : null,
-                Gym = training.Gym?.Name,
+                Gym = IsOwnedByAccount(training.Gym, userId) ? training.Gym!.Name : null,
                 Exercises = grouped.Values
                     .OrderBy(exercise => exerciseOrderMap[exercise.ExerciseDetails.Id])
                     .Select(exercise => new EnrichedExercise
@@ -153,7 +156,14 @@ internal sealed class TrainingHistoryReadService : ITrainingHistoryReadService
     private static ProgressExerciseReadModel MapExercise(WorkoutExercisePersistenceModel exercise)
         => new(exercise.Id, exercise.Name, exercise.OwnerId, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image);
 
-    private static WorkoutExerciseScoreReadModel MapScore(WorkoutExerciseScorePersistenceModel score)
+    private static bool IsVisibleToAccount(WorkoutExercisePersistenceModel exercise, Id<AccountReference> accountId)
+        => !exercise.OwnerId.HasValue || exercise.OwnerId.Value == accountId;
+
+    private static bool IsOwnedByAccount(WorkoutGymPersistenceModel? gym, Id<AccountReference> accountId)
+        => gym is not null && gym.OwnerId == accountId;
+
+    private static WorkoutExerciseScoreReadModel MapScore(WorkoutExerciseScorePersistenceModel score, Id<AccountReference> accountId)
         => new(score.Id, score.ExerciseId, score.Weight, score.Unit, score.Reps, score.Series,
-            score.Training is null ? null : new WorkoutScoreTrainingReadModel(score.Training.Id, score.Training.GymId, score.Training.Gym?.Name, score.Training.CreatedAt));
+            score.Training is null ? null : new WorkoutScoreTrainingReadModel(score.Training.Id, score.Training.GymId,
+                IsOwnedByAccount(score.Training.Gym, accountId) ? score.Training.Gym!.Name : null, score.Training.CreatedAt));
 }

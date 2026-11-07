@@ -16,6 +16,9 @@ public sealed class WorkoutExercisePersistenceRepository(AppDbContext dbContext)
     public Task<WorkoutExercisePersistenceModel?> FindUnrestrictedByIdAsync(Id<Exercise> id, CancellationToken cancellationToken = default)
         => FindAsync(dbContext.Exercises.Where(exercise => exercise.Id == id), cancellationToken);
 
+    public Task<WorkoutExercisePersistenceModel?> FindGlobalByIdAsync(Id<Exercise> id, CancellationToken cancellationToken = default)
+        => FindAsync(dbContext.Exercises.Where(exercise => exercise.Id == id && exercise.UserId == null), cancellationToken);
+
     public Task<WorkoutExercisePersistenceModel?> FindVisibleToAccountAsync(Id<Exercise> id, Id<AccountReference> accountId, CancellationToken cancellationToken = default)
     {
         var persistedAccountId = WorkoutPersistenceAccountIds.ToPersisted(accountId);
