@@ -13,11 +13,22 @@ internal static class ProgramHangfire
             return;
         }
 
+        BackgroundWorkerRecurringJobs.Configure();
+    }
+
+    public static void ConfigureDashboard(WebApplication app, string testingEnvironment)
+    {
+        if (app.Environment.IsEnvironment(testingEnvironment))
+        {
+            return;
+        }
+
+        app.UseWhen(
+            context => context.Request.Path.StartsWithSegments("/hangfire"),
+            branch => branch.UseMiddleware<HangfireDashboardAuthorizationMiddleware>());
         app.UseHangfireDashboard("/hangfire", new DashboardOptions
         {
-            Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
+            Authorization = [new HangfireDashboardAuthorizationFilter()]
         });
-
-        BackgroundWorkerRecurringJobs.Configure();
     }
 }

@@ -1,3 +1,4 @@
+using System.Net;
 using FluentAssertions;
 using Hangfire;
 using LgymApi.Application.Abstractions.Storage;
@@ -218,6 +219,19 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
         scope.ServiceProvider.GetServices<IPushProviderSender>().Should().ContainSingle()
             .Which.Should().BeSameAs(baseFactory.PushSender);
         scope.ServiceProvider.GetService<JobStorage>().Should().BeNull();
+    }
+
+    [Test]
+    public async Task TestingApiHost_DoesNotExposeDevelopmentOnlySwaggerOrHangfireMiddleware()
+    {
+        var user = await SeedUserAsync("technical-middleware-probe", "technical-middleware-probe@example.test");
+        SetAuthorizationHeader(user.Id);
+
+        foreach (var path in new[] { "/swagger/v1/swagger.json", "/swagger/index.html", "/hangfire" })
+        {
+            using var response = await Client.GetAsync(path);
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound, $"{path} is not part of the Testing host");
+        }
     }
 
     [TestCase("Email:DeliveryMode", "invalid", "Email:DeliveryMode must be one of: Smtp, Dummy.")]

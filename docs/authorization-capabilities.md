@@ -21,14 +21,19 @@
     "coaching": { "available": false },
     "nutrition": { "available": false },
     "workoutProgress": { "available": false },
-    "notifications": { "available": false }
+    "notifications": {
+      "available": true,
+      "canReadNotifications": true,
+      "canMarkNotificationsRead": true,
+      "canManagePushInstallations": true
+    }
   }
 }
 ```
 
 `application` is evaluated from the request's validated `AuthenticatedAccountContext` through the same Identity global-permission policy used by protected commands and HTTP policies. Roles and JWT permission claims are not a fallback. The response is `Cache-Control: private, no-store` and contains no caller-selected account identifier; ignored query parameters cannot select another account.
 
-Each owner entry is a typed extension slot. An owner is unavailable unless its module registers exactly one `IAccountAccessOwnerCapabilityExtension`; missing, unknown, or duplicate extension registrations resolve unavailable. `GetAvailability()` takes no actor or raw role/claim inputs: integration availability alone is not an action permission. All owners currently remain unregistered. Clients must treat an unknown schema version, a missing field, or `available: false` as unavailable. AUTH-A02 through AUTH-A11 own future enabled owner fields, resource capabilities, and capability-versus-mutation parity.
+Each owner entry is a typed extension slot. An owner is unavailable unless its module registers exactly one `IAccountAccessOwnerCapabilityExtension`; missing, unknown, or duplicate extension registrations resolve unavailable. Notifications registers its extension and derives the three action booleans from the validated account/session context. These are own-account collection capabilities, not grants over a particular notification or installation: mutation and delivery still recheck ownership, session and current source eligibility. Other owners remain unavailable until integrated. Clients must treat an unknown schema version, a missing action field, or `available: false` as non-authorizing.
 
 ## Resource And Collection Conventions
 

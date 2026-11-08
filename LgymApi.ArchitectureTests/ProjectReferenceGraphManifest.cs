@@ -120,11 +120,20 @@ internal static class ProjectReferenceGraphManifest
         ]),
         new("LgymApi.Notifications", ProjectKind.Production,
         [
+            "LgymApi.Authorization",
             "LgymApi.BackgroundWorker.Common",
             "LgymApi.Domain",
             "LgymApi.Identity",
             "LgymApi.Platform",
             "LgymApi.Resources"
+        ]),
+        new("LgymApi.Notifications.UnitTests", ProjectKind.Test,
+        [
+            "LgymApi.Authorization",
+            "LgymApi.Domain",
+            "LgymApi.Identity",
+            "LgymApi.Notifications",
+            "LgymApi.Platform"
         ]),
         new("LgymApi.Reporting", ProjectKind.Production,
         [
@@ -169,6 +178,7 @@ internal static class ProjectReferenceGraphManifest
         [
             "LgymApi.Api",
             "LgymApi.Application",
+            "LgymApi.Authorization",
             "LgymApi.BackgroundWorker",
             "LgymApi.BackgroundWorker.Common",
             "LgymApi.Domain",

@@ -16,11 +16,22 @@ public enum AccountAccessCapabilityOwner
 
 public sealed record AccountAccessOwnerCapabilities(bool IsAvailable);
 
+public sealed record NotificationsAccountAccessOwnerCapabilities(
+    bool IsAvailable,
+    bool CanReadNotifications,
+    bool CanMarkNotificationsRead,
+    bool CanManagePushInstallations);
+
 public interface IAccountAccessOwnerCapabilityExtension
 {
     AccountAccessCapabilityOwner Owner { get; }
 
     AccountAccessOwnerCapabilities GetAvailability();
+}
+
+public interface IAccountAccessOwnerCapabilityExtension<out TCapabilities> : IAccountAccessOwnerCapabilityExtension
+{
+    TCapabilities GetCapabilities(AuthenticatedAccountContext accountContext);
 }
 
 public sealed record AccountAccessApplicationCapabilities(
@@ -36,7 +47,7 @@ public sealed record AccountAccessOwnerExtensions(
     AccountAccessOwnerCapabilities Coaching,
     AccountAccessOwnerCapabilities Nutrition,
     AccountAccessOwnerCapabilities WorkoutProgress,
-    AccountAccessOwnerCapabilities Notifications);
+    NotificationsAccountAccessOwnerCapabilities Notifications);
 
 public sealed record AccountAccessCapabilities(
     Id<AccountReference> AccountId,

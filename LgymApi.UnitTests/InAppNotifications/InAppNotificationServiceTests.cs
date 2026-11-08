@@ -8,8 +8,13 @@ using InAppNotificationService = global::LgymApi.Application.Notifications.InApp
 using IInAppNotificationRepository = global::LgymApi.Application.Notifications.IInAppNotificationRepository;
 using IInAppNotificationPushPublisher = global::LgymApi.Application.Notifications.IInAppNotificationPushPublisher;
 using INotificationEventBridge = global::LgymApi.Application.Notifications.INotificationEventBridge;
+using NotificationDisclosureEligibilityService = global::LgymApi.Application.Notifications.NotificationDisclosureEligibilityService;
 using LgymApi.Application.Notifications.Errors;
 using LgymApi.Application.Notifications.Models;
+using LgymApi.Application.Notifications.Authorization;
+using LgymApi.Authorization;
+using LgymApi.Authorization.Contracts;
+using LgymApi.Platform.Contracts;
 using LgymApi.Domain.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -30,7 +35,9 @@ public sealed class InAppNotificationServiceTests
             typeof(IUnitOfWork),
             typeof(IInAppNotificationPushPublisher),
             typeof(INotificationEventBridge),
-            typeof(Microsoft.Extensions.Logging.ILogger<InAppNotificationService>));
+            typeof(Microsoft.Extensions.Logging.ILogger<InAppNotificationService>),
+            typeof(LgymApi.Authorization.Contracts.IAuthorizationEvaluator<NotificationOwnershipContext>),
+            typeof(NotificationDisclosureEligibilityService));
     }
 
     [Test]
@@ -195,6 +202,50 @@ public sealed class InAppNotificationServiceTests
     }
 
     [Test]
+    public async Task GetForUserAsync_MoreThanFiftyInvalidRecentSources_DoesNotHideOlderValidNotification()
+    {
+        var repo = new FakeInAppNotificationRepository();
+        var userId = Id<User>.New();
+        var now = DateTimeOffset.UtcNow;
+        AddNotification(repo, userId, "older valid", now.AddMinutes(-52));
+        for (var index = 0; index < 51; index++)
+        {
+            var notification = AddNotification(repo, userId, $"stale {index}", now.AddMinutes(-index));
+            notification.SenderUserId = Id<User>.New();
+            notification.DeliveryKey = "malformed";
+            notification.IsSystemNotification = false;
+        }
+
+        var result = await CreateService(repository: repo).GetForUserAsync(
+            userId,
+            new CursorPaginationQuery(Limit: 1));
+
+        result.Value.Items.Should().ContainSingle().Which.Message.Should().Be("older valid");
+        result.Value.HasNextPage.Should().BeFalse();
+    }
+
+    [Test]
+    public async Task GetForUserAsync_ExactlyFiftyResultsAndOneOlderRow_SetsNextPageCursor()
+    {
+        var repo = new FakeInAppNotificationRepository();
+        var userId = Id<User>.New();
+        var now = DateTimeOffset.UtcNow;
+        for (var index = 0; index < 51; index++)
+        {
+            AddNotification(repo, userId, $"notification {index}", now.AddMinutes(-index));
+        }
+
+        var result = await CreateService(repository: repo).GetForUserAsync(
+            userId,
+            new CursorPaginationQuery(Limit: 50));
+
+        result.Value.Items.Should().HaveCount(50);
+        result.Value.HasNextPage.Should().BeTrue();
+        result.Value.NextCursorCreatedAt.Should().Be(now.AddMinutes(-49));
+        result.Value.NextCursorId.Should().Be(result.Value.Items[^1].Id);
+    }
+
+    [Test]
     public async Task MarkAsReadAsync_OwnNotification_ReturnsSuccess()
     {
         var repo = new FakeInAppNotificationRepository();
@@ -203,7 +254,7 @@ public sealed class InAppNotificationServiceTests
 
         var service = CreateService(repository: repo);
 
-        var result = await service.MarkAsReadAsync(notification.Id, userId);
+        var result = await service.MarkAsReadAsync(notification.Id, Actor(userId));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -218,7 +269,7 @@ public sealed class InAppNotificationServiceTests
 
         var service = CreateService(repository: repo);
 
-        var result = await service.MarkAsReadAsync(notification.Id, otherUserId);
+        var result = await service.MarkAsReadAsync(notification.Id, Actor(otherUserId));
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InAppNotificationForbiddenError>();
@@ -230,7 +281,7 @@ public sealed class InAppNotificationServiceTests
         var service = CreateService();
         var nonExistentId = Id<InAppNotification>.New();
 
-        var result = await service.MarkAsReadAsync(nonExistentId, Id<User>.New());
+        var result = await service.MarkAsReadAsync(nonExistentId, Actor(Id<User>.New()));
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InAppNotificationNotFoundError>();
@@ -246,7 +297,7 @@ public sealed class InAppNotificationServiceTests
 
         var service = CreateService(repository: repo);
 
-        var result = await service.MarkAsReadAsync(notification.Id, userId);
+        var result = await service.MarkAsReadAsync(notification.Id, Actor(userId));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -314,16 +365,19 @@ public sealed class InAppNotificationServiceTests
         var push = new FakePushPublisher();
         var bridge = new FakeNotificationEventBridge();
         var userId = Id<User>.New();
+        var invitationId = Id<TrainerInvitation>.New();
         var existing = AddNotification(repo, userId, "Already there");
         existing.Type = InAppNotificationTypes.InvitationSent;
-        existing.DeliveryKey = "trainer-invitation:abc:sent";
+        existing.SenderUserId = Id<User>.New();
+        existing.IsSystemNotification = false;
+        existing.DeliveryKey = $"trainer-invitation:{invitationId}:sent";
 
         var service = CreateService(repository: repo, unitOfWork: unitOfWork, pushPublisher: push, notificationEventBridge: bridge);
         var input = new CreateInAppNotificationInput(
             userId,
-            null,
-            "trainer-invitation:abc:sent",
-            true,
+            existing.SenderUserId,
+            existing.DeliveryKey,
+            false,
             "Already there",
             null,
             InAppNotificationTypes.InvitationSent);
@@ -348,12 +402,15 @@ public sealed class InAppNotificationServiceTests
         FakePushPublisher? pushPublisher = null,
         FakeNotificationEventBridge? notificationEventBridge = null)
     {
+        var selectedRepository = repository ?? new FakeInAppNotificationRepository();
         return new InAppNotificationService(
-            repository ?? new FakeInAppNotificationRepository(),
+            selectedRepository,
             unitOfWork ?? new FakeUnitOfWork(),
             pushPublisher ?? new FakePushPublisher(),
             notificationEventBridge ?? new FakeNotificationEventBridge(),
-            NullLogger<InAppNotificationService>.Instance);
+            NullLogger<InAppNotificationService>.Instance,
+            new AuthorizationPolicyEvaluator<NotificationOwnershipContext>([new NotificationOwnershipPolicy()]),
+            new NotificationDisclosureEligibilityService(selectedRepository, new FakeNotificationSourceFactPort()));
     }
 
     private static InAppNotification AddNotification(
@@ -420,6 +477,11 @@ public sealed class InAppNotificationServiceTests
             return Task.FromResult<InAppNotification?>(found);
         }
 
+        public Task<bool> IsActiveAsync(Id<InAppNotification> id, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Added.Any(n => n.Id == id && !n.IsDeleted));
+        }
+
         public Task<IReadOnlyList<InAppNotification>> GetPageAsync(
             Id<User> userId,
             int limit,
@@ -479,6 +541,41 @@ public sealed class InAppNotificationServiceTests
             var count = Added.Count(n => n.RecipientId == userId && !n.IsRead);
             return Task.FromResult(count);
         }
+
+        public Task<IReadOnlyList<InAppNotification>> GetUnreadAsync(
+            Id<User> userId,
+            CancellationToken cancellationToken = default)
+        {
+            IReadOnlyList<InAppNotification> unread = Added
+                .Where(notification => notification.RecipientId == userId
+                    && !notification.IsRead
+                    && !notification.IsDeleted)
+                .ToList();
+            return Task.FromResult(unread);
+        }
+    }
+
+    private static AuthorizationActor Actor(Id<User> userId) =>
+        new(userId.Rebind<ActorReference>());
+
+    private sealed class FakeNotificationSourceFactPort : INotificationSourceFactPort
+    {
+        public Task<IReadOnlyDictionary<Id<InAppNotification>, NotificationSourceFacts>> GetFactsAsync(
+            IReadOnlyCollection<NotificationSourceReference> references,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyDictionary<Id<InAppNotification>, NotificationSourceFacts>>(
+                references.ToDictionary(
+                    reference => reference.NotificationId,
+                    reference => new NotificationSourceFacts(
+                        true,
+                        false,
+                        true,
+                        true,
+                        true,
+                        reference.RequiredState,
+                        true,
+                        true,
+                        false)));
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

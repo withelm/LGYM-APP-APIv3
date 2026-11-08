@@ -8,21 +8,24 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Resources;
+using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Application.Notifications;
 
 internal sealed class PushInstallationLifecycleService : IPushInstallationLifecycleService
 {
     private const string UnregisteredDisabledReason = "Unregistered";
-
     private readonly IPushInstallationRepository _pushInstallationRepository;
+    private readonly IPushInstallationPersistenceConflictClassifier _conflictClassifier;
     private readonly IUnitOfWork _unitOfWork;
 
     public PushInstallationLifecycleService(
         IPushInstallationRepository pushInstallationRepository,
+        IPushInstallationPersistenceConflictClassifier conflictClassifier,
         IUnitOfWork unitOfWork)
     {
         _pushInstallationRepository = pushInstallationRepository;
+        _conflictClassifier = conflictClassifier;
         _unitOfWork = unitOfWork;
     }
 
@@ -50,7 +53,7 @@ internal sealed class PushInstallationLifecycleService : IPushInstallationLifecy
             return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
         }
 
-        await _pushInstallationRepository.UpsertForUserSessionAsync(
+        var installation = await _pushInstallationRepository.UpsertForUserSessionAsync(
             new PushInstallationRegistration(
                 normalizedInstallationId,
                 normalizedPlatform,
@@ -63,7 +66,16 @@ internal sealed class PushInstallationLifecycleService : IPushInstallationLifecy
                 DateTimeOffset.UtcNow),
             cancellationToken);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (installation == null)
+        {
+            return Result<Unit, AppError>.Failure(new ForbiddenError(Messages.Forbidden));
+        }
+
+        if (!await TrySaveMutationAsync(installation, classifyUniqueConflicts: true, cancellationToken))
+        {
+            return Result<Unit, AppError>.Failure(new ForbiddenError(Messages.Forbidden));
+        }
+
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -84,14 +96,21 @@ internal sealed class PushInstallationLifecycleService : IPushInstallationLifecy
             return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
         }
 
-        await _pushInstallationRepository.DisableBoundForUserOrSessionAsync(
+        var installation = await _pushInstallationRepository.DisableBoundForUserAndSessionAsync(
             normalizedInstallationId,
             currentUserId.Value,
             sessionId.Value,
             DateTimeOffset.UtcNow,
             UnregisteredDisabledReason,
             cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (installation == null)
+        {
+            return Result<Unit, AppError>.Failure(new ForbiddenError(Messages.Forbidden));
+        }
+        if (!await TrySaveMutationAsync(installation, classifyUniqueConflicts: false, cancellationToken))
+        {
+            return Result<Unit, AppError>.Failure(new ForbiddenError(Messages.Forbidden));
+        }
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -112,13 +131,20 @@ internal sealed class PushInstallationLifecycleService : IPushInstallationLifecy
             return Result<Unit, AppError>.Failure(new InvalidUserError(Messages.FieldRequired));
         }
 
-        await _pushInstallationRepository.DisassociateBoundForUserOrSessionAsync(
+        var installation = await _pushInstallationRepository.DisassociateBoundForUserAndSessionAsync(
             normalizedInstallationId,
             currentUserId.Value,
             sessionId.Value,
             DateTimeOffset.UtcNow,
             cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (installation == null)
+        {
+            return Result<Unit, AppError>.Failure(new ForbiddenError(Messages.Forbidden));
+        }
+        if (!await TrySaveMutationAsync(installation, classifyUniqueConflicts: false, cancellationToken))
+        {
+            return Result<Unit, AppError>.Failure(new ForbiddenError(Messages.Forbidden));
+        }
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -145,5 +171,28 @@ internal sealed class PushInstallationLifecycleService : IPushInstallationLifecy
     private static string? NormalizeOptionalValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private async Task<bool> TrySaveMutationAsync(
+        PushInstallation installation,
+        bool classifyUniqueConflicts,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await _pushInstallationRepository.ResetFailedMutationAsync(installation, cancellationToken);
+            return false;
+        }
+        catch (DbUpdateException exception) when (
+            classifyUniqueConflicts && _conflictClassifier.IsRegistrationConflict(exception))
+        {
+            await _pushInstallationRepository.ResetFailedMutationAsync(installation, cancellationToken);
+            return false;
+        }
     }
 }

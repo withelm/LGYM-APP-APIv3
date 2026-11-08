@@ -17,8 +17,10 @@ using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.UnitOfWork;
 using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 
 namespace LgymApi.UnitTests;
 
@@ -26,17 +28,19 @@ namespace LgymApi.UnitTests;
 public sealed class PushNotificationPipelineTests
 {
     [Test]
-    public void PushNotificationDeliveryService_UsesTheSevenDirectDeliveryCollaborators()
+    public void PushNotificationDeliveryService_UsesTheEightDirectDeliveryCollaborators()
     {
         var constructor = typeof(PushNotificationDeliveryService).GetConstructors().Should().ContainSingle().Which;
 
         constructor.GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(
             typeof(IPushNotificationMessageRepository),
+            typeof(INotificationDisclosureEligibilityService),
             typeof(IPushInstallationRepository),
             typeof(IPushProviderSender),
             typeof(IPushBackgroundScheduler),
             typeof(IPushNotificationDeliveryRetrySettings),
             typeof(IUnitOfWork),
+            typeof(IAuthenticatedAccountContextResolver),
             typeof(Microsoft.Extensions.Logging.ILogger<PushNotificationDeliveryService>));
     }
 
@@ -823,6 +827,7 @@ public sealed class PushNotificationPipelineTests
         {
             Id = Id<PushInstallation>.New(),
             UserId = userId,
+            SessionId = Id<UserSession>.New(),
             InstallationId = $"device-{Id<PushInstallation>.New():N}",
             Platform = "android",
             FcmToken = "token-1",
@@ -890,12 +895,37 @@ public sealed class PushNotificationPipelineTests
         return new PushNotificationJobHandlerService(
             new PushNotificationDeliveryService(
                 messageRepository,
+                CreateDisclosureEligibility(),
                 installationRepository,
                 sender,
                 scheduler,
                 new PushNotificationDeliveryRetrySettings(options),
                 unitOfWork,
+                new ActiveAccountContextResolver(),
                 NullLogger<PushNotificationDeliveryService>.Instance));
+    }
+
+    private static INotificationDisclosureEligibilityService CreateDisclosureEligibility()
+    {
+        return new StubNotificationDisclosureEligibilityService();
+    }
+
+    private sealed class StubNotificationDisclosureEligibilityService : INotificationDisclosureEligibilityService
+    {
+        public Task<bool> CanDiscloseAsync(
+            Id<InAppNotification> notificationId,
+            CancellationToken cancellationToken = default) => Task.FromResult(true);
+    }
+
+    private sealed class ActiveAccountContextResolver : IAuthenticatedAccountContextResolver
+    {
+        public Task<AuthenticatedAccountResolution> ResolveAsync(
+            Id<AccountReference> accountId,
+            Id<AccountSessionReference> sessionId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AuthenticatedAccountResolution(
+                AuthenticatedAccountResolutionStatus.Active,
+                new AuthenticatedAccountContext(accountId, sessionId, [], [], false, false)));
     }
 
     private static TResult InvokePrivate<TResult>(object instance, string methodName, params object?[] parameters)
@@ -1212,8 +1242,8 @@ public sealed class PushNotificationPipelineTests
         public Task<PushInstallation?> FindByInstallationIdAsync(string installationId, CancellationToken cancellationToken = default)
             => Task.FromResult<PushInstallation?>(_installations.FirstOrDefault(x => x.InstallationId == installationId));
 
-        public Task<PushInstallation?> FindBoundToUserOrSessionAsync(string installationId, Id<User> userId, Id<UserSession> sessionId, CancellationToken cancellationToken = default)
-            => Task.FromResult<PushInstallation?>(_installations.FirstOrDefault(x => x.InstallationId == installationId && (x.UserId == userId || x.SessionId == sessionId)));
+        public Task<PushInstallation?> FindBoundToUserAndSessionAsync(string installationId, Id<User> userId, Id<UserSession> sessionId, CancellationToken cancellationToken = default)
+            => Task.FromResult<PushInstallation?>(_installations.FirstOrDefault(x => x.InstallationId == installationId && x.UserId == userId && x.SessionId == sessionId));
 
         public Task<List<PushInstallation>> GetActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
             => Task.FromResult(_installations.Where(x => x.UserId == userId && x.DisabledAt == null).ToList());
@@ -1228,7 +1258,7 @@ public sealed class PushNotificationPipelineTests
 
         public Task UpdateAsync(PushInstallation installation, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-        public Task UpsertForUserSessionAsync(PushInstallationRegistration registration, CancellationToken cancellationToken = default)
+        public Task<PushInstallation?> UpsertForUserSessionAsync(PushInstallationRegistration registration, CancellationToken cancellationToken = default)
         {
             var installation = _installations.FirstOrDefault(entity => entity.InstallationId == registration.InstallationId);
             if (installation == null)
@@ -1248,10 +1278,10 @@ public sealed class PushNotificationPipelineTests
             installation.LastSeenAt = registration.LastSeenAt;
             installation.DisabledAt = null;
             installation.DisabledReason = null;
-            return Task.CompletedTask;
+            return Task.FromResult<PushInstallation?>(installation);
         }
 
-        public Task<bool> DisableBoundForUserOrSessionAsync(
+        public Task<PushInstallation?> DisableBoundForUserAndSessionAsync(
             string installationId,
             Id<User> userId,
             Id<UserSession> sessionId,
@@ -1259,36 +1289,39 @@ public sealed class PushNotificationPipelineTests
             string disabledReason,
             CancellationToken cancellationToken = default)
         {
-            var installation = _installations.FirstOrDefault(entity => entity.InstallationId == installationId && (entity.UserId == userId || entity.SessionId == sessionId));
+            var installation = _installations.FirstOrDefault(entity => entity.InstallationId == installationId && entity.UserId == userId && entity.SessionId == sessionId);
             if (installation == null)
             {
-                return Task.FromResult(false);
+                return Task.FromResult<PushInstallation?>(null);
             }
 
             installation.DisabledAt = disabledAt;
             installation.DisabledReason = disabledReason;
             installation.LastSeenAt = disabledAt;
-            return Task.FromResult(true);
+            return Task.FromResult<PushInstallation?>(installation);
         }
 
-        public Task<bool> DisassociateBoundForUserOrSessionAsync(
+        public Task<PushInstallation?> DisassociateBoundForUserAndSessionAsync(
             string installationId,
             Id<User> userId,
             Id<UserSession> sessionId,
             DateTimeOffset lastSeenAt,
             CancellationToken cancellationToken = default)
         {
-            var installation = _installations.FirstOrDefault(entity => entity.InstallationId == installationId && (entity.UserId == userId || entity.SessionId == sessionId));
+            var installation = _installations.FirstOrDefault(entity => entity.InstallationId == installationId && entity.UserId == userId && entity.SessionId == sessionId);
             if (installation == null)
             {
-                return Task.FromResult(false);
+                return Task.FromResult<PushInstallation?>(null);
             }
 
             installation.UserId = null;
             installation.SessionId = null;
             installation.LastSeenAt = lastSeenAt;
-            return Task.FromResult(true);
+            return Task.FromResult<PushInstallation?>(installation);
         }
+
+        public Task ResetFailedMutationAsync(PushInstallation installation, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
 
         public Task RemoveForAccountAsync(Id<User> userId, CancellationToken cancellationToken = default)
         {

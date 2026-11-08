@@ -89,10 +89,12 @@ public sealed class PushNotificationPipelineIntegrationTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var user = await TestUtils.TestDataFactory.SeedUserAsync(db, "push-int-send", "push-int-send@example.com", "pass123");
+            var session = CreateActiveSession(user.Id);
             var installation = new PushInstallation
             {
                 Id = Id<PushInstallation>.New(),
                 UserId = user.Id,
+                SessionId = session.Id,
                 InstallationId = "device-invalid",
                 Platform = "android",
                 FcmToken = "token-invalid",
@@ -100,6 +102,7 @@ public sealed class PushNotificationPipelineIntegrationTests
                 PermissionStatus = "authorized",
                 LastSeenAt = DateTimeOffset.UtcNow
             };
+            db.UserSessions.Add(session);
             db.PushInstallations.Add(installation);
             await db.SaveChangesAsync();
             installationId = installation.Id;
@@ -139,6 +142,88 @@ public sealed class PushNotificationPipelineIntegrationTests
     }
 
     [Test]
+    public async Task ProcessAsync_RevalidatesCurrentSourceAndSuppressesOnlyTheHiddenNotification()
+    {
+        var sender = new CountingPushProviderSender();
+        using var baseFactory = new CustomWebApplicationFactory();
+        using var factory = baseFactory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IPushProviderSender>();
+                services.AddSingleton<IPushProviderSender>(sender);
+            });
+        });
+
+        Id<PushNotificationMessage> validMessageId;
+        Id<PushNotificationMessage> hiddenMessageId;
+        Id<TraineeNote> hiddenNoteId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var trainee = await TestUtils.TestDataFactory.SeedUserAsync(db, "push-source-trainee", "push-source-trainee@example.com", "pass123");
+            var trainer = await TestUtils.TestDataFactory.SeedUserAsync(db, "push-source-trainer", "push-source-trainer@example.com", "pass123");
+            var session = CreateActiveSession(trainee.Id);
+            var installation = new PushInstallation
+            {
+                Id = Id<PushInstallation>.New(),
+                UserId = trainee.Id,
+                SessionId = session.Id,
+                InstallationId = "device-source-privacy",
+                Platform = "android",
+                FcmToken = "token-source-privacy",
+                Environment = "development",
+                PermissionStatus = "authorized",
+                LastSeenAt = DateTimeOffset.UtcNow
+            };
+            var validNote = CreateVisibleNote(trainer.Id, trainee.Id, "valid note");
+            var hiddenNote = CreateVisibleNote(trainer.Id, trainee.Id, "hidden later");
+            var validNotification = CreateNoteNotification(validNote, trainer.Id, trainee.Id);
+            var hiddenNotification = CreateNoteNotification(hiddenNote, trainer.Id, trainee.Id);
+
+            db.UserSessions.Add(session);
+            db.PushInstallations.Add(installation);
+            db.TraineeNotes.AddRange(validNote, hiddenNote);
+            db.InAppNotifications.AddRange(validNotification, hiddenNotification);
+            await db.SaveChangesAsync();
+
+            var enqueue = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
+            await enqueue.EnqueueAsync(new Application.Notifications.Models.EnqueuePushNotificationInput(
+                trainee.Id, 1, validNotification.Type.Value, validNotification.Id.ToString(), null, validNotification.Id, validNotification.RedirectUrl));
+            await enqueue.EnqueueAsync(new Application.Notifications.Models.EnqueuePushNotificationInput(
+                trainee.Id, 1, hiddenNotification.Type.Value, hiddenNotification.Id.ToString(), null, hiddenNotification.Id, hiddenNotification.RedirectUrl));
+
+            validMessageId = db.PushNotificationMessages.Single(message => message.InAppNotificationId == validNotification.Id).Id;
+            hiddenMessageId = db.PushNotificationMessages.Single(message => message.InAppNotificationId == hiddenNotification.Id).Id;
+            hiddenNoteId = hiddenNote.Id;
+        }
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.TraineeNotes.Single(note => note.Id == hiddenNoteId).VisibleToTrainee = false;
+            await db.SaveChangesAsync();
+        }
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<PushNotificationJobHandlerService>();
+            await handler.ProcessAsync(validMessageId.ToString());
+            await handler.ProcessAsync(hiddenMessageId.ToString());
+        }
+
+        sender.SendCalls.Should().Be(1);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.PushNotificationMessages.Single(message => message.Id == validMessageId).Status.Should().Be(PushNotificationStatus.Sent);
+            var hiddenMessage = db.PushNotificationMessages.Single(message => message.Id == hiddenMessageId);
+            hiddenMessage.Status.Should().Be(PushNotificationStatus.Skipped);
+            hiddenMessage.ProviderStatus.Should().Be("SourceNotificationUnavailable");
+        }
+    }
+
+    [Test]
     public async Task EnqueueAsync_WhenConcurrentForSameDeliveryKey_PersistsOneMessageAndSendsOnce()
     {
         var sender = new CountingPushProviderSender();
@@ -158,10 +243,13 @@ public sealed class PushNotificationPipelineIntegrationTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var user = await TestUtils.TestDataFactory.SeedUserAsync(db, "push-dedup-user", "push-dedup@example.com", "pass123");
             userId = user.Id;
+            var session = CreateActiveSession(userId);
+            db.UserSessions.Add(session);
             db.PushInstallations.Add(new PushInstallation
             {
                 Id = Id<PushInstallation>.New(),
                 UserId = userId,
+                SessionId = session.Id,
                 InstallationId = "device-dedup",
                 Platform = "android",
                 FcmToken = "token-dedup",
@@ -332,6 +420,39 @@ public sealed class PushNotificationPipelineIntegrationTests
                 "registration-token-not-registered"));
         }
     }
+
+    private static UserSession CreateActiveSession(Id<User> userId) => new()
+    {
+        Id = Id<UserSession>.New(),
+        UserId = userId,
+        Jti = Id<UserSession>.New().ToString(),
+        ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1)
+    };
+
+    private static TraineeNote CreateVisibleNote(Id<User> trainerId, Id<User> traineeId, string title)
+        => new()
+        {
+            Id = Id<TraineeNote>.New(),
+            TrainerId = trainerId,
+            TraineeId = traineeId,
+            Title = title,
+            Content = title,
+            VisibleToTrainee = true,
+            LastUpdatedByUserId = trainerId,
+            LastUpdatedAt = DateTimeOffset.UtcNow
+        };
+
+    private static InAppNotification CreateNoteNotification(TraineeNote note, Id<User> trainerId, Id<User> traineeId)
+        => new()
+        {
+            Id = Id<InAppNotification>.New(),
+            RecipientId = traineeId,
+            SenderUserId = trainerId,
+            DeliveryKey = $"trainee-note:{note.Id}:{note.LastUpdatedAt:O}",
+            Message = note.Title!,
+            RedirectUrl = $"/trainer/notes/{note.Id}",
+            Type = LgymApi.Domain.Notifications.InAppNotificationTypes.TraineeNoteUpdated
+        };
 
     private sealed class CountingPushProviderSender : IPushProviderSender
     {

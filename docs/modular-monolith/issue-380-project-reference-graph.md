@@ -25,14 +25,15 @@ A project promotion must update the descriptor, solution membership, root Projec
 13. `LgymApi.Infrastructure` (`Production`)
 14. `LgymApi.IntegrationTests` (`Test`)
 15. `LgymApi.Notifications` (`Production`)
-16. `LgymApi.Platform` (`Production`)
-17. `LgymApi.Resources` (`Production`)
-18. `LgymApi.Resources.Generator` (`Tooling`)
-19. `LgymApi.TestUtils` (`Test`)
-20. `LgymApi.TrainingPlanning` (`Production`)
-21. `LgymApi.UnitTests` (`Test`)
-22. `LgymApi.Reporting` (`Production`)
-23. `LgymApi.Reporting.UnitTests` (`Test`)
+16. `LgymApi.Notifications.UnitTests` (`Test`)
+17. `LgymApi.Platform` (`Production`)
+18. `LgymApi.Resources` (`Production`)
+19. `LgymApi.Resources.Generator` (`Tooling`)
+20. `LgymApi.TestUtils` (`Test`)
+21. `LgymApi.TrainingPlanning` (`Production`)
+22. `LgymApi.UnitTests` (`Test`)
+23. `LgymApi.Reporting` (`Production`)
+24. `LgymApi.Reporting.UnitTests` (`Test`)
 
 ## Canonical direct edge manifest
 
@@ -116,10 +117,16 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.IntegrationTests` -> `LgymApi.TestUtils`
 - `LgymApi.IntegrationTests` -> `LgymApi.TrainingPlanning`
 - `LgymApi.Notifications` -> `LgymApi.BackgroundWorker.Common`
+- `LgymApi.Notifications` -> `LgymApi.Authorization`
 - `LgymApi.Notifications` -> `LgymApi.Domain`
 - `LgymApi.Notifications` -> `LgymApi.Identity`
 - `LgymApi.Notifications` -> `LgymApi.Platform`
 - `LgymApi.Notifications` -> `LgymApi.Resources`
+- `LgymApi.Notifications.UnitTests` -> `LgymApi.Authorization`
+- `LgymApi.Notifications.UnitTests` -> `LgymApi.Domain`
+- `LgymApi.Notifications.UnitTests` -> `LgymApi.Identity`
+- `LgymApi.Notifications.UnitTests` -> `LgymApi.Notifications`
+- `LgymApi.Notifications.UnitTests` -> `LgymApi.Platform`
 - `LgymApi.Reporting` -> `LgymApi.Domain`
 - `LgymApi.Reporting` -> `LgymApi.Identity`
 - `LgymApi.Reporting` -> `LgymApi.Platform`
@@ -145,6 +152,7 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.TrainingPlanning` -> `LgymApi.Resources`
 - `LgymApi.UnitTests` -> `LgymApi.Api`
 - `LgymApi.UnitTests` -> `LgymApi.Application`
+- `LgymApi.UnitTests` -> `LgymApi.Authorization`
 - `LgymApi.UnitTests` -> `LgymApi.BackgroundWorker`
 - `LgymApi.UnitTests` -> `LgymApi.BackgroundWorker.Common`
 - `LgymApi.UnitTests` -> `LgymApi.Domain`
@@ -164,11 +172,11 @@ Each row is one representative source location whose symbol resolves to the targ
 | Edge | Roslyn-resolved source or analyzer evidence |
 | --- | --- |
 | `LgymApi.Api -> LgymApi.Application` | `LgymApi.Api/Features/Account/Controllers/AccountController.cs:5` |
-| `LgymApi.Api -> LgymApi.BackgroundWorker` | `LgymApi.Api/Program.Hangfire.cs:21` |
+| `LgymApi.Api -> LgymApi.BackgroundWorker` | `LgymApi.Api/Program.Hangfire.cs:16` |
 | `LgymApi.Api -> LgymApi.Domain` | `LgymApi.Api/Configuration/ApiAuthorizationExtensions.cs:3` |
 | `LgymApi.Api -> LgymApi.Identity` | `LgymApi.Api/Features/Account/Controllers/AccountController.cs:8` |
 | `LgymApi.Api -> LgymApi.Infrastructure` | `LgymApi.Api/Configuration/LocalPhotoDevelopmentEndpoints.cs:27` |
-| `LgymApi.Api -> LgymApi.Notifications` | `LgymApi.Api/Features/InAppNotification/Controllers/InAppNotificationController.cs:6` |
+| `LgymApi.Api -> LgymApi.Notifications` | `LgymApi.Api/Features/InAppNotification/Controllers/InAppNotificationController.cs:7` |
 | `LgymApi.Api -> LgymApi.Platform` | `LgymApi.Api/Extensions/ApiJsonOptionsExtensions.cs:3` |
 | `LgymApi.Api -> LgymApi.Reporting` | `LgymApi.Api/Program.cs:8` |
 | `LgymApi.Api -> LgymApi.Resources` | `LgymApi.Api/Configuration/ApiAuthenticationExtensions.cs:50` |
@@ -234,17 +242,23 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.IntegrationTests -> LgymApi.Domain` | `LgymApi.IntegrationTests/AdminFlagTests.cs:4` |
 | `LgymApi.IntegrationTests -> LgymApi.Identity` | `LgymApi.IntegrationTests/CoachingContractCompatibilityTests.cs:8` |
 | `LgymApi.IntegrationTests -> LgymApi.Infrastructure` | `LgymApi.IntegrationTests/AdminUserIntegrationTests.cs:102` |
-| `LgymApi.IntegrationTests -> LgymApi.Notifications` | `LgymApi.IntegrationTests/CompositionRootStartupTests.cs:16` |
+| `LgymApi.IntegrationTests -> LgymApi.Notifications` | `LgymApi.IntegrationTests/CompositionRootStartupTests.cs:17` |
 | `LgymApi.IntegrationTests -> LgymApi.Platform` | `LgymApi.IntegrationTests/ApiHostConfigurationCharacterizationTests.cs:10` |
 | `LgymApi.IntegrationTests -> LgymApi.Resources` | `LgymApi.IntegrationTests/ApiHostConfigurationCharacterizationTests.cs:179` |
-| `LgymApi.IntegrationTests -> LgymApi.Reporting` | `LgymApi.IntegrationTests/CompositionRootStartupTests.cs:14` |
+| `LgymApi.IntegrationTests -> LgymApi.Reporting` | `LgymApi.IntegrationTests/CompositionRootStartupTests.cs:4` |
 | `LgymApi.IntegrationTests -> LgymApi.TestUtils` | `LgymApi.IntegrationTests/CoachingLegacyEnvelopeReplayIntegrationTests.cs:78` |
 | `LgymApi.IntegrationTests -> LgymApi.TrainingPlanning` | `LgymApi.IntegrationTests/CoachingManagedPlanSliceIntegrationTests.cs:6` |
 | `LgymApi.Notifications -> LgymApi.BackgroundWorker.Common` | `LgymApi.Notifications/EmailTemplates/EmailServiceCollectionExtensions.cs:1` |
+| `LgymApi.Notifications -> LgymApi.Authorization` | `LgymApi.Notifications/Authorization/NotificationOwnershipPolicy.cs:1` |
 | `LgymApi.Notifications -> LgymApi.Domain` | `LgymApi.Notifications/Adapters/PushInstallationSessionDisassociationAdapter.cs:3` |
 | `LgymApi.Notifications -> LgymApi.Identity` | `LgymApi.Notifications/Adapters/PushInstallationSessionDisassociationAdapter.cs:1` |
 | `LgymApi.Notifications -> LgymApi.Platform` | `LgymApi.Notifications/CoachingNotificationIntentService.cs:2` |
 | `LgymApi.Notifications -> LgymApi.Resources` | `LgymApi.Notifications/CoachingNotificationIntentService.cs:52` |
+| `LgymApi.Notifications.UnitTests -> LgymApi.Authorization` | `LgymApi.Notifications.UnitTests/NotificationOwnershipPolicyTests.cs:3` |
+| `LgymApi.Notifications.UnitTests -> LgymApi.Domain` | `LgymApi.Notifications.UnitTests/NotificationOwnershipPolicyTests.cs:4` |
+| `LgymApi.Notifications.UnitTests -> LgymApi.Identity` | `LgymApi.Notifications.UnitTests/NotificationsModuleTests.cs:6` |
+| `LgymApi.Notifications.UnitTests -> LgymApi.Notifications` | `LgymApi.Notifications.UnitTests/NotificationOwnershipPolicyTests.cs:2` |
+| `LgymApi.Notifications.UnitTests -> LgymApi.Platform` | `LgymApi.Notifications.UnitTests/NotificationOwnershipPolicyTests.cs:5` |
 | `LgymApi.Reporting -> LgymApi.Domain` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:4` |
 | `LgymApi.Reporting -> LgymApi.Identity` | `LgymApi.Reporting/Features/Reporting/IRecurringReportAssignmentService.cs:6` |
 | `LgymApi.Reporting -> LgymApi.Platform` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:13` |
@@ -270,6 +284,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.TrainingPlanning -> LgymApi.Resources` | `LgymApi.TrainingPlanning/ManagedPlans/AssignManagedPlanUseCase.cs:44` |
 | `LgymApi.UnitTests -> LgymApi.Api` | `LgymApi.UnitTests/AccountReadServiceTests.cs:195` |
 | `LgymApi.UnitTests -> LgymApi.Application` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:8` |
+| `LgymApi.UnitTests -> LgymApi.Authorization` | `LgymApi.UnitTests/ApiAuthorizationExtensionsTests.cs:6` |
 | `LgymApi.UnitTests -> LgymApi.BackgroundWorker` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:11` |
 | `LgymApi.UnitTests -> LgymApi.BackgroundWorker.Common` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:21` |
 | `LgymApi.UnitTests -> LgymApi.Domain` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:13` |
@@ -284,9 +299,9 @@ Each row is one representative source location whose symbol resolves to the targ
 
 ## Locked topology
 
-Current derived snapshot: 23 approved projects, 118 approved direct `ProjectReference` edges, and 388 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 117 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
+Current derived snapshot: 24 approved projects, 125 approved direct `ProjectReference` edges, and 427 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 124 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
 
-Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Authorization` -> `LgymApi.Authorization.UnitTests` -> `LgymApi.Identity` -> `LgymApi.Identity.UnitTests` -> `LgymApi.Notifications` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
+Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Authorization` -> `LgymApi.Authorization.UnitTests` -> `LgymApi.Identity` -> `LgymApi.Identity.UnitTests` -> `LgymApi.Notifications` -> `LgymApi.Notifications.UnitTests` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
 
 This topology retains one `AppDbContext`, migration root, snapshot, database, schema, and migration stream. Worker selects environment-specific scheduling and delegates hosted Hangfire server registration to the Infrastructure-owned persistence helper.
 

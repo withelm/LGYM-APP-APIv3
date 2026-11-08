@@ -55,6 +55,16 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
             traineeCapability.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
+        ClearAuthorizationHeader();
+        using (var anonymousTrainerCapability = await Client.GetAsync("/api/trainer/reporting/capabilities"))
+        {
+            anonymousTrainerCapability.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+        using (var anonymousTraineeCapability = await Client.GetAsync("/api/trainee/reporting/capabilities"))
+        {
+            anonymousTraineeCapability.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
         SetAuthorizationHeader(trainer.Id);
         using var enabledFactory = CreateEnabledFactory();
         using var enabledClient = CreateAuthorizedClient(enabledFactory);

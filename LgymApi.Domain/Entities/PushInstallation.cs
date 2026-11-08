@@ -15,4 +15,5 @@ public sealed class PushInstallation : EntityBase<PushInstallation>
     public DateTimeOffset LastSeenAt { get; set; }
     public DateTimeOffset? DisabledAt { get; set; }
     public string? DisabledReason { get; set; }
+    public long RegistrationRevision { get; set; }
 }

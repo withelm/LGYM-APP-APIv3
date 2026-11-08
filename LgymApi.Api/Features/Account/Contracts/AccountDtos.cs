@@ -79,7 +79,7 @@ public sealed class AccountAccessOwnerExtensionsDto : IResultDto
     public AccountAccessOwnerCapabilitiesDto WorkoutProgress { get; init; } = new();
 
     [JsonPropertyName("notifications")]
-    public AccountAccessOwnerCapabilitiesDto Notifications { get; init; } = new();
+    public NotificationsAccountAccessOwnerCapabilitiesDto Notifications { get; init; } = new();
 }
 
 public sealed class AccountAccessOwnerCapabilitiesDto : IResultDto
@@ -87,4 +87,19 @@ public sealed class AccountAccessOwnerCapabilitiesDto : IResultDto
     /// <summary>False when the owner is missing, unsupported, or intentionally denies it. Clients must not infer access from availability.</summary>
     [JsonPropertyName("available")]
     public bool IsAvailable { get; init; }
+}
+
+public sealed class NotificationsAccountAccessOwnerCapabilitiesDto : IResultDto
+{
+    [JsonPropertyName("available")]
+    public bool IsAvailable { get; init; }
+
+    [JsonPropertyName("canReadNotifications")]
+    public bool CanReadNotifications { get; init; }
+
+    [JsonPropertyName("canMarkNotificationsRead")]
+    public bool CanMarkNotificationsRead { get; init; }
+
+    [JsonPropertyName("canManagePushInstallations")]
+    public bool CanManagePushInstallations { get; init; }
 }

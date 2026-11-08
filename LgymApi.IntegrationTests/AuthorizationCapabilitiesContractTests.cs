@@ -43,9 +43,14 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         var extensions = payload.RootElement.GetProperty("extensions");
         extensions.EnumerateObject().Select(property => property.Name)
             .Should().Equal("reporting", "trainingPlanning", "coaching", "nutrition", "workoutProgress", "notifications");
-        extensions.EnumerateObject().Should().OnlyContain(property =>
+        extensions.EnumerateObject().Where(property => property.Name != "notifications").Should().OnlyContain(property =>
             property.Value.EnumerateObject().Select(nested => nested.Name).SequenceEqual(new[] { "available" })
             && !property.Value.GetProperty("available").GetBoolean());
+        var notifications = extensions.GetProperty("notifications");
+        notifications.GetProperty("available").GetBoolean().Should().BeTrue();
+        notifications.GetProperty("canReadNotifications").GetBoolean().Should().BeTrue();
+        notifications.GetProperty("canMarkNotificationsRead").GetBoolean().Should().BeTrue();
+        notifications.GetProperty("canManagePushInstallations").GetBoolean().Should().BeTrue();
     }
 
     [Test]
@@ -146,6 +151,9 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
             .Select(property => property.Name).Should().BeEquivalentTo("schemaVersion", "account", "application", "extensions");
         schemas.GetProperty("AccountAccessOwnerCapabilitiesDto").GetProperty("properties").GetProperty("available")
             .GetProperty("type").GetString().Should().Be("boolean");
+        schemas.GetProperty("NotificationsAccountAccessOwnerCapabilitiesDto").GetProperty("properties")
+            .EnumerateObject().Select(property => property.Name)
+            .Should().BeEquivalentTo("available", "canReadNotifications", "canMarkNotificationsRead", "canManagePushInstallations");
 
         var exportPath = Environment.GetEnvironmentVariable("LGYM_CAPABILITIES_OPENAPI_OUTPUT");
         if (!string.IsNullOrWhiteSpace(exportPath))
@@ -171,7 +179,9 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         var application = payload.RootElement.GetProperty("application");
         application.GetProperty("canAccessTrainerWorkspace").GetBoolean().Should().BeTrue();
         application.GetProperty("canAccessAdminWorkspace").GetBoolean().Should().Be(isAdmin);
-        payload.RootElement.GetProperty("extensions").EnumerateObject()
+        var extensions = payload.RootElement.GetProperty("extensions");
+        extensions.EnumerateObject().Where(property => property.Name != "notifications")
             .Should().OnlyContain(property => !property.Value.GetProperty("available").GetBoolean());
+        extensions.GetProperty("notifications").GetProperty("canManagePushInstallations").GetBoolean().Should().BeTrue();
     }
 }

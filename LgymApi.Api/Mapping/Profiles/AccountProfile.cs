@@ -41,11 +41,18 @@ public sealed class AccountProfile : IMappingProfile
             Coaching = context.Map<AccountAccessOwnerCapabilitiesDto>(source.Coaching),
             Nutrition = context.Map<AccountAccessOwnerCapabilitiesDto>(source.Nutrition),
             WorkoutProgress = context.Map<AccountAccessOwnerCapabilitiesDto>(source.WorkoutProgress),
-            Notifications = context.Map<AccountAccessOwnerCapabilitiesDto>(source.Notifications)
+            Notifications = context.Map<NotificationsAccountAccessOwnerCapabilitiesDto>(source.Notifications)
         });
         configuration.CreateMap<AccountAccessOwnerCapabilities, AccountAccessOwnerCapabilitiesDto>((source, _) => new AccountAccessOwnerCapabilitiesDto
         {
             IsAvailable = source.IsAvailable
+        });
+        configuration.CreateMap<NotificationsAccountAccessOwnerCapabilities, NotificationsAccountAccessOwnerCapabilitiesDto>((source, _) => new NotificationsAccountAccessOwnerCapabilitiesDto
+        {
+            IsAvailable = source.IsAvailable,
+            CanReadNotifications = source.CanReadNotifications,
+            CanMarkNotificationsRead = source.CanMarkNotificationsRead,
+            CanManagePushInstallations = source.CanManagePushInstallations
         });
     }
 }

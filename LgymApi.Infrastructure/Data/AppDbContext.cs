@@ -101,6 +101,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     DbSet<PushNotificationMessage> INotificationsPersistenceContext.PushNotificationMessages => PushNotificationMessages;
     DbSet<InAppNotification> INotificationsPersistenceContext.InAppNotifications => InAppNotifications;
     EntityEntry<InAppNotification> INotificationsPersistenceContext.Entry(InAppNotification entity) => Entry(entity);
+    EntityEntry<PushInstallation> INotificationsPersistenceContext.Entry(PushInstallation entity) => Entry(entity);
     EntityEntry<PushNotificationMessage> INotificationsPersistenceContext.Entry(PushNotificationMessage entity) => Entry(entity);
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -196,6 +197,10 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
             else if (entry.State == EntityState.Modified)
             {
                 entry.Property("UpdatedAt").CurrentValue = utcNow;
+                if (entry.Entity is PushInstallation installation)
+                {
+                    installation.RegistrationRevision = (long)entry.Property(nameof(PushInstallation.RegistrationRevision)).OriginalValue! + 1;
+                }
             }
         }
     }

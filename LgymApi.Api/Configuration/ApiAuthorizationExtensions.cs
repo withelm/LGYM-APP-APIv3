@@ -12,6 +12,7 @@ public static class ApiAuthorizationExtensions
     {
         services.AddScoped<IAuthorizationHandler, CurrentPermissionAuthorizationHandler>();
         services.AddScoped<IApiIdempotencyReplayAccessPort, IdentityIdempotencyReplayAccessPort>();
+        services.AddScoped<IApiIdempotencyReplayAccessPort, NotificationsIdempotencyReplayAccessPort>();
         services.AddScoped<ApiIdempotencyReplayAccessEvaluator>();
 
         services

@@ -17,6 +17,10 @@ using LgymApi.Application.Notifications.Contracts.Email;
 using LgymApi.Application.Notifications.Email;
 using LgymApi.Application.Notifications.Contracts.InApp;
 using LgymApi.Application.Notifications.InApp;
+using LgymApi.Application.Notifications.Authorization;
+using LgymApi.Authorization;
+using LgymApi.Authorization.Contracts;
+using LgymApi.Identity.Contracts.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,7 +30,13 @@ public static class NotificationsModule
 {
     public static IServiceCollection AddNotificationsModule(this IServiceCollection services)
     {
+        services.AddAuthorizationPolicy<NotificationOwnershipContext, NotificationOwnershipPolicy>();
+        services.AddScoped<IAccountAccessOwnerCapabilityExtension, NotificationsAccountAccessCapabilityExtension>();
         services.AddScoped<IInAppNotificationService, InAppNotificationService>();
+        services.AddScoped<NotificationDisclosureEligibilityService>();
+        services.AddScoped<INotificationDisclosureEligibilityService>(static provider =>
+            provider.GetRequiredService<NotificationDisclosureEligibilityService>());
+        services.AddScoped<INotificationReplayAccessService, NotificationReplayAccessService>();
         services.AddScoped<IInAppNotificationWireWriter, InAppNotificationWireWriter>();
         services.AddScoped<ICoachingNotificationIntentService, CoachingNotificationIntentService>();
         services.AddScoped<IPushNotificationService, PushNotificationService>();

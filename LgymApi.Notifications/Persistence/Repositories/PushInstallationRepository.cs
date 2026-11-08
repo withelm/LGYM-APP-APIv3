@@ -27,7 +27,7 @@ internal sealed class PushInstallationRepository : IPushInstallationRepository
             .FirstOrDefaultAsync(x => x.InstallationId == installationId, cancellationToken);
     }
 
-    public Task<PushInstallation?> FindBoundToUserOrSessionAsync(
+    public Task<PushInstallation?> FindBoundToUserAndSessionAsync(
         string installationId,
         Id<User> userId,
         Id<UserSession> sessionId,
@@ -36,7 +36,8 @@ internal sealed class PushInstallationRepository : IPushInstallationRepository
         return _persistenceContext.PushInstallations
             .FirstOrDefaultAsync(
                 x => x.InstallationId == installationId
-                    && (x.UserId == userId || x.SessionId == sessionId),
+                    && x.UserId == userId
+                    && x.SessionId == sessionId,
                 cancellationToken);
     }
 
@@ -74,10 +75,24 @@ internal sealed class PushInstallationRepository : IPushInstallationRepository
         return Task.CompletedTask;
     }
 
-    public async Task UpsertForUserSessionAsync(PushInstallationRegistration registration, CancellationToken cancellationToken = default)
+    public async Task<PushInstallation?> UpsertForUserSessionAsync(PushInstallationRegistration registration, CancellationToken cancellationToken = default)
     {
         var installation = await _persistenceContext.PushInstallations
             .FirstOrDefaultAsync(entity => entity.InstallationId == registration.InstallationId, cancellationToken);
+
+        var tokenInstallation = await _persistenceContext.PushInstallations
+            .FirstOrDefaultAsync(entity => entity.FcmToken == registration.FcmToken, cancellationToken);
+        if (tokenInstallation != null && tokenInstallation.Id != installation?.Id)
+        {
+            return null;
+        }
+
+        if (installation != null
+            && ((installation.UserId.HasValue && installation.UserId != registration.UserId)
+                || (!installation.UserId.HasValue && installation.SessionId.HasValue)))
+        {
+            return null;
+        }
 
         var isNewInstallation = installation == null;
         if (installation == null)
@@ -106,9 +121,11 @@ internal sealed class PushInstallationRepository : IPushInstallationRepository
         {
             _persistenceContext.PushInstallations.Update(installation);
         }
+
+        return installation;
     }
 
-    public async Task<bool> DisableBoundForUserOrSessionAsync(
+    public async Task<PushInstallation?> DisableBoundForUserAndSessionAsync(
         string installationId,
         Id<User> userId,
         Id<UserSession> sessionId,
@@ -116,35 +133,52 @@ internal sealed class PushInstallationRepository : IPushInstallationRepository
         string disabledReason,
         CancellationToken cancellationToken = default)
     {
-        var installation = await FindBoundToUserOrSessionAsync(installationId, userId, sessionId, cancellationToken);
+        var installation = await FindBoundToUserAndSessionAsync(installationId, userId, sessionId, cancellationToken);
         if (installation == null)
         {
-            return false;
+            return null;
         }
 
         installation.DisabledAt = disabledAt;
         installation.DisabledReason = disabledReason;
         installation.LastSeenAt = disabledAt;
         _persistenceContext.PushInstallations.Update(installation);
-        return true;
+        return installation;
     }
 
-    public async Task<bool> DisassociateBoundForUserOrSessionAsync(
+    public async Task<PushInstallation?> DisassociateBoundForUserAndSessionAsync(
         string installationId,
         Id<User> userId,
         Id<UserSession> sessionId,
         DateTimeOffset lastSeenAt,
         CancellationToken cancellationToken = default)
     {
-        var installation = await FindBoundToUserOrSessionAsync(installationId, userId, sessionId, cancellationToken);
+        var installation = await FindBoundToUserAndSessionAsync(installationId, userId, sessionId, cancellationToken);
         if (installation == null)
         {
-            return false;
+            return null;
         }
 
         Disassociate(installation, lastSeenAt);
         _persistenceContext.PushInstallations.Update(installation);
-        return true;
+        return installation;
+    }
+
+    public async Task ResetFailedMutationAsync(
+        PushInstallation installation,
+        CancellationToken cancellationToken = default)
+    {
+        var entry = _persistenceContext.Entry(installation);
+        if (entry.State == EntityState.Added)
+        {
+            entry.State = EntityState.Detached;
+            return;
+        }
+
+        if (entry.State is EntityState.Modified or EntityState.Deleted)
+        {
+            await entry.ReloadAsync(cancellationToken);
+        }
     }
 
     public async Task DisassociateForSessionAsync(

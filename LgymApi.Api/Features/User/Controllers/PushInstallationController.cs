@@ -1,4 +1,5 @@
 using LgymApi.Api.Extensions;
+using LgymApi.Api.Idempotency;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Middleware;
@@ -24,6 +25,7 @@ public sealed class PushInstallationController : ControllerBase
     }
 
     [HttpPost("register")]
+    [ApiIdempotency("api/push/installations/register", ApiIdempotencyScopeSource.AuthenticatedUser, ApiIdempotencyReplayOwner.Notifications, IsOptional = true)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Register([FromBody] RegisterPushInstallationRequest request, CancellationToken cancellationToken = default)
     {
@@ -50,6 +52,7 @@ public sealed class PushInstallationController : ControllerBase
     }
 
     [HttpPost("unregister")]
+    [ApiIdempotency("api/push/installations/unregister", ApiIdempotencyScopeSource.AuthenticatedUser, ApiIdempotencyReplayOwner.Notifications, IsOptional = true)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Unregister([FromBody] PushInstallationActionRequest request, CancellationToken cancellationToken = default)
     {

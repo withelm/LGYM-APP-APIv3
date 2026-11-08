@@ -26,6 +26,8 @@ public sealed class ApiIdempotencyAttribute : Attribute
     public ApiIdempotencyReplayResourceBinding ReplayResourceBinding { get; }
 
     public string? RequiredPermission { get; }
+
+    public bool IsOptional { get; init; }
 }
 
 public enum ApiIdempotencyScopeSource
