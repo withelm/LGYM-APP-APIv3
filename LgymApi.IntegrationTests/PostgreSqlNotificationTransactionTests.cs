@@ -147,10 +147,18 @@ internal sealed class PostgreSqlNotificationTransactionTests : PostgreSqlIntegra
     private async Task<(Id<PushNotificationMessage> MessageId, Id<PushInstallation> InstallationId)> SeedPushNotificationAsync()
     {
         var user = await SeedUserAsync($"push-recovery-{Id<User>.New():N}", $"push-recovery-{Id<User>.New():N}@example.com");
+        var session = new UserSession
+        {
+            Id = Id<UserSession>.New(),
+            UserId = user.Id,
+            Jti = Id<UserSession>.New().ToString(),
+            ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1)
+        };
         var installation = new PushInstallation
         {
             Id = Id<PushInstallation>.New(),
             UserId = user.Id,
+            SessionId = session.Id,
             InstallationId = $"task-36-{Id<PushInstallation>.New():N}",
             Platform = "android",
             FcmToken = "test-token",
@@ -173,6 +181,7 @@ internal sealed class PostgreSqlNotificationTransactionTests : PostgreSqlIntegra
 
         await using var scope = Factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        database.UserSessions.Add(session);
         database.PushInstallations.Add(installation);
         database.PushNotificationMessages.Add(message);
         await database.SaveChangesAsync();

@@ -40,11 +40,29 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
         await using (var baseline = CreateDbContext(lease))
         {
             await MigrateAsync(baseline, PreviousMigrationId);
-            baseline.PushInstallations.AddRange(
+            // Seed the historical schema without the current model's RegistrationRevision column.
+            await using var connection = new NpgsqlConnection(lease.ConnectionString);
+            await connection.OpenAsync();
+            foreach (var installation in new[]
+            {
                 CreateInstallation("duplicate-device-a", "duplicate-token"),
                 CreateInstallation("duplicate-device-b", "duplicate-token"),
-                CreateInstallation("unrelated-device", "unrelated-token"));
-            await baseline.SaveChangesAsync();
+                CreateInstallation("unrelated-device", "unrelated-token")
+            })
+            {
+                await using var command = new NpgsqlCommand("""
+                    INSERT INTO "PushInstallations"
+                        ("Id", "InstallationId", "Platform", "FcmToken", "Environment", "LastSeenAt", "CreatedAt", "UpdatedAt", "IsDeleted")
+                    VALUES (@id, @installationId, @platform, @token, @environment, @now, @now, @now, FALSE)
+                    """, connection);
+                command.Parameters.AddWithValue("id", installation.Id.Value);
+                command.Parameters.AddWithValue("installationId", installation.InstallationId);
+                command.Parameters.AddWithValue("platform", installation.Platform);
+                command.Parameters.AddWithValue("token", installation.FcmToken);
+                command.Parameters.AddWithValue("environment", installation.Environment);
+                command.Parameters.AddWithValue("now", installation.LastSeenAt);
+                await command.ExecuteNonQueryAsync();
+            }
         }
 
         await using (var migration = CreateDbContext(lease))
