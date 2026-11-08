@@ -38,15 +38,22 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
             // Missing defaults originate from legacy requiredViews, not existing schema-2 IDs.
             if (document.RootElement.ValueKind != JsonValueKind.Object
                 || !document.RootElement.TryGetProperty("requiredViews", out var views)
+                || document.RootElement.TryGetProperty("requiredPhotoTypeIds", out _)
                 || views.ValueKind != JsonValueKind.Array)
                 return;
 
+            var systemKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var view in views.EnumerateArray())
             {
-                if (view.ValueKind == JsonValueKind.String
-                    && LegacyPhotoTypeCatalog.TryResolve(view.GetString(), out var systemKey, out _))
-                    referenced.Add((trainerId, systemKey));
+                if (view.ValueKind != JsonValueKind.String
+                    || !LegacyPhotoTypeCatalog.TryResolve(view.GetString(), out var systemKey, out _)
+                    || !systemKeys.Add(systemKey))
+                    return;
             }
+
+            // Invalid definitions must not contribute even their individually valid views.
+            foreach (var systemKey in systemKeys)
+                referenced.Add((trainerId, systemKey));
         }
         catch (JsonException)
         {

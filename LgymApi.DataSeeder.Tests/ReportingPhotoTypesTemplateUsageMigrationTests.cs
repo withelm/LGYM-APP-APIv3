@@ -56,6 +56,10 @@ public sealed partial class ReportingPhotoTypesMigrationTests
     [TestCase(true, "other-type", true)]
     [TestCase(true, "non-photo", true)]
     [TestCase(true, "malformed-config", true)]
+    [TestCase(true, "ambiguous-config", true)]
+    [TestCase(true, "unknown-view", true)]
+    [TestCase(true, "duplicate-view", true)]
+    [TestCase(true, "non-string-view", true)]
     public async Task Apply_ArchiveStateUsesAllSurvivingTemplatesOfTheOriginalTrainer(
         bool historicalFieldRequired, string reference, bool expectedArchived)
     {
@@ -89,6 +93,10 @@ public sealed partial class ReportingPhotoTypesMigrationTests
                 {
                     "other-type" => "{\"requiredViews\":[\"Side\"]}",
                     "malformed-config" => "not-json",
+                    "ambiguous-config" => "{\"requiredViews\":[\"Back\"],\"requiredPhotoTypeIds\":[]}",
+                    "unknown-view" => "{\"requiredViews\":[\"Back\",\"Unknown\"]}",
+                    "duplicate-view" => "{\"requiredViews\":[\"Back\",\"back\"]}",
+                    "non-string-view" => "{\"requiredViews\":[\"Back\",42]}",
                     // Match legacy spellings without changing the canonical SystemKey.
                     _ => "{\"requiredViews\":[\"back\"]}"
                 }
