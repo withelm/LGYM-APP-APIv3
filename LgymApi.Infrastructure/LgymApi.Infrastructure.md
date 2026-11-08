@@ -1,6 +1,8 @@
 # LgymApi.Infrastructure.csproj
 
 - Purpose: technical implementations.
+- Photo-type template usage accepts only an unambiguous legacy configuration whose views are all recognized and unique; invalid fields contribute no partial references when classifying new defaults.
+- Reporting photo-type backfill classifies only missing defaults using all surviving templates of the original surviving trainer, including optional photo fields and templates without issued requests. Unreferenced historical defaults and retained deleted-trainer defaults are archived; existing dictionary states and issued snapshots remain unchanged. The legacy catalog includes `Side` / `Bok` alongside Front, Back, SideLeft and SideRight.
 - Contains: EF Core `DbContext`, migrations, Unit of Work, storage, remaining technical services, Hangfire persistence, and module-owned infrastructure DI helpers.
 - Rules: repositories must not call `SaveChangesAsync` or own transactions.
 - Boundary: do not register Application services here.

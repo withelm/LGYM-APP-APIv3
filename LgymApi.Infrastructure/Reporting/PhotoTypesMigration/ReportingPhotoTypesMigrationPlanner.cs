@@ -85,7 +85,6 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
                 .OrderBy(field => field.Order)
                 .ThenBy(field => field.CreatedAt)
                 .ToList();
-            var historyOnly = users[request.TrainerId].IsDeleted || users[request.TraineeId].IsDeleted;
             var localTypes = new Dictionary<(Id<User> TrainerId, string SystemKey), TrainerPhotoType>();
             var bindingsByView = new Dictionary<string, List<MigrationPhotoBindingDocument>>(StringComparer.OrdinalIgnoreCase);
             var snapshotFields = new List<MigrationReportTemplateSnapshotFieldDocument>();
@@ -104,7 +103,6 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
                         plannedTypes,
                         localTypes,
                         bindingsByView,
-                        historyOnly,
                         report,
                         ref unsafeRequest);
                 }
@@ -140,17 +138,7 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
 
             foreach (var plannedType in localTypes)
             {
-                if (plannedTypes.TryGetValue(plannedType.Key, out var sharedType))
-                {
-                    if (!plannedType.Value.IsArchived)
-                    {
-                        sharedType.IsArchived = false;
-                    }
-                }
-                else
-                {
-                    plannedTypes.Add(plannedType.Key, plannedType.Value);
-                }
+                plannedTypes.TryAdd(plannedType.Key, plannedType.Value);
             }
 
             var snapshotDocument = new MigrationReportTemplateSnapshotDocument(
@@ -171,6 +159,13 @@ internal sealed partial class ReportingPhotoTypesMigrationPlanner
             plannedRequests.Add(new PlannedRequestMigration(request.Id, snapshot, photoBindings));
             report.Counters.PhotoMappingsPlanned += photoBindings.Count;
             report.Counters.RequestsPlanned++;
+        }
+
+        var referencedTypes = FindReferencedLegacyPhotoTypes(state);
+        foreach (var plannedType in plannedTypes)
+        {
+            // Classify only newly created defaults. Existing trainer choices are immutable here.
+            plannedType.Value.IsArchived = !referencedTypes.Contains(plannedType.Key);
         }
 
         report.Counters.DefaultsPlanned = plannedTypes.Count;
