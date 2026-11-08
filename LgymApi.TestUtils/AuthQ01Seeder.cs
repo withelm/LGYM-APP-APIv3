@@ -36,7 +36,11 @@ public static class AuthQ01Seeder
                 cancellationToken: cancellationToken,
                 userId: Id<User>.TryParse(actor.Id, out var id) ? id : throw new InvalidOperationException($"Invalid actor ID '{actor.Id}'."),
                 timestamp: definition.Timeline.ReferenceNow,
-                additionalRoles: actor.Roles));
+                additionalRoles: actor.Roles.Where(role => role != AuthConstants.Roles.Trainer).ToArray()));
+            if (actor.Roles.Contains(AuthConstants.Roles.Trainer, StringComparer.Ordinal))
+            {
+                dbContext.UserRoles.Add(TestDataFactory.ApprovedTrainerRole(dbContext, actors[actor.Alias].Id));
+            }
         }
 
         var plans = new Dictionary<string, Plan>(StringComparer.Ordinal);

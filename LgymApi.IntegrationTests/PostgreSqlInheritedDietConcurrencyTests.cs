@@ -224,13 +224,11 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
             database,
             $"diet-original-{suffix}",
             $"diet-original-{suffix}@example.test",
-            additionalRoles: [AuthConstants.Roles.Trainer],
             cancellationToken: cancellationToken);
         var currentCoach = await TestDataFactory.SeedUserAsync(
             database,
             $"diet-current-{suffix}",
             $"diet-current-{suffix}@example.test",
-            additionalRoles: [AuthConstants.Roles.Trainer],
             cancellationToken: cancellationToken);
         var trainee = await TestDataFactory.SeedUserAsync(
             database,
@@ -252,6 +250,9 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
             TrainerId = currentCoach.Id,
             TraineeId = trainee.Id
         });
+        database.UserRoles.AddRange(
+            TestDataFactory.ApprovedTrainerRole(database, originalCoach.Id),
+            TestDataFactory.ApprovedTrainerRole(database, currentCoach.Id));
         database.DietPlans.Add(plan);
         database.DietPlanHistories.Add(new DietPlanHistory
         {

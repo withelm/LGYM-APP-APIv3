@@ -22,10 +22,7 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
     [Test]
     public async Task CreateInvitation_WhenReplayPortDenies_RejectsCachedRetryAfterEndpointAuthorizationWithoutDuplicateEffect()
     {
-        var trainer = await SeedUserAsync(
-            "replay-port-trainer",
-            "replay-port-trainer@example.com",
-            additionalRoles: [AuthConstants.Roles.Trainer]);
+        var trainer = await SeedApprovedTrainerAsync("replay-port-trainer", "replay-port-trainer@example.com");
         var trainee = await SeedUserAsync("replay-port-trainee", "replay-port-trainee@example.com");
         SetAuthorizationHeader(trainer.Id);
         var authorization = Client.DefaultRequestHeaders.Authorization;
@@ -56,10 +53,7 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
     [Test]
     public async Task IdentityReplayPort_UsesCurrentSessionRouteAndPermissionFacts()
     {
-        var permittedTrainer = await SeedUserAsync(
-            "replay-port-allowed",
-            "replay-port-allowed@example.com",
-            additionalRoles: [AuthConstants.Roles.Trainer]);
+        var permittedTrainer = await SeedApprovedTrainerAsync("replay-port-allowed", "replay-port-allowed@example.com");
         SetAuthorizationHeader(permittedTrainer.Id);
         var permittedSession = await GetSessionIdAsync(permittedTrainer.Id);
 
@@ -88,10 +82,7 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
             ApiIdempotencyReplayResourceBinding.RouteAccount,
             routeAccountId: unrelatedAccount)).Should().BeFalse();
 
-        var demotedTrainer = await SeedUserAsync(
-            "replay-port-demoted",
-            "replay-port-demoted@example.com",
-            additionalRoles: [AuthConstants.Roles.Trainer]);
+        var demotedTrainer = await SeedApprovedTrainerAsync("replay-port-demoted", "replay-port-demoted@example.com");
         SetAuthorizationHeader(demotedTrainer.Id);
         var demotedSession = await GetSessionIdAsync(demotedTrainer.Id);
         await RemoveTrainerRoleAsync(demotedTrainer.Id);
@@ -106,10 +97,7 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
     [Test]
     public async Task CreateInvitation_ReplaysForActiveSession_AndDeniedAfterSessionRevocationWithoutDuplicateEffect()
     {
-        var trainer = await SeedUserAsync(
-            "replay-session-trainer",
-            "replay-session-trainer@example.com",
-            additionalRoles: [AuthConstants.Roles.Trainer]);
+        var trainer = await SeedApprovedTrainerAsync("replay-session-trainer", "replay-session-trainer@example.com");
         var trainee = await SeedUserAsync("replay-session-trainee", "replay-session-trainee@example.com");
         SetAuthorizationHeader(trainer.Id);
         const string idempotencyKey = "authorization-replay-session";
@@ -138,10 +126,7 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
     [Test]
     public async Task CreateInvitation_DeniesCachedReplayAfterTrainerPermissionRemovalWithoutDuplicateEffect()
     {
-        var trainer = await SeedUserAsync(
-            "replay-permission-trainer",
-            "replay-permission-trainer@example.com",
-            additionalRoles: [AuthConstants.Roles.Trainer]);
+        var trainer = await SeedApprovedTrainerAsync("replay-permission-trainer", "replay-permission-trainer@example.com");
         var trainee = await SeedUserAsync("replay-permission-trainee", "replay-permission-trainee@example.com");
         SetAuthorizationHeader(trainer.Id);
         const string idempotencyKey = "authorization-replay-permission";
@@ -170,6 +155,16 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
         var session = await database.UserSessions.SingleAsync(candidate => candidate.UserId == userId);
         session.RevokedAtUtc = DateTimeOffset.UtcNow;
         await database.SaveChangesAsync();
+    }
+
+    private async Task<User> SeedApprovedTrainerAsync(string name, string email)
+    {
+        var trainer = await SeedUserAsync(name, email);
+        using var scope = Factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
+        await database.SaveChangesAsync();
+        return trainer;
     }
 
     private async Task<Id<AccountSessionReference>> GetSessionIdAsync(Id<User> userId)
