@@ -57,7 +57,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
                 operations.Add("notification");
             });
 
-        var result = await dependencies.CreateUseCase().ExecuteAsync(new(trainerId, traineeId, plan.Id));
+        var result = await dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id));
 
         result.IsSuccess.Should().BeTrue();
         plan.IsActive.Should().BeTrue();
@@ -90,13 +90,12 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         dependencies.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
         dependencies.Commands.EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>()).Returns(Task.CompletedTask);
 
-        var result = await dependencies.CreateUseCase().ExecuteAsync(new(trainerId, traineeId, planToActivate.Id));
+        var result = await dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, planToActivate.Id));
 
         result.IsSuccess.Should().BeTrue();
         existingActivePlan.IsActive.Should().BeTrue();
         plans.Count(plan => plan.IsActive).Should().Be(2);
-        await dependencies.Plans.DidNotReceive().ListPlansByTrainerAndTraineeAsync(
-            Arg.Any<Id<User>>(),
+        await dependencies.Plans.DidNotReceive().ListPlansByTraineeAsync(
             Arg.Any<Id<User>>(),
             Arg.Any<CancellationToken>());
         await dependencies.Plans.DidNotReceive().ListActivePlansForTraineeAsync(
@@ -113,7 +112,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         dependencies.Access.GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(false, true));
 
-        var result = await dependencies.CreateUseCase().ExecuteAsync(new(trainerId, traineeId, Id<DietPlan>.New()));
+        var result = await dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
         result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
         result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
@@ -130,7 +129,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         dependencies.Access.GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(true, false));
 
-        var result = await dependencies.CreateUseCase().ExecuteAsync(new(trainerId, traineeId, Id<DietPlan>.New()));
+        var result = await dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
         result.Error.Should().BeOfType<NotFoundError>();
         result.Error.Message.Should().Be(Messages.DidntFind);
@@ -146,7 +145,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
 
         var emptyTraineeDependencies = new Dependencies();
         var emptyTraineeResult = await emptyTraineeDependencies.CreateUseCase().ExecuteAsync(
-            new(trainerId, Id<User>.Empty, Id<DietPlan>.New()));
+            new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<User>.Empty, Id<DietPlan>.New()));
 
         emptyTraineeResult.Error.Should().BeOfType<BadRequestError>();
         emptyTraineeResult.Error.Message.Should().Be(Messages.UserIdRequired);
@@ -159,7 +158,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         var emptyPlanDependencies = new Dependencies();
         emptyPlanDependencies.GrantAccess(trainerId, traineeId);
         var emptyPlanResult = await emptyPlanDependencies.CreateUseCase().ExecuteAsync(
-            new(trainerId, traineeId, Id<DietPlan>.Empty));
+            new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.Empty));
 
         emptyPlanResult.Error.Should().BeOfType<BadRequestError>();
         emptyPlanResult.Error.Message.Should().Be(Messages.FieldRequired);
@@ -173,7 +172,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         missingPlanDependencies.Plans.FindTrackedPlanByIdAsync(Arg.Any<Id<DietPlan>>(), Arg.Any<CancellationToken>())
             .Returns((DietPlan?)null);
         var missingPlanResult = await missingPlanDependencies.CreateUseCase().ExecuteAsync(
-            new(trainerId, traineeId, Id<DietPlan>.New()));
+            new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
         missingPlanResult.Error.Should().BeOfType<NotFoundError>();
         await AssertNoWritesAsync(missingPlanDependencies);
@@ -181,9 +180,9 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         var foreignPlanDependencies = new Dependencies();
         foreignPlanDependencies.GrantAccess(trainerId, traineeId);
         foreignPlanDependencies.Plans.FindTrackedPlanByIdAsync(Arg.Any<Id<DietPlan>>(), Arg.Any<CancellationToken>())
-            .Returns(CreatePlan(Id<User>.New(), traineeId));
+            .Returns(CreatePlan(trainerId, Id<User>.New()));
         var foreignPlanResult = await foreignPlanDependencies.CreateUseCase().ExecuteAsync(
-            new(trainerId, traineeId, Id<DietPlan>.New()));
+            new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
         foreignPlanResult.Error.Should().BeOfType<NotFoundError>();
         await AssertNoWritesAsync(foreignPlanDependencies);
@@ -202,7 +201,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         dependencies.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromException<int>(new InvalidOperationException("commit failed")));
 
-        Func<Task> act = () => dependencies.CreateUseCase().ExecuteAsync(new(trainerId, traineeId, plan.Id));
+        Func<Task> act = () => dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id));
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("commit failed");
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>());
@@ -239,7 +238,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
                 .Returns(new CoachingRelationshipAccessDecision(true, true));
 
         public ActivateTraineeDietPlanUseCase CreateUseCase()
-            => new(Access, Plans, Commands, UnitOfWork, new DietPlanHistorySnapshotFactory(CreateMapper()));
+            => new(Access, Plans, Commands, UnitOfWork, new DietPlanHistorySnapshotFactory(CreateMapper()), NutritionAuthorizationTestFactory.CreateDietCoordinator());
 
         private static IMapper CreateMapper()
         {

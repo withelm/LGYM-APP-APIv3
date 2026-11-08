@@ -36,7 +36,7 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
             .Returns([new SupplementIntakeLog { TraineeId = traineeId, PlanItemId = plan.Items.First().Id, IntakeDate = new DateOnly(2026, 7, 6) }]);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetSupplementComplianceSummaryQuery(trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)));
+            new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)));
 
         result.Value.PlannedDoses.Should().Be(3);
         result.Value.TakenDoses.Should().Be(1);
@@ -65,7 +65,7 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
             .Returns([]);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetSupplementComplianceSummaryQuery(trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 6)));
+            new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 6)));
 
         result.Value.PlannedDoses.Should().Be(0);
         result.Value.TakenDoses.Should().Be(0);
@@ -81,7 +81,7 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         dependencies.Plans.GetActivePlanForTraineeAsync(traineeId, CancellationToken.None).Returns((SupplementPlan?)null);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetSupplementComplianceSummaryQuery(trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)));
+            new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)));
 
         result.Value.PlannedDoses.Should().Be(0);
         result.Value.TakenDoses.Should().Be(0);
@@ -99,7 +99,7 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         dependencies.Plans.GetActivePlanForTraineeAsync(traineeId, CancellationToken.None).Returns(plan);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetSupplementComplianceSummaryQuery(trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)));
+            new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)));
 
         result.Value.PlannedDoses.Should().Be(0);
         result.Value.TakenDoses.Should().Be(0);
@@ -115,11 +115,11 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         var useCase = dependencies.CreateUseCase();
 
         var maximum = await useCase.ExecuteAsync(
-            new GetSupplementComplianceSummaryQuery(trainerId, traineeId, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1)));
+            new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1)));
         var reversed = await useCase.ExecuteAsync(
-            new GetSupplementComplianceSummaryQuery(trainerId, traineeId, new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 1)));
+            new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 1)));
         var oversized = await useCase.ExecuteAsync(
-            new GetSupplementComplianceSummaryQuery(trainerId, traineeId, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 2)));
+            new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 2)));
 
         maximum.IsSuccess.Should().BeTrue();
         reversed.Error.Should().BeOfType<InvalidSupplementationError>();
@@ -138,7 +138,7 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(false, true));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetSupplementComplianceSummaryQuery(trainerId, Id<UserEntity>.Empty, new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 1)));
+            new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<UserEntity>.Empty, new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 1)));
 
         result.Error.Should().BeOfType<SupplementationForbiddenError>();
         result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
@@ -162,7 +162,7 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
             .Returns([]);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetSupplementComplianceSummaryQuery(trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)),
+            new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)),
             cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
@@ -198,6 +198,6 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         public ISupplementationPersistence Plans { get; } = Substitute.For<ISupplementationPersistence>();
 
         public IGetSupplementComplianceSummaryUseCase CreateUseCase()
-            => new GetSupplementComplianceSummaryUseCase(Access, Plans);
+            => new GetSupplementComplianceSummaryUseCase(Access, Plans, NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
     }
 }

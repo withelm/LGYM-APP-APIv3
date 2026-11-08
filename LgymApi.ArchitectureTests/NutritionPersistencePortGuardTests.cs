@@ -20,7 +20,7 @@ public sealed class NutritionPersistencePortGuardTests
             new HashSet<string>(StringComparer.Ordinal) { "FindTrackedPlanByIdAsync" },
             new HashSet<string>(StringComparer.Ordinal)
             {
-                "GetPlanByIdAsync", "ListPlansByTrainerAndTraineeAsync", "ListActivePlansForTraineeAsync",
+                "GetPlanByIdAsync", "ListPlansByTraineeAsync", "ListActivePlansForTraineeAsync",
                 "GetActivePlanForTraineeAsync", "ListPlanHistoryAsync"
             }),
         new(

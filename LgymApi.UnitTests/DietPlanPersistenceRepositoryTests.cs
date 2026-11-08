@@ -68,13 +68,13 @@ public sealed class DietPlanPersistenceRepositoryTests
         database.ChangeTracker.Clear();
         var repository = new DietPlanPersistenceRepository(database);
 
-        var trainerPlans = await repository.ListPlansByTrainerAndTraineeAsync(trainerId, traineeId);
+        var traineePlans = await repository.ListPlansByTraineeAsync(traineeId);
         var activePlans = await repository.ListActivePlansForTraineeAsync(traineeId);
         var activePlan = await repository.GetActivePlanForTraineeAsync(traineeId);
         var history = await repository.ListPlanHistoryAsync(activeLatest.Id);
 
-        trainerPlans.Select(plan => plan.Id).Should().Equal(activeLatest.Id, activeEarlier.Id, inactive.Id);
-        trainerPlans.Single(plan => plan.Id == activeLatest.Id).Meals.Select(meal => meal.Name).Should().Equal("breakfast", "dinner");
+        traineePlans.Select(plan => plan.Id).Should().Equal(otherTrainer.Id, activeLatest.Id, activeEarlier.Id, inactive.Id);
+        traineePlans.Single(plan => plan.Id == activeLatest.Id).Meals.Select(meal => meal.Name).Should().Equal("breakfast", "dinner");
         activePlans.Select(plan => plan.Id).Should().Equal(otherTrainer.Id, activeLatest.Id, activeEarlier.Id);
         activePlan!.Id.Should().Be(otherTrainer.Id);
         history.Select(entry => entry.ChangeType).Should().Equal("latest", "older");
@@ -110,6 +110,29 @@ public sealed class DietPlanPersistenceRepositoryTests
         await using var afterCommitContext = new AppDbContext(options);
         (await afterCommitContext.DietPlans.AsNoTracking().SingleAsync()).Id.Should().Be(plan.Id);
         (await afterCommitContext.DietPlanHistories.AsNoTracking().SingleAsync()).Id.Should().Be(history.Id);
+    }
+
+    [Test]
+    public async Task StageUpdate_MarksThePrincipalConcurrencyTokenModifiedWithoutSaving()
+    {
+        await using var database = CreateDbContext();
+        var plan = CreatePlan(
+            Id<User>.New(),
+            Id<User>.New(),
+            "tracked plan",
+            true,
+            new DateOnly(2026, 7, 20),
+            DateTimeOffset.UtcNow.AddDays(-2),
+            DateTimeOffset.UtcNow.AddDays(-1));
+        database.DietPlans.Add(plan);
+        await database.SaveChangesAsync();
+        database.ChangeTracker.Clear();
+        var repository = new DietPlanPersistenceRepository(database);
+        var tracked = await repository.FindTrackedPlanByIdAsync(plan.Id);
+
+        repository.StageUpdate(tracked!);
+
+        database.Entry(tracked!).Property(candidate => candidate.UpdatedAt).IsModified.Should().BeTrue();
     }
 
     [Test]

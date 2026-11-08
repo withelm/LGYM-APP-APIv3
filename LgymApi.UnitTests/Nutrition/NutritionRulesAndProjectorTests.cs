@@ -36,9 +36,11 @@ public sealed class NutritionRulesAndProjectorTests
         normalized.Name.Should().Be("Cut");
         normalized.Notes.Should().BeNull();
         normalized.Meals.Should().ContainSingle().Which.Should().Be(new DietMealInput("Dinner", 0, "rice", null, null, null, null));
-        DietPlanAccess.GetTrainerAccessError(false, true)
+        var actorId = Id<User>.New();
+        var actor = NutritionAuthorizationTestFactory.CreateActor(actorId);
+        DietPlanAccess.GetAccessError(NutritionAuthorizationTestFactory.CreateDietCoordinator(), actor, DietPlanAction.Read, actorId, Id<User>.New(), false, true)
             .Should().BeOfType<TrainerRelationshipForbiddenError>();
-        DietPlanAccess.GetTrainerAccessError(true, false)
+        DietPlanAccess.GetAccessError(NutritionAuthorizationTestFactory.CreateDietCoordinator(), actor, DietPlanAction.Read, actorId, Id<User>.New(), true, false)
             .Should().BeOfType<NotFoundError>();
     }
 
@@ -59,11 +61,13 @@ public sealed class NutritionRulesAndProjectorTests
         normalized.Items.Select(item => item.SupplementName).Should().Equal("Magnesium", "Zinc");
         SupplementationRules.GetComplianceRangeError(new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 1))
             .Should().BeOfType<InvalidSupplementationError>();
-        SupplementationAccess.GetTrainerAccessError(false, false, default)
+        var actorId = Id<User>.New();
+        var actor = NutritionAuthorizationTestFactory.CreateActor(actorId);
+        SupplementationAccess.GetTrainerAccessError(NutritionAuthorizationTestFactory.CreateSupplementationCoordinator(), actor, false, false, default)
             .Should().BeOfType<SupplementationForbiddenError>();
-        SupplementationAccess.GetTrainerAccessError(true, true, default)
+        SupplementationAccess.GetTrainerAccessError(NutritionAuthorizationTestFactory.CreateSupplementationCoordinator(), actor, true, true, default)
             .Should().BeOfType<InvalidSupplementationError>();
-        SupplementationAccess.GetTrainerAccessError(true, false, Id<User>.New())
+        SupplementationAccess.GetTrainerAccessError(NutritionAuthorizationTestFactory.CreateSupplementationCoordinator(), actor, true, false, Id<User>.New())
             .Should().BeOfType<SupplementationNotFoundError>();
     }
 

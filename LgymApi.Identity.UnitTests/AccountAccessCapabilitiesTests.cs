@@ -25,7 +25,7 @@ public sealed class AccountAccessCapabilitiesTests
 
         result.Application.Should().Be(new AccountAccessApplicationCapabilities(false, false, false, false, false));
         result.Extensions.Should().Be(new AccountAccessOwnerExtensions(
-            new(false), new(false), new(false), new(false), new(false), new(false, false, false, false)));
+            new(false), new(false), new(false), new(false, false, false, false, false), new(false), new(false, false, false, false)));
     }
 
     [Test]
@@ -67,7 +67,7 @@ public sealed class AccountAccessCapabilitiesTests
         var result = service.GetCapabilities(Account());
 
         result.Extensions.Should().Be(new AccountAccessOwnerExtensions(
-            new(false), new(false), new(false), new(false), new(false), new(false, false, false, false)));
+            new(false), new(false), new(false), new(false, false, false, false, false), new(false), new(false, false, false, false)));
     }
 
     private static IAccountAccessOwnerCapabilityExtension Extension(AccountAccessCapabilityOwner owner)

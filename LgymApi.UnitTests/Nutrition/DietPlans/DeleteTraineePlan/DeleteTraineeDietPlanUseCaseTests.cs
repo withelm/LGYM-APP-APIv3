@@ -65,7 +65,7 @@ public sealed class DeleteTraineeDietPlanUseCaseTests
         var dependencies = new Dependencies();
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new(dependencies.TrainerId, Id<User>.Empty, Id<DietPlan>.New()));
+            new(NutritionAuthorizationTestFactory.CreateActor(dependencies.TrainerId), dependencies.TrainerId, Id<User>.Empty, Id<DietPlan>.New()));
 
         result.Error.Should().BeOfType<BadRequestError>().Which.Message.Should().Be(Messages.UserIdRequired);
         await dependencies.Access.DidNotReceive().GetAccessDecisionAsync(
@@ -116,7 +116,7 @@ public sealed class DeleteTraineeDietPlanUseCaseTests
         var foreign = new Dependencies();
         foreign.GrantAccess();
         foreign.Plans.FindTrackedPlanByIdAsync(Arg.Any<Id<DietPlan>>(), Arg.Any<CancellationToken>())
-            .Returns(CreatePlan(Id<User>.New(), foreign.TraineeId));
+            .Returns(CreatePlan(foreign.TrainerId, Id<User>.New()));
         var foreignResult = await foreign.CreateUseCase().ExecuteAsync(foreign.Command(Id<DietPlan>.New()));
         foreignResult.Error.Should().BeOfType<NotFoundError>();
         await AssertNoWritesAsync(foreign);
@@ -181,9 +181,10 @@ public sealed class DeleteTraineeDietPlanUseCaseTests
                 access,
                 new DietPlanPersistenceRepository(deleteContext),
                 new DietPlanHistorySnapshotFactory(CreateMapper()),
-                new EfUnitOfWork(deleteContext));
+                new EfUnitOfWork(deleteContext),
+                NutritionAuthorizationTestFactory.CreateDietCoordinator());
 
-            var result = await useCase.ExecuteAsync(new(trainerId, traineeId, plan.Id));
+            var result = await useCase.ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id));
 
             result.IsSuccess.Should().BeTrue();
         }
@@ -244,9 +245,9 @@ public sealed class DeleteTraineeDietPlanUseCaseTests
                 .AndDoes(_ => operations?.Add("access"));
 
         public DeleteTraineeDietPlanCommand Command(Id<DietPlan> planId)
-            => new(TrainerId, TraineeId, planId);
+            => new(NutritionAuthorizationTestFactory.CreateActor(TrainerId), TrainerId, TraineeId, planId);
 
         public DeleteTraineeDietPlanUseCase CreateUseCase()
-            => new(Access, Plans, new DietPlanHistorySnapshotFactory(DeleteTraineeDietPlanUseCaseTests.CreateMapper()), UnitOfWork);
+            => new(Access, Plans, new DietPlanHistorySnapshotFactory(DeleteTraineeDietPlanUseCaseTests.CreateMapper()), UnitOfWork, NutritionAuthorizationTestFactory.CreateDietCoordinator());
     }
 }

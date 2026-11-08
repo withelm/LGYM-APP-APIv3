@@ -55,6 +55,24 @@ public sealed class UpsertDietPlanRequest : DietPlanContractBase, IDto
     public List<UpsertDietMealRequest> Meals { get; set; } = [];
 }
 
+public sealed class UpdateOwnDietPlanRequest : DietMacrosContractBase, IDto
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("startDate")]
+    public DateOnly StartDate { get; set; }
+
+    [JsonPropertyName("endDate")]
+    public DateOnly? EndDate { get; set; }
+
+    [JsonPropertyName("notes")]
+    public string? Notes { get; set; }
+
+    [JsonPropertyName("meals")]
+    public List<UpsertDietMealRequest>? Meals { get; set; } = [];
+}
+
 public sealed class UpsertDietMealRequest : DietMealContractBase, IDto
 {
 }

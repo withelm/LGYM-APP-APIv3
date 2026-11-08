@@ -17,28 +17,34 @@ internal sealed class UpdateTraineeSupplementPlanUseCase : IUpdateTraineeSupplem
     private readonly ISupplementationPersistence _plans;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly ISupplementationAuthorizationCoordinator _authorization;
 
     public UpdateTraineeSupplementPlanUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
         ISupplementationPersistence plans,
         IUnitOfWork unitOfWork,
-        IMapper mapper)
+        IMapper mapper,
+        ISupplementationAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _plans = plans;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _authorization = authorization;
     }
 
     public async Task<Result<SupplementPlanReadModel, AppError>> ExecuteAsync(
         UpdateTraineeSupplementPlanCommand command,
         CancellationToken cancellationToken = default)
     {
+        var actorId = command.Actor.Id.Rebind<User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            command.TrainerId,
+            actorId,
             command.TraineeId,
             cancellationToken);
         var accessError = SupplementationAccess.GetTrainerAccessError(
+            _authorization,
+            command.Actor,
             access.IsTrainer,
             access.HasActiveRelationship,
             command.TraineeId);
@@ -60,7 +66,7 @@ internal sealed class UpdateTraineeSupplementPlanUseCase : IUpdateTraineeSupplem
         }
 
         var plan = await _plans.FindTrackedPlanByIdAsync(command.PlanId, cancellationToken);
-        if (plan is null || !SupplementationAccess.IsOwnedBy(plan, command.TrainerId, command.TraineeId))
+        if (plan is null || !SupplementationAccess.IsOwnedBy(plan, actorId, command.TraineeId))
         {
             return Result<SupplementPlanReadModel, AppError>.Failure(
                 new SupplementationNotFoundError(Resources.Messages.DidntFind));
@@ -70,7 +76,7 @@ internal sealed class UpdateTraineeSupplementPlanUseCase : IUpdateTraineeSupplem
             SupplementationRules.Normalize(command.Data),
             _mapper.CreateContext());
         replacement.Id = Id<SupplementPlan>.New();
-        replacement.TrainerId = command.TrainerId;
+        replacement.TrainerId = actorId;
         replacement.TraineeId = command.TraineeId;
         replacement.IsActive = plan.IsActive;
         replacement.IsDeleted = false;

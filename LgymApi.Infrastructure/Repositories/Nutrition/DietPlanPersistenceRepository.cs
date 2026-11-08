@@ -21,6 +21,9 @@ public sealed class DietPlanPersistenceRepository : IDietPlanPersistence
     public Task AddHistoryEntryAsync(DietPlanHistory historyEntry, CancellationToken cancellationToken = default)
         => _dbContext.DietPlanHistories.AddAsync(historyEntry, cancellationToken).AsTask();
 
+    public void StageUpdate(DietPlan plan)
+        => _dbContext.Entry(plan).Property(candidate => candidate.UpdatedAt).IsModified = true;
+
     public Task<DietPlan?> FindTrackedPlanByIdAsync(Id<DietPlan> planId, CancellationToken cancellationToken = default)
         => _dbContext.DietPlans
             .Include(x => x.Meals.OrderBy(m => m.Order).ThenBy(m => m.CreatedAt))
@@ -32,10 +35,10 @@ public sealed class DietPlanPersistenceRepository : IDietPlanPersistence
             .Include(x => x.Meals.OrderBy(m => m.Order).ThenBy(m => m.CreatedAt))
             .FirstOrDefaultAsync(x => x.Id == planId, cancellationToken);
 
-    public Task<List<DietPlan>> ListPlansByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default)
+    public Task<List<DietPlan>> ListPlansByTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default)
         => _dbContext.DietPlans
             .AsNoTracking()
-            .Where(x => x.TrainerId == trainerId && x.TraineeId == traineeId && !x.IsDeleted)
+            .Where(x => x.TraineeId == traineeId && !x.IsDeleted)
             .Include(x => x.Meals.OrderBy(m => m.Order).ThenBy(m => m.CreatedAt))
             .OrderByDescending(x => x.IsActive)
             .ThenByDescending(x => x.StartDate)

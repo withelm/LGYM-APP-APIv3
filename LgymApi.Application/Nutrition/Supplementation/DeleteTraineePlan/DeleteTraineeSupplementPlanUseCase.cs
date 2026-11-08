@@ -15,26 +15,32 @@ internal sealed class DeleteTraineeSupplementPlanUseCase : IDeleteTraineeSupplem
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
     private readonly ISupplementationPersistence _plans;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISupplementationAuthorizationCoordinator _authorization;
 
     public DeleteTraineeSupplementPlanUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
         ISupplementationPersistence plans,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ISupplementationAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _plans = plans;
         _unitOfWork = unitOfWork;
+        _authorization = authorization;
     }
 
     public async Task<Result<Unit, AppError>> ExecuteAsync(
         DeleteTraineeSupplementPlanCommand command,
         CancellationToken cancellationToken = default)
     {
+        var actorId = command.Actor.Id.Rebind<LgymApi.Domain.Entities.User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            command.TrainerId,
+            actorId,
             command.TraineeId,
             cancellationToken);
         var accessError = SupplementationAccess.GetTrainerAccessError(
+            _authorization,
+            command.Actor,
             access.IsTrainer,
             access.HasActiveRelationship,
             command.TraineeId);
@@ -49,7 +55,7 @@ internal sealed class DeleteTraineeSupplementPlanUseCase : IDeleteTraineeSupplem
         }
 
         var plan = await _plans.FindTrackedPlanByIdAsync(command.SupplementPlanId, cancellationToken);
-        if (plan is null || !SupplementationAccess.IsOwnedBy(plan, command.TrainerId, command.TraineeId))
+        if (plan is null || !SupplementationAccess.IsOwnedBy(plan, actorId, command.TraineeId))
         {
             return Result<Unit, AppError>.Failure(new SupplementationNotFoundError(Messages.DidntFind));
         }

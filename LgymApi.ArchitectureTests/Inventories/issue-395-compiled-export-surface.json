@@ -3,13 +3,13 @@
   "assemblies": [
     {
       "name": "LgymApi.Application",
-      "exportedTypeCount": 413,
-      "sha256": "3052ccb029e126195bd78f84e4bca5afc6458e3813c3d22f94c2e32695c67e26"
+      "exportedTypeCount": 417,
+      "sha256": "e94c58694ae128eef9a8eddbebd483a736daf8b2b2c17145b548af683d62edaa"
     },
     {
       "name": "LgymApi.Identity",
-      "exportedTypeCount": 80,
-      "sha256": "30300e5a74d2ece4549bd1507f52e36d14f6880dcab1b8e4aa169a79bb9fcac8"
+      "exportedTypeCount": 81,
+      "sha256": "113232295aba077c4859049f226466fe14ad12ad51dea154b372baac04c51809"
     },
     {
       "name": "LgymApi.Notifications",

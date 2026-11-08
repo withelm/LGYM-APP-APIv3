@@ -4,6 +4,7 @@ using LgymApi.Application.Nutrition.Supplementation.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 
 namespace LgymApi.Application.Nutrition.ApiAdapters;
 
@@ -20,12 +21,12 @@ public interface ISupplementationApiAdapter
     Task<Result<SupplementScheduleEntryReadModel, AppError>> CheckOffAsync(SupplementCheckOffAccountCommand command, CancellationToken cancellationToken = default);
 }
 
-public sealed record SupplementPlanListAccountQuery(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId);
-public sealed record SupplementPlanCreateAccountCommand(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, SupplementPlanUpsertData Data);
-public sealed record SupplementPlanUpdateAccountCommand(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, Id<SupplementPlan> PlanId, SupplementPlanUpsertData Data);
-public sealed record SupplementPlanDeleteAccountCommand(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, Id<SupplementPlan> PlanId);
-public sealed record SupplementPlanAssignAccountCommand(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, Id<SupplementPlan> PlanId);
-public sealed record SupplementPlanUnassignAccountCommand(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId);
-public sealed record SupplementComplianceAccountQuery(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId, DateOnly FromDate, DateOnly ToDate);
-public sealed record SupplementScheduleAccountQuery(Id<AccountReference> TraineeId, DateOnly IntakeDate);
-public sealed record SupplementCheckOffAccountCommand(Id<AccountReference> TraineeId, Id<SupplementPlanItem> PlanItemId, DateOnly IntakeDate, DateTimeOffset? TakenAt);
+public sealed record SupplementPlanListAccountQuery(AuthenticatedAccountContext AccountContext, Id<AccountReference> TraineeId);
+public sealed record SupplementPlanCreateAccountCommand(AuthenticatedAccountContext AccountContext, Id<AccountReference> TraineeId, SupplementPlanUpsertData Data);
+public sealed record SupplementPlanUpdateAccountCommand(AuthenticatedAccountContext AccountContext, Id<AccountReference> TraineeId, Id<SupplementPlan> PlanId, SupplementPlanUpsertData Data);
+public sealed record SupplementPlanDeleteAccountCommand(AuthenticatedAccountContext AccountContext, Id<AccountReference> TraineeId, Id<SupplementPlan> PlanId);
+public sealed record SupplementPlanAssignAccountCommand(AuthenticatedAccountContext AccountContext, Id<AccountReference> TraineeId, Id<SupplementPlan> PlanId);
+public sealed record SupplementPlanUnassignAccountCommand(AuthenticatedAccountContext AccountContext, Id<AccountReference> TraineeId);
+public sealed record SupplementComplianceAccountQuery(AuthenticatedAccountContext AccountContext, Id<AccountReference> TraineeId, DateOnly FromDate, DateOnly ToDate);
+public sealed record SupplementScheduleAccountQuery(AuthenticatedAccountContext AccountContext, DateOnly IntakeDate);
+public sealed record SupplementCheckOffAccountCommand(AuthenticatedAccountContext AccountContext, Id<SupplementPlanItem> PlanItemId, DateOnly IntakeDate, DateTimeOffset? TakenAt);

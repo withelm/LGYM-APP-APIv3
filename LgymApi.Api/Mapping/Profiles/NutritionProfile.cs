@@ -30,6 +30,18 @@ public sealed class NutritionProfile : IMappingProfile
             source.IsActive,
             context!.MapList<DietMealInput>(source.Meals)));
 
+        configuration.CreateMap<UpdateOwnDietPlanRequest, DietPlanUpsertData>((source, context) => new DietPlanUpsertData(
+            source.Name,
+            source.StartDate,
+            source.EndDate,
+            source.EstimatedCalories,
+            source.ProteinGrams,
+            source.CarbsGrams,
+            source.FatGrams,
+            source.Notes,
+            false,
+            context!.MapList<DietMealInput>(source.Meals!)));
+
         configuration.CreateMap<UpsertSupplementPlanItemRequest, SupplementPlanItemInput>((source, _) => new SupplementPlanItemInput(
             source.SupplementName,
             source.Dosage,

@@ -43,9 +43,15 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         var extensions = payload.RootElement.GetProperty("extensions");
         extensions.EnumerateObject().Select(property => property.Name)
             .Should().Equal("reporting", "trainingPlanning", "coaching", "nutrition", "workoutProgress", "notifications");
-        extensions.EnumerateObject().Where(property => property.Name != "notifications").Should().OnlyContain(property =>
+        extensions.EnumerateObject().Where(property => property.Name is not "notifications" and not "nutrition").Should().OnlyContain(property =>
             property.Value.EnumerateObject().Select(nested => nested.Name).SequenceEqual(new[] { "available" })
             && !property.Value.GetProperty("available").GetBoolean());
+        var nutrition = extensions.GetProperty("nutrition");
+        nutrition.GetProperty("available").GetBoolean().Should().BeTrue();
+        nutrition.GetProperty("canReadOwnDietPlans").GetBoolean().Should().BeTrue();
+        nutrition.GetProperty("canUpdateOwnDietPlans").GetBoolean().Should().BeTrue();
+        nutrition.GetProperty("canCreateDietPlans").GetBoolean().Should().BeFalse();
+        nutrition.GetProperty("canManageSupplementation").GetBoolean().Should().BeFalse();
         var notifications = extensions.GetProperty("notifications");
         notifications.GetProperty("available").GetBoolean().Should().BeTrue();
         notifications.GetProperty("canReadNotifications").GetBoolean().Should().BeTrue();
@@ -180,8 +186,10 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         application.GetProperty("canAccessTrainerWorkspace").GetBoolean().Should().BeTrue();
         application.GetProperty("canAccessAdminWorkspace").GetBoolean().Should().Be(isAdmin);
         var extensions = payload.RootElement.GetProperty("extensions");
-        extensions.EnumerateObject().Where(property => property.Name != "notifications")
+        extensions.EnumerateObject().Where(property => property.Name is not "notifications" and not "nutrition")
             .Should().OnlyContain(property => !property.Value.GetProperty("available").GetBoolean());
+        extensions.GetProperty("nutrition").GetProperty("canCreateDietPlans").GetBoolean().Should().BeTrue();
+        extensions.GetProperty("nutrition").GetProperty("canManageSupplementation").GetBoolean().Should().BeTrue();
         extensions.GetProperty("notifications").GetProperty("canManagePushInstallations").GetBoolean().Should().BeTrue();
     }
 }

@@ -18,6 +18,8 @@ using LgymApi.Application.Nutrition.DietPlans.GetTraineePlanHistory.Models;
 using LgymApi.Application.Nutrition.DietPlans.GetTraineePlans;
 using LgymApi.Application.Nutrition.DietPlans.UpdateTraineePlan;
 using LgymApi.Application.Nutrition.DietPlans.UpdateTraineePlan.Contracts;
+using LgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan;
+using LgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.ArchitectureTests;
@@ -35,7 +37,8 @@ public sealed class NutritionDietSliceArchitectureTests
         (typeof(IGetTraineeDietPlansUseCase), "LgymApi.Application.Nutrition.DietPlans.GetTraineePlans.GetTraineeDietPlansUseCase"),
         (typeof(IGetCurrentDietPlansUseCase), "LgymApi.Application.Nutrition.DietPlans.GetCurrentDietPlans.GetCurrentDietPlansUseCase"),
         (typeof(IGetTraineeDietPlanHistoryUseCase), "LgymApi.Application.Nutrition.DietPlans.GetTraineePlanHistory.GetTraineeDietPlanHistoryUseCase"),
-        (typeof(IGetCurrentDietPlanUseCase), "LgymApi.Application.Nutrition.DietPlans.GetCurrentDietPlan.GetCurrentDietPlanUseCase")
+        (typeof(IGetCurrentDietPlanUseCase), "LgymApi.Application.Nutrition.DietPlans.GetCurrentDietPlan.GetCurrentDietPlanUseCase"),
+        (typeof(IUpdateOwnDietPlanUseCase), "LgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan.UpdateOwnDietPlanUseCase")
     ];
 
     [Test]
@@ -60,7 +63,7 @@ public sealed class NutritionDietSliceArchitectureTests
             typeof(DeleteTraineeDietPlanCommand), typeof(ActivateTraineeDietPlanCommand),
             typeof(GetTraineeDietPlanQuery), typeof(GetTraineeDietPlansQuery),
             typeof(GetCurrentDietPlansQuery), typeof(GetTraineeDietPlanHistoryQuery),
-            typeof(GetCurrentDietPlanQuery)
+            typeof(GetCurrentDietPlanQuery), typeof(UpdateOwnDietPlanCommand)
         };
 
         models.Should().OnlyContain(model => model.IsSealed && model.GetProperties().All(property => IsAllowed(property.PropertyType)));
@@ -100,6 +103,11 @@ public sealed class NutritionDietSliceArchitectureTests
 
         if (type == typeof(string) || type == typeof(bool) || type == typeof(int)
             || type == typeof(decimal) || type == typeof(DateOnly) || type == typeof(DateTimeOffset))
+        {
+            return true;
+        }
+
+        if (type == typeof(LgymApi.Authorization.Contracts.AuthorizationActor))
         {
             return true;
         }
