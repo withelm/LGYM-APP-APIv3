@@ -1,6 +1,9 @@
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Notifications.Errors;
+using LgymApi.Application.Notifications.Authorization;
+using LgymApi.Authorization.Contracts;
+using LgymApi.Platform.Contracts;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -19,19 +22,25 @@ internal sealed class InAppNotificationService : IInAppNotificationService
     private readonly IInAppNotificationPushPublisher _pushPublisher;
     private readonly INotificationEventBridge _notificationEventBridge;
     private readonly ILogger<InAppNotificationService> _logger;
+    private readonly IAuthorizationEvaluator<NotificationOwnershipContext> _ownershipEvaluator;
+    private readonly NotificationDisclosureEligibilityService _disclosureEligibility;
 
     public InAppNotificationService(
         IInAppNotificationRepository inAppNotificationRepository,
         IUnitOfWork unitOfWork,
         IInAppNotificationPushPublisher pushPublisher,
         INotificationEventBridge notificationEventBridge,
-        ILogger<InAppNotificationService> logger)
+        ILogger<InAppNotificationService> logger,
+        IAuthorizationEvaluator<NotificationOwnershipContext> ownershipEvaluator,
+        NotificationDisclosureEligibilityService disclosureEligibility)
     {
         _inAppNotificationRepository = inAppNotificationRepository;
         _unitOfWork = unitOfWork;
         _pushPublisher = pushPublisher;
         _notificationEventBridge = notificationEventBridge;
         _logger = logger;
+        _ownershipEvaluator = ownershipEvaluator;
+        _disclosureEligibility = disclosureEligibility;
     }
 
     public async Task<Result<InAppNotificationResult, AppError>> CreateAsync(CreateInAppNotificationInput input, CancellationToken cancellationToken = default)
@@ -72,6 +81,12 @@ internal sealed class InAppNotificationService : IInAppNotificationService
             }
         }
 
+        var canDisclose = await _disclosureEligibility.CanDiscloseAsync(result.Id, cancellationToken);
+        if (!canDisclose)
+        {
+            return Result<InAppNotificationResult, AppError>.Success(result);
+        }
+
         if (isNewNotification)
         {
             try
@@ -100,13 +115,38 @@ internal sealed class InAppNotificationService : IInAppNotificationService
 
     public async Task<Result<PagedResult<InAppNotificationResult>, AppError>> GetForUserAsync(Id<User> userId, CursorPaginationQuery query, CancellationToken cancellationToken = default)
     {
-        var items = await _inAppNotificationRepository.GetPageAsync(userId, query.Limit + 1, query.CursorCreatedAt, query.CursorId, cancellationToken);
+        const int candidateBatchSize = 50;
+        var eligibleItems = new List<InAppNotification>(query.Limit + 1);
+        var cursorCreatedAt = query.CursorCreatedAt;
+        var cursorId = query.CursorId;
 
-        var hasNextPage = items.Count > query.Limit;
-        if (hasNextPage)
+        while (eligibleItems.Count <= query.Limit)
         {
-            items = items.Take(query.Limit).ToList();
+            var candidates = await _inAppNotificationRepository.GetPageAsync(
+                userId,
+                candidateBatchSize,
+                cursorCreatedAt,
+                cursorId,
+                cancellationToken);
+            if (candidates.Count == 0)
+            {
+                break;
+            }
+
+            var eligibleIds = await _disclosureEligibility.GetDisclosableIdsAsync(candidates, cancellationToken);
+            eligibleItems.AddRange(candidates.Where(candidate => eligibleIds.Contains(candidate.Id)));
+            var lastCandidate = candidates[^1];
+            cursorCreatedAt = lastCandidate.CreatedAt;
+            cursorId = lastCandidate.Id;
+
+            if (candidates.Count < candidateBatchSize)
+            {
+                break;
+            }
         }
+
+        var hasNextPage = eligibleItems.Count > query.Limit;
+        IReadOnlyList<InAppNotification> items = eligibleItems.Take(query.Limit).ToList();
 
         var lastItem = items.LastOrDefault();
         var resultItems = items.Select(MapToResult).ToList();
@@ -114,7 +154,7 @@ internal sealed class InAppNotificationService : IInAppNotificationService
         return Result<PagedResult<InAppNotificationResult>, AppError>.Success(new PagedResult<InAppNotificationResult>(resultItems, hasNextPage, hasNextPage ? lastItem?.CreatedAt : null, hasNextPage ? lastItem?.Id : null));
     }
 
-    public async Task<Result<Unit, AppError>> MarkAsReadAsync(Id<InAppNotification> notificationId, Id<User> requestingUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<Unit, AppError>> MarkAsReadAsync(Id<InAppNotification> notificationId, AuthorizationActor actor, CancellationToken cancellationToken = default)
     {
         var notification = await _inAppNotificationRepository.GetByIdAsync(notificationId, cancellationToken);
         if (notification == null)
@@ -122,9 +162,16 @@ internal sealed class InAppNotificationService : IInAppNotificationService
             return Result<Unit, AppError>.Failure(new InAppNotificationNotFoundError());
         }
 
-        if (notification.RecipientId != requestingUserId)
+        if (!_ownershipEvaluator.Evaluate(
+                actor,
+                new NotificationOwnershipContext(notification.RecipientId.Rebind<ActorReference>())).IsAllowed)
         {
             return Result<Unit, AppError>.Failure(new InAppNotificationForbiddenError());
+        }
+
+        if (!await _disclosureEligibility.CanDiscloseAsync(notification, cancellationToken))
+        {
+            return Result<Unit, AppError>.Failure(new InAppNotificationNotFoundError());
         }
 
         await _inAppNotificationRepository.MarkAsReadAsync(notificationId, cancellationToken);
@@ -143,8 +190,9 @@ internal sealed class InAppNotificationService : IInAppNotificationService
 
     public async Task<Result<int, AppError>> GetUnreadCountAsync(Id<User> userId, CancellationToken cancellationToken = default)
     {
-        var count = await _inAppNotificationRepository.GetUnreadCountAsync(userId, cancellationToken);
-        return Result<int, AppError>.Success(count);
+        var unread = await _inAppNotificationRepository.GetUnreadAsync(userId, cancellationToken);
+        var eligibleIds = await _disclosureEligibility.GetDisclosableIdsAsync(unread, cancellationToken);
+        return Result<int, AppError>.Success(eligibleIds.Count);
     }
 
     private static InAppNotificationResult MapToResult(InAppNotification notification)

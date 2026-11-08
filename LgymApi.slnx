@@ -19,6 +19,7 @@
   <Project Path="LgymApi.Infrastructure/LgymApi.Infrastructure.csproj" />
   <Project Path="LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj" />
   <Project Path="LgymApi.Notifications/LgymApi.Notifications.csproj" />
+  <Project Path="LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj" />
   <Project Path="LgymApi.Platform/LgymApi.Platform.csproj" />
   <Project Path="LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj" />
   <Project Path="LgymApi.Reporting/LgymApi.Reporting.csproj" />

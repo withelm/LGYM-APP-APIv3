@@ -31,7 +31,9 @@ public sealed class SingleProductionDbContextGuardTests
         ["LgymApi.Application/LgymApi.Application.csproj"] = "afacd804b7178a428a230ce11d5d500a46214afdb73726f608818c8247b913c7",
         ["LgymApi.Identity/LgymApi.Identity.csproj"] = "5fe4c97db85e1ce49ce16156a8f0f33ddf1716e207fc58aaef743f2489cb8752",
         ["LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj"] = "c7e286bce4f001c43b3458ae8e2265677d19f4f2f16738766124afadda874199",
-        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "200549f3f97f6672b7751fdb894de3c69c44bd55a90397b015f01beb9217b47c",
+        ["LgymApi.Notifications/LgymApi.Notifications.csproj"] = "a9c932f78098834604f3ad34a628d8f6ad435de1db2c64168b4dfb059eb162bd",
+        ["LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj"] = "cc06ce973e9fe252b5f59fa2b17a5d63bc9a3ff1a2a056e593e87e48bf09f83d",
+        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "79cf212c1835f38a00f61733b0527c41015dd96fd1ec87c8292949794c09c534",
         ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "4453c4766317025d9eefd24a05e6ff9841e7c0fcaf71c2d62c9a5622dad66339"
     };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -43,9 +45,11 @@ public sealed class SingleProductionDbContextGuardTests
         [ReportReceiptMigrationDesigner] = "a6ab655fcc346b2f12b17baea223f58c3f2d70f63e2df6d589c483025f2991b5",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.cs"] = "4f22bc2418831f276588d568ab40da6ce742ca781577eb42774e7724d19a0d82",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.Designer.cs"] = "ee6deb9e9ccaab9a5a9efbd5e6857c44c2fc679747ae8a9d538755c675b08d5a",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "5bd078767cdcc49611a23fec98f8b25bb00c3cac0d97e81b524dcc59beeace35",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "43c6f567c0f4ee07b2e65d73ca56cd4cfcf75f8a17e90aa6e1fe8c3a3a8c6cfb",
         [MigrationRoot + "/20261107094438_AddCoachingEpisodes.cs"] = "06ec01f112c832272fcc614daad7089102e20aef43eac25f7d8232b3d10a3a81",
-        [MigrationRoot + "/20261107094438_AddCoachingEpisodes.Designer.cs"] = "8be1b918db5649448655da2082e60feac37b570be7eb1658d67769f85cdb693e"
+        [MigrationRoot + "/20261107094438_AddCoachingEpisodes.Designer.cs"] = "8be1b918db5649448655da2082e60feac37b570be7eb1658d67769f85cdb693e",
+        [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.cs"] = "d6a64a469455b5e5fa220c7bb8e7c6fe3975c00b9db192bbf3a8c75f78322070",
+        [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.Designer.cs"] = "74b7a5a8d0a81a5880cc8fa1f550d4f305e925395d6158ec1c4e20e0cd248813"
     };
 
     [Test]

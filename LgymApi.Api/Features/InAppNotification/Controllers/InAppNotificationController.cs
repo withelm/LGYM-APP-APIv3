@@ -1,4 +1,5 @@
 using LgymApi.Api.Extensions;
+using LgymApi.Api.Idempotency;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.InAppNotification.Contracts;
 using LgymApi.Api.Middleware;
@@ -45,6 +46,7 @@ public sealed class InAppNotificationController : ControllerBase
     }
 
     [HttpPost("{id}/notifications/{notificationId}/mark-read")]
+    [ApiIdempotency("api/{id}/notifications/{notificationId}/mark-read", ApiIdempotencyScopeSource.AuthenticatedUser, ApiIdempotencyReplayOwner.Notifications, ApiIdempotencyReplayResourceBinding.RouteAccount, IsOptional = true)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
@@ -54,8 +56,9 @@ public sealed class InAppNotificationController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.ParseRouteAccountIdForCurrentAccount(id);
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var notifId = notificationId.ToIdOrEmpty<NotificationEntity>();
-        var result = await _notificationService.MarkAsReadAsync(notifId, accountId, cancellationToken);
+        var result = await _notificationService.MarkAsReadAsync(notifId, accountContext, cancellationToken);
         if (result.IsFailure)
         {
             return result.ToActionResult();
@@ -65,6 +68,7 @@ public sealed class InAppNotificationController : ControllerBase
     }
 
     [HttpPost("{id}/notifications/mark-all-read")]
+    [ApiIdempotency("api/{id}/notifications/mark-all-read", ApiIdempotencyScopeSource.AuthenticatedUser, ApiIdempotencyReplayOwner.Notifications, ApiIdempotencyReplayResourceBinding.RouteAccount, IsOptional = true)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> MarkAllAsRead(

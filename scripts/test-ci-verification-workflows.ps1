@@ -563,12 +563,13 @@ function Assert-Task4EvidenceProducerContract {
 
     $nonPostgreSqlJob = $Workflow.jobs.'non-postgresql'
     $matrix = @($nonPostgreSqlJob.strategy.matrix.include)
-    Assert-True -Condition ($matrix.Count -eq 7) -Message 'The non-PostgreSQL matrix must contain exactly seven suites.'
-    Assert-StringSet -Expected @('Architecture', 'AuthorizationUnit', 'DataSeeder', 'IdentityUnit', 'InMemoryIntegration', 'ReportingUnit', 'Unit') -Actual @($matrix | ForEach-Object { [string]$_.suite }) -Description 'non-PostgreSQL suite matrix'
+    Assert-True -Condition ($matrix.Count -eq 8) -Message 'The non-PostgreSQL matrix must contain exactly eight suites.'
+    Assert-StringSet -Expected @('Architecture', 'AuthorizationUnit', 'DataSeeder', 'IdentityUnit', 'InMemoryIntegration', 'NotificationsUnit', 'ReportingUnit', 'Unit') -Actual @($matrix | ForEach-Object { [string]$_.suite }) -Description 'non-PostgreSQL suite matrix'
     $expectedProjects = @{
         Unit = 'LgymApi.UnitTests/LgymApi.UnitTests.csproj'
         AuthorizationUnit = 'LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj'
         IdentityUnit = 'LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj'
+        NotificationsUnit = 'LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj'
         ReportingUnit = 'LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj'
         Architecture = 'LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj'
         InMemoryIntegration = 'LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj'
@@ -1033,7 +1034,7 @@ function Assert-StagedSonarInputs {
         [Parameter(Mandatory)][string]$MergeSha
     )
 
-    $expectedSuites = @('Architecture', 'AuthorizationUnit', 'DataSeeder', 'IdentityUnit', 'InMemoryIntegration', 'PostgreSqlIntegration', 'ReportingUnit', 'Unit')
+    $expectedSuites = @('Architecture', 'AuthorizationUnit', 'DataSeeder', 'IdentityUnit', 'InMemoryIntegration', 'NotificationsUnit', 'PostgreSqlIntegration', 'ReportingUnit', 'Unit')
     $expectedFiles = @('manifest.json')
     foreach ($suite in $expectedSuites) {
         $expectedFiles += @(
@@ -1047,7 +1048,7 @@ function Assert-StagedSonarInputs {
             ForEach-Object { $_.FullName.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar).Replace('\', '/') }
     )
     Assert-StringSet -Expected $expectedFiles -Actual $actualFiles -Description 'staged Sonar input files'
-    Assert-True -Condition ($actualFiles.Count -eq 17) -Message 'The staged Sonar input tree must contain exactly seventeen files.'
+    Assert-True -Condition ($actualFiles.Count -eq 19) -Message 'The staged Sonar input tree must contain exactly nineteen files.'
     Assert-StringSet -Expected @('manifest.json', 'TestResults') -Actual @(Get-ChildItem -LiteralPath $Path -Force | ForEach-Object { $_.Name }) -Description 'consumer-compatible artifact root entries'
     $testResultsDirectory = Join-Path $Path 'TestResults'
     Assert-StringSet -Expected @('SonarInputs') -Actual @(Get-ChildItem -LiteralPath $testResultsDirectory -Force | ForEach-Object { $_.Name }) -Description 'consumer-compatible TestResults entries'
@@ -1104,7 +1105,7 @@ function New-EvidenceFixture {
         })
 
     $buildSha256 = (Get-FileHash -LiteralPath $buildPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    foreach ($suite in @('Unit', 'AuthorizationUnit', 'IdentityUnit', 'ReportingUnit', 'Architecture', 'InMemoryIntegration', 'PostgreSqlIntegration', 'DataSeeder')) {
+    foreach ($suite in @('Unit', 'AuthorizationUnit', 'IdentityUnit', 'NotificationsUnit', 'ReportingUnit', 'Architecture', 'InMemoryIntegration', 'PostgreSqlIntegration', 'DataSeeder')) {
         $directory = New-Item -ItemType Directory -Path (Join-Path $Root $suite) -Force
         $evidenceDirectory = New-Item -ItemType Directory -Path (Join-Path $directory.FullName 'evidence') -Force
         $trxName = "$suite-fixture.trx"
@@ -1177,11 +1178,12 @@ Assert-StringSet -Expected $expectedBranches -Actual @($prWorkflow.on.pull_reque
 Assert-StringSet -Expected $expectedBranches -Actual @($prWorkflow.on.push.branches) -Description 'PR workflow push branches'
 
 $matrix = @($prWorkflow.jobs.'non-postgresql'.strategy.matrix.include)
-Assert-True -Condition ($matrix.Count -eq 7) -Message 'The non-PostgreSQL matrix must contain exactly seven suites.'
+Assert-True -Condition ($matrix.Count -eq 8) -Message 'The non-PostgreSQL matrix must contain exactly eight suites.'
 $expectedMatrix = @{
     Unit = ''
     AuthorizationUnit = ''
     IdentityUnit = ''
+    NotificationsUnit = ''
     ReportingUnit = ''
     Architecture = ''
     InMemoryIntegration = 'TestCategory!=PostgreSql'
@@ -1191,6 +1193,7 @@ $expectedProjects = @{
     Unit = 'LgymApi.UnitTests/LgymApi.UnitTests.csproj'
     AuthorizationUnit = 'LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj'
     IdentityUnit = 'LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj'
+    NotificationsUnit = 'LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj'
     ReportingUnit = 'LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj'
     Architecture = 'LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj'
     InMemoryIntegration = 'LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj'

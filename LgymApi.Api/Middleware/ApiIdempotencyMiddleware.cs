@@ -44,6 +44,12 @@ public sealed class ApiIdempotencyMiddleware
         // Extract and validate idempotency key
         if (!context.Request.Headers.TryGetValue(ApiIdempotencyHeaders.IdempotencyKey, out var keyHeader))
         {
+            if (idempotencyMetadata.IsOptional)
+            {
+                await _next(context);
+                return;
+            }
+
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsJsonAsync(new
             {

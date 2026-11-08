@@ -12,15 +12,19 @@ internal sealed class PushInstallationEntityTypeConfiguration : IEntityTypeConfi
 
         builder.Property(e => e.InstallationId).HasMaxLength(200).IsRequired();
         builder.Property(e => e.Platform).HasMaxLength(32).IsRequired();
-        builder.Property(e => e.FcmToken).HasMaxLength(512).IsRequired();
+        builder.Property(e => e.FcmToken).HasMaxLength(512).IsRequired(false);
         builder.Property(e => e.AppVersion).HasMaxLength(64);
         builder.Property(e => e.Environment).HasMaxLength(32).IsRequired();
         builder.Property(e => e.PermissionStatus).HasMaxLength(64);
         builder.Property(e => e.DisabledReason).HasMaxLength(128);
+        builder.Property(e => e.RegistrationRevision).IsConcurrencyToken();
 
         builder.HasIndex(e => e.InstallationId)
             .IsUnique()
             .HasFilter(NotificationsConfigurationFilters.ActiveRowsFilter);
+        builder.HasIndex(e => e.FcmToken)
+            .IsUnique()
+            .HasFilter("\"FcmToken\" IS NOT NULL");
         builder.HasIndex(e => e.DisabledAt);
 
         builder.HasOne<User>()

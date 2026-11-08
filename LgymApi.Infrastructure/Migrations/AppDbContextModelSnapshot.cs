@@ -1239,7 +1239,6 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("character varying(32)");
 
                     b.Property<string>("FcmToken")
-                        .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
@@ -1263,6 +1262,10 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<long>("RegistrationRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
                     b.Property<Guid?>("SessionId")
                         .HasColumnType("uuid");
 
@@ -1275,6 +1278,10 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DisabledAt");
+
+                    b.HasIndex("FcmToken")
+                        .IsUnique()
+                        .HasFilter("\"FcmToken\" IS NOT NULL");
 
                     b.HasIndex("InstallationId")
                         .IsUnique()

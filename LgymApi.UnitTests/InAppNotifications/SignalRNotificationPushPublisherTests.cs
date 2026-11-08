@@ -3,6 +3,8 @@ using LgymApi.Api.Features.InAppNotification;
 using LgymApi.Api.Features.InAppNotification.Contracts;
 using LgymApi.Api.Hubs;
 using LgymApi.Application.Notifications.Models;
+using LgymApi.Application.Notifications;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
@@ -73,12 +75,23 @@ public sealed class SignalRNotificationPushPublisherTests
             .Returns(call => Task.FromResult(new AuthenticatedAccountResolution(
                 AuthenticatedAccountResolutionStatus.Active,
                 new AuthenticatedAccountContext(call.ArgAt<Id<AccountReference>>(0), sessionId, [], [], false, false))));
+        var access = Substitute.For<INotificationReplayAccessService>();
+        access.CanReplayNotificationAsync(Arg.Any<AuthenticatedAccountContext>(), Arg.Any<Id<InAppNotification>>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        var mapper = Substitute.For<IMapper>();
+        mapper.Map<InAppNotificationResult, InAppNotificationResultDto>(Arg.Any<InAppNotificationResult>())
+            .Returns(call =>
+            {
+                var source = call.Arg<InAppNotificationResult>();
+                return new InAppNotificationResultDto(source.Id.ToString(), source.Message, source.RedirectUrl,
+                    source.IsRead, source.Type.Value, source.IsSystemNotification, source.SenderUserId?.ToString(), source.CreatedAt);
+            });
         var type = typeof(NotificationHub).Assembly.GetType("LgymApi.Api.Features.InAppNotification.SignalRNotificationPushPublisher", throwOnError: true)!;
         var publisher = Activator.CreateInstance(
             type,
             BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
             null,
-            new object[] { hubContext, registry, resolver, logger },
+            new object[] { hubContext, registry, resolver, access, mapper, logger },
             null)!;
 
         return (publisher, clientProxy, logger);

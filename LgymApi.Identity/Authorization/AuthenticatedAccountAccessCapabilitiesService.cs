@@ -7,6 +7,7 @@ namespace LgymApi.Application.Identity.Authorization;
 internal sealed class AuthenticatedAccountAccessCapabilitiesService : IAuthenticatedAccountAccessCapabilitiesService
 {
     private static readonly AccountAccessOwnerCapabilities Unavailable = new(false);
+    private static readonly NotificationsAccountAccessOwnerCapabilities NotificationsUnavailable = new(false, false, false, false);
     private readonly IAuthenticatedAccountAuthorizationService _authorizationService;
     private readonly IReadOnlyDictionary<AccountAccessCapabilityOwner, IAccountAccessOwnerCapabilityExtension> _extensions;
 
@@ -40,7 +41,7 @@ internal sealed class AuthenticatedAccountAccessCapabilitiesService : IAuthentic
                 GetOwnerCapabilities(AccountAccessCapabilityOwner.Coaching),
                 GetOwnerCapabilities(AccountAccessCapabilityOwner.Nutrition),
                 GetOwnerCapabilities(AccountAccessCapabilityOwner.WorkoutProgress),
-                GetOwnerCapabilities(AccountAccessCapabilityOwner.Notifications)));
+                GetNotificationsCapabilities(accountContext)));
     }
 
     private AccountAccessOwnerCapabilities GetOwnerCapabilities(
@@ -48,4 +49,11 @@ internal sealed class AuthenticatedAccountAccessCapabilitiesService : IAuthentic
         _extensions.TryGetValue(owner, out var extension)
             ? extension.GetAvailability()
             : Unavailable;
+
+    private NotificationsAccountAccessOwnerCapabilities GetNotificationsCapabilities(
+        AuthenticatedAccountContext accountContext) =>
+        _extensions.TryGetValue(AccountAccessCapabilityOwner.Notifications, out var extension)
+            && extension is IAccountAccessOwnerCapabilityExtension<NotificationsAccountAccessOwnerCapabilities> typedExtension
+                ? typedExtension.GetCapabilities(accountContext)
+                : NotificationsUnavailable;
 }

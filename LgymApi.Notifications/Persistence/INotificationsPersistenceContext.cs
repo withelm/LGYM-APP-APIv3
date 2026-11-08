@@ -13,5 +13,6 @@ internal interface INotificationsPersistenceContext
     DbSet<InAppNotification> InAppNotifications { get; }
 
     EntityEntry<InAppNotification> Entry(InAppNotification entity);
+    EntityEntry<PushInstallation> Entry(PushInstallation entity);
     EntityEntry<PushNotificationMessage> Entry(PushNotificationMessage entity);
 }

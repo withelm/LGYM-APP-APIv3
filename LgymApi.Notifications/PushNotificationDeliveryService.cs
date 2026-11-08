@@ -7,6 +7,8 @@ using LgymApi.Domain.Constants;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Notifications;
@@ -16,28 +18,34 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
     private const int MaximumExceptionTypeLength = 128;
 
     private readonly IPushNotificationMessageRepository _pushNotificationMessageRepository;
+    private readonly INotificationDisclosureEligibilityService _disclosureEligibility;
     private readonly IPushInstallationRepository _pushInstallationRepository;
     private readonly IPushProviderSender _pushProviderSender;
     private readonly IPushBackgroundScheduler _pushBackgroundScheduler;
     private readonly IPushNotificationDeliveryRetrySettings _retrySettings;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuthenticatedAccountContextResolver _accountContextResolver;
     private readonly ILogger<PushNotificationDeliveryService> _logger;
 
     public PushNotificationDeliveryService(
         IPushNotificationMessageRepository pushNotificationMessageRepository,
+        INotificationDisclosureEligibilityService disclosureEligibility,
         IPushInstallationRepository pushInstallationRepository,
         IPushProviderSender pushProviderSender,
         IPushBackgroundScheduler pushBackgroundScheduler,
         IPushNotificationDeliveryRetrySettings retrySettings,
         IUnitOfWork unitOfWork,
+        IAuthenticatedAccountContextResolver accountContextResolver,
         ILogger<PushNotificationDeliveryService> logger)
     {
         _pushNotificationMessageRepository = pushNotificationMessageRepository ?? throw new ArgumentNullException(nameof(pushNotificationMessageRepository));
+        _disclosureEligibility = disclosureEligibility ?? throw new ArgumentNullException(nameof(disclosureEligibility));
         _pushInstallationRepository = pushInstallationRepository ?? throw new ArgumentNullException(nameof(pushInstallationRepository));
         _pushProviderSender = pushProviderSender ?? throw new ArgumentNullException(nameof(pushProviderSender));
         _pushBackgroundScheduler = pushBackgroundScheduler ?? throw new ArgumentNullException(nameof(pushBackgroundScheduler));
         _retrySettings = retrySettings ?? throw new ArgumentNullException(nameof(retrySettings));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _accountContextResolver = accountContextResolver ?? throw new ArgumentNullException(nameof(accountContextResolver));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -78,6 +86,19 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
                 return;
             }
 
+            if (message.InAppNotificationId is { } inAppNotificationId
+                && !await _disclosureEligibility.CanDiscloseAsync(inAppNotificationId, cancellationToken))
+            {
+                message.Status = PushNotificationStatus.Skipped;
+                message.FailureKind = PushNotificationFailureKind.Preference;
+                message.ProviderStatus = "SourceNotificationUnavailable";
+                message.LastError = "The source in-app notification is no longer available.";
+                message.NextAttemptAt = null;
+                message.SchedulerJobId = null;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
             var installation = await _pushInstallationRepository.FindByIdAsync(message.PushInstallationId, cancellationToken);
             if (installation == null)
             {
@@ -101,6 +122,23 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
                 message.NextAttemptAt = null;
                 message.SchedulerJobId = null;
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
+            if (installation.SessionId is not { } installationSessionId)
+            {
+                await DenyStaleInstallationAsync(message, cancellationToken);
+                return;
+            }
+
+            var accountResolution = await _accountContextResolver.ResolveAsync(
+                message.UserId.Rebind<AccountReference>(),
+                installationSessionId.Rebind<AccountSessionReference>(),
+                cancellationToken);
+            if (accountResolution.Status != AuthenticatedAccountResolutionStatus.Active
+                || accountResolution.Context?.Id != message.UserId.Rebind<AccountReference>())
+            {
+                await DenyStaleInstallationAsync(message, cancellationToken);
                 return;
             }
 
@@ -156,6 +194,19 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private async Task DenyStaleInstallationAsync(
+        PushNotificationMessage message,
+        CancellationToken cancellationToken)
+    {
+        message.Status = PushNotificationStatus.Failed;
+        message.FailureKind = PushNotificationFailureKind.Permanent;
+        message.ProviderStatus = "InstallationSessionInvalid";
+        message.LastError = "The push installation session is no longer active.";
+        message.NextAttemptAt = null;
+        message.SchedulerJobId = null;
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     private static void ApplyProviderResult(

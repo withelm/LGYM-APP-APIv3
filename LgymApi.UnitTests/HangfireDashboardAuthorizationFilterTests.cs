@@ -8,9 +8,15 @@ using Hangfire.States;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
 using LgymApi.Api.Configuration;
+using LgymApi.Api.Middleware;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace LgymApi.UnitTests;
 
@@ -18,10 +24,16 @@ namespace LgymApi.UnitTests;
 public sealed class HangfireDashboardAuthorizationFilterTests
 {
     [Test]
-    public void Authorize_Should_Return_False_When_User_Is_Not_Authenticated()
+    public void Authorize_WithoutFreshPermissionFeature_DeniesStaleAdminClaims()
     {
         var filter = new HangfireDashboardAuthorizationFilter();
-        var context = CreateDashboardContext(CreateHttpContext(new ClaimsIdentity()));
+        var httpContext = CreateHttpContext(CreateAccountContext(AuthConstants.Permissions.AdminAccess));
+        httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(ClaimTypes.Role, AuthConstants.Roles.Admin),
+            new Claim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.AdminAccess)
+        ], "stale-token"));
+        var context = CreateDashboardContext(httpContext);
 
         var result = filter.Authorize(context);
 
@@ -29,11 +41,12 @@ public sealed class HangfireDashboardAuthorizationFilterTests
     }
 
     [Test]
-    public void Authorize_Should_Return_True_For_Admin_Role()
+    public void Authorize_WithValidatedContextAndFreshPermissionFeature_AllowsDashboard()
     {
         var filter = new HangfireDashboardAuthorizationFilter();
-        var identity = CreateIdentity(new Claim(ClaimTypes.Role, AuthConstants.Roles.Admin));
-        var context = CreateDashboardContext(CreateHttpContext(identity));
+        var httpContext = CreateHttpContext(CreateAccountContext(AuthConstants.Permissions.AdminAccess));
+        httpContext.Features.Set(new HangfireDashboardAuthorizationFeature());
+        var context = CreateDashboardContext(httpContext);
 
         var result = filter.Authorize(context);
 
@@ -41,45 +54,74 @@ public sealed class HangfireDashboardAuthorizationFilterTests
     }
 
     [Test]
-    public void Authorize_Should_Return_True_For_Admin_Access_Permission()
+    public async Task Middleware_CurrentIdentityPermission_StampsFreshFeatureAndContinues()
     {
+        var accountContext = CreateAccountContext(AuthConstants.Permissions.AdminAccess);
+        var httpContext = CreateHttpContext(accountContext);
+        var authorizationService = Substitute.For<IAuthenticatedAccountAuthorizationService>();
+        authorizationService.HasPermission(accountContext, AuthConstants.Permissions.AdminAccess).Returns(true);
+        var continued = false;
+        var middleware = new HangfireDashboardAuthorizationMiddleware(_ =>
+        {
+            continued = true;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(httpContext, authorizationService);
+
+        continued.Should().BeTrue();
+        httpContext.Features.Get<HangfireDashboardAuthorizationFeature>().Should().NotBeNull();
+        authorizationService.Received(1).HasPermission(accountContext, AuthConstants.Permissions.AdminAccess);
         var filter = new HangfireDashboardAuthorizationFilter();
-        var identity = CreateIdentity(new Claim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.AdminAccess));
-        var context = CreateDashboardContext(CreateHttpContext(identity));
-
-        var result = filter.Authorize(context);
-
-        result.Should().BeTrue();
+        filter.Authorize(CreateDashboardContext(httpContext)).Should().BeTrue();
     }
 
     [Test]
-    public void Authorize_Should_Return_False_When_No_Admin_Access()
+    public async Task Middleware_StaleTokenClaimsWithoutCurrentPermission_ReturnsForbidden()
     {
-        var filter = new HangfireDashboardAuthorizationFilter();
-        var identity = CreateIdentity(new Claim(ClaimTypes.Name, "user"));
-        var context = CreateDashboardContext(CreateHttpContext(identity));
+        var accountContext = CreateAccountContext();
+        var httpContext = CreateHttpContext(accountContext);
+        httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(ClaimTypes.Role, AuthConstants.Roles.Admin),
+            new Claim(AuthConstants.PermissionClaimType, AuthConstants.Permissions.AdminAccess)
+        ], "stale-token"));
+        var authorizationService = Substitute.For<IAuthenticatedAccountAuthorizationService>();
+        authorizationService.HasPermission(accountContext, AuthConstants.Permissions.AdminAccess).Returns(false);
+        var continued = false;
+        var middleware = new HangfireDashboardAuthorizationMiddleware(_ =>
+        {
+            continued = true;
+            return Task.CompletedTask;
+        });
 
-        var result = filter.Authorize(context);
+        await middleware.InvokeAsync(httpContext, authorizationService);
 
-        result.Should().BeFalse();
+        httpContext.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        continued.Should().BeFalse();
+        httpContext.Features.Get<HangfireDashboardAuthorizationFeature>().Should().BeNull();
     }
 
-    private static ClaimsIdentity CreateIdentity(params Claim[] claims)
-    {
-        return new ClaimsIdentity(claims, "Test");
-    }
-
-    private static HttpContext CreateHttpContext(ClaimsIdentity identity)
+    private static HttpContext CreateHttpContext(AuthenticatedAccountContext accountContext)
     {
         var services = new ServiceCollection()
             .BuildServiceProvider();
-
-        return new DefaultHttpContext
+        var context = new DefaultHttpContext
         {
-            User = new ClaimsPrincipal(identity),
             RequestServices = services
         };
+        context.Features.Set<IAuthenticatedAccountContextFeature>(new AuthenticatedAccountContextFeature(accountContext));
+        return context;
     }
+
+    private static AuthenticatedAccountContext CreateAccountContext(params string[] permissions) =>
+        new(
+            Id<AccountReference>.New(),
+            Id<AccountSessionReference>.New(),
+            [],
+            permissions,
+            IsBlocked: false,
+            IsDeleted: false);
 
     private static DashboardContext CreateDashboardContext(HttpContext httpContext)
     {

@@ -31,6 +31,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LgymApi.Api\LgymApi.Api.csproj" />
     <ProjectReference Include="..\LgymApi.Application\LgymApi.Application.csproj" />
+    <ProjectReference Include="..\LgymApi.Authorization\LgymApi.Authorization.csproj" />
     <ProjectReference Include="..\LgymApi.BackgroundWorker\LgymApi.BackgroundWorker.csproj" />
     <ProjectReference Include="..\LgymApi.BackgroundWorker.Common\LgymApi.BackgroundWorker.Common.csproj" />
     <ProjectReference Include="..\LgymApi.Domain\LgymApi.Domain.csproj" />

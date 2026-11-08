@@ -2,6 +2,7 @@ using LgymApi.Api.Hubs;
 using LgymApi.Api.Features.InAppNotification.Contracts;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
+using LgymApi.Application.Mapping.Core;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.AspNetCore.SignalR;
@@ -13,31 +14,29 @@ internal sealed class SignalRNotificationPushPublisher : IInAppNotificationPushP
     private readonly IHubContext<NotificationHub> _hubContext;
     private readonly IAccountSessionConnectionRegistry _connectionRegistry;
     private readonly IAuthenticatedAccountContextResolver _authenticatedAccountContextResolver;
+    private readonly INotificationReplayAccessService _notificationAccess;
+    private readonly IMapper _mapper;
     private readonly ILogger<SignalRNotificationPushPublisher> _logger;
 
     public SignalRNotificationPushPublisher(
         IHubContext<NotificationHub> hubContext,
         IAccountSessionConnectionRegistry connectionRegistry,
         IAuthenticatedAccountContextResolver authenticatedAccountContextResolver,
+        INotificationReplayAccessService notificationAccess,
+        IMapper mapper,
         ILogger<SignalRNotificationPushPublisher> logger)
     {
         _hubContext = hubContext;
         _connectionRegistry = connectionRegistry;
         _authenticatedAccountContextResolver = authenticatedAccountContextResolver;
+        _notificationAccess = notificationAccess;
+        _mapper = mapper;
         _logger = logger;
     }
 
     public async Task PushAsync(InAppNotificationResult notification, CancellationToken ct = default)
     {
-        var payload = new InAppNotificationResultDto(
-            notification.Id.ToString(),
-            notification.Message,
-            notification.RedirectUrl,
-            notification.IsRead,
-            notification.Type.Value,
-            notification.IsSystemNotification,
-            notification.SenderUserId?.ToString(),
-            notification.CreatedAt);
+        var payload = _mapper.Map<InAppNotificationResult, InAppNotificationResultDto>(notification);
 
         foreach (var connection in _connectionRegistry.GetConnections(notification.RecipientId.Rebind<AccountReference>()))
         {
@@ -50,6 +49,11 @@ internal sealed class SignalRNotificationPushPublisher : IInAppNotificationPushP
                 || resolution.Context?.Id != connection.AccountId)
             {
                 _connectionRegistry.Remove(connection.ConnectionId);
+                continue;
+            }
+
+            if (!await _notificationAccess.CanReplayNotificationAsync(resolution.Context, notification.Id, ct))
+            {
                 continue;
             }
 

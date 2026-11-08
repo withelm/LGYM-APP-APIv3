@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.IntegrationTests.Authorization;
@@ -74,7 +75,11 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         "non-sensitive-current;no-replay-contract", "opaque-capability-current-contract",
         "credential-or-token-current;generic-idempotency-foundation-complete;public-replay-policy-current",
         "idempotent-current;generic-idempotency-foundation-complete;identity-replay-policy-current",
-        "idempotent-current;generic-idempotency-foundation-complete;workout-progress-replay-policy-deferred"
+        "idempotent-current;generic-idempotency-foundation-complete;workout-progress-replay-policy-deferred",
+        "credential-or-token-current;notifications-installation-current-replay",
+        "private-response-current;notifications-installation-current-replay",
+        "private-response-current;notifications-source-current-replay",
+        "private-response-current;notifications-actor-current-replay"
     ];
 
     private static readonly string[] ApprovedMigrationTasks =
@@ -280,7 +285,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         [
             "GET|/swagger/v1/swagger.json|Program.swagger-json|anonymous-development-only",
             "GET|/swagger/{**path}|Program.swagger-ui|anonymous-development-only",
-            "GET|/hangfire|ProgramHangfire.ConfigureRecurringJobs|admin-role-or-permission"
+            "GET|/hangfire|ProgramHangfire.ConfigureDashboard|policy.admin.access"
         ]);
     }
 
@@ -312,6 +317,39 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             var documentedRow = documented.Single(row => row.EntryPoint == type.Name);
             documentedRow.Methods.Should().Be(GetPublicJobSignature(type), $"{type.Name} must keep its persisted public job signature");
         }
+    }
+
+    [Test]
+    public void TechnicalAcceptanceEvidence_IsClosedAndEveryLocatorResolves()
+    {
+        var matrix = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "docs", "validation", "issue-395-validation-matrix.md"));
+        var inventory = ReadTechnicalInventory(matrix);
+        var acceptance = ReadTechnicalAcceptanceEvidence(matrix);
+
+        AssertTechnicalAcceptanceIsClosed(inventory, acceptance);
+        foreach (var row in acceptance)
+        {
+            foreach (var locator in SplitTechnicalEvidenceLocators(row.PositiveEvidence)
+                         .Concat(SplitTechnicalEvidenceLocators(row.NegativeEvidence)))
+            {
+                AssertTechnicalEvidenceLocatorResolves(locator, row.TechnicalEntry);
+            }
+        }
+    }
+
+    [Test]
+    public void TechnicalAcceptanceEvidence_RejectsUnmappedEntriesAndInvalidLocators()
+    {
+        var inventory = new[]
+        {
+            new TechnicalInventoryRow("http-endpoint", "GET", "/health/live", "Program.health-live", "platform-reference-data", "anonymous", "public", "non-sensitive-current;no-replay-contract", "AUTH-A11")
+        };
+
+        Action unmapped = () => AssertTechnicalAcceptanceIsClosed(inventory, []);
+        Action invalidLocator = () => AssertTechnicalEvidenceLocatorResolves("MissingFixture.MissingTest", "http-endpoint Program.health-live");
+
+        unmapped.Should().Throw<AssertionException>().WithMessage("*technical acceptance evidence must map every inventory entry exactly once*");
+        invalidLocator.Should().Throw<AssertionException>().WithMessage("*MissingFixture.MissingTest*executable NUnit test*");
     }
 
     private static string GetPublicJobSignature(Type type)
@@ -621,6 +659,78 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .OrderBy(row => row.Kind, StringComparer.Ordinal)
             .ThenBy(row => row.EntryPoint, StringComparer.Ordinal)
             .ToArray();
+    }
+
+    private static IReadOnlyList<TechnicalAcceptanceEvidenceRow> ReadTechnicalAcceptanceEvidence(string matrix)
+    {
+        var lines = matrix.Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
+        var headerIndex = Array.FindIndex(lines, line => line.StartsWith("| technical entry | positive executable evidence |", StringComparison.Ordinal));
+        headerIndex.Should().BeGreaterThanOrEqualTo(0, "the matrix must include its K01 technical acceptance evidence header");
+
+        return lines.Skip(headerIndex + 2)
+            .TakeWhile(line => line.StartsWith("| ", StringComparison.Ordinal))
+            .Select(ParseTechnicalAcceptanceEvidenceRow)
+            .ToArray();
+    }
+
+    private static TechnicalAcceptanceEvidenceRow ParseTechnicalAcceptanceEvidenceRow(string line)
+    {
+        var values = line.Trim().Trim('|').Split('|').Select(value => value.Trim()).ToArray();
+        values.Should().HaveCount(3, $"technical acceptance row '{line}' must define its entry and positive/negative evidence");
+        values.Should().NotContain(string.Empty, "technical acceptance evidence cannot be blank");
+        return new TechnicalAcceptanceEvidenceRow(values[0], values[1], values[2]);
+    }
+
+    private static void AssertTechnicalAcceptanceIsClosed(
+        IReadOnlyCollection<TechnicalInventoryRow> inventory,
+        IReadOnlyCollection<TechnicalAcceptanceEvidenceRow> acceptance)
+    {
+        var expected = inventory
+            .Select(row => $"{row.Kind} {row.EntryPoint}")
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+        var actual = acceptance
+            .Select(row => row.TechnicalEntry)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+
+        actual.Should().OnlyHaveUniqueItems("technical acceptance evidence cannot duplicate an inventory entry");
+        actual.Should().Equal(expected, "technical acceptance evidence must map every inventory entry exactly once");
+    }
+
+    private static IEnumerable<string> SplitTechnicalEvidenceLocators(string value) =>
+        value.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+    private static void AssertTechnicalEvidenceLocatorResolves(string locator, string technicalEntry)
+    {
+        var parts = locator.Split('.', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2)
+        {
+            throw new AssertionException($"'{technicalEntry}' locator '{locator}' must identify an executable NUnit test as Fixture.Method.");
+        }
+
+        var currentAssemblyFixture = typeof(EndpointContractMatrixTests).Assembly.GetTypes()
+            .SingleOrDefault(type => type.Name == parts[0]);
+        if (currentAssemblyFixture is not null)
+        {
+            _ = ResolveExecutableTestMethod(locator, technicalEntry, "technical acceptance evidence");
+            return;
+        }
+
+        var repositoryRoot = FindRepositoryRoot();
+        var fixtureFiles = Directory.GetFiles(repositoryRoot, $"{parts[0]}.cs", SearchOption.AllDirectories)
+            .Where(path => path.Split(Path.DirectorySeparatorChar)
+                .Any(segment => segment.EndsWith("Tests", StringComparison.Ordinal)))
+            .ToArray();
+        fixtureFiles.Should().ContainSingle($"'{technicalEntry}' locator '{locator}' must resolve to one executable NUnit test fixture");
+
+        var source = File.ReadAllText(fixtureFiles[0]);
+        var methodPattern = $@"(?<attributes>(?:\s*\[[^\]]+\]\s*)+)\s*(?:public|internal)\s+(?:async\s+)?(?:Task(?:<[^>]+>)?|void)\s+{Regex.Escape(parts[1])}\s*\(";
+        var method = Regex.Match(source, methodPattern, RegexOptions.CultureInvariant);
+        if (!method.Success || !Regex.IsMatch(method.Groups["attributes"].Value, @"\[(?:Test|TestCase|TestCaseSource)\b", RegexOptions.CultureInvariant))
+        {
+            throw new AssertionException($"'{technicalEntry}' locator '{locator}' must resolve to an executable NUnit test.");
+        }
     }
 
     private static TechnicalInventoryRow ParseTechnicalInventoryRow(string line)
@@ -1279,6 +1389,11 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         string Scope,
         string SensitiveReplay,
         string MigrationTasks);
+
+    private sealed record TechnicalAcceptanceEvidenceRow(
+        string TechnicalEntry,
+        string PositiveEvidence,
+        string NegativeEvidence);
 
     private sealed record MatrixRow(
         string Method,

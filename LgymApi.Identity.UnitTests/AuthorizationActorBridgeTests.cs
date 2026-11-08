@@ -41,6 +41,21 @@ public sealed class AuthorizationActorBridgeTests
     }
 
     [Test]
+    public void CreateActor_UsesTheRegisteredIdentityMappingBridge()
+    {
+        var accountContext = CreateAccountContext([]);
+        var expectedActor = new AuthorizationActor(accountContext.Id.Rebind<ActorReference>());
+        var mapper = Substitute.For<IMapper>();
+        mapper.Map<AuthenticatedAccountContext, AuthorizationActor>(accountContext, null).Returns(expectedActor);
+        var service = new AuthenticatedAccountAuthorizationService(
+            mapper,
+            Substitute.For<IAuthorizationEvaluator<GlobalPermissionAuthorizationContext>>());
+
+        service.CreateActor(accountContext).Should().BeSameAs(expectedActor);
+        mapper.Received(1).Map<AuthenticatedAccountContext, AuthorizationActor>(accountContext, null);
+    }
+
+    [Test]
     public void Evaluate_UsesTheCurrentPersistedPermissionFactsWithoutRoleBypass()
     {
         var accountContext = CreateAccountContext([], ["Admin", "Trainer"]);

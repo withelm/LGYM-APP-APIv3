@@ -187,6 +187,7 @@ if (!app.Environment.IsEnvironment(TestingEnvironment))
 
 app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
 app.UseAuthorization();
+ProgramHangfire.ConfigureDashboard(app, TestingEnvironment);
 app.UseMiddleware<ReportingProtocolMiddleware>();
 app.UseMiddleware<LgymApi.Api.Middleware.ApiIdempotencyMiddleware>();
 

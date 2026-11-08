@@ -32,7 +32,7 @@ public sealed class ModulePersistenceBridgeGuardTests
             Context(typeof(ActorReference).Assembly, "LgymApi.Platform.Persistence.IPlatformPersistenceContext", ["AppConfigs", "ActionExecutionLogs", "CommandEnvelopes", "ApiIdempotencyRecords"], ["CommandEnvelope", "ApiIdempotencyRecord"]),
             Context(typeof(AccountReference).Assembly, "LgymApi.Identity.Persistence.IIdentityPersistenceContext", ["Users", "Roles", "UserRoles", "RoleClaims", "PasswordResetTokens", "UserExternalLogins", "UserSessions", "UserTutorialProgresses", "UserTutorialStepProgresses", "ProviderName"], []),
             Context(typeof(PlanReference).Assembly, "LgymApi.TrainingPlanning.Persistence.ITrainingPlanningPersistenceContext", ["Plans", "PlanDays", "PlanDayExercises"], []),
-            Context(typeof(NotificationReference).Assembly, "LgymApi.Notifications.Persistence.INotificationsPersistenceContext", ["NotificationMessages", "EmailNotificationSubscriptions", "PushInstallations", "PushNotificationMessages", "InAppNotifications"], ["InAppNotification", "PushNotificationMessage"])
+            Context(typeof(NotificationReference).Assembly, "LgymApi.Notifications.Persistence.INotificationsPersistenceContext", ["NotificationMessages", "EmailNotificationSubscriptions", "PushInstallations", "PushNotificationMessages", "InAppNotifications"], ["InAppNotification", "PushInstallation", "PushNotificationMessage"])
         };
 
         var services = new ServiceCollection();
@@ -104,9 +104,12 @@ public sealed class ModulePersistenceBridgeGuardTests
         foreach (var modulePath in modulePaths)
         {
             var assemblyInfo = Path.Combine(repoRoot, modulePath, "Properties", "AssemblyInfo.cs");
-            var expectedFriends = modulePath == "LgymApi.Identity"
-                ? ApprovedFriends.Append("LgymApi.Identity.UnitTests").OrderBy(friend => friend, StringComparer.Ordinal).ToArray()
-                : ApprovedFriends;
+            var expectedFriends = modulePath switch
+            {
+                "LgymApi.Identity" => ApprovedFriends.Append("LgymApi.Identity.UnitTests").OrderBy(friend => friend, StringComparer.Ordinal).ToArray(),
+                "LgymApi.Notifications" => ApprovedFriends.Append("LgymApi.Notifications.UnitTests").OrderBy(friend => friend, StringComparer.Ordinal).ToArray(),
+                _ => ApprovedFriends
+            };
             Assert.That(ReadFriends(File.ReadAllText(assemblyInfo)), Is.EqualTo(expectedFriends), modulePath);
         }
 

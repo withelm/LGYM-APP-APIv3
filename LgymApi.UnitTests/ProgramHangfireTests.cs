@@ -20,4 +20,18 @@ public sealed class ProgramHangfireTests
 
         action.Should().NotThrow();
     }
+
+    [Test]
+    public void ConfigureDashboard_WhenEnvironmentMatchesTesting_ReturnsWithoutThrowing()
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = "Testing"
+        });
+        using var app = builder.Build();
+
+        var action = () => ProgramHangfire.ConfigureDashboard(app, "Testing");
+
+        action.Should().NotThrow();
+    }
 }

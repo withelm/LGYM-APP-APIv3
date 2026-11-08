@@ -70,6 +70,116 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreateAsync_DeliversValidSourceAndSuppressesHiddenSourceAcrossLiveAndQueuedPush()
+    {
+        var trainee = await SeedUserAsync(name: "hub-source-trainee", email: "hub-source-trainee@example.com");
+        var trainer = await SeedUserAsync(name: "hub-source-trainer", email: "hub-source-trainer@example.com");
+        var session = await CreateSessionAsync(trainee.Id);
+        var now = DateTimeOffset.UtcNow;
+        var validNote = new TraineeNote
+        {
+            Id = Id<TraineeNote>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            Title = "Visible",
+            Content = "Visible",
+            VisibleToTrainee = true,
+            LastUpdatedByUserId = trainer.Id,
+            LastUpdatedAt = now
+        };
+        var hiddenNote = new TraineeNote
+        {
+            Id = Id<TraineeNote>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            Title = "Hidden",
+            Content = "Hidden",
+            VisibleToTrainee = false,
+            LastUpdatedByUserId = trainer.Id,
+            LastUpdatedAt = now
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<LgymApi.Infrastructure.Data.AppDbContext>();
+            database.TraineeNotes.AddRange(validNote, hiddenNote);
+            database.PushInstallations.Add(new PushInstallation
+            {
+                Id = Id<PushInstallation>.New(),
+                UserId = trainee.Id,
+                InstallationId = "hub-source-device",
+                Platform = "android",
+                FcmToken = "hub-source-token",
+                Environment = "testing",
+                PermissionStatus = "authorized",
+                LastSeenAt = now
+            });
+            await database.SaveChangesAsync();
+        }
+
+        await using var connection = CreateHubConnection(session.Token);
+        var validDelivery = ReceiveNotification(connection);
+        await connection.StartAsync();
+
+        Id<InAppNotification> validNotificationId;
+        Id<InAppNotification> hiddenNotificationId;
+        using var deliveryScope = Factory.Services.CreateScope();
+        {
+            var notifications = deliveryScope.ServiceProvider.GetRequiredService<IInAppNotificationService>();
+            var valid = await notifications.CreateAsync(new CreateInAppNotificationInput(
+                trainee.Id,
+                trainer.Id,
+                $"trainee-note:{validNote.Id}:{now:O}",
+                false,
+                "visible delivery",
+                $"/trainer/notes/{validNote.Id}",
+                InAppNotificationTypes.TraineeNoteUpdated));
+            valid.IsSuccess.Should().BeTrue();
+            validNotificationId = valid.Value.Id;
+        }
+
+        var received = await validDelivery.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        received.GetProperty("message").GetString().Should().Be("visible delivery");
+        var hiddenDelivery = ReceiveNotification(connection);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var notifications = scope.ServiceProvider.GetRequiredService<IInAppNotificationService>();
+            var hidden = await notifications.CreateAsync(new CreateInAppNotificationInput(
+                trainee.Id,
+                trainer.Id,
+                $"trainee-note:{hiddenNote.Id}:{now:O}",
+                false,
+                "hidden delivery",
+                $"/trainer/notes/{hiddenNote.Id}",
+                InAppNotificationTypes.TraineeNoteUpdated));
+            hidden.IsSuccess.Should().BeTrue();
+            hiddenNotificationId = hidden.Value.Id;
+        }
+
+        await AssertNotReceivedAsync(hiddenDelivery.Task);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<LgymApi.Infrastructure.Data.AppDbContext>();
+            database.PushNotificationMessages.Should().ContainSingle(message => message.InAppNotificationId == validNotificationId);
+            database.PushNotificationMessages.Should().NotContain(message => message.InAppNotificationId == hiddenNotificationId);
+            var note = await database.TraineeNotes.FindAsync(validNote.Id);
+            note!.VisibleToTrainee = false;
+            await database.SaveChangesAsync();
+        }
+
+        {
+            var publisher = deliveryScope.ServiceProvider.GetRequiredService<IInAppNotificationPushPublisher>();
+            await publisher.PushAsync(new InAppNotificationResult(
+                validNotificationId, trainee.Id, "stale visible delivery",
+                $"/trainer/notes/{validNote.Id}", false,
+                InAppNotificationTypes.TraineeNoteUpdated, false, trainer.Id, now));
+        }
+
+        await AssertNotReceivedAsync(hiddenDelivery.Task);
+    }
+
+    [Test]
     public async Task Hub_LogoutRevocation_PrunesTerminatedSessionAndPreservesOtherDelivery()
     {
         var terminatedUser = await SeedUserAsync(name: "hub-logout", email: "hub-logout@example.com");
@@ -200,9 +310,21 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
     private async Task PublishAsync(Id<User> recipientId, string message)
     {
         using var scope = Factory.Services.CreateScope();
+        var notification = new InAppNotification
+        {
+            Id = Id<InAppNotification>.New(),
+            RecipientId = recipientId,
+            IsSystemNotification = true,
+            Message = message,
+            RedirectUrl = "/notifications",
+            Type = InAppNotificationTypes.InvitationSent
+        };
+        var database = scope.ServiceProvider.GetRequiredService<LgymApi.Infrastructure.Data.AppDbContext>();
+        database.InAppNotifications.Add(notification);
+        await database.SaveChangesAsync();
         var publisher = scope.ServiceProvider.GetRequiredService<IInAppNotificationPushPublisher>();
         await publisher.PushAsync(new InAppNotificationResult(
-            Id<InAppNotification>.New(),
+            notification.Id,
             recipientId,
             message,
             "/notifications",

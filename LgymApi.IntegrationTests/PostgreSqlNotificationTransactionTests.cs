@@ -13,6 +13,7 @@ using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.UnitOfWork;
+using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -97,11 +98,13 @@ internal sealed class PostgreSqlNotificationTransactionTests : PostgreSqlIntegra
             var database = serviceScope.ServiceProvider.GetRequiredService<AppDbContext>();
             var service = new PushNotificationDeliveryService(
                 new PushNotificationMessageRepository(database),
+                serviceScope.ServiceProvider.GetRequiredService<INotificationDisclosureEligibilityService>(),
                 new PushInstallationRepository(database),
                 sender,
                 scheduler,
                 new TestRetrySettings(),
                 new EfUnitOfWork(database),
+                serviceScope.ServiceProvider.GetRequiredService<IAuthenticatedAccountContextResolver>(),
                 NullLogger<PushNotificationDeliveryService>.Instance);
 
             var action = () => service.ProcessAsync(messageId.ToString());

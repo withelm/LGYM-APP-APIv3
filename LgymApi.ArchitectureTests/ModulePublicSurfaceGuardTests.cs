@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 812;
+    private const int ManifestEntryCount = 816;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -67,10 +67,14 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessApplicationCapabilities",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessOwnerExtensions",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAccountAccessOwnerCapabilityExtension`1",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAuthenticatedAccountAccessCapabilitiesService",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.NotificationsAccountAccessOwnerCapabilities",
         "LgymApi.Notifications/IDisabledPushInstallationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IDisabledPushInstallationRetentionCleanupService",
         "LgymApi.Notifications/IInAppNotificationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IInAppNotificationRetentionCleanupService",
         "LgymApi.Notifications/IPushNotificationMessageRetentionCleanupService.cs\tLgymApi.Application.Notifications.IPushNotificationMessageRetentionCleanupService",
+        "LgymApi.Notifications/NotificationReplayAccessService.cs\tLgymApi.Application.Notifications.INotificationReplayAccessService",
+        "LgymApi.Notifications/NotificationReplayAccessService.cs\tLgymApi.Application.Notifications.NotificationReplayResourceKind",
         "LgymApi.Application/MainRecords/Models/BestMainRecordsWithTranslations.cs\tLgymApi.Application.Features.MainRecords.Models.BestMainRecordsWithTranslations",
         "LgymApi.Application/Training/Models/TrainingsByDateWithTranslations.cs\tLgymApi.Application.Features.Training.Models.TrainingsByDateWithTranslations",
         "LgymApi.Application/WorkoutProgress/Dashboard/Models/WorkoutProgressDashboardTrainingsWithTranslations.cs\tLgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardTrainingsWithTranslations",

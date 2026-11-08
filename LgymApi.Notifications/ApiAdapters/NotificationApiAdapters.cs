@@ -4,6 +4,8 @@ using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts.Authorization;
 using InAppNotificationEntity = LgymApi.Domain.Entities.InAppNotification;
 using UserEntity = LgymApi.Domain.Entities.User;
 
@@ -18,7 +20,7 @@ public interface IInAppNotificationApiAdapter
 
     Task<Result<Unit, AppError>> MarkAsReadAsync(
         Id<InAppNotificationEntity> notificationId,
-        Id<AccountReference> requestingAccountId,
+        AuthenticatedAccountContext accountContext,
         CancellationToken cancellationToken = default);
 
     Task<Result<Unit, AppError>> MarkAllAsReadAsync(
@@ -50,10 +52,14 @@ public interface INotificationEventApiAdapter
 internal sealed class InAppNotificationApiAdapter : IInAppNotificationApiAdapter
 {
     private readonly IInAppNotificationService _notificationService;
+    private readonly IAuthenticatedAccountAuthorizationService _authorizationService;
 
-    public InAppNotificationApiAdapter(IInAppNotificationService notificationService)
+    public InAppNotificationApiAdapter(
+        IInAppNotificationService notificationService,
+        IAuthenticatedAccountAuthorizationService authorizationService)
     {
         _notificationService = notificationService;
+        _authorizationService = authorizationService;
     }
 
     public Task<Result<PagedResult<InAppNotificationResult>, AppError>> GetForAccountAsync(
@@ -64,9 +70,12 @@ internal sealed class InAppNotificationApiAdapter : IInAppNotificationApiAdapter
 
     public Task<Result<Unit, AppError>> MarkAsReadAsync(
         Id<InAppNotificationEntity> notificationId,
-        Id<AccountReference> requestingAccountId,
+        AuthenticatedAccountContext accountContext,
         CancellationToken cancellationToken = default)
-        => _notificationService.MarkAsReadAsync(notificationId, requestingAccountId.Rebind<UserEntity>(), cancellationToken);
+        => _notificationService.MarkAsReadAsync(
+            notificationId,
+            _authorizationService.CreateActor(accountContext),
+            cancellationToken);
 
     public Task<Result<Unit, AppError>> MarkAllAsReadAsync(
         Id<AccountReference> accountId,

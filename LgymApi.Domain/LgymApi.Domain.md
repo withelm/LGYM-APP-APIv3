@@ -9,6 +9,7 @@
 - `Exercise` now carries `ExerciseEloFormula` with `Standard` as the default profile.
 - `ExerciseEloFormula.PullupWeighted` rewards lower weight for pull-up style exercises where added weight makes the score worse.
 - `PushInstallation` stores installation-scoped FCM registration state with optional user/session binding so logout and account-switch flows can disassociate a device without deleting its installation record.
+- `PushInstallation.RegistrationRevision` is the optimistic concurrency version for installation ownership and delivery-state writes; Infrastructure advances it on modifications and Notifications translates stale registration/action writes into safe denial.
 - `PushInstallationDisabledReasons.InvalidToken` preserves the legacy disabled-reason value used when provider-neutral delivery classifies an installation token as invalid.
 - Notifications ownership is module and write responsibility, not physical relocation: `InAppNotification`, `NotificationMessage`, `EmailNotificationSubscription`, `PushInstallation`, and `PushNotificationMessage` remain under `LgymApi.Domain/Entities` while Notifications owns their write rules. Non-owner modules use published contracts, views, or events; see [`issue-381-notifications-boundary.md`](../docs/modular-monolith/issue-381-notifications-boundary.md).
 - #387 moved the approved Notifications implementation into its module assembly while preserving the physical entity locations, shared `AppDbContext`, and single migration stream.

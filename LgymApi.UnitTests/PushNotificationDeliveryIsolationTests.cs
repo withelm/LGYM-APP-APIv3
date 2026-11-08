@@ -7,6 +7,8 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 using LgymApi.UnitTests.Fakes;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -24,6 +26,7 @@ public sealed class PushNotificationDeliveryIsolationTests
         {
             Id = Id<PushInstallation>.New(),
             UserId = Id<User>.New(),
+            SessionId = Id<UserSession>.New(),
             InstallationId = "installation-invalid-token",
             Platform = "android",
             FcmToken = rawToken,
@@ -55,13 +58,16 @@ public sealed class PushNotificationDeliveryIsolationTests
         var sender = new RecordingInvalidTokenPushSender(rawToken);
         var scheduler = new RecordingPushScheduler();
         var logger = new RecordingLogger<PushNotificationDeliveryService>();
+        var disclosureEligibility = new StubNotificationDisclosureEligibilityService(canDisclose: true);
         var service = new PushNotificationDeliveryService(
             messageRepository,
+            disclosureEligibility,
             installationRepository,
             sender,
             scheduler,
             new PushNotificationDeliveryRetrySettings(new PushNotificationOptions { RetryDelaysSeconds = [5] }),
             unitOfWork,
+            CreateActiveResolver(installation),
             logger);
 
         await service.ProcessAsync(message.Id.ToString());
@@ -75,6 +81,64 @@ public sealed class PushNotificationDeliveryIsolationTests
         installation.DisabledAt.Should().NotBeNull();
         scheduler.RetryNotificationIds.Should().BeEmpty();
         logger.Messages.Should().NotContain(messageText => messageText.Contains(rawToken, StringComparison.Ordinal));
+    }
+
+    [Test]
+    public async Task ProcessAsync_WhenSourceInAppNotificationWasDeleted_SkipsProviderDelivery()
+    {
+        var message = new PushNotificationMessage
+        {
+            Id = Id<PushNotificationMessage>.New(),
+            UserId = Id<User>.New(),
+            PushInstallationId = Id<PushInstallation>.New(),
+            InAppNotificationId = Id<InAppNotification>.New(),
+            SchemaVersion = 1,
+            Type = "push.deleted-source",
+            EventId = "event-deleted-source",
+            PayloadJson = "{}"
+        };
+        var messageRepository = new TestPushNotificationMessageRepository(message);
+        var disclosureEligibility = new StubNotificationDisclosureEligibilityService(canDisclose: false);
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(1));
+        var sender = Substitute.For<IPushProviderSender>();
+        var scheduler = new RecordingPushScheduler();
+        var service = new PushNotificationDeliveryService(
+            messageRepository,
+            disclosureEligibility,
+            new ConfigurablePushInstallationRepository(),
+            sender,
+            scheduler,
+            new PushNotificationDeliveryRetrySettings(new PushNotificationOptions { RetryDelaysSeconds = [5] }),
+            unitOfWork,
+            Substitute.For<IAuthenticatedAccountContextResolver>(),
+            new RecordingLogger<PushNotificationDeliveryService>());
+
+        await service.ProcessAsync(message.Id.ToString());
+
+        message.Status.Should().Be(PushNotificationStatus.Skipped);
+        message.ProviderStatus.Should().Be("SourceNotificationUnavailable");
+        scheduler.RetryNotificationIds.Should().BeEmpty();
+        _ = sender.DidNotReceiveWithAnyArgs().SendAsync(default, default!, default);
+    }
+
+    private static IAuthenticatedAccountContextResolver CreateActiveResolver(PushInstallation installation)
+    {
+        var resolver = Substitute.For<IAuthenticatedAccountContextResolver>();
+        resolver.ResolveAsync(
+                installation.UserId!.Value.Rebind<AccountReference>(),
+                installation.SessionId!.Value.Rebind<AccountSessionReference>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new AuthenticatedAccountResolution(
+                AuthenticatedAccountResolutionStatus.Active,
+                new AuthenticatedAccountContext(
+                    installation.UserId.Value.Rebind<AccountReference>(),
+                    installation.SessionId.Value.Rebind<AccountSessionReference>(),
+                    [],
+                    [],
+                    false,
+                    false))));
+        return resolver;
     }
 
     private sealed class RecordingInvalidTokenPushSender(string rawToken) : IPushProviderSender
@@ -94,6 +158,14 @@ public sealed class PushNotificationDeliveryIsolationTests
                 "UNREGISTERED",
                 $"provider rejected {rawToken}"));
         }
+    }
+
+    private sealed class StubNotificationDisclosureEligibilityService(bool canDisclose)
+        : INotificationDisclosureEligibilityService
+    {
+        public Task<bool> CanDiscloseAsync(
+            Id<InAppNotification> notificationId,
+            CancellationToken cancellationToken = default) => Task.FromResult(canDisclose);
     }
 
     private sealed class TestPushNotificationMessageRepository(PushNotificationMessage message) : IPushNotificationMessageRepository
