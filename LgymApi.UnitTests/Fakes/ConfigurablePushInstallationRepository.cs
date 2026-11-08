@@ -9,6 +9,7 @@ internal sealed class ConfigurablePushInstallationRepository : IPushInstallation
 {
     public List<(string Method, object? Argument, CancellationToken CancellationToken)> Calls { get; } = [];
     public Func<Id<PushInstallation>, CancellationToken, Task<PushInstallation?>> FindById { get; set; } = (_, _) => Task.FromResult<PushInstallation?>(null);
+    public Func<Id<PushInstallation>, CancellationToken, Task<PushInstallation?>> FindActiveById { get; set; } = (_, _) => Task.FromResult<PushInstallation?>(null);
     public Func<string, CancellationToken, Task<PushInstallation?>> FindByInstallationId { get; set; } = (_, _) => Task.FromResult<PushInstallation?>(null);
     public Func<string, Id<User>, Id<UserSession>, CancellationToken, Task<PushInstallation?>> FindBoundToUserAndSession { get; set; } = (_, _, _, _) => Task.FromResult<PushInstallation?>(null);
     public Func<Id<User>, CancellationToken, Task<List<PushInstallation>>> GetActiveByUserId { get; set; } = (_, _) => Task.FromResult(new List<PushInstallation>());
@@ -24,6 +25,7 @@ internal sealed class ConfigurablePushInstallationRepository : IPushInstallation
     public Func<Id<User>, CancellationToken, Task> RemoveForAccount { get; set; } = (_, _) => Task.CompletedTask;
 
     public Task<PushInstallation?> FindByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default) { Calls.Add((nameof(FindByIdAsync), id, cancellationToken)); return FindById(id, cancellationToken); }
+    public Task<PushInstallation?> FindActiveByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default) { Calls.Add((nameof(FindActiveByIdAsync), id, cancellationToken)); return FindActiveById(id, cancellationToken); }
     public Task<PushInstallation?> FindByInstallationIdAsync(string installationId, CancellationToken cancellationToken = default) { Calls.Add((nameof(FindByInstallationIdAsync), installationId, cancellationToken)); return FindByInstallationId(installationId, cancellationToken); }
     public Task<PushInstallation?> FindBoundToUserAndSessionAsync(string installationId, Id<User> userId, Id<UserSession> sessionId, CancellationToken cancellationToken = default) { Calls.Add((nameof(FindBoundToUserAndSessionAsync), (installationId, userId, sessionId), cancellationToken)); return FindBoundToUserAndSession(installationId, userId, sessionId, cancellationToken); }
     public Task<List<PushInstallation>> GetActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default) { Calls.Add((nameof(GetActiveByUserIdAsync), userId, cancellationToken)); return GetActiveByUserId(userId, cancellationToken); }

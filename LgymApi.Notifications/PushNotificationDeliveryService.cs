@@ -125,6 +125,21 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
                 return;
             }
 
+            if (installation.DisabledAt != null)
+            {
+                message.Status = PushNotificationStatus.Skipped;
+                message.FailureKind = PushNotificationFailureKind.Preference;
+                message.ProviderStatus = "InstallationInactive";
+                message.ProviderMessageId = null;
+                message.ProviderErrorCode = "installation-unavailable";
+                message.ProviderResponseSummary = "Push installation is no longer active.";
+                message.LastError = "Push installation is no longer active.";
+                message.NextAttemptAt = null;
+                message.SchedulerJobId = null;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
             if (installation.SessionId is not { } installationSessionId)
             {
                 await DenyStaleInstallationAsync(message, cancellationToken);

@@ -71,8 +71,16 @@ internal sealed class FcmPushSender : IPushProviderSender
 
         try
         {
-            var installation = await _pushInstallationRepository.FindByIdAsync(installationId, cancellationToken)
-                ?? throw new InvalidOperationException("Push installation was not found for provider delivery.");
+            var installation = await _pushInstallationRepository.FindActiveByIdAsync(installationId, cancellationToken);
+            if (installation == null)
+            {
+                return new PushSendAttemptResult(
+                    PushSendOutcome.Skipped,
+                    "InstallationInactive",
+                    null,
+                    "installation-unavailable",
+                    "Push installation is no longer active.");
+            }
 
             var accessToken = await GetAccessTokenAsync(cancellationToken);
             using var request = new HttpRequestMessage(HttpMethod.Post, BuildSendUrl())

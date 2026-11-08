@@ -21,6 +21,13 @@ internal sealed class PushInstallationRepository : IPushInstallationRepository
         return _persistenceContext.PushInstallations.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
+    public Task<PushInstallation?> FindActiveByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default)
+    {
+        return _persistenceContext.PushInstallations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id && x.DisabledAt == null, cancellationToken);
+    }
+
     public Task<PushInstallation?> FindByInstallationIdAsync(string installationId, CancellationToken cancellationToken = default)
     {
         return _persistenceContext.PushInstallations

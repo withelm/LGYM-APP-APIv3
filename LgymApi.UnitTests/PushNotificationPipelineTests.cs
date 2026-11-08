@@ -18,6 +18,7 @@ using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.UnitOfWork;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -325,6 +326,37 @@ public sealed class PushNotificationPipelineTests
         message.Attempts.Should().Be(0);
         sender.SendCalls.Should().Be(0);
         unitOfWork.SaveChangesCalls.Should().Be(1);
+    }
+
+    [TestCase("Unregistered")]
+    [TestCase("InactiveStale")]
+    [TestCase("InvalidFcmToken")]
+    public async Task ProcessAsync_WhenInstallationWasDisabledAfterQueueing_SuppressesDeliveryWithoutProviderCall(string disabledReason)
+    {
+        var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
+        installation.DisabledAt = DateTimeOffset.UtcNow;
+        installation.DisabledReason = disabledReason;
+        var message = CreateMessage(installation.Id);
+        message.UserId = installation.UserId!.Value;
+        var sender = new FakePushProviderSender(new PushSendAttemptResult(PushSendOutcome.Sent, "OK", "message-1", null, "accepted"));
+        var scheduler = new FakePushBackgroundScheduler();
+        var handler = CreateHandler(
+            new FakePushNotificationMessageRepository(message),
+            new FakePushInstallationRepository(installation),
+            sender,
+            scheduler,
+            new FakeUnitOfWork(),
+            new PushNotificationOptions());
+
+        await handler.ProcessAsync(message.Id);
+
+        message.Status.Should().Be(PushNotificationStatus.Skipped);
+        message.FailureKind.Should().Be(PushNotificationFailureKind.Preference);
+        message.ProviderStatus.Should().Be("InstallationInactive");
+        message.NextAttemptAt.Should().BeNull();
+        message.SchedulerJobId.Should().BeNull();
+        sender.SendCalls.Should().Be(0);
+        scheduler.ScheduledRetries.Should().BeEmpty();
     }
 
     [Test]
@@ -707,6 +739,66 @@ public sealed class PushNotificationPipelineTests
     }
 
     [Test]
+    public async Task FcmSender_WhenInstallationIsInactive_ReturnsSkippedWithoutCreatingProviderClient()
+    {
+        var httpClientFactory = new FakeHttpClientFactory();
+        var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
+        installation.DisabledAt = DateTimeOffset.UtcNow;
+        var sender = new FcmPushSender(
+            httpClientFactory,
+            new FakePushInstallationRepository(installation),
+            new PushNotificationOptions { SendEnabled = true },
+            NullLogger<FcmPushSender>.Instance);
+        var payload = new PushEventPayload(1, "internal.test.push", "event-1", null, null, null);
+
+        var result = await sender.SendAsync(installation.Id, payload);
+
+        result.Outcome.Should().Be(PushSendOutcome.Skipped);
+        result.ProviderStatus.Should().Be("InstallationInactive");
+        result.ProviderErrorCode.Should().Be("installation-unavailable");
+        httpClientFactory.CreateClientCalls.Should().Be(0);
+    }
+
+    [Test]
+    public async Task FcmSender_WhenTrackedInstallationWasDisabledInAnotherContext_UsesFreshActiveLookupWithoutProviderCall()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
+        await using var trackedContext = new AppDbContext(options);
+        await trackedContext.Database.EnsureCreatedAsync();
+        var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
+        installation.UserId = null;
+        installation.SessionId = null;
+        trackedContext.PushInstallations.Add(installation);
+        await trackedContext.SaveChangesAsync();
+        _ = await trackedContext.PushInstallations.SingleAsync(candidate => candidate.Id == installation.Id);
+
+        await using (var externalContext = new AppDbContext(options))
+        {
+            var externallyDisabledInstallation = await externalContext.PushInstallations.SingleAsync(candidate => candidate.Id == installation.Id);
+            externallyDisabledInstallation.DisabledAt = DateTimeOffset.UtcNow;
+            externallyDisabledInstallation.DisabledReason = "InactiveStale";
+            await externalContext.SaveChangesAsync();
+        }
+
+        var httpClientFactory = new FakeHttpClientFactory();
+        var sender = new FcmPushSender(
+            httpClientFactory,
+            new PushInstallationRepository(trackedContext),
+            new PushNotificationOptions { SendEnabled = true },
+            NullLogger<FcmPushSender>.Instance);
+
+        var result = await sender.SendAsync(
+            installation.Id,
+            new PushEventPayload(1, "internal.test.push", "event-1", null, null, null));
+
+        result.Outcome.Should().Be(PushSendOutcome.Skipped);
+        result.ProviderStatus.Should().Be("InstallationInactive");
+        httpClientFactory.CreateClientCalls.Should().Be(0);
+    }
+
+    [Test]
     public async Task FcmSender_WhenInstallationLookupIsCancelled_PropagatesCancellationWithoutHttpCall()
     {
         using var cancellationTokenSource = new CancellationTokenSource();
@@ -726,7 +818,7 @@ public sealed class PushNotificationPipelineTests
         var action = () => sender.SendAsync(Id<PushInstallation>.New(), payload, cancellationTokenSource.Token);
 
         await action.Should().ThrowAsync<OperationCanceledException>();
-        installationRepository.FindByIdCalls.Should().Be(1);
+        installationRepository.FindActiveByIdCalls.Should().Be(1);
         httpClientFactory.CreateClientCalls.Should().Be(0);
     }
 
@@ -1226,6 +1318,8 @@ public sealed class PushNotificationPipelineTests
 
         public int FindByIdCalls { get; private set; }
 
+        public int FindActiveByIdCalls { get; private set; }
+
         public Func<Id<PushInstallation>, CancellationToken, Task<PushInstallation?>>? FindByIdAsyncOverride { get; init; }
 
         public Task<PushInstallation?> FindByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default)
@@ -1237,6 +1331,17 @@ public sealed class PushNotificationPipelineTests
             }
 
             return Task.FromResult<PushInstallation?>(_installations.FirstOrDefault(x => x.Id == id));
+        }
+
+        public Task<PushInstallation?> FindActiveByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default)
+        {
+            FindActiveByIdCalls += 1;
+            if (FindByIdAsyncOverride != null)
+            {
+                return FindByIdAsyncOverride(id, cancellationToken);
+            }
+
+            return Task.FromResult<PushInstallation?>(_installations.FirstOrDefault(x => x.Id == id && x.DisabledAt == null));
         }
 
         public Task<PushInstallation?> FindByInstallationIdAsync(string installationId, CancellationToken cancellationToken = default)
