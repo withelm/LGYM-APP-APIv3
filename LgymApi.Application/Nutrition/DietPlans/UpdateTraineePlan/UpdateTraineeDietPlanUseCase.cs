@@ -89,6 +89,7 @@ internal sealed class UpdateTraineeDietPlanUseCase : IUpdateTraineeDietPlanUseCa
 
         var replacement = _mapper.Map<NormalizedDietPlanData, DietPlan>(normalized, _mapper.CreateContext());
         ApplyReplacement(plan, replacement, actorId == plan.TraineeId);
+        _plans.StageUpdate(plan);
 
         await _plans.AddHistoryEntryAsync(
             _historyFactory.Create(plan, actorId, "Updated"),

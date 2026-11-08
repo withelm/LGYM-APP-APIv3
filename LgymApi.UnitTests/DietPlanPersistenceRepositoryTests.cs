@@ -113,6 +113,29 @@ public sealed class DietPlanPersistenceRepositoryTests
     }
 
     [Test]
+    public async Task StageUpdate_MarksThePrincipalConcurrencyTokenModifiedWithoutSaving()
+    {
+        await using var database = CreateDbContext();
+        var plan = CreatePlan(
+            Id<User>.New(),
+            Id<User>.New(),
+            "tracked plan",
+            true,
+            new DateOnly(2026, 7, 20),
+            DateTimeOffset.UtcNow.AddDays(-2),
+            DateTimeOffset.UtcNow.AddDays(-1));
+        database.DietPlans.Add(plan);
+        await database.SaveChangesAsync();
+        database.ChangeTracker.Clear();
+        var repository = new DietPlanPersistenceRepository(database);
+        var tracked = await repository.FindTrackedPlanByIdAsync(plan.Id);
+
+        repository.StageUpdate(tracked!);
+
+        database.Entry(tracked!).Property(candidate => candidate.UpdatedAt).IsModified.Should().BeTrue();
+    }
+
+    [Test]
     public void Repository_DoesNotExposeOrCallSaveOrTransactionOperations()
     {
         var declaredMethodNames = typeof(DietPlanPersistenceRepository)

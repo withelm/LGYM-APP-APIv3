@@ -145,6 +145,76 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
             + $"persistedMeals={plan.Meals.Count}; persistedHistory={history.Count}");
     }
 
+    [Test]
+    public async Task UpdateInheritedDiet_WhenOnlyMealsDiffer_StillRejectsOneConcurrentAggregateWriter()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var cancellationToken = timeout.Token;
+        var scenario = await SeedInheritedDietAsync(cancellationToken);
+        var barrier = new SaveBarrier();
+        using var raceFactory = Factory.WithWebHostBuilder(builder => ConfigureSaveBarrier(builder, barrier));
+        await using var ownerScope = raceFactory.Services.CreateAsyncScope();
+        await using var coachScope = raceFactory.Services.CreateAsyncScope();
+        var ownerUpdate = ownerScope.ServiceProvider.GetRequiredService<IUpdateOwnDietPlanUseCase>();
+        var coachUpdate = coachScope.ServiceProvider.GetRequiredService<IUpdateTraineeDietPlanUseCase>();
+        var ownerAuthorization = ownerScope.ServiceProvider.GetRequiredService<IAuthenticatedAccountAuthorizationService>();
+        var coachAuthorization = coachScope.ServiceProvider.GetRequiredService<IAuthenticatedAccountAuthorizationService>();
+        var ownerData = CreateMealOnlyUpdateData("Owner replacement meal");
+        var coachData = CreateMealOnlyUpdateData("Coach replacement meal");
+
+        var outcomes = await Task.WhenAll(
+            CaptureAsync(
+                scenario.Trainee.Id,
+                ownerData.Name,
+                ownerData.Meals[0].Name,
+                () => ownerUpdate.ExecuteAsync(
+                    new UpdateOwnDietPlanCommand(
+                        ownerAuthorization.CreateActor(CreateAccountContext(scenario.Trainee.Id)),
+                        scenario.Trainee.Id,
+                        scenario.PlanId,
+                        ownerData),
+                    cancellationToken)),
+            CaptureAsync(
+                scenario.CurrentCoach.Id,
+                coachData.Name,
+                coachData.Meals[0].Name,
+                () => coachUpdate.ExecuteAsync(
+                    new UpdateTraineeDietPlanCommand(
+                        coachAuthorization.CreateActor(CreateAccountContext(scenario.CurrentCoach.Id)),
+                        scenario.CurrentCoach.Id,
+                        scenario.Trainee.Id,
+                        scenario.PlanId,
+                        coachData),
+                    cancellationToken))).WaitAsync(TimeSpan.FromSeconds(20), cancellationToken);
+
+        outcomes.Should().ContainSingle(outcome => outcome.Succeeded && outcome.Exception == null);
+        outcomes.Should().ContainSingle(outcome => outcome.Exception is DbUpdateConcurrencyException);
+        outcomes.Should().OnlyContain(outcome => outcome.ApplicationError == null);
+        var winner = outcomes.Single(outcome => outcome.Succeeded);
+        var loser = outcomes.Single(outcome => outcome.Exception is not null);
+
+        await using var verificationScope = Factory.Services.CreateAsyncScope();
+        var database = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var plan = await database.DietPlans
+            .AsNoTracking()
+            .Include(candidate => candidate.Meals)
+            .SingleAsync(candidate => candidate.Id == scenario.PlanId, cancellationToken);
+        var history = await database.DietPlanHistories
+            .AsNoTracking()
+            .Where(entry => entry.DietPlanId == scenario.PlanId)
+            .OrderBy(entry => entry.ChangeDate)
+            .ToListAsync(cancellationToken);
+
+        plan.Name.Should().Be("Original inherited diet");
+        plan.Meals.Should().ContainSingle(meal => meal.Name == winner.MealName);
+        plan.Meals.Should().NotContain(meal => meal.Name == loser.MealName);
+        history.Should().HaveCount(2);
+        var updateHistory = history.Single(entry => entry.ChangeType == "Updated");
+        updateHistory.ChangedByUserId.Should().Be(winner.ActorId);
+        updateHistory.SnapshotJson.Should().Contain(winner.MealName);
+        updateHistory.SnapshotJson.Should().NotContain(loser.MealName);
+    }
+
     private async Task<RaceScenario> SeedInheritedDietAsync(CancellationToken cancellationToken)
     {
         var suffix = Id<PostgreSqlInheritedDietConcurrencyTests>.New().ToString().Replace("-", string.Empty, StringComparison.Ordinal);
@@ -207,6 +277,19 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
             250,
             70,
             $"Contested update by {planName}",
+            true,
+            [new DietMealInput(mealName, 0, "Race-specific meal", 600, 45, 60, 20)]);
+
+    private static DietPlanUpsertData CreateMealOnlyUpdateData(string mealName)
+        => new(
+            "Original inherited diet",
+            new DateOnly(2026, 11, 1),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
             true,
             [new DietMealInput(mealName, 0, "Race-specific meal", 600, 45, 60, 20)]);
 

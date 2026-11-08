@@ -41,6 +41,8 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         dependencies.Plans.FindTrackedPlanByIdAsync(plan.Id, Arg.Any<CancellationToken>())
             .Returns(plan)
             .AndDoes(_ => operations.Add("tracked"));
+        dependencies.Plans.When(plans => plans.StageUpdate(plan))
+            .Do(_ => operations.Add("stage"));
         dependencies.Plans.AddHistoryEntryAsync(Arg.Any<DietPlanHistory>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask)
             .AndDoes(call =>
@@ -72,7 +74,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         notification.TraineeId.Should().Be(traineeId);
         notification.TrainerId.Should().Be(trainerId);
         notification.DietPlanName.Should().Be("Nutrition Plan");
-        operations.Should().Equal("access", "tracked", "history", "save", "notify");
+        operations.Should().Equal("access", "tracked", "stage", "history", "save", "notify");
         await AssertNoTransactionAsync(dependencies);
     }
 
@@ -289,6 +291,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         await dependencies.Plans.DidNotReceive().AddHistoryEntryAsync(
             Arg.Any<DietPlanHistory>(),
             Arg.Any<CancellationToken>());
+        dependencies.Plans.DidNotReceive().StageUpdate(Arg.Any<DietPlan>());
         await dependencies.UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>());
         await AssertNoTransactionAsync(dependencies);
