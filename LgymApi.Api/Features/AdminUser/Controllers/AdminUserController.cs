@@ -9,6 +9,8 @@ using LgymApi.Application.Pagination;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Approval;
+using LgymApi.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,11 +25,64 @@ public sealed class AdminUserController : ControllerBase
 
     private readonly IAdminAccountManagementApiAdapter _adminAccountManagementApiAdapter;
     private readonly IMapper _mapper;
+    private readonly ITrainerApprovalService _trainerApproval;
 
-    public AdminUserController(IAdminAccountManagementApiAdapter adminAccountManagementApiAdapter, IMapper mapper)
+    public AdminUserController(IAdminAccountManagementApiAdapter adminAccountManagementApiAdapter, IMapper mapper, ITrainerApprovalService trainerApproval)
     {
         _adminAccountManagementApiAdapter = adminAccountManagementApiAdapter;
         _mapper = mapper;
+        _trainerApproval = trainerApproval;
+    }
+
+    [HttpGet("trainer-applications")]
+    [ProducesResponseType(typeof(PaginatedTrainerApplicationsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ListTrainerApplications([FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] bool includeReviewed = false, CancellationToken cancellationToken = default)
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        var result = await _trainerApproval.ListAsync(HttpContext.GetAuthenticatedAccountContext()!, page, pageSize, includeReviewed, cancellationToken);
+        return result.IsFailure ? result.ToActionResult()
+            : Ok(_mapper.Map<Pagination<TrainerApplication>, PaginatedTrainerApplicationsDto>(result.Value));
+    }
+
+    [HttpGet("{id}/trainer-application")]
+    [ProducesResponseType(typeof(TrainerApplicationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTrainerApplication([FromRoute] string id, CancellationToken cancellationToken = default)
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        if (!TryParseUserId(id, out var accountId, out var error)) return error;
+        var result = await _trainerApproval.GetAsync(HttpContext.GetAuthenticatedAccountContext()!, accountId, cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<TrainerApplication, TrainerApplicationDto>(result.Value));
+    }
+
+    [HttpPost("{id}/trainer-application/approve")]
+    [ProducesResponseType(typeof(TrainerApplicationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(TrainerApprovalErrorDto), StatusCodes.Status409Conflict)]
+    public Task<IActionResult> ApproveTrainerApplication([FromRoute] string id, [FromQuery] int attempt = 1,
+        CancellationToken cancellationToken = default)
+        => DecideTrainerApplication(id, TrainerApprovalStatus.Approved, attempt, cancellationToken);
+
+    [HttpPost("{id}/trainer-application/reject")]
+    [ProducesResponseType(typeof(TrainerApplicationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(TrainerApprovalErrorDto), StatusCodes.Status409Conflict)]
+    public Task<IActionResult> RejectTrainerApplication([FromRoute] string id, [FromQuery] int attempt = 1,
+        CancellationToken cancellationToken = default)
+        => DecideTrainerApplication(id, TrainerApprovalStatus.Rejected, attempt, cancellationToken);
+
+    private async Task<IActionResult> DecideTrainerApplication(string id, TrainerApprovalStatus decision, int attempt,
+        CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        if (!TryParseUserId(id, out var accountId, out var error)) return error;
+        var result = await _trainerApproval.DecideAsync(HttpContext.GetAuthenticatedAccountContext()!, accountId,
+            decision, attempt, cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<TrainerApplication, TrainerApplicationDto>(result.Value));
     }
 
     [HttpPost("paginated")]

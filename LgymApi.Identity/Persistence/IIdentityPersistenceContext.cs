@@ -6,6 +6,7 @@ namespace LgymApi.Identity.Persistence;
 internal interface IIdentityPersistenceContext
 {
     DbSet<User> Users { get; }
+    DbSet<TrainerApplicationAttempt> TrainerApplications { get; }
     DbSet<Role> Roles { get; }
     DbSet<UserRole> UserRoles { get; }
     DbSet<RoleClaim> RoleClaims { get; }

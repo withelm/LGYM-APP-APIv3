@@ -69,7 +69,7 @@ public sealed class CoachingInvitationSliceIntegrationTests : IntegrationTestBas
         using (var scope = Factory.Services.CreateScope())
         {
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            database.UserRoles.Add(new UserRole { UserId = trainer.Id, RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId });
+            database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
             database.TrainerInvitations.AddRange(
                 new TrainerInvitation
                 {

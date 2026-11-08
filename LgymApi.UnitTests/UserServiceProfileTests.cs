@@ -13,6 +13,7 @@ using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.Services;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,7 @@ public sealed class UserServiceProfileTests
     private IRankService _rankService = null!;
     private IAccountPushInstallationCleanupPort _accountPushInstallationCleanupPort = null!;
     private UserProfileService _profileService = null!;
+    private TrainerApplicationRepositoryStub _trainerApplications = null!;
 
     [SetUp]
     public void SetUp()
@@ -41,6 +43,7 @@ public sealed class UserServiceProfileTests
         _userRepository = new ConfigurableUserRepository();
         _rankService = Substitute.For<IRankService>();
         _accountPushInstallationCleanupPort = Substitute.For<IAccountPushInstallationCleanupPort>();
+        _trainerApplications = new TrainerApplicationRepositoryStub();
         _userRepository.Update = (_, _) => Task.CompletedTask;
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(1));
         _profileService = new UserProfileService(
@@ -51,7 +54,8 @@ public sealed class UserServiceProfileTests
             _accountPushInstallationCleanupPort,
             new AppDefaultsOptions { PreferredTimeZone = "UTC" },
             _tutorialService,
-            BuildMapper());
+            BuildMapper(),
+            _trainerApplications);
     }
 
     [Test]
@@ -61,6 +65,7 @@ public sealed class UserServiceProfileTests
         var cancellationToken = cancellationSource.Token;
         var user = CreateUser();
         user.PreferredTimeZone = string.Empty;
+        _trainerApplications.Status = TrainerApprovalStatus.Approved;
         _roleRepository.GetRoleNamesByUserId = (_, _) => Task.FromResult<List<string>>(["User", "Trainer"]);
         _roleRepository.GetPermissionClaimsByUserId = (_, _) => Task.FromResult<List<string>>(["users.read"]);
         _tutorialService.HasActiveTutorialsAsync(user.Id, cancellationToken).Returns(true);
@@ -75,6 +80,7 @@ public sealed class UserServiceProfileTests
         result.Value.Avatar.Should().Be(user.Avatar);
         result.Value.ProfileRank.Should().Be(user.ProfileRank);
         result.Value.Roles.Should().Equal("User", "Trainer");
+        result.Value.TrainerApprovalStatus.Should().Be(TrainerApprovalStatus.Approved);
         result.Value.PermissionClaims.Should().Equal("users.read");
         result.Value.HasActiveTutorials.Should().BeTrue();
         result.Value.PreferredTimeZone.Should().Be("UTC");

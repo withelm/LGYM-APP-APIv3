@@ -1,4 +1,3 @@
-using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
@@ -31,4 +30,5 @@ public sealed class User : EntityBase<User>
     public ICollection<UserExternalLogin> ExternalLogins { get; set; } = new List<UserExternalLogin>();
     public ICollection<Gym> Gyms { get; set; } = new List<Gym>();
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    public ICollection<TrainerApplicationAttempt> TrainerApplications { get; set; } = new List<TrainerApplicationAttempt>();
 }

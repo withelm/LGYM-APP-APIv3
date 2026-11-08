@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 52;
+    private const int PersistedEntityCount = 53;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
@@ -45,11 +45,13 @@ public sealed class SingleProductionDbContextGuardTests
         [ReportReceiptMigrationDesigner] = "a6ab655fcc346b2f12b17baea223f58c3f2d70f63e2df6d589c483025f2991b5",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.cs"] = "4f22bc2418831f276588d568ab40da6ce742ca781577eb42774e7724d19a0d82",
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.Designer.cs"] = "ee6deb9e9ccaab9a5a9efbd5e6857c44c2fc679747ae8a9d538755c675b08d5a",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "43c6f567c0f4ee07b2e65d73ca56cd4cfcf75f8a17e90aa6e1fe8c3a3a8c6cfb",
+        [MigrationRoot + "/20261104014456_AddTrainerApproval.cs"] = "75591f32d31f999a58e1514c90ed63e9716c9aee9720c2582d5bdbbeafa53fe0",
+        [MigrationRoot + "/20261104014456_AddTrainerApproval.Designer.cs"] = "f1e0374b7b54cd4918d81cf7c1c6718ed2498edceb35b3b655c6a08bd8503b01",
         [MigrationRoot + "/20261107094438_AddCoachingEpisodes.cs"] = "06ec01f112c832272fcc614daad7089102e20aef43eac25f7d8232b3d10a3a81",
-        [MigrationRoot + "/20261107094438_AddCoachingEpisodes.Designer.cs"] = "8be1b918db5649448655da2082e60feac37b570be7eb1658d67769f85cdb693e",
+        [MigrationRoot + "/20261107094438_AddCoachingEpisodes.Designer.cs"] = "9f802f8b1097ec56c5478ece5fd9685f39637fa59e48b5a625b307c6a83cf85c",
         [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.cs"] = "d6a64a469455b5e5fa220c7bb8e7c6fe3975c00b9db192bbf3a8c75f78322070",
-        [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.Designer.cs"] = "74b7a5a8d0a81a5880cc8fa1f550d4f305e925395d6158ec1c4e20e0cd248813"
+        [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.Designer.cs"] = "1417f96bcd7abf046858cde05ebb26faa354862f5c9c99aeaac2ce05152c1758",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "ff26531b323f5553d8f1339bffc0e9a6365d9caa7aaa4f1da83825999a44b652"
     };
 
     [Test]

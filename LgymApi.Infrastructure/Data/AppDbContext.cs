@@ -21,6 +21,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<TrainerApplicationAttempt> TrainerApplications => Set<TrainerApplicationAttempt>();
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<PlanDay> PlanDays => Set<PlanDay>();
     public DbSet<PlanDayExercise> PlanDayExercises => Set<PlanDayExercise>();
@@ -81,6 +82,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     EntityEntry<ApiIdempotencyRecord> IPlatformPersistenceContext.Entry(ApiIdempotencyRecord entity) => Entry(entity);
 
     DbSet<User> IIdentityPersistenceContext.Users => Users;
+    DbSet<TrainerApplicationAttempt> IIdentityPersistenceContext.TrainerApplications => TrainerApplications;
     DbSet<Role> IIdentityPersistenceContext.Roles => Roles;
     DbSet<UserRole> IIdentityPersistenceContext.UserRoles => UserRoles;
     DbSet<RoleClaim> IIdentityPersistenceContext.RoleClaims => RoleClaims;

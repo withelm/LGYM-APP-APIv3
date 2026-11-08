@@ -149,6 +149,7 @@ public sealed class RoleController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(TrainerApprovalErrorDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateUserRoles([FromRoute] string id, [FromBody] UpdateUserRolesRequest request, CancellationToken cancellationToken = default)
     {
         var userId = Id<AccountReference>.TryParse(id, out var parsedUserId) ? parsedUserId : Id<AccountReference>.Empty;

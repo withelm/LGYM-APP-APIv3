@@ -26,6 +26,7 @@ public sealed class IdentityPersistenceExtractionGuardTests
     private static readonly string[] ConfigurationTypes =
     [
         "UserEntityTypeConfiguration",
+        "TrainerApplicationAttemptEntityTypeConfiguration",
         "RoleEntityTypeConfiguration",
         "UserRoleEntityTypeConfiguration",
         "RoleClaimEntityTypeConfiguration",

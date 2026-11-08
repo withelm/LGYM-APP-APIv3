@@ -126,7 +126,8 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
             UpdatedAt = now
         };
 
-        dbContext.AddRange(user, progress, step);
+        await PostgreSqlHistoricalUserSeed.AddAsync(dbContext, user);
+        dbContext.AddRange(progress, step);
         await dbContext.SaveChangesAsync();
     }
 

@@ -257,11 +257,7 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
         var trainer = await SeedUserAsync(name, email);
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        database.UserRoles.Add(new UserRole
-        {
-            UserId = trainer.Id,
-            RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
-        });
+        database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
         await database.SaveChangesAsync();
         return trainer;
     }

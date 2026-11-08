@@ -1272,11 +1272,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         var alreadyLinked = await db.UserRoles.AnyAsync(ur => ur.UserId == (Domain.ValueObjects.Id<User>)trainer.Id && ur.RoleId == (Domain.ValueObjects.Id<Role>)RoleSeedDataConfiguration.TrainerRoleSeedId);
         if (!alreadyLinked)
         {
-            db.UserRoles.Add(new UserRole
-            {
-                UserId = (Domain.ValueObjects.Id<User>)trainer.Id,
-                RoleId = (Domain.ValueObjects.Id<Role>)RoleSeedDataConfiguration.TrainerRoleSeedId
-            });
+            db.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(db, (Domain.ValueObjects.Id<User>)trainer.Id));
             await db.SaveChangesAsync();
         }
 

@@ -302,7 +302,8 @@ public sealed class ServiceCommitBehaviorTests
             Substitute.For<IAccountPushInstallationCleanupPort>(),
             new AppDefaultsOptions(),
             new NoOpTutorialService(),
-            Substitute.For<IMapper>());
+            Substitute.For<IMapper>(),
+            new LgymApi.UnitTests.Fakes.TrainerApplicationRepositoryStub());
 
         var updateTimeZoneResult = await service.UpdateTimeZoneAsync(user, "Europe/Paris");
         updateTimeZoneResult.IsSuccess.Should().BeTrue();
@@ -357,7 +358,8 @@ public sealed class ServiceCommitBehaviorTests
             Substitute.For<IAccountPushInstallationCleanupPort>(),
             new AppDefaultsOptions(),
             new NoOpTutorialService(),
-            Substitute.For<IMapper>());
+            Substitute.For<IMapper>(),
+            new LgymApi.UnitTests.Fakes.TrainerApplicationRepositoryStub());
 
         var updateTimeZoneResult = await service.UpdateTimeZoneAsync(user, "Not/ARealTimeZone");
         updateTimeZoneResult.IsFailure.Should().BeTrue();
@@ -378,7 +380,8 @@ public sealed class ServiceCommitBehaviorTests
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
 
-        var service = new RoleService(roleRepository, userRepository, unitOfWork);
+        var service = new RoleService(roleRepository, userRepository, unitOfWork,
+            new LgymApi.UnitTests.Fakes.TrainerApplicationRepositoryStub());
 
         var result = await service.CreateRoleAsync(
             "Coach",
@@ -435,7 +438,8 @@ public sealed class ServiceCommitBehaviorTests
         IUserRepository userRepository = CreateUserRepository(dbContext);
         IUnitOfWork unitOfWork = new EfUnitOfWork(dbContext);
 
-        var service = new RoleService(roleRepository, userRepository, unitOfWork);
+        var service = new RoleService(roleRepository, userRepository, unitOfWork,
+            new LgymApi.UnitTests.Fakes.TrainerApplicationRepositoryStub());
 
         await service.UpdateUserRolesAsync(user.Id, [AuthConstants.Roles.User, "Coach"]);
 

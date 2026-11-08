@@ -195,7 +195,10 @@ try {
         $dockerPassword = [Guid]::NewGuid().ToString('N')
         $sensitiveValues += $dockerPassword
 
-        $null = & docker run --detach --name $containerName --publish "127.0.0.1::5432" --env "POSTGRES_USER=postgres" --env "POSTGRES_PASSWORD=$dockerPassword" --env "POSTGRES_DB=postgres" "postgres:17-alpine"
+        # psql activation fixtures use relative \ir includes. Keep their SQL directory
+        # available inside the disposable runner, without granting write access.
+        $postgresScripts = Join-Path $repositoryRoot "deploy/postgres"
+        $null = & docker run --mount "type=bind,source=$postgresScripts,target=/lgym-postgres-scripts,readonly" --workdir /lgym-postgres-scripts --detach --name $containerName --publish "127.0.0.1::5432" --env "POSTGRES_USER=postgres" --env "POSTGRES_PASSWORD=$dockerPassword" --env "POSTGRES_DB=postgres" "postgres:17-alpine"
         if ($LASTEXITCODE -ne 0) {
             throw "Could not start the PostgreSQL Docker container."
         }

@@ -1,3 +1,6 @@
+using LgymApi.Identity.Persistence.Repositories;
+using LgymApi.Identity.Approval;
+using LgymApi.Identity.Contracts.Approval;
 using LgymApi.Application.ExternalAuth;
 using LgymApi.Application.Identity.Authentication;
 using LgymApi.Application.Identity.Adapters;
@@ -48,6 +51,8 @@ public static class IdentityModule
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ITutorialProgressRepository, TutorialProgressRepository>();
         services.AddScoped<IAdminUserService, AdminUserService>();
+        services.AddScoped<ITrainerApprovalService, TrainerApprovalService>();
+        services.AddScoped<ITrainerApplicationRepository, TrainerApplicationRepository>();
         services.AddScoped<IPasswordResetTokenGenerationService, PasswordResetTokenGenerationService>();
         services.AddScoped<IPasswordResetService, PasswordResetService>();
         services.AddScoped<IRankService, RankService>();

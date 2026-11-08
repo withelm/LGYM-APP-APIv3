@@ -235,6 +235,7 @@ public sealed class AccountReadServiceTests
     private sealed class IdentityPersistenceContextStub : IIdentityPersistenceContext
     {
         public DbSet<User> Users => null!;
+        public DbSet<TrainerApplicationAttempt> TrainerApplications => null!;
         public DbSet<Role> Roles => null!;
         public DbSet<UserRole> UserRoles => null!;
         public DbSet<RoleClaim> RoleClaims => null!;

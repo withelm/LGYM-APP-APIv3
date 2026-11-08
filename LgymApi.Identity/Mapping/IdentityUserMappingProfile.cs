@@ -2,6 +2,7 @@ using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Models;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.Services;
 
 namespace LgymApi.Application.Identity.Mapping;
@@ -16,6 +17,7 @@ internal sealed class IdentityUserMappingProfile : IMappingProfile
         internal static readonly ContextKey<List<string>> Roles = new("Identity.User.Roles");
         internal static readonly ContextKey<List<string>> PermissionClaims = new("Identity.User.PermissionClaims");
         internal static readonly ContextKey<bool> HasActiveTutorials = new("Identity.User.HasActiveTutorials");
+        internal static readonly ContextKey<TrainerApprovalStatus?> TrainerApprovalStatus = new("Identity.User.TrainerApprovalStatus");
     }
 
     public void Configure(MappingConfiguration configuration)
@@ -26,6 +28,7 @@ internal sealed class IdentityUserMappingProfile : IMappingProfile
         configuration.AllowContextKey(Keys.Roles);
         configuration.AllowContextKey(Keys.PermissionClaims);
         configuration.AllowContextKey(Keys.HasActiveTutorials);
+        configuration.AllowContextKey(Keys.TrainerApprovalStatus);
 
         configuration.CreateMap<RankDefinition, RankInfo>((source, _) => new RankInfo
         {
@@ -55,7 +58,8 @@ internal sealed class IdentityUserMappingProfile : IMappingProfile
                 IsVisibleInRanking = source.IsVisibleInRanking,
                 Roles = context?.Get(Keys.Roles) ?? [],
                 PermissionClaims = context?.Get(Keys.PermissionClaims) ?? [],
-                HasActiveTutorials = context?.Get(Keys.HasActiveTutorials) ?? false
+                HasActiveTutorials = context?.Get(Keys.HasActiveTutorials) ?? false,
+                TrainerApprovalStatus = context?.Get(Keys.TrainerApprovalStatus)
             };
         });
 

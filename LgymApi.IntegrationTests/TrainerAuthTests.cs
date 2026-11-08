@@ -12,11 +12,11 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 public sealed class TrainerAuthTests : IntegrationTestBase
 {
-    private static readonly string[] ExpectedTrainerRoles = ["User", "Trainer"];
+    private static readonly string[] ExpectedTrainerRoles = ["User"];
 
     [Test]
     [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/trainer/register", "public", "anonymous-intended-behavior")]
-    public async Task RegisterTrainer_WithValidData_CreatesTrainerRoleAssignment()
+    public async Task RegisterTrainer_WithValidData_CreatesPendingApplication()
     {
         var request = new
         {
@@ -43,7 +43,11 @@ public sealed class TrainerAuthTests : IntegrationTestBase
             .Select(ur => ur.Role.Name)
             .ToListAsync();
 
-        roleNames.Should().Contain(ExpectedTrainerRoles);
+        roleNames.Should().BeEquivalentTo(ExpectedTrainerRoles);
+        var application = await db.TrainerApplications.SingleAsync(item => item.ApplicantId == user!.Id);
+        application.Status.Should().Be(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval);
+        application.CreatedAt.Should().NotBe(default);
+        (await db.UserSessions.CountAsync()).Should().Be(0);
     }
 
     [Test]
@@ -61,6 +65,17 @@ public sealed class TrainerAuthTests : IntegrationTestBase
             cpassword = "password123"
         });
         ClearIdempotencyKey();
+
+        var admin = await SeedAdminAsync();
+        SetAuthorizationHeader(admin.Id);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var applicant = await db.Users.SingleAsync(user => user.Name == "trainer-auth");
+            var approval = await Client.PostAsync($"/api/admin/users/{applicant.Id}/trainer-application/approve", null);
+            approval.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        ClearAuthorizationHeader();
 
         var loginResponse = await Client.PostAsJsonAsync("/api/trainer/login", new
         {

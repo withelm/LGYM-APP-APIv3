@@ -832,6 +832,10 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     [AuthorizationEvidence("POST", "/api/roles/{id}/delete", "admin", "ordinary-user-denial")]
     [AuthorizationEvidence("POST", "/api/roles/{id}/update", "admin", "ordinary-user-denial")]
     [AuthorizationEvidence("POST", "/api/internal/push/test-event", "admin", "ordinary-user-denial")]
+    [AuthorizationEvidence("GET", "/api/admin/users/trainer-applications", "admin", "ordinary-user-denial")]
+    [AuthorizationEvidence("GET", "/api/admin/users/{id}/trainer-application", "admin", "ordinary-user-denial")]
+    [AuthorizationEvidence("POST", "/api/admin/users/{id}/trainer-application/approve", "admin", "ordinary-user-denial")]
+    [AuthorizationEvidence("POST", "/api/admin/users/{id}/trainer-application/reject", "admin", "ordinary-user-denial")]
     public async Task Task8_AdminRoutes_OrdinaryUserIsDenied()
     {
         var user = await SeedUserAsync("task8-ordinary", "task8-ordinary@example.com");
@@ -866,6 +870,10 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     [AuthorizationEvidence("POST", "/api/roles/{id}/delete", "admin", "stale-token-demotion-denial")]
     [AuthorizationEvidence("POST", "/api/roles/{id}/update", "admin", "stale-token-demotion-denial")]
     [AuthorizationEvidence("POST", "/api/internal/push/test-event", "admin", "stale-token-demotion-denial")]
+    [AuthorizationEvidence("GET", "/api/admin/users/trainer-applications", "admin", "stale-token-demotion-denial")]
+    [AuthorizationEvidence("GET", "/api/admin/users/{id}/trainer-application", "admin", "stale-token-demotion-denial")]
+    [AuthorizationEvidence("POST", "/api/admin/users/{id}/trainer-application/approve", "admin", "stale-token-demotion-denial")]
+    [AuthorizationEvidence("POST", "/api/admin/users/{id}/trainer-application/reject", "admin", "stale-token-demotion-denial")]
     public async Task Task8_AdminRoutes_PreIssuedTokenIsDeniedAfterDemotion()
     {
         var demotedAdministrator = await SeedUserAsync("task8-demoted", "task8-demoted@example.com", isAdmin: true);
@@ -890,6 +898,10 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
 
     private IEnumerable<Func<Task<HttpResponseMessage>>> CreateTask8AdminRouteRequests(string targetId)
     {
+        yield return () => Client.GetAsync("/api/admin/users/trainer-applications");
+        yield return () => Client.GetAsync($"/api/admin/users/{targetId}/trainer-application");
+        yield return () => Client.PostAsync($"/api/admin/users/{targetId}/trainer-application/approve", null);
+        yield return () => Client.PostAsync($"/api/admin/users/{targetId}/trainer-application/reject", null);
         yield return () => Client.GetAsync($"/api/admin/users/{targetId}");
         yield return () => Client.GetAsync($"/api/appconfig/{targetId}");
         yield return () => Client.GetAsync("/api/roles");

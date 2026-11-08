@@ -198,4 +198,7 @@
   <data name="PhotoTypeNameMode_TrainerProvided" xml:space="preserve">
     <value>Trainer provided</value>
   </data>
+  <data name="TrainerApprovalStatus_PendingApproval" xml:space="preserve"><value>Pending approval</value></data>
+  <data name="TrainerApprovalStatus_Approved" xml:space="preserve"><value>Approved</value></data>
+  <data name="TrainerApprovalStatus_Rejected" xml:space="preserve"><value>Rejected</value></data>
 </root>

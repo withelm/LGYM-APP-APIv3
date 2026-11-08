@@ -137,6 +137,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | Persisted entity | Owner module |
 | --- | --- |
 | `User` | `Identity & Accounts` |
+| `TrainerApplicationAttempt` | `Identity & Accounts` |
 | `Role` | `Identity & Accounts` |
 | `UserRole` | `Identity & Accounts` |
 | `RoleClaim` | `Identity & Accounts` |
@@ -189,7 +190,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `CommandEnvelope` | `Platform / Reference Data` |
 | `ApiIdempotencyRecord` | `Platform / Reference Data` |
 
-Totals are fixed: Identity & Accounts 9, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 11, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 52 persisted entities.
+Totals are fixed: Identity & Accounts 10, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 11, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 53 persisted entities.
 
 ## Ownership tie-breaker
 

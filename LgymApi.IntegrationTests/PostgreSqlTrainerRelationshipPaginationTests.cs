@@ -234,11 +234,7 @@ internal sealed class PostgreSqlTrainerRelationshipPaginationTests : PostgreSqlI
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.UserRoles.Add(new UserRole
-        {
-            UserId = trainer.Id,
-            RoleId = RoleSeedDataConfiguration.TrainerRoleSeedId
-        });
+        db.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(db, trainer.Id));
         await db.SaveChangesAsync();
 
         return trainer;

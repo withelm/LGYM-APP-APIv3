@@ -337,7 +337,8 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         };
         var seed = new RecurringRequestSeed(trainer.Id, trainee.Id, template.Id, assignment.Id);
 
-        dbContext.AddRange(trainer, trainee, template, assignment, CreateRequest(seed, "first"));
+        await PostgreSqlHistoricalUserSeed.AddAsync(dbContext, trainer, trainee);
+        dbContext.AddRange(template, assignment, CreateRequest(seed, "first"));
         await dbContext.SaveChangesAsync();
 
         return seed;
@@ -379,7 +380,8 @@ public sealed class PostgreSqlRecurringReportMigrationTests
             CreatedAt = new DateTimeOffset(2026, 10, 25, 1, 30, 0, TimeSpan.Zero)
         };
 
-        dbContext.AddRange(trainer, trainee, template, request, submission, measurement);
+        await PostgreSqlHistoricalUserSeed.AddAsync(dbContext, trainer, trainee);
+        dbContext.AddRange(template, request, submission, measurement);
         await dbContext.SaveChangesAsync();
         return new MigrationPreservationSeed(
             request.Id,

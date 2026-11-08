@@ -50,6 +50,7 @@ public sealed class AuthenticationControllerContractTests
     [
         (nameof(TrainerAuthController.Register), HttpMethods.Post, "register"),
         (nameof(TrainerAuthController.Login), HttpMethods.Post, "login"),
+        (nameof(TrainerAuthController.ResubmitApplication), HttpMethods.Post, "application/resubmit"),
         (nameof(TrainerAuthController.CheckToken), HttpMethods.Get, "checkToken")
     ];
 
@@ -292,7 +293,8 @@ public sealed class AuthenticationControllerContractTests
             authenticatedAccountApiAdapter ?? Substitute.For<IAuthenticatedAccountApiAdapter>(),
             accountEloApiAdapter ?? Substitute.For<IAccountEloApiAdapter>(),
             eloRegistryService,
-            mapper);
+            mapper,
+            Substitute.For<LgymApi.Identity.Contracts.Approval.ITrainerApprovalService>());
     }
 
     private static void AssertRoutes<TController>(

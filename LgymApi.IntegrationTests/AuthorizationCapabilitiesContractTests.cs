@@ -4,6 +4,7 @@ using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
+using LgymApi.TestUtils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
@@ -174,8 +175,13 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
     [TestCase(true)]
     public async Task GetAccess_TrainerAndMixedRoleAccounts_PreserveIndependentCapabilities(bool isAdmin)
     {
-        var account = await SeedUserAsync("access-trainer", "trainer@example.com", isAdmin: isAdmin,
-            additionalRoles: [AuthConstants.Roles.Trainer]);
+        var account = await SeedUserAsync("access-trainer", "trainer@example.com", isAdmin: isAdmin);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.UserRoles.Add(TestDataFactory.ApprovedTrainerRole(database, account.Id));
+            await database.SaveChangesAsync();
+        }
         SetAuthorizationHeader(account.Id);
 
         using var response = await Client.GetAsync("/api/account/access");

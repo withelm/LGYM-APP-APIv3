@@ -7,6 +7,7 @@ using LgymApi.Application.Identity.Administration;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.UnitTests.Fakes;
@@ -22,6 +23,7 @@ public sealed class UserServiceAdminTests
     private ConfigurableUserRepository _userRepository = null!;
     private UserAdminAccessService _adminAccessService = null!;
     private UserRoleAdministrationService _roleAdministrationService = null!;
+    private TrainerApplicationRepositoryStub _trainerApplications = null!;
 
     [SetUp]
     public void SetUp()
@@ -30,7 +32,8 @@ public sealed class UserServiceAdminTests
         _unitOfWork = Substitute.For<IUnitOfWork>();
         _userRepository = new ConfigurableUserRepository();
         _adminAccessService = new UserAdminAccessService(_roleRepository);
-        _roleAdministrationService = new UserRoleAdministrationService(_userRepository, _roleRepository, _unitOfWork);
+        _trainerApplications = new TrainerApplicationRepositoryStub();
+        _roleAdministrationService = new UserRoleAdministrationService(_userRepository, _roleRepository, _unitOfWork, _trainerApplications);
     }
 
     [Test]
@@ -70,6 +73,7 @@ public sealed class UserServiceAdminTests
         using var cancellationSource = new CancellationTokenSource();
         var cancellationToken = cancellationSource.Token;
         var user = new User { Id = Id<User>.New(), Name = "user", Email = "user@example.com" };
+        _trainerApplications.Status = TrainerApprovalStatus.Approved;
         var trainerRole = new Role { Id = Id<Role>.New(), Name = AuthConstants.Roles.Trainer };
         _userRepository.FindById = (_, _) => Task.FromResult<User?>(user);
         _roleRepository.GetByNames = (_, _) => Task.FromResult<List<Role>>([trainerRole]);

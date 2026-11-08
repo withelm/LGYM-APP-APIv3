@@ -93,7 +93,7 @@ public sealed class AdminUserControllerTests
         services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         using var provider = services.BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
-        var controller = new AdminUserController(new StubAdminUserService(), mapper)
+        var controller = new AdminUserController(new StubAdminUserService(), mapper, NSubstitute.Substitute.For<LgymApi.Identity.Contracts.Approval.ITrainerApprovalService>())
         {
             ControllerContext = new ControllerContext
             {
