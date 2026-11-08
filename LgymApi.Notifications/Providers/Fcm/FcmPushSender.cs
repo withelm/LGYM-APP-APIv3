@@ -3,10 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using LgymApi.Application.Notifications.Contracts.Push;
-using LgymApi.Application.Notifications.Repositories;
 using LgymApi.Application.Platform.Contracts.Serialization;
-using LgymApi.Domain.Entities;
-using LgymApi.Domain.ValueObjects;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.Extensions.Logging;
 
@@ -38,24 +35,21 @@ internal sealed class FcmPushSender : IPushProviderSender
     };
 
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IPushInstallationRepository _pushInstallationRepository;
     private readonly PushNotificationOptions _options;
     private readonly ILogger<FcmPushSender> _logger;
 
     public FcmPushSender(
         IHttpClientFactory httpClientFactory,
-        IPushInstallationRepository pushInstallationRepository,
         PushNotificationOptions options,
         ILogger<FcmPushSender> logger)
     {
         _httpClientFactory = httpClientFactory;
-        _pushInstallationRepository = pushInstallationRepository;
         _options = options;
         _logger = logger;
     }
 
     public async Task<PushSendAttemptResult> SendAsync(
-        Id<PushInstallation> installationId,
+        PushInstallationDeliveryTarget target,
         PushEventPayload payload,
         CancellationToken cancellationToken = default)
     {
@@ -71,13 +65,10 @@ internal sealed class FcmPushSender : IPushProviderSender
 
         try
         {
-            var installation = await _pushInstallationRepository.FindByIdAsync(installationId, cancellationToken)
-                ?? throw new InvalidOperationException("Push installation was not found for provider delivery.");
-
             var accessToken = await GetAccessTokenAsync(cancellationToken);
             using var request = new HttpRequestMessage(HttpMethod.Post, BuildSendUrl())
             {
-                Content = BuildRequestContent(installation.FcmToken, payload)
+                Content = BuildRequestContent(target.FcmToken, payload)
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -101,7 +92,7 @@ internal sealed class FcmPushSender : IPushProviderSender
             var outcome = ClassifyFailure(response.StatusCode, body);
             _logger.LogWarning(
                 "FCM send failed for installation {InstallationId}, event {EventId}, category {Category} with provider status {ProviderStatus}, outcome {Outcome}, and summary {ProviderSummary}.",
-                installation.InstallationId,
+                target.InstallationId,
                 payload.EventId,
                 payload.Type,
                 response.StatusCode,

@@ -5,11 +5,14 @@ using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Notifications;
+using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Notifications.Repositories;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts.Accounts;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.UnitOfWork;
@@ -20,6 +23,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 
 namespace LgymApi.IntegrationTests;
@@ -53,9 +57,9 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
                 await using var command = new NpgsqlCommand("""
                     INSERT INTO "PushInstallations"
                         ("Id", "InstallationId", "Platform", "FcmToken", "Environment", "LastSeenAt", "CreatedAt", "UpdatedAt", "IsDeleted")
-                    VALUES (@id, @installationId, @platform, @token, @environment, @now, @now, @now, FALSE)
+                    VALUES (CAST(@id AS uuid), @installationId, @platform, @token, @environment, @now, @now, @now, FALSE)
                     """, connection);
-                command.Parameters.AddWithValue("id", installation.Id.Value);
+                command.Parameters.AddWithValue("id", installation.Id.ToString());
                 command.Parameters.AddWithValue("installationId", installation.InstallationId);
                 command.Parameters.AddWithValue("platform", installation.Platform);
                 command.Parameters.AddWithValue("token", installation.FcmToken);
@@ -225,6 +229,99 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
             .BeEquivalentTo([(int)HttpStatusCode.OK, (int)HttpStatusCode.Forbidden]);
     }
 
+    [Test]
+    public async Task ProcessAsync_WhenRegistrationRotatesDuringInvalidTokenDelivery_PreservesTheReplacementAndRecoversWithCanceledRequestToken()
+    {
+        var user = await SeedUserAsync($"push-delivery-{Id<User>.New():N}", $"push-delivery-{Id<User>.New():N}@example.com");
+        var originalSession = await SeedSessionAsync(user.Id);
+        var replacementSession = await SeedSessionAsync(user.Id);
+        var installation = CreateInstallation("delivery-rotation-device", "token-a");
+        installation.UserId = user.Id;
+        installation.SessionId = originalSession.Id;
+        var message = new PushNotificationMessage
+        {
+            Id = Id<PushNotificationMessage>.New(),
+            UserId = user.Id,
+            PushInstallationId = installation.Id,
+            SchemaVersion = 1,
+            Type = "trainer.note.updated",
+            EventId = "delivery-rotation-event",
+            PayloadJson = """{"schemaVersion":1,"type":"trainer.note.updated","eventId":"delivery-rotation-event"}""",
+            Status = PushNotificationStatus.Pending
+        };
+        await using (var seedScope = Factory.Services.CreateAsyncScope())
+        {
+            var database = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.PushInstallations.Add(installation);
+            database.PushNotificationMessages.Add(message);
+            await database.SaveChangesAsync();
+        }
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await using var deliveryScope = Factory.Services.CreateAsyncScope();
+        var deliveryDatabase = deliveryScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var sender = new RotatingInvalidTokenSender();
+        var scheduler = new CapturingPushScheduler();
+        var unitOfWork = new RecordingCancellationUnitOfWork(new EfUnitOfWork(deliveryDatabase));
+        var deliveryService = new PushNotificationDeliveryService(
+            new PushNotificationMessageRepository(deliveryDatabase),
+            deliveryScope.ServiceProvider.GetRequiredService<INotificationDisclosureEligibilityService>(),
+            new PushInstallationRepository(deliveryDatabase),
+            sender,
+            scheduler,
+            new SingleRetrySettings(),
+            unitOfWork,
+            deliveryScope.ServiceProvider.GetRequiredService<IAuthenticatedAccountContextResolver>(),
+            NullLogger<PushNotificationDeliveryService>.Instance);
+
+        var deliveryTask = deliveryService.ProcessAsync(message.Id.ToString(), cancellationTokenSource.Token);
+        await sender.WaitUntilDeliveryStartsAsync();
+
+        await using (var registrationScope = Factory.Services.CreateAsyncScope())
+        {
+            var registrationService = new PushInstallationLifecycleService(
+                new PushInstallationRepository(registrationScope.ServiceProvider.GetRequiredService<AppDbContext>()),
+                registrationScope.ServiceProvider.GetRequiredService<IPushInstallationPersistenceConflictClassifier>(),
+                new EfUnitOfWork(registrationScope.ServiceProvider.GetRequiredService<AppDbContext>()));
+            var registration = await registrationService.RegisterAsync(
+                user.Id,
+                replacementSession.Id,
+                new RegisterPushInstallationInput("delivery-rotation-device", "android", "token-b", null, "testing", "authorized"));
+
+            registration.IsSuccess.Should().BeTrue();
+        }
+
+        cancellationTokenSource.Cancel();
+        sender.ReturnInvalidToken();
+
+        Func<Task> awaitDelivery = async () => await deliveryTask;
+        await awaitDelivery.Should().ThrowAsync<DbUpdateConcurrencyException>();
+
+        sender.TokenObservedDuringDelivery.Should().Be("token-a");
+        scheduler.ScheduleRetryCalls.Should().Be(1);
+        unitOfWork.CancellationTokens.Should().HaveCount(3);
+        unitOfWork.CancellationTokens[0].IsCancellationRequested.Should().BeTrue();
+        unitOfWork.CancellationTokens.Skip(1).Should().OnlyContain(token => !token.CanBeCanceled);
+
+        await using var assertionScope = Factory.Services.CreateAsyncScope();
+        var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persistedInstallation = await assertionDatabase.PushInstallations.AsNoTracking()
+            .SingleAsync(candidate => candidate.Id == installation.Id);
+        var persistedMessage = await assertionDatabase.PushNotificationMessages.AsNoTracking()
+            .SingleAsync(candidate => candidate.Id == message.Id);
+
+        persistedInstallation.FcmToken.Should().Be("token-b");
+        persistedInstallation.SessionId.Should().Be(replacementSession.Id);
+        persistedInstallation.RegistrationRevision.Should().Be(1);
+        persistedInstallation.DisabledAt.Should().BeNull();
+        persistedInstallation.DisabledReason.Should().BeNull();
+        persistedMessage.Status.Should().Be(PushNotificationStatus.Failed);
+        persistedMessage.FailureKind.Should().Be(PushNotificationFailureKind.Transient);
+        persistedMessage.Attempts.Should().Be(1);
+        persistedMessage.SchedulerJobId.Should().Be("delivery-rotation-retry");
+        persistedMessage.NextAttemptAt.Should().NotBeNull();
+    }
+
     private async Task<UserSession> SeedSessionAsync(Id<User> userId)
     {
         var session = new UserSession
@@ -359,6 +456,62 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
             }
 
             return await inner.SaveChangesAsync(cancellationToken);
+        }
+
+        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+            => inner.BeginTransactionAsync(cancellationToken);
+    }
+
+    private sealed class RotatingInvalidTokenSender : IPushProviderSender
+    {
+        private readonly TaskCompletionSource _deliveryStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _returnInvalidToken = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public string? TokenObservedDuringDelivery { get; private set; }
+
+        public async Task<PushSendAttemptResult> SendAsync(
+            PushInstallationDeliveryTarget target,
+            PushEventPayload payload,
+            CancellationToken cancellationToken = default)
+        {
+            TokenObservedDuringDelivery = target.FcmToken;
+            _deliveryStarted.TrySetResult();
+            await _returnInvalidToken.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            return new PushSendAttemptResult(PushSendOutcome.InvalidToken, "BadRequest", null, "UNREGISTERED", "unregistered");
+        }
+
+        public Task WaitUntilDeliveryStartsAsync()
+            => _deliveryStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        public void ReturnInvalidToken() => _returnInvalidToken.TrySetResult();
+    }
+
+    private sealed class CapturingPushScheduler : IPushBackgroundScheduler
+    {
+        public int ScheduleRetryCalls { get; private set; }
+
+        public string? Enqueue(string notificationId) => throw new InvalidOperationException("Unexpected initial enqueue.");
+
+        public string? ScheduleRetry(string notificationId, TimeSpan delay)
+        {
+            ScheduleRetryCalls += 1;
+            return "delivery-rotation-retry";
+        }
+    }
+
+    private sealed class SingleRetrySettings : IPushNotificationDeliveryRetrySettings
+    {
+        public IReadOnlyList<int> RetryDelaysSeconds { get; } = [1];
+    }
+
+    private sealed class RecordingCancellationUnitOfWork(IUnitOfWork inner) : IUnitOfWork
+    {
+        public List<CancellationToken> CancellationTokens { get; } = [];
+
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            CancellationTokens.Add(cancellationToken);
+            return inner.SaveChangesAsync(CancellationToken.None);
         }
 
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)

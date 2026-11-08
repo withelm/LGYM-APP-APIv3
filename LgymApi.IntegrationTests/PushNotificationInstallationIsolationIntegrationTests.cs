@@ -170,7 +170,7 @@ public sealed class PushNotificationInstallationIsolationIntegrationTests : Inte
         }
 
         Factory.PushSender.Attempts.Should().ContainSingle();
-        Factory.PushSender.Attempts.Single().InstallationId.Should().Be(installationId);
+        Factory.PushSender.Attempts.Single().Target.InstallationId.Should().Be(installationId);
         Factory.PushSender.Attempts.Single().Payload.EventId.Should().Be(bEventId);
 
         using (var scope = Factory.Services.CreateScope())

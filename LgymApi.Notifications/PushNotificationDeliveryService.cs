@@ -75,6 +75,7 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
         }
 
         PushNotificationMessage? message = null;
+        PushInstallation? installation = null;
         var deliveryAttemptStarted = false;
         TimeSpan? retryDelay = null;
         try
@@ -99,7 +100,7 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
                 return;
             }
 
-            var installation = await _pushInstallationRepository.FindByIdAsync(message.PushInstallationId, cancellationToken);
+            installation = await _pushInstallationRepository.FindByIdAsync(message.PushInstallationId, cancellationToken);
             if (installation == null)
             {
                 message.Status = PushNotificationStatus.Failed;
@@ -125,6 +126,21 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
                 return;
             }
 
+            if (installation.DisabledAt != null)
+            {
+                message.Status = PushNotificationStatus.Skipped;
+                message.FailureKind = PushNotificationFailureKind.Preference;
+                message.ProviderStatus = "InstallationInactive";
+                message.ProviderMessageId = null;
+                message.ProviderErrorCode = "installation-unavailable";
+                message.ProviderResponseSummary = "Push installation is no longer active.";
+                message.LastError = "Push installation is no longer active.";
+                message.NextAttemptAt = null;
+                message.SchedulerJobId = null;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
             if (installation.SessionId is not { } installationSessionId)
             {
                 await DenyStaleInstallationAsync(message, cancellationToken);
@@ -142,12 +158,24 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
                 return;
             }
 
+            var target = await _pushInstallationRepository.FindActiveBoundTargetAsync(
+                installation.Id,
+                message.UserId,
+                installationSessionId,
+                installation.RegistrationRevision,
+                cancellationToken);
+            if (target == null)
+            {
+                await DenyStaleInstallationAsync(message, cancellationToken);
+                return;
+            }
+
             deliveryAttemptStarted = true;
             message.Attempts += 1;
             var payload = JsonSerializer.Deserialize<PushEventPayload>(message.PayloadJson, SharedSerializationOptions.Current)
                 ?? throw new InvalidOperationException($"Failed to deserialize push payload for notification {notificationId}.");
 
-            var result = await _pushProviderSender.SendAsync(message.PushInstallationId, payload, cancellationToken);
+            var result = await _pushProviderSender.SendAsync(target, payload, cancellationToken);
             retryDelay = result.Outcome == PushSendOutcome.TransientFailure
                 ? ResolveRetryDelay(message.Attempts)
                 : null;
@@ -166,12 +194,12 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
         }
         catch (OperationCanceledException)
         {
-            await RecoverFromPostClaimFailureAsync(notificationId, message, deliveryAttemptStarted, new OperationCanceledException());
+            await RecoverFromPostClaimFailureAsync(notificationId, message, installation, deliveryAttemptStarted, new OperationCanceledException());
             throw;
         }
         catch (Exception exception)
         {
-            await RecoverFromPostClaimFailureAsync(notificationId, message, deliveryAttemptStarted, exception);
+            await RecoverFromPostClaimFailureAsync(notificationId, message, installation, deliveryAttemptStarted, exception);
             throw;
         }
 
@@ -279,9 +307,15 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
     private async Task RecoverFromPostClaimFailureAsync(
         Id<PushNotificationMessage> notificationId,
         PushNotificationMessage? message,
+        PushInstallation? failedInstallation,
         bool deliveryAttemptStarted,
         Exception exception)
     {
+        if (failedInstallation != null)
+        {
+            await _pushInstallationRepository.ResetFailedMutationAsync(failedInstallation, CancellationToken.None);
+        }
+
         message ??= await _pushNotificationMessageRepository.FindByIdAsync(notificationId, CancellationToken.None);
         if (message == null)
         {

@@ -142,6 +142,79 @@ public sealed class PushNotificationPipelineIntegrationTests
     }
 
     [Test]
+    public async Task ProcessAsync_WhenInstallationIsDisabledAfterQueueing_SuppressesProviderDelivery()
+    {
+        var sender = new CountingPushProviderSender();
+        using var baseFactory = new CustomWebApplicationFactory();
+        using var factory = baseFactory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IPushProviderSender>();
+                services.AddSingleton<IPushProviderSender>(sender);
+            });
+        });
+
+        Id<PushNotificationMessage> notificationId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = await TestUtils.TestDataFactory.SeedUserAsync(db, "push-disabled-after-queue", "push-disabled-after-queue@example.com", "pass123");
+            var session = CreateActiveSession(user.Id);
+            var installation = new PushInstallation
+            {
+                Id = Id<PushInstallation>.New(),
+                UserId = user.Id,
+                SessionId = session.Id,
+                InstallationId = "device-disabled-after-queue",
+                Platform = "android",
+                FcmToken = "token-disabled-after-queue",
+                Environment = "development",
+                PermissionStatus = "authorized",
+                LastSeenAt = DateTimeOffset.UtcNow
+            };
+            db.UserSessions.Add(session);
+            db.PushInstallations.Add(installation);
+            await db.SaveChangesAsync();
+
+            var enqueue = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
+            await enqueue.EnqueueAsync(new Application.Notifications.Models.EnqueuePushNotificationInput(
+                user.Id,
+                1,
+                "trainer.note.updated",
+                "event-disabled-after-queue",
+                null,
+                null,
+                null));
+            notificationId = db.PushNotificationMessages.Single().Id;
+        }
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var installation = db.PushInstallations.Single(candidate => candidate.InstallationId == "device-disabled-after-queue");
+            installation.DisabledAt = DateTimeOffset.UtcNow;
+            installation.DisabledReason = "InactiveStale";
+            await db.SaveChangesAsync();
+        }
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<PushNotificationJobHandlerService>();
+            await handler.ProcessAsync(notificationId.ToString());
+        }
+
+        sender.SendCalls.Should().Be(0);
+        using var assertionScope = factory.Services.CreateScope();
+        var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var message = assertionDatabase.PushNotificationMessages.Single(candidate => candidate.Id == notificationId);
+        message.Status.Should().Be(PushNotificationStatus.Skipped);
+        message.FailureKind.Should().Be(PushNotificationFailureKind.Preference);
+        message.ProviderStatus.Should().Be("InstallationInactive");
+        message.NextAttemptAt.Should().BeNull();
+    }
+
+    [Test]
     public async Task ProcessAsync_RevalidatesCurrentSourceAndSuppressesOnlyTheHiddenNotification()
     {
         var sender = new CountingPushProviderSender();
@@ -409,9 +482,9 @@ public sealed class PushNotificationPipelineIntegrationTests
     {
         public Id<PushInstallation>? LastInstallationId { get; private set; }
 
-        public Task<PushSendAttemptResult> SendAsync(Id<PushInstallation> installationId, PushEventPayload payload, CancellationToken cancellationToken = default)
+        public Task<PushSendAttemptResult> SendAsync(PushInstallationDeliveryTarget target, PushEventPayload payload, CancellationToken cancellationToken = default)
         {
-            LastInstallationId = installationId;
+            LastInstallationId = target.InstallationId;
             return Task.FromResult(new PushSendAttemptResult(
                 PushSendOutcome.InvalidToken,
                 "BadRequest",
@@ -458,7 +531,7 @@ public sealed class PushNotificationPipelineIntegrationTests
     {
         public int SendCalls { get; private set; }
 
-        public Task<PushSendAttemptResult> SendAsync(Id<PushInstallation> installationId, PushEventPayload payload, CancellationToken cancellationToken = default)
+        public Task<PushSendAttemptResult> SendAsync(PushInstallationDeliveryTarget target, PushEventPayload payload, CancellationToken cancellationToken = default)
         {
             SendCalls += 1;
             return Task.FromResult(new PushSendAttemptResult(

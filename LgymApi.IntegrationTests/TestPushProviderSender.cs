@@ -7,18 +7,18 @@ namespace LgymApi.IntegrationTests;
 
 public sealed class TestPushProviderSender : IPushProviderSender
 {
-    private readonly ConcurrentQueue<(Id<PushInstallation> InstallationId, PushEventPayload Payload)> _attempts = new();
+    private readonly ConcurrentQueue<(PushInstallationDeliveryTarget Target, PushEventPayload Payload)> _attempts = new();
 
-    public IReadOnlyCollection<(Id<PushInstallation> InstallationId, PushEventPayload Payload)> Attempts
+    public IReadOnlyCollection<(PushInstallationDeliveryTarget Target, PushEventPayload Payload)> Attempts
         => _attempts.ToArray();
 
     public Task<PushSendAttemptResult> SendAsync(
-        Id<PushInstallation> installationId,
+        PushInstallationDeliveryTarget target,
         PushEventPayload payload,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        _attempts.Enqueue((installationId, payload));
+        _attempts.Enqueue((target, payload));
 
         return Task.FromResult(new PushSendAttemptResult(
             PushSendOutcome.Skipped,

@@ -17,6 +17,7 @@ public sealed class NotificationPushContractArchitectureTests
         "IPushNotificationDeliveryRetrySettings.cs",
         "IPushProviderSender.cs",
         "PushEventPayload.cs",
+        "PushInstallationDeliveryTarget.cs",
         "PushSendAttemptResult.cs"
     ];
 
@@ -54,7 +55,7 @@ public sealed class NotificationPushContractArchitectureTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(contractTypes, Has.Length.EqualTo(6));
+            Assert.That(contractTypes, Has.Length.EqualTo(7));
             Assert.That(contractTypes, Is.All.Matches<Type>(type => type.Assembly == notificationsAssembly && type.IsPublic));
             Assert.That(payloadProperties.Single(property => property.Name == "EntityId").PropertyType, Is.EqualTo(typeof(string)));
             Assert.That(

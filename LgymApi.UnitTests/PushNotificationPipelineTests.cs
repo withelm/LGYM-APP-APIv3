@@ -327,6 +327,65 @@ public sealed class PushNotificationPipelineTests
         unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
+    [TestCase("Unregistered")]
+    [TestCase("InactiveStale")]
+    [TestCase("InvalidFcmToken")]
+    public async Task ProcessAsync_WhenInstallationWasDisabledAfterQueueing_SuppressesDeliveryWithoutProviderCall(string disabledReason)
+    {
+        var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
+        installation.DisabledAt = DateTimeOffset.UtcNow;
+        installation.DisabledReason = disabledReason;
+        var message = CreateMessage(installation.Id);
+        message.UserId = installation.UserId!.Value;
+        var sender = new FakePushProviderSender(new PushSendAttemptResult(PushSendOutcome.Sent, "OK", "message-1", null, "accepted"));
+        var scheduler = new FakePushBackgroundScheduler();
+        var handler = CreateHandler(
+            new FakePushNotificationMessageRepository(message),
+            new FakePushInstallationRepository(installation),
+            sender,
+            scheduler,
+            new FakeUnitOfWork(),
+            new PushNotificationOptions());
+
+        await handler.ProcessAsync(message.Id);
+
+        message.Status.Should().Be(PushNotificationStatus.Skipped);
+        message.FailureKind.Should().Be(PushNotificationFailureKind.Preference);
+        message.ProviderStatus.Should().Be("InstallationInactive");
+        message.NextAttemptAt.Should().BeNull();
+        message.SchedulerJobId.Should().BeNull();
+        sender.SendCalls.Should().Be(0);
+        scheduler.ScheduledRetries.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task ProcessAsync_WhenBindingChangesAfterAuthorization_SuppressesProviderDelivery()
+    {
+        var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
+        var message = CreateMessage(installation.Id);
+        message.UserId = installation.UserId!.Value;
+        var sender = new FakePushProviderSender(new PushSendAttemptResult(PushSendOutcome.Sent, "OK", "message-1", null, "accepted"));
+        var scheduler = new FakePushBackgroundScheduler();
+        var handler = CreateHandler(
+            new FakePushNotificationMessageRepository(message),
+            new FakePushInstallationRepository(installation)
+            {
+                FindActiveBoundTargetAsyncOverride = (_, _, _, _, _) => Task.FromResult<PushInstallationDeliveryTarget?>(null)
+            },
+            sender,
+            scheduler,
+            new FakeUnitOfWork(),
+            new PushNotificationOptions());
+
+        await handler.ProcessAsync(message.Id);
+
+        message.Status.Should().Be(PushNotificationStatus.Failed);
+        message.FailureKind.Should().Be(PushNotificationFailureKind.Permanent);
+        message.ProviderStatus.Should().Be("InstallationSessionInvalid");
+        sender.SendCalls.Should().Be(0);
+        scheduler.ScheduledRetries.Should().BeEmpty();
+    }
+
     [Test]
     public async Task ProcessAsync_WhenProviderSends_PersistsSentDeliveryStateWithoutRetry()
     {
@@ -401,7 +460,6 @@ public sealed class PushNotificationPipelineTests
             new FakePushInstallationRepository(installation),
             new FcmPushSender(
                 httpClientFactory,
-                new FakePushInstallationRepository(installation),
                 new PushNotificationOptions { SendEnabled = false },
                 NullLogger<FcmPushSender>.Instance),
             scheduler,
@@ -445,7 +503,6 @@ public sealed class PushNotificationPipelineTests
             new FakePushInstallationRepository(installation),
             new FcmPushSender(
                 httpClientFactory,
-                new FakePushInstallationRepository(installation),
                 new PushNotificationOptions { SendEnabled = true },
                 NullLogger<FcmPushSender>.Instance),
             scheduler,
@@ -656,7 +713,6 @@ public sealed class PushNotificationPipelineTests
         var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
         var sender = new FcmPushSender(
             new FakeHttpClientFactory(),
-            new FakePushInstallationRepository(installation),
             new PushNotificationOptions(),
             NullLogger<FcmPushSender>.Instance);
         var notificationId = Id<InAppNotification>.New();
@@ -689,44 +745,17 @@ public sealed class PushNotificationPipelineTests
     {
         var httpClientFactory = new FakeHttpClientFactory();
         var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
-        var installationRepository = new FakePushInstallationRepository(installation);
         var sender = new FcmPushSender(
             httpClientFactory,
-            installationRepository,
             new PushNotificationOptions { SendEnabled = false },
             NullLogger<FcmPushSender>.Instance);
         var payload = new PushEventPayload(1, "internal.test.push", "event-1", null, null, null);
 
-        var result = await sender.SendAsync(installation.Id, payload);
+        var result = await sender.SendAsync(CreateTarget(installation), payload);
 
         result.Outcome.Should().Be(PushSendOutcome.Skipped);
         result.ProviderStatus.Should().Be("Skipped");
         result.ProviderErrorCode.Should().Be("push-disabled");
-        installationRepository.FindByIdCalls.Should().Be(0);
-        httpClientFactory.CreateClientCalls.Should().Be(0);
-    }
-
-    [Test]
-    public async Task FcmSender_WhenInstallationLookupIsCancelled_PropagatesCancellationWithoutHttpCall()
-    {
-        using var cancellationTokenSource = new CancellationTokenSource();
-        cancellationTokenSource.Cancel();
-        var httpClientFactory = new FakeHttpClientFactory();
-        var installationRepository = new FakePushInstallationRepository
-        {
-            FindByIdAsyncOverride = (_, cancellationToken) => Task.FromCanceled<PushInstallation?>(cancellationToken)
-        };
-        var sender = new FcmPushSender(
-            httpClientFactory,
-            installationRepository,
-            new PushNotificationOptions { SendEnabled = true },
-            NullLogger<FcmPushSender>.Instance);
-        var payload = new PushEventPayload(1, "internal.test.push", "event-1", null, null, null);
-
-        var action = () => sender.SendAsync(Id<PushInstallation>.New(), payload, cancellationTokenSource.Token);
-
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        installationRepository.FindByIdCalls.Should().Be(1);
         httpClientFactory.CreateClientCalls.Should().Be(0);
     }
 
@@ -735,7 +764,6 @@ public sealed class PushNotificationPipelineTests
     {
         var sender = new FcmPushSender(
             new FakeHttpClientFactory(),
-            new FakePushInstallationRepository(),
             new PushNotificationOptions
             {
                 Fcm = { BaseUrl = "https://fcm.example.test", ProjectId = "lgym-test" }
@@ -796,7 +824,6 @@ public sealed class PushNotificationPipelineTests
         var installation = CreateInstallation(Id<User>.New(), permissionStatus: "authorized");
         var sender = new FcmPushSender(
             new FakeHttpClientFactory(),
-            new FakePushInstallationRepository(installation),
             new PushNotificationOptions
             {
                 SendEnabled = true,
@@ -810,7 +837,7 @@ public sealed class PushNotificationPipelineTests
             NullLogger<FcmPushSender>.Instance);
         var payload = new PushEventPayload(1, "internal.test.push", "event-1", null, null, null);
 
-        var action = () => sender.SendAsync(installation.Id, payload);
+        var action = () => sender.SendAsync(CreateTarget(installation), payload);
 
         var exception = await action.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Be("FCM provider delivery failed.");
@@ -903,6 +930,16 @@ public sealed class PushNotificationPipelineTests
                 unitOfWork,
                 new ActiveAccountContextResolver(),
                 NullLogger<PushNotificationDeliveryService>.Instance));
+    }
+
+    private static PushInstallationDeliveryTarget CreateTarget(PushInstallation installation)
+    {
+        return new PushInstallationDeliveryTarget(
+            installation.Id,
+            installation.UserId!.Value,
+            installation.SessionId!.Value,
+            installation.RegistrationRevision,
+            installation.FcmToken);
     }
 
     private static INotificationDisclosureEligibilityService CreateDisclosureEligibility()
@@ -998,7 +1035,7 @@ public sealed class PushNotificationPipelineTests
 
     private sealed class FakePushProviderSender : IPushProviderSender
     {
-        private readonly Func<Id<PushInstallation>, PushEventPayload, CancellationToken, Task<PushSendAttemptResult>> _sendAsync;
+        private readonly Func<PushInstallationDeliveryTarget, PushEventPayload, CancellationToken, Task<PushSendAttemptResult>> _sendAsync;
 
         public FakePushProviderSender(PushSendAttemptResult result)
             : this((_, _, _) => Task.FromResult(result))
@@ -1010,7 +1047,7 @@ public sealed class PushNotificationPipelineTests
         {
         }
 
-        public FakePushProviderSender(Func<Id<PushInstallation>, PushEventPayload, CancellationToken, Task<PushSendAttemptResult>> sendAsync)
+        public FakePushProviderSender(Func<PushInstallationDeliveryTarget, PushEventPayload, CancellationToken, Task<PushSendAttemptResult>> sendAsync)
         {
             _sendAsync = sendAsync;
         }
@@ -1021,12 +1058,12 @@ public sealed class PushNotificationPipelineTests
 
         public CancellationToken LastCancellationToken { get; private set; }
 
-        public Task<PushSendAttemptResult> SendAsync(Id<PushInstallation> installationId, PushEventPayload payload, CancellationToken cancellationToken = default)
+        public Task<PushSendAttemptResult> SendAsync(PushInstallationDeliveryTarget target, PushEventPayload payload, CancellationToken cancellationToken = default)
         {
             SendCalls += 1;
-            LastInstallationId = installationId;
+            LastInstallationId = target.InstallationId;
             LastCancellationToken = cancellationToken;
-            return _sendAsync(installationId, payload, cancellationToken);
+            return _sendAsync(target, payload, cancellationToken);
         }
     }
 
@@ -1226,7 +1263,11 @@ public sealed class PushNotificationPipelineTests
 
         public int FindByIdCalls { get; private set; }
 
+        public int FindActiveByIdCalls { get; private set; }
+
         public Func<Id<PushInstallation>, CancellationToken, Task<PushInstallation?>>? FindByIdAsyncOverride { get; init; }
+
+        public Func<Id<PushInstallation>, Id<User>, Id<UserSession>, long, CancellationToken, Task<PushInstallationDeliveryTarget?>>? FindActiveBoundTargetAsyncOverride { get; init; }
 
         public Task<PushInstallation?> FindByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default)
         {
@@ -1237,6 +1278,32 @@ public sealed class PushNotificationPipelineTests
             }
 
             return Task.FromResult<PushInstallation?>(_installations.FirstOrDefault(x => x.Id == id));
+        }
+
+        public Task<PushInstallation?> FindActiveByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default)
+        {
+            FindActiveByIdCalls += 1;
+            if (FindByIdAsyncOverride != null)
+            {
+                return FindByIdAsyncOverride(id, cancellationToken);
+            }
+
+            return Task.FromResult<PushInstallation?>(_installations.FirstOrDefault(x => x.Id == id && x.DisabledAt == null));
+        }
+
+        public Task<PushInstallationDeliveryTarget?> FindActiveBoundTargetAsync(Id<PushInstallation> id, Id<User> userId, Id<UserSession> sessionId, long registrationRevision, CancellationToken cancellationToken = default)
+        {
+            if (FindActiveBoundTargetAsyncOverride != null)
+            {
+                return FindActiveBoundTargetAsyncOverride(id, userId, sessionId, registrationRevision, cancellationToken);
+            }
+
+            var installation = _installations.FirstOrDefault(x => x.Id == id
+                && x.UserId == userId
+                && x.SessionId == sessionId
+                && x.RegistrationRevision == registrationRevision
+                && x.DisabledAt == null);
+            return Task.FromResult(installation == null ? null : CreateTarget(installation));
         }
 
         public Task<PushInstallation?> FindByInstallationIdAsync(string installationId, CancellationToken cancellationToken = default)
