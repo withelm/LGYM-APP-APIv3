@@ -109,7 +109,7 @@ public sealed class PushNotificationDeliveryRecoveryTests
             => Task.FromResult<PushInstallation?>(id == installation.Id && installation.DisabledAt == null ? installation : null);
         public Task<PushInstallationDeliveryTarget?> FindActiveBoundTargetAsync(Id<PushInstallation> id, Id<User> userId, Id<UserSession> sessionId, long registrationRevision, CancellationToken cancellationToken = default)
             => Task.FromResult<PushInstallationDeliveryTarget?>(id == installation.Id && userId == installation.UserId && sessionId == installation.SessionId && registrationRevision == installation.RegistrationRevision && installation.DisabledAt == null
-                ? new PushInstallationDeliveryTarget(installation.Id, installation.UserId!.Value, installation.SessionId!.Value, installation.RegistrationRevision, installation.FcmToken)
+                ? new PushInstallationDeliveryTarget(installation.Id, installation.UserId!.Value, installation.SessionId!.Value, installation.RegistrationRevision)
                 : null);
         public Task<PushInstallation?> FindByInstallationIdAsync(string installationId, CancellationToken cancellationToken = default)
             => Task.FromResult<PushInstallation?>(null);
