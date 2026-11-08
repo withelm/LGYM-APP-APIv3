@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 816;
+    private const int ManifestEntryCount = 817;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -75,6 +75,7 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Notifications/IPushNotificationMessageRetentionCleanupService.cs\tLgymApi.Application.Notifications.IPushNotificationMessageRetentionCleanupService",
         "LgymApi.Notifications/NotificationReplayAccessService.cs\tLgymApi.Application.Notifications.INotificationReplayAccessService",
         "LgymApi.Notifications/NotificationReplayAccessService.cs\tLgymApi.Application.Notifications.NotificationReplayResourceKind",
+        "LgymApi.Notifications/Contracts/Push/PushInstallationDeliveryTarget.cs\tLgymApi.Application.Notifications.Contracts.Push.PushInstallationDeliveryTarget",
         "LgymApi.Application/MainRecords/Models/BestMainRecordsWithTranslations.cs\tLgymApi.Application.Features.MainRecords.Models.BestMainRecordsWithTranslations",
         "LgymApi.Application/Training/Models/TrainingsByDateWithTranslations.cs\tLgymApi.Application.Features.Training.Models.TrainingsByDateWithTranslations",
         "LgymApi.Application/WorkoutProgress/Dashboard/Models/WorkoutProgressDashboardTrainingsWithTranslations.cs\tLgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardTrainingsWithTranslations",
