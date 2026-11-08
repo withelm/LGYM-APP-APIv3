@@ -158,12 +158,24 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
                 return;
             }
 
+            var target = await _pushInstallationRepository.FindActiveBoundTargetAsync(
+                installation.Id,
+                message.UserId,
+                installationSessionId,
+                installation.RegistrationRevision,
+                cancellationToken);
+            if (target == null)
+            {
+                await DenyStaleInstallationAsync(message, cancellationToken);
+                return;
+            }
+
             deliveryAttemptStarted = true;
             message.Attempts += 1;
             var payload = JsonSerializer.Deserialize<PushEventPayload>(message.PayloadJson, SharedSerializationOptions.Current)
                 ?? throw new InvalidOperationException($"Failed to deserialize push payload for notification {notificationId}.");
 
-            var result = await _pushProviderSender.SendAsync(message.PushInstallationId, payload, cancellationToken);
+            var result = await _pushProviderSender.SendAsync(target, payload, cancellationToken);
             retryDelay = result.Outcome == PushSendOutcome.TransientFailure
                 ? ResolveRetryDelay(message.Attempts)
                 : null;

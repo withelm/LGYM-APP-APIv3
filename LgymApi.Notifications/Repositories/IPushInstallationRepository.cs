@@ -1,6 +1,7 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Application.Notifications.Contracts.Push;
 
 namespace LgymApi.Application.Notifications.Repositories;
 
@@ -8,6 +9,12 @@ internal interface IPushInstallationRepository
 {
     Task<PushInstallation?> FindByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default);
     Task<PushInstallation?> FindActiveByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default);
+    Task<PushInstallationDeliveryTarget?> FindActiveBoundTargetAsync(
+        Id<PushInstallation> id,
+        Id<User> userId,
+        Id<UserSession> sessionId,
+        long registrationRevision,
+        CancellationToken cancellationToken = default);
     Task<PushInstallation?> FindByInstallationIdAsync(string installationId, CancellationToken cancellationToken = default);
     Task<PushInstallation?> FindBoundToUserAndSessionAsync(string installationId, Id<User> userId, Id<UserSession> sessionId, CancellationToken cancellationToken = default);
     Task<List<PushInstallation>> GetActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default);

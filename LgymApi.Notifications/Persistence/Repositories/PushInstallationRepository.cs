@@ -1,4 +1,5 @@
 using LgymApi.Application.Notifications.Repositories;
+using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
@@ -26,6 +27,29 @@ internal sealed class PushInstallationRepository : IPushInstallationRepository
         return _persistenceContext.PushInstallations
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id && x.DisabledAt == null, cancellationToken);
+    }
+
+    public Task<PushInstallationDeliveryTarget?> FindActiveBoundTargetAsync(
+        Id<PushInstallation> id,
+        Id<User> userId,
+        Id<UserSession> sessionId,
+        long registrationRevision,
+        CancellationToken cancellationToken = default)
+    {
+        return _persistenceContext.PushInstallations
+            .AsNoTracking()
+            .Where(x => x.Id == id
+                && x.UserId == userId
+                && x.SessionId == sessionId
+                && x.RegistrationRevision == registrationRevision
+                && x.DisabledAt == null)
+            .Select(x => new PushInstallationDeliveryTarget(
+                x.Id,
+                x.UserId!.Value,
+                x.SessionId!.Value,
+                x.RegistrationRevision,
+                x.FcmToken))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public Task<PushInstallation?> FindByInstallationIdAsync(string installationId, CancellationToken cancellationToken = default)

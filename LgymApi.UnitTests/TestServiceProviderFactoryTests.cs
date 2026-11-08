@@ -111,7 +111,7 @@ public sealed class TestServiceProviderFactoryTests
     private sealed class RecordingPushProviderSender : IPushProviderSender
     {
         public Task<PushSendAttemptResult> SendAsync(
-            Id<PushInstallation> installationId,
+            PushInstallationDeliveryTarget target,
             PushEventPayload payload,
             CancellationToken cancellationToken = default)
         {

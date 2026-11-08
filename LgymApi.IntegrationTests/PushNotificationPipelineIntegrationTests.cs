@@ -482,9 +482,9 @@ public sealed class PushNotificationPipelineIntegrationTests
     {
         public Id<PushInstallation>? LastInstallationId { get; private set; }
 
-        public Task<PushSendAttemptResult> SendAsync(Id<PushInstallation> installationId, PushEventPayload payload, CancellationToken cancellationToken = default)
+        public Task<PushSendAttemptResult> SendAsync(PushInstallationDeliveryTarget target, PushEventPayload payload, CancellationToken cancellationToken = default)
         {
-            LastInstallationId = installationId;
+            LastInstallationId = target.InstallationId;
             return Task.FromResult(new PushSendAttemptResult(
                 PushSendOutcome.InvalidToken,
                 "BadRequest",
@@ -531,7 +531,7 @@ public sealed class PushNotificationPipelineIntegrationTests
     {
         public int SendCalls { get; private set; }
 
-        public Task<PushSendAttemptResult> SendAsync(Id<PushInstallation> installationId, PushEventPayload payload, CancellationToken cancellationToken = default)
+        public Task<PushSendAttemptResult> SendAsync(PushInstallationDeliveryTarget target, PushEventPayload payload, CancellationToken cancellationToken = default)
         {
             SendCalls += 1;
             return Task.FromResult(new PushSendAttemptResult(

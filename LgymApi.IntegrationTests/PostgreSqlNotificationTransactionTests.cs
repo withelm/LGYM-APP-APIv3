@@ -267,12 +267,12 @@ internal sealed class PostgreSqlNotificationTransactionTests : PostgreSqlIntegra
         public PushNotificationStatus? StatusObservedBeforeSend { get; private set; }
 
         public async Task<PushSendAttemptResult> SendAsync(
-            Id<PushInstallation> installationId,
+            PushInstallationDeliveryTarget target,
             PushEventPayload payload,
             CancellationToken cancellationToken = default)
         {
             SendCalls++;
-            LastInstallationId = installationId;
+            LastInstallationId = target.InstallationId;
             StatusObservedBeforeSend = await readStatus();
             throw exception;
         }

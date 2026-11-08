@@ -51,7 +51,14 @@ public sealed class PushNotificationDeliveryIsolationTests
         var messageRepository = new TestPushNotificationMessageRepository(message);
         var installationRepository = new ConfigurablePushInstallationRepository
         {
-            FindById = (_, _) => Task.FromResult<PushInstallation?>(installation)
+            FindById = (_, _) => Task.FromResult<PushInstallation?>(installation),
+            FindActiveBoundTarget = (_, _, _, _, _) => Task.FromResult<PushInstallationDeliveryTarget?>(
+                new PushInstallationDeliveryTarget(
+                    installation.Id,
+                    installation.UserId!.Value,
+                    installation.SessionId!.Value,
+                    installation.RegistrationRevision,
+                    installation.FcmToken))
         };
         var unitOfWork = Substitute.For<IUnitOfWork>();
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(1));
@@ -146,11 +153,11 @@ public sealed class PushNotificationDeliveryIsolationTests
         public List<Id<PushInstallation>> AttemptedInstallationIds { get; } = [];
 
         public Task<PushSendAttemptResult> SendAsync(
-            Id<PushInstallation> installationId,
+            PushInstallationDeliveryTarget target,
             PushEventPayload payload,
             CancellationToken cancellationToken = default)
         {
-            AttemptedInstallationIds.Add(installationId);
+            AttemptedInstallationIds.Add(target.InstallationId);
             return Task.FromResult(new PushSendAttemptResult(
                 PushSendOutcome.InvalidToken,
                 "BadRequest",

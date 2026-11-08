@@ -107,6 +107,10 @@ public sealed class PushNotificationDeliveryRecoveryTests
             => Task.FromResult<PushInstallation?>(id == installation.Id ? installation : null);
         public Task<PushInstallation?> FindActiveByIdAsync(Id<PushInstallation> id, CancellationToken cancellationToken = default)
             => Task.FromResult<PushInstallation?>(id == installation.Id && installation.DisabledAt == null ? installation : null);
+        public Task<PushInstallationDeliveryTarget?> FindActiveBoundTargetAsync(Id<PushInstallation> id, Id<User> userId, Id<UserSession> sessionId, long registrationRevision, CancellationToken cancellationToken = default)
+            => Task.FromResult<PushInstallationDeliveryTarget?>(id == installation.Id && userId == installation.UserId && sessionId == installation.SessionId && registrationRevision == installation.RegistrationRevision && installation.DisabledAt == null
+                ? new PushInstallationDeliveryTarget(installation.Id, installation.UserId!.Value, installation.SessionId!.Value, installation.RegistrationRevision, installation.FcmToken)
+                : null);
         public Task<PushInstallation?> FindByInstallationIdAsync(string installationId, CancellationToken cancellationToken = default)
             => Task.FromResult<PushInstallation?>(null);
         public Task<PushInstallation?> FindBoundToUserAndSessionAsync(string installationId, Id<User> userId, Id<UserSession> sessionId, CancellationToken cancellationToken = default)
@@ -143,7 +147,7 @@ public sealed class PushNotificationDeliveryRecoveryTests
 
     private sealed class InvalidTokenSender : IPushProviderSender
     {
-        public Task<PushSendAttemptResult> SendAsync(Id<PushInstallation> installationId, PushEventPayload payload, CancellationToken cancellationToken = default)
+        public Task<PushSendAttemptResult> SendAsync(PushInstallationDeliveryTarget target, PushEventPayload payload, CancellationToken cancellationToken = default)
             => Task.FromResult(new PushSendAttemptResult(PushSendOutcome.InvalidToken, "BadRequest", null, "UNREGISTERED", "unregistered"));
     }
 

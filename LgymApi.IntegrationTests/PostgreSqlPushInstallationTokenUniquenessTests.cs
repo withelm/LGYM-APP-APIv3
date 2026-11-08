@@ -260,9 +260,7 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
         using var cancellationTokenSource = new CancellationTokenSource();
         await using var deliveryScope = Factory.Services.CreateAsyncScope();
         var deliveryDatabase = deliveryScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var sender = new RotatingInvalidTokenSender(() => deliveryDatabase.ChangeTracker.Entries<PushInstallation>()
-            .Single(entry => entry.Entity.Id == installation.Id)
-            .Entity.FcmToken);
+        var sender = new RotatingInvalidTokenSender();
         var scheduler = new CapturingPushScheduler();
         var unitOfWork = new RecordingCancellationUnitOfWork(new EfUnitOfWork(deliveryDatabase));
         var deliveryService = new PushNotificationDeliveryService(
@@ -464,7 +462,7 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
             => inner.BeginTransactionAsync(cancellationToken);
     }
 
-    private sealed class RotatingInvalidTokenSender(Func<string?> readTrackedToken) : IPushProviderSender
+    private sealed class RotatingInvalidTokenSender : IPushProviderSender
     {
         private readonly TaskCompletionSource _deliveryStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _returnInvalidToken = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -472,11 +470,11 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
         public string? TokenObservedDuringDelivery { get; private set; }
 
         public async Task<PushSendAttemptResult> SendAsync(
-            Id<PushInstallation> installationId,
+            PushInstallationDeliveryTarget target,
             PushEventPayload payload,
             CancellationToken cancellationToken = default)
         {
-            TokenObservedDuringDelivery = readTrackedToken();
+            TokenObservedDuringDelivery = target.FcmToken;
             _deliveryStarted.TrySetResult();
             await _returnInvalidToken.Task.WaitAsync(TimeSpan.FromSeconds(10));
             return new PushSendAttemptResult(PushSendOutcome.InvalidToken, "BadRequest", null, "UNREGISTERED", "unregistered");
