@@ -1027,6 +1027,41 @@ public sealed class DietPlansApiTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task TrainerDietPlanCreateAndUpdate_TextAbovePersistedMaximums_ReturnBadRequestWithoutPersistence()
+    {
+        var trainer = await SeedTrainerAsync("trainer-diet-boundary-author", "trainer-diet-boundary-author@example.com");
+        var trainee = await SeedUserAsync("trainer-diet-boundary-owner", "trainer-diet-boundary-owner@example.com", "password123");
+        await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
+        SetAuthorizationHeader(trainer.Id);
+        var plan = await CreateDietAsync(trainee.Id, "Trainer boundary diet", false);
+        var originalSnapshot = await GetDietPlanSnapshotAsync(plan.Id);
+        var originalCounts = await GetDietPersistenceCountsAsync();
+        var maximumName = new string('n', 120);
+        var maximumNotes = new string('p', 2000);
+        var maximumMealName = new string('m', 160);
+        var maximumMealDescription = new string('d', 2000);
+        var invalidRequests = new[]
+        {
+            (Field: "plan name", Request: BoundaryDietRequest(new string('n', 121), maximumNotes, maximumMealName, maximumMealDescription)),
+            (Field: "plan notes", Request: BoundaryDietRequest(maximumName, new string('p', 2001), maximumMealName, maximumMealDescription)),
+            (Field: "meal name", Request: BoundaryDietRequest(maximumName, maximumNotes, new string('m', 161), maximumMealDescription)),
+            (Field: "meal description", Request: BoundaryDietRequest(maximumName, maximumNotes, maximumMealName, new string('d', 2001)))
+        };
+
+        foreach (var invalid in invalidRequests)
+        {
+            using var createResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans", invalid.Request);
+            createResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{invalid.Field} exceeds its persisted maximum by one character");
+
+            using var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/update", invalid.Request);
+            updateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{invalid.Field} exceeds its persisted maximum by one character");
+        }
+
+        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalSnapshot);
+        (await GetDietPersistenceCountsAsync()).Should().Be(originalCounts);
+    }
+
+    [Test]
     public async Task TrainerRoleDietOwner_UsingTrainerUpdateRoute_PreservesIsActive()
     {
         var author = await SeedTrainerAsync("trainer-route-diet-author", "trainer-route-diet-author@example.com");
