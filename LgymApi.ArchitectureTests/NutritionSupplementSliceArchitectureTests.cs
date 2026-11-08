@@ -97,6 +97,11 @@ public sealed class NutritionSupplementSliceArchitectureTests
             return true;
         }
 
+        if (type == typeof(LgymApi.Authorization.Contracts.AuthorizationActor))
+        {
+            return true;
+        }
+
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(LgymApi.Domain.ValueObjects.Id<>))
         {
             return type.GetGenericArguments().Single() is var argument

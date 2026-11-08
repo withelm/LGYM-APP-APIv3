@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 817;
+    private const int ManifestEntryCount = 822;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -70,6 +70,11 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAccountAccessOwnerCapabilityExtension`1",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAuthenticatedAccountAccessCapabilitiesService",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.NotificationsAccountAccessOwnerCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.NutritionAccountAccessOwnerCapabilities",
+        "LgymApi.Application/Nutrition/ApiAdapters/DietPlanApiAdapterContracts.cs\tLgymApi.Application.Nutrition.ApiAdapters.DietPlanOwnGetAccountQuery",
+        "LgymApi.Application/Nutrition/ApiAdapters/DietPlanApiAdapterContracts.cs\tLgymApi.Application.Nutrition.ApiAdapters.DietPlanOwnUpdateAccountCommand",
+        "LgymApi.Application/Nutrition/DietPlans/UpdateOwnDietPlan/Contracts/IUpdateOwnDietPlanUseCase.cs\tLgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan.Contracts.IUpdateOwnDietPlanUseCase",
+        "LgymApi.Application/Nutrition/DietPlans/UpdateOwnDietPlan/UpdateOwnDietPlanCommand.cs\tLgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan.UpdateOwnDietPlanCommand",
         "LgymApi.Notifications/IDisabledPushInstallationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IDisabledPushInstallationRetentionCleanupService",
         "LgymApi.Notifications/IInAppNotificationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IInAppNotificationRetentionCleanupService",
         "LgymApi.Notifications/IPushNotificationMessageRetentionCleanupService.cs\tLgymApi.Application.Notifications.IPushNotificationMessageRetentionCleanupService",
