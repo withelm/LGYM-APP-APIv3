@@ -33,10 +33,10 @@ public sealed class GetTraineeDietPlansUseCaseTests
         var dependencies = new Dependencies();
         dependencies.Access.GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None)
             .Returns(new CoachingRelationshipAccessDecision(true, true));
-        dependencies.Plans.ListPlansByTrainerAndTraineeAsync(trainerId, traineeId, CancellationToken.None)
+        dependencies.Plans.ListPlansByTraineeAsync(traineeId, CancellationToken.None)
             .Returns(plans);
 
-        var result = await dependencies.CreateUseCase().ExecuteAsync(new GetTraineeDietPlansQuery(trainerId, traineeId));
+        var result = await dependencies.CreateUseCase().ExecuteAsync(new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Select(plan => plan.Name).Should().Equal(plans.Select(plan => plan.Name));
@@ -48,7 +48,7 @@ public sealed class GetTraineeDietPlansUseCaseTests
             new DateOnly(2026, 7, 4));
         result.Value.Select(plan => plan.CreatedAt).Should().Equal(plans.Select(plan => plan.CreatedAt));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None);
-        await dependencies.Plans.Received(1).ListPlansByTrainerAndTraineeAsync(trainerId, traineeId, CancellationToken.None);
+        await dependencies.Plans.Received(1).ListPlansByTraineeAsync(traineeId, CancellationToken.None);
         dependencies.Plans.ReceivedCalls().Should().ContainSingle();
     }
 
@@ -59,7 +59,7 @@ public sealed class GetTraineeDietPlansUseCaseTests
         var dependencies = new Dependencies();
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlansQuery(trainerId, Id<UserEntity>.Empty));
+            new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<UserEntity>.Empty));
 
         result.Error.Should().BeOfType<BadRequestError>();
         result.Error.Message.Should().Be(Messages.UserIdRequired);
@@ -79,7 +79,7 @@ public sealed class GetTraineeDietPlansUseCaseTests
         dependencies.Access.GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None)
             .Returns(new CoachingRelationshipAccessDecision(false, false));
 
-        var result = await dependencies.CreateUseCase().ExecuteAsync(new GetTraineeDietPlansQuery(trainerId, traineeId));
+        var result = await dependencies.CreateUseCase().ExecuteAsync(new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
         result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
         result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
@@ -97,7 +97,7 @@ public sealed class GetTraineeDietPlansUseCaseTests
         dependencies.Access.GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None)
             .Returns(new CoachingRelationshipAccessDecision(true, false));
 
-        var result = await dependencies.CreateUseCase().ExecuteAsync(new GetTraineeDietPlansQuery(trainerId, traineeId));
+        var result = await dependencies.CreateUseCase().ExecuteAsync(new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
         result.Error.Should().BeOfType<NotFoundError>();
         result.Error.Message.Should().Be(Messages.DidntFind);
@@ -115,16 +115,16 @@ public sealed class GetTraineeDietPlansUseCaseTests
         var dependencies = new Dependencies();
         dependencies.Access.GetAccessDecisionAsync(trainerId, traineeId, cancellationToken)
             .Returns(new CoachingRelationshipAccessDecision(true, true));
-        dependencies.Plans.ListPlansByTrainerAndTraineeAsync(trainerId, traineeId, cancellationToken)
+        dependencies.Plans.ListPlansByTraineeAsync(traineeId, cancellationToken)
             .Returns([]);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlansQuery(trainerId, traineeId),
+            new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId),
             cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, cancellationToken);
-        await dependencies.Plans.Received(1).ListPlansByTrainerAndTraineeAsync(trainerId, traineeId, cancellationToken);
+        await dependencies.Plans.Received(1).ListPlansByTraineeAsync(traineeId, cancellationToken);
         dependencies.Plans.ReceivedCalls().Should().ContainSingle();
     }
 
@@ -154,7 +154,7 @@ public sealed class GetTraineeDietPlansUseCaseTests
         public IMapper Mapper { get; } = CreateMapper();
 
         public IGetTraineeDietPlansUseCase CreateUseCase()
-            => new GetTraineeDietPlansUseCase(Access, Plans, Mapper);
+            => new GetTraineeDietPlansUseCase(Access, Plans, Mapper, NutritionAuthorizationTestFactory.CreateDietCoordinator());
 
         private static IMapper CreateMapper()
         {

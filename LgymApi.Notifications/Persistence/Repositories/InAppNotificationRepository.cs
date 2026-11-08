@@ -49,6 +49,13 @@ internal sealed class InAppNotificationRepository : IInAppNotificationRepository
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
     }
 
+    public Task<bool> IsActiveAsync(Id<InAppNotification> id, CancellationToken cancellationToken = default)
+    {
+        return _persistenceContext.InAppNotifications
+            .AsNoTracking()
+            .AnyAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<InAppNotification>> GetPageAsync(
         Id<User> userId,
         int limit,
@@ -100,6 +107,18 @@ internal sealed class InAppNotificationRepository : IInAppNotificationRepository
         return _persistenceContext.InAppNotifications
             .AsNoTracking()
             .CountAsync(x => x.RecipientId == userId && !x.IsRead && !x.IsDeleted, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<InAppNotification>> GetUnreadAsync(
+        Id<User> userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _persistenceContext.InAppNotifications
+            .AsNoTracking()
+            .Where(notification => notification.RecipientId == userId
+                && !notification.IsRead
+                && !notification.IsDeleted)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<InAppNotification>> GetRetentionCandidatesCreatedBeforeAsync(

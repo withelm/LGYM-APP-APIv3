@@ -10,24 +10,30 @@ internal sealed class GetSupplementComplianceSummaryUseCase : IGetSupplementComp
 {
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
     private readonly ISupplementationPersistence _plans;
+    private readonly ISupplementationAuthorizationCoordinator _authorization;
 
     public GetSupplementComplianceSummaryUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
-        ISupplementationPersistence plans)
+        ISupplementationPersistence plans,
+        ISupplementationAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _plans = plans;
+        _authorization = authorization;
     }
 
     public async Task<Result<SupplementComplianceSummaryReadModel, AppError>> ExecuteAsync(
         GetSupplementComplianceSummaryQuery query,
         CancellationToken cancellationToken = default)
     {
+        var actorId = query.Actor.Id.Rebind<LgymApi.Domain.Entities.User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            query.TrainerId,
+            actorId,
             query.TraineeId,
             cancellationToken);
         var accessError = SupplementationAccess.GetTrainerAccessError(
+            _authorization,
+            query.Actor,
             access.IsTrainer,
             access.HasActiveRelationship,
             query.TraineeId);
@@ -43,7 +49,7 @@ internal sealed class GetSupplementComplianceSummaryUseCase : IGetSupplementComp
         }
 
         var activePlan = await _plans.GetActivePlanForTraineeAsync(query.TraineeId, cancellationToken);
-        if (activePlan is null || activePlan.TrainerId != query.TrainerId)
+        if (activePlan is null || activePlan.TrainerId != actorId)
         {
             return Result<SupplementComplianceSummaryReadModel, AppError>.Success(
                 new SupplementComplianceSummaryReadModel(

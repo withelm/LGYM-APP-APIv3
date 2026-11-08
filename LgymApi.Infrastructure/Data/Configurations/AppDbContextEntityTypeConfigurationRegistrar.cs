@@ -51,6 +51,7 @@ internal static class AppDbContextEntityTypeConfigurationRegistrar
     private static void ApplyCoaching(ModelBuilder modelBuilder)
     {
         Register(modelBuilder, new TrainerInvitationEntityTypeConfiguration());
+        Register(modelBuilder, new CoachingEpisodeEntityTypeConfiguration());
         Register(modelBuilder, new TrainerTraineeLinkEntityTypeConfiguration());
         Register(modelBuilder, new TraineeNoteEntityTypeConfiguration());
         Register(modelBuilder, new TraineeNoteHistoryEntityTypeConfiguration());

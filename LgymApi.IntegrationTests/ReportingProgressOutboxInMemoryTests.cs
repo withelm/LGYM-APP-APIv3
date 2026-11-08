@@ -59,6 +59,40 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
         await AssertPersistedOutcomeAsync(traineeId, 3);
     }
 
+    [Test]
+    public async Task AcceptedReportProgress_DispatchedAfterUnlink_RemainsProcessable()
+    {
+        var (traineeId, requestIds) = await SeedMeasurementRequestsAsync();
+        var requestId = requestIds[0];
+        await SeedRelationshipAsync(requestId, traineeId);
+        SetAuthorizationHeader(traineeId);
+
+        using (var response = await Client.PostAsJsonAsync(
+                   $"/api/trainee/report-requests/{requestId}/submit",
+                   new
+                   {
+                       answers = new
+                       {
+                           measurements = new
+                           {
+                               BodyWeight = new { value = 82.4, unit = MeasurementUnits.Kilograms.ToString() }
+                           }
+                       }
+                   }))
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        await RemoveRelationshipAsync(traineeId);
+        await using (var dispatchScope = Factory.Services.CreateAsyncScope())
+        {
+            await dispatchScope.ServiceProvider.GetRequiredService<ICommittedIntentDispatchJob>().ExecuteAsync();
+        }
+
+        await DeliverAsync(await ReadAcceptedEnvelopeIdsAsync());
+        await AssertPersistedOutcomeAsync(traineeId, 1);
+    }
+
     private async Task<(Id<User> TraineeId, IReadOnlyList<Id<ReportRequest>> RequestIds)> SeedMeasurementRequestsAsync()
     {
         await using var scope = Factory.Services.CreateAsyncScope();
@@ -106,6 +140,32 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
         await database.SaveChangesAsync();
 
         return (trainee.Id, requests.Select(request => request.Id).ToArray());
+    }
+
+    private async Task SeedRelationshipAsync(Id<ReportRequest> requestId, Id<User> traineeId)
+    {
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var trainerId = await database.ReportRequests
+            .Where(request => request.Id == requestId)
+            .Select(request => request.TrainerId)
+            .SingleAsync();
+        database.TrainerTraineeLinks.Add(new TrainerTraineeLink
+        {
+            Id = Id<TrainerTraineeLink>.New(),
+            TrainerId = trainerId,
+            TraineeId = traineeId
+        });
+        await database.SaveChangesAsync();
+    }
+
+    private async Task RemoveRelationshipAsync(Id<User> traineeId)
+    {
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var relationship = await database.TrainerTraineeLinks.SingleAsync(link => link.TraineeId == traineeId);
+        database.TrainerTraineeLinks.Remove(relationship);
+        await database.SaveChangesAsync();
     }
 
     private async Task<IReadOnlyList<Id<CommandEnvelope>>> ReadAcceptedEnvelopeIdsAsync()

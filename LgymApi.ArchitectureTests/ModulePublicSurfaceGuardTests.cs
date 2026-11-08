@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 799;
+    private const int ManifestEntryCount = 824;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -35,6 +35,11 @@ public sealed class ModulePublicSurfaceGuardTests
     [
         "LgymApi.Identity/Contracts/Approval/ITrainerApprovalService.cs\tLgymApi.Identity.Contracts.Approval.ITrainerApprovalService",
         "LgymApi.Identity/Contracts/Approval/ITrainerApprovalService.cs\tLgymApi.Identity.Contracts.Approval.TrainerApplication",
+        "LgymApi.Application/Coaching/Contracts/Access/ICoachingEpisodeAuthorizationService.cs\tLgymApi.Application.Coaching.Contracts.Access.CoachingEpisodeAuthorizationAction",
+        "LgymApi.Application/Coaching/Contracts/Access/ICoachingEpisodeAuthorizationService.cs\tLgymApi.Application.Coaching.Contracts.Access.CoachingEpisodeAuthorizationGrant",
+        "LgymApi.Application/Coaching/Contracts/Access/ICoachingEpisodeAuthorizationService.cs\tLgymApi.Application.Coaching.Contracts.Access.ICoachingEpisodeAuthorizationService",
+        "LgymApi.Application/Coaching/Persistence/CoachingPersistenceModels.cs\tLgymApi.Application.Coaching.Persistence.CoachingEpisodeFact",
+        "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.ReportingRelationshipPeriodFact",
         "LgymApi.Reporting/Options/PhotoStorageOptions.cs\tLgymApi.Application.Options.PhotoStorageOptions",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.LocalCalendarDay",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.UtcTimeRange",
@@ -56,12 +61,32 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Application/Reporting/Errors/ReportingErrors.cs\tLgymApi.Application.Reporting.Errors.ReportingConflictError",
         "LgymApi.Platform/Repositories/IActorRowSecurityScopeFactory.cs\tLgymApi.Application.Repositories.IActorRowSecurityScopeFactory",
         "LgymApi.Identity/Contracts/Accounts/IAccountPushInstallationCleanupPort.cs\tLgymApi.Application.Identity.Contracts.Accounts.IAccountPushInstallationCleanupPort",
+        "LgymApi.Identity/Contracts/Authorization/AuthenticatedAccountAuthorizationContracts.cs\tLgymApi.Identity.Contracts.Authorization.GlobalPermissionAuthorizationContext",
+        "LgymApi.Identity/Contracts/Authorization/AuthenticatedAccountAuthorizationContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAuthenticatedAccountAuthorizationService",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessCapabilityOwner",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessOwnerCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAccountAccessOwnerCapabilityExtension",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessApplicationCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessOwnerExtensions",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAccountAccessOwnerCapabilityExtension`1",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAuthenticatedAccountAccessCapabilitiesService",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.NotificationsAccountAccessOwnerCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.NutritionAccountAccessOwnerCapabilities",
+        "LgymApi.Application/Nutrition/ApiAdapters/DietPlanApiAdapterContracts.cs\tLgymApi.Application.Nutrition.ApiAdapters.DietPlanOwnGetAccountQuery",
+        "LgymApi.Application/Nutrition/ApiAdapters/DietPlanApiAdapterContracts.cs\tLgymApi.Application.Nutrition.ApiAdapters.DietPlanOwnUpdateAccountCommand",
+        "LgymApi.Application/Nutrition/DietPlans/UpdateOwnDietPlan/Contracts/IUpdateOwnDietPlanUseCase.cs\tLgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan.Contracts.IUpdateOwnDietPlanUseCase",
+        "LgymApi.Application/Nutrition/DietPlans/UpdateOwnDietPlan/UpdateOwnDietPlanCommand.cs\tLgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan.UpdateOwnDietPlanCommand",
         "LgymApi.Notifications/IDisabledPushInstallationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IDisabledPushInstallationRetentionCleanupService",
         "LgymApi.Notifications/IInAppNotificationRetentionCleanupService.cs\tLgymApi.Application.Notifications.IInAppNotificationRetentionCleanupService",
         "LgymApi.Notifications/IPushNotificationMessageRetentionCleanupService.cs\tLgymApi.Application.Notifications.IPushNotificationMessageRetentionCleanupService",
+        "LgymApi.Notifications/NotificationReplayAccessService.cs\tLgymApi.Application.Notifications.INotificationReplayAccessService",
+        "LgymApi.Notifications/NotificationReplayAccessService.cs\tLgymApi.Application.Notifications.NotificationReplayResourceKind",
+        "LgymApi.Notifications/Contracts/Push/PushInstallationDeliveryTarget.cs\tLgymApi.Application.Notifications.Contracts.Push.PushInstallationDeliveryTarget",
         "LgymApi.Application/MainRecords/Models/BestMainRecordsWithTranslations.cs\tLgymApi.Application.Features.MainRecords.Models.BestMainRecordsWithTranslations",
         "LgymApi.Application/Training/Models/TrainingsByDateWithTranslations.cs\tLgymApi.Application.Features.Training.Models.TrainingsByDateWithTranslations",
-        "LgymApi.Application/WorkoutProgress/Dashboard/Models/WorkoutProgressDashboardTrainingsWithTranslations.cs\tLgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardTrainingsWithTranslations"
+        "LgymApi.Application/WorkoutProgress/Dashboard/Models/WorkoutProgressDashboardTrainingsWithTranslations.cs\tLgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardTrainingsWithTranslations",
+        "LgymApi.Application/WorkoutProgress/Authorization/WorkoutProgressOwnershipAuthorization.cs\tLgymApi.Application.WorkoutProgress.Authorization.IWorkoutProgressOwnershipAuthorizationService"
     ];
 
 

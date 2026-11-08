@@ -188,9 +188,11 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
                 access,
                 new SupplementationPersistenceRepository(writeContext),
                 new ThrowingUnitOfWork(),
-                CreateMapper());
+                CreateMapper(),
+                NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
 
             await FluentActions.Awaiting(() => useCase.ExecuteAsync(new(
+                NutritionAuthorizationTestFactory.CreateActor(trainerId),
                 trainerId,
                 traineeId,
                 oldPlan.Id,
@@ -258,10 +260,10 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
             Id<SupplementPlan> planId,
             Id<User>? traineeId = null,
             SupplementPlanUpsertData? data = null)
-            => new(TrainerId, traineeId ?? TraineeId, planId, data ?? ValidData());
+            => new(NutritionAuthorizationTestFactory.CreateActor(TrainerId), TrainerId, traineeId ?? TraineeId, planId, data ?? ValidData());
 
         public UpdateTraineeSupplementPlanUseCase CreateUseCase()
-            => new(Access, Plans, UnitOfWork, CreateMapper());
+            => new(Access, Plans, UnitOfWork, CreateMapper(), NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
     }
 
     private sealed class ThrowingUnitOfWork : IUnitOfWork

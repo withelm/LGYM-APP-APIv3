@@ -73,7 +73,8 @@ internal static class PhotoServiceTestFactory
         IUnitOfWork? unitOfWork = null,
         IReportPhotoPersistence? photoUploadInitTracker = null,
         PhotoStorageOptions? photoStorageOptions = null,
-        IAccountLookupService? accountLookupService = null)
+        IAccountLookupService? accountLookupService = null,
+        Func<Id<User>, Id<User>, CancellationToken, Task<ReportingRelationshipAccessFact>>? relationshipAccessFact = null)
     {
         var requestPersistence = Substitute.For<IReportRequestSubmissionPersistence>();
         if (findRequestById != null)
@@ -93,12 +94,17 @@ internal static class PhotoServiceTestFactory
                 Arg.Any<CancellationToken>())
             .Returns(async callInfo =>
             {
+                var trainerId = callInfo.ArgAt<Id<AccountReference>>(0).Rebind<User>();
+                var traineeId = callInfo.ArgAt<Id<AccountReference>>(1).Rebind<User>();
+                var cancellationToken = callInfo.ArgAt<CancellationToken>(2);
+                if (relationshipAccessFact is not null)
+                {
+                    return await relationshipAccessFact(trainerId, traineeId, cancellationToken);
+                }
+
                 var hasAccess = relationshipAccess is not null
-                    && await relationshipAccess(
-                        callInfo.ArgAt<Id<AccountReference>>(0).Rebind<User>(),
-                        callInfo.ArgAt<Id<AccountReference>>(1).Rebind<User>(),
-                        callInfo.ArgAt<CancellationToken>(2));
-             return new ReportingRelationshipAccessFact(hasAccess);
+                    && await relationshipAccess(trainerId, traineeId, cancellationToken);
+                return new ReportingRelationshipAccessFact(hasAccess);
          });
 
         var accountLookup = accountLookupService ?? CreateActiveAccountLookup();

@@ -184,6 +184,7 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
             var planDay = new PlanDay { Id = Id<PlanDay>.New(), PlanId = plan.Id, Name = "Slice day" };
             var gym = new Gym { Id = Id<Gym>.New(), UserId = trainee.Id, Name = gymName };
             var exercise = new Exercise { Id = exerciseId, Name = "Slice squat", BodyPart = BodyParts.Quads };
+            var foreignExercise = new Exercise { Id = Id<Exercise>.New(), UserId = trainer.Id, Name = "Trainer private exercise", BodyPart = BodyParts.Back };
             var training = new Training
             {
                 Id = Id<Training>.New(),
@@ -207,14 +208,34 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
             database.Plans.Add(plan);
             database.PlanDays.Add(planDay);
             database.Gyms.Add(gym);
-            database.Exercises.Add(exercise);
+            database.Exercises.AddRange(exercise, foreignExercise);
             database.Trainings.Add(training);
             database.ExerciseScores.Add(score);
+            var foreignScore = new ExerciseScore
+            {
+                Id = Id<ExerciseScore>.New(),
+                ExerciseId = foreignExercise.Id,
+                UserId = trainee.Id,
+                Reps = 5,
+                Series = 2,
+                Weight = 90,
+                Unit = WeightUnits.Kilograms,
+                TrainingId = training.Id,
+                CreatedAt = createdAt
+            };
+            database.ExerciseScores.Add(foreignScore);
             database.TrainingExerciseScores.Add(new TrainingExerciseScore
             {
                 Id = Id<TrainingExerciseScore>.New(),
                 TrainingId = training.Id,
                 ExerciseScoreId = score.Id
+            });
+            database.TrainingExerciseScores.Add(new TrainingExerciseScore
+            {
+                Id = Id<TrainingExerciseScore>.New(),
+                TrainingId = training.Id,
+                ExerciseScoreId = foreignScore.Id,
+                Order = 1
             });
             database.EloRegistries.Add(new EloRegistry
             {
@@ -251,6 +272,7 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
         dates.Value.Should().ContainSingle();
         byDate.IsSuccess.Should().BeTrue();
         byDate.Value.Trainings.Should().ContainSingle(item => item.Gym == gymName);
+        byDate.Value.Trainings.Single().Exercises.Should().ContainSingle(item => item.ExerciseDetails.Id == exerciseId.ToString());
         scores.IsSuccess.Should().BeTrue();
         scores.Value.Should().ContainSingle(item => item.ExerciseId == exerciseId);
         elo.IsSuccess.Should().BeTrue();

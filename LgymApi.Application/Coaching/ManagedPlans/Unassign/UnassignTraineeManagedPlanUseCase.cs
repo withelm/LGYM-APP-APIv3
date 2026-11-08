@@ -10,15 +10,18 @@ namespace LgymApi.Application.Coaching.ManagedPlans.Unassign;
 internal sealed class UnassignTraineeManagedPlanUseCase : IUnassignTraineeManagedPlanUseCase
 {
     private readonly IMarkerCoachingRelationshipAccessService _relationshipAccess;
+    private readonly ICoachingEpisodeAuthorizationService _episodeAuthorization;
     private readonly OwnerUnassignUseCase _owner;
     private readonly IMapper _mapper;
 
     public UnassignTraineeManagedPlanUseCase(
         IMarkerCoachingRelationshipAccessService relationshipAccess,
+        ICoachingEpisodeAuthorizationService episodeAuthorization,
         OwnerUnassignUseCase owner,
         IMapper mapper)
     {
         _relationshipAccess = relationshipAccess;
+        _episodeAuthorization = episodeAuthorization;
         _owner = owner;
         _mapper = mapper;
     }
@@ -36,6 +39,9 @@ internal sealed class UnassignTraineeManagedPlanUseCase : IUnassignTraineeManage
         {
             return Result<Unit, AppError>.Failure(accessError);
         }
+
+        if (await _episodeAuthorization.AuthorizeAndStageAsync(command.TrainerId, command.TrainerId, command.TraineeId, CoachingEpisodeAuthorizationAction.ProtectedWrite, cancellationToken) is null)
+            return Result<Unit, AppError>.Failure(new LgymApi.Application.Coaching.Errors.TrainerRelationshipNotFoundError(LgymApi.Resources.Messages.DidntFind));
 
         var ownerCommand = _mapper.Map<UnassignTraineeManagedPlanCommand, OwnerUnassignCommand>(command, _mapper.CreateContext());
         return await _owner.ExecuteAsync(ownerCommand, cancellationToken);

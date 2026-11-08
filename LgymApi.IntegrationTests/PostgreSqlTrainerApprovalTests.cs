@@ -146,12 +146,12 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
             {
                 await before.Database.ExecuteSqlInterpolatedAsync($"""
                     INSERT INTO "Users" ("Id", "Name", "Email", "PreferredLanguage", "PreferredTimeZone", "ProfileRank", "IsVisibleInRanking", "IsBlocked", "IsDeleted", "CreatedAt", "UpdatedAt")
-                    VALUES ({id.Value}, {name}, {name + "@example.test"}, 'en', 'UTC', 'Junior 1', TRUE, FALSE, {deleted}, {created}, {created})
+                    VALUES (CAST({id.ToString()} AS uuid), {name}, {name + "@example.test"}, 'en', 'UTC', 'Junior 1', TRUE, FALSE, {deleted}, {created}, {created})
                     """);
             }
             foreach (var id in new[] { trainerId, deletedId })
                 await before.Database.ExecuteSqlInterpolatedAsync($"""
-                    INSERT INTO "UserRoles" ("UserId", "RoleId") VALUES ({id.Value}, {RoleSeedDataConfiguration.TrainerRoleSeedId.Value})
+                    INSERT INTO "UserRoles" ("UserId", "RoleId") VALUES (CAST({id.ToString()} AS uuid), CAST({RoleSeedDataConfiguration.TrainerRoleSeedId.ToString()} AS uuid))
                     """);
             await before.Database.MigrateAsync();
         }

@@ -39,7 +39,7 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
             .Returns([mappedNewer, mappedOlder]);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanHistoryQuery(trainerId, traineeId, plan.Id));
+            new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Equal(mappedNewer, mappedOlder);
@@ -56,7 +56,7 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
         var dependencies = new Dependencies();
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanHistoryQuery(Id<User>.New(), Id<User>.Empty, Id<DietPlan>.New()));
+            new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(Id<User>.New()), Id<User>.New(), Id<User>.Empty, Id<DietPlan>.New()));
 
         result.Error.Should().BeOfType<BadRequestError>();
         result.Error.Message.Should().Be(Messages.UserIdRequired);
@@ -73,7 +73,7 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(false, true));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanHistoryQuery(trainerId, traineeId, Id<DietPlan>.New()));
+            new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
         result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
         result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
@@ -90,7 +90,7 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(true, false));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanHistoryQuery(trainerId, traineeId, Id<DietPlan>.New()));
+            new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
         result.Error.Should().BeOfType<NotFoundError>();
         result.Error.Message.Should().Be(Messages.DidntFind);
@@ -107,12 +107,12 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
         dependencies.Access.GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(true, true));
         dependencies.Plans.GetPlanByIdAsync(planId, Arg.Any<CancellationToken>())
-            .Returns(null, CreatePlan(Id<User>.New(), traineeId, planId), CreatePlan(trainerId, traineeId, planId, true));
+            .Returns(null, CreatePlan(trainerId, Id<User>.New(), planId), CreatePlan(trainerId, traineeId, planId, true));
 
         foreach (var attempt in Enumerable.Range(0, 3))
         {
             var result = await dependencies.CreateUseCase().ExecuteAsync(
-                new GetTraineeDietPlanHistoryQuery(trainerId, traineeId, planId));
+                new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, planId));
 
             result.Error.Should().BeOfType<NotFoundError>();
             result.Error.Message.Should().Be(Messages.DidntFind);
@@ -162,6 +162,6 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
         public IMapper Mapper { get; } = Substitute.For<IMapper>();
 
         public IGetTraineeDietPlanHistoryUseCase CreateUseCase()
-            => new GetTraineeDietPlanHistoryUseCase(Access, Plans, Mapper);
+            => new GetTraineeDietPlanHistoryUseCase(Access, Plans, Mapper, NutritionAuthorizationTestFactory.CreateDietCoordinator());
     }
 }

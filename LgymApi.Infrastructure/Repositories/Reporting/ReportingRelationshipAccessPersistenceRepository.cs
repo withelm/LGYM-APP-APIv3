@@ -22,6 +22,15 @@ public sealed class ReportingRelationshipAccessPersistenceRepository : IReportin
         var hasActiveRelationship = await _dbContext.TrainerTraineeLinks
             .AsNoTracking()
             .AnyAsync(link => link.TrainerId == persistedTrainerId && link.TraineeId == persistedTraineeId, cancellationToken);
-        return new ReportingRelationshipAccessFact(hasActiveRelationship);
+        var relationshipPeriods = await _dbContext.CoachingEpisodes
+            .AsNoTracking()
+            .Where(episode => episode.TrainerId == persistedTrainerId && episode.TraineeId == persistedTraineeId)
+            .OrderBy(episode => episode.CreatedAt)
+            .Select(episode => new ReportingRelationshipPeriodFact(
+                episode.StartedAt,
+                episode.EndedAt,
+                episode.StartedAtProvenance))
+            .ToListAsync(cancellationToken);
+        return new ReportingRelationshipAccessFact(hasActiveRelationship, relationshipPeriods);
     }
 }

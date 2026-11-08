@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.IntegrationTests.Authorization;
@@ -42,14 +43,14 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     private static readonly string[] ApprovedAccessFacets =
     [
         "actor-derived-subject", "foreign-object", "owned-resource", "global-visible",
-        "manager-override", "opaque-capability", "relationship-revocable"
+        "manager-override", "opaque-capability", "relationship-revocable", "source-episode-history"
     ];
 
     private static readonly string[] ApprovedEvidenceCategories =
     [
         "anonymous-intended-behavior", "invalid-capability-denial", "expired-capability-denial", "tampered-capability-denial",
         "owner-allow", "anonymous-denial", "no-client-subject", "foreign-object-denial-no-mutation",
-        "active-relationship-allow", "unrelated-relationship-denial", "former-relationship-denial",
+        "active-relationship-allow", "unrelated-relationship-denial", "former-relationship-denial", "source-episode-history-allow",
         "current-permission-allow", "ordinary-user-denial", "stale-token-demotion-denial",
         "ordinary-authenticated-allow", "owner-custom-allow", "foreign-custom-denial", "global-resource-allow",
         "current-manager-allow", "stale-manager-denial", "ordinary-manager-denial"
@@ -71,12 +72,19 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     [
         "credential-or-token-current;future-replay-review", "idempotent-current;future-replay-review",
         "private-photo-current;future-replay-review", "private-response-current;no-replay-contract",
-        "non-sensitive-current;no-replay-contract", "opaque-capability-current-contract"
+        "non-sensitive-current;no-replay-contract", "opaque-capability-current-contract",
+        "credential-or-token-current;generic-idempotency-foundation-complete;public-replay-policy-current",
+        "idempotent-current;generic-idempotency-foundation-complete;identity-replay-policy-current",
+        "idempotent-current;generic-idempotency-foundation-complete;workout-progress-replay-policy-deferred",
+        "credential-or-token-current;notifications-installation-current-replay",
+        "private-response-current;notifications-installation-current-replay",
+        "private-response-current;notifications-source-current-replay",
+        "private-response-current;notifications-actor-current-replay"
     ];
 
     private static readonly string[] ApprovedMigrationTasks =
     [
-        "AUTH-K05", "AUTH-P01", "AUTH-P02", "AUTH-A01", "AUTH-A02", "AUTH-A03", "AUTH-A04",
+        "AUTH-K04", "AUTH-K05", "AUTH-P01", "AUTH-P02", "AUTH-A01", "AUTH-A02", "AUTH-A03", "AUTH-A04",
         "AUTH-A05", "AUTH-A06", "AUTH-A07", "AUTH-A08", "AUTH-A09", "AUTH-A10", "AUTH-A11"
     ];
 
@@ -104,10 +112,9 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     [AuthorizationEvidence("GET", "/api/own/{id}", "own", "owner-allow")]
     [AuthorizationEvidence("GET", "/api/own/{id}", "own", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/own/{id}", "own", "foreign-object-denial-no-mutation")]
-    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/plans", "trainer-shared", "active-relationship-allow")]
-    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/plans", "trainer-shared", "unrelated-relationship-denial")]
-    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/plans", "trainer-shared", "former-relationship-denial")]
-    [AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/plans", "trainer-shared", "anonymous-denial")]
+    [AuthorizationEvidence("GET", "/api/source-history/{id}", "own", "owner-allow")]
+    [AuthorizationEvidence("GET", "/api/source-history/{id}", "own", "anonymous-denial")]
+    [AuthorizationEvidence("GET", "/api/source-history/{id}", "own", "source-episode-history-allow")]
     [AuthorizationEvidence("GET", "/api/admin/users/{id}", "admin", "current-permission-allow")]
     [AuthorizationEvidence("GET", "/api/admin/users/{id}", "admin", "ordinary-user-denial")]
     [AuthorizationEvidence("GET", "/api/admin/users/{id}", "admin", "stale-token-demotion-denial")]
@@ -278,7 +285,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         [
             "GET|/swagger/v1/swagger.json|Program.swagger-json|anonymous-development-only",
             "GET|/swagger/{**path}|Program.swagger-ui|anonymous-development-only",
-            "GET|/hangfire|ProgramHangfire.ConfigureRecurringJobs|admin-role-or-permission"
+            "GET|/hangfire|ProgramHangfire.ConfigureDashboard|policy.admin.access"
         ]);
     }
 
@@ -310,6 +317,39 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             var documentedRow = documented.Single(row => row.EntryPoint == type.Name);
             documentedRow.Methods.Should().Be(GetPublicJobSignature(type), $"{type.Name} must keep its persisted public job signature");
         }
+    }
+
+    [Test]
+    public void TechnicalAcceptanceEvidence_IsClosedAndEveryLocatorResolves()
+    {
+        var matrix = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "docs", "validation", "issue-395-validation-matrix.md"));
+        var inventory = ReadTechnicalInventory(matrix);
+        var acceptance = ReadTechnicalAcceptanceEvidence(matrix);
+
+        AssertTechnicalAcceptanceIsClosed(inventory, acceptance);
+        foreach (var row in acceptance)
+        {
+            foreach (var locator in SplitTechnicalEvidenceLocators(row.PositiveEvidence)
+                         .Concat(SplitTechnicalEvidenceLocators(row.NegativeEvidence)))
+            {
+                AssertTechnicalEvidenceLocatorResolves(locator, row.TechnicalEntry);
+            }
+        }
+    }
+
+    [Test]
+    public void TechnicalAcceptanceEvidence_RejectsUnmappedEntriesAndInvalidLocators()
+    {
+        var inventory = new[]
+        {
+            new TechnicalInventoryRow("http-endpoint", "GET", "/health/live", "Program.health-live", "platform-reference-data", "anonymous", "public", "non-sensitive-current;no-replay-contract", "AUTH-A11")
+        };
+
+        Action unmapped = () => AssertTechnicalAcceptanceIsClosed(inventory, []);
+        Action invalidLocator = () => AssertTechnicalEvidenceLocatorResolves("MissingFixture.MissingTest", "http-endpoint Program.health-live");
+
+        unmapped.Should().Throw<AssertionException>().WithMessage("*technical acceptance evidence must map every inventory entry exactly once*");
+        invalidLocator.Should().Throw<AssertionException>().WithMessage("*MissingFixture.MissingTest*executable NUnit test*");
     }
 
     private static string GetPublicJobSignature(Type type)
@@ -428,6 +468,25 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         localizedResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         using var localizedBody = JsonDocument.Parse(await localizedResponse.Content.ReadAsStringAsync());
         localizedBody.RootElement.GetProperty("errors").GetProperty("platform")[0].GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    [TestCase("POST", "/api/appConfig/createNewAppVersion/{id}", "policy.appconfig.manage")]
+    public void AuthA08_ScopedRoutes_DeclareTheirAuthenticationOrPermissionBoundary(
+        string method,
+        string route,
+        string? policy)
+    {
+        var endpoint = Factory.Services.GetServices<EndpointDataSource>()
+            .SelectMany(source => source.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(candidate =>
+                candidate.RoutePattern.RawText == route.TrimStart('/')
+                && candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains(method) == true);
+
+        var authorization = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>();
+        endpoint.Metadata.GetMetadata<IAllowAnonymous>().Should().BeNull();
+        authorization.Should().ContainSingle();
+        authorization.Single().Policy.Should().Be(policy);
     }
 
     [Test]
@@ -600,6 +659,78 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .OrderBy(row => row.Kind, StringComparer.Ordinal)
             .ThenBy(row => row.EntryPoint, StringComparer.Ordinal)
             .ToArray();
+    }
+
+    private static IReadOnlyList<TechnicalAcceptanceEvidenceRow> ReadTechnicalAcceptanceEvidence(string matrix)
+    {
+        var lines = matrix.Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
+        var headerIndex = Array.FindIndex(lines, line => line.StartsWith("| technical entry | positive executable evidence |", StringComparison.Ordinal));
+        headerIndex.Should().BeGreaterThanOrEqualTo(0, "the matrix must include its K01 technical acceptance evidence header");
+
+        return lines.Skip(headerIndex + 2)
+            .TakeWhile(line => line.StartsWith("| ", StringComparison.Ordinal))
+            .Select(ParseTechnicalAcceptanceEvidenceRow)
+            .ToArray();
+    }
+
+    private static TechnicalAcceptanceEvidenceRow ParseTechnicalAcceptanceEvidenceRow(string line)
+    {
+        var values = line.Trim().Trim('|').Split('|').Select(value => value.Trim()).ToArray();
+        values.Should().HaveCount(3, $"technical acceptance row '{line}' must define its entry and positive/negative evidence");
+        values.Should().NotContain(string.Empty, "technical acceptance evidence cannot be blank");
+        return new TechnicalAcceptanceEvidenceRow(values[0], values[1], values[2]);
+    }
+
+    private static void AssertTechnicalAcceptanceIsClosed(
+        IReadOnlyCollection<TechnicalInventoryRow> inventory,
+        IReadOnlyCollection<TechnicalAcceptanceEvidenceRow> acceptance)
+    {
+        var expected = inventory
+            .Select(row => $"{row.Kind} {row.EntryPoint}")
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+        var actual = acceptance
+            .Select(row => row.TechnicalEntry)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+
+        actual.Should().OnlyHaveUniqueItems("technical acceptance evidence cannot duplicate an inventory entry");
+        actual.Should().Equal(expected, "technical acceptance evidence must map every inventory entry exactly once");
+    }
+
+    private static IEnumerable<string> SplitTechnicalEvidenceLocators(string value) =>
+        value.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+    private static void AssertTechnicalEvidenceLocatorResolves(string locator, string technicalEntry)
+    {
+        var parts = locator.Split('.', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2)
+        {
+            throw new AssertionException($"'{technicalEntry}' locator '{locator}' must identify an executable NUnit test as Fixture.Method.");
+        }
+
+        var currentAssemblyFixture = typeof(EndpointContractMatrixTests).Assembly.GetTypes()
+            .SingleOrDefault(type => type.Name == parts[0]);
+        if (currentAssemblyFixture is not null)
+        {
+            _ = ResolveExecutableTestMethod(locator, technicalEntry, "technical acceptance evidence");
+            return;
+        }
+
+        var repositoryRoot = FindRepositoryRoot();
+        var fixtureFiles = Directory.GetFiles(repositoryRoot, $"{parts[0]}.cs", SearchOption.AllDirectories)
+            .Where(path => path.Split(Path.DirectorySeparatorChar)
+                .Any(segment => segment.EndsWith("Tests", StringComparison.Ordinal)))
+            .ToArray();
+        fixtureFiles.Should().ContainSingle($"'{technicalEntry}' locator '{locator}' must resolve to one executable NUnit test fixture");
+
+        var source = File.ReadAllText(fixtureFiles[0]);
+        var methodPattern = $@"(?<attributes>(?:\s*\[[^\]]+\]\s*)+)\s*(?:public|internal)\s+(?:async\s+)?(?:Task(?:<[^>]+>)?|void)\s+{Regex.Escape(parts[1])}\s*\(";
+        var method = Regex.Match(source, methodPattern, RegexOptions.CultureInvariant);
+        if (!method.Success || !Regex.IsMatch(method.Groups["attributes"].Value, @"\[(?:Test|TestCase|TestCaseSource)\b", RegexOptions.CultureInvariant))
+        {
+            throw new AssertionException($"'{technicalEntry}' locator '{locator}' must resolve to an executable NUnit test.");
+        }
     }
 
     private static TechnicalInventoryRow ParseTechnicalInventoryRow(string line)
@@ -818,6 +949,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     }
 
     [Test]
+    [AuthorizationEvidence("GET", "/api/account/access", "own", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/account/external-logins", "own", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/checkToken", "own", "anonymous-denial")]
     [AuthorizationEvidence("GET", "/api/deleteAccount", "own", "anonymous-denial")]
@@ -843,6 +975,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         var id = Id<AccountReference>.New().ToString();
         var requests = new Func<Task<HttpResponseMessage>>[]
         {
+            () => Client.GetAsync("/api/account/access"),
             () => Client.GetAsync("/api/account/external-logins"),
             () => Client.GetAsync("/api/checkToken"),
             () => Client.GetAsync("/api/deleteAccount"),
@@ -1144,6 +1277,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
                 "manager-override" => ["current-manager-allow", "stale-manager-denial", "ordinary-manager-denial"],
                 "opaque-capability" => ["invalid-capability-denial", "expired-capability-denial", "tampered-capability-denial"],
                 "relationship-revocable" => ["former-relationship-denial"],
+                "source-episode-history" => ["source-episode-history-allow"],
                 _ => []
             };
             foreach (var category in facetCategories)
@@ -1161,7 +1295,9 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .SetName("own actor-derived-subject profile is complete");
         yield return new TestCaseData("| GET | /api/own/{id} | ExampleController.GetOwn | authorize | none | 200,404 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | own | foreign-object | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")
             .SetName("own foreign-object profile is complete");
-        yield return new TestCaseData("| GET | /api/trainer/trainees/{traineeId}/plans | TrainerManagedPlansController.GetTraineePlans | policy.trainer.access | none | 200 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | trainer-shared | relationship-revocable | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")
+        yield return new TestCaseData("| GET | /api/source-history/{id} | ExampleController.GetSourceHistory | authorize | none | 200,404 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | own | source-episode-history | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")
+            .SetName("own source-episode-history profile is complete");
+        yield return new TestCaseData("| GET | /api/trainer/trainees/{traineeId}/plans | TrainerManagedPlansController.GetTraineePlans | policy.trainer.access | none | 200 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | trainer-shared | relationship-revocable | AuthQ01FixtureTests.ManagedPlanList_UsesCanonicalActorsAndRelationshipStates |")
             .SetName("trainer-shared relationship-revocable profile is complete");
         yield return new TestCaseData("| GET | /api/admin/users/{id} | AdminUserController.GetUser | policy.admin.access | none | 200,404 | application/json | ContractCompatibilityTests | TypedIdEfTests | EnumLookupResponseSnapshotTests | RequestLocalizationIntegrationTests | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | admin | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles |")
             .SetName("admin profile is complete");
@@ -1265,6 +1401,11 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         string Scope,
         string SensitiveReplay,
         string MigrationTasks);
+
+    private sealed record TechnicalAcceptanceEvidenceRow(
+        string TechnicalEntry,
+        string PositiveEvidence,
+        string NegativeEvidence);
 
     private sealed record MatrixRow(
         string Method,

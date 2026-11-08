@@ -1,5 +1,6 @@
 using System.Text;
 using LgymApi.Api.Constants;
+using LgymApi.Api.Authorization;
 using LgymApi.Api.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
@@ -63,7 +64,10 @@ public static class ApiAuthenticationExtensions
                     },
                     OnForbidden = context =>
                     {
-                        return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status403Forbidden, Messages.Unauthorized, context.HttpContext.RequestAborted);
+                        var message = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<LegacyForbiddenResponseAttribute>() is not null
+                            ? Messages.Forbidden
+                            : Messages.Unauthorized;
+                        return ErrorResponseWriter.WriteAsync(context.HttpContext, StatusCodes.Status403Forbidden, message, context.HttpContext.RequestAborted);
                     }
                 };
             });

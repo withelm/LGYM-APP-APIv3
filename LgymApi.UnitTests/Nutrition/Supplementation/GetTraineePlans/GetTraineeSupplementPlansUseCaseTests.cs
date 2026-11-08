@@ -37,7 +37,7 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
             .Returns(plans);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeSupplementPlansQuery(trainerId, traineeId));
+            new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Select(plan => plan.Name).Should().Equal("Newest", "Older");
@@ -56,7 +56,7 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(false, true));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeSupplementPlansQuery(trainerId, Id<UserEntity>.Empty));
+            new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<UserEntity>.Empty));
 
         result.Error.Should().BeOfType<SupplementationForbiddenError>();
         result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
@@ -73,7 +73,7 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(true, true));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeSupplementPlansQuery(trainerId, Id<UserEntity>.Empty));
+            new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<UserEntity>.Empty));
 
         result.Error.Should().BeOfType<InvalidSupplementationError>();
         result.Error.Message.Should().Be(Messages.UserIdRequired);
@@ -91,7 +91,7 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(true, false));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeSupplementPlansQuery(trainerId, traineeId));
+            new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
         result.Error.Should().BeOfType<SupplementationNotFoundError>();
         result.Error.Message.Should().Be(Messages.DidntFind);
@@ -112,7 +112,7 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
             .Returns([]);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeSupplementPlansQuery(trainerId, traineeId),
+            new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId),
             cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
@@ -163,7 +163,7 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
         public IMapper Mapper { get; } = CreateMapper();
 
         public IGetTraineeSupplementPlansUseCase CreateUseCase()
-            => new GetTraineeSupplementPlansUseCase(Access, Plans, Mapper);
+            => new GetTraineeSupplementPlansUseCase(Access, Plans, Mapper, NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
 
         private static IMapper CreateMapper()
         {

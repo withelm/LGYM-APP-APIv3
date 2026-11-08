@@ -1,6 +1,7 @@
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.WorkoutProgress.Contracts.Measurements;
 using LgymApi.Application.WorkoutProgress.ProgressData;
+using LgymApi.Application.WorkoutProgress.Authorization;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
@@ -45,7 +46,8 @@ public sealed class MeasurementsCoachingAuthorizationBoundaryGuardTests
             {
                 typeof(IWorkoutProgressReadWriteService),
                 typeof(IAccountAccessReader),
-                typeof(IMeasurementsRelationshipAccessPort)
+                typeof(IMeasurementsRelationshipAccessPort),
+                typeof(IWorkoutProgressOwnershipAuthorizationService)
             }));
             Assert.That(serviceDependencies.Select(type => type.Name), Does.Not.Contain("IRoleRepository"));
             Assert.That(serviceDependencies.Select(type => type.Name), Does.Not.Contain("ITrainerRelationshipRepository"));

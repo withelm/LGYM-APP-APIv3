@@ -142,7 +142,8 @@ internal sealed partial class PostgreSqlTutorialRowSecurityTestEnvironment : IAs
         string maintenancePassword,
         string runtimePassword,
         string databaseEnvironment,
-        bool activate, string? targetMigration)
+        bool activate,
+        string? targetMigration)
     {
         await using (var adminConnection = new NpgsqlConnection(_lease.AdminConnectionString))
         {
@@ -161,7 +162,7 @@ internal sealed partial class PostgreSqlTutorialRowSecurityTestEnvironment : IAs
 
         await using (var database = CreateDbContext(MaintenanceConnectionString))
         {
-            await database.GetService<IMigrator>().MigrateAsync(targetMigration);
+            await database.Database.GetService<IMigrator>().MigrateAsync(targetMigration);
             await PrepareHangfireAsync();
             await GrantRuntimeAccessAsync();
             await TestDataFactory.SeedDefaultRolesAsync(database);

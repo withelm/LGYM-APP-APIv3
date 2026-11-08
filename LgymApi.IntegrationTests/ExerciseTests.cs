@@ -226,6 +226,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
     [Test]
     [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "own", "owner-allow")]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "own", "owner-custom-allow")]
     public async Task DeleteExercise_AsOwner_MarksAsDeleted()
     {
         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
@@ -252,7 +253,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task DeleteExercise_AsAdmin_CanDeleteAnyExercise()
+    public async Task DeleteExercise_AsAdmin_CanDeleteGlobalExercise()
     {
         var admin = await SeedUserAsync(name: "admin", email: "admin@example.com", isAdmin: true);
         var exercise = await SeedExerciseAsync(null, "Global Exercise", "Chest");
@@ -274,6 +275,52 @@ public sealed class ExerciseTests : IntegrationTestBase
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.Id == exercise.Id);
         deletedExercise!.IsDeleted.Should().BeTrue();
+    }
+
+    [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "manager-own", "owner-allow")]
+    public async Task DeleteExercise_AsManager_DeletesOwnCustomExercise()
+    {
+        var manager = await SeedAdminAsync();
+        var exercise = await SeedExerciseAsync(manager.Id, "Manager Custom Delete", "Chest");
+        SetAuthorizationHeader(manager.Id);
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/exercise/{manager.Id}/deleteExercise",
+            new Dictionary<string, string> { ["id"] = exercise.Id.ToString() });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.Exercises.IgnoreQueryFilters().SingleAsync(item => item.Id == exercise.Id)).IsDeleted.Should().BeTrue();
+    }
+
+    [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/deleteExercise", "own", "foreign-custom-denial")]
+    public async Task DeleteExercise_AsManager_CannotDeleteForeignCustomExercise()
+    {
+        var manager = await SeedAdminAsync();
+        var victim = await SeedUserAsync(name: "manager-delete-victim", email: "manager-delete-victim@example.com");
+        var exercise = await SeedExerciseAsync(victim.Id, "Manager Denied Private Delete", "Chest");
+        SetAuthorizationHeader(manager.Id);
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/exercise/{manager.Id}/deleteExercise",
+            new Dictionary<string, string> { ["id"] = exercise.Id.ToString() });
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persistedExercise = await db.Exercises
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == exercise.Id);
+
+        using (new AssertionScope())
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            persistedExercise.UserId.Should().Be(victim.Id);
+            persistedExercise.IsDeleted.Should().BeFalse();
+        }
     }
 
     [Test]
@@ -314,6 +361,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
     [Test]
     [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/updateExercise", "own", "owner-allow")]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/updateExercise", "own", "owner-custom-allow")]
     public async Task UpdateExercise_WithValidData_UpdatesExercise()
     {
         var user = await SeedUserAsync(name: "exerciseuser", email: "exercise@example.com");
@@ -341,6 +389,34 @@ public sealed class ExerciseTests : IntegrationTestBase
         updatedExercise.BodyPart.ToString().Should().Be("Back");
         updatedExercise.Description.Should().Be("Updated description");
         updatedExercise.EloFormula.Should().Be(ExerciseEloFormula.Standard);
+    }
+
+    [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/updateExercise", "manager-own", "owner-allow")]
+    public async Task UpdateExercise_AsManager_UpdatesOwnCustomExercise()
+    {
+        var manager = await SeedAdminAsync();
+        var exercise = await SeedExerciseAsync(manager.Id, "Manager Custom Update", "Chest");
+        SetAuthorizationHeader(manager.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", new
+        {
+            _id = exercise.Id.ToString(),
+            name = "Manager Custom Updated",
+            bodyPart = BodyParts.Back.ToString(),
+            description = "Owned by manager"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var updatedExercise = await db.Exercises.SingleAsync(item => item.Id == exercise.Id);
+        using (new AssertionScope())
+        {
+            updatedExercise.UserId.Should().Be(manager.Id);
+            updatedExercise.Name.Should().Be("Manager Custom Updated");
+            updatedExercise.BodyPart.Should().Be(BodyParts.Back);
+        }
     }
 
     [Test]
@@ -375,6 +451,7 @@ public sealed class ExerciseTests : IntegrationTestBase
     }
 
     [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/updateExercise", "own", "foreign-custom-denial")]
     public async Task UpdateExercise_WhenUserIsNotOwnerAndHasNoPermission_ReturnsNotFoundWithoutMutation()
     {
         var (attacker, victim, victimExercise) = await SeedForeignExerciseScenarioAsync(
@@ -580,6 +657,35 @@ public sealed class ExerciseTests : IntegrationTestBase
             responseBody.Should().NotContain(victimExercise.Id.ToString());
             persistedExercise.UserId.Should().Be(victimExercise.UserId);
             persistedExercise.Name.Should().Be(victimExercise.Name);
+            persistedExercise.IsDeleted.Should().BeFalse();
+        }
+    }
+
+    [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("GET", "/api/exercise/{id}/getExercise", "manager", "foreign-custom-denial")]
+    public async Task GetExercise_AsManager_ReturnsNotFoundWithoutDisclosingForeignCustomExercise()
+    {
+        var manager = await SeedAdminAsync();
+        var victim = await SeedUserAsync(name: "manager-detail-victim", email: "manager-detail-victim@example.com");
+        var exercise = await SeedExerciseAsync(victim.Id, "Manager Denied Private Detail", "Back");
+        SetAuthorizationHeader(manager.Id);
+
+        var response = await Client.GetAsync($"/api/exercise/{exercise.Id}/getExercise");
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persistedExercise = await db.Exercises
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == exercise.Id);
+
+        using (new AssertionScope())
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            responseBody.Should().NotContain(exercise.Name);
+            responseBody.Should().NotContain(exercise.Id.ToString());
+            persistedExercise.UserId.Should().Be(victim.Id);
             persistedExercise.IsDeleted.Should().BeFalse();
         }
     }
@@ -880,6 +986,27 @@ public sealed class ExerciseTests : IntegrationTestBase
     }
 
     [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/exercise/{id}/addUserExerciseWithFormula", "admin", "foreign-object-denial-no-mutation")]
+    public async Task AddUserExerciseWithFormula_AsAdmin_WithForeignRoute_ReturnsForbiddenWithoutCreatingExercise()
+    {
+        var admin = await SeedAdminAsync();
+        var foreignOwner = await SeedUserAsync(name: "formula-foreign-route-owner", email: "formula-foreign-route-owner@example.com");
+        SetAuthorizationHeader(admin.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{foreignOwner.Id}/addUserExerciseWithFormula", new
+        {
+            name = "Unauthorized Formula Exercise",
+            bodyPart = BodyParts.Chest.ToString(),
+            eloFormula = ExerciseEloFormula.Standard.ToString()
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var scope = Factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await database.Exercises.AnyAsync(exercise => exercise.Name == "Unauthorized Formula Exercise")).Should().BeFalse();
+    }
+
+    [Test]
     public async Task AddGlobalTranslation_AsNonAdmin_ReturnsForbidden()
     {
         var user = await SeedUserAsync(name: "normaluser", email: "normal@example.com");
@@ -949,6 +1076,24 @@ public sealed class ExerciseTests : IntegrationTestBase
             persistedExercise.Name.Should().Be(exercise.Name);
             persistedExercise.IsDeleted.Should().BeFalse();
         }
+    }
+
+    [Test]
+    public async Task AddGlobalTranslation_ForForeignUserExercise_ReturnsNotFound()
+    {
+        var admin = await SeedAdminAsync();
+        var foreignOwner = await SeedUserAsync(name: "translation-foreign-owner", email: "translation-foreign-owner@example.com");
+        var exercise = await SeedExerciseAsync(foreignOwner.Id, "Foreign Exercise for Translation", "Chest");
+        SetAuthorizationHeader(admin.Id);
+
+        var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", new
+        {
+            exerciseId = exercise.Id.ToString(),
+            culture = "pl",
+            name = "Obce cwiczenie"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Test]

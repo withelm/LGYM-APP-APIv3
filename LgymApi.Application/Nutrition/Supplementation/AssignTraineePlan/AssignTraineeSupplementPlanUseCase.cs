@@ -14,26 +14,32 @@ internal sealed class AssignTraineeSupplementPlanUseCase : IAssignTraineeSupplem
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
     private readonly ISupplementationPersistence _plans;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISupplementationAuthorizationCoordinator _authorization;
 
     public AssignTraineeSupplementPlanUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
         ISupplementationPersistence plans,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ISupplementationAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _plans = plans;
         _unitOfWork = unitOfWork;
+        _authorization = authorization;
     }
 
     public async Task<Result<Unit, AppError>> ExecuteAsync(
         AssignTraineeSupplementPlanCommand command,
         CancellationToken cancellationToken = default)
     {
+        var actorId = command.Actor.Id.Rebind<User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            command.TrainerId,
+            actorId,
             command.TraineeId,
             cancellationToken);
         var accessError = SupplementationAccess.GetTrainerAccessError(
+            _authorization,
+            command.Actor,
             access.IsTrainer,
             access.HasActiveRelationship,
             command.TraineeId);
@@ -53,7 +59,7 @@ internal sealed class AssignTraineeSupplementPlanUseCase : IAssignTraineeSupplem
             cancellationToken);
         if (target is null || !SupplementationAccess.IsOwnedBy(
                 target,
-                command.TrainerId,
+                actorId,
                 command.TraineeId))
         {
             return Result<Unit, AppError>.Failure(
@@ -61,13 +67,13 @@ internal sealed class AssignTraineeSupplementPlanUseCase : IAssignTraineeSupplem
         }
 
         var candidates = await _plans.ListTrackedPlansByTrainerAndTraineeAsync(
-            command.TrainerId,
+            actorId,
             command.TraineeId,
             cancellationToken);
         foreach (var candidate in candidates.Where(candidate =>
                      candidate.IsActive
                      && candidate.Id != target.Id
-                     && candidate.TrainerId == command.TrainerId
+                      && candidate.TrainerId == actorId
                      && candidate.TraineeId == command.TraineeId))
         {
             candidate.IsActive = false;

@@ -178,7 +178,7 @@ public sealed class PhotoSignedReadServiceTests
     }
 
     [Test]
-    public async Task GetSignedReadUrlAsync_WhenFormerSourceTrainerRequestsPhoto_ReturnsNotFoundWithoutSigning()
+    public async Task GetSignedReadUrlAsync_WhenFormerSourceTrainerRequestsPhotoFromTheirEpisode_ReturnsSignedUrl()
     {
         var traineeId = Id<User>.New();
         var sourceTrainerId = Id<User>.New();
@@ -199,17 +199,25 @@ public sealed class PhotoSignedReadServiceTests
         var repository = Substitute.For<IReportPhotoPersistence>();
         repository.FindByIdAsync(photoId, Arg.Any<CancellationToken>()).Returns(ReportingTestData.Photo(photo));
         var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var request = PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, traineeId, sourceTrainerId);
+        request.CreatedAt = DateTimeOffset.UtcNow;
+        var startedAt = request.CreatedAt.AddDays(-1);
+        var endedAt = request.CreatedAt.AddDays(1);
+        storageProvider.GenerateSignedReadUrlAsync(photo.StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns("https://storage.example.com/former-source");
         var service = PhotoServiceTestFactory.CreateService(
-            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(PhotoServiceTestFactory.CreateReportRequest(photo.ReportRequestId, traineeId, sourceTrainerId)),
-            relationshipAccess: (_, _, _) => Task.FromResult(false),
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            relationshipAccessFact: (_, _, _) => Task.FromResult(new ReportingRelationshipAccessFact(
+                false,
+                [new ReportingRelationshipPeriodFact(startedAt, endedAt)])),
             reportingRepository: repository,
             photoStorageProvider: storageProvider);
 
         var result = await service.GetSignedReadUrlAsync(sourceTrainer, photoId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ReadUrl.Should().Be("https://storage.example.com/former-source");
+        await storageProvider.Received(1).GenerateSignedReadUrlAsync(photo.StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
     [Test]

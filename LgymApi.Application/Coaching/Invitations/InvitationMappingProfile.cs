@@ -56,7 +56,9 @@ public sealed class InvitationMappingProfile : IMappingProfile
         configuration.CreateMap<InvitationActiveLinkSource, CoachingActiveLinkWriteModel>((source, _) => new CoachingActiveLinkWriteModel(
             source.Id,
             source.TrainerId,
-            source.TraineeId));
+            source.TraineeId,
+            source.EpisodeId,
+            source.StartedAt));
         configuration.CreateMap<InvitationListSource, InvitationReadModel>((source, _) => new InvitationReadModel(
             source.Invitation.Id,
             source.Invitation.TrainerId,
@@ -114,4 +116,6 @@ internal sealed record InvitationResponseSource(
 internal sealed record InvitationActiveLinkSource(
     Id<LgymApi.Domain.Entities.TrainerTraineeLink> Id,
     Id<UserEntity> TrainerId,
-    Id<UserEntity> TraineeId);
+    Id<UserEntity> TraineeId,
+    Id<LgymApi.Domain.Entities.CoachingEpisode> EpisodeId = default,
+    DateTimeOffset StartedAt = default);

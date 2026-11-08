@@ -6,6 +6,7 @@
 - Composition: uses the public `IdentityModule.AddIdentityModule()` facade for legacy password hashing while retaining the shared `AppDbContext` seeding path and the one migration stream.
 - Stable role and claim IDs come from the entity-free public `IdentitySeedIds` contract; this executable does not use Identity internals.
 - Rules: do not make API startup depend on this executable.
+- Coaching demo links are seeded with a matching `CoachingEpisode`; the link never bypasses the active-episode fence.
 - Boundary: keep this as a console entrypoint, not a web host.
 - The `reporting-photo-types` command is optional preflight/repair tooling. Its engine is owned by Infrastructure and also runs automatically during API startup; normal deployment needs no CLI command or Reporting enable flag.
 - `--prepare-hangfire` and ordinary seed mode require `LGYM_MIGRATION_POSTGRES`. `--migrate-only` is disabled because non-Testing API startup applies EF migrations through `lgym_runtime`, which owns the application schema. The API runtime never consumes that environment variable.

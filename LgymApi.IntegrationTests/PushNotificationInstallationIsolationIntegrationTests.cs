@@ -19,6 +19,59 @@ namespace LgymApi.IntegrationTests;
 public sealed class PushNotificationInstallationIsolationIntegrationTests : IntegrationTestBase
 {
     [Test]
+    public async Task QueuedNotification_WhenInstallationSessionIsRevoked_DoesNotReachProvider()
+    {
+        var user = await SeedUserAsync("push-revoked-session", "push-revoked-session@example.com", "pass123");
+        await LoginAndAuthorizeAsync("push-revoked-session", "pass123");
+        var register = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "revoked-session-installation",
+            platform = "android",
+            fcmToken = "revoked-session-token",
+            environment = "testing",
+            permissionStatus = "authorized"
+        });
+        register.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        Id<PushNotificationMessage> messageId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var installation = await database.PushInstallations.SingleAsync(item => item.InstallationId == "revoked-session-installation");
+            var pushNotifications = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
+            await pushNotifications.EnqueueAsync(new EnqueuePushNotificationInput(
+                user.Id,
+                1,
+                "push.revoked.session",
+                "event-revoked-session",
+                null,
+                null,
+                null));
+            messageId = await database.PushNotificationMessages
+                .Where(message => message.EventId == "event-revoked-session")
+                .Select(message => message.Id)
+                .SingleAsync();
+            var session = await database.UserSessions.SingleAsync(item => item.Id == installation.SessionId);
+            session.RevokedAtUtc = DateTimeOffset.UtcNow;
+            await database.SaveChangesAsync();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<PushNotificationJobHandlerService>()
+                .ProcessAsync(messageId.ToString());
+        }
+
+        Factory.PushSender.Attempts.Should().BeEmpty();
+        using var assertionScope = Factory.Services.CreateScope();
+        var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var message = await assertionDatabase.PushNotificationMessages.SingleAsync(item => item.Id == messageId);
+        message.Status.Should().Be(PushNotificationStatus.Failed);
+        message.FailureKind.Should().Be(PushNotificationFailureKind.Permanent);
+        message.ProviderStatus.Should().Be("InstallationSessionInvalid");
+    }
+
+    [Test]
     public async Task QueuedNotification_WhenInstallationIsReboundAfterLogout_DeliversOnlyTheNewUsersEvent()
     {
         const string installationKey = "shared-installation";
@@ -117,7 +170,7 @@ public sealed class PushNotificationInstallationIsolationIntegrationTests : Inte
         }
 
         Factory.PushSender.Attempts.Should().ContainSingle();
-        Factory.PushSender.Attempts.Single().InstallationId.Should().Be(installationId);
+        Factory.PushSender.Attempts.Single().Target.InstallationId.Should().Be(installationId);
         Factory.PushSender.Attempts.Single().Payload.EventId.Should().Be(bEventId);
 
         using (var scope = Factory.Services.CreateScope())

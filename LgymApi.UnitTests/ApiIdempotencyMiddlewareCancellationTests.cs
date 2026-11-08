@@ -6,7 +6,10 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Routing;
 using NSubstitute;
 using NUnit.Framework;
@@ -220,10 +223,221 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
             $"pre-cancelled cancelled=true nextCalls={nextCalls} persistenceCalls=0 responseRestored={ReferenceEquals(context.Response.Body, responseBody)}");
     }
 
+    [Test]
+    public async Task InvokeAsync_WhenExistingRecordIsInProgress_DoesNotInvokeMutation()
+    {
+        await using var requestBody = new MemoryStream(Encoding.UTF8.GetBytes("{\"value\":1}"));
+        await using var responseBody = new MemoryStream();
+        var context = CreateContext(responseBody, requestBody);
+        context.Request.Headers[ApiIdempotencyHeaders.IdempotencyKey] = "in-progress-key";
+        var repository = Substitute.For<IApiIdempotencyRecordRepository>();
+        repository
+            .FindByScopeAndKeyAsync(Arg.Any<string>(), "in-progress-key", context.RequestAborted)
+            .Returns(new ApiIdempotencyRecord
+            {
+                Id = Id<ApiIdempotencyRecord>.New(),
+                IdempotencyKey = "in-progress-key",
+                ScopeTuple = "scope",
+                RequestFingerprint = "fingerprint",
+                ResponseStatusCode = 0,
+                ResponseBodyJson = string.Empty,
+                ProcessedAt = DateTimeOffset.UtcNow
+            });
+        var nextCalls = 0;
+        var middleware = new ApiIdempotencyMiddleware(_ =>
+        {
+            nextCalls++;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(context, repository, Substitute.For<IUnitOfWork>());
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        nextCalls.Should().Be(0);
+        await repository.DidNotReceiveWithAnyArgs().AddOrGetExistingAsync(default!, default);
+        await repository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
+    }
+
+    [Test]
+    public async Task InvokeAsync_WhenRaceReturnsCompletedPrivateRecord_DeniesReplayWithoutInvokingMutation()
+    {
+        await using var requestBody = new MemoryStream(Encoding.UTF8.GetBytes("{\"value\":1}"));
+        await using var responseBody = new MemoryStream();
+        var context = CreateContext(responseBody, requestBody, replayOwner: ApiIdempotencyReplayOwner.Identity);
+        context.Request.Headers[ApiIdempotencyHeaders.IdempotencyKey] = "race-key";
+        context.Features.Set<IAuthenticatedAccountContextFeature>(
+            new TestAuthenticatedAccountContextFeature(
+                new AuthenticatedAccountContext(Id<AccountReference>.New(), Id<AccountSessionReference>.New(), [], [], false, false)));
+        var repository = Substitute.For<IApiIdempotencyRecordRepository>();
+        repository
+            .AddOrGetExistingAsync(Arg.Any<ApiIdempotencyRecord>(), context.RequestAborted)
+            .Returns(call =>
+            {
+                var proposed = call.Arg<ApiIdempotencyRecord>();
+                return new ApiIdempotencyRecord
+                {
+                    Id = Id<ApiIdempotencyRecord>.New(),
+                    IdempotencyKey = proposed.IdempotencyKey,
+                    ScopeTuple = proposed.ScopeTuple,
+                    RequestFingerprint = proposed.RequestFingerprint,
+                    ResponseStatusCode = StatusCodes.Status200OK,
+                    ResponseBodyJson = "{\"private\":true}",
+                    ProcessedAt = DateTimeOffset.UtcNow
+                };
+            });
+        var deniedPort = new TestReplayAccessPort(canReplay: false);
+        var nextCalls = 0;
+        var middleware = new ApiIdempotencyMiddleware(_ =>
+        {
+            nextCalls++;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(
+            context,
+            repository,
+            Substitute.For<IUnitOfWork>(),
+            new ApiIdempotencyReplayAccessEvaluator([deniedPort]));
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        (await ReadBodyAsync(responseBody)).Should().NotContain("private");
+        nextCalls.Should().Be(0);
+        deniedPort.Calls.Should().Be(1);
+        await repository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
+    }
+
+    [Test]
+    public async Task InvokeAsync_WhenConcurrentClaimCommitFindsPrivateWinner_DeniesReplayWithoutInvokingMutation()
+    {
+        await using var requestBody = new MemoryStream(Encoding.UTF8.GetBytes("{\"value\":1}"));
+        await using var responseBody = new MemoryStream();
+        var context = CreateContext(responseBody, requestBody, replayOwner: ApiIdempotencyReplayOwner.Identity);
+        context.Request.Headers[ApiIdempotencyHeaders.IdempotencyKey] = "concurrent-key";
+        context.Features.Set<IAuthenticatedAccountContextFeature>(
+            new TestAuthenticatedAccountContextFeature(
+                new AuthenticatedAccountContext(Id<AccountReference>.New(), Id<AccountSessionReference>.New(), [], [], false, false)));
+        var repository = Substitute.For<IApiIdempotencyRecordRepository>();
+        repository
+            .AddOrGetExistingAsync(Arg.Any<ApiIdempotencyRecord>(), context.RequestAborted)
+            .Returns(call => call.Arg<ApiIdempotencyRecord>());
+        repository
+            .TryRecoverDuplicateAsync(Arg.Any<ApiIdempotencyRecord>(), Arg.Any<DbUpdateException>(), context.RequestAborted)
+            .Returns(call =>
+            {
+                var proposed = call.ArgAt<ApiIdempotencyRecord>(0);
+                return new ApiIdempotencyRecord
+                {
+                    Id = Id<ApiIdempotencyRecord>.New(),
+                    IdempotencyKey = proposed.IdempotencyKey,
+                    ScopeTuple = proposed.ScopeTuple,
+                    RequestFingerprint = proposed.RequestFingerprint,
+                    ResponseStatusCode = StatusCodes.Status200OK,
+                    ResponseBodyJson = "{\"private\":true}",
+                    ProcessedAt = DateTimeOffset.UtcNow
+                };
+            });
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.SaveChangesAsync(context.RequestAborted).Returns(Task.FromException<int>(new DbUpdateException()));
+        var deniedPort = new TestReplayAccessPort(canReplay: false);
+        var nextCalls = 0;
+        var middleware = new ApiIdempotencyMiddleware(_ =>
+        {
+            nextCalls++;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(
+            context,
+            repository,
+            unitOfWork,
+            new ApiIdempotencyReplayAccessEvaluator([deniedPort]));
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        (await ReadBodyAsync(responseBody)).Should().NotContain("private");
+        nextCalls.Should().Be(0);
+        deniedPort.Calls.Should().Be(1);
+        await repository.Received(1).TryRecoverDuplicateAsync(
+            Arg.Any<ApiIdempotencyRecord>(),
+            Arg.Any<DbUpdateException>(),
+            context.RequestAborted);
+        await repository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
+    }
+
+    [Test]
+    public async Task InvokeAsync_WhenConcurrentClaimCommitFindsInProgressWinner_ReturnsConflictWithoutInvokingMutation()
+    {
+        await using var requestBody = new MemoryStream(Encoding.UTF8.GetBytes("{\"value\":1}"));
+        await using var responseBody = new MemoryStream();
+        var context = CreateContext(responseBody, requestBody);
+        context.Request.Headers[ApiIdempotencyHeaders.IdempotencyKey] = "in-progress-race-key";
+        var repository = Substitute.For<IApiIdempotencyRecordRepository>();
+        repository
+            .AddOrGetExistingAsync(Arg.Any<ApiIdempotencyRecord>(), context.RequestAborted)
+            .Returns(call => call.Arg<ApiIdempotencyRecord>());
+        repository
+            .TryRecoverDuplicateAsync(Arg.Any<ApiIdempotencyRecord>(), Arg.Any<DbUpdateException>(), context.RequestAborted)
+            .Returns(call =>
+            {
+                var proposed = call.ArgAt<ApiIdempotencyRecord>(0);
+                return new ApiIdempotencyRecord
+                {
+                    Id = Id<ApiIdempotencyRecord>.New(),
+                    IdempotencyKey = proposed.IdempotencyKey,
+                    ScopeTuple = proposed.ScopeTuple,
+                    RequestFingerprint = proposed.RequestFingerprint,
+                    ResponseStatusCode = 0,
+                    ResponseBodyJson = string.Empty,
+                    ProcessedAt = DateTimeOffset.UtcNow
+                };
+            });
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.SaveChangesAsync(context.RequestAborted).Returns(Task.FromException<int>(new DbUpdateException()));
+        var nextCalls = 0;
+        var middleware = new ApiIdempotencyMiddleware(_ =>
+        {
+            nextCalls++;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(context, repository, unitOfWork);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        nextCalls.Should().Be(0);
+        await repository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
+    }
+
+    [Test]
+    public async Task InvokeAsync_WhenConcurrentClaimCommitFailureIsNotRecoverable_Rethrows()
+    {
+        await using var requestBody = new MemoryStream(Encoding.UTF8.GetBytes("{\"value\":1}"));
+        await using var responseBody = new MemoryStream();
+        var context = CreateContext(responseBody, requestBody);
+        context.Request.Headers[ApiIdempotencyHeaders.IdempotencyKey] = "non-recoverable-race-key";
+        var repository = Substitute.For<IApiIdempotencyRecordRepository>();
+        repository
+            .AddOrGetExistingAsync(Arg.Any<ApiIdempotencyRecord>(), context.RequestAborted)
+            .Returns(call => call.Arg<ApiIdempotencyRecord>());
+        repository
+            .TryRecoverDuplicateAsync(Arg.Any<ApiIdempotencyRecord>(), Arg.Any<DbUpdateException>(), context.RequestAborted)
+            .Returns((ApiIdempotencyRecord?)null);
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.SaveChangesAsync(context.RequestAborted).Returns(Task.FromException<int>(new DbUpdateException()));
+        var middleware = new ApiIdempotencyMiddleware(_ => Task.CompletedTask);
+
+        var action = () => middleware.InvokeAsync(context, repository, unitOfWork);
+
+        await action.Should().ThrowAsync<DbUpdateException>();
+        await repository.Received(1).TryRecoverDuplicateAsync(
+            Arg.Any<ApiIdempotencyRecord>(),
+            Arg.Any<DbUpdateException>(),
+            context.RequestAborted);
+    }
+
     private static DefaultHttpContext CreateContext(
         Stream responseBody,
         Stream? requestBody = null,
-        ApiIdempotencyScopeSource scopeSource = ApiIdempotencyScopeSource.AuthenticatedUser)
+        ApiIdempotencyScopeSource scopeSource = ApiIdempotencyScopeSource.AuthenticatedUser,
+        ApiIdempotencyReplayOwner replayOwner = ApiIdempotencyReplayOwner.Public)
     {
         var context = new DefaultHttpContext();
         context.Request.Method = HttpMethods.Post;
@@ -233,7 +447,8 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
             _ => Task.CompletedTask,
             new EndpointMetadataCollection(new ApiIdempotencyAttribute(
                 "/api/idempotency-test",
-                scopeSource)),
+                scopeSource,
+                replayOwner)),
             "Idempotency test"));
         return context;
     }
@@ -336,6 +551,24 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
 
             _requestCancellationSource.Cancel();
             ObservedRequestCancellation = cancellationToken.IsCancellationRequested;
+        }
+    }
+
+    private sealed record TestAuthenticatedAccountContextFeature(AuthenticatedAccountContext Context)
+        : IAuthenticatedAccountContextFeature;
+
+    private sealed class TestReplayAccessPort(bool canReplay) : IApiIdempotencyReplayAccessPort
+    {
+        public int Calls { get; private set; }
+
+        public ApiIdempotencyReplayOwner Owner => ApiIdempotencyReplayOwner.Identity;
+
+        public Task<bool> CanReplayAsync(
+            ApiIdempotencyReplayAccessContext context,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return Task.FromResult(canReplay);
         }
     }
 }

@@ -8,8 +8,14 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Infrastructure;
+using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Repositories;
 using LgymApi.Resources;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Npgsql;
 using LgymApi.UnitTests.Fakes;
 
 namespace LgymApi.UnitTests;
@@ -18,6 +24,7 @@ namespace LgymApi.UnitTests;
 public sealed class PushInstallationLifecycleServiceTests
 {
     private ConfigurablePushInstallationRepository _pushInstallationRepository = null!;
+    private ConfigurableConflictClassifier _conflictClassifier = null!;
     private IUnitOfWork _unitOfWork = null!;
     private PushInstallationLifecycleService _service = null!;
 
@@ -25,8 +32,9 @@ public sealed class PushInstallationLifecycleServiceTests
     public void SetUp()
     {
         _pushInstallationRepository = new ConfigurablePushInstallationRepository();
+        _conflictClassifier = new ConfigurableConflictClassifier();
         _unitOfWork = Substitute.For<IUnitOfWork>();
-        _service = new PushInstallationLifecycleService(_pushInstallationRepository, _unitOfWork);
+        _service = new PushInstallationLifecycleService(_pushInstallationRepository, _conflictClassifier, _unitOfWork);
     }
 
     [Test]
@@ -85,6 +93,147 @@ public sealed class PushInstallationLifecycleServiceTests
             .Should()
             .ContainSingle();
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task RegisterAsync_WhenFcmTokenUniqueConstraintLosesRace_ReturnsForbiddenWithoutLeakingToken()
+    {
+        const string token = "secret-racing-token";
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<int>(CreateUniqueViolation("IX_PushInstallations_FcmToken")));
+        _conflictClassifier.ShouldClassify = true;
+
+        var result = await _service.RegisterAsync(
+            CreateUserId(),
+            Id<UserSession>.New(),
+            new RegisterPushInstallationInput("device-race", "android", token, null, "production", null));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ForbiddenError>();
+        result.Error.Message.Should().Be(Messages.Forbidden).And.NotContain(token);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task RegisterAsync_WhenInstallationIdUniqueConstraintLosesRace_ReturnsForbidden()
+    {
+        var persistenceFailure = CreateUniqueViolation("IX_PushInstallations_InstallationId");
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<int>(persistenceFailure));
+        _conflictClassifier.ShouldClassify = true;
+
+        var result = await _service.RegisterAsync(
+            CreateUserId(),
+            Id<UserSession>.New(),
+            new RegisterPushInstallationInput("device-race", "android", "token-race", null, "production", null));
+
+        result.Error.Should().BeOfType<ForbiddenError>();
+        _pushInstallationRepository.Calls.Should().ContainSingle(call => call.Method == nameof(IPushInstallationRepository.ResetFailedMutationAsync));
+    }
+
+    [Test]
+    public async Task RegisterAsync_WhenUnrelatedPersistenceFailureOccurs_Propagates()
+    {
+        var persistenceFailure = CreateUniqueViolation("IX_Unrelated");
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<int>(persistenceFailure));
+        _conflictClassifier.ShouldClassify = false;
+
+        var action = () => _service.RegisterAsync(
+            CreateUserId(),
+            Id<UserSession>.New(),
+            new RegisterPushInstallationInput("device-race", "android", "token-race", null, "production", null));
+
+        await action.Should().ThrowAsync<DbUpdateException>().Where(exception => ReferenceEquals(exception, persistenceFailure));
+        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.ResetFailedMutationAsync));
+    }
+
+    [TestCase("IX_PushInstallations_FcmToken", true)]
+    [TestCase("IX_PushInstallations_InstallationId", true)]
+    [TestCase("IX_Unrelated", false)]
+    public void RegistrationConflictClassifier_RecognizesOnlyOwnedUniqueConstraints(
+        string constraintName,
+        bool expected)
+    {
+        var services = new ServiceCollection();
+        services.AddNotificationsInfrastructure();
+        using var provider = services.BuildServiceProvider();
+        var classifier = provider.GetRequiredService<IPushInstallationPersistenceConflictClassifier>();
+
+        classifier.IsRegistrationConflict(CreateUniqueViolation(constraintName)).Should().Be(expected);
+    }
+
+    [Test]
+    public async Task RegisterAsync_WhenOptimisticConcurrencyLosesRace_ReturnsForbiddenAndResetsOnlyInstallation()
+    {
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<int>(new DbUpdateConcurrencyException("stale registration")));
+
+        var result = await _service.RegisterAsync(
+            CreateUserId(),
+            Id<UserSession>.New(),
+            new RegisterPushInstallationInput("device-race", "android", "token-race", null, "production", null));
+
+        result.Error.Should().BeOfType<ForbiddenError>();
+        _pushInstallationRepository.Calls.Should().ContainSingle(call => call.Method == nameof(IPushInstallationRepository.ResetFailedMutationAsync));
+    }
+
+    [Test]
+    public async Task UnregisterAsync_WhenOptimisticConcurrencyLosesRace_ReturnsForbiddenAndResetsOnlyInstallation()
+    {
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<int>(new DbUpdateConcurrencyException("stale unregister")));
+
+        var result = await _service.UnregisterAsync(
+            CreateUserId(),
+            Id<UserSession>.New(),
+            new PushInstallationActionInput("device-race"));
+
+        result.Error.Should().BeOfType<ForbiddenError>();
+        _pushInstallationRepository.Calls.Should().ContainSingle(call => call.Method == nameof(IPushInstallationRepository.ResetFailedMutationAsync));
+    }
+
+    [Test]
+    public async Task RegisterAsync_WhenConflictModifiesExistingInstallation_CleansTrackedMutationBeforeLaterSave()
+    {
+        await using var database = CreateDatabase();
+        var installation = CreateInstallation("existing-device", "existing-token");
+        database.PushInstallations.Add(installation);
+        await database.SaveChangesAsync();
+        var unitOfWork = new FailOnceUnitOfWork(database, CreateUniqueViolation("IX_PushInstallations_FcmToken"));
+        var classifier = new ConfigurableConflictClassifier { ShouldClassify = true };
+        var service = new PushInstallationLifecycleService(new PushInstallationRepository(database), classifier, unitOfWork);
+
+        var result = await service.RegisterAsync(
+            CreateUserId(),
+            Id<UserSession>.New(),
+            new RegisterPushInstallationInput("existing-device", "android", "conflicting-token", null, "production", null));
+        await unitOfWork.SaveChangesAsync();
+        database.ChangeTracker.Clear();
+        var persisted = await database.PushInstallations.SingleAsync();
+
+        result.Error.Should().BeOfType<ForbiddenError>();
+        persisted.UserId.Should().BeNull();
+        persisted.SessionId.Should().BeNull();
+        persisted.FcmToken.Should().Be("existing-token");
+    }
+
+    [Test]
+    public async Task RegisterAsync_WhenConflictAddsInstallation_DetachesTrackedInsertBeforeLaterSave()
+    {
+        await using var database = CreateDatabase();
+        var unitOfWork = new FailOnceUnitOfWork(database, CreateUniqueViolation("IX_PushInstallations_InstallationId"));
+        var classifier = new ConfigurableConflictClassifier { ShouldClassify = true };
+        var service = new PushInstallationLifecycleService(new PushInstallationRepository(database), classifier, unitOfWork);
+
+        var result = await service.RegisterAsync(
+            CreateUserId(),
+            Id<UserSession>.New(),
+            new RegisterPushInstallationInput("new-device", "android", "new-token", null, "production", null));
+        await unitOfWork.SaveChangesAsync();
+
+        result.Error.Should().BeOfType<ForbiddenError>();
+        (await database.PushInstallations.CountAsync()).Should().Be(0);
     }
 
     [Test]
@@ -157,7 +306,7 @@ public sealed class PushInstallationLifecycleServiceTests
         result.IsSuccess.Should().BeTrue();
         _pushInstallationRepository.Calls
             .Where(call =>
-                call.Method == nameof(IPushInstallationRepository.DisableBoundForUserOrSessionAsync)
+                call.Method == nameof(IPushInstallationRepository.DisableBoundForUserAndSessionAsync)
                 && call.Argument is ValueTuple<string, Id<User>, Id<UserSession>, DateTimeOffset, string> arguments
                 && arguments.Item1 == "device-1"
                 && arguments.Item2 == userId
@@ -184,7 +333,7 @@ public sealed class PushInstallationLifecycleServiceTests
         result.IsSuccess.Should().BeTrue();
         _pushInstallationRepository.Calls
             .Where(call =>
-                call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserOrSessionAsync)
+                call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserAndSessionAsync)
                 && call.Argument is ValueTuple<string, Id<User>, Id<UserSession>, DateTimeOffset> arguments
                 && arguments.Item1 == "device-1"
                 && arguments.Item2 == userId
@@ -212,8 +361,8 @@ public sealed class PushInstallationLifecycleServiceTests
         unregisterResult.Error.Message.Should().Be(Messages.FieldRequired);
         disassociateResult.Error.Should().BeOfType<InvalidUserError>();
         disassociateResult.Error.Message.Should().Be(Messages.FieldRequired);
-        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisableBoundForUserOrSessionAsync));
-        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserOrSessionAsync));
+        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisableBoundForUserAndSessionAsync));
+        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserAndSessionAsync));
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -229,8 +378,8 @@ public sealed class PushInstallationLifecycleServiceTests
         unregisterResult.Error.Message.Should().Be(Messages.Unauthorized);
         disassociateResult.Error.Should().BeOfType<UserUnauthorizedError>();
         disassociateResult.Error.Message.Should().Be(Messages.Unauthorized);
-        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisableBoundForUserOrSessionAsync));
-        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserOrSessionAsync));
+        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisableBoundForUserAndSessionAsync));
+        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserAndSessionAsync));
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -246,27 +395,27 @@ public sealed class PushInstallationLifecycleServiceTests
         unregisterResult.Error.Message.Should().Be(Messages.Unauthorized);
         disassociateResult.Error.Should().BeOfType<UserUnauthorizedError>();
         disassociateResult.Error.Message.Should().Be(Messages.Unauthorized);
-        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisableBoundForUserOrSessionAsync));
-        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserOrSessionAsync));
+        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisableBoundForUserAndSessionAsync));
+        _pushInstallationRepository.Calls.Should().NotContain(call => call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserAndSessionAsync));
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task PushInstallationActions_WhenNoBoundInstallationExists_ReturnSuccessAndCommitOnce()
+    public async Task PushInstallationActions_WhenNoExactSessionBindingExists_ReturnForbiddenWithoutCommit()
     {
         var userId = CreateUserId();
         var sessionId = Id<UserSession>.New();
-        _pushInstallationRepository.DisableBoundForUserOrSession = (_, _, _, _, _, _) => Task.FromResult(false);
-        _pushInstallationRepository.DisassociateBoundForUserOrSession = (_, _, _, _, _) => Task.FromResult(false);
+        _pushInstallationRepository.DisableBoundForUserAndSession = (_, _, _, _, _, _) => Task.FromResult<PushInstallation?>(null);
+        _pushInstallationRepository.DisassociateBoundForUserAndSession = (_, _, _, _, _) => Task.FromResult<PushInstallation?>(null);
 
         var unregisterResult = await _service.UnregisterAsync(userId, sessionId, new PushInstallationActionInput("device-1"));
         var disassociateResult = await _service.DisassociateAsync(userId, sessionId, new PushInstallationActionInput("device-1"));
 
-        unregisterResult.IsSuccess.Should().BeTrue();
-        disassociateResult.IsSuccess.Should().BeTrue();
+        unregisterResult.Error.Should().BeOfType<ForbiddenError>();
+        disassociateResult.Error.Should().BeOfType<ForbiddenError>();
         _pushInstallationRepository.Calls
             .Where(call =>
-                call.Method == nameof(IPushInstallationRepository.DisableBoundForUserOrSessionAsync)
+                call.Method == nameof(IPushInstallationRepository.DisableBoundForUserAndSessionAsync)
                 && call.Argument is ValueTuple<string, Id<User>, Id<UserSession>, DateTimeOffset, string> disableArguments
                 && disableArguments.Item1 == "device-1"
                 && disableArguments.Item2 == userId
@@ -276,14 +425,14 @@ public sealed class PushInstallationLifecycleServiceTests
             .ContainSingle();
         _pushInstallationRepository.Calls
             .Where(call =>
-                call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserOrSessionAsync)
+                call.Method == nameof(IPushInstallationRepository.DisassociateBoundForUserAndSessionAsync)
                 && call.Argument is ValueTuple<string, Id<User>, Id<UserSession>, DateTimeOffset> disassociateArguments
                 && disassociateArguments.Item1 == "device-1"
                 && disassociateArguments.Item2 == userId
                 && disassociateArguments.Item3 == sessionId)
             .Should()
             .ContainSingle();
-        await _unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -334,5 +483,58 @@ public sealed class PushInstallationLifecycleServiceTests
     private static Id<User> CreateUserId()
     {
         return Id<User>.New();
+    }
+
+    private static DbUpdateException CreateUniqueViolation(string constraintName)
+    {
+        var postgresException = new PostgresException(
+            "duplicate key value violates unique constraint",
+            "ERROR",
+            "ERROR",
+            PostgresErrorCodes.UniqueViolation,
+            constraintName: constraintName);
+        return new DbUpdateException("duplicate push installation", postgresException);
+    }
+
+    private static AppDbContext CreateDatabase()
+        => new(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"push-registration-conflict-{Id<PushInstallationLifecycleServiceTests>.New():N}")
+            .Options);
+
+    private static PushInstallation CreateInstallation(string installationId, string token)
+        => new()
+        {
+            Id = Id<PushInstallation>.New(),
+            InstallationId = installationId,
+            Platform = "android",
+            FcmToken = token,
+            Environment = "production",
+            LastSeenAt = DateTimeOffset.UtcNow
+        };
+
+    private sealed class FailOnceUnitOfWork(AppDbContext database, Exception firstFailure) : IUnitOfWork
+    {
+        private bool _failed;
+
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (!_failed)
+            {
+                _failed = true;
+                return Task.FromException<int>(firstFailure);
+            }
+
+            return database.SaveChangesAsync(cancellationToken);
+        }
+
+        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+            => Task.FromException<IUnitOfWorkTransaction>(new NotSupportedException());
+    }
+
+    private sealed class ConfigurableConflictClassifier : IPushInstallationPersistenceConflictClassifier
+    {
+        public bool ShouldClassify { get; set; }
+
+        public bool IsRegistrationConflict(DbUpdateException exception) => ShouldClassify;
     }
 }

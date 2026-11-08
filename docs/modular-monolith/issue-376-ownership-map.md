@@ -89,10 +89,11 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 | Public access contract | `ICoachingRelationshipAccessService` | `Coaching` | Publishes trainer and active-link facts to Reporting and Nutrition without exposing Coaching persistence. | Consumers use the ID-only contract and adapt its decision to their own errors. |
 | Consumer-owned authorization adapters | `IPlanDayRelationshipAccessPort` and `IMeasurementsRelationshipAccessPort` implementations | `Coaching` | Coaching maps its relationship decision to each consumer-owned boolean port. | Training Planning and Workout & Progress own their port contracts and do not depend on Coaching. |
 | Focused capability family | Invitations, relationships, dashboard and progress, managed plans, and trainee notes | `Coaching` | The 31 focused Coaching actions own relationship, invitation, dashboard, note, and collaboration orchestration. | Non-owners use published contracts or owner read models only. |
-| Persistence adapters | Focused invitation, active-link, fact-reader, and trainee-note/history ports | `Coaching` | Coaching persistence is stage-only and limited to its four owned entities. | Application use cases own authorization, transactions, and commits. |
+| Persistence adapters | Focused invitation, active-link, episode, fact-reader, and trainee-note/history ports | `Coaching` | Coaching persistence is stage-only and limited to its five owned entities. | Application use cases own authorization, transactions, and commits. |
 | Service contract | `ITrainingService` | `Workout & Progress` | Training is the workout boundary, even when coaching depends on it. | Non-owners call the training service interface only. |
 | Repository contract | `MainRecordRepository / IMainRecordRepository` | `Workout & Progress` | Main-record persistence belongs to workout progress, even when coaching workflows consume the resulting records. | Non-owners use the owning service or published read model only. |
 | Table | `TrainerInvitations` | `Coaching` | Trainer invitations are owned by coaching. | Non-owners do not mutate invitations directly. |
+| Table | `CoachingEpisodes` | `Coaching` | Durable relationship episodes and authorization revisions are owned by coaching. | Active links reference one episode; protected writes participate in its optimistic revision check. |
 | Table | `TrainerTraineeLinks` | `Coaching` | Trainer to trainee links are owned by coaching. | Non-owners do not mutate links directly. |
 | Table | `DietPlans` | `Nutrition` | Diet plan rows are owned by nutrition. | Non-owners do not write diet plans directly. |
 | Table | `DietMeals` | `Nutrition` | Diet meal rows are owned by nutrition. | Non-owners do not write diet meals directly. |
@@ -174,6 +175,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `Address` | `Workout & Progress` |
 | `EloRegistry` | `Workout & Progress` |
 | `TrainerInvitation` | `Coaching` |
+| `CoachingEpisode` | `Coaching` |
 | `TrainerTraineeLink` | `Coaching` |
 | `TraineeNote` | `Coaching` |
 | `TraineeNoteHistory` | `Coaching` |
@@ -188,7 +190,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `CommandEnvelope` | `Platform / Reference Data` |
 | `ApiIdempotencyRecord` | `Platform / Reference Data` |
 
-Current totals are Identity & Accounts 10, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 11, Coaching 4, Nutrition 6, and Platform / Reference Data 4.
+Totals are fixed: Identity & Accounts 10, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 11, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 53 persisted entities.
 
 ## Ownership tie-breaker
 

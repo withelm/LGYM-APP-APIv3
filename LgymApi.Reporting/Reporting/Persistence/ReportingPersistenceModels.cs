@@ -217,7 +217,39 @@ public sealed record NewTrainerPhotoTypePersistenceModel(
     bool IsArchived,
     DateTimeOffset CreatedAt);
 
-public sealed record ReportingRelationshipAccessFact(bool HasActiveRelationship);
+public sealed record ReportingRelationshipPeriodFact(
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? EndedAt,
+    CoachingEpisodeStartProvenance StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation)
+{
+    public bool Contains(DateTimeOffset occurredAt)
+        => StartedAt is not null
+            && StartedAt <= occurredAt
+            && (EndedAt is null || occurredAt < EndedAt);
+
+    public bool ContainsTrustedSourceRecord(DateTimeOffset occurredAt)
+        => Contains(occurredAt)
+            || (StartedAt is null
+                && StartedAtProvenance == CoachingEpisodeStartProvenance.ExistingActiveLinkObservedDuringMigration
+                && (EndedAt is null || occurredAt < EndedAt));
+}
+
+public sealed record ReportingRelationshipAccessFact(
+    bool HasActiveRelationship,
+    IReadOnlyList<ReportingRelationshipPeriodFact> RelationshipPeriods)
+{
+    public ReportingRelationshipAccessFact(bool hasActiveRelationship)
+        : this(hasActiveRelationship, [])
+    {
+    }
+
+    public bool HadRelationshipAt(DateTimeOffset occurredAt)
+        => RelationshipPeriods.Any(period => period.Contains(occurredAt));
+
+    public bool CanReadTrainerAuthoredRecordAt(DateTimeOffset occurredAt)
+        => HasActiveRelationship
+            || RelationshipPeriods.Any(period => period.ContainsTrustedSourceRecord(occurredAt));
+}
 
 internal sealed record ReportPhotoCapabilitySource(
     ReportPhotoPersistenceModel? CanonicalPhoto,

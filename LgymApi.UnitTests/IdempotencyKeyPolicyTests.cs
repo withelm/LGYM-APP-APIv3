@@ -6,6 +6,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
+using LgymApi.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 
@@ -211,5 +212,55 @@ public sealed class IdempotencyKeyPolicyTests
         await ctx.SaveChangesAsync();
         var all = await ctx.CommandEnvelopes.ToListAsync();
         all.Count.Should().Be(2);
+    }
+
+    [Test]
+    public async Task ApiIdempotencyRecord_TryRecoverDuplicateAsync_DetachesFailedInsertAndReturnsWinner()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: $"ApiIdempotencyRecovery_{Id<IdempotencyKeyPolicyTests>.New().GetValue().ToString("N")}")
+            .Options;
+        const string scopeTuple = "POST|/api/idempotency-test|user";
+        const string idempotencyKey = "duplicate-key";
+
+        using var context = new AppDbContext(options);
+        var winner = new ApiIdempotencyRecord
+        {
+            Id = Id<ApiIdempotencyRecord>.New(),
+            ScopeTuple = scopeTuple,
+            IdempotencyKey = idempotencyKey,
+            RequestFingerprint = "winner-fingerprint",
+            ResponseStatusCode = 200,
+            ResponseBodyJson = "{}",
+            ProcessedAt = DateTimeOffset.UtcNow
+        };
+        context.ApiIdempotencyRecords.Add(winner);
+        await context.SaveChangesAsync();
+
+        var failedInsert = new ApiIdempotencyRecord
+        {
+            Id = Id<ApiIdempotencyRecord>.New(),
+            ScopeTuple = scopeTuple,
+            IdempotencyKey = idempotencyKey,
+            RequestFingerprint = "loser-fingerprint",
+            ResponseStatusCode = 0,
+            ResponseBodyJson = string.Empty,
+            ProcessedAt = DateTimeOffset.UtcNow
+        };
+        context.ApiIdempotencyRecords.Add(failedInsert);
+        var repository = new ApiIdempotencyRecordRepository(context, new DuplicateScopeAndKeyFailureClassifier());
+
+        var recovered = await repository.TryRecoverDuplicateAsync(failedInsert, new DbUpdateException());
+
+        recovered.Should().NotBeNull();
+        recovered!.Id.Should().Be(winner.Id);
+        context.Entry(failedInsert).State.Should().Be(EntityState.Detached);
+        await context.SaveChangesAsync();
+        (await context.ApiIdempotencyRecords.ToListAsync()).Should().ContainSingle().Which.Id.Should().Be(winner.Id);
+    }
+
+    private sealed class DuplicateScopeAndKeyFailureClassifier : IApiIdempotencyRecordDuplicateFailureClassifier
+    {
+        public bool IsDuplicateScopeAndKeyFailure(Exception commitFailure) => true;
     }
 }

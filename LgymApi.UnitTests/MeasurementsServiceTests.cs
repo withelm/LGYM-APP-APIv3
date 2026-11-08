@@ -4,6 +4,7 @@ using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Measurements;
 using LgymApi.Application.Features.Measurements.Models;
 using LgymApi.Application.WorkoutProgress.Contracts.Measurements;
+using LgymApi.Application.WorkoutProgress.Authorization;
 using LgymApi.Application.WorkoutProgress.Errors;
 using LgymApi.Application.WorkoutProgress.ProgressData;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
@@ -23,6 +24,7 @@ public sealed class MeasurementsServiceTests
     private IWorkoutProgressReadWriteService _progress = null!;
     private IAccountAccessReader _accounts = null!;
     private IMeasurementsRelationshipAccessPort _relationships = null!;
+    private IWorkoutProgressOwnershipAuthorizationService _ownershipAuthorization = null!;
     private MeasurementsService _service = null!;
 
     [SetUp]
@@ -31,7 +33,14 @@ public sealed class MeasurementsServiceTests
         _progress = Substitute.For<IWorkoutProgressReadWriteService>();
         _accounts = Substitute.For<IAccountAccessReader>();
         _relationships = Substitute.For<IMeasurementsRelationshipAccessPort>();
-        _service = new MeasurementsService(_progress, _accounts, _relationships);
+        _ownershipAuthorization = Substitute.For<IWorkoutProgressOwnershipAuthorizationService>();
+        _ownershipAuthorization.IsOwner(Arg.Any<AuthenticatedAccountContext?>(), Arg.Any<Id<AccountReference>>())
+            .Returns(call =>
+            {
+                var actor = call.ArgAt<AuthenticatedAccountContext?>(0);
+                return actor is not null && actor.Id == call.ArgAt<Id<AccountReference>>(1);
+            });
+        _service = new MeasurementsService(_progress, _accounts, _relationships, _ownershipAuthorization);
     }
 
     [Test]

@@ -40,8 +40,8 @@ public sealed class TrainerDietPlansController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
-        var result = await _dietPlans.GetTraineePlansAsync(new DietPlanListAccountQuery(trainerId, parsedTraineeId), cancellationToken);
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
+        var result = await _dietPlans.GetTraineePlansAsync(new DietPlanListAccountQuery(accountContext, parsedTraineeId), cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.MapList<DietPlanReadModel, DietPlanDto>(result.Value));
     }
 
@@ -59,8 +59,8 @@ public sealed class TrainerDietPlansController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
-        var result = await _dietPlans.GetTraineePlanAsync(new DietPlanGetAccountQuery(trainerId, parsedTraineeId, parsedPlanId), cancellationToken);
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
+        var result = await _dietPlans.GetTraineePlanAsync(new DietPlanGetAccountQuery(accountContext, parsedTraineeId, parsedPlanId), cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<DietPlanReadModel, DietPlanDto>(result.Value));
     }
 
@@ -73,9 +73,9 @@ public sealed class TrainerDietPlansController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var result = await _dietPlans.CreateAsync(
-            new DietPlanCreateAccountCommand(trainerId, parsedTraineeId, _mapper.Map<UpsertDietPlanRequest, DietPlanUpsertData>(request)),
+            new DietPlanCreateAccountCommand(accountContext, parsedTraineeId, _mapper.Map<UpsertDietPlanRequest, DietPlanUpsertData>(request)),
             cancellationToken);
         return result.IsFailure
             ? result.ToActionResult()
@@ -96,9 +96,9 @@ public sealed class TrainerDietPlansController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var result = await _dietPlans.UpdateAsync(
-            new DietPlanUpdateAccountCommand(trainerId, parsedTraineeId, parsedPlanId, _mapper.Map<UpsertDietPlanRequest, DietPlanUpsertData>(request)),
+            new DietPlanUpdateAccountCommand(accountContext, parsedTraineeId, parsedPlanId, _mapper.Map<UpsertDietPlanRequest, DietPlanUpsertData>(request)),
             cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<DietPlanReadModel, DietPlanDto>(result.Value));
     }
@@ -117,8 +117,8 @@ public sealed class TrainerDietPlansController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
-        var result = await _dietPlans.ActivateAsync(new DietPlanActivateAccountCommand(trainerId, parsedTraineeId, parsedPlanId), cancellationToken);
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
+        var result = await _dietPlans.ActivateAsync(new DietPlanActivateAccountCommand(accountContext, parsedTraineeId, parsedPlanId), cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Updated));
     }
 
@@ -136,8 +136,8 @@ public sealed class TrainerDietPlansController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
-        var result = await _dietPlans.DeleteAsync(new DietPlanDeleteAccountCommand(trainerId, parsedTraineeId, parsedPlanId), cancellationToken);
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
+        var result = await _dietPlans.DeleteAsync(new DietPlanDeleteAccountCommand(accountContext, parsedTraineeId, parsedPlanId), cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<string, ResponseMessageDto>(Messages.Deleted));
     }
 
@@ -155,8 +155,8 @@ public sealed class TrainerDietPlansController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
-        var result = await _dietPlans.GetHistoryAsync(new DietPlanHistoryAccountQuery(trainerId, parsedTraineeId, parsedPlanId), cancellationToken);
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
+        var result = await _dietPlans.GetHistoryAsync(new DietPlanHistoryAccountQuery(accountContext, parsedTraineeId, parsedPlanId), cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(_mapper.MapList<DietPlanHistoryReadModel, DietPlanHistoryDto>(result.Value));
     }
 }

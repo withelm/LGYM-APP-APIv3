@@ -7,9 +7,10 @@ public interface IDietPlanPersistence
 {
     Task AddPlanAsync(DietPlan plan, CancellationToken cancellationToken = default);
     Task AddHistoryEntryAsync(DietPlanHistory historyEntry, CancellationToken cancellationToken = default);
+    void StageUpdate(DietPlan plan);
     Task<DietPlan?> FindTrackedPlanByIdAsync(Id<DietPlan> planId, CancellationToken cancellationToken = default);
     Task<DietPlan?> GetPlanByIdAsync(Id<DietPlan> planId, CancellationToken cancellationToken = default);
-    Task<List<DietPlan>> ListPlansByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default);
+    Task<List<DietPlan>> ListPlansByTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<List<DietPlan>> ListActivePlansForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<DietPlan?> GetActivePlanForTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<List<DietPlanHistory>> ListPlanHistoryAsync(Id<DietPlan> planId, CancellationToken cancellationToken = default);

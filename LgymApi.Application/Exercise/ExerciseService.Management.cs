@@ -44,7 +44,7 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
         }
 
-        if (currentAccount == null || currentAccount.Id.IsEmpty || currentAccount.Id != routeAccountId)
+        if (currentAccount is null || !IsOwner(currentAccount, routeAccountId))
         {
             return Result<Unit, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
@@ -60,7 +60,7 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
         }
 
-        if (!CanManageGlobalExercises(currentAccount))
+        if (!CanManageGlobalExercises(currentAccount) || !IsOwner(currentAccount, targetAccountId))
         {
             return Result<Unit, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
@@ -110,14 +110,12 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.InvalidId));
         }
 
-        if (currentAccount == null || currentAccount.Id.IsEmpty || currentAccount.Id != routeAccountId)
+        if (currentAccount is null || !IsOwner(currentAccount, routeAccountId))
         {
             return Result<Unit, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
 
-        var exercise = CanManageGlobalExercises(currentAccount)
-            ? await _exerciseRepository.FindUnrestrictedByIdAsync(exerciseId, cancellationToken)
-            : await _exerciseRepository.FindOwnedByAccountAsync(exerciseId, currentAccount.Id, cancellationToken);
+        var exercise = await FindEditableExerciseAsync(currentAccount, exerciseId, cancellationToken);
         if (exercise == null)
         {
             return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
@@ -152,9 +150,7 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.FieldRequired));
         }
 
-        var exercise = CanManageGlobalExercises(currentUser)
-            ? await _exerciseRepository.FindUnrestrictedByIdAsync(exerciseId, cancellationToken)
-            : await _exerciseRepository.FindOwnedByAccountAsync(exerciseId, currentUser.Id, cancellationToken);
+        var exercise = await FindEditableExerciseAsync(currentUser, exerciseId, cancellationToken);
         if (exercise == null)
         {
             return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
@@ -191,6 +187,17 @@ public sealed partial class ExerciseService : IExerciseService
         string? Description,
         string? Image);
 
+    private async Task<WorkoutExercisePersistenceModel?> FindEditableExerciseAsync(
+        AuthenticatedAccountContext account,
+        Id<Domain.Entities.Exercise> exerciseId,
+        CancellationToken cancellationToken)
+    {
+        var ownedExercise = await _exerciseRepository.FindOwnedByAccountAsync(exerciseId, account.Id, cancellationToken);
+        return ownedExercise ?? (CanManageGlobalExercises(account)
+            ? await _exerciseRepository.FindGlobalByIdAsync(exerciseId, cancellationToken)
+            : null);
+    }
+
     public async Task<Result<Unit, AppError>> AddGlobalTranslationAsync(AuthenticatedAccountContext? currentUser, AddGlobalTranslationInput input, CancellationToken cancellationToken = default)
     {
         var (routeUserId, exerciseId, culture, name) = input;
@@ -200,7 +207,7 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
 
-        if (routeUserId.IsEmpty || currentUser.Id != routeUserId)
+        if (!IsOwner(currentUser, routeUserId))
         {
             return Result<Unit, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
         }
@@ -234,15 +241,14 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.FieldRequired));
         }
 
-        var exercise = await _exerciseRepository.FindUnrestrictedByIdAsync(exerciseId, cancellationToken);
-        if (exercise == null)
-        {
-            return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
-        }
-
-        if (exercise.OwnerId != null)
+        if (await _exerciseRepository.FindOwnedByAccountAsync(exerciseId, currentUser.Id, cancellationToken) is not null)
         {
             return Result<Unit, AppError>.Failure(new ExerciseForbiddenError(Messages.Forbidden));
+        }
+
+        if (await _exerciseRepository.FindGlobalByIdAsync(exerciseId, cancellationToken) is null)
+        {
+            return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
         }
 
         var normalizedCulture = cultureInput.ToLowerInvariant();

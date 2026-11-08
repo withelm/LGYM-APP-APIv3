@@ -12,6 +12,7 @@ internal sealed class DietPlanEntityTypeConfiguration : IEntityTypeConfiguration
 
         builder.Property(e => e.Name).HasMaxLength(120).IsRequired();
         builder.Property(e => e.Notes).HasMaxLength(2000);
+        builder.Property(e => e.UpdatedAt).IsConcurrencyToken();
 
         builder.HasIndex(e => new { e.TrainerId, e.TraineeId, e.CreatedAt });
         builder.HasIndex(e => new { e.TraineeId, e.IsActive });

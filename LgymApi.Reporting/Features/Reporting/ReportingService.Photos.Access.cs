@@ -62,6 +62,24 @@ public sealed partial class ReportingService
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
+    private async Task<Result<Unit, AppError>> ValidateTrainerSourcePhotoAccessAsync(
+        AuthenticatedAccountContext currentTrainer,
+        Id<AccountReference> traineeId,
+        DateTimeOffset sourceCreatedAt,
+        CancellationToken cancellationToken)
+    {
+        var trainerCheck = EnsureTrainer(currentTrainer);
+        if (trainerCheck.IsFailure)
+        {
+            return Result<Unit, AppError>.Failure(new ReportingForbiddenError(Messages.TrainerRoleRequired));
+        }
+
+        var access = await _relationshipAccessPersistence.GetAccessAsync(currentTrainer.Id, traineeId, cancellationToken);
+        return access.CanReadTrainerAuthoredRecordAt(sourceCreatedAt)
+            ? Result<Unit, AppError>.Success(Unit.Value)
+            : Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+    }
+
     private async Task<Result<Unit, AppError>> ValidatePhotoSubjectAvailabilityAsync(
         Id<AccountReference> traineeId,
         CancellationToken cancellationToken)
@@ -122,7 +140,11 @@ public sealed partial class ReportingService
                 : Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
 
-        return await ValidateTrainerPhotoAccessAsync(currentUser, request.TraineeId, cancellationToken);
+        return await ValidateTrainerSourcePhotoAccessAsync(
+            currentUser,
+            request.TraineeId,
+            request.CreatedAt,
+            cancellationToken);
     }
 
     private static string GenerateStorageKey(

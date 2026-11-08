@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 52;
+    private const int PersistedEntityCount = 53;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
@@ -23,10 +23,17 @@ public sealed class SingleProductionDbContextGuardTests
     {
         ["LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj"] = "784fc7ec545ef354f14b14c3f9925298fed54a73429f78399fef9fd1b7ef7838",
         ["LgymApi.Api/LgymApi.Api.csproj"] = "874e79fdd00d04c02203ca7c1937c6195c9906cc84aeff517876b5b8428711df",
-        ["LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj"] = "b0f1e355b313382f9a46f9e698eeb22204a702e7d01db5668fc5f0c2b9941517",
+        ["LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj"] = "583b80cc08387417b6f5c92b3a3a31eba558d12b7e32fefe82a523878b545a14",
+        ["LgymApi.Authorization/LgymApi.Authorization.csproj"] = "0c39e15658290889c3dd0b540c854a9971d4f4e87b920c9460ab985936b96545",
+        ["LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj"] = "c300f972bd132330f0ead1dac11bd40168b7ebc28184cf0f249373eaabb09eca",
         ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj"] = "9e37345ff9459e13b1cec859b2b394cee1961bfea379c0936b8861b1a23efe10",
         ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "082c91ec55218916e80b8cb0394b1bc92306d54ee1157b9224b8637e74467207",
-        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "200549f3f97f6672b7751fdb894de3c69c44bd55a90397b015f01beb9217b47c",
+        ["LgymApi.Application/LgymApi.Application.csproj"] = "afacd804b7178a428a230ce11d5d500a46214afdb73726f608818c8247b913c7",
+        ["LgymApi.Identity/LgymApi.Identity.csproj"] = "5fe4c97db85e1ce49ce16156a8f0f33ddf1716e207fc58aaef743f2489cb8752",
+        ["LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj"] = "c7e286bce4f001c43b3458ae8e2265677d19f4f2f16738766124afadda874199",
+        ["LgymApi.Notifications/LgymApi.Notifications.csproj"] = "a9c932f78098834604f3ad34a628d8f6ad435de1db2c64168b4dfb059eb162bd",
+        ["LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj"] = "cc06ce973e9fe252b5f59fa2b17a5d63bc9a3ff1a2a056e593e87e48bf09f83d",
+        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "79cf212c1835f38a00f61733b0527c41015dd96fd1ec87c8292949794c09c534",
         ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "4453c4766317025d9eefd24a05e6ff9841e7c0fcaf71c2d62c9a5622dad66339"
     };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -40,7 +47,11 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261028200254_AddReportingPhotoTypeSnapshots.Designer.cs"] = "ee6deb9e9ccaab9a5a9efbd5e6857c44c2fc679747ae8a9d538755c675b08d5a",
         [MigrationRoot + "/20261104014456_AddTrainerApproval.cs"] = "75591f32d31f999a58e1514c90ed63e9716c9aee9720c2582d5bdbbeafa53fe0",
         [MigrationRoot + "/20261104014456_AddTrainerApproval.Designer.cs"] = "f1e0374b7b54cd4918d81cf7c1c6718ed2498edceb35b3b655c6a08bd8503b01",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "5287810ca2b0eb339867f46886a51ae0b93f50cf7221795955ce4dbe36ba8aca"
+        [MigrationRoot + "/20261107094438_AddCoachingEpisodes.cs"] = "06ec01f112c832272fcc614daad7089102e20aef43eac25f7d8232b3d10a3a81",
+        [MigrationRoot + "/20261107094438_AddCoachingEpisodes.Designer.cs"] = "9f802f8b1097ec56c5478ece5fd9685f39637fa59e48b5a625b307c6a83cf85c",
+        [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.cs"] = "d6a64a469455b5e5fa220c7bb8e7c6fe3975c00b9db192bbf3a8c75f78322070",
+        [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.Designer.cs"] = "1417f96bcd7abf046858cde05ebb26faa354862f5c9c99aeaac2ce05152c1758",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "ff26531b323f5553d8f1339bffc0e9a6365d9caa7aaa4f1da83825999a44b652"
     };
 
     [Test]
@@ -457,16 +468,9 @@ public sealed class SingleProductionDbContextGuardTests
             AssertApprovedFileHash(repoRoot, entry, "project file");
         }
 
-        const string applicationProject = "LgymApi.Application/LgymApi.Application.csproj";
         var approvedChanges = ApprovedRetentionMigrationLedger.Keys
             .Concat(ApprovedProjectFileLedger.Keys)
             .ToList();
-        if (headChanges.Contains(applicationProject, StringComparer.OrdinalIgnoreCase))
-        {
-            var baseline = string.Join(Environment.NewLine, RunGit(repoRoot, ["show", $"HEAD:{applicationProject}"]));
-            AssertOnlyNodaTimePackageAdded(baseline, File.ReadAllText(Path.Combine(repoRoot, applicationProject)));
-            approvedChanges.Add(applicationProject);
-        }
 
         AssertPhysicalTopologyWorktreeIsClean(headChanges, untrackedFiles, approvedChanges);
     }

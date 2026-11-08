@@ -1,9 +1,12 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Resources;
 using Microsoft.EntityFrameworkCore;
@@ -156,8 +159,8 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         var unregisterResponse = await Client.PostAsJsonAsync("/api/push/installations/unregister", new { installationId = "device-owner" });
         var disassociateResponse = await Client.PostAsJsonAsync("/api/push/installations/disassociate", new { installationId = "device-owner" });
 
-        unregisterResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        disassociateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        unregisterResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        disassociateResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         using var assertionScope = Factory.Services.CreateScope();
         var assertionDb = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -165,6 +168,248 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         installation.UserId.Should().Be(owner.Id);
         installation.SessionId.Should().Be(ownerSessionId);
         installation.DisabledAt.Should().BeNull();
+    }
+
+    [Test]
+    public async Task RegisterPushInstallation_CannotTakeOverForeignInstallationOrToken()
+    {
+        var owner = await SeedUserAsync("push-register-owner", "push-register-owner@example.com");
+        var attacker = await SeedUserAsync("push-register-attacker", "push-register-attacker@example.com");
+        SetAuthorizationHeader(owner.Id);
+        var ownerResponse = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-takeover",
+            platform = "android",
+            fcmToken = "token-takeover",
+            environment = "testing"
+        });
+        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        SetAuthorizationHeader(attacker.Id);
+        var installationTakeover = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-takeover",
+            platform = "ios",
+            fcmToken = "attacker-token",
+            environment = "testing"
+        });
+        var tokenTakeover = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "attacker-device",
+            platform = "ios",
+            fcmToken = "token-takeover",
+            environment = "testing"
+        });
+
+        installationTakeover.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        tokenTakeover.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var scope = Factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var installation = await database.PushInstallations.SingleAsync();
+        installation.UserId.Should().Be(owner.Id);
+        installation.InstallationId.Should().Be("device-takeover");
+        installation.FcmToken.Should().Be("token-takeover");
+    }
+
+    [Test]
+    public async Task RegisterPushInstallation_SameAccountRotatesSession_AndActionsStillRequireExactCurrentPair()
+    {
+        var owner = await SeedUserAsync("push-session-owner", "push-session-owner@example.com");
+        SetAuthorizationHeader(owner.Id);
+        var register = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-session-owned",
+            platform = "android",
+            fcmToken = "token-session-owned",
+            environment = "testing"
+        });
+        register.StatusCode.Should().Be(HttpStatusCode.OK);
+        LgymApi.Domain.Entities.UserSession originalSession;
+        using (var originalScope = Factory.Services.CreateScope())
+        {
+            var originalDatabase = originalScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var originalSessionId = (await originalDatabase.PushInstallations.SingleAsync()).SessionId!.Value;
+            originalSession = await originalDatabase.UserSessions.AsNoTracking().SingleAsync(session => session.Id == originalSessionId);
+        }
+
+        SetAuthorizationHeader(owner.Id);
+        var reregister = await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-session-owned",
+            platform = "android",
+            fcmToken = "token-replaced",
+            environment = "testing"
+        });
+        reregister.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var scope = Factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var installation = await database.PushInstallations.SingleAsync();
+        installation.FcmToken.Should().Be("token-replaced");
+        installation.DisabledAt.Should().BeNull();
+        installation.UserId.Should().Be(owner.Id);
+        installation.SessionId.Should().NotBe(originalSession.Id);
+
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            GenerateJwt(owner.Id, originalSession.Id, originalSession.Jti));
+        var oldSessionUnregister = await Client.PostAsJsonAsync(
+            "/api/push/installations/unregister",
+            new { installationId = "device-session-owned" });
+        oldSessionUnregister.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var currentSession = await database.UserSessions.AsNoTracking()
+            .SingleAsync(session => session.Id == installation.SessionId);
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            GenerateJwt(owner.Id, currentSession.Id, currentSession.Jti));
+        var currentSessionUnregister = await Client.PostAsJsonAsync(
+            "/api/push/installations/unregister",
+            new { installationId = "device-session-owned" });
+        currentSessionUnregister.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Test]
+    public async Task RegisterPushInstallation_KeyedRetryReplaysOnce_AndResourceLossDeniesCachedResponse()
+    {
+        var user = await SeedUserAsync("push-register-replay", "push-register-replay@example.com");
+        SetAuthorizationHeader(user.Id);
+        SetIdempotencyKey("push-register-replay-key");
+        var request = new
+        {
+            installationId = "device-register-replay",
+            platform = "android",
+            fcmToken = "token-register-replay",
+            environment = "testing"
+        };
+
+        var first = await Client.PostAsJsonAsync("/api/push/installations/register", request);
+        var replay = await Client.PostAsJsonAsync("/api/push/installations/register", request);
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var installation = await database.PushInstallations.SingleAsync();
+            installation.UserId = null;
+            installation.SessionId = null;
+            await database.SaveChangesAsync();
+        }
+
+        var deniedReplay = await Client.PostAsJsonAsync("/api/push/installations/register", request);
+        ClearIdempotencyKey();
+        deniedReplay.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task UnregisterPushInstallation_KeyedRetryReplaysCompletedMutationWithoutUpdatingAgain()
+    {
+        var user = await SeedUserAsync("push-unregister-replay", "push-unregister-replay@example.com");
+        SetAuthorizationHeader(user.Id);
+        await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-unregister-replay",
+            platform = "android",
+            fcmToken = "token-unregister-replay",
+            environment = "testing"
+        });
+        SetIdempotencyKey("push-unregister-replay-key");
+        var request = new { installationId = "device-unregister-replay" };
+
+        var first = await Client.PostAsJsonAsync("/api/push/installations/unregister", request);
+        DateTimeOffset firstUpdatedAt;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            firstUpdatedAt = (await database.PushInstallations.SingleAsync()).UpdatedAt;
+        }
+
+        var replay = await Client.PostAsJsonAsync("/api/push/installations/unregister", request);
+        ClearIdempotencyKey();
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var assertionScope = Factory.Services.CreateScope();
+        var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await assertionDatabase.PushInstallations.SingleAsync()).UpdatedAt.Should().Be(firstUpdatedAt);
+    }
+
+    [TestCase("{", "application/json")]
+    [TestCase("{\"installationId\":42}", "application/json")]
+    public async Task RegisterPushInstallation_KeyedMalformedRetry_DeniesWithoutThrowing(
+        string body,
+        string mediaType)
+    {
+        var identity = Id<User>.New();
+        var user = await SeedUserAsync($"push-malformed-{identity}", $"push-malformed-{identity}@example.com");
+        SetAuthorizationHeader(user.Id);
+        SetIdempotencyKey($"push-malformed-{Id<PushInstallation>.New()}");
+
+        var first = await Client.PostAsync(
+            "/api/push/installations/register",
+            new StringContent(body, Encoding.UTF8, mediaType));
+        var retry = await Client.PostAsync(
+            "/api/push/installations/register",
+            new StringContent(body, Encoding.UTF8, mediaType));
+        ClearIdempotencyKey();
+
+        first.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        retry.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task RegisterPushInstallation_KeyedRetryAfterSessionRevocation_IsUnauthorized()
+    {
+        var user = await SeedUserAsync("push-revoked-replay", "push-revoked-replay@example.com");
+        SetAuthorizationHeader(user.Id);
+        SetIdempotencyKey("push-revoked-replay-key");
+        var request = new
+        {
+            installationId = "device-revoked-replay",
+            platform = "android",
+            fcmToken = "token-revoked-replay",
+            environment = "testing"
+        };
+        var first = await Client.PostAsJsonAsync("/api/push/installations/register", request);
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var sessionId = (await database.PushInstallations.SingleAsync()).SessionId!.Value;
+            (await database.UserSessions.SingleAsync(session => session.Id == sessionId)).RevokedAtUtc = DateTimeOffset.UtcNow;
+            await database.SaveChangesAsync();
+        }
+
+        var replay = await Client.PostAsJsonAsync("/api/push/installations/register", request);
+        ClearIdempotencyKey();
+        replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Test]
+    public async Task DisassociatePushInstallation_IdempotencyHeaderDoesNotReplayAfterOwnershipIsRemoved()
+    {
+        var user = await SeedUserAsync("push-disassociate-no-replay", "push-disassociate-no-replay@example.com");
+        SetAuthorizationHeader(user.Id);
+        await Client.PostAsJsonAsync("/api/push/installations/register", new
+        {
+            installationId = "device-disassociate-no-replay",
+            platform = "android",
+            fcmToken = "token-disassociate-no-replay",
+            environment = "testing"
+        });
+        SetIdempotencyKey("push-disassociate-no-replay-key");
+
+        var first = await Client.PostAsJsonAsync(
+            "/api/push/installations/disassociate",
+            new { installationId = "device-disassociate-no-replay" });
+        var retry = await Client.PostAsJsonAsync(
+            "/api/push/installations/disassociate",
+            new { installationId = "device-disassociate-no-replay" });
+        ClearIdempotencyKey();
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        retry.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Test]

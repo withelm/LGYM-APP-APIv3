@@ -9,6 +9,7 @@ public interface IPlanExerciseCatalogPort
 {
     Task<IReadOnlyDictionary<Id<PlanExerciseReference>, PlanExerciseCatalogItem>> GetByIdsAsync(
         IReadOnlyCollection<Id<PlanExerciseReference>> exerciseIds,
+        Id<AccountReference> accountId,
         IReadOnlyList<string> cultures,
         CancellationToken cancellationToken = default);
 }

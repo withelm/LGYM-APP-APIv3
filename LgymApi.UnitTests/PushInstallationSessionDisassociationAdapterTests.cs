@@ -7,6 +7,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using LgymApi.UnitTests.Fakes;
 
@@ -49,6 +50,7 @@ public sealed class PushInstallationSessionDisassociationAdapterTests
         productionRepositoryRegistration.ImplementationType!.Name.Should().Be("PushInstallationRepository");
 
         services.AddScoped<IPushInstallationRepository>(_ => pushInstallationRepository);
+        services.AddScoped<IPushInstallationPersistenceConflictClassifier>(_ => new NoRegistrationConflictClassifier());
         services.AddScoped(_ => Substitute.For<IUnitOfWork>());
 
         var registrations = services
@@ -80,5 +82,10 @@ public sealed class PushInstallationSessionDisassociationAdapterTests
                 && call.CancellationToken == cancellationSource.Token)
             .Should()
             .ContainSingle();
+    }
+
+    private sealed class NoRegistrationConflictClassifier : IPushInstallationPersistenceConflictClassifier
+    {
+        public bool IsRegistrationConflict(DbUpdateException exception) => false;
     }
 }

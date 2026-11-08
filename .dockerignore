@@ -6,6 +6,7 @@
 !LgymApi.BackgroundWorker/**
 !LgymApi.BackgroundWorker.Common/**
 !LgymApi.Application/**
+!LgymApi.Authorization/**
 !LgymApi.Infrastructure/**
 !LgymApi.Domain/**
 !LgymApi.Identity/**

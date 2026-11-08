@@ -24,6 +24,14 @@ public sealed class NotificationRetentionSchemaTests
 
         AssertIndex(pushInstallation, [nameof(PushInstallation.DisabledAt)], false, "IX_PushInstallations_DisabledAt");
         AssertIndex(pushInstallation, [nameof(PushInstallation.InstallationId)], true, "IX_PushInstallations_InstallationId", "\"IsDeleted\" = FALSE");
+        pushInstallation.GetProperties()
+            .Where(property => property.IsConcurrencyToken)
+            .Select(property => property.Name)
+            .Should()
+            .ContainSingle()
+            .Which
+            .Should()
+            .Be("RegistrationRevision");
         AssertForeignKey(pushInstallation, nameof(PushInstallation.UserId), DeleteBehavior.SetNull);
         AssertForeignKey(pushInstallation, nameof(PushInstallation.SessionId), DeleteBehavior.SetNull);
 

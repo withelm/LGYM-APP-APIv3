@@ -67,6 +67,8 @@ public sealed class ExerciseRepositoryTests
         var owned = await repository.FindOwnedByAccountAsync(ownedExercise.Id, actorId);
         var foreignOwned = await repository.FindOwnedByAccountAsync(foreignExercise.Id, actorId);
         var unrestrictedForeign = await repository.FindUnrestrictedByIdAsync(foreignExercise.Id);
+        var global = await repository.FindGlobalByIdAsync(globalExercise.Id);
+        var foreignGlobal = await repository.FindGlobalByIdAsync(foreignExercise.Id);
 
         using (new AssertionScope())
         {
@@ -80,6 +82,9 @@ public sealed class ExerciseRepositoryTests
             foreignOwned.Should().BeNull();
             unrestrictedForeign.Should().NotBeNull();
             unrestrictedForeign!.OwnerId.Should().Be(foreignOwnerId);
+            global.Should().NotBeNull();
+            global!.OwnerId.Should().BeNull();
+            foreignGlobal.Should().BeNull();
         }
     }
 

@@ -63,7 +63,7 @@ public sealed class CreateTraineeDietPlanUseCaseTests
         var beforeNotification = DateTimeOffset.UtcNow;
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeDietPlanCommand(trainerId, traineeId, ValidData()),
+            new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()),
             cancellationToken);
 
         var afterNotification = DateTimeOffset.UtcNow;
@@ -115,7 +115,7 @@ public sealed class CreateTraineeDietPlanUseCaseTests
         dependencies.UnitOfWork.SaveChangesAsync(cancellationToken).Returns(Task.FromResult(2));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeDietPlanCommand(trainerId, traineeId, ValidData(isActive: false)),
+            new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData(isActive: false)),
             cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
@@ -141,6 +141,7 @@ public sealed class CreateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CreateTraineeDietPlanCommand(
+                NutritionAuthorizationTestFactory.CreateActor(trainerId),
                 trainerId,
                 traineeId,
                 new DietPlanUpsertData("Macros", new DateOnly(2026, 7, 23), null, 2200, null, null, null, null, false, [])),
@@ -165,6 +166,7 @@ public sealed class CreateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CreateTraineeDietPlanCommand(
+                NutritionAuthorizationTestFactory.CreateActor(trainerId),
                 trainerId,
                 traineeId,
                 new DietPlanUpsertData("Plan", new DateOnly(2026, 7, 23), null, null, null, null, null, null, false, [])),
@@ -195,7 +197,7 @@ public sealed class CreateTraineeDietPlanUseCaseTests
             dependencies.GrantAccess(trainerId, traineeId);
 
             var result = await dependencies.CreateUseCase().ExecuteAsync(
-                new CreateTraineeDietPlanCommand(trainerId, traineeId, data),
+                new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, data),
                 cancellationToken);
 
             result.Error.Should().BeOfType<BadRequestError>();
@@ -212,7 +214,7 @@ public sealed class CreateTraineeDietPlanUseCaseTests
         var dependencies = new Dependencies();
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeDietPlanCommand(trainerId, Id<User>.Empty, ValidData()));
+            new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<User>.Empty, ValidData()));
 
         result.Error.Should().BeOfType<BadRequestError>();
         result.Error.Message.Should().Be(Messages.UserIdRequired);
@@ -233,7 +235,7 @@ public sealed class CreateTraineeDietPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(false, true));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeDietPlanCommand(trainerId, traineeId, ValidData()));
+            new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()));
 
         result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
         result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
@@ -260,7 +262,7 @@ public sealed class CreateTraineeDietPlanUseCaseTests
             .AndDoes(_ => operations.Add("save"));
 
         Func<Task> act = () => dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeDietPlanCommand(trainerId, traineeId, ValidData()),
+            new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()),
             cancellationToken);
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("save failed");
@@ -324,7 +326,8 @@ public sealed class CreateTraineeDietPlanUseCaseTests
                 Commands,
                 UnitOfWork,
                 Mapper,
-                new DietPlanHistorySnapshotFactory(Mapper));
+                new DietPlanHistorySnapshotFactory(Mapper),
+                NutritionAuthorizationTestFactory.CreateDietCoordinator());
 
         private static IMapper CreateMapper()
         {

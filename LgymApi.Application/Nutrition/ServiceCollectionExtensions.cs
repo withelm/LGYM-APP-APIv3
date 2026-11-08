@@ -12,6 +12,8 @@ using LgymApi.Application.Nutrition.DietPlans.GetTraineePlanHistory.Contracts;
 using LgymApi.Application.Nutrition.DietPlans.GetTraineePlans;
 using LgymApi.Application.Nutrition.DietPlans.UpdateTraineePlan;
 using LgymApi.Application.Nutrition.DietPlans.UpdateTraineePlan.Contracts;
+using LgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan;
+using LgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan.Contracts;
 using LgymApi.Application.Nutrition.Supplementation.AssignTraineePlan;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake.Contracts;
@@ -25,7 +27,10 @@ using LgymApi.Application.Nutrition.Supplementation.GetTraineePlans;
 using LgymApi.Application.Nutrition.Supplementation.UnassignTraineePlan;
 using LgymApi.Application.Nutrition.Supplementation.UnassignTraineePlan.Contracts;
 using LgymApi.Application.Nutrition.Supplementation.UpdateTraineePlan;
+using LgymApi.Application.Nutrition.Supplementation;
 using Microsoft.Extensions.DependencyInjection;
+using LgymApi.Identity.Contracts.Authorization;
+using LgymApi.Authorization;
 
 namespace LgymApi.Application.Nutrition;
 
@@ -33,8 +38,14 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddNutritionModule(this IServiceCollection services)
     {
+        services.AddAuthorizationPolicy<DietPlanAuthorizationContext, DietPlanAuthorizationPolicy>();
+        services.AddScoped<IDietPlanAuthorizationCoordinator, DietPlanAuthorizationCoordinator>();
+        services.AddAuthorizationPolicy<SupplementationAuthorizationContext, SupplementationAuthorizationPolicy>();
+        services.AddScoped<ISupplementationAuthorizationCoordinator, SupplementationAuthorizationCoordinator>();
+        services.AddScoped<IAccountAccessOwnerCapabilityExtension, NutritionAccountAccessCapabilitiesExtension>();
         services.AddScoped<ICreateTraineeDietPlanUseCase, CreateTraineeDietPlanUseCase>();
         services.AddScoped<IUpdateTraineeDietPlanUseCase, UpdateTraineeDietPlanUseCase>();
+        services.AddScoped<IUpdateOwnDietPlanUseCase, UpdateOwnDietPlanUseCase>();
         services.AddScoped<IDeleteTraineeDietPlanUseCase, DeleteTraineeDietPlanUseCase>();
         services.AddScoped<IActivateTraineeDietPlanUseCase, ActivateTraineeDietPlanUseCase>();
         services.AddScoped<IGetTraineeDietPlanUseCase, GetTraineeDietPlanUseCase>();

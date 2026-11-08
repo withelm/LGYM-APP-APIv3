@@ -14,15 +14,18 @@ internal sealed class GetTraineeDietPlanUseCase : IGetTraineeDietPlanUseCase
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
     private readonly IDietPlanPersistence _plans;
     private readonly IMapper _mapper;
+    private readonly IDietPlanAuthorizationCoordinator _authorization;
 
     public GetTraineeDietPlanUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
         IDietPlanPersistence plans,
-        IMapper mapper)
+        IMapper mapper,
+        IDietPlanAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _plans = plans;
         _mapper = mapper;
+        _authorization = authorization;
     }
 
     public async Task<Result<DietPlanReadModel, AppError>> ExecuteAsync(
@@ -35,18 +38,23 @@ internal sealed class GetTraineeDietPlanUseCase : IGetTraineeDietPlanUseCase
                 new BadRequestError(Messages.UserIdRequired));
         }
 
+        var actorId = query.Actor.Id.Rebind<User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            query.TrainerId,
+            actorId,
             query.TraineeId,
             cancellationToken);
-        var accessError = DietPlanAccess.GetTrainerAccessError(
+        var accessError = DietPlanAccess.GetAccessError(
+            _authorization,
+            query.Actor,
+            DietPlanAction.Read,
+            actorId,
+            query.TraineeId,
             access.IsTrainer,
             access.HasActiveRelationship);
         if (accessError is not null)
         {
             return Result<DietPlanReadModel, AppError>.Failure(accessError);
         }
-
         if (query.DietPlanId.IsEmpty)
         {
             return Result<DietPlanReadModel, AppError>.Failure(
@@ -54,7 +62,7 @@ internal sealed class GetTraineeDietPlanUseCase : IGetTraineeDietPlanUseCase
         }
 
         var plan = await _plans.GetPlanByIdAsync(query.DietPlanId, cancellationToken);
-        if (plan is null || !DietPlanAccess.IsOwnedBy(plan, query.TrainerId, query.TraineeId))
+        if (plan is null || !DietPlanAccess.IsOwnedByTrainee(plan, query.TraineeId))
         {
             return Result<DietPlanReadModel, AppError>.Failure(
                 new NotFoundError(Messages.DidntFind));

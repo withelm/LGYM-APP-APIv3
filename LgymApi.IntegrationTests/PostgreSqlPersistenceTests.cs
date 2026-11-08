@@ -1,6 +1,7 @@
 using FluentAssertions;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake.Contracts;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake.Models;
+using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -28,7 +29,7 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
         database.Database.ProviderName.Should().Be("Npgsql.EntityFrameworkCore.PostgreSQL");
         (await database.Database.GetPendingMigrationsAsync()).Should().BeEmpty();
         database.Database.HasPendingModelChanges().Should().BeFalse();
-        database.Model.GetEntityTypes().Should().HaveCount(52);
+        database.Model.GetEntityTypes().Should().HaveCount(53);
     }
 
     [Test]
@@ -200,6 +201,69 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
     }
 
     [Test]
+    public async Task ApiIdempotencyRecord_ConcurrentFirstClaims_RecoverWinnerAndExecuteMutationOnce()
+    {
+        const string scopeTuple = "POST|/api/idempotency-race|user";
+        const string idempotencyKey = "concurrent-first-claim";
+        using var barrier = new Barrier(2);
+        var mutationCount = 0;
+
+        async Task<IdempotencyClaimOutcome> ClaimAsync()
+        {
+            using var scope = Factory.Services.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IApiIdempotencyRecordRepository>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var proposed = new ApiIdempotencyRecord
+            {
+                Id = Id<ApiIdempotencyRecord>.New(),
+                ScopeTuple = scopeTuple,
+                IdempotencyKey = idempotencyKey,
+                RequestFingerprint = "same-request",
+                ResponseStatusCode = 0,
+                ResponseBodyJson = string.Empty,
+                ProcessedAt = DateTimeOffset.UtcNow
+            };
+            var staged = await repository.AddOrGetExistingAsync(proposed);
+            staged.Id.Should().Be(proposed.Id);
+            barrier.SignalAndWait();
+
+            try
+            {
+                await unitOfWork.SaveChangesAsync();
+                Interlocked.Increment(ref mutationCount);
+                staged.ResponseStatusCode = 200;
+                staged.ResponseBodyJson = "{\"ok\":true}";
+                await repository.UpdateAsync(staged);
+                await unitOfWork.SaveChangesAsync();
+                return new IdempotencyClaimOutcome(ExecutedMutation: true, RecoveredWinner: false);
+            }
+            catch (DbUpdateException exception)
+            {
+                var winner = await repository.TryRecoverDuplicateAsync(proposed, exception);
+                return new IdempotencyClaimOutcome(
+                    ExecutedMutation: false,
+                    RecoveredWinner: winner is not null);
+            }
+        }
+
+        var outcomes = await Task.WhenAll(Task.Run(ClaimAsync), Task.Run(ClaimAsync));
+
+        outcomes.Count(outcome => outcome.ExecutedMutation).Should().Be(1);
+        outcomes.Count(outcome => outcome.RecoveredWinner).Should().Be(1);
+        mutationCount.Should().Be(1);
+
+        using var readScope = Factory.Services.CreateScope();
+        var database = readScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var storedRecords = await database.ApiIdempotencyRecords
+            .AsNoTracking()
+            .Where(record => record.ScopeTuple == scopeTuple && record.IdempotencyKey == idempotencyKey)
+            .ToListAsync();
+        storedRecords.Should().ContainSingle();
+        storedRecords[0].ResponseStatusCode.Should().Be(200);
+        storedRecords[0].ResponseBodyJson.Should().Be("{\"ok\":true}");
+    }
+
+    [Test]
     public async Task UserRole_WithNonexistentTypedForeignKeys_IsRejectedByPostgreSqlConstraints()
     {
         var user = await SeedUserAsync(
@@ -266,4 +330,6 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
 
         await AssertConstraintViolationAsync(database, expectedConstraintName, "23503");
     }
+
+    private sealed record IdempotencyClaimOutcome(bool ExecutedMutation, bool RecoveredWinner);
 }

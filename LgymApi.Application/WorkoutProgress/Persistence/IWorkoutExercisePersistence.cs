@@ -8,6 +8,7 @@ public interface IWorkoutExercisePersistence
 {
     Task<WorkoutExercisePersistenceModel?> FindByIdAsync(Id<LgymApi.Domain.Entities.Exercise> id, CancellationToken cancellationToken = default);
     Task<WorkoutExercisePersistenceModel?> FindUnrestrictedByIdAsync(Id<LgymApi.Domain.Entities.Exercise> id, CancellationToken cancellationToken = default);
+    Task<WorkoutExercisePersistenceModel?> FindGlobalByIdAsync(Id<LgymApi.Domain.Entities.Exercise> id, CancellationToken cancellationToken = default);
     Task<WorkoutExercisePersistenceModel?> FindVisibleToAccountAsync(Id<LgymApi.Domain.Entities.Exercise> id, Id<AccountReference> accountId, CancellationToken cancellationToken = default);
     Task<WorkoutExercisePersistenceModel?> FindOwnedByAccountAsync(Id<LgymApi.Domain.Entities.Exercise> id, Id<AccountReference> accountId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<WorkoutExercisePersistenceModel>> GetAllForAccountAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default);

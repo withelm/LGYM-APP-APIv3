@@ -53,6 +53,7 @@ internal sealed class PostgreSqlAccountDeletionSharedUnitOfWorkTests : PostgreSq
                 unitOfWork,
                 new PushInstallationAccountCleanupAdapter(new PushInstallationLifecycleService(
                     new PushInstallationRepository(database),
+                    serviceScope.ServiceProvider.GetRequiredService<IPushInstallationPersistenceConflictClassifier>(),
                     unitOfWork)),
                 new AppDefaultsOptions(),
                 serviceScope.ServiceProvider.GetRequiredService<ITutorialService>(),

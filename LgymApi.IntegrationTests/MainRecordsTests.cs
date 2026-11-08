@@ -5,6 +5,9 @@ using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.IntegrationTests;
 
@@ -206,6 +209,75 @@ public sealed class MainRecordsTests : IntegrationTestBase
         var response = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task GetMainRecordsHistory_WithLegacyForeignCustomExerciseRecord_ReturnsNotFound()
+    {
+        var (ownerId, token) = await RegisterUserViaEndpointAsync(
+            name: "history-foreign-record-owner",
+            email: "history-foreign-record-owner@example.com",
+            password: "password123");
+        var foreignOwner = await SeedUserAsync(name: "history-foreign-record-exercise-owner", email: "history-foreign-record-exercise-owner@example.com");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var foreignExercise = new Exercise
+            {
+                Id = Id<Exercise>.New(),
+                UserId = foreignOwner.Id,
+                Name = "Foreign History Record Exercise",
+                BodyPart = BodyParts.Back
+            };
+            database.Exercises.Add(foreignExercise);
+            database.MainRecords.Add(new MainRecord
+            {
+                Id = Id<MainRecord>.New(),
+                UserId = ownerId,
+                ExerciseId = foreignExercise.Id,
+                Weight = 100,
+                Unit = WeightUnits.Kilograms,
+                Date = DateTimeOffset.UtcNow
+            });
+            await database.SaveChangesAsync();
+        }
+
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var response = await Client.GetAsync($"/api/mainRecords/{ownerId}/getMainRecordsHistory");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("GET", "/api/mainRecords/{id}/getLastMainRecords", "own", "foreign-object-denial")]
+    [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/mainRecords/getRecordOrPossibleRecordInExercise", "own", "foreign-object-denial")]
+    public async Task LegacyForeignExerciseRecords_AreNotExposedByBestOrPossibleRecordReads()
+    {
+        var (userId, token) = await RegisterUserViaEndpointAsync("legacy-record-owner", "legacy-record-owner@example.com", "password123");
+        var (foreignOwnerId, _) = await RegisterUserViaEndpointAsync("legacy-record-foreign", "legacy-record-foreign@example.com", "password123");
+        var foreignExerciseId = Id<Exercise>.New();
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.Exercises.Add(new Exercise { Id = foreignExerciseId, UserId = foreignOwnerId, Name = "Foreign legacy exercise", BodyPart = BodyParts.Back });
+            database.MainRecords.Add(new MainRecord
+            {
+                Id = Id<MainRecord>.New(),
+                UserId = userId,
+                ExerciseId = foreignExerciseId,
+                Weight = 100,
+                Unit = WeightUnits.Kilograms,
+                Date = DateTimeOffset.UtcNow
+            });
+            await database.SaveChangesAsync();
+        }
+
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var bestResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
+        var possibleResponse = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", new { exerciseId = foreignExerciseId.ToString() });
+
+        bestResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        possibleResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Test]

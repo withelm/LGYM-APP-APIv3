@@ -8,6 +8,7 @@ using ApplicationPushBackgroundScheduler = LgymApi.Application.Notifications.Con
 using ApplicationPushDeliveryRetrySettings = LgymApi.Application.Notifications.Contracts.Push.IPushNotificationDeliveryRetrySettings;
 using ApplicationPushEventPayload = LgymApi.Application.Notifications.Contracts.Push.PushEventPayload;
 using ApplicationPushProviderSender = LgymApi.Application.Notifications.Contracts.Push.IPushProviderSender;
+using ApplicationPushInstallationDeliveryTarget = LgymApi.Application.Notifications.Contracts.Push.PushInstallationDeliveryTarget;
 using ApplicationPushSendAttemptResult = LgymApi.Application.Notifications.Contracts.Push.PushSendAttemptResult;
 using ApplicationPushSendOutcome = LgymApi.Application.Notifications.Contracts.Push.PushSendOutcome;
 
@@ -54,6 +55,7 @@ public sealed class ApplicationPushContractCompatibilityTests
             $"{PushContractsNamespace}.IPushNotificationDeliveryRetrySettings",
             $"{PushContractsNamespace}.IPushProviderSender",
             $"{PushContractsNamespace}.PushEventPayload",
+            $"{PushContractsNamespace}.PushInstallationDeliveryTarget",
             $"{PushContractsNamespace}.PushSendAttemptResult",
             $"{PushContractsNamespace}.PushSendOutcome");
         contractTypes.Should().OnlyContain(type => type.Assembly == notificationsAssembly && type.IsPublic);
@@ -94,7 +96,7 @@ public sealed class ApplicationPushContractCompatibilityTests
             sendMethod,
             "SendAsync",
             typeof(Task<ApplicationPushSendAttemptResult>),
-            ("installationId", typeof(Id<PushInstallation>), false),
+            ("target", typeof(ApplicationPushInstallationDeliveryTarget), false),
             ("payload", typeof(ApplicationPushEventPayload), false),
             ("cancellationToken", typeof(CancellationToken), true));
 

@@ -53,6 +53,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.UseInlineDefinitionsForEnums();
     options.SchemaFilter<EnumAsStringSchemaFilter>();
+    options.OperationFilter<AccountAccessOperationFilter>();
 });
 var configuredCorsOrigins = builder.Configuration.GetSection(ConfigKeys.CorsAllowedOrigins).Get<string[]>();
 var corsAllowedOrigins = CorsOriginResolver.ResolveAllowedOrigins(configuredCorsOrigins, builder.Environment.IsDevelopment());
@@ -186,6 +187,7 @@ if (!app.Environment.IsEnvironment(TestingEnvironment))
 
 app.UseMiddleware<LgymApi.Api.Middleware.UserContextMiddleware>();
 app.UseAuthorization();
+ProgramHangfire.ConfigureDashboard(app, TestingEnvironment);
 app.UseMiddleware<ReportingProtocolMiddleware>();
 app.UseMiddleware<LgymApi.Api.Middleware.ApiIdempotencyMiddleware>();
 

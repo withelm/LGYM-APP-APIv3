@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.IntegrationTests.Authorization;
@@ -185,6 +186,65 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task MarkAsReadReplay_AfterSourceLossDeniesCachedResponseWithoutSecondMutation()
+    {
+        var trainee = await SeedUserAsync("notif-replay-trainee", "notif-replay-trainee@example.com");
+        var trainer = await SeedUserAsync("notif-replay-trainer", "notif-replay-trainer@example.com");
+        var now = DateTimeOffset.UtcNow;
+        Id<DietPlan> dietId;
+        Id<NotificationEntity> notificationId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var diet = new DietPlan
+            {
+                Id = Id<DietPlan>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                Name = "Replay source",
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                IsActive = true
+            };
+            var notification = CreateSourceNotification(
+                trainee.Id,
+                trainer.Id,
+                InAppNotificationTypes.DietPlanUpdated,
+                $"diet-plan:{diet.Id}:{now:O}",
+                "private replay payload",
+                now);
+            dietId = diet.Id;
+            notificationId = notification.Id;
+            database.DietPlans.Add(diet);
+            database.InAppNotifications.Add(notification);
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainee.Id);
+        SetIdempotencyKey("notification-source-loss-replay");
+        var first = await Client.PostAsync($"/api/{trainee.Id}/notifications/{notificationId}/mark-read", null);
+        DateTimeOffset firstUpdatedAt;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            firstUpdatedAt = (await database.InAppNotifications.SingleAsync(item => item.Id == notificationId)).UpdatedAt;
+            (await database.DietPlans.SingleAsync(item => item.Id == dietId)).IsDeleted = true;
+            await database.SaveChangesAsync();
+        }
+
+        var replay = await Client.PostAsync($"/api/{trainee.Id}/notifications/{notificationId}/mark-read", null);
+        ClearIdempotencyKey();
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        replay.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await replay.Content.ReadAsStringAsync()).Should().NotContain("private replay payload");
+        using var assertionScope = Factory.Services.CreateScope();
+        var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await assertionDatabase.InAppNotifications.SingleAsync(item => item.Id == notificationId);
+        stored.IsRead.Should().BeTrue();
+        stored.UpdatedAt.Should().Be(firstUpdatedAt);
+    }
+
+    [Test]
     [AuthorizationEvidence("POST", "/api/{id}/notifications/mark-all-read", "own", "owner-allow")]
     [AuthorizationEvidence("POST", "/api/{id}/notifications/mark-all-read", "own", "foreign-object-denial-no-mutation")]
     [AuthorizationEvidence("POST", "/api/{id}/notifications/mark-all-read", "own", "anonymous-denial")]
@@ -268,6 +328,205 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         anonymousText.Should().NotContain("HTTP unread two");
     }
 
+    [Test]
+    public async Task GetNotificationsAndUnreadCount_FilterInvalidSourcesBeforePaging()
+    {
+        var recipient = await SeedUserAsync(name: "notif-source-recipient", email: "notif-source-recipient@example.test");
+        var trainer = await SeedUserAsync(name: "notif-source-trainer", email: "notif-source-trainer@example.test");
+        var deletedTrainer = await SeedUserAsync(name: "notif-source-deleted-trainer", email: "notif-source-deleted-trainer@example.test");
+        var otherTrainee = await SeedUserAsync(name: "notif-source-other-trainee", email: "notif-source-other-trainee@example.test");
+        var now = DateTimeOffset.UtcNow;
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var validDiet = new DietPlan
+            {
+                Id = Id<DietPlan>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = recipient.Id,
+                Name = "Current diet",
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                IsActive = true
+            };
+            var deletedDiet = new DietPlan
+            {
+                Id = Id<DietPlan>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = recipient.Id,
+                Name = "Deleted diet",
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                IsActive = true,
+                IsDeleted = true
+            };
+            var hiddenNote = new TraineeNote
+            {
+                Id = Id<TraineeNote>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = recipient.Id,
+                Title = "Hidden note",
+                Content = "private",
+                VisibleToTrainee = false,
+                LastUpdatedByUserId = trainer.Id,
+                LastUpdatedAt = now
+            };
+            var cancelledReport = new ReportRequest
+            {
+                Id = Id<ReportRequest>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = recipient.Id,
+                TemplateId = Id<ReportTemplate>.New(),
+                Status = ReportRequestStatus.Cancelled
+            };
+            var submittedReminder = CreateReportRequest(trainer.Id, recipient.Id, ReportRequestStatus.Submitted);
+            var expiredReminder = CreateReportRequest(trainer.Id, recipient.Id, ReportRequestStatus.Expired);
+            var pendingSubmissionRequest = CreateReportRequest(trainer.Id, recipient.Id, ReportRequestStatus.Pending);
+            var pendingSubmission = new ReportSubmission
+            {
+                Id = Id<ReportSubmission>.New(),
+                ReportRequestId = pendingSubmissionRequest.Id,
+                TraineeId = recipient.Id,
+                TrainerFeedbackAddedAt = now
+            };
+            var mismatchedSubmissionRequest = CreateReportRequest(trainer.Id, recipient.Id, ReportRequestStatus.Submitted);
+            var mismatchedSubmission = new ReportSubmission
+            {
+                Id = Id<ReportSubmission>.New(),
+                ReportRequestId = mismatchedSubmissionRequest.Id,
+                TraineeId = otherTrainee.Id,
+                TrainerFeedbackAddedAt = now
+            };
+            var deletedSubjectDiet = new DietPlan
+            {
+                Id = Id<DietPlan>.New(),
+                TrainerId = deletedTrainer.Id,
+                TraineeId = recipient.Id,
+                Name = "Deleted trainer diet",
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                IsActive = true
+            };
+
+            db.Users.Single(user => user.Id == deletedTrainer.Id).IsDeleted = true;
+            db.DietPlans.AddRange(validDiet, deletedDiet, deletedSubjectDiet);
+            db.TraineeNotes.Add(hiddenNote);
+            db.ReportRequests.AddRange(
+                cancelledReport,
+                submittedReminder,
+                expiredReminder,
+                pendingSubmissionRequest,
+                mismatchedSubmissionRequest);
+            db.ReportSubmissions.AddRange(pendingSubmission, mismatchedSubmission);
+            db.InAppNotifications.AddRange(
+                CreateSourceNotification(recipient.Id, trainer.Id, InAppNotificationTypes.DietPlanUpdated, $"diet-plan:{validDiet.Id}:{now:O}", "valid source", now.AddMinutes(-5)),
+                CreateSourceNotification(recipient.Id, trainer.Id, InAppNotificationTypes.DietPlanUpdated, $"diet-plan:{deletedDiet.Id}:{now:O}", "deleted source", now.AddMinutes(-4)),
+                CreateSourceNotification(recipient.Id, trainer.Id, InAppNotificationTypes.TraineeNoteUpdated, $"trainee-note:{hiddenNote.Id}:{now:O}", "hidden source", now.AddMinutes(-3)),
+                CreateSourceNotification(recipient.Id, trainer.Id, InAppNotificationTypes.ReportRequestReceived, $"report-request:{cancelledReport.Id}:created", "cancelled source", now.AddMinutes(-2)),
+                CreateSourceNotification(recipient.Id, deletedTrainer.Id, InAppNotificationTypes.DietPlanUpdated, $"diet-plan:{deletedSubjectDiet.Id}:{now:O}", "deleted subject", now.AddMinutes(-1)),
+                CreateSourceNotification(recipient.Id, trainer.Id, InAppNotificationTypes.ReportRequestReceived, $"report-request:{submittedReminder.Id}:created", "submitted reminder", now),
+                CreateSourceNotification(recipient.Id, trainer.Id, InAppNotificationTypes.ReportRequestReceived, $"report-request:{expiredReminder.Id}:created", "expired reminder", now.AddSeconds(1)),
+                CreateSourceNotification(recipient.Id, trainer.Id, InAppNotificationTypes.ReportFeedbackReceived, $"report-feedback:{pendingSubmission.Id}:{now:O}", "pending submission", now.AddSeconds(2)),
+                CreateSourceNotification(recipient.Id, trainer.Id, InAppNotificationTypes.ReportFeedbackReceived, $"report-feedback:{mismatchedSubmission.Id}:{now:O}", "mismatched submission trainee", now.AddSeconds(3)),
+                CreateSourceNotification(recipient.Id, trainer.Id, InAppNotificationTypes.DietPlanUpdated, $"diet-plan:{validDiet.Id}:arbitrary", "malformed version", now.AddSeconds(4)));
+            db.InAppNotifications.AddRange(Enumerable.Range(0, 51).Select(index =>
+                CreateSourceNotification(
+                    recipient.Id,
+                    trainer.Id,
+                    InAppNotificationTypes.DietPlanUpdated,
+                    $"diet-plan:{validDiet.Id}:invalid-{index}",
+                    $"stale recent {index}",
+                    now.AddSeconds(5 + index))));
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(recipient.Id);
+        var pageResponse = await Client.GetAsync($"/api/{recipient.Id}/notifications?limit=1");
+        var countResponse = await Client.GetAsync($"/api/{recipient.Id}/notifications/unread-count");
+
+        pageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page = await pageResponse.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
+        page.Should().NotBeNull();
+        page!.Items.Should().ContainSingle().Which.Message.Should().Be("valid source");
+        page.HasNextPage.Should().BeFalse();
+
+        countResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var count = await countResponse.Content.ReadFromJsonAsync<UnreadCountResponse>();
+        count.Should().NotBeNull();
+        count!.Count.Should().Be(1);
+    }
+
+    [Test]
+    public async Task GetNotifications_AllCurrentSourceTypesRemainVisibleWithoutActiveRelationship()
+    {
+        var trainee = await SeedUserAsync(name: "notif-all-trainee", email: "notif-all-trainee@example.test");
+        var trainer = await SeedUserAsync(name: "notif-all-trainer", email: "notif-all-trainer@example.test");
+        var now = DateTimeOffset.UtcNow;
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var sentInvitation = CreateInvitation(trainer.Id, trainee.Id, TrainerInvitationStatus.Pending);
+            var acceptedInvitation = CreateInvitation(trainer.Id, trainee.Id, TrainerInvitationStatus.Accepted);
+            var rejectedInvitation = CreateInvitation(trainer.Id, trainee.Id, TrainerInvitationStatus.Rejected);
+            var request = CreateReportRequest(trainer.Id, trainee.Id, ReportRequestStatus.Pending);
+            var submittedRequest = CreateReportRequest(trainer.Id, trainee.Id, ReportRequestStatus.Submitted);
+            var submission = new ReportSubmission
+            {
+                Id = Id<ReportSubmission>.New(),
+                ReportRequestId = submittedRequest.Id,
+                TraineeId = trainee.Id,
+                TrainerFeedbackAddedAt = now
+            };
+            var diet = new DietPlan
+            {
+                Id = Id<DietPlan>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                Name = "Diet",
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                IsActive = true
+            };
+            var note = new TraineeNote
+            {
+                Id = Id<TraineeNote>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                Content = "Visible note",
+                VisibleToTrainee = true,
+                LastUpdatedByUserId = trainer.Id,
+                LastUpdatedAt = now
+            };
+
+            db.TrainerInvitations.AddRange(sentInvitation, acceptedInvitation, rejectedInvitation);
+            db.ReportRequests.AddRange(request, submittedRequest);
+            db.ReportSubmissions.Add(submission);
+            db.DietPlans.Add(diet);
+            db.TraineeNotes.Add(note);
+            db.InAppNotifications.AddRange(
+                CreateSourceNotification(trainee.Id, trainer.Id, InAppNotificationTypes.InvitationSent, $"trainer-invitation:{sentInvitation.Id}:sent", "sent", now.AddMinutes(-9)),
+                CreateSourceNotification(trainer.Id, trainee.Id, InAppNotificationTypes.InvitationAccepted, $"trainer-invitation:{acceptedInvitation.Id}:accepted", "accepted", now.AddMinutes(-8)),
+                CreateSourceNotification(trainer.Id, trainee.Id, InAppNotificationTypes.InvitationRejected, $"trainer-invitation:{rejectedInvitation.Id}:rejected", "rejected", now.AddMinutes(-7)),
+                CreateSourceNotification(trainee.Id, trainer.Id, InAppNotificationTypes.ReportRequestReceived, $"report-request:{request.Id}:created", "request", now.AddMinutes(-6)),
+                CreateSourceNotification(trainer.Id, trainee.Id, InAppNotificationTypes.ReportSubmissionReceived, $"report-submission:{submission.Id}", "submission", now.AddMinutes(-5)),
+                CreateSourceNotification(trainee.Id, trainer.Id, InAppNotificationTypes.ReportFeedbackReceived, $"report-feedback:{submission.Id}:{now:O}", "feedback", now.AddMinutes(-4)),
+                CreateSourceNotification(trainee.Id, trainer.Id, InAppNotificationTypes.DietPlanUpdated, $"diet-plan:{diet.Id}:{now:O}", "diet", now.AddMinutes(-3)),
+                CreateSourceNotification(trainee.Id, trainer.Id, InAppNotificationTypes.TraineeNoteUpdated, $"trainee-note:{note.Id}:{now:O}", "note", now.AddMinutes(-2)),
+                CreateSourceNotification(trainer.Id, trainee.Id, InAppNotificationTypes.TrainerRelationshipEnded, $"trainer-relationship-ended:{trainer.Id}:{trainee.Id}", "ended", now.AddMinutes(-1)));
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainee.Id);
+        var traineeResponse = await Client.GetAsync($"/api/{trainee.Id}/notifications?limit=20");
+        var traineePage = await traineeResponse.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
+        traineeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        traineePage!.Items.Select(item => item.Message).Should().BeEquivalentTo("sent", "request", "feedback", "diet", "note");
+
+        SetAuthorizationHeader(trainer.Id);
+        var trainerResponse = await Client.GetAsync($"/api/{trainer.Id}/notifications?limit=20");
+        var trainerPage = await trainerResponse.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
+        trainerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        trainerPage!.Items.Select(item => item.Message).Should().BeEquivalentTo("accepted", "rejected", "submission", "ended");
+    }
+
     private async Task<NotificationEntity> SeedNotificationAsync(
         Id<User> recipientId,
         string message,
@@ -285,7 +544,7 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
             Id = Id<NotificationEntity>.New(),
             RecipientId = recipientId,
             SenderUserId = senderUserId,
-            IsSystemNotification = senderUserId is null,
+            IsSystemNotification = true,
             Message = message,
             RedirectUrl = "/app/notifications",
             IsRead = isRead,
@@ -299,6 +558,54 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         await db.SaveChangesAsync();
         return notification;
     }
+
+    private static NotificationEntity CreateSourceNotification(
+        Id<User> recipientId,
+        Id<User> senderId,
+        InAppNotificationType type,
+        string deliveryKey,
+        string message,
+        DateTimeOffset createdAt)
+        => new()
+        {
+            Id = Id<NotificationEntity>.New(),
+            RecipientId = recipientId,
+            SenderUserId = senderId,
+            DeliveryKey = deliveryKey,
+            Message = message,
+            RedirectUrl = "/source",
+            Type = type,
+            CreatedAt = createdAt,
+            UpdatedAt = createdAt
+        };
+
+    private static TrainerInvitation CreateInvitation(
+        Id<User> trainerId,
+        Id<User> traineeId,
+        TrainerInvitationStatus status)
+        => new()
+        {
+            Id = Id<TrainerInvitation>.New(),
+            TrainerId = trainerId,
+            TraineeId = traineeId,
+            InviteeEmail = $"{status.ToString().ToLowerInvariant()}@example.test",
+            Code = Id<TrainerInvitation>.New().ToString(),
+            Status = status,
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+        };
+
+    private static ReportRequest CreateReportRequest(
+        Id<User> trainerId,
+        Id<User> traineeId,
+        ReportRequestStatus status)
+        => new()
+        {
+            Id = Id<ReportRequest>.New(),
+            TrainerId = trainerId,
+            TraineeId = traineeId,
+            TemplateId = Id<ReportTemplate>.New(),
+            Status = status
+        };
 
     private sealed class MessageResponse
     {

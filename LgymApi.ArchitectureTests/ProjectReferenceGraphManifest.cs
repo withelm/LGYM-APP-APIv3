@@ -19,6 +19,7 @@ internal static class ProjectReferenceGraphManifest
         ]),
         new("LgymApi.Application", ProjectKind.Production,
         [
+            "LgymApi.Authorization",
             "LgymApi.Domain",
             "LgymApi.Identity",
             "LgymApi.Platform",
@@ -29,6 +30,7 @@ internal static class ProjectReferenceGraphManifest
         [
             "LgymApi.Api",
             "LgymApi.Application",
+            "LgymApi.Authorization",
             "LgymApi.BackgroundWorker.Common",
             "LgymApi.Domain",
             "LgymApi.Identity",
@@ -38,6 +40,17 @@ internal static class ProjectReferenceGraphManifest
             "LgymApi.Resources",
             "LgymApi.Reporting",
             "LgymApi.TrainingPlanning"
+        ]),
+        new("LgymApi.Authorization", ProjectKind.Production,
+        [
+            "LgymApi.Domain",
+            "LgymApi.Platform"
+        ]),
+        new("LgymApi.Authorization.UnitTests", ProjectKind.Test,
+        [
+            "LgymApi.Authorization",
+            "LgymApi.Domain",
+            "LgymApi.Platform"
         ]),
         new("LgymApi.BackgroundWorker", ProjectKind.Host,
         [
@@ -66,9 +79,17 @@ internal static class ProjectReferenceGraphManifest
         new("LgymApi.Domain", ProjectKind.Production, []),
         new("LgymApi.Identity", ProjectKind.Production,
         [
+            "LgymApi.Authorization",
             "LgymApi.Domain",
             "LgymApi.Platform",
             "LgymApi.Resources"
+        ]),
+        new("LgymApi.Identity.UnitTests", ProjectKind.Test,
+        [
+            "LgymApi.Authorization",
+            "LgymApi.Domain",
+            "LgymApi.Identity",
+            "LgymApi.Platform"
         ]),
         new("LgymApi.Infrastructure", ProjectKind.Production,
         [
@@ -99,11 +120,20 @@ internal static class ProjectReferenceGraphManifest
         ]),
         new("LgymApi.Notifications", ProjectKind.Production,
         [
+            "LgymApi.Authorization",
             "LgymApi.BackgroundWorker.Common",
             "LgymApi.Domain",
             "LgymApi.Identity",
             "LgymApi.Platform",
             "LgymApi.Resources"
+        ]),
+        new("LgymApi.Notifications.UnitTests", ProjectKind.Test,
+        [
+            "LgymApi.Authorization",
+            "LgymApi.Domain",
+            "LgymApi.Identity",
+            "LgymApi.Notifications",
+            "LgymApi.Platform"
         ]),
         new("LgymApi.Reporting", ProjectKind.Production,
         [
@@ -148,6 +178,7 @@ internal static class ProjectReferenceGraphManifest
         [
             "LgymApi.Api",
             "LgymApi.Application",
+            "LgymApi.Authorization",
             "LgymApi.BackgroundWorker",
             "LgymApi.BackgroundWorker.Common",
             "LgymApi.Domain",

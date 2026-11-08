@@ -8,6 +8,7 @@ using LgymApi.Application.Notifications;
 using LgymApi.Application.Repositories;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts.Authorization;
 using LgymApi.Notifications.ApiAdapters;
 using LgymApi.Notifications.Contracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,8 @@ public sealed class NotificationHostAdapterCompositionTests
         services.AddSignalR();
         services.AddSingleton<IAccountSessionConnectionRegistry, AccountSessionConnectionRegistry>();
         services.AddSingleton(Substitute.For<IAuthenticatedAccountContextResolver>());
+        services.AddScoped(_ => Substitute.For<INotificationReplayAccessService>());
+        services.AddScoped(_ => Substitute.For<LgymApi.Application.Mapping.Core.IMapper>());
         services.AddScoped<IInAppNotificationPushPublisher, SignalRNotificationPushPublisher>();
 
         var registrations = services
@@ -88,6 +91,7 @@ public sealed class NotificationHostAdapterCompositionTests
         services.AddScoped(_ => Substitute.For<IInAppNotificationService>());
         services.AddScoped(_ => Substitute.For<INotificationEventBridge>());
         services.AddScoped(_ => Substitute.For<IPushInstallationLifecycleService>());
+        services.AddScoped(_ => Substitute.For<IAuthenticatedAccountAuthorizationService>());
         services.AddNotificationsApiAdapters();
 
         AssertScopedRegistration<IInAppNotificationApiAdapter, InAppNotificationApiAdapter>(services);

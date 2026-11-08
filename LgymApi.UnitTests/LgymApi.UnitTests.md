@@ -1,11 +1,12 @@
 # LgymApi.UnitTests.csproj
 
 - Purpose: focused unit tests.
-- Contains: unit coverage for service, domain, application, mapping, API, and infrastructure units, excluding Reporting-owned service, persistence, recurring-assignment, mapping, and photo tests.
+- Contains: unit coverage for service, domain, application, mapping, API HTTP-adapter, and infrastructure units, excluding Authorization-kernel behavior, Identity-owned actor-bridge behavior, and Reporting-owned service, persistence, recurring-assignment, mapping, and photo tests.
 - Rules: use NUnit, FluentAssertions, and NSubstitute; prefer mocks for touched collaborators instead of new hand-written fake interfaces.
 - Rules: use shared helpers from `LgymApi.TestUtils` when they already fit the test.
 - Rules: prefer `LgymApi.Resources` accessors over hardcoded translated/user-facing strings when the resource value is the source of truth.
 - Boundary: keep tests isolated and fast.
+- `AuthQ01FixtureValidationTests` exercises invalid fixture identities, roles, actor/source references, chronology, date-only diet bounds and photo encoding; HTTP authorization behavior remains in IntegrationTests.
 - Local-day history tests cover strict TZDB midnight resolution, UTC/fractional offsets, Warsaw 23/25-hour DST days, Apia skipped days, range bounds, and separate request-shape versus semantic validation errors.
 - EF bootstrap coverage constructs `AppDbContextFactory` without host DI, verifies the canonical 52-entity Npgsql model and Infrastructure migration snapshot, and preserves Testing startup migration suppression versus non-Testing migration attempts.
 - Composition guards assert one canonical registry/dispatcher/password adapter, one scoped AppConfig and enum service, one singleton converter per supported unit family, Notifications FCM ownership, environment-selected Worker push scheduling, and exact 15-row/16-handler startup validation.

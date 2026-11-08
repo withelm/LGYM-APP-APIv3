@@ -3,8 +3,6 @@ using LgymApi.Api.Configuration;
 using LgymApi.Infrastructure.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,7 +19,8 @@ public sealed class StartupMigrationBootstrapPostgreSqlTests
     public async Task ApplyAsync_InStaging_AppliesPendingMigrationWithRuntimeRole()
     {
         await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync(
-            activate: false, targetMigration: PrePolicyMigrationId);
+            activate: false,
+            targetMigration: PrePolicyMigrationId);
 
         await using var app = CreateApp(environment);
 

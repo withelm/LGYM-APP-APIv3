@@ -13,7 +13,7 @@ internal static class PostgreSqlHistoricalUserSeed
         {
             await context.Database.ExecuteSqlInterpolatedAsync($"""
                 INSERT INTO "Users" ("Id", "Name", "Email", "PreferredLanguage", "PreferredTimeZone", "ProfileRank", "IsVisibleInRanking", "IsBlocked", "IsDeleted", "CreatedAt", "UpdatedAt")
-                VALUES ({user.Id.Value}, {user.Name}, {user.Email.Value}, {user.PreferredLanguage}, {user.PreferredTimeZone}, {user.ProfileRank}, {user.IsVisibleInRanking}, {user.IsBlocked}, {user.IsDeleted}, {user.CreatedAt}, {user.UpdatedAt})
+                VALUES (CAST({user.Id.ToString()} AS uuid), {user.Name}, {user.Email.Value}, {user.PreferredLanguage}, {user.PreferredTimeZone}, {user.ProfileRank}, {user.IsVisibleInRanking}, {user.IsBlocked}, {user.IsDeleted}, {user.CreatedAt}, {user.UpdatedAt})
                 """);
         }
     }

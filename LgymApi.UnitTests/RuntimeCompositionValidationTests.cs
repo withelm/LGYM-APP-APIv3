@@ -7,6 +7,7 @@ using LgymApi.Application.Reporting;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.BackgroundWorker.Runtime;
+using LgymApi.Identity.Contracts.Authorization;
 using LgymApi.TestUtils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -182,6 +183,7 @@ public sealed class RuntimeCompositionValidationTests
         {
             [typeof(LgymApi.Application.WorkoutProgress.Scoring.Elo.IExerciseEloCalculator)] = 4,
             [typeof(LgymApi.BackgroundWorker.Common.Notifications.IEmailTemplateComposer)] = 6,
+            [typeof(IAccountAccessOwnerCapabilityExtension)] = 2,
             [typeof(LgymApi.Application.Mapping.Core.IMappingProfile)] = 47
         };
 

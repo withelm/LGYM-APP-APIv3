@@ -1,4 +1,6 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data.Configurations;
 using LgymApi.Infrastructure.Data.Conventions;
 using LgymApi.Infrastructure.Data.SeedData;
@@ -40,6 +42,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     public DbSet<RoleClaim> RoleClaims => Set<RoleClaim>();
     public DbSet<TrainerInvitation> TrainerInvitations => Set<TrainerInvitation>();
     public DbSet<TrainerTraineeLink> TrainerTraineeLinks => Set<TrainerTraineeLink>();
+    public DbSet<CoachingEpisode> CoachingEpisodes => Set<CoachingEpisode>();
     public DbSet<NotificationMessage> NotificationMessages => Set<NotificationMessage>();
     public DbSet<EmailNotificationSubscription> EmailNotificationSubscriptions => Set<EmailNotificationSubscription>();
     public DbSet<ReportTemplate> ReportTemplates => Set<ReportTemplate>();
@@ -76,6 +79,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     DbSet<CommandEnvelope> IPlatformPersistenceContext.CommandEnvelopes => CommandEnvelopes;
     DbSet<ApiIdempotencyRecord> IPlatformPersistenceContext.ApiIdempotencyRecords => ApiIdempotencyRecords;
     EntityEntry<CommandEnvelope> IPlatformPersistenceContext.Entry(CommandEnvelope entity) => Entry(entity);
+    EntityEntry<ApiIdempotencyRecord> IPlatformPersistenceContext.Entry(ApiIdempotencyRecord entity) => Entry(entity);
 
     DbSet<User> IIdentityPersistenceContext.Users => Users;
     DbSet<TrainerApplicationAttempt> IIdentityPersistenceContext.TrainerApplications => TrainerApplications;
@@ -99,6 +103,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     DbSet<PushNotificationMessage> INotificationsPersistenceContext.PushNotificationMessages => PushNotificationMessages;
     DbSet<InAppNotification> INotificationsPersistenceContext.InAppNotifications => InAppNotifications;
     EntityEntry<InAppNotification> INotificationsPersistenceContext.Entry(InAppNotification entity) => Entry(entity);
+    EntityEntry<PushInstallation> INotificationsPersistenceContext.Entry(PushInstallation entity) => Entry(entity);
     EntityEntry<PushNotificationMessage> INotificationsPersistenceContext.Entry(PushNotificationMessage entity) => Entry(entity);
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -137,14 +142,38 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
 
     public override int SaveChanges()
     {
+        EnsureActiveLinksHaveEpisodes();
         SetTimestamps();
         return base.SaveChanges();
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        EnsureActiveLinksHaveEpisodes();
         SetTimestamps();
         return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void EnsureActiveLinksHaveEpisodes()
+    {
+        var links = ChangeTracker.Entries<TrainerTraineeLink>()
+            .Where(entry => entry.State == EntityState.Added && entry.Entity.EpisodeId is null)
+            .Select(entry => entry.Entity)
+            .ToList();
+        foreach (var link in links)
+        {
+            var episodeId = Id<CoachingEpisode>.New();
+            link.EpisodeId = episodeId;
+            CoachingEpisodes.Add(new CoachingEpisode
+            {
+                Id = episodeId,
+                TrainerId = link.TrainerId,
+                TraineeId = link.TraineeId,
+                StartedAt = null,
+                StartedAtProvenance = CoachingEpisodeStartProvenance.ExistingActiveLinkObservedDuringMigration,
+                AuthorizationRevision = 0
+            });
+        }
     }
 
     private void SetTimestamps()
@@ -170,6 +199,10 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
             else if (entry.State == EntityState.Modified)
             {
                 entry.Property("UpdatedAt").CurrentValue = utcNow;
+                if (entry.Entity is PushInstallation installation)
+                {
+                    installation.RegistrationRevision = (long)entry.Property(nameof(PushInstallation.RegistrationRevision)).OriginalValue! + 1;
+                }
             }
         }
     }

@@ -41,6 +41,8 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         dependencies.Plans.FindTrackedPlanByIdAsync(plan.Id, Arg.Any<CancellationToken>())
             .Returns(plan)
             .AndDoes(_ => operations.Add("tracked"));
+        dependencies.Plans.When(plans => plans.StageUpdate(plan))
+            .Do(_ => operations.Add("stage"));
         dependencies.Plans.AddHistoryEntryAsync(Arg.Any<DietPlanHistory>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask)
             .AndDoes(call =>
@@ -72,7 +74,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         notification.TraineeId.Should().Be(traineeId);
         notification.TrainerId.Should().Be(trainerId);
         notification.DietPlanName.Should().Be("Nutrition Plan");
-        operations.Should().Equal("access", "tracked", "history", "save", "notify");
+        operations.Should().Equal("access", "tracked", "stage", "history", "save", "notify");
         await AssertNoTransactionAsync(dependencies);
     }
 
@@ -128,6 +130,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
     {
         var dependencies = new Dependencies();
         var command = new UpdateTraineeDietPlanCommand(
+            NutritionAuthorizationTestFactory.CreateActor(Id<User>.New()),
             Id<User>.New(),
             Id<User>.New(),
             Id<DietPlan>.New(),
@@ -173,7 +176,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         var cases = new[]
         {
             new PlanFailureCase(Id<DietPlan>.Empty, null, typeof(BadRequestError), Messages.FieldRequired),
-            new PlanFailureCase(planId, ExistingPlan(Id<User>.New(), traineeId, planId), typeof(NotFoundError), Messages.DidntFind),
+            new PlanFailureCase(planId, ExistingPlan(trainerId, Id<User>.New(), planId), typeof(NotFoundError), Messages.DidntFind),
             new PlanFailureCase(planId, ExistingPlan(trainerId, traineeId, planId, isDeleted: true), typeof(NotFoundError), Messages.DidntFind)
         };
 
@@ -216,6 +219,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
             createdAt: new DateTimeOffset(2026, 6, 1, 8, 9, 10, TimeSpan.FromHours(2)),
             updatedAt: new DateTimeOffset(2026, 6, 2, 9, 10, 11, TimeSpan.FromHours(2)));
         var command = new UpdateTraineeDietPlanCommand(
+            NutritionAuthorizationTestFactory.CreateActor(trainerId),
             trainerId,
             traineeId,
             plan.Id,
@@ -287,6 +291,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         await dependencies.Plans.DidNotReceive().AddHistoryEntryAsync(
             Arg.Any<DietPlanHistory>(),
             Arg.Any<CancellationToken>());
+        dependencies.Plans.DidNotReceive().StageUpdate(Arg.Any<DietPlan>());
         await dependencies.UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>());
         await AssertNoTransactionAsync(dependencies);
@@ -301,7 +306,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         Id<DietPlan> planId,
         bool isActive = true,
         IReadOnlyList<DietMealInput>? meals = null)
-        => new(trainerId, traineeId, planId, new DietPlanUpsertData(
+        => new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, planId, new DietPlanUpsertData(
             " Nutrition Plan ",
             new DateOnly(2026, 7, 23),
             null,
@@ -376,7 +381,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         public IMapper Mapper { get; } = CreateMapper();
 
         public UpdateTraineeDietPlanUseCase CreateUseCase()
-            => new(Access, Plans, new DietPlanHistorySnapshotFactory(Mapper), Commands, UnitOfWork, Mapper);
+            => new(Access, Plans, new DietPlanHistorySnapshotFactory(Mapper), Commands, UnitOfWork, Mapper, NutritionAuthorizationTestFactory.CreateDietCoordinator());
     }
 
     private static IMapper CreateMapper()

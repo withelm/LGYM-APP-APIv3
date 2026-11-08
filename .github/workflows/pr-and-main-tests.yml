@@ -18,7 +18,8 @@ env:
   SONAR_HOST_URL: https://sonarcloud.io
   SONAR_ORG: ${{ vars.SONAR_ORG != '' && vars.SONAR_ORG || secrets.SONAR_ORG }}
   SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY != '' && vars.SONAR_PROJECT_KEY || secrets.SONAR_PROJECT_KEY }}
-  SONAR_COVERAGE_EXCLUSIONS: "**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs,scripts/run-verification-matrix.ps1,scripts/test-ci-verification-workflows.ps1"
+  # PowerShell CI tools are fixture-tested separately; C# OpenCover reports cannot measure them.
+  SONAR_COVERAGE_EXCLUSIONS: "**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs,scripts/run-verification-matrix.ps1,scripts/test-ci-verification-workflows.ps1,scripts/assert-ci-verification-evidence.ps1,scripts/assert-sonar-inputs.ps1,scripts/test-sonar-inputs.ps1"
 
 jobs:
   release-build:
@@ -114,7 +115,10 @@ jobs:
 
           $suites = @(
               [pscustomobject]@{ name = 'Unit'; project = 'LgymApi.UnitTests/LgymApi.UnitTests.csproj'; filters = @() },
-              [pscustomobject]@{ name = 'ReportingUnit'; project = 'LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj'; filters = @() },
+               [pscustomobject]@{ name = 'AuthorizationUnit'; project = 'LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj'; filters = @() },
+               [pscustomobject]@{ name = 'IdentityUnit'; project = 'LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj'; filters = @() },
+               [pscustomobject]@{ name = 'NotificationsUnit'; project = 'LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj'; filters = @() },
+               [pscustomobject]@{ name = 'ReportingUnit'; project = 'LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj'; filters = @() },
                [pscustomobject]@{ name = 'Architecture'; project = 'LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj'; filters = @() },
               [pscustomobject]@{ name = 'InMemoryIntegration'; project = 'LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj'; filters = @('TestCategory!=PostgreSql') },
               [pscustomobject]@{ name = 'PostgreSqlIntegration'; project = 'LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj'; filters = @() },
@@ -175,6 +179,15 @@ jobs:
         include:
           - suite: Unit
             project: LgymApi.UnitTests/LgymApi.UnitTests.csproj
+            filter: ''
+          - suite: AuthorizationUnit
+            project: LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj
+            filter: ''
+          - suite: IdentityUnit
+            project: LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj
+            filter: ''
+          - suite: NotificationsUnit
+            project: LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj
             filter: ''
           - suite: ReportingUnit
             project: LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj
@@ -261,6 +274,37 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
               exit $LASTEXITCODE
           }
+
+      - name: Run AUTH-Q01 focused authorization slice with nonzero TRX proof
+        if: matrix.suite == 'InMemoryIntegration'
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $sliceDirectory = Join-Path $env:GITHUB_WORKSPACE (Join-Path $env:EVIDENCE_ROOT 'AUTH-Q01')
+          $null = New-Item -ItemType Directory -Path $sliceDirectory -Force
+          $trxPath = Join-Path $sliceDirectory 'auth-q01.trx'
+          & dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build --filter 'FullyQualifiedName~AuthQ01FixtureTests|FullyQualifiedName~EndpointContractMatrixTests' --logger "trx;LogFileName=auth-q01.trx" --results-directory $sliceDirectory
+          if ($LASTEXITCODE -ne 0) {
+            throw "AUTH-Q01 focused test slice exited with code $LASTEXITCODE."
+          }
+          if (-not (Test-Path -LiteralPath $trxPath)) {
+            throw "AUTH-Q01 focused test slice did not produce a TRX file."
+          }
+          $trx = [xml][System.IO.File]::ReadAllText($trxPath)
+          $counters = $trx.TestRun.ResultSummary.Counters
+          if ([int]$counters.executed -le 0 -or [int]$counters.passed -ne [int]$counters.total -or [int]$counters.failed -ne 0) {
+            throw "AUTH-Q01 focused TRX counters are not a nonzero green execution: $($counters.OuterXml)"
+          }
+          $fixtureDefinitions = @($trx.TestRun.TestDefinitions.UnitTest | Where-Object { $_.TestMethod.className -like '*AuthQ01FixtureTests*' })
+          $requiredCases = @('CanonicalFixture_LoadsAndSatisfiesSchemaInvariants', 'AuthQ01CoverageMap_IsClosedAndExecutable', 'ManagedPlanList_UsesCanonicalActorsAndRelationshipStates', 'DirectPlanActorMatrix_AllDeclaredActorsPreserveOwnershipAndPayloadBoundaries', 'ManagedPlanChain_AccessToBDoesNotGrantAccessToC')
+          foreach ($case in $requiredCases) {
+            $definition = @($fixtureDefinitions | Where-Object { $_.TestMethod.name -eq $case })
+            if ($definition.Count -ne 1) { throw "AUTH-Q01 required case missing or duplicated: $case" }
+            $result = @($trx.TestRun.Results.UnitTestResult | Where-Object { $_.testId -eq $definition[0].id -and $_.outcome -eq 'Passed' })
+            if ($result.Count -ne 1) { throw "AUTH-Q01 required case did not pass: $case" }
+          }
+          Write-Host "AUTH-Q01 focused TRX counters: executed=$($counters.executed), passed=$($counters.passed), failed=$($counters.failed)."
 
       - name: Upload same-SHA suite evidence
         uses: actions/upload-artifact@v4

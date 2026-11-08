@@ -67,7 +67,8 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
 
         await using (var forwardContext = CreateDbContext(lease))
         {
-            await MigrateAsync(forwardContext, GetPolicyMigrationId(forwardContext.Database.GetMigrations()));
+            var policyMigrationId = GetPolicyMigrationId(forwardContext.Database.GetMigrations());
+            await MigrateAsync(forwardContext, policyMigrationId);
         }
 
         await using (var downgradeContext = CreateDbContext(lease))

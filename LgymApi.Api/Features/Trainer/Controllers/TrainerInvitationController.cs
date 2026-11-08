@@ -37,7 +37,12 @@ public sealed class TrainerInvitationController : ControllerBase
     }
 
     [HttpPost("invitations")]
-    [ApiIdempotency("/api/trainer/invitations", ApiIdempotencyScopeSource.AuthenticatedUser)]
+    [ApiIdempotency(
+        "/api/trainer/invitations",
+        ApiIdempotencyScopeSource.AuthenticatedUser,
+        ApiIdempotencyReplayOwner.Identity,
+        ApiIdempotencyReplayResourceBinding.None,
+        AuthConstants.Permissions.TrainerAccess)]
     [ProducesResponseType(typeof(TrainerInvitationDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateInvitation([FromBody] CreateTrainerInvitationRequest request, CancellationToken cancellationToken = default)
     {

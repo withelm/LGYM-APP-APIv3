@@ -6,7 +6,7 @@ namespace LgymApi.Application.Notifications.Contracts.Push;
 public interface IPushProviderSender
 {
     Task<PushSendAttemptResult> SendAsync(
-        Id<PushInstallation> installationId,
+        PushInstallationDeliveryTarget target,
         PushEventPayload payload,
         CancellationToken cancellationToken = default);
 }

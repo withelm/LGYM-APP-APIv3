@@ -1,4 +1,5 @@
 using FluentAssertions;
+using LgymApi.Authorization.Contracts;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.AdminManagement.Models;
@@ -140,7 +141,7 @@ public sealed class ReportSubmissionCreatedInAppNotificationCommandHandlerTests
         }
 
         public Task<Result<PagedResult<InAppNotificationResult>, AppError>> GetForUserAsync(Id<User> userId, CursorPaginationQuery query, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<Result<Unit, AppError>> MarkAsReadAsync(Id<InAppNotification> notificationId, Id<User> requestingUserId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<Result<Unit, AppError>> MarkAsReadAsync(Id<InAppNotification> notificationId, AuthorizationActor actor, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<Result<Unit, AppError>> MarkAllAsReadAsync(Id<User> userId, DateTimeOffset? before, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<Result<int, AppError>> GetUnreadCountAsync(Id<User> userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
