@@ -73,7 +73,7 @@ public sealed class AccountAccessOwnerExtensionsDto : IResultDto
     public AccountAccessOwnerCapabilitiesDto Coaching { get; init; } = new();
 
     [JsonPropertyName("nutrition")]
-    public AccountAccessOwnerCapabilitiesDto Nutrition { get; init; } = new();
+    public NutritionAccountAccessOwnerCapabilitiesDto Nutrition { get; init; } = new();
 
     [JsonPropertyName("workoutProgress")]
     public AccountAccessOwnerCapabilitiesDto WorkoutProgress { get; init; } = new();
@@ -102,4 +102,22 @@ public sealed class NotificationsAccountAccessOwnerCapabilitiesDto : IResultDto
 
     [JsonPropertyName("canManagePushInstallations")]
     public bool CanManagePushInstallations { get; init; }
+}
+
+public sealed class NutritionAccountAccessOwnerCapabilitiesDto : IResultDto
+{
+    [JsonPropertyName("available")]
+    public bool IsAvailable { get; init; }
+
+    [JsonPropertyName("canReadOwnDietPlans")]
+    public bool CanReadOwnDietPlans { get; init; }
+
+    [JsonPropertyName("canUpdateOwnDietPlans")]
+    public bool CanUpdateOwnDietPlans { get; init; }
+
+    [JsonPropertyName("canCreateDietPlans")]
+    public bool CanCreateDietPlans { get; init; }
+
+    [JsonPropertyName("canManageSupplementation")]
+    public bool CanManageSupplementation { get; init; }
 }

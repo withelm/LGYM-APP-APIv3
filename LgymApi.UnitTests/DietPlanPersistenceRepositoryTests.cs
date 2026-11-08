@@ -68,13 +68,13 @@ public sealed class DietPlanPersistenceRepositoryTests
         database.ChangeTracker.Clear();
         var repository = new DietPlanPersistenceRepository(database);
 
-        var trainerPlans = await repository.ListPlansByTrainerAndTraineeAsync(trainerId, traineeId);
+        var traineePlans = await repository.ListPlansByTraineeAsync(traineeId);
         var activePlans = await repository.ListActivePlansForTraineeAsync(traineeId);
         var activePlan = await repository.GetActivePlanForTraineeAsync(traineeId);
         var history = await repository.ListPlanHistoryAsync(activeLatest.Id);
 
-        trainerPlans.Select(plan => plan.Id).Should().Equal(activeLatest.Id, activeEarlier.Id, inactive.Id);
-        trainerPlans.Single(plan => plan.Id == activeLatest.Id).Meals.Select(meal => meal.Name).Should().Equal("breakfast", "dinner");
+        traineePlans.Select(plan => plan.Id).Should().Equal(otherTrainer.Id, activeLatest.Id, activeEarlier.Id, inactive.Id);
+        traineePlans.Single(plan => plan.Id == activeLatest.Id).Meals.Select(meal => meal.Name).Should().Equal("breakfast", "dinner");
         activePlans.Select(plan => plan.Id).Should().Equal(otherTrainer.Id, activeLatest.Id, activeEarlier.Id);
         activePlan!.Id.Should().Be(otherTrainer.Id);
         history.Select(entry => entry.ChangeType).Should().Equal("latest", "older");

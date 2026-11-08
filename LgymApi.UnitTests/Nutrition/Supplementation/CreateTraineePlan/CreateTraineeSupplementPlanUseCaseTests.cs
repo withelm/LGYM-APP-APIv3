@@ -42,7 +42,7 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
             .AndDoes(_ => operations.Add("save"));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeSupplementPlanCommand(trainerId, traineeId, ValidData()),
+            new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()),
             cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
@@ -71,7 +71,7 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
         dependencies.GrantAccess(trainerId, traineeId);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeSupplementPlanCommand(trainerId, traineeId, new SupplementPlanUpsertData(" ", null, [])));
+            new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new SupplementPlanUpsertData(" ", null, [])));
 
         result.Error.Should().BeOfType<InvalidSupplementationError>();
         result.Error.Message.Should().Be(Messages.FieldRequired);
@@ -88,7 +88,7 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(true, true));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeSupplementPlanCommand(trainerId, Id<User>.Empty, ValidData()));
+            new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<User>.Empty, ValidData()));
 
         result.Error.Should().BeOfType<InvalidSupplementationError>();
         result.Error.Message.Should().Be(Messages.UserIdRequired);
@@ -106,7 +106,7 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(false, true));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeSupplementPlanCommand(trainerId, traineeId, ValidData()));
+            new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()));
 
         result.Error.Should().BeOfType<SupplementationForbiddenError>();
         result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
@@ -123,7 +123,7 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(true, false));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeSupplementPlanCommand(trainerId, traineeId, ValidData()));
+            new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()));
 
         result.Error.Should().BeOfType<SupplementationNotFoundError>();
         result.Error.Message.Should().Be(Messages.DidntFind);
@@ -141,6 +141,7 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CreateTraineeSupplementPlanCommand(
+                NutritionAuthorizationTestFactory.CreateActor(trainerId),
                 trainerId,
                 traineeId,
                 new SupplementPlanUpsertData("Plan", null, [invalidItem])));
@@ -163,7 +164,7 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
             .Returns(Task.FromException<int>(new InvalidOperationException("save failed")));
 
         Func<Task> act = () => dependencies.CreateUseCase().ExecuteAsync(
-            new CreateTraineeSupplementPlanCommand(trainerId, traineeId, ValidData()),
+            new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()),
             cancellationToken);
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("save failed");
@@ -201,7 +202,7 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
                 .AndDoes(_ => operations?.Add("access"));
 
         public ICreateTraineeSupplementPlanUseCase CreateUseCase()
-            => new CreateTraineeSupplementPlanUseCase(Access, Plans, UnitOfWork, Mapper);
+            => new CreateTraineeSupplementPlanUseCase(Access, Plans, UnitOfWork, Mapper, NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
 
         private static IMapper CreateMapper()
         {

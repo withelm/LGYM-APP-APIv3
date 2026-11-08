@@ -12,26 +12,32 @@ internal sealed class UnassignTraineeSupplementPlanUseCase : IUnassignTraineeSup
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
     private readonly ISupplementationPersistence _plans;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISupplementationAuthorizationCoordinator _authorization;
 
     public UnassignTraineeSupplementPlanUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
         ISupplementationPersistence plans,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ISupplementationAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _plans = plans;
         _unitOfWork = unitOfWork;
+        _authorization = authorization;
     }
 
     public async Task<Result<Unit, AppError>> ExecuteAsync(
         UnassignTraineeSupplementPlanCommand command,
         CancellationToken cancellationToken = default)
     {
+        var actorId = command.Actor.Id.Rebind<LgymApi.Domain.Entities.User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            command.TrainerId,
+            actorId,
             command.TraineeId,
             cancellationToken);
         var accessError = SupplementationAccess.GetTrainerAccessError(
+            _authorization,
+            command.Actor,
             access.IsTrainer,
             access.HasActiveRelationship,
             command.TraineeId);
@@ -43,7 +49,7 @@ internal sealed class UnassignTraineeSupplementPlanUseCase : IUnassignTraineeSup
         var activePlan = await _plans.GetTrackedActivePlanForTraineeAsync(
             command.TraineeId,
             cancellationToken);
-        if (activePlan is null || activePlan.TrainerId != command.TrainerId)
+        if (activePlan is null || activePlan.TrainerId != actorId)
         {
             return Result<Unit, AppError>.Success(Unit.Value);
         }

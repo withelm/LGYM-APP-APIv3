@@ -49,9 +49,10 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
             var useCase = new DeleteTraineeSupplementPlanUseCase(
                 access,
                 new SupplementationPersistenceRepository(deleteContext),
-                unitOfWork);
+                unitOfWork,
+                NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
 
-            var result = await useCase.ExecuteAsync(new(trainerId, traineeId, plan.Id));
+            var result = await useCase.ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id));
 
             result.IsSuccess.Should().BeTrue();
             result.Value.Should().Be(Unit.Value);
@@ -82,7 +83,7 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
         forbidden.Access.GetAccessDecisionAsync(forbidden.TrainerId, Id<User>.Empty, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(false, true));
         var forbiddenResult = await forbidden.CreateUseCase().ExecuteAsync(
-            new(forbidden.TrainerId, Id<User>.Empty, Id<SupplementPlan>.New()));
+            new(NutritionAuthorizationTestFactory.CreateActor(forbidden.TrainerId), forbidden.TrainerId, Id<User>.Empty, Id<SupplementPlan>.New()));
 
         forbiddenResult.Error.Should().BeOfType<SupplementationForbiddenError>().Which.Message.Should().Be(Messages.TrainerRoleRequired);
         await forbidden.Access.Received(1).GetAccessDecisionAsync(forbidden.TrainerId, Id<User>.Empty, Arg.Any<CancellationToken>());
@@ -92,7 +93,7 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
         emptyTrainee.Access.GetAccessDecisionAsync(emptyTrainee.TrainerId, Id<User>.Empty, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(true, true));
         var emptyResult = await emptyTrainee.CreateUseCase().ExecuteAsync(
-            new(emptyTrainee.TrainerId, Id<User>.Empty, Id<SupplementPlan>.New()));
+            new(NutritionAuthorizationTestFactory.CreateActor(emptyTrainee.TrainerId), emptyTrainee.TrainerId, Id<User>.Empty, Id<SupplementPlan>.New()));
 
         emptyResult.Error.Should().BeOfType<InvalidSupplementationError>().Which.Message.Should().Be(Messages.UserIdRequired);
         await emptyTrainee.Access.Received(1).GetAccessDecisionAsync(emptyTrainee.TrainerId, Id<User>.Empty, Arg.Any<CancellationToken>());
@@ -195,10 +196,10 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
                 .Returns(new CoachingRelationshipAccessDecision(true, true));
 
         public DeleteTraineeSupplementPlanCommand Command(Id<SupplementPlan> planId)
-            => new(TrainerId, TraineeId, planId);
+            => new(NutritionAuthorizationTestFactory.CreateActor(TrainerId), TrainerId, TraineeId, planId);
 
         public DeleteTraineeSupplementPlanUseCase CreateUseCase()
-            => new(Access, Plans, UnitOfWork);
+            => new(Access, Plans, UnitOfWork, NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
     }
 
     private sealed class CountingUnitOfWork : IUnitOfWork

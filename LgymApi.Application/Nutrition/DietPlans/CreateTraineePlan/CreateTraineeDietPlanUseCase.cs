@@ -21,6 +21,7 @@ internal sealed class CreateTraineeDietPlanUseCase : ICreateTraineeDietPlanUseCa
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly DietPlanHistorySnapshotFactory _historyFactory;
+    private readonly IDietPlanAuthorizationCoordinator _authorization;
 
     public CreateTraineeDietPlanUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
@@ -28,7 +29,8 @@ internal sealed class CreateTraineeDietPlanUseCase : ICreateTraineeDietPlanUseCa
         ICommandDispatcher commands,
         IUnitOfWork unitOfWork,
         IMapper mapper,
-        DietPlanHistorySnapshotFactory historyFactory)
+        DietPlanHistorySnapshotFactory historyFactory,
+        IDietPlanAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _plans = plans;
@@ -36,6 +38,7 @@ internal sealed class CreateTraineeDietPlanUseCase : ICreateTraineeDietPlanUseCa
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _historyFactory = historyFactory;
+        _authorization = authorization;
     }
 
     public async Task<Result<DietPlanReadModel, AppError>> ExecuteAsync(
@@ -47,11 +50,19 @@ internal sealed class CreateTraineeDietPlanUseCase : ICreateTraineeDietPlanUseCa
             return Result<DietPlanReadModel, AppError>.Failure(new BadRequestError(Messages.UserIdRequired));
         }
 
+        var actorId = command.Actor.Id.Rebind<User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            command.TrainerId,
+            actorId,
             command.TraineeId,
             cancellationToken);
-        var accessError = DietPlanAccess.GetTrainerAccessError(access.IsTrainer, access.HasActiveRelationship);
+        var accessError = DietPlanAccess.GetAccessError(
+            _authorization,
+            command.Actor,
+            DietPlanAction.Create,
+            actorId,
+            command.TraineeId,
+            access.IsTrainer,
+            access.HasActiveRelationship);
         if (accessError is not null)
         {
             return Result<DietPlanReadModel, AppError>.Failure(accessError);
@@ -67,7 +78,7 @@ internal sealed class CreateTraineeDietPlanUseCase : ICreateTraineeDietPlanUseCa
             DietPlanRules.Normalize(command.Data),
             _mapper.CreateContext());
         plan.Id = Id<DietPlan>.New();
-        plan.TrainerId = command.TrainerId;
+        plan.TrainerId = actorId;
         plan.TraineeId = command.TraineeId;
         plan.IsDeleted = false;
 
@@ -79,7 +90,7 @@ internal sealed class CreateTraineeDietPlanUseCase : ICreateTraineeDietPlanUseCa
 
         await _plans.AddPlanAsync(plan, cancellationToken);
         await _plans.AddHistoryEntryAsync(
-            _historyFactory.Create(plan, command.TrainerId, "Created"),
+            _historyFactory.Create(plan, actorId, "Created"),
             cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -89,7 +100,7 @@ internal sealed class CreateTraineeDietPlanUseCase : ICreateTraineeDietPlanUseCa
             {
                 DietPlanId = plan.Id,
                 TraineeId = plan.TraineeId,
-                TrainerId = command.TrainerId,
+                TrainerId = actorId,
                 DietPlanName = plan.Name,
                 TriggeredAt = DateTimeOffset.UtcNow
             });

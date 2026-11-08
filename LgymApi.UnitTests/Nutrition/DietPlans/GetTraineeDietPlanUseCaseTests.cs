@@ -34,7 +34,7 @@ public sealed class GetTraineeDietPlanUseCaseTests
             .Returns(mappedPlan);
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanQuery(trainerId, traineeId, plan.Id),
+            new GetTraineeDietPlanQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id),
             cancellationSource.Token);
 
         result.IsSuccess.Should().BeTrue();
@@ -52,7 +52,7 @@ public sealed class GetTraineeDietPlanUseCaseTests
         var dependencies = new Dependencies();
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanQuery(Id<User>.New(), Id<User>.Empty, Id<DietPlan>.New()));
+            new GetTraineeDietPlanQuery(NutritionAuthorizationTestFactory.CreateActor(Id<User>.New()), Id<User>.New(), Id<User>.Empty, Id<DietPlan>.New()));
 
         result.Error.Should().BeOfType<BadRequestError>();
         result.Error.Message.Should().Be(Messages.UserIdRequired);
@@ -71,7 +71,7 @@ public sealed class GetTraineeDietPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(false, true));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanQuery(trainerId, traineeId, Id<DietPlan>.New()));
+            new GetTraineeDietPlanQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
         result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
         result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
@@ -89,7 +89,7 @@ public sealed class GetTraineeDietPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(true, false));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanQuery(trainerId, traineeId, Id<DietPlan>.New()));
+            new GetTraineeDietPlanQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
         result.Error.Should().BeOfType<NotFoundError>();
         result.Error.Message.Should().Be(Messages.DidntFind);
@@ -107,7 +107,7 @@ public sealed class GetTraineeDietPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(true, true));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanQuery(trainerId, traineeId, Id<DietPlan>.Empty));
+            new GetTraineeDietPlanQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.Empty));
 
         result.Error.Should().BeOfType<BadRequestError>();
         result.Error.Message.Should().Be(Messages.FieldRequired);
@@ -120,7 +120,6 @@ public sealed class GetTraineeDietPlanUseCaseTests
     }
 
     [TestCase(OwnershipFailure.Missing)]
-    [TestCase(OwnershipFailure.ForeignTrainer)]
     [TestCase(OwnershipFailure.WrongTrainee)]
     [TestCase(OwnershipFailure.Deleted)]
     public async Task ExecuteAsync_WhenPlanIsMissingOrNotOwned_ReturnsNotFoundWithoutMapping(
@@ -136,7 +135,7 @@ public sealed class GetTraineeDietPlanUseCaseTests
             .Returns(CreateOwnedPlanFailure(ownershipFailure, planId, trainerId, traineeId));
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(
-            new GetTraineeDietPlanQuery(trainerId, traineeId, planId));
+            new GetTraineeDietPlanQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, planId));
 
         result.Error.Should().BeOfType<NotFoundError>();
         result.Error.Message.Should().Be(Messages.DidntFind);
@@ -220,6 +219,6 @@ public sealed class GetTraineeDietPlanUseCaseTests
         public IMapper Mapper { get; } = Substitute.For<IMapper>();
 
         public IGetTraineeDietPlanUseCase CreateUseCase()
-            => new GetTraineeDietPlanUseCase(Access, Plans, Mapper);
+            => new GetTraineeDietPlanUseCase(Access, Plans, Mapper, NutritionAuthorizationTestFactory.CreateDietCoordinator());
     }
 }

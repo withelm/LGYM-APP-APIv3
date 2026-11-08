@@ -35,7 +35,7 @@ public sealed class TraineeSupplementationController : ControllerBase
     {
         var result = await _supplementation.GetScheduleAsync(
             new SupplementScheduleAccountQuery(
-                HttpContext.GetAuthenticatedAccountContext()!.Id,
+                HttpContext.GetAuthenticatedAccountContext()!,
                 date ?? DateOnly.FromDateTime(DateTime.UtcNow)),
             cancellationToken);
 
@@ -56,7 +56,7 @@ public sealed class TraineeSupplementationController : ControllerBase
 
         var result = await _supplementation.CheckOffAsync(
             new SupplementCheckOffAccountCommand(
-                HttpContext.GetAuthenticatedAccountContext()!.Id,
+                HttpContext.GetAuthenticatedAccountContext()!,
                 parsedPlanItemId,
                 request.IntakeDate,
                 request.TakenAt),

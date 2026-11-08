@@ -16,28 +16,34 @@ internal sealed class CreateTraineeSupplementPlanUseCase : ICreateTraineeSupplem
     private readonly ISupplementationPersistence _plans;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly ISupplementationAuthorizationCoordinator _authorization;
 
     public CreateTraineeSupplementPlanUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
         ISupplementationPersistence plans,
         IUnitOfWork unitOfWork,
-        IMapper mapper)
+        IMapper mapper,
+        ISupplementationAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _plans = plans;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _authorization = authorization;
     }
 
     public async Task<Result<SupplementPlanReadModel, AppError>> ExecuteAsync(
         CreateTraineeSupplementPlanCommand command,
         CancellationToken cancellationToken = default)
     {
+        var actorId = command.Actor.Id.Rebind<User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            command.TrainerId,
+            actorId,
             command.TraineeId,
             cancellationToken);
         var accessError = SupplementationAccess.GetTrainerAccessError(
+            _authorization,
+            command.Actor,
             access.IsTrainer,
             access.HasActiveRelationship,
             command.TraineeId);
@@ -56,7 +62,7 @@ internal sealed class CreateTraineeSupplementPlanUseCase : ICreateTraineeSupplem
             SupplementationRules.Normalize(command.Data),
             _mapper.CreateContext());
         plan.Id = Id<SupplementPlan>.New();
-        plan.TrainerId = command.TrainerId;
+        plan.TrainerId = actorId;
         plan.TraineeId = command.TraineeId;
         plan.IsActive = false;
         plan.IsDeleted = false;

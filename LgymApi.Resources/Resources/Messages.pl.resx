@@ -45,6 +45,9 @@
   <data name="NameIsRequired" xml:space="preserve">
     <value>Nazwa jest wymagana i musi mieć co najmniej jeden znak</value>
   </data>
+  <data name="MaximumLengthExceeded" xml:space="preserve">
+    <value>Wartość przekracza maksymalną dozwoloną długość</value>
+  </data>
   <data name="EmailInvalid" xml:space="preserve">
     <value>Ten email jest nieprawidłowy!</value>
   </data>
@@ -116,6 +119,9 @@
   </data>
   <data name="ValueMustBePositive" xml:space="preserve">
     <value>Wartość musi być liczbą dodatnią.</value>
+  </data>
+  <data name="ValueMustBeNonNegative" xml:space="preserve">
+    <value>Wartość nie może być ujemna</value>
   </data>
   <data name="TrainingIdRequired" xml:space="preserve">
     <value>ID treningu jest wymagane.</value>

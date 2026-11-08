@@ -8,6 +8,7 @@ internal sealed class AuthenticatedAccountAccessCapabilitiesService : IAuthentic
 {
     private static readonly AccountAccessOwnerCapabilities Unavailable = new(false);
     private static readonly NotificationsAccountAccessOwnerCapabilities NotificationsUnavailable = new(false, false, false, false);
+    private static readonly NutritionAccountAccessOwnerCapabilities NutritionUnavailable = new(false, false, false, false, false);
     private readonly IAuthenticatedAccountAuthorizationService _authorizationService;
     private readonly IReadOnlyDictionary<AccountAccessCapabilityOwner, IAccountAccessOwnerCapabilityExtension> _extensions;
 
@@ -39,7 +40,7 @@ internal sealed class AuthenticatedAccountAccessCapabilitiesService : IAuthentic
                 GetOwnerCapabilities(AccountAccessCapabilityOwner.Reporting),
                 GetOwnerCapabilities(AccountAccessCapabilityOwner.TrainingPlanning),
                 GetOwnerCapabilities(AccountAccessCapabilityOwner.Coaching),
-                GetOwnerCapabilities(AccountAccessCapabilityOwner.Nutrition),
+                GetNutritionCapabilities(accountContext),
                 GetOwnerCapabilities(AccountAccessCapabilityOwner.WorkoutProgress),
                 GetNotificationsCapabilities(accountContext)));
     }
@@ -56,4 +57,11 @@ internal sealed class AuthenticatedAccountAccessCapabilitiesService : IAuthentic
             && extension is IAccountAccessOwnerCapabilityExtension<NotificationsAccountAccessOwnerCapabilities> typedExtension
                 ? typedExtension.GetCapabilities(accountContext)
                 : NotificationsUnavailable;
+
+    private NutritionAccountAccessOwnerCapabilities GetNutritionCapabilities(
+        AuthenticatedAccountContext accountContext) =>
+        _extensions.TryGetValue(AccountAccessCapabilityOwner.Nutrition, out var extension)
+        && extension is IAccountAccessOwnerCapabilityExtension<NutritionAccountAccessOwnerCapabilities> typedExtension
+            ? typedExtension.GetCapabilities(accountContext)
+            : NutritionUnavailable;
 }

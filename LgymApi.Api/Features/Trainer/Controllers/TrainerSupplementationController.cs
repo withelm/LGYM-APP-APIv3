@@ -40,9 +40,9 @@ public sealed class TrainerSupplementationController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var result = await _supplementation.GetTraineePlansAsync(
-            new SupplementPlanListAccountQuery(trainerId, parsedTraineeId),
+            new SupplementPlanListAccountQuery(accountContext, parsedTraineeId),
             cancellationToken);
         return result.IsFailure
             ? result.ToActionResult()
@@ -58,9 +58,9 @@ public sealed class TrainerSupplementationController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var result = await _supplementation.CreateAsync(
-            new SupplementPlanCreateAccountCommand(trainerId, parsedTraineeId, _mapper.Map<UpsertSupplementPlanRequest, SupplementPlanUpsertData>(request)),
+            new SupplementPlanCreateAccountCommand(accountContext, parsedTraineeId, _mapper.Map<UpsertSupplementPlanRequest, SupplementPlanUpsertData>(request)),
             cancellationToken);
         return result.IsFailure
             ? result.ToActionResult()
@@ -81,9 +81,9 @@ public sealed class TrainerSupplementationController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var result = await _supplementation.UpdateAsync(
-            new SupplementPlanUpdateAccountCommand(trainerId, parsedTraineeId, parsedPlanId, _mapper.Map<UpsertSupplementPlanRequest, SupplementPlanUpsertData>(request)),
+            new SupplementPlanUpdateAccountCommand(accountContext, parsedTraineeId, parsedPlanId, _mapper.Map<UpsertSupplementPlanRequest, SupplementPlanUpsertData>(request)),
             cancellationToken);
         return result.IsFailure
             ? result.ToActionResult()
@@ -104,9 +104,9 @@ public sealed class TrainerSupplementationController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var result = await _supplementation.DeleteAsync(
-            new SupplementPlanDeleteAccountCommand(trainerId, parsedTraineeId, parsedPlanId),
+            new SupplementPlanDeleteAccountCommand(accountContext, parsedTraineeId, parsedPlanId),
             cancellationToken);
         return result.IsFailure
             ? result.ToActionResult()
@@ -127,9 +127,9 @@ public sealed class TrainerSupplementationController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var result = await _supplementation.AssignAsync(
-            new SupplementPlanAssignAccountCommand(trainerId, parsedTraineeId, parsedPlanId),
+            new SupplementPlanAssignAccountCommand(accountContext, parsedTraineeId, parsedPlanId),
             cancellationToken);
         return result.IsFailure
             ? result.ToActionResult()
@@ -145,9 +145,9 @@ public sealed class TrainerSupplementationController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var result = await _supplementation.UnassignAsync(
-            new SupplementPlanUnassignAccountCommand(trainerId, parsedTraineeId),
+            new SupplementPlanUnassignAccountCommand(accountContext, parsedTraineeId),
             cancellationToken);
         return result.IsFailure
             ? result.ToActionResult()
@@ -168,9 +168,9 @@ public sealed class TrainerSupplementationController : ControllerBase
             return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.DateRangeRequired));
         }
 
-        var trainerId = HttpContext.GetAuthenticatedAccountContext()!.Id;
+        var accountContext = HttpContext.GetAuthenticatedAccountContext()!;
         var result = await _supplementation.GetComplianceAsync(
-            new SupplementComplianceAccountQuery(trainerId, parsedTraineeId, fromDate.Value, toDate.Value),
+            new SupplementComplianceAccountQuery(accountContext, parsedTraineeId, fromDate.Value, toDate.Value),
             cancellationToken);
         return result.IsFailure
             ? result.ToActionResult()

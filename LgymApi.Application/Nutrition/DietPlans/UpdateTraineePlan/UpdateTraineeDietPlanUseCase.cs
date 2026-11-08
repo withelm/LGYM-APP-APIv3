@@ -22,6 +22,7 @@ internal sealed class UpdateTraineeDietPlanUseCase : IUpdateTraineeDietPlanUseCa
     private readonly ICommandDispatcher _commands;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IDietPlanAuthorizationCoordinator _authorization;
 
     public UpdateTraineeDietPlanUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
@@ -29,7 +30,8 @@ internal sealed class UpdateTraineeDietPlanUseCase : IUpdateTraineeDietPlanUseCa
         DietPlanHistorySnapshotFactory historyFactory,
         ICommandDispatcher commands,
         IUnitOfWork unitOfWork,
-        IMapper mapper)
+        IMapper mapper,
+        IDietPlanAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _plans = plans;
@@ -37,6 +39,7 @@ internal sealed class UpdateTraineeDietPlanUseCase : IUpdateTraineeDietPlanUseCa
         _commands = commands;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _authorization = authorization;
     }
 
     public async Task<Result<DietPlanReadModel, AppError>> ExecuteAsync(
@@ -56,42 +59,49 @@ internal sealed class UpdateTraineeDietPlanUseCase : IUpdateTraineeDietPlanUseCa
             return Result<DietPlanReadModel, AppError>.Failure(new BadRequestError(Messages.UserIdRequired));
         }
 
+        var actorId = command.Actor.Id.Rebind<User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            command.TrainerId,
+            actorId,
             command.TraineeId,
             cancellationToken);
-        var accessError = DietPlanAccess.GetTrainerAccessError(access.IsTrainer, access.HasActiveRelationship);
+        var accessError = DietPlanAccess.GetAccessError(
+            _authorization,
+            command.Actor,
+            DietPlanAction.Update,
+            actorId,
+            command.TraineeId,
+            access.IsTrainer,
+            access.HasActiveRelationship);
         if (accessError is not null)
         {
             return Result<DietPlanReadModel, AppError>.Failure(accessError);
         }
-
         if (command.DietPlanId.IsEmpty)
         {
             return Result<DietPlanReadModel, AppError>.Failure(new BadRequestError(Messages.FieldRequired));
         }
 
         var plan = await _plans.FindTrackedPlanByIdAsync(command.DietPlanId, cancellationToken);
-        if (plan is null || !DietPlanAccess.IsOwnedBy(plan, command.TrainerId, command.TraineeId))
+        if (plan is null || !DietPlanAccess.IsOwnedByTrainee(plan, command.TraineeId))
         {
             return Result<DietPlanReadModel, AppError>.Failure(new NotFoundError(Messages.DidntFind));
         }
 
         var replacement = _mapper.Map<NormalizedDietPlanData, DietPlan>(normalized, _mapper.CreateContext());
-        ApplyReplacement(plan, replacement);
+        ApplyReplacement(plan, replacement, actorId == plan.TraineeId);
 
         await _plans.AddHistoryEntryAsync(
-            _historyFactory.Create(plan, command.TrainerId, "Updated"),
+            _historyFactory.Create(plan, actorId, "Updated"),
             cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        if (plan.IsActive)
+        if (plan.IsActive && actorId != command.TraineeId)
         {
             await _commands.EnqueueAsync(new DietPlanUpdatedInAppNotificationCommand
             {
                 DietPlanId = plan.Id,
                 TraineeId = plan.TraineeId,
-                TrainerId = command.TrainerId,
+                TrainerId = actorId,
                 DietPlanName = plan.Name,
                 TriggeredAt = DateTimeOffset.UtcNow
             });
@@ -101,7 +111,7 @@ internal sealed class UpdateTraineeDietPlanUseCase : IUpdateTraineeDietPlanUseCa
             _mapper.Map<DietPlan, DietPlanReadModel>(plan, _mapper.CreateContext()));
     }
 
-    private static void ApplyReplacement(DietPlan plan, DietPlan replacement)
+    private static void ApplyReplacement(DietPlan plan, DietPlan replacement, bool preserveIsActive)
     {
         plan.Name = replacement.Name;
         plan.StartDate = replacement.StartDate;
@@ -111,7 +121,10 @@ internal sealed class UpdateTraineeDietPlanUseCase : IUpdateTraineeDietPlanUseCa
         plan.CarbsGrams = replacement.CarbsGrams;
         plan.FatGrams = replacement.FatGrams;
         plan.Notes = replacement.Notes;
-        plan.IsActive = replacement.IsActive;
+        if (!preserveIsActive)
+        {
+            plan.IsActive = replacement.IsActive;
+        }
 
         plan.Meals.Clear();
         foreach (var meal in replacement.Meals)

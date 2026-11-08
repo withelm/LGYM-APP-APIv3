@@ -46,9 +46,10 @@ public sealed class AssignTraineeSupplementPlanUseCaseTests
             var useCase = new AssignTraineeSupplementPlanUseCase(
                 access,
                 new SupplementationPersistenceRepository(assignContext),
-                new EfUnitOfWork(assignContext));
+                new EfUnitOfWork(assignContext),
+                NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
 
-            var result = await useCase.ExecuteAsync(new(trainerId, traineeId, target.Id));
+            var result = await useCase.ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, target.Id));
 
             result.IsSuccess.Should().BeTrue();
         }
@@ -215,9 +216,9 @@ public sealed class AssignTraineeSupplementPlanUseCaseTests
                 .Returns(new CoachingRelationshipAccessDecision(true, true));
 
         public AssignTraineeSupplementPlanCommand Command(Id<SupplementPlan> planId)
-            => new(TrainerId, TraineeId, planId);
+            => new(NutritionAuthorizationTestFactory.CreateActor(TrainerId), TrainerId, TraineeId, planId);
 
         public AssignTraineeSupplementPlanUseCase CreateUseCase()
-            => new(Access, Plans, UnitOfWork);
+            => new(Access, Plans, UnitOfWork, NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
     }
 }

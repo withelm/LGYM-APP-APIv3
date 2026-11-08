@@ -18,19 +18,22 @@ internal sealed class ActivateTraineeDietPlanUseCase : IActivateTraineeDietPlanU
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly DietPlanHistorySnapshotFactory _historySnapshotFactory;
+    private readonly IDietPlanAuthorizationCoordinator _authorization;
 
     public ActivateTraineeDietPlanUseCase(
         ICoachingRelationshipAccessService relationshipAccess,
         IDietPlanPersistence dietPlanPersistence,
         ICommandDispatcher commandDispatcher,
         IUnitOfWork unitOfWork,
-        DietPlanHistorySnapshotFactory historySnapshotFactory)
+        DietPlanHistorySnapshotFactory historySnapshotFactory,
+        IDietPlanAuthorizationCoordinator authorization)
     {
         _relationshipAccess = relationshipAccess;
         _dietPlanPersistence = dietPlanPersistence;
         _commandDispatcher = commandDispatcher;
         _unitOfWork = unitOfWork;
         _historySnapshotFactory = historySnapshotFactory;
+        _authorization = authorization;
     }
 
     public async Task<Result<Unit, AppError>> ExecuteAsync(
@@ -42,11 +45,19 @@ internal sealed class ActivateTraineeDietPlanUseCase : IActivateTraineeDietPlanU
             return Result<Unit, AppError>.Failure(new BadRequestError(Messages.UserIdRequired));
         }
 
+        var actorId = command.Actor.Id.Rebind<LgymApi.Domain.Entities.User>();
         var access = await _relationshipAccess.GetAccessDecisionAsync(
-            command.TrainerId,
+            actorId,
             command.TraineeId,
             cancellationToken);
-        var accessError = DietPlanAccess.GetTrainerAccessError(access.IsTrainer, access.HasActiveRelationship);
+        var accessError = DietPlanAccess.GetAccessError(
+            _authorization,
+            command.Actor,
+            DietPlanAction.Activate,
+            actorId,
+            command.TraineeId,
+            access.IsTrainer,
+            access.HasActiveRelationship);
         if (accessError is not null)
         {
             return Result<Unit, AppError>.Failure(accessError);
@@ -58,21 +69,21 @@ internal sealed class ActivateTraineeDietPlanUseCase : IActivateTraineeDietPlanU
         }
 
         var plan = await _dietPlanPersistence.FindTrackedPlanByIdAsync(command.DietPlanId, cancellationToken);
-        if (plan is null || !DietPlanAccess.IsOwnedBy(plan, command.TrainerId, command.TraineeId))
+        if (plan is null || !DietPlanAccess.IsOwnedByTrainee(plan, command.TraineeId))
         {
             return Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind));
         }
 
         plan.IsActive = true;
         await _dietPlanPersistence.AddHistoryEntryAsync(
-            _historySnapshotFactory.Create(plan, command.TrainerId, "Activated"),
+            _historySnapshotFactory.Create(plan, actorId, "Activated"),
             cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await _commandDispatcher.EnqueueAsync(new DietPlanUpdatedInAppNotificationCommand
         {
             DietPlanId = plan.Id,
             TraineeId = plan.TraineeId,
-            TrainerId = command.TrainerId,
+            TrainerId = actorId,
             DietPlanName = plan.Name,
             TriggeredAt = DateTimeOffset.UtcNow
         });

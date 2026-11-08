@@ -78,9 +78,10 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
             var useCase = new UnassignTraineeSupplementPlanUseCase(
                 access,
                 new SupplementationPersistenceRepository(context),
-                unitOfWork);
+                unitOfWork,
+                NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
 
-            var result = await useCase.ExecuteAsync(new(trainerId, traineeId));
+            var result = await useCase.ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
             result.IsSuccess.Should().BeTrue();
         }
@@ -101,7 +102,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
         forbidden.Access.GetAccessDecisionAsync(forbidden.TrainerId, Id<UserEntity>.Empty, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(false, true));
         var forbiddenResult = await forbidden.CreateUseCase().ExecuteAsync(
-            new(forbidden.TrainerId, Id<UserEntity>.Empty));
+            new(NutritionAuthorizationTestFactory.CreateActor(forbidden.TrainerId), forbidden.TrainerId, Id<UserEntity>.Empty));
 
         forbiddenResult.Error.Should().BeOfType<SupplementationForbiddenError>();
         await AssertNoPersistenceAsync(forbidden);
@@ -110,7 +111,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
         emptyTrainee.Access.GetAccessDecisionAsync(emptyTrainee.TrainerId, Id<UserEntity>.Empty, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(true, true));
         var emptyResult = await emptyTrainee.CreateUseCase().ExecuteAsync(
-            new(emptyTrainee.TrainerId, Id<UserEntity>.Empty));
+            new(NutritionAuthorizationTestFactory.CreateActor(emptyTrainee.TrainerId), emptyTrainee.TrainerId, Id<UserEntity>.Empty));
 
         emptyResult.Error.Should().BeOfType<InvalidSupplementationError>();
         await AssertNoPersistenceAsync(emptyTrainee);
@@ -185,9 +186,9 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
                 .Returns(new CoachingRelationshipAccessDecision(true, true));
 
         public UnassignTraineeSupplementPlanCommand Command()
-            => new(TrainerId, TraineeId);
+            => new(NutritionAuthorizationTestFactory.CreateActor(TrainerId), TrainerId, TraineeId);
 
         public IUnassignTraineeSupplementPlanUseCase CreateUseCase()
-            => new UnassignTraineeSupplementPlanUseCase(Access, Plans, UnitOfWork);
+            => new UnassignTraineeSupplementPlanUseCase(Access, Plans, UnitOfWork, NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
     }
 }

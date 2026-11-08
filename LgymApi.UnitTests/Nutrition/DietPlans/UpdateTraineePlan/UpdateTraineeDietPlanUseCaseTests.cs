@@ -128,6 +128,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
     {
         var dependencies = new Dependencies();
         var command = new UpdateTraineeDietPlanCommand(
+            NutritionAuthorizationTestFactory.CreateActor(Id<User>.New()),
             Id<User>.New(),
             Id<User>.New(),
             Id<DietPlan>.New(),
@@ -173,7 +174,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         var cases = new[]
         {
             new PlanFailureCase(Id<DietPlan>.Empty, null, typeof(BadRequestError), Messages.FieldRequired),
-            new PlanFailureCase(planId, ExistingPlan(Id<User>.New(), traineeId, planId), typeof(NotFoundError), Messages.DidntFind),
+            new PlanFailureCase(planId, ExistingPlan(trainerId, Id<User>.New(), planId), typeof(NotFoundError), Messages.DidntFind),
             new PlanFailureCase(planId, ExistingPlan(trainerId, traineeId, planId, isDeleted: true), typeof(NotFoundError), Messages.DidntFind)
         };
 
@@ -216,6 +217,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
             createdAt: new DateTimeOffset(2026, 6, 1, 8, 9, 10, TimeSpan.FromHours(2)),
             updatedAt: new DateTimeOffset(2026, 6, 2, 9, 10, 11, TimeSpan.FromHours(2)));
         var command = new UpdateTraineeDietPlanCommand(
+            NutritionAuthorizationTestFactory.CreateActor(trainerId),
             trainerId,
             traineeId,
             plan.Id,
@@ -301,7 +303,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         Id<DietPlan> planId,
         bool isActive = true,
         IReadOnlyList<DietMealInput>? meals = null)
-        => new(trainerId, traineeId, planId, new DietPlanUpsertData(
+        => new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, planId, new DietPlanUpsertData(
             " Nutrition Plan ",
             new DateOnly(2026, 7, 23),
             null,
@@ -376,7 +378,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         public IMapper Mapper { get; } = CreateMapper();
 
         public UpdateTraineeDietPlanUseCase CreateUseCase()
-            => new(Access, Plans, new DietPlanHistorySnapshotFactory(Mapper), Commands, UnitOfWork, Mapper);
+            => new(Access, Plans, new DietPlanHistorySnapshotFactory(Mapper), Commands, UnitOfWork, Mapper, NutritionAuthorizationTestFactory.CreateDietCoordinator());
     }
 
     private static IMapper CreateMapper()
