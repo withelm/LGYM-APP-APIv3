@@ -7,13 +7,14 @@ using LgymApi.Application.Nutrition.DietPlans.UpdateOwnDietPlan.Contracts;
 using LgymApi.Application.Nutrition.DietPlans.UpdateTraineePlan;
 using LgymApi.Application.Nutrition.DietPlans.UpdateTraineePlan.Contracts;
 using LgymApi.Application.Repositories;
-using LgymApi.Authorization.Contracts;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts.Authorization;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.UnitOfWork;
-using LgymApi.Platform.Contracts;
 using LgymApi.TestUtils;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -37,8 +38,9 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
         await using (var updateScope = Factory.Services.CreateAsyncScope())
         {
             var update = updateScope.ServiceProvider.GetRequiredService<IUpdateTraineeDietPlanUseCase>();
+            var authorization = updateScope.ServiceProvider.GetRequiredService<IAuthenticatedAccountAuthorizationService>();
             var result = await update.ExecuteAsync(new UpdateTraineeDietPlanCommand(
-                CreateActor(scenario.CurrentCoach.Id),
+                authorization.CreateActor(CreateAccountContext(scenario.CurrentCoach.Id)),
                 scenario.CurrentCoach.Id,
                 scenario.Trainee.Id,
                 scenario.PlanId,
@@ -79,6 +81,8 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
         await using var coachScope = raceFactory.Services.CreateAsyncScope();
         var ownerUpdate = ownerScope.ServiceProvider.GetRequiredService<IUpdateOwnDietPlanUseCase>();
         var coachUpdate = coachScope.ServiceProvider.GetRequiredService<IUpdateTraineeDietPlanUseCase>();
+        var ownerAuthorization = ownerScope.ServiceProvider.GetRequiredService<IAuthenticatedAccountAuthorizationService>();
+        var coachAuthorization = coachScope.ServiceProvider.GetRequiredService<IAuthenticatedAccountAuthorizationService>();
         var ownerData = CreateUpdateData("Owner winning diet", "Owner meal");
         var coachData = CreateUpdateData("Coach winning diet", "Coach meal");
 
@@ -89,7 +93,7 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
                 ownerData.Meals[0].Name,
                 () => ownerUpdate.ExecuteAsync(
                     new UpdateOwnDietPlanCommand(
-                        CreateActor(scenario.Trainee.Id),
+                        ownerAuthorization.CreateActor(CreateAccountContext(scenario.Trainee.Id)),
                         scenario.Trainee.Id,
                         scenario.PlanId,
                         ownerData),
@@ -100,7 +104,7 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
                 coachData.Meals[0].Name,
                 () => coachUpdate.ExecuteAsync(
                     new UpdateTraineeDietPlanCommand(
-                        CreateActor(scenario.CurrentCoach.Id),
+                        coachAuthorization.CreateActor(CreateAccountContext(scenario.CurrentCoach.Id)),
                         scenario.CurrentCoach.Id,
                         scenario.Trainee.Id,
                         scenario.PlanId,
@@ -206,8 +210,14 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
             true,
             [new DietMealInput(mealName, 0, "Race-specific meal", 600, 45, 60, 20)]);
 
-    private static AuthorizationActor CreateActor(Id<User> userId)
-        => new(userId.Rebind<ActorReference>());
+    private static AuthenticatedAccountContext CreateAccountContext(Id<User> userId)
+        => new(
+            userId.Rebind<AccountReference>(),
+            null,
+            [],
+            [],
+            IsBlocked: false,
+            IsDeleted: false);
 
     private static async Task<UpdateOutcome> CaptureAsync(
         Id<User> actorId,
