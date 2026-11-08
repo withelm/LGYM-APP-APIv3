@@ -75,6 +75,7 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
         }
 
         PushNotificationMessage? message = null;
+        PushInstallation? installation = null;
         var deliveryAttemptStarted = false;
         TimeSpan? retryDelay = null;
         try
@@ -99,7 +100,7 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
                 return;
             }
 
-            var installation = await _pushInstallationRepository.FindByIdAsync(message.PushInstallationId, cancellationToken);
+            installation = await _pushInstallationRepository.FindByIdAsync(message.PushInstallationId, cancellationToken);
             if (installation == null)
             {
                 message.Status = PushNotificationStatus.Failed;
@@ -181,12 +182,12 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
         }
         catch (OperationCanceledException)
         {
-            await RecoverFromPostClaimFailureAsync(notificationId, message, deliveryAttemptStarted, new OperationCanceledException());
+            await RecoverFromPostClaimFailureAsync(notificationId, message, installation, deliveryAttemptStarted, new OperationCanceledException());
             throw;
         }
         catch (Exception exception)
         {
-            await RecoverFromPostClaimFailureAsync(notificationId, message, deliveryAttemptStarted, exception);
+            await RecoverFromPostClaimFailureAsync(notificationId, message, installation, deliveryAttemptStarted, exception);
             throw;
         }
 
@@ -294,9 +295,15 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
     private async Task RecoverFromPostClaimFailureAsync(
         Id<PushNotificationMessage> notificationId,
         PushNotificationMessage? message,
+        PushInstallation? failedInstallation,
         bool deliveryAttemptStarted,
         Exception exception)
     {
+        if (failedInstallation != null)
+        {
+            await _pushInstallationRepository.ResetFailedMutationAsync(failedInstallation, CancellationToken.None);
+        }
+
         message ??= await _pushNotificationMessageRepository.FindByIdAsync(notificationId, CancellationToken.None);
         if (message == null)
         {
