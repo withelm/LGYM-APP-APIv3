@@ -981,6 +981,52 @@ public sealed class DietPlansApiTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task UpdateOwnDietPlan_TextBoundaries_AcceptMaximumsAndRejectMaxPlusOneBeforePersistence()
+    {
+        var trainer = await SeedTrainerAsync("diet-boundary-author", "diet-boundary-author@example.com");
+        var trainee = await SeedUserAsync("diet-boundary-owner", "diet-boundary-owner@example.com", "password123");
+        await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
+        SetAuthorizationHeader(trainer.Id);
+        var plan = await CreateDietAsync(trainee.Id, "Boundary diet", false);
+        SetAuthorizationHeader(trainee.Id);
+        var maximumName = new string('n', 120);
+        var maximumNotes = new string('p', 2000);
+        var maximumMealName = new string('m', 160);
+        var maximumMealDescription = new string('d', 2000);
+        var route = $"/api/trainee/diet-plans/{plan.Id}/update";
+
+        using (var maximumResponse = await Client.PostAsJsonAsync(
+                   route,
+                   BoundaryDietRequest(maximumName, maximumNotes, maximumMealName, maximumMealDescription)))
+        {
+            maximumResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        var acceptedSnapshot = await GetDietPlanSnapshotAsync(plan.Id);
+        acceptedSnapshot.Name.Should().HaveLength(120);
+        acceptedSnapshot.Notes.Should().HaveLength(2000);
+        acceptedSnapshot.Meals.Should().ContainSingle();
+        acceptedSnapshot.Meals[0].Name.Should().HaveLength(160);
+        acceptedSnapshot.Meals[0].Description.Should().HaveLength(2000);
+        var acceptedCounts = await GetDietPersistenceCountsAsync();
+        var invalidRequests = new[]
+        {
+            (Field: "plan name", Request: BoundaryDietRequest(new string('n', 121), maximumNotes, maximumMealName, maximumMealDescription)),
+            (Field: "plan notes", Request: BoundaryDietRequest(maximumName, new string('p', 2001), maximumMealName, maximumMealDescription)),
+            (Field: "meal name", Request: BoundaryDietRequest(maximumName, maximumNotes, new string('m', 161), maximumMealDescription)),
+            (Field: "meal description", Request: BoundaryDietRequest(maximumName, maximumNotes, maximumMealName, new string('d', 2001)))
+        };
+
+        foreach (var invalid in invalidRequests)
+        {
+            using var response = await Client.PostAsJsonAsync(route, invalid.Request);
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{invalid.Field} exceeds its persisted maximum by one character");
+            (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(acceptedSnapshot);
+            (await GetDietPersistenceCountsAsync()).Should().Be(acceptedCounts);
+        }
+    }
+
+    [Test]
     public async Task TrainerRoleDietOwner_UsingTrainerUpdateRoute_PreservesIsActive()
     {
         var author = await SeedTrainerAsync("trainer-route-diet-author", "trainer-route-diet-author@example.com");
@@ -1082,6 +1128,16 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             startDate = new DateOnly(2026, 7, 23),
             isActive = true,
             meals = new[] { new { name = "Meal", order = 0, estimatedCalories = 500 } }
+        };
+
+    private static object BoundaryDietRequest(string name, string notes, string mealName, string mealDescription)
+        => new
+        {
+            name,
+            startDate = new DateOnly(2026, 7, 23),
+            notes,
+            isActive = true,
+            meals = new[] { new { name = mealName, order = 0, description = mealDescription, estimatedCalories = 500 } }
         };
 
     private static async Task AssertExactMessageAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, string expectedMessage)

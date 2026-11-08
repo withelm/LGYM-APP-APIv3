@@ -11,7 +11,10 @@ public sealed class UpdateOwnDietPlanRequestValidator : AbstractValidator<Update
         RuleFor(request => request.Name)
             .NotEmpty()
             .WithMessage(Messages.NameIsRequired)
-            .MaximumLength(200)
+            .MaximumLength(120)
+            .WithMessage(Messages.MaximumLengthExceeded);
+        RuleFor(request => request.Notes)
+            .MaximumLength(2000)
             .WithMessage(Messages.MaximumLengthExceeded);
         RuleFor(request => request.EndDate)
             .GreaterThanOrEqualTo(request => request.StartDate)
@@ -31,7 +34,10 @@ public sealed class UpdateOwnDietMealRequestValidator : AbstractValidator<Upsert
         RuleFor(request => request.Name)
             .NotEmpty()
             .WithMessage(Messages.NameIsRequired)
-            .MaximumLength(200)
+            .MaximumLength(160)
+            .WithMessage(Messages.MaximumLengthExceeded);
+        RuleFor(request => request.Description)
+            .MaximumLength(2000)
             .WithMessage(Messages.MaximumLengthExceeded);
         RuleFor(request => request.Order)
             .GreaterThanOrEqualTo(0)
