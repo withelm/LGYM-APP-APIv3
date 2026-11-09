@@ -23,7 +23,7 @@ public sealed class ReportingRelationshipAccessBoundaryGuardTests
     [Test]
     public void ReportingRelationshipAccessPort_ShouldRemainMarkerIdOnly()
     {
-        var method = typeof(IReportingRelationshipAccessPersistence).GetMethods().Single();
+        var method = typeof(IReportingRelationshipAccessPersistence).GetMethod(nameof(IReportingRelationshipAccessPersistence.GetAccessAsync))!;
 
         Assert.Multiple(() =>
         {
@@ -35,13 +35,14 @@ public sealed class ReportingRelationshipAccessBoundaryGuardTests
                 typeof(CancellationToken)
             }));
             Assert.That(typeof(ReportingRelationshipAccessFact).GetProperties().Select(property => property.PropertyType),
-                Is.EqualTo(new[] { typeof(bool), typeof(IReadOnlyList<ReportingRelationshipPeriodFact>) }));
+                Is.EqualTo(new[] { typeof(bool), typeof(IReadOnlyList<ReportingRelationshipPeriodFact>), typeof(ReportingActiveRelationshipFact) }));
             Assert.That(typeof(ReportingRelationshipPeriodFact).GetProperties().Select(property => property.PropertyType),
                 Is.EqualTo(new[]
                 {
                     typeof(DateTimeOffset?),
                     typeof(DateTimeOffset?),
-                    typeof(CoachingEpisodeStartProvenance)
+                    typeof(CoachingEpisodeStartProvenance),
+                    typeof(Id<LgymApi.Domain.Entities.CoachingEpisode>?)
                 }));
         });
     }

@@ -76,7 +76,9 @@ public sealed partial class ReportingService
             null,
             null,
             submission.CreatedAt,
-            request);
+            request,
+            submission.SourceCoachingEpisodeId,
+            submission.AcceptedAt);
 
     private static RecurringReportAssignmentUpdatePersistenceModel ToUpdateModel(
         RecurringReportAssignmentPersistenceModel assignment)

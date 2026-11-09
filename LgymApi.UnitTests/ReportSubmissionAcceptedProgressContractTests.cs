@@ -27,7 +27,9 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
         nameof(ReportSubmissionAcceptedProgressPayload.TraineeId),
         nameof(ReportSubmissionAcceptedProgressPayload.ObservedAt),
         nameof(ReportSubmissionAcceptedProgressPayload.AcceptedAt),
-        nameof(ReportSubmissionAcceptedProgressPayload.Measurements)
+        nameof(ReportSubmissionAcceptedProgressPayload.Measurements),
+        nameof(ReportSubmissionAcceptedProgressPayload.SourceReportRequestId),
+        nameof(ReportSubmissionAcceptedProgressPayload.SourceCoachingEpisodeId)
     ];
 
     [Test]
@@ -41,10 +43,10 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
     }
 
     [Test]
-    public void Payload_UsesStableSchemaVersionOne()
+    public void Payload_UsesStableSchemaVersionTwo()
     {
-        ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion.Should().Be(1);
-        CreateValidPayload().SchemaVersion.Should().Be(ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion);
+        ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion.Should().Be(2);
+        CreateValidPayload().SchemaVersion.Should().Be(1);
     }
 
     [Test]
@@ -111,6 +113,24 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
             validation.Outcome == ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid);
     }
 
+    [Test]
+    public void SchemaTwoPayload_RejectsMissingOrMalformedSourceIdentifiers()
+    {
+        var valid = CreateValidPayload() with
+        {
+            SchemaVersion = ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion,
+            SourceReportRequestId = "00000000-0000-0000-0000-000000000006"
+        };
+
+        valid.Validate().IsValid.Should().BeTrue();
+        (valid with { SourceReportRequestId = null }).Validate().Outcome
+            .Should().Be(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid);
+        (valid with { SourceReportRequestId = "not-an-id" }).Validate().Outcome
+            .Should().Be(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid);
+        (valid with { SourceCoachingEpisodeId = "not-an-id" }).Validate().Outcome
+            .Should().Be(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid);
+    }
+
     [TestCase(double.NaN)]
     [TestCase(0d)]
     [TestCase(-1d)]
@@ -125,7 +145,7 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
     [Test]
     public void Payload_RejectsUnsupportedSchemaVersion()
     {
-        var validation = (CreateValidPayload() with { SchemaVersion = 2 }).Validate();
+        var validation = (CreateValidPayload() with { SchemaVersion = 3 }).Validate();
 
         validation.Outcome.Should().Be(ReportSubmissionAcceptedProgressPayloadValidationOutcome.UnsupportedSchema);
     }

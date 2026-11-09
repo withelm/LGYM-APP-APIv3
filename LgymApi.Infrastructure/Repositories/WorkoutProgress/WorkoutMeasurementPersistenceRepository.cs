@@ -11,7 +11,7 @@ namespace LgymApi.Infrastructure.Repositories.WorkoutProgress;
 public sealed class WorkoutMeasurementPersistenceRepository(AppDbContext dbContext) : IWorkoutMeasurementPersistence
 {
     public Task AddAsync(WorkoutMeasurementWriteModel measurement, CancellationToken cancellationToken = default)
-        => dbContext.Measurements.AddAsync(new Measurement { Id = measurement.Id, UserId = WorkoutPersistenceAccountIds.ToPersisted(measurement.AccountId), BodyPart = measurement.BodyPart, Unit = measurement.Unit, Value = measurement.Value, CreatedAt = measurement.CreatedAt ?? default }, cancellationToken).AsTask();
+        => dbContext.Measurements.AddAsync(new Measurement { Id = measurement.Id, UserId = WorkoutPersistenceAccountIds.ToPersisted(measurement.AccountId), BodyPart = measurement.BodyPart, Unit = measurement.Unit, Value = measurement.Value, CreatedAt = measurement.CreatedAt ?? default, RecordedAt = DateTimeOffset.UtcNow }, cancellationToken).AsTask();
 
     public async Task<WorkoutMeasurementPersistenceModel?> FindByIdAsync(Id<Measurement> id, CancellationToken cancellationToken = default)
     {

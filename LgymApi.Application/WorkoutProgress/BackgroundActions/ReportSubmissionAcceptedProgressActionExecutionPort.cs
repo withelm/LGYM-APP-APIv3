@@ -72,12 +72,14 @@ internal sealed class AcceptedProgressWirePayload
     public DateTimeOffset ObservedAt { get; init; }
     public DateTimeOffset AcceptedAt { get; init; }
     public IReadOnlyList<AcceptedProgressWireMeasurement?>? Measurements { get; init; }
+    public string? SourceReportRequestId { get; init; }
+    public string? SourceCoachingEpisodeId { get; init; }
 
     public bool TryToWorkoutEvent(out ReportSubmissionAcceptedProgressEvent workoutEvent, out string outcome)
     {
         workoutEvent = default!;
         outcome = "Invalid";
-        if (SchemaVersion != 1)
+        if (SchemaVersion is not (1 or 2))
         {
             outcome = "UnsupportedSchema";
             return false;
@@ -85,7 +87,8 @@ internal sealed class AcceptedProgressWirePayload
 
         if (!IsCanonicalId(EventId) || !IsCanonicalId(ReportSubmissionId) || !IsCanonicalId(CorrelationId)
             || !IsCanonicalId(CausationId) || !Id<AccountReference>.TryParse(TraineeId, out var traineeId) || traineeId.IsEmpty || ObservedAt == default || AcceptedAt == default
-            || Measurements is null || Measurements.Count == 0 || Measurements.Any(measurement => measurement is null || !measurement.IsValid()))
+            || Measurements is null || Measurements.Count == 0 || Measurements.Any(measurement => measurement is null || !measurement.IsValid())
+            || (SchemaVersion == 2 && (!IsCanonicalId(SourceReportRequestId) || (SourceCoachingEpisodeId is not null && !IsCanonicalId(SourceCoachingEpisodeId)))))
         {
             return false;
         }
@@ -93,12 +96,14 @@ internal sealed class AcceptedProgressWirePayload
         workoutEvent = new ReportSubmissionAcceptedProgressEvent(
             SchemaVersion, EventId, ReportSubmissionId, CorrelationId, CausationId, traineeId,
             ObservedAt, AcceptedAt,
-            Measurements.Select(measurement => new ReportSubmissionAcceptedMeasurement(measurement!.BodyPart, measurement.Value, measurement.Unit)).ToArray());
+            Measurements.Select(measurement => new ReportSubmissionAcceptedMeasurement(measurement!.BodyPart, measurement.Value, measurement.Unit)).ToArray(),
+            SourceReportRequestId,
+            SourceCoachingEpisodeId);
         outcome = "Valid";
         return true;
     }
 
-    private static bool IsCanonicalId(string value) =>
+    private static bool IsCanonicalId(string? value) =>
         !string.IsNullOrWhiteSpace(value)
         && Id<AcceptedProgressWirePayload>.TryParse(value, out var id)
         && string.Equals(value, id.ToString(), StringComparison.Ordinal);

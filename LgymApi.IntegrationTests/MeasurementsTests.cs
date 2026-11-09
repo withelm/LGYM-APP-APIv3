@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
@@ -372,6 +373,190 @@ public sealed class MeasurementsTests : IntegrationTestBase
             }
         }
     }
+
+    [Test]
+    public async Task TrainerMeasurementRoutes_TransitionFromFullActiveAccessToEndedEpisodeScope()
+    {
+        var trainer = await SeedUserAsync(name: "measurement-scope-trainer", email: "measurement-scope-trainer@example.com");
+        var trainee = await SeedUserAsync(name: "measurement-scope-trainee", email: "measurement-scope-trainee@example.com");
+        var episodeId = Id<CoachingEpisode>.New();
+        var startedAt = new DateTimeOffset(2026, 10, 1, 10, 0, 0, TimeSpan.Zero);
+        var endedAt = startedAt.AddDays(2);
+        var manualInsideId = Id<Measurement>.New();
+        var manualOutsideId = Id<Measurement>.New();
+        var trustedReportId = Id<Measurement>.New();
+        var incompleteReportId = Id<Measurement>.New();
+
+        using (var database = GetDbContext())
+        {
+            database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
+            database.CoachingEpisodes.Add(new CoachingEpisode
+            {
+                Id = episodeId,
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                StartedAt = startedAt,
+                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation,
+                AuthorizationRevision = 0
+            });
+            database.TrainerTraineeLinks.Add(new TrainerTraineeLink
+            {
+                Id = Id<TrainerTraineeLink>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                EpisodeId = episodeId
+            });
+            database.Measurements.AddRange(
+                MeasurementRow(manualInsideId, trainee.Id, 71, startedAt.AddHours(1), startedAt.AddHours(1)),
+                MeasurementRow(manualOutsideId, trainee.Id, 72, endedAt.AddHours(1), endedAt.AddHours(1)),
+                MeasurementRow(
+                    trustedReportId,
+                    trainee.Id,
+                    73,
+                    endedAt.AddDays(1),
+                    recordedAt: null,
+                    sourceSubmissionId: Id<ReportSubmission>.New(),
+                    sourceRequestId: Id<ReportRequest>.New(),
+                    sourceEpisodeId: episodeId,
+                    sourceAcceptedAt: endedAt.AddTicks(-1)),
+                MeasurementRow(
+                    incompleteReportId,
+                    trainee.Id,
+                    74,
+                    endedAt.AddDays(1),
+                    recordedAt: null,
+                    sourceEpisodeId: episodeId,
+                    sourceAcceptedAt: endedAt.AddTicks(-1)));
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        var activeHistory = await Client.GetFromJsonAsync<MeasurementsHistoryResponse>(
+            $"/api/measurements/{trainee.Id}/getHistory?bodyPart=BodyWeight&unit=Kilograms");
+        activeHistory!.Measurements.Should().HaveCount(4, "an active coach has full measurement access");
+
+        using (var database = GetDbContext())
+        {
+            var link = await database.TrainerTraineeLinks.SingleAsync(candidate => candidate.EpisodeId == episodeId);
+            database.TrainerTraineeLinks.Remove(link);
+            var episode = await database.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
+            episode.EndedAt = endedAt;
+            episode.AuthorizationRevision++;
+            await database.SaveChangesAsync();
+        }
+
+        var historyResponse = await Client.GetAsync(
+            $"/api/measurements/{trainee.Id}/getHistory?bodyPart=BodyWeight&unit=Kilograms");
+        var listResponse = await Client.GetAsync($"/api/measurements/{trainee.Id}/list?bodyPart=BodyWeight&unit=Kilograms");
+        var trendResponse = await Client.GetAsync(
+            $"/api/measurements/{trainee.Id}/trend?bodyPart=BodyWeight&unit=Kilograms");
+        var trendsResponse = await Client.GetAsync($"/api/measurements/{trainee.Id}/trends");
+        var trustedDetailResponse = await Client.GetAsync($"/api/measurements:/{trustedReportId}/getMeasurementDetail");
+        var incompleteDetailResponse = await Client.GetAsync($"/api/measurements:/{incompleteReportId}/getMeasurementDetail");
+
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        trendResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        trendsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        trustedDetailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        incompleteDetailResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var history = await historyResponse.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
+        var list = await listResponse.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
+        var trend = await trendResponse.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
+        var trends = await trendsResponse.Content.ReadFromJsonAsync<MeasurementTrendsResponse>();
+        history!.Measurements.Select(measurement => measurement.Value).Should().Equal(71, 73);
+        list!.Measurements.Select(measurement => measurement.Value).Should().Equal(73, 71);
+        trend!.Points.Should().Be(2);
+        trends!.Trends.Should().ContainSingle().Which.Points.Should().Be(2);
+    }
+
+    [Test]
+    public async Task MeasurementReadRoutes_WhenSubjectIsSoftDeleted_ReturnNotFoundWithRetainedData()
+    {
+        var trainer = await SeedUserAsync(name: "deleted-subject-trainer", email: "deleted-subject-trainer@example.com");
+        var trainee = await SeedUserAsync(name: "deleted-subject-trainee", email: "deleted-subject-trainee@example.com");
+        var episodeId = Id<CoachingEpisode>.New();
+        var measurementId = Id<Measurement>.New();
+
+        using (var database = GetDbContext())
+        {
+            database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
+            database.CoachingEpisodes.Add(new CoachingEpisode
+            {
+                Id = episodeId,
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                StartedAt = DateTimeOffset.UtcNow.AddDays(-1),
+                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation,
+                AuthorizationRevision = 0
+            });
+            database.TrainerTraineeLinks.Add(new TrainerTraineeLink
+            {
+                Id = Id<TrainerTraineeLink>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                EpisodeId = episodeId
+            });
+            database.Measurements.Add(MeasurementRow(
+                measurementId,
+                trainee.Id,
+                81,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow));
+            await database.SaveChangesAsync();
+
+            var subject = await database.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == trainee.Id);
+            subject.IsDeleted = true;
+            await database.SaveChangesAsync();
+
+            (await database.Measurements.CountAsync(measurement => measurement.UserId == trainee.Id)).Should().Be(1);
+            (await database.CoachingEpisodes.CountAsync(episode => episode.Id == episodeId)).Should().Be(1);
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        var responses = new[]
+        {
+            await Client.GetAsync($"/api/measurements:/{measurementId}/getMeasurementDetail"),
+            await Client.GetAsync($"/api/measurements/{trainee.Id}/list"),
+            await Client.GetAsync($"/api/measurements/{trainee.Id}/getHistory?bodyPart=BodyWeight&unit=Kilograms"),
+            await Client.GetAsync($"/api/measurements/{trainee.Id}/trend?bodyPart=BodyWeight&unit=Kilograms"),
+            await Client.GetAsync($"/api/measurements/{trainee.Id}/trends")
+        };
+
+        foreach (var response in responses)
+        {
+            using (response)
+            {
+                response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            }
+        }
+    }
+
+    private static Measurement MeasurementRow(
+        Id<Measurement> id,
+        Id<UserEntity> traineeId,
+        double value,
+        DateTimeOffset createdAt,
+        DateTimeOffset? recordedAt,
+        Id<ReportSubmission>? sourceSubmissionId = null,
+        Id<ReportRequest>? sourceRequestId = null,
+        Id<CoachingEpisode>? sourceEpisodeId = null,
+        DateTimeOffset? sourceAcceptedAt = null)
+        => new()
+        {
+            Id = id,
+            UserId = traineeId,
+            BodyPart = BodyParts.BodyWeight,
+            Unit = MeasurementUnits.Kilograms.ToString(),
+            Value = value,
+            CreatedAt = createdAt,
+            RecordedAt = recordedAt,
+            SourceReportSubmissionId = sourceSubmissionId,
+            SourceReportRequestId = sourceRequestId,
+            SourceCoachingEpisodeId = sourceEpisodeId,
+            SourceReportAcceptedAt = sourceAcceptedAt
+        };
 
     private async Task AddMeasurementAsync(BodyParts bodyPart, double value, MeasurementUnits unit)
     {

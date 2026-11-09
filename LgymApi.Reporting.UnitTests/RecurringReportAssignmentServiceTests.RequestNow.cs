@@ -740,7 +740,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
         relationshipPersistence
             .GetAccessAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
             .Returns(_ => new ReportingRelationshipAccessFact(
-                relationshipCall++ == 0 ? preflightRelationship : lockedRelationship));
+                relationshipCall++ == 0 ? preflightRelationship : lockedRelationship,
+                [],
+                new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0)));
+        relationshipPersistence
+            .StageActiveEpisodeRevisionCheckAsync(Arg.Any<ReportingActiveRelationshipFact>(), Arg.Any<CancellationToken>())
+            .Returns(true);
         assignmentPersistence
             .FindByIdForUpdateAsync(assignment.Id, Arg.Any<CancellationToken>())
             .Returns(assignment);

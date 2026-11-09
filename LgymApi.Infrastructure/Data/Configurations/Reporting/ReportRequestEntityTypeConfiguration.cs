@@ -12,10 +12,12 @@ internal sealed class ReportRequestEntityTypeConfiguration : IEntityTypeConfigur
 
         builder.Property(e => e.Status).HasConversion<string>();
         builder.Property(e => e.Note).HasMaxLength(1000);
+        builder.Property(e => e.SourceCoachingEpisodeId).HasColumnType("uuid");
 
         builder.HasIndex(e => new { e.TrainerId, e.TraineeId, e.CreatedAt });
         builder.HasIndex(e => new { e.TraineeId, e.Status, e.CreatedAt });
         builder.HasIndex(e => e.RecurringReportAssignmentId).IsUnique(false);
+        builder.HasIndex(e => e.SourceCoachingEpisodeId);
 
         builder.HasOne(e => e.Trainer)
             .WithMany()

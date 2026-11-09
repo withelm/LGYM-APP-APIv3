@@ -50,7 +50,9 @@ public sealed class WorkoutProgressPublicContractGuardTests
         "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedMeasurement",
         "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedProgressValidationResult",
         "LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration.ReportSubmissionAcceptedProgressConsumeResult",
-        "LgymApi.Application.WorkoutProgress.Contracts.Measurements.IMeasurementsRelationshipAccessPort"
+        "LgymApi.Application.WorkoutProgress.Contracts.Measurements.IMeasurementsRelationshipAccessPort",
+        "LgymApi.Application.WorkoutProgress.Contracts.Measurements.MeasurementsRelationshipAccessFact",
+        "LgymApi.Application.WorkoutProgress.Contracts.Measurements.MeasurementsRelationshipPeriod"
     };
 
     [Test]

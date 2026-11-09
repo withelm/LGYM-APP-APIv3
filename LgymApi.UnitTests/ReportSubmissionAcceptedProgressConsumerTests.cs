@@ -35,9 +35,53 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
             Arg.Is<Id<ReportSubmission>>(id => id.ToString() == @event.ReportSubmissionId),
             Arg.Any<CancellationToken>());
         await persistence.Received(1).AddReceiptAsync(
-            Arg.Is<AcceptedReportSubmissionReceiptPersistenceModel>(receipt => receipt.ReportSubmissionId.ToString() == @event.ReportSubmissionId),
+            Arg.Is<AcceptedReportSubmissionReceiptPersistenceModel>(receipt =>
+                receipt.ReportSubmissionId.ToString() == @event.ReportSubmissionId
+                && receipt.SourceReportRequestId == null
+                && receipt.SourceCoachingEpisodeId == null
+                && receipt.SourceReportAcceptedAt == null),
             Arg.Any<CancellationToken>());
+        staged.Should().OnlyContain(measurement =>
+            measurement.SourceReportRequestId == null
+            && measurement.SourceCoachingEpisodeId == null
+            && measurement.SourceReportAcceptedAt == null);
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ConsumeAsync_WithSchemaTwo_PropagatesTrustedSourceToReceiptAndMeasurements()
+    {
+        var persistence = Substitute.For<IReportSubmissionAcceptedProgressPersistence>();
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        AcceptedReportSubmissionReceiptPersistenceModel? receipt = null;
+        var staged = new List<AcceptedReportMeasurementPersistenceModel>();
+        var sourceRequestId = Id<ReportRequest>.New();
+        var sourceEpisodeId = Id<CoachingEpisode>.New();
+        var @event = CreateValidEvent(
+            new ReportSubmissionAcceptedMeasurement(BodyParts.Chest, 101.5, MeasurementUnits.Centimeters)) with
+        {
+            SchemaVersion = ReportSubmissionAcceptedProgressEvent.CurrentSchemaVersion,
+            SourceReportRequestId = sourceRequestId.ToString(),
+            SourceCoachingEpisodeId = sourceEpisodeId.ToString()
+        };
+        ConfigureReceipt(persistence, false);
+        persistence.AddReceiptAsync(
+                Arg.Do<AcceptedReportSubmissionReceiptPersistenceModel>(value => receipt = value),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        ConfigureStaging(persistence, staged);
+
+        var result = await new ReportSubmissionAcceptedProgressConsumer(persistence, unitOfWork).ConsumeAsync(@event);
+
+        result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
+        receipt.Should().NotBeNull();
+        receipt!.SourceReportRequestId.Should().Be(sourceRequestId);
+        receipt.SourceCoachingEpisodeId.Should().Be(sourceEpisodeId);
+        receipt.SourceReportAcceptedAt.Should().Be(@event.AcceptedAt);
+        staged.Should().ContainSingle(measurement =>
+            measurement.SourceReportRequestId == sourceRequestId
+            && measurement.SourceCoachingEpisodeId == sourceEpisodeId
+            && measurement.SourceReportAcceptedAt == @event.AcceptedAt);
     }
 
     [TestCase(0)]
@@ -150,7 +194,7 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
     }
 
     [TestCase(0, ReportSubmissionAcceptedProgressConsumeOutcome.UnsupportedSchema)]
-    [TestCase(2, ReportSubmissionAcceptedProgressConsumeOutcome.UnsupportedSchema)]
+    [TestCase(3, ReportSubmissionAcceptedProgressConsumeOutcome.UnsupportedSchema)]
     public async Task ConsumeAsync_WithRejectedEvent_DoesNotPersistOrCommit(
         int schemaVersion,
         ReportSubmissionAcceptedProgressConsumeOutcome expectedOutcome)
@@ -203,7 +247,7 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
     {
         Id<AccountReference>.TryParse("00000000-0000-0000-0000-000000000005", out var traineeId).Should().BeTrue();
         return new ReportSubmissionAcceptedProgressEvent(
-            ReportSubmissionAcceptedProgressEvent.CurrentSchemaVersion,
+            1,
             "00000000-0000-0000-0000-000000000001",
             "00000000-0000-0000-0000-000000000002",
             "00000000-0000-0000-0000-000000000003",

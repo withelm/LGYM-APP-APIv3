@@ -10,6 +10,10 @@ internal sealed class ReportSubmissionProgressReceiptEntityTypeConfiguration
     public void Configure(EntityTypeBuilder<ReportSubmissionProgressReceipt> builder)
     {
         builder.ToTable("ReportSubmissionProgressReceipts");
+        builder.Property(receipt => receipt.SourceReportRequestId).HasColumnType("uuid");
+        builder.Property(receipt => receipt.SourceCoachingEpisodeId).HasColumnType("uuid");
+        builder.Property(receipt => receipt.SourceReportAcceptedAt).HasColumnType("timestamp with time zone");
         builder.HasIndex(receipt => receipt.ReportSubmissionId).IsUnique();
+        builder.HasIndex(receipt => receipt.SourceCoachingEpisodeId);
     }
 }

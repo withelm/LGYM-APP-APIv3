@@ -55,7 +55,8 @@ public sealed record ReportRequestPersistenceModel(
     bool IsDeleted,
     ReportTemplatePersistenceModel Template,
     ReportSubmissionFeedbackPersistenceModel? Submission,
-    ReportRequestDefinitionSnapshotPersistenceModel? DefinitionSnapshot = null);
+    ReportRequestDefinitionSnapshotPersistenceModel? DefinitionSnapshot = null,
+    Id<CoachingEpisode>? SourceCoachingEpisodeId = null);
 
 public sealed record NewReportRequestPersistenceModel(
     Id<ReportRequest> Id,
@@ -68,7 +69,8 @@ public sealed record NewReportRequestPersistenceModel(
     DateTimeOffset? SubmittedAt,
     string? Note,
     DateTimeOffset CreatedAt,
-    string? DefinitionSnapshotJson = null);
+    string? DefinitionSnapshotJson = null,
+    Id<CoachingEpisode>? SourceCoachingEpisodeId = null);
 
 public sealed record ReportRequestDefinitionSnapshotPersistenceModel(
     Id<ReportRequest> ReportRequestId,
@@ -87,14 +89,18 @@ public sealed record ReportSubmissionPersistenceModel(
     DateTimeOffset? TrainerFeedbackAddedAt,
     DateTimeOffset? TrainerFeedbackReadAt,
     DateTimeOffset CreatedAt,
-    ReportRequestPersistenceModel ReportRequest);
+    ReportRequestPersistenceModel ReportRequest,
+    Id<CoachingEpisode>? SourceCoachingEpisodeId = null,
+    DateTimeOffset? AcceptedAt = null);
 
 public sealed record NewReportSubmissionPersistenceModel(
     Id<ReportSubmission> Id,
     Id<ReportRequest> ReportRequestId,
     Id<AccountReference> TraineeId,
     string PayloadJson,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    Id<CoachingEpisode>? SourceCoachingEpisodeId = null,
+    DateTimeOffset? AcceptedAt = null);
 
 public sealed record ReportSubmissionFeedbackUpdatePersistenceModel(
     string? TrainerOverallComment,
@@ -220,7 +226,8 @@ public sealed record NewTrainerPhotoTypePersistenceModel(
 public sealed record ReportingRelationshipPeriodFact(
     DateTimeOffset? StartedAt,
     DateTimeOffset? EndedAt,
-    CoachingEpisodeStartProvenance StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation)
+    CoachingEpisodeStartProvenance StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation,
+    Id<CoachingEpisode>? EpisodeId = null)
 {
     public bool Contains(DateTimeOffset occurredAt)
         => StartedAt is not null
@@ -236,7 +243,8 @@ public sealed record ReportingRelationshipPeriodFact(
 
 public sealed record ReportingRelationshipAccessFact(
     bool HasActiveRelationship,
-    IReadOnlyList<ReportingRelationshipPeriodFact> RelationshipPeriods)
+    IReadOnlyList<ReportingRelationshipPeriodFact> RelationshipPeriods,
+    ReportingActiveRelationshipFact? ActiveEpisode = null)
 {
     public ReportingRelationshipAccessFact(bool hasActiveRelationship)
         : this(hasActiveRelationship, [])
@@ -250,6 +258,10 @@ public sealed record ReportingRelationshipAccessFact(
         => HasActiveRelationship
             || RelationshipPeriods.Any(period => period.ContainsTrustedSourceRecord(occurredAt));
 }
+
+public sealed record ReportingActiveRelationshipFact(
+    Id<CoachingEpisode> EpisodeId,
+    long AuthorizationRevision);
 
 internal sealed record ReportPhotoCapabilitySource(
     ReportPhotoPersistenceModel? CanonicalPhoto,
