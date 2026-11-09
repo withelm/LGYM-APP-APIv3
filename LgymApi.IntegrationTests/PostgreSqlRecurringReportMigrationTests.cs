@@ -217,16 +217,16 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         await using var verificationContext = CreateDbContext(lease);
         var data = await PostgreSqlHistoricalReportingSeed.ReadMigrationPreservationDataAsync(
             verificationContext,
-            seed.SubmissionId.Value,
-            seed.MeasurementId.Value);
+            seed.SubmissionId,
+            seed.MeasurementId);
         var appliedMigrations = (await verificationContext.Database.GetAppliedMigrationsAsync()).ToList();
 
         Assert.Multiple(() =>
         {
-            data.SubmissionRequestId.Should().Be(seed.RequestId.Value);
-            data.SubmissionTraineeId.Should().Be(seed.TraineeId.Value);
+            data.SubmissionRequestId.Should().Be(seed.RequestId);
+            data.SubmissionTraineeId.Should().Be(seed.TraineeId);
             data.SubmissionPayloadJson.Should().Be(seed.PayloadJson);
-            data.MeasurementUserId.Should().Be(seed.TraineeId.Value);
+            data.MeasurementUserId.Should().Be(seed.TraineeId);
             data.MeasurementBodyPart.Should().Be(seed.BodyPart.ToString());
             data.MeasurementUnit.Should().Be(seed.Unit);
             data.MeasurementValue.Should().Be(seed.Value);

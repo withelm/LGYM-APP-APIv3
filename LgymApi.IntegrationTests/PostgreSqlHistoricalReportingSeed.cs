@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,8 +52,8 @@ internal static class PostgreSqlHistoricalReportingSeed
 
     internal static async Task<HistoricalMigrationData> ReadMigrationPreservationDataAsync(
         AppDbContext context,
-        Guid submissionId,
-        Guid measurementId)
+        Id<ReportSubmission> submissionId,
+        Id<Measurement> measurementId)
     {
         await context.Database.OpenConnectionAsync();
         try
@@ -65,8 +66,8 @@ internal static class PostgreSqlHistoricalReportingSeed
                 CROSS JOIN "Measurements" AS measurement
                 WHERE submission."Id" = @submissionId AND measurement."Id" = @measurementId
                 """;
-            AddGuidParameter(command, "submissionId", submissionId);
-            AddGuidParameter(command, "measurementId", measurementId);
+            AddIdParameter(command, "submissionId", submissionId);
+            AddIdParameter(command, "measurementId", measurementId);
 
             await using var reader = await command.ExecuteReaderAsync();
             if (!await reader.ReadAsync())
@@ -75,10 +76,10 @@ internal static class PostgreSqlHistoricalReportingSeed
             }
 
             return new HistoricalMigrationData(
-                reader.GetGuid(0),
-                reader.GetGuid(1),
+                new Id<ReportRequest>(reader.GetGuid(0)),
+                new Id<User>(reader.GetGuid(1)),
                 reader.GetString(2),
-                reader.GetGuid(3),
+                new Id<User>(reader.GetGuid(3)),
                 reader.GetString(4),
                 reader.GetString(5),
                 reader.GetDouble(6),
@@ -90,20 +91,20 @@ internal static class PostgreSqlHistoricalReportingSeed
         }
     }
 
-    private static void AddGuidParameter(System.Data.Common.DbCommand command, string name, Guid value)
+    private static void AddIdParameter<TEntity>(System.Data.Common.DbCommand command, string name, Id<TEntity> value)
     {
         var parameter = command.CreateParameter();
         parameter.ParameterName = name;
-        parameter.Value = value;
+        parameter.Value = value.Value;
         command.Parameters.Add(parameter);
     }
 }
 
 internal sealed record HistoricalMigrationData(
-    Guid SubmissionRequestId,
-    Guid SubmissionTraineeId,
+    Id<ReportRequest> SubmissionRequestId,
+    Id<User> SubmissionTraineeId,
     string SubmissionPayloadJson,
-    Guid MeasurementUserId,
+    Id<User> MeasurementUserId,
     string MeasurementBodyPart,
     string MeasurementUnit,
     double MeasurementValue,
