@@ -43,14 +43,14 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     private static readonly string[] ApprovedAccessFacets =
     [
         "actor-derived-subject", "foreign-object", "owned-resource", "global-visible",
-        "manager-override", "opaque-capability", "relationship-revocable", "source-episode-history"
+        "manager-override", "opaque-capability", "relationship-revocable", "author-owned", "source-episode-history"
     ];
 
     private static readonly string[] ApprovedEvidenceCategories =
     [
         "anonymous-intended-behavior", "invalid-capability-denial", "expired-capability-denial", "tampered-capability-denial",
         "owner-allow", "anonymous-denial", "no-client-subject", "foreign-object-denial-no-mutation",
-        "active-relationship-allow", "unrelated-relationship-denial", "former-relationship-denial", "source-episode-history-allow",
+        "active-relationship-allow", "unrelated-relationship-denial", "former-relationship-denial", "former-author-allow", "active-successor-denial", "source-episode-history-allow",
         "current-permission-allow", "ordinary-user-denial", "stale-token-demotion-denial",
         "ordinary-authenticated-allow", "owner-custom-allow", "foreign-custom-denial", "global-resource-allow",
         "current-manager-allow", "stale-manager-denial", "ordinary-manager-denial"
@@ -1277,6 +1277,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
                 "manager-override" => ["current-manager-allow", "stale-manager-denial", "ordinary-manager-denial"],
                 "opaque-capability" => ["invalid-capability-denial", "expired-capability-denial", "tampered-capability-denial"],
                 "relationship-revocable" => ["former-relationship-denial"],
+                "author-owned" => ["former-author-allow", "active-successor-denial"],
                 "source-episode-history" => ["source-episode-history-allow"],
                 _ => []
             };

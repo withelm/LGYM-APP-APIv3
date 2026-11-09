@@ -349,10 +349,10 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
     [Test]
     [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes", "trainer-shared", "active-relationship-allow")]
     [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes", "trainer-shared", "unrelated-relationship-denial")]
-    [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes", "trainer-shared", "former-relationship-denial")]
+    [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes", "trainer-shared", "former-author-allow")]
     [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes", "trainer-shared", "foreign-object-denial-no-mutation")]
     [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes", "trainer-shared", "anonymous-denial")]
-    public async Task TrainerTraineeNotesRoute_IsRelationshipScopedAndNonDisclosing()
+    public async Task TrainerTraineeNotesRoute_AllowsOriginalAuthorAfterUnlinkAndRejectsUnrelatedActors()
     {
         var trainer = await SeedUserAsync("http-trainer-notes-trainer", "http-trainer-notes-trainer@example.test");
         var linked = await SeedUserAsync("http-trainer-notes-linked", "http-trainer-notes-linked@example.test");
@@ -492,10 +492,10 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
     [Test]
     [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/delete", "trainer-shared", "active-relationship-allow")]
     [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/delete", "trainer-shared", "unrelated-relationship-denial")]
-    [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/delete", "trainer-shared", "former-relationship-denial")]
+    [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/delete", "trainer-shared", "former-author-allow")]
     [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/delete", "trainer-shared", "foreign-object-denial-no-mutation")]
     [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/delete", "trainer-shared", "anonymous-denial")]
-    public async Task TrainerTraineeNoteDeleteRoute_IsRelationshipScopedAndNonDisclosing()
+    public async Task TrainerTraineeNoteDeleteRoute_AllowsOriginalAuthorAfterUnlinkAndRejectsUnrelatedActors()
     {
         var trainer = await SeedUserAsync("http-delete-note-trainer", "http-delete-note-trainer@example.test");
         var linked = await SeedUserAsync("http-delete-note-linked", "http-delete-note-linked@example.test");
@@ -557,10 +557,10 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
     [Test]
     [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/update", "trainer-shared", "active-relationship-allow")]
     [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/update", "trainer-shared", "unrelated-relationship-denial")]
-    [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/update", "trainer-shared", "former-relationship-denial")]
+    [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/update", "trainer-shared", "former-author-allow")]
     [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/update", "trainer-shared", "foreign-object-denial-no-mutation")]
     [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/update", "trainer-shared", "anonymous-denial")]
-    public async Task TrainerTraineeNoteUpdateRoute_IsRelationshipScopedAndNonDisclosing()
+    public async Task TrainerTraineeNoteUpdateRoute_AllowsOriginalAuthorAfterUnlinkAndRejectsUnrelatedActors()
     {
         var trainer = await SeedUserAsync("http-update-note-trainer", "http-update-note-trainer@example.test");
         var linked = await SeedUserAsync("http-update-note-linked", "http-update-note-linked@example.test");
@@ -619,10 +619,10 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
     [Test]
     [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes/{noteId}/history", "trainer-shared", "active-relationship-allow")]
     [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes/{noteId}/history", "trainer-shared", "unrelated-relationship-denial")]
-    [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes/{noteId}/history", "trainer-shared", "former-relationship-denial")]
+    [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes/{noteId}/history", "trainer-shared", "former-author-allow")]
     [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes/{noteId}/history", "trainer-shared", "foreign-object-denial-no-mutation")]
     [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes/{noteId}/history", "trainer-shared", "anonymous-denial")]
-    public async Task TrainerTraineeNoteHistoryRoute_IsRelationshipScopedAndNonDisclosing()
+    public async Task TrainerTraineeNoteHistoryRoute_AllowsOriginalAuthorAfterUnlinkAndRejectsUnrelatedActors()
     {
         var trainer = await SeedUserAsync("http-history-trainer", "http-history-trainer@example.test");
         var linked = await SeedUserAsync("http-history-linked", "http-history-linked@example.test");
@@ -692,11 +692,13 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
     }
 
     [Test]
-    [Authorization.AuthorizationEvidence("GET", "/api/trainee/notes/{noteId}/history", "own", "visibility-transition-redaction-and-revocation")]
+    [Authorization.AuthorizationEvidence("GET", "/api/trainee/notes/{noteId}/history", "own", "owner-allow")]
+    [Authorization.AuthorizationEvidence("GET", "/api/trainee/notes/{noteId}/history", "own", "foreign-object-denial-no-mutation")]
     public async Task TraineeNoteHistoryRoute_ReturnsOnlySharedVersionsRedactsPrivatePredecessorsAndRevokesStaleIds()
     {
         var trainer = await SeedUserAsync("history-author", "history-author@example.test");
         var trainee = await SeedUserAsync("history-trainee", "history-trainee@example.test");
+        var foreignTrainee = await SeedUserAsync("history-foreign", "history-foreign@example.test");
         var note = VisibleNote(trainer.Id, trainee.Id, "Shared again", DateTimeOffset.UtcNow);
         var now = DateTimeOffset.UtcNow;
         var history = new[]
@@ -723,6 +725,13 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         visibleHistory.Single(entry => entry.NewContent == "Shared again").PreviousContent.Should().BeNull();
         (await sharedResponse.Content.ReadAsStringAsync()).Should().NotContain("Private revision");
 
+        SetAuthorizationHeader(foreignTrainee.Id);
+        using var foreignResponse = await Client.GetAsync($"/api/trainee/notes/{note.Id}/history");
+        foreignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var foreignText = await foreignResponse.Content.ReadAsStringAsync();
+        foreignText.Should().NotContain(note.Id.ToString());
+        foreignText.Should().NotContain("Initially shared");
+
         using (var scope = Factory.Services.CreateScope())
         {
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -731,13 +740,13 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             await database.SaveChangesAsync();
         }
 
+        SetAuthorizationHeader(trainee.Id);
         using var hiddenResponse = await Client.GetAsync($"/api/trainee/notes/{note.Id}/history");
         hiddenResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await hiddenResponse.Content.ReadAsStringAsync()).Should().NotContain("Initially shared");
     }
 
     [Test]
-    [Authorization.AuthorizationEvidence("GET", "/api/trainee/notes/{noteId}/history", "own", "concurrent-read-after-delete-revocation")]
     public async Task TraineeNoteHistoryRoute_ConcurrentReadsAfterDeletionDoNotDiscloseStaleHistory()
     {
         var trainer = await SeedUserAsync("concurrent-history-author", "concurrent-history-author@example.test");
@@ -772,6 +781,104 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
                 (await response.Content.ReadAsStringAsync()).Should().NotContain("Concurrent shared");
             }
         }
+    }
+
+    [Test]
+    [Authorization.AuthorizationEvidence("GET", "/api/trainee/notes/{noteId}/history", "own", "anonymous-denial")]
+    public async Task TraineeNoteHistoryRoute_WithoutAuthentication_ReturnsUnauthorizedWithoutProtectedContent()
+    {
+        var trainer = await SeedUserAsync("history-anonymous-author", "history-anonymous-author@example.test");
+        var trainee = await SeedUserAsync("history-anonymous-trainee", "history-anonymous-trainee@example.test");
+        var note = VisibleNote(trainer.Id, trainee.Id, "Anonymous history protected", DateTimeOffset.UtcNow);
+        var history = History(note, trainer.Id, "", "Anonymous history protected", false, true, "Created", DateTimeOffset.UtcNow);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.TraineeNotes.Add(note);
+            database.TraineeNoteHistories.Add(history);
+            await database.SaveChangesAsync();
+        }
+
+        ClearAuthorizationHeader();
+        using var response = await Client.GetAsync($"/api/trainee/notes/{note.Id}/history");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var responseText = await response.Content.ReadAsStringAsync();
+        responseText.Should().NotContain(note.Id.ToString());
+        responseText.Should().NotContain(history.NewContent);
+    }
+
+    [Test]
+    [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes", "trainer-shared", "active-successor-denial")]
+    [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/update", "trainer-shared", "active-successor-denial")]
+    [Authorization.AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/notes/{noteId}/delete", "trainer-shared", "active-successor-denial")]
+    [Authorization.AuthorizationEvidence("GET", "/api/trainer/trainees/{traineeId}/notes/{noteId}/history", "trainer-shared", "active-successor-denial")]
+    public async Task ActiveSuccessorCannotAccessOriginalAuthorsNoteAfterUnlink()
+    {
+        var originalAuthor = await SeedUserAsync("successor-original", "successor-original@example.test");
+        var successor = await SeedUserAsync("successor-active", "successor-active@example.test");
+        var trainee = await SeedUserAsync("successor-trainee", "successor-trainee@example.test");
+        var note = VisibleNote(originalAuthor.Id, trainee.Id, "Original author content", DateTimeOffset.UtcNow, isPinned: false);
+        var history = History(note, originalAuthor.Id, "", note.Content, false, true, "Created", DateTimeOffset.UtcNow);
+
+        await SeedRelationshipAsync(originalAuthor.Id, trainee.Id);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.TraineeNotes.Add(note);
+            database.TraineeNoteHistories.Add(history);
+            await database.SaveChangesAsync();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var link = await database.TrainerTraineeLinks.SingleAsync(candidate =>
+                candidate.TrainerId == originalAuthor.Id && candidate.TraineeId == trainee.Id);
+            database.TrainerTraineeLinks.Remove(link);
+            await database.SaveChangesAsync();
+        }
+
+        await SeedRelationshipAsync(successor.Id, trainee.Id);
+        SetAuthorizationHeader(successor.Id);
+
+        using var listResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/notes");
+        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var listedNotes = await listResponse.Content.ReadFromJsonAsync<List<TraineeNoteDto>>();
+        listedNotes.Should().NotBeNull();
+        listedNotes!.Should().NotContain(item => item.Id == note.Id.ToString());
+        var listText = await listResponse.Content.ReadAsStringAsync();
+        listText.Should().NotContain(note.Content);
+
+        var updatePayload = new
+        {
+            title = "Successor mutation",
+            content = "Successor mutation content",
+            visibleToTrainee = false,
+            isPinned = true
+        };
+        using var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/notes/{note.Id}/update", updatePayload);
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await updateResponse.Content.ReadAsStringAsync()).Should().NotContain(updatePayload.content);
+
+        using var deleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/notes/{note.Id}/delete", null);
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        using var historyResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/notes/{note.Id}/history");
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var historyText = await historyResponse.Content.ReadAsStringAsync();
+        historyText.Should().NotContain(note.Id.ToString());
+        historyText.Should().NotContain(history.NewContent);
+
+        using var verificationScope = Factory.Services.CreateScope();
+        var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persisted = await verificationDatabase.TraineeNotes.IgnoreQueryFilters().SingleAsync(candidate => candidate.Id == note.Id);
+        persisted.Content.Should().Be(note.Content);
+        persisted.IsDeleted.Should().BeFalse();
+        persisted.VisibleToTrainee.Should().BeTrue();
+        persisted.IsPinned.Should().BeFalse();
+        (await verificationDatabase.TraineeNoteHistories.CountAsync(candidate => candidate.TraineeNoteId == note.Id)).Should().Be(1);
     }
 
     private async Task SeedRelationshipAsync(
