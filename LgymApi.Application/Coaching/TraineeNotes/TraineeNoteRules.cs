@@ -30,6 +30,20 @@ internal static class TraineeNoteRules
             : new NotFoundError(Messages.DidntFind);
     }
 
+    public static AppError? GetTrainerError(
+        CoachingRelationshipAccessDecision access,
+        Id<UserEntity> traineeId)
+    {
+        if (!access.IsTrainer)
+        {
+            return new TrainerRelationshipForbiddenError(Messages.TrainerRoleRequired);
+        }
+
+        return traineeId.IsEmpty
+            ? new BadRequestError(Messages.UserIdRequired)
+            : null;
+    }
+
     public static AppError? GetUpsertError(TraineeNoteUpsertData data)
         => string.IsNullOrWhiteSpace(data.Content)
             ? new BadRequestError(Messages.FieldRequired)

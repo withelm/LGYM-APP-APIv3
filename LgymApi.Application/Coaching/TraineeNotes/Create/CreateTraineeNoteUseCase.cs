@@ -4,6 +4,7 @@ using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Coaching.TraineeNotes.Models;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
+using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Repositories;
@@ -18,6 +19,7 @@ internal sealed class CreateTraineeNoteUseCase : ICreateTraineeNoteUseCase
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
     private readonly ICoachingEpisodeAuthorizationService _episodeAuthorization;
     private readonly ICoachingTraineeNotePersistence _notes;
+    private readonly IAccountReadService _accounts;
     private readonly ICommandDispatcher _commands;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
@@ -26,6 +28,7 @@ internal sealed class CreateTraineeNoteUseCase : ICreateTraineeNoteUseCase
         ICoachingRelationshipAccessService relationshipAccess,
         ICoachingEpisodeAuthorizationService episodeAuthorization,
         ICoachingTraineeNotePersistence notes,
+        IAccountReadService accounts,
         ICommandDispatcher commands,
         IUnitOfWork unitOfWork,
         IMapper mapper)
@@ -33,6 +36,7 @@ internal sealed class CreateTraineeNoteUseCase : ICreateTraineeNoteUseCase
         _relationshipAccess = relationshipAccess;
         _episodeAuthorization = episodeAuthorization;
         _notes = notes;
+        _accounts = accounts;
         _commands = commands;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -81,6 +85,8 @@ internal sealed class CreateTraineeNoteUseCase : ICreateTraineeNoteUseCase
                 DateTimeOffset.UtcNow,
                 null,
                 note.Content,
+                false,
+                note.VisibleToTrainee,
                 "Created"),
             _mapper.CreateContext());
         await _notes.AddHistoryEntryAsync(history, cancellationToken);
@@ -99,8 +105,9 @@ internal sealed class CreateTraineeNoteUseCase : ICreateTraineeNoteUseCase
         }
 
         var persisted = await _notes.FindNoteByIdAsync(note.Id, cancellationToken);
-        var readModel = _mapper.Map<CoachingTraineeNoteFact, TraineeNoteReadModel>(
-            persisted!,
+        var author = (await _accounts.GetByIdsAsync([command.TrainerId], cancellationToken)).FirstOrDefault();
+        var readModel = _mapper.Map<TraineeNoteReadSource, TraineeNoteReadModel>(
+            new TraineeNoteReadSource(persisted!, author),
             _mapper.CreateContext());
         return Result<TraineeNoteReadModel, AppError>.Success(readModel);
     }

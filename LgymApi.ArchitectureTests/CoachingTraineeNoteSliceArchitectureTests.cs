@@ -12,6 +12,7 @@ using LgymApi.Application.Coaching.TraineeNotes.VisibleList;
 using LgymApi.Application.Coaching.TraineeNotes.VisibleSingle;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
+using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -101,7 +102,7 @@ public sealed class CoachingTraineeNoteSliceArchitectureTests
         {
             assembly.GetType(implementationName)!.GetConstructors().Single().GetParameters()
                 .Select(parameter => parameter.ParameterType)
-                .Should().BeEquivalentTo(new[] { typeof(ICoachingTraineeNotePersistence), typeof(IMapper) });
+                .Should().BeEquivalentTo(new[] { typeof(ICoachingTraineeNotePersistence), typeof(IAccountReadService), typeof(IMapper) });
         }
 
         typeof(IListVisibleTraineeNotesUseCase).GetMethods().Single().ReturnType.Should().Be(
@@ -136,7 +137,7 @@ public sealed class CoachingTraineeNoteSliceArchitectureTests
             .Select(File.ReadAllText)
             .ToArray();
 
-        profile.Split("configuration.CreateMap<", StringSplitOptions.None).Length.Should().Be(7);
+        profile.Split("configuration.CreateMap<", StringSplitOptions.None).Length.Should().Be(8);
         useCases.Should().OnlyContain(source => source.Contains("_mapper.CreateContext()", StringComparison.Ordinal));
         useCases.Should().NotContain(source => source.Contains("new CoachingTraineeNoteWriteModel", StringComparison.Ordinal));
         useCases.Should().NotContain(source => source.Contains("new CoachingTraineeNoteHistoryWriteModel", StringComparison.Ordinal));

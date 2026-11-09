@@ -417,7 +417,7 @@ public sealed class Issue395MigrationLedgerTests
             ["LgymApi.Identity"] = 83,
             ["LgymApi.TrainingPlanning"] = 69,
             ["LgymApi.Notifications"] = 82,
-            ["LgymApi.Application"] = 417,
+            ["LgymApi.Application"] = 420,
             ["LgymApi.Reporting"] = 82
         };
 

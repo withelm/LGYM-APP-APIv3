@@ -32,7 +32,7 @@ internal sealed class GetTraineeNoteHistoryUseCase : IGetTraineeNoteHistoryUseCa
             query.TrainerId,
             query.TraineeId,
             cancellationToken);
-        var accessError = TraineeNoteRules.GetAccessError(access, query.TraineeId);
+        var accessError = TraineeNoteRules.GetTrainerError(access, query.TraineeId);
         if (accessError is not null)
         {
             return Result<IReadOnlyList<TraineeNoteHistoryReadModel>, AppError>.Failure(accessError);

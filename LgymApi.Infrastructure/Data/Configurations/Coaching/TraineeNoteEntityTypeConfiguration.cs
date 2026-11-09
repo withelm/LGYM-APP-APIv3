@@ -12,6 +12,7 @@ internal sealed class TraineeNoteEntityTypeConfiguration : IEntityTypeConfigurat
 
         builder.Property(e => e.Title).HasMaxLength(160);
         builder.Property(e => e.Content).HasMaxLength(8000).IsRequired();
+        builder.Property(e => e.UpdatedAt).IsConcurrencyToken();
 
         builder.HasIndex(e => new { e.TrainerId, e.TraineeId, e.LastUpdatedAt });
         builder.HasIndex(e => new { e.TraineeId, e.VisibleToTrainee, e.LastUpdatedAt });

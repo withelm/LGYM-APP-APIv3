@@ -12,6 +12,7 @@ using LgymApi.Application.Coaching.TraineeNotes.Update;
 using LgymApi.Application.Coaching.TraineeNotes.VisibleList;
 using LgymApi.Application.Coaching.TraineeNotes.VisibleSingle;
 using LgymApi.Application.BuildingBlocks.Errors;
+using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -56,7 +57,8 @@ public sealed class CoachingTraineeNoteSliceTests
             note.LastUpdatedByUserId,
             note.LastUpdatedAt,
             note.CreatedAt,
-            note.UpdatedAt));
+            note.UpdatedAt,
+            "Original trainer"));
         await dependencies.UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -237,7 +239,7 @@ public sealed class CoachingTraineeNoteSliceTests
     }
 
     [Test]
-    public async Task Update_UnsharesOwnedNoteAndNotifiesAfterTheAtomicCommit()
+    public async Task Update_UnsharesOwnedNoteWithoutNotification()
     {
         var trainerId = Id<User>.New();
         var traineeId = Id<User>.New();
@@ -285,11 +287,9 @@ public sealed class CoachingTraineeNoteSliceTests
         stagedHistory!.PreviousContent.Should().Be("Old content");
         stagedHistory.NewContent.Should().Be("New content");
         stagedHistory.ChangeType.Should().Be("Updated");
-        operations.Should().Equal("note", "history", "commit", "notify");
-        await dependencies.Commands.Received(1).EnqueueAsync(
-            Arg.Is<TraineeNoteUpdatedInAppNotificationCommand>(command =>
-                command.TraineeNoteId == existing.Id
-                && command.NoteTitle == "New title"));
+        operations.Should().Equal("note", "history", "commit");
+        await dependencies.Commands.DidNotReceive().EnqueueAsync(
+            Arg.Any<TraineeNoteUpdatedInAppNotificationCommand>());
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -387,6 +387,8 @@ public sealed class CoachingTraineeNoteSliceTests
             changedAt,
             "Before",
             "After",
+            true,
+            true,
             "Updated",
             changedAt,
             changedAt);
@@ -411,7 +413,7 @@ public sealed class CoachingTraineeNoteSliceTests
     }
 
     [Test]
-    public async Task TrainerSlices_RejectForeignRelationshipForeignNoteAndEmptyNoteIdWithoutWrites()
+    public async Task TrainerSlices_AllowFormerAuthorListAndRejectForeignNoteAndEmptyNoteIdWithoutWrites()
     {
         var trainerId = Id<User>.New();
         var traineeId = Id<User>.New();
@@ -437,7 +439,7 @@ public sealed class CoachingTraineeNoteSliceTests
         var invalidId = await Resolve<IDeleteTraineeNoteUseCase>(services)
             .ExecuteAsync(new DeleteTraineeNoteCommand(trainerId, traineeId, Id<TraineeNote>.Empty));
 
-        foreignRelationship.Error.Should().BeOfType<NotFoundError>();
+        foreignRelationship.IsSuccess.Should().BeTrue();
         foreignNote.Error.Should().BeOfType<NotFoundError>();
         invalidId.Error.Should().BeOfType<BadRequestError>();
         await dependencies.Notes.DidNotReceive().UpdateNoteAsync(
@@ -458,6 +460,7 @@ public sealed class CoachingTraineeNoteSliceTests
         var traineeId = Id<User>.New();
         var access = Substitute.For<ICoachingRelationshipAccessService>();
         var episodeAuthorization = Substitute.For<ICoachingEpisodeAuthorizationService>();
+        var accounts = Substitute.For<IAccountReadService>();
         var commands = Substitute.For<ICommandDispatcher>();
         access.GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>())
             .Returns(new CoachingRelationshipAccessDecision(true, true));
@@ -473,6 +476,8 @@ public sealed class CoachingTraineeNoteSliceTests
                 trainerId,
                 traineeId,
                 0));
+        accounts.GetByIdAsync(trainerId, Arg.Any<CancellationToken>())
+            .Returns(new AccountReadModel(trainerId, "Original trainer", "trainer@example.test", null, "en", "UTC"));
         var services = new ServiceCollection();
         services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         services.AddCoachingModule();
@@ -480,6 +485,7 @@ public sealed class CoachingTraineeNoteSliceTests
         services.AddScoped<ICoachingTraineeNotePersistence, CoachingTraineeNotePersistenceRepository>();
         services.AddScoped(_ => access);
         services.AddScoped(_ => episodeAuthorization);
+        services.AddScoped(_ => accounts);
         services.AddScoped(_ => commands);
         services.AddScoped<IUnitOfWork>(_ => new ThrowingUnitOfWork());
         using var provider = services.BuildServiceProvider();
@@ -551,6 +557,7 @@ public sealed class CoachingTraineeNoteSliceTests
         public ICoachingRelationshipAccessService Access { get; } = Substitute.For<ICoachingRelationshipAccessService>();
         public ICoachingEpisodeAuthorizationService EpisodeAuthorization { get; } = Substitute.For<ICoachingEpisodeAuthorizationService>();
         public ICoachingTraineeNotePersistence Notes { get; } = Substitute.For<ICoachingTraineeNotePersistence>();
+        public IAccountReadService Accounts { get; } = Substitute.For<IAccountReadService>();
         public ICommandDispatcher Commands { get; } = Substitute.For<ICommandDispatcher>();
         public IUnitOfWork UnitOfWork { get; } = Substitute.For<IUnitOfWork>();
 
@@ -568,6 +575,18 @@ public sealed class CoachingTraineeNoteSliceTests
                     call.ArgAt<Id<User>>(1),
                     call.ArgAt<Id<User>>(2),
                     0));
+            Accounts.GetByIdAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>())
+                .Returns(call => new AccountReadModel(
+                    call.Arg<Id<User>>(),
+                    "Original trainer",
+                    "trainer@example.test",
+                    null,
+                    "en",
+                    "UTC"));
+            Accounts.GetByIdsAsync(Arg.Any<IReadOnlyList<Id<User>>>(), Arg.Any<CancellationToken>())
+                .Returns(call => (IReadOnlyList<AccountReadModel>)call.Arg<IReadOnlyList<Id<User>>>()
+                    .Select(id => new AccountReadModel(id, "Original trainer", "trainer@example.test", null, "en", "UTC"))
+                    .ToList());
         }
 
         public void GrantAccess(Id<User> trainerId, Id<User> traineeId)
@@ -582,6 +601,7 @@ public sealed class CoachingTraineeNoteSliceTests
             services.AddScoped(_ => Access);
             services.AddScoped(_ => EpisodeAuthorization);
             services.AddScoped(_ => Notes);
+            services.AddScoped(_ => Accounts);
             services.AddScoped(_ => Commands);
             services.AddScoped(_ => UnitOfWork);
             return services;

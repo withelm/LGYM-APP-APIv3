@@ -4,6 +4,7 @@ using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Coaching.TraineeNotes.Models;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
+using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Repositories;
@@ -18,6 +19,7 @@ internal sealed class UpdateTraineeNoteUseCase : IUpdateTraineeNoteUseCase
     private readonly ICoachingRelationshipAccessService _relationshipAccess;
     private readonly ICoachingEpisodeAuthorizationService _episodeAuthorization;
     private readonly ICoachingTraineeNotePersistence _notes;
+    private readonly IAccountReadService _accounts;
     private readonly ICommandDispatcher _commands;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
@@ -26,6 +28,7 @@ internal sealed class UpdateTraineeNoteUseCase : IUpdateTraineeNoteUseCase
         ICoachingRelationshipAccessService relationshipAccess,
         ICoachingEpisodeAuthorizationService episodeAuthorization,
         ICoachingTraineeNotePersistence notes,
+        IAccountReadService accounts,
         ICommandDispatcher commands,
         IUnitOfWork unitOfWork,
         IMapper mapper)
@@ -33,6 +36,7 @@ internal sealed class UpdateTraineeNoteUseCase : IUpdateTraineeNoteUseCase
         _relationshipAccess = relationshipAccess;
         _episodeAuthorization = episodeAuthorization;
         _notes = notes;
+        _accounts = accounts;
         _commands = commands;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -52,15 +56,10 @@ internal sealed class UpdateTraineeNoteUseCase : IUpdateTraineeNoteUseCase
             command.TrainerId,
             command.TraineeId,
             cancellationToken);
-        var accessError = TraineeNoteRules.GetAccessError(access, command.TraineeId);
+        var accessError = TraineeNoteRules.GetTrainerError(access, command.TraineeId);
         if (accessError is not null)
         {
             return Result<TraineeNoteReadModel, AppError>.Failure(accessError);
-        }
-
-        if (await _episodeAuthorization.AuthorizeAndStageAsync(command.TrainerId, command.TrainerId, command.TraineeId, CoachingEpisodeAuthorizationAction.ProtectedWrite, cancellationToken) is null)
-        {
-            return Result<TraineeNoteReadModel, AppError>.Failure(new LgymApi.Application.Coaching.Errors.TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
         if (command.NoteId.IsEmpty)
@@ -72,6 +71,12 @@ internal sealed class UpdateTraineeNoteUseCase : IUpdateTraineeNoteUseCase
         if (existing is null || !TraineeNoteRules.IsOwnedBy(existing, command.TrainerId, command.TraineeId))
         {
             return Result<TraineeNoteReadModel, AppError>.Failure(new NotFoundError(Messages.DidntFind));
+        }
+
+        if (access.HasActiveRelationship
+            && await _episodeAuthorization.AuthorizeAndStageAsync(command.TrainerId, command.TrainerId, command.TraineeId, CoachingEpisodeAuthorizationAction.ProtectedWrite, cancellationToken) is null)
+        {
+            return Result<TraineeNoteReadModel, AppError>.Failure(new LgymApi.Application.Coaching.Errors.TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
         var updated = _mapper.Map<UpdateTraineeNoteSource, CoachingTraineeNoteWriteModel>(
@@ -91,12 +96,14 @@ internal sealed class UpdateTraineeNoteUseCase : IUpdateTraineeNoteUseCase
                 DateTimeOffset.UtcNow,
                 existing.Content,
                 updated.Content,
+                existing.VisibleToTrainee,
+                updated.VisibleToTrainee,
                 "Updated"),
             _mapper.CreateContext());
         await _notes.AddHistoryEntryAsync(history, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        if (updated.VisibleToTrainee || existing.VisibleToTrainee)
+        if (updated.VisibleToTrainee)
         {
             await _commands.EnqueueAsync(new TraineeNoteUpdatedInAppNotificationCommand
             {
@@ -109,8 +116,9 @@ internal sealed class UpdateTraineeNoteUseCase : IUpdateTraineeNoteUseCase
         }
 
         var persisted = await _notes.FindNoteByIdAsync(updated.Id, cancellationToken);
-        var readModel = _mapper.Map<CoachingTraineeNoteFact, TraineeNoteReadModel>(
-            persisted!,
+        var author = (await _accounts.GetByIdsAsync([command.TrainerId], cancellationToken)).FirstOrDefault();
+        var readModel = _mapper.Map<TraineeNoteReadSource, TraineeNoteReadModel>(
+            new TraineeNoteReadSource(persisted!, author),
             _mapper.CreateContext());
         return Result<TraineeNoteReadModel, AppError>.Success(readModel);
     }
