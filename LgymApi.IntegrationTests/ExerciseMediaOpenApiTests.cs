@@ -22,7 +22,7 @@ public sealed class ExerciseMediaOpenApiTests : IntegrationTestBase
         if (!string.IsNullOrWhiteSpace(output))
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
-            File.WriteAllText(output, json + Environment.NewLine);
+            File.WriteAllText(output, json.Replace("\r\n", "\n", StringComparison.Ordinal) + "\n");
         }
     }
 }

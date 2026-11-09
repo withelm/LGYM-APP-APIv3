@@ -2,7 +2,7 @@
 
 Scope: LGYM-244 and LGYM-247, `feat/lgym-244-247-exercise-asset-upload`, based on API main `8d0ae98dc19d2e90e846bb49d492ee0d4344fcec`. Checks ran on the feature working tree before its review commit; the final commit/PR is recorded by the cross-repository checkpoint. No API merge, production deployment or asset publication was performed.
 
-The canonical actual-host OpenAPI snapshot is [`openapi/exercise-media.json`](openapi/exercise-media.json), SHA-256 **5FA542318229A7660EE607C57D82EA70338E9C5E95CF5C1A28D47BE71E13C475**. Page and Mobile regenerate from this identical file.
+The canonical actual-host OpenAPI snapshot is [`openapi/exercise-media.json`](openapi/exercise-media.json), SHA-256 **36C5C52A121F0D2ECA0E94006018336F3CB72BDE33137869C9C0C200D479DD88**. Page and Mobile regenerate from this identical file.
 
 ## Executed checks
 
@@ -51,3 +51,5 @@ These checks are **technical only**. Historical archive UUIDs are not verified c
 - Ten exercise identities and movement techniques require explicit human approval against the actual target catalog before one-by-one client UI publication. Conditional rollback is prepared in [`exercise-media.md`](exercise-media.md); no bulk publication or automatic release is authorized.
 
 The implementation is prepared for human review. Staging acceptance and production release are separate, incomplete milestones.
+
+Canonical byte normalization: the initial Windows working export used a trailing CRLF (SHA-256 `5fa542318229a7660ee607c57d82ea70338e9c5e95cf5c1a28d47be71e13c475`). The committed LF document is pinned above. The API exporter and Git attributes now enforce LF; both Orval generation commands were rerun and produced byte-identical generated clients. Earlier behavior evidence remains valid and retains its original provenance.

@@ -40,6 +40,6 @@ let run (archivePath:string) (outputPath:string) =
     if records.Length <> 10 then failwith "Expected exactly ten draft GIF entries"
     File.WriteAllText(outputPath, JsonSerializer.Serialize(records, JsonSerializerOptions(WriteIndented = true)))
     printfn "Verified %d technical draft GIFs: decoding, sanitization, bounds and exact coalesced frame pixels. No publication or human technique approval." records.Length
-    
+
 if fsi.CommandLineArgs.Length <> 3 then failwith "Usage: dotnet fsi scripts/verify-exercise-media-pilot.fsx ARCHIVE OUTPUT_JSON"
 run fsi.CommandLineArgs.[1] fsi.CommandLineArgs.[2]

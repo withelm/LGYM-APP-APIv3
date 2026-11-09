@@ -17,4 +17,3 @@ public sealed class ExerciseMediaStorageOptions
         if (string.IsNullOrWhiteSpace(PrivateBucket) || string.IsNullOrWhiteSpace(PublishedBucket) || PrivateBucket == PublishedBucket || string.IsNullOrWhiteSpace(AccessKeyId) || string.IsNullOrWhiteSpace(SecretAccessKey)) throw new InvalidOperationException("ExerciseMediaStorage requires isolated private and published buckets and dedicated credentials.");
     }
 }
-
