@@ -26,5 +26,13 @@
     "DevMaxTotalBytes": 8589934592,
     "DevMaxUploadsPerDay": 200,
     "DevMaxUploadInitPerUserPerHour": 50
+  },
+  "ExerciseMediaStorage": {
+    "Enabled": false,
+    "Endpoint": "https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com",
+    "Bucket": "lgym-exercises-dev",
+    "AccessKeyId": "",
+    "SecretAccessKey": "",
+    "PublicBaseUrl": "https://<VERIFY_DEV_EXERCISE_WORKER_HOST>"
   }
 }

@@ -9,11 +9,16 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 54;
+    private const int PersistedEntityCount = 55;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
     private const string SignalRClientTestPackageProject = "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj";
+    private static readonly string[] RetiredUnreleasedExerciseMediaMigrationPaths =
+    [
+        MigrationRoot + "/20261109150046_AddExerciseMediaUploadSessions.cs",
+        MigrationRoot + "/20261109150046_AddExerciseMediaUploadSessions.Designer.cs"
+    ];
     private static readonly string[] ExpectedSolutionProjectPaths = ProjectReferenceGraphManifest.ProjectNames
         .Select(name => name + "/" + name + ".csproj")
         .OrderBy(path => path, StringComparer.Ordinal)
@@ -51,13 +56,13 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261107094438_AddCoachingEpisodes.Designer.cs"] = "9f802f8b1097ec56c5478ece5fd9685f39637fa59e48b5a625b307c6a83cf85c",
         [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.cs"] = "d6a64a469455b5e5fa220c7bb8e7c6fe3975c00b9db192bbf3a8c75f78322070",
         [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.Designer.cs"] = "1417f96bcd7abf046858cde05ebb26faa354862f5c9c99aeaac2ce05152c1758",
-        [MigrationRoot + "/20261109150046_AddExerciseMediaUploadSessions.cs"] = "1eff428622c0b231dc1ecad811a9966a02e2ddd061e98fab2f19da713ca64114",
-        [MigrationRoot + "/20261109150046_AddExerciseMediaUploadSessions.Designer.cs"] = "59c4622985e297ca90baf193882018a327a16c16711c9f590ccadb4e6ae54359",
+        [MigrationRoot + "/20261109212642_AddExerciseMediaOperationsAndObjectFences.cs"] = "5b10153db9370923d42a5be5771e33fa8640c45448a43a65edf09a576e22a680",
+        [MigrationRoot + "/20261109212642_AddExerciseMediaOperationsAndObjectFences.Designer.cs"] = "85507484f0fea5ea632f7c0d30f8d1dd497fa22ea7889990dbb8d95111ea619a",
         [MigrationRoot + "/20261108120000_AddTraineeNoteHistoryVisibility.cs"] = "b83b471ee554febd7001f0a32417eba1866b5bdd731bc03ce2b4e19646d16a68",
         [MigrationRoot + "/20261108120000_AddTraineeNoteHistoryVisibility.Designer.cs"] = "e3907d80e4c04c1735f8ce675fca9986fa9ae5e6dd7aabd81f8e2b5c2c81143c",
         [MigrationRoot + "/20261108222532_AddTraineeNoteUpdatedAtConcurrency.cs"] = "cc9810729bf6fd033d497af90876eb60cecde575229f76095819e6cba1eaa936",
         [MigrationRoot + "/20261108222532_AddTraineeNoteUpdatedAtConcurrency.Designer.cs"] = "23b5c30f392eb9796ecb95ca84c5d2b1dd708dfaf7f7dbf0255c5b0509b9da84",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "da0856a8bc7155e42f2b22e4d61214eab3a6f3e4932005595faa07e905c1cabd"
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "d2b3672acb40eb2772c0e48e1a92a8a275c04acc9ddbf83cbf7a4d1b5ffa7e58"
     };
 
     [Test]
@@ -183,6 +188,16 @@ public sealed class SingleProductionDbContextGuardTests
         Assert.That(
             () => AssertProductionMigrationWorktreeIsClean([], [snapshotPath]),
             Throws.InstanceOf<AssertionException>().With.Message.Contains(snapshotPath));
+    }
+
+    [TestCase("20261109150046_AddExerciseMediaUploadSessions.cs")]
+    [TestCase("20261109150046_AddExerciseMediaUploadSessions.Designer.cs")]
+    public void Retired_Unreleased_Migration_Fixture_Should_Reject_Reintroduced_Source(string fileName)
+    {
+        var path = MigrationRoot + "/" + fileName;
+        Assert.That(RetiredUnreleasedExerciseMediaMigrationPaths, Does.Contain(path));
+        Assert.That(() => AssertRetiredMigrationAbsent(path, exists: true),
+            Throws.InstanceOf<AssertionException>().With.Message.Contains(path));
     }
 
     [Test]
@@ -474,11 +489,21 @@ public sealed class SingleProductionDbContextGuardTests
             AssertApprovedFileHash(repoRoot, entry, "project file");
         }
 
+        foreach (var path in RetiredUnreleasedExerciseMediaMigrationPaths)
+        {
+            AssertRetiredMigrationAbsent(path, File.Exists(Path.Combine(repoRoot, path)));
+        }
+
         var approvedChanges = ApprovedRetentionMigrationLedger.Keys
             .Concat(ApprovedProjectFileLedger.Keys)
             .ToList();
 
         AssertPhysicalTopologyWorktreeIsClean(headChanges, untrackedFiles, approvedChanges);
+    }
+
+    private static void AssertRetiredMigrationAbsent(string path, bool exists)
+    {
+        Assert.That(exists, Is.False, $"Retired unreleased migration must remain absent: {path}");
     }
 
     private static void AssertApprovedFileHash(

@@ -6,6 +6,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Identity.Contracts;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Repositories.WorkoutProgress;
 using Microsoft.EntityFrameworkCore;
@@ -59,7 +60,7 @@ public sealed class ExerciseRepositoryTests
         var foreignExercise = Exercise(Id<Exercise>.New(), foreignOwnerId.Rebind<User>(), "Foreign");
         dbContext.Exercises.AddRange(globalExercise, ownedExercise, foreignExercise);
         await dbContext.SaveChangesAsync();
-        var repository = new WorkoutExercisePersistenceRepository(dbContext);
+        var repository = new WorkoutExercisePersistenceRepository(dbContext, new ExerciseMediaStorageOptions());
 
         var visibleGlobal = await repository.FindVisibleToAccountAsync(globalExercise.Id, actorId);
         var visibleOwned = await repository.FindVisibleToAccountAsync(ownedExercise.Id, actorId);
@@ -86,6 +87,25 @@ public sealed class ExerciseRepositoryTests
             global!.OwnerId.Should().BeNull();
             foreignGlobal.Should().BeNull();
         }
+    }
+
+    [TestCase(@"https:\\exercise.test\exercises\new-key\animation.gif")]
+    [TestCase("https://exer\tcise.test/exercises/new-key/animation.gif")]
+    [TestCase("https:////exercise.test/exercises/new-key/animation.gif")]
+    [TestCase("https://%65xercise.test/exercises/new-key/animation.gif")]
+    [TestCase(" \u0001https://exercise.test/exercises/new-key/animation.gif\u001F ")]
+    [TestCase("//exercise.test/exercises/new-key/animation.gif")]
+    [TestCase("https://EXERCISE.test:443/old/../exercises/new-key/animation.gif?cache=1#frame")]
+    [TestCase("http://exercise.test/exercises/new-key/animation.gif")]
+    [TestCase("https://exercise.test./exercises/new-key/animation.gif")]
+    public async Task PersonalImageGuard_RejectsUnreservedManagedAliasesAndPreservesUnrelatedLegacyUrls(string image)
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Id<ExerciseRepositoryTests>.New().ToString()).Options;
+        await using var db = new AppDbContext(options);
+        var repository = new WorkoutExercisePersistenceRepository(db, new ExerciseMediaStorageOptions { PublicBaseUrl = "https://exercise.test" });
+        (await repository.IsUnboundManagedImageAsync(image)).Should().BeTrue();
+        (await repository.IsUnboundManagedImageAsync("https://legacy.example/exercises/new-key/animation.gif")).Should().BeFalse();
+        (await repository.IsUnboundManagedImageAsync("legacy-image-value")).Should().BeFalse();
     }
 
     private static Exercise Exercise(Id<Exercise> id, Id<User>? ownerId, string name) => new()

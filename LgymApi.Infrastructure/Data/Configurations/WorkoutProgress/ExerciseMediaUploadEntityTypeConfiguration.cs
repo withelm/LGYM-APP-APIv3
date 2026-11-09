@@ -13,7 +13,8 @@ internal sealed class ExerciseMediaUploadEntityTypeConfiguration : IEntityTypeCo
         builder.Property(x => x.Revision).IsConcurrencyToken();
         builder.Property(x => x.OperationId).HasConversion<NullableTypedIdValueConverter<ExerciseMediaOperationReference>>();
         builder.HasIndex(x => new { x.ActorId, x.OperationId }).IsUnique();
-        builder.HasIndex(x => new { x.PrivateObjectsCleaned, x.ExpiresAt });
+        builder.HasIndex(x => new { x.ObjectKey, x.ExpiresAt });
+        builder.Property(x => x.ObjectKey).HasMaxLength(256);
         builder.Property(x => x.Status).HasMaxLength(16);
         builder.Property(x => x.ContentType).HasMaxLength(32);
         builder.Property(x => x.SourceSha256).HasMaxLength(64);

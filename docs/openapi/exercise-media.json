@@ -3154,615 +3154,117 @@
         }
       }
     },
-    "/api/exercise/media/uploads": {
-      "post": {
-        "tags": [
-          "ExerciseMedia"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InitiateExerciseMediaDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InitiateExerciseMediaDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/InitiateExerciseMediaDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Gone",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExerciseMediaUploadDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExerciseMediaUploadDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExerciseMediaUploadDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/exercise/media/uploads/{uploadReference}/verify": {
-      "post": {
-        "tags": [
-          "ExerciseMedia"
-        ],
-        "parameters": [
-          {
-            "name": "uploadReference",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Gone",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExerciseMediaVerificationDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExerciseMediaVerificationDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExerciseMediaVerificationDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/exercise/media/uploads/{uploadReference}": {
-      "delete": {
-        "tags": [
-          "ExerciseMedia"
-        ],
-        "parameters": [
-          {
-            "name": "uploadReference",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Gone",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/exercise/media/create": {
       "post": {
         "tags": [
           "ExerciseMedia"
         ],
+        "description": "Authenticated bounded multipart upload through the API; never direct client-to-R2. Send original file plus sourceSha256/contentType/sizeBytes, or no media manifest for a no-media create. Retry the exact scalar fields and manifest with the same operationId; a known operation can replay without file. 428 sourceRequired needs the matching original file, never a new create or silent no-media downgrade. Only an error with matching operationId and disposition=rejected proves the operation is durably fenced against creation. Unresolved/network/503 and ordinary409conflict retain the receipt. A permanently retired never-bound key may return409rejected. For media changes expectedImage is a required form field: send an empty value for explicit expected null. Choose file+manifest, remove=true or recorded restoreImage, exactly one. Max file5242880 bytes, request5308416 bytes.",
+        "parameters": [
+          {
+            "name": "X-Exercise-Media-Operation-Id",
+            "in": "header",
+            "description": "Same UUID as multipart operationId. Required before body reception for safely fenced definitive rejections.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/CreateExerciseMediaDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateExerciseMediaDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateExerciseMediaDto"
+                "required": [
+                  "bodyPart",
+                  "name",
+                  "operationId"
+                ],
+                "type": "object",
+                "properties": {
+                  "operationId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "bodyPart": {
+                    "enum": [
+                      "Unknown",
+                      "Chest",
+                      "Back",
+                      "Shoulders",
+                      "Biceps",
+                      "Triceps",
+                      "Forearms",
+                      "Abs",
+                      "Quads",
+                      "Hamstrings",
+                      "Calves",
+                      "Glutes",
+                      "BodyWeight",
+                      "Neck",
+                      "Waist",
+                      "Hips",
+                      "Thigh",
+                      "BodyFat",
+                      "Bmi"
+                    ],
+                    "type": "string"
+                  },
+                  "eloFormulaId": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 16000,
+                    "type": "string"
+                  },
+                  "sourceSha256": {
+                    "type": "string"
+                  },
+                  "contentType": {
+                    "type": "string"
+                  },
+                  "sizeBytes": {
+                    "type": "integer",
+                    "format": "int64"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "operationId": {
+                  "style": "form"
+                },
+                "name": {
+                  "style": "form"
+                },
+                "bodyPart": {
+                  "style": "form"
+                },
+                "eloFormulaId": {
+                  "style": "form"
+                },
+                "description": {
+                  "style": "form"
+                },
+                "sourceSha256": {
+                  "style": "form"
+                },
+                "contentType": {
+                  "style": "form"
+                },
+                "sizeBytes": {
+                  "style": "form"
+                },
+                "file": {
+                  "style": "form"
+                }
               }
             }
           }
@@ -3773,17 +3275,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -3833,17 +3335,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -3853,37 +3355,37 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
           },
-          "410": {
-            "description": "Gone",
+          "413": {
+            "description": "Content Too Large",
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -3893,17 +3395,37 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -3913,17 +3435,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -3956,6 +3478,7 @@
         "tags": [
           "ExerciseMedia"
         ],
+        "description": "Authenticated bounded multipart upload through the API; never direct client-to-R2. Send original file plus sourceSha256/contentType/sizeBytes, or no media manifest for a no-media create. Retry the exact scalar fields and manifest with the same operationId; a known operation can replay without file. 428 sourceRequired needs the matching original file, never a new create or silent no-media downgrade. Only an error with matching operationId and disposition=rejected proves the operation is durably fenced against creation. Unresolved/network/503 and ordinary409conflict retain the receipt. A permanently retired never-bound key may return409rejected. For media changes expectedImage is a required form field: send an empty value for explicit expected null. Choose file+manifest, remove=true or recorded restoreImage, exactly one. Max file5242880 bytes, request5308416 bytes.",
         "parameters": [
           {
             "name": "id",
@@ -3964,23 +3487,82 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "X-Exercise-Media-Operation-Id",
+            "in": "header",
+            "description": "Same UUID as multipart operationId. Required before body reception for safely fenced definitive rejections.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "requestBody": {
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/ChangeExerciseMediaDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangeExerciseMediaDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangeExerciseMediaDto"
+                "required": [
+                  "expectedImage",
+                  "operationId"
+                ],
+                "type": "object",
+                "properties": {
+                  "operationId": {
+                    "type": "string"
+                  },
+                  "expectedImage": {
+                    "type": "string",
+                    "description": "Required form field. Send an empty string for expected null; omission is invalid."
+                  },
+                  "sourceSha256": {
+                    "type": "string"
+                  },
+                  "contentType": {
+                    "type": "string"
+                  },
+                  "sizeBytes": {
+                    "type": "integer",
+                    "format": "int64"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "remove": {
+                    "type": "boolean"
+                  },
+                  "restoreImage": {
+                    "type": "string"
+                  }
+                }
+              },
+              "encoding": {
+                "operationId": {
+                  "style": "form"
+                },
+                "expectedImage": {
+                  "style": "form"
+                },
+                "sourceSha256": {
+                  "style": "form"
+                },
+                "contentType": {
+                  "style": "form"
+                },
+                "sizeBytes": {
+                  "style": "form"
+                },
+                "file": {
+                  "style": "form"
+                },
+                "remove": {
+                  "style": "form"
+                },
+                "restoreImage": {
+                  "style": "form"
+                }
               }
             }
           }
@@ -3991,17 +3573,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -4051,17 +3633,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -4071,37 +3653,37 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
           },
-          "410": {
-            "description": "Gone",
+          "413": {
+            "description": "Content Too Large",
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -4111,17 +3693,37 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -4131,17 +3733,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -4180,17 +3782,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -4240,17 +3842,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -4260,37 +3862,37 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
           },
-          "410": {
-            "description": "Gone",
+          "413": {
+            "description": "Content Too Large",
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -4300,17 +3902,37 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -4320,17 +3942,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResponseMessageDto"
+                  "$ref": "#/components/schemas/ExerciseMediaErrorDto"
                 }
               }
             }
@@ -9490,6 +9112,54 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TraineeNoteDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trainee/notes/{noteId}/history": {
+      "get": {
+        "tags": [
+          "TraineeNotes"
+        ],
+        "parameters": [
+          {
+            "name": "noteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TraineeNoteHistoryDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TraineeNoteHistoryDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TraineeNoteHistoryDto"
+                  }
                 }
               }
             }
@@ -15556,34 +15226,6 @@
         },
         "additionalProperties": false
       },
-      "ChangeExerciseMediaDto": {
-        "required": [
-          "expectedImage"
-        ],
-        "type": "object",
-        "properties": {
-          "operationId": {
-            "type": "string",
-            "nullable": true
-          },
-          "expectedImage": {
-            "type": "string",
-            "nullable": true
-          },
-          "uploadReference": {
-            "type": "string",
-            "nullable": true
-          },
-          "remove": {
-            "type": "boolean"
-          },
-          "restoreImage": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
       "ChangeVisibilityInRankingRequest": {
         "type": "object",
         "properties": {
@@ -15707,58 +15349,6 @@
         "type": "object",
         "properties": {
           "shareCode": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "CreateExerciseMediaDto": {
-        "required": [
-          "bodyPart"
-        ],
-        "type": "object",
-        "properties": {
-          "operationId": {
-            "type": "string",
-            "nullable": true
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "bodyPart": {
-            "enum": [
-              "Unknown",
-              "Chest",
-              "Back",
-              "Shoulders",
-              "Biceps",
-              "Triceps",
-              "Forearms",
-              "Abs",
-              "Quads",
-              "Hamstrings",
-              "Calves",
-              "Glutes",
-              "BodyWeight",
-              "Neck",
-              "Waist",
-              "Hips",
-              "Thigh",
-              "BodyFat",
-              "Bmi"
-            ],
-            "type": "string"
-          },
-          "eloFormula": {
-            "$ref": "#/components/schemas/LookupItemVm"
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "uploadReference": {
             "type": "string",
             "nullable": true
           }
@@ -16223,6 +15813,24 @@
         },
         "additionalProperties": false
       },
+      "ExerciseMediaErrorDto": {
+        "type": "object",
+        "properties": {
+          "msg": {
+            "type": "string",
+            "nullable": true
+          },
+          "operationId": {
+            "type": "string",
+            "nullable": true
+          },
+          "disposition": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ExerciseMediaMutationDto": {
         "type": "object",
         "properties": {
@@ -16237,69 +15845,6 @@
           "status": {
             "type": "string",
             "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "ExerciseMediaUploadDto": {
-        "type": "object",
-        "properties": {
-          "uploadReference": {
-            "type": "string",
-            "nullable": true
-          },
-          "uploadUrl": {
-            "type": "string",
-            "nullable": true
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "headers": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "ExerciseMediaVerificationDto": {
-        "type": "object",
-        "properties": {
-          "uploadReference": {
-            "type": "string",
-            "nullable": true
-          },
-          "status": {
-            "type": "string",
-            "nullable": true
-          },
-          "sourceSha256": {
-            "type": "string",
-            "nullable": true
-          },
-          "publishedSha256": {
-            "type": "string",
-            "nullable": true
-          },
-          "contentType": {
-            "type": "string",
-            "nullable": true
-          },
-          "width": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "height": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "frames": {
-            "type": "integer",
-            "format": "int32"
           }
         },
         "additionalProperties": false
@@ -16703,28 +16248,6 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
-          }
-        },
-        "additionalProperties": false
-      },
-      "InitiateExerciseMediaDto": {
-        "type": "object",
-        "properties": {
-          "contentType": {
-            "type": "string",
-            "nullable": true
-          },
-          "sizeBytes": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "sha256": {
-            "type": "string",
-            "nullable": true
-          },
-          "exerciseId": {
-            "type": "string",
-            "nullable": true
           }
         },
         "additionalProperties": false
@@ -18638,6 +18161,14 @@
             "nullable": true
           },
           "trainerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalAuthorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalAuthorDisplayName": {
             "type": "string",
             "nullable": true
           },

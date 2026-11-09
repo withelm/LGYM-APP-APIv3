@@ -22,5 +22,7 @@ public interface IExerciseMediaState
     string? OperationHash { get; set; }
     string? PreviousImage { get; set; }
     string? ResultImage { get; set; }
-    bool PrivateObjectsCleaned { get; set; }
+    bool IsCreate { get; set; }
+    string? ObjectKey { get; set; }
+    int? RejectionStatusCode { get; set; }
 }

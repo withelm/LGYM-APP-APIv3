@@ -80,11 +80,11 @@ public sealed class PlatformInfrastructureCompositionGuardTests
     {
         var entries = PersistenceIdentityContract.RegistrarConfigurationTypes.ToList();
         entries.Remove("AppConfigEntityTypeConfiguration");
-        entries.Insert(23, "AppConfigEntityTypeConfiguration");
+        entries.Insert(25, "AppConfigEntityTypeConfiguration");
 
         Assert.That(
             () => AssertAppConfigRegistrarPlacement(entries),
-            Throws.InvalidOperationException.With.Message.Contains("ordinal 26"));
+            Throws.InvalidOperationException.With.Message.Contains("ordinal 27"));
     }
 
     private static void AssertExactPrivateHelperComposition(IReadOnlyList<string> actual)
@@ -99,13 +99,13 @@ public sealed class PlatformInfrastructureCompositionGuardTests
 
     private static void AssertAppConfigRegistrarPlacement(IReadOnlyList<string> entries)
     {
-        const int appConfigOrdinal = 25;
-        if (entries.Count != 54 ||
+        const int appConfigOrdinal = 26;
+        if (entries.Count != 55 ||
             entries.ElementAtOrDefault(appConfigOrdinal) != "AppConfigEntityTypeConfiguration" ||
             entries.ElementAtOrDefault(appConfigOrdinal - 1) != "EloRegistryEntityTypeConfiguration" ||
             entries.ElementAtOrDefault(appConfigOrdinal + 1) != "TrainerInvitationEntityTypeConfiguration")
         {
-            throw new InvalidOperationException("AppConfigEntityTypeConfiguration must remain at registrar ordinal 26.");
+            throw new InvalidOperationException("AppConfigEntityTypeConfiguration must remain at registrar ordinal 27.");
         }
     }
 

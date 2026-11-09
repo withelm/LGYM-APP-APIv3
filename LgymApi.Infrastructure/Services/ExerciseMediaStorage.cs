@@ -24,21 +24,28 @@ public sealed class ExerciseMediaStorage : IExerciseMediaStorage, IDisposable
             ForcePathStyle = true,
             AuthenticationRegion = "auto",
             RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
-            ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED
+            ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED,
+            Timeout = TimeSpan.FromSeconds(30)
         });
     }
 
     private IAmazonS3 Client => _client ?? throw new InvalidOperationException("Exercise media storage is not configured.");
-    public Task<string> SignUploadAsync(string key, string contentType, DateTimeOffset expiresAt, CancellationToken cancellationToken)
+    public string GetPublicUrl(string key)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(Client.GetPreSignedURL(new GetPreSignedUrlRequest { BucketName = _options.PrivateBucket, Key = key, Verb = HttpVerb.PUT, ContentType = contentType, Expires = expiresAt.UtcDateTime }));
+        if (!IsConfigured) throw new InvalidOperationException("Exercise media storage is not configured.");
+        ValidateKey(key);
+        return _options.PublicBaseUrl.TrimEnd('/') + "/" + key;
     }
 
-    public async Task<byte[]> ReadPrivateAsync(string key, CancellationToken cancellationToken)
+    public async Task<byte[]?> ReadAsync(string key, CancellationToken cancellationToken)
     {
-        using var response = await Client.GetObjectAsync(_options.PrivateBucket, key, cancellationToken);
-        return await ReadBoundedAsync(response, cancellationToken);
+        ValidateKey(key);
+        try
+        {
+            using var response = await Client.GetObjectAsync(_options.Bucket, key, cancellationToken);
+            return await ReadBoundedAsync(response, cancellationToken);
+        }
+        catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.NotFound) { return null; }
     }
 
     private static async Task<byte[]> ReadBoundedAsync(GetObjectResponse response, CancellationToken cancellationToken)
@@ -51,22 +58,25 @@ public sealed class ExerciseMediaStorage : IExerciseMediaStorage, IDisposable
             var read = await response.ResponseStream.ReadAsync(buffer, cancellationToken);
             if (read == 0) break;
             if (output.Length + read > ExerciseMediaLimits.MaxBytes) throw new ExerciseMediaRejectedException();
-            output.Write(buffer, 0, read);
+            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
         }
         if (output.Length != response.ContentLength) throw new ExerciseMediaRejectedException();
         return output.ToArray();
     }
 
-    public Task WriteVerifiedAsync(string key, byte[] bytes, string contentType, CancellationToken cancellationToken) => PutImmutableAsync(_options.PrivateBucket, key, bytes, contentType, false, cancellationToken);
+    private static void ValidateKey(string key)
+    {
+        if (!Regex.IsMatch(key, @"\Aexercises/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/[0-9a-f]{64}/(?:animation\.gif|image\.(?:png|jpg|webp))\z", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100))) throw new ExerciseMediaRejectedException();
+    }
 
     public async Task<string> PublishAsync(string key, byte[] bytes, string contentType, CancellationToken cancellationToken)
     {
-        if (!Regex.IsMatch(key, @"\Aexercises/[0-9a-f-]{36}/[0-9a-f]{64}/(?:animation\.gif|image\.(?:png|jpg|webp))\z", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100))) throw new ExerciseMediaRejectedException();
-        await PutImmutableAsync(_options.PublishedBucket, key, bytes, contentType, true, cancellationToken);
-        return _options.PublicBaseUrl.TrimEnd('/') + "/" + key;
+        var url = GetPublicUrl(key);
+        await PutImmutableAsync(_options.Bucket, key, bytes, contentType, cancellationToken);
+        return url;
     }
 
-    private async Task PutImmutableAsync(string bucket, string key, byte[] bytes, string contentType, bool published, CancellationToken cancellationToken)
+    private async Task PutImmutableAsync(string bucket, string key, byte[] bytes, string contentType, CancellationToken cancellationToken)
     {
         using var stream = new MemoryStream(bytes, false);
         try
@@ -82,7 +92,7 @@ public sealed class ExerciseMediaStorage : IExerciseMediaStorage, IDisposable
                 DisablePayloadSigning = true,
                 DisableDefaultChecksumValidation = true,
                 UseChunkEncoding = false,
-                Headers = { CacheControl = published ? "public,max-age=31536000,immutable" : "private,no-store" }
+                Headers = { CacheControl = "public,max-age=31536000,immutable" }
             }, cancellationToken);
         }
         catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.PreconditionFailed)
@@ -95,6 +105,10 @@ public sealed class ExerciseMediaStorage : IExerciseMediaStorage, IDisposable
         if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(System.Security.Cryptography.SHA256.HashData(storedBytes), System.Security.Cryptography.SHA256.HashData(bytes))) throw new ExerciseMediaRejectedException();
     }
 
-    public async Task DeletePrivateAsync(string key, CancellationToken cancellationToken) => await Client.DeleteObjectAsync(_options.PrivateBucket, key, cancellationToken);
+    public async Task DeleteAsync(string key, CancellationToken cancellationToken)
+    {
+        ValidateKey(key);
+        await Client.DeleteObjectAsync(_options.Bucket, key, cancellationToken);
+    }
     public void Dispose() => _client?.Dispose();
 }

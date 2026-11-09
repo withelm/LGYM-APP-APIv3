@@ -13,4 +13,4 @@
 - Reporting migration apply additionally requires the exact external-writer fence acknowledgement and the SHA-256 fingerprint from a reviewed dry-run. Unbound pending legacy uploads and unapproved retained deleted/anonymized owners block writes.
 - The tutorial RLS pilot requires offline Hangfire bootstrap when needed, while API startup owns EF migration. Its staging-only activation, diagnostics, and rollback procedure is [`tutorial-rls-pilot.md`](../docs/security/tutorial-rls-pilot.md).
 
-- ExerciseMediaUploadSeeder deliberately seeds no upload capabilities, media objects or operation receipts; authenticated runtime workflows exclusively create these states.
+- ExerciseMediaUploadSeeder and ExerciseMediaObjectFenceSeeder deliberately seed no operation receipts, object fences or retirement authority; authenticated runtime workflows exclusively create these states.

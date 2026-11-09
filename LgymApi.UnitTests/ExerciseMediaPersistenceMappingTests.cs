@@ -12,36 +12,28 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class ExerciseMediaPersistenceMappingTests
 {
-    [TestCase(false)]
-    [TestCase(true)]
-    public void RegisteredDirections_PreserveAllLedgerFieldsAndActorScopeWithoutTransportingEntityAudit(bool published)
+    [TestCase(false, false)]
+    [TestCase(true, false)]
+    [TestCase(true, true)]
+    public void RegisteredLedgerDirections_PreserveEveryStateFieldAndActorWithoutEntityAudit(bool bound, bool isCreate)
     {
         using var provider = CompositionRootTestHost.Create().BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
+        var exerciseId = Id<Exercise>.New();
+        var objectKey = $"exercises/{exerciseId}/{new string('b', 64)}/animation.gif";
         var source = new ExerciseMediaUpload
         {
-            Id = Id<ExerciseMediaUpload>.New(),
-            ActorId = Id<User>.New(),
-            TargetExerciseId = published ? Id<Exercise>.New() : null,
-            ContentType = "image/gif",
-            SizeBytes = 4321,
-            SourceSha256 = new string('a', 64),
-            PublishedSha256 = published ? new string('b', 64) : null,
-            Extension = published ? "gif" : null,
-            Width = 418,
-            Height = 419,
-            Frames = 16,
-            ExpiresAt = DateTimeOffset.UtcNow.AddHours(24),
-            Status = published ? "bound" : "pending",
-            Revision = 17,
-            OperationId = published ? Id<ExerciseMediaOperationReference>.New() : null,
-            OperationHash = published ? new string('c', 64) : null,
-            PreviousImage = published ? "https://legacy.example.invalid/retained.gif" : null,
-            ResultImage = published ? "https://exercise.example.invalid/published.gif" : null,
-            PrivateObjectsCleaned = published,
-            CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
-            UpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-1),
-            IsDeleted = true
+            Id = Id<ExerciseMediaUpload>.New(), ActorId = Id<User>.New(),
+            TargetExerciseId = bound ? exerciseId : null,
+            ContentType = "image/gif", SizeBytes = 4321, SourceSha256 = new string('a', 64),
+            PublishedSha256 = bound ? new string('b', 64) : null, Extension = bound ? "gif" : null,
+            Width = 418, Height = 419, Frames = 16,
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(24), Status = bound ? "bound" : "rejected", Revision = 17,
+            OperationId = Id<ExerciseMediaOperationReference>.New(), OperationHash = new string('c', 64),
+            PreviousImage = bound ? "https://legacy.owner.test/retained.gif" : null,
+            ResultImage = bound ? "https://exercises-dev.owner.test/" + objectKey : null,
+            IsCreate = isCreate, ObjectKey = bound ? objectKey : null, RejectionStatusCode = bound ? null : 422,
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-1), UpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-1), IsDeleted = true
         };
 
         var session = mapper.Map<ExerciseMediaUpload, ExerciseMediaSession>(source);
@@ -58,8 +50,44 @@ public sealed class ExerciseMediaPersistenceMappingTests
         roundtrip.UpdatedAt.Should().Be(default);
         roundtrip.IsDeleted.Should().BeFalse();
 
-        session.Status = "expired";
-        source.Status.Should().Be(published ? "bound" : "pending");
+        session.Status = "retired";
+        session.ObjectKey = "changed-projection-only";
+        source.Status.Should().Be(bound ? "bound" : "rejected");
+        source.ObjectKey.Should().Be(bound ? objectKey : null);
         roundtrip.Status.Should().Be(source.Status);
+        roundtrip.ObjectKey.Should().Be(source.ObjectKey);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void RegisteredObjectFenceDirections_PreservePermanentRetirementAndCleanupWithoutEntityAudit(bool retired)
+    {
+        using var provider = CompositionRootTestHost.Create().BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+        var exerciseId = Id<Exercise>.New();
+        var objectKey = $"exercises/{exerciseId}/{new string('b', 64)}/animation.gif";
+        var source = new ExerciseMediaObjectFence
+        {
+            Id = Id<ExerciseMediaObjectFence>.New(), ExerciseId = exerciseId, ObjectKey = objectKey,
+            PublicUrl = "https://exercises-dev.owner.test/" + objectKey, Revision = 19,
+            IsRetired = retired, LastCleanupAt = retired ? DateTimeOffset.UtcNow.AddMinutes(-2) : null,
+            LastDeleteSucceeded = retired,
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-1), UpdatedAt = DateTimeOffset.UtcNow, IsDeleted = true
+        };
+
+        var state = mapper.Map<ExerciseMediaObjectFence, ExerciseMediaObjectState>(source);
+        state.Should().BeEquivalentTo(source, options => options.Excluding(x => x.CreatedAt).Excluding(x => x.UpdatedAt).Excluding(x => x.IsDeleted));
+        var roundtrip = mapper.Map<ExerciseMediaObjectState, ExerciseMediaObjectFence>(state);
+        roundtrip.Should().NotBeSameAs(source);
+        roundtrip.Should().BeEquivalentTo(source, options => options.Excluding(x => x.CreatedAt).Excluding(x => x.UpdatedAt).Excluding(x => x.IsDeleted));
+        roundtrip.CreatedAt.Should().Be(default);
+        roundtrip.UpdatedAt.Should().Be(default);
+        roundtrip.IsDeleted.Should().BeFalse();
+        state.ObjectKey = "changed-projection-only";
+        state.IsRetired = !retired;
+        source.ObjectKey.Should().Be(objectKey);
+        source.IsRetired.Should().Be(retired);
+        roundtrip.ObjectKey.Should().Be(objectKey);
+        roundtrip.IsRetired.Should().Be(retired);
     }
 }

@@ -19,6 +19,18 @@ internal sealed class ExerciseMediaPersistenceProfile : IMappingProfile
             ActorId = WorkoutPersistenceAccountIds.ToPersisted(source.ActorId),
             Id = source.Id,
         }));
+        configuration.CreateMap<ExerciseMediaObjectFence, ExerciseMediaObjectState>((source, _) => new()
+        {
+            Id = source.Id, ExerciseId = source.ExerciseId, ObjectKey = source.ObjectKey,
+            PublicUrl = source.PublicUrl, Revision = source.Revision, IsRetired = source.IsRetired,
+            LastCleanupAt = source.LastCleanupAt, LastDeleteSucceeded = source.LastDeleteSucceeded
+        });
+        configuration.CreateMap<ExerciseMediaObjectState, ExerciseMediaObjectFence>((source, _) => new()
+        {
+            Id = source.Id, ExerciseId = source.ExerciseId, ObjectKey = source.ObjectKey,
+            PublicUrl = source.PublicUrl, Revision = source.Revision, IsRetired = source.IsRetired,
+            LastCleanupAt = source.LastCleanupAt, LastDeleteSucceeded = source.LastDeleteSucceeded
+        });
     }
 
     private static TTarget CopyState<TTarget>(IExerciseMediaState source, TTarget target) where TTarget : class, IExerciseMediaState
@@ -39,7 +51,9 @@ internal sealed class ExerciseMediaPersistenceProfile : IMappingProfile
         target.OperationHash = source.OperationHash;
         target.PreviousImage = source.PreviousImage;
         target.ResultImage = source.ResultImage;
-        target.PrivateObjectsCleaned = source.PrivateObjectsCleaned;
+        target.IsCreate = source.IsCreate;
+        target.ObjectKey = source.ObjectKey;
+        target.RejectionStatusCode = source.RejectionStatusCode;
         return target;
     }
 }

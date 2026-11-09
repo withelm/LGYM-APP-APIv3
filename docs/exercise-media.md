@@ -1,85 +1,227 @@
 # Exercise media API and operations (LGYM-244 / LGYM-247)
 
-The feature branch implements the shared Page/native Mobile contract. Production activation requires reviewed API deployment, configured exercise-only storage/CDN, and the cross-client staging gates in LGYM-251. No production publication is authorized by these instructions.
+This is the direct-to-API, one-bucket implementation. It supersedes the
+unreleased signed-R2 flow at commit `056c9487`. Use the same API PR #528 to main.
+Code review, compatible existing DEV deployment, real storage/device acceptance
+and production release remain separate gates. An authorized admin's Save
+automatically publishes after technical validation; there is no asset moderation.
 
-## Contract and authorization
+## HTTP contract and authorization
 
-Every media endpoint requires the middleware-resolved current `ManageGlobalExercises` permission, including retries, verification, cancellation and receipt replay. Page and Mobile read `GET /api/account/access`, require schema version 1, and use `application.canManageGlobalExercises`; role names are not a capability substitute. Targeted operations require an active global exercise, never a personal/foreign/deleted target.
+Every endpoint requires the existing middleware/policy-resolved current
+`ManageGlobalExercises`. Clients read `GET /api/account/access`, require schema
+version 1 and `application.canManageGlobalExercises`; roles are not substitutes.
+Media edits require an active GLOBAL target, never personal/deleted targets.
 
-| Endpoint | Body / outcome |
+| Endpoint | Multipart fields / outcome |
 | --- | --- |
-| `POST /api/exercise/media/uploads` | `{contentType,sizeBytes,sha256,exerciseId?}`; returns opaque `uploadReference`, signed `uploadUrl`, `expiresAt`, and required PUT `headers`. |
-| `POST /api/exercise/media/uploads/{uploadReference}/verify` | Reads actual bounded staged bytes; verifies declared size, SHA-256 and actual format; decodes/sanitizes, freezes verified private bytes; returns source/published SHA-256, format, dimensions, frame count. |
-| `DELETE /api/exercise/media/uploads/{uploadReference}` | Fences unbound upload state; deferred cleanup after all signed PUTs expire. Bound receipts cannot be cancelled. |
-| `POST /api/exercise/media/create` | `{operationId,name,bodyPart,eloFormula?:{id},description?,uploadReference?}`; idempotent global creation with server UUID, optional verified media, returns `{_id,image,status:"persisted"}`. No placeholder record is required. |
-| `PATCH /api/exercise/{id}/media` | `{operationId,expectedImage,uploadReference}` or `{operationId,expectedImage,remove:true}` or `{operationId,expectedImage,restoreImage}`. `expectedImage` is required, including explicit null. |
-| `POST /api/exercise/media/cleanup` | Bounded administrator-triggered cleanup of at most 100 expired private sessions; returns `cleaned` and `remaining` failed candidates. Repeat until zero candidates, then schedule at least hourly with existing authenticated operations tooling. |
+| POST /api/exercise/media/create | Required operationId, name, bodyPart; optional description, eloFormulaId; optional file with sourceSha256/contentType/sizeBytes. Server-generated global UUID, with or without media. |
+| PATCH /api/exercise/{id}/media | Required operationId and expectedImage. Exactly file+manifest, remove=true or retained restoreImage. Empty expectedImage explicitly means null; omission fails. |
+| POST /api/exercise/media/cleanup | No body; bounded administrator reconciliation of at most 100 eligible never-bound object keys. Returns cleaned/remaining for that batch, not a full orphan inventory. |
 
-All operation identifiers are opaque UUID strings, scoped by actor. Keep the exact operation ID and request body after any ambiguous network/503 result. A changed body with the same ID conflicts. The receipt is the outcome of that operation; read back the current exercise separately before claiming its present image, because a later authorized operation may already have changed it.
+Create/PATCH require the UUID header `X-Exercise-Media-Operation-Id` equal to the
+multipart operationId. The header permits durable rejection fencing before
+parsing an invalid body. The old uploads/initiate/verify/cancel/reference routes
+and signed-PUT DTOs are removed. Neither client sends bytes or credentials to R2.
 
-`400` means invalid declaration/reference/intent. `401`/`403` mean missing session/current capability. `404` is an unavailable global target. `409` means a stale image/session revision or another in-progress operation; refresh deliberately. `410` is a definitively expired unused/fenced session. `422` is rejected actual file content. `503` is unconfigured/retryable storage or an unconfirmed save; replay the unchanged operation, do not create another exercise. Expired but still potentially in-flight publication intents return 503 until fenced reconciliation, not a misleading terminal 410.
+Success is HTTP 200 `{_id,image,status:"persisted"}`. The operation receipt proves
+that operation's outcome; independently read
+`GET /api/exercise/{id}/getExercise` before claiming current Image, since later
+legitimate writes may have changed it.
 
-Ordinary `updateExercise` and `updateExerciseWithFormula` preserve Image for omitted, null, empty, unchanged or stale echoed values. These fields are read-only compatibility data on metadata edits; explicit media mutation goes through PATCH. The persistence adapter never marks Image modified for metadata updates, so a concurrently newer URL is preserved. Description null still clears description. Legacy global creation rejects nonempty raw image injection; existing personal creation/read compatibility remains supported. No old stored URL is silently migrated.
+| Status | Meaning and recovery |
+| --- | --- |
+| 400 | Invalid fields, multipart, missing precondition or intent. |
+| 401 / 403 | Invalid session/current capability; no client role bypass. |
+| 404 | Unavailable active global target. |
+| 409 | Stale Image or concurrent/mismatching operation; refresh deliberately. A permanently retired key may instead be a durably rejected operation. |
+| 413 | Source exceeds 5 MiB or total request exceeds 5308416 bytes; a proxy may return an unscoped/non-JSON 413. |
+| 422 | Rejected actual file/declaration or extra file part. |
+| 428 | sourceRequired: repeat the exact manifest/op with the same original bytes. Never silently downgrade to no-media create. |
+| 503 | Unconfigured storage, busy/deadline, uncertain accepted operation, storage/DB failure. Keep exact replay identity. |
 
-## File and resource policy
+Only an error naming the same operationId with `disposition:"rejected"` proves a
+durable terminal fence. Clients may then release that matching actor/op receipt
+and correct a fresh operation. Generic 4xx, conflict, network loss and unresolved
+responses do not prove rejection. An invalid retry of an already accepted
+operation returns unresolved rather than falsely releasing its receipt.
+Error payloads retain `msg`, operationId and disposition
+(rejected/unresolved/conflict/sourceRequired); auth middleware retains its
+established error envelope.
 
-Source and sanitized derivative each have a 5 MiB encoded maximum. Accept GIF, PNG, JPEG and still WebP only. Maximum canvas is 2048 pixels per side, 100 GIF frames, and **16,000,000 aggregate canvas pixel-frames**. HEIC is explicitly rejected with localized guidance; animated PNG/WebP are rejected rather than silently flattened. APNG `acTL` is rejected explicitly even when a PNG decoder would expose only a static first frame.
+Ordinary updateExercise/updateExerciseWithFormula ignore Image omission, null,
+empty or stale echoes. Persistence never marks Image modified for metadata writes.
+Media-only operations preserve name, body part, descriptions, ELO, owner,
+translations and progress. Legacy display and personal-exercise behavior remain;
+old stored URLs are not silently migrated.
 
-`Magick.NET-Q8-AnyCPU` **15.1.0** is centrally pinned. Byte signatures select only an explicit GIF/PNG/JPEG/WebP decoder; no user URL, filename, delegate or arbitrary coder is accepted. Collection Ping validates canvas/frame budgets before pixel decoding. Verification is serialized per process, uses a 256 MiB native memory ceiling, disables disk spill, limits native threads to one, profile size to 1 MiB and native processing time to 15 seconds. The server normalizes orientation, strips profiles/private metadata and re-encodes in the same allowed format. GIF frame count/timing/loop survive; regression fixtures compare actual decoded per-frame pixels. A second decode verifies the final bytes and metadata removal. Both source and published SHA-256 are retained; the permanent key uses the published digest, not ETag or client declaration.
+Personal legacy creation keeps unrelated external Image URLs. For the new
+managed exercise-CDN namespace, it may reference only a canonical already-bound
+or retained URL. It cannot introduce a reference to an unbound/retired orphan,
+including through URL aliases, after cleanup has claimed that key. Permanent
+bound history makes an allowed reference stable without weakening the claim.
 
-Decoder/native runtime dependencies must remain in the published artifact; do not trim their native assets from Docker/publish output. Linux SDK-container decoding of all ten available draft GIFs and native dependency resolution in the built API image were checked locally; actual R2/CDN behavior remains a staging gate.
+## Intake, byte verification and privacy
 
-## Durable state and R2/database failures
+Source and output each max 5242880 bytes; total request max 5308416 bytes. Required
+name is max 200 UTF-16 units, description max 16000; bodyPart must be a supported
+non-Unknown enum. A source manifest is complete or absent; file MIME/length and
+actual bytes must agree. Manifest-only requests support safe recovery.
 
-Migration `20261109150046_AddExerciseMediaUploadSessions` adds one scoped Workout & Progress upload/receipt table to the canonical migration stream. It does not add an ExerciseMedia domain aggregate. The table contains actor ownership, declared/source and final digests, target, expiry, status, typed operation ID/fingerprint, previous/new Image, cleanup state, and an optimistic revision. `(ActorId,OperationId)` is unique; pending null operation IDs remain independent. No upload authorities or receipts are seeded.
+The resource filter bounds total reads even without Content-Length, limits form
+values/parts, applies a 60 second intake deadline and permits two simultaneous
+intakes per process before form/model buffering. Extra file fields are rejected.
+ReadSource checks actual bounded bytes and length. HTTP validation failures use
+application-owned atomic rejection fences, including resource/result/exception
+filter paths; accepted operations cannot become definitive parser rejections.
 
-The signed PUT expires after five minutes. Initial session expiry is 15 minutes. Verified bytes are written to a server-only immutable private key; finalization never rereads the client-writable staging key. Immutable writes use `If-None-Match: *`; every new or duplicate write is accepted only after a bounded server-side GET and SHA-256 comparison against the exact intended bytes. Reusing a signed staging PUT therefore cannot substitute bytes during publication. The pinned S3 client uses WHEN_REQUIRED checksum settings and non-chunked HTTPS PUTs with DisablePayloadSigning and DisableDefaultChecksumValidation as required by Cloudflare R2, which does not implement AWSSDK streaming SigV4. Application-level source checksums and mandatory post-write SHA-256 read-back remain enabled; ETag is never accepted as proof.
+`Magick.NET-Q8-AnyCPU 15.1.0` is centrally pinned. Magic bytes select an explicit
+GIF/PNG/JPEG/WebP decoder. SHA-256, MIME, decoding and real budgets are verified:
+2048 px/side, 100 GIF frames and 16000000 canvas pixel-frames. Ping precedes allocation.
+Decode is serialized per process with 256 MiB native memory, no disk spill, one
+native thread, 1 MiB profile limit and 15 second native time limit.
+Stills are oriented and stripped of EXIF/GPS/XMP/IPTC/private profiles, re-encoded,
+then decoded/checked again. GIF frame sequence/pixels/timing/loop are preserved.
+HEIC and animated PNG/WebP are rejected; APNG acTL is explicitly detected.
+Final immutable keys use the final output digest, which can differ from source.
+No remote URL fetch or arbitrary coder/delegate is accepted.
 
-Before any public write, reserve the actor operation, payload hash and stable server-created target UUID in a durable `publishing` intent. Recovery expires after 24 hours. Publication uses `exercises/{UUID}/{publishedSHA256}/animation.gif` or `image.png`, `image.jpg`, `image.webp`. The final Image CAS or exercise insert and `bound` receipt commit in one database transaction. `Image`, global ownership and active state are EF concurrency preconditions at the database boundary; media-only writes do not attach unrelated metadata as modified.
+## Durable operation and object fences
 
-R2 and the database do not share a transaction. A failure after R2 publication can leave an object with a durable `publishing` intent, while the exercise remains unchanged. Retry the same operation: the same UUID/digest/key is reused. A committed operation with a lost response replays its bound receipt. Concurrent duplicates can return conflict/unconfirmed results; an unchanged retry resolves the winning receipt. Never assume a storage object proves a successful database attachment.
+Migration `20261109212642_AddExerciseMediaOperationsAndObjectFences` creates the
+narrow Workout & Progress operation ledger and per-object fence tables. It
+replaces this PR's old unreleased signed-upload migration; current main's
+note-author-rights migrations/behavior remain intact. No generic media domain
+aggregate, seeded authorities, extra database or bucket is introduced.
 
-Cleanup deletes only private staging/verified bytes after expiry and retains the durable receipt. Cancellation and cleanup advance its optimistic revision so a delayed finalizer cannot commit after a definitive terminal fence. An already-started PUT may complete after its signature expiry or an earlier cleanup pass; its cancelled/expired session cannot attach it. Use the **48-hour** private-bucket lifecycle as defense against those late private orphans and crashes, including unrecorded verified-object writes; it is longer than the latest 24-hour recovery window. Retain all published old versions throughout the pilot and for at least 30 days after the last relevant binding; this feature deliberately performs no automatic public deletion.
+Migration Down is fail-closed: retain receipts and permanent retired-key fences
+during binary rollback; do not downgrade/drop those tables.
 
-Reconciliation is record-by-record: inspect an unresolved intent's operation/target/published digest, derive its exact published key, check object presence/digest and current exercise Image, and retry the original client operation while eligible. If it expired, run bounded cleanup to fence it and record the public object as retained orphan. Do not remove a published object until the intent is terminal, all in-flight work is stopped, a fresh catalog scan proves no reference, retention has elapsed, and an operator approves the deletion. Logs contain phase, opaque operation/session identifier and exception type only, never provider exception messages/bearer URLs/files.
+This replacement assumes the former unreleased migration was not deployed.
+If an operator applied that prototype to a persistent DEV database, stop for a
+reviewed forward-migration plan; do not drop its tables or recreate the database.
 
-## Configuration and storage isolation
+Activation must drain old API writers and in-flight requests before enabling
+uploads/reconciliation. A pre-feature writer lacks Image/key fences. Binary
+rollback must retain a compatible Image/fence-aware writer; do not resume an
+unguarded old binary against these live receipts. Data rollback uses the narrow
+conditional media operation below.
 
-`ExerciseMediaStorage.Enabled` defaults false. Use the example below through the established external configuration mechanism, with real credentials only in the environment/secret store. Enabled startup rejects invalid origins, same private/published bucket, reused report bucket and reused report access-key ID. The report-photo configuration/endpoints remain private and separate.
+Before an external PUT, reserve actor/op uniqueness, exact request fingerprint,
+source/final manifest, stable target UUID and object identity. Publication uses
+only `exercises/{UUID}/{finalSHA256}/{animation.gif|image.png|image.jpg|image.webp}`.
+A publishing intent has a 24 hour recovery window; bound receipt replay remains
+durable. The exercise insert or expected-Image CAS and bound receipt commit
+atomically in the service-owned database transaction. Active/global/Image
+preconditions are checked at persistence. Repositories stage; they do not commit.
+
+R2 and DB have no shared transaction. New and duplicate immutable writes use
+If-None-Match:*, then bounded GET and SHA-256 comparison of the exact final bytes.
+The pinned AWS SDK uses R2-compatible non-chunked HTTPS PUT settings and
+WHEN_REQUIRED transport checksum settings; application integrity/readback is
+mandatory and ETag is not accepted as proof. A timeout may leave a late PUT.
+
+A lost response replays the same actor/op/request, never a new create. A committed
+receipt returns the original target/Image even if current Image changed later.
+Unbound verified bytes may be publicly readable before DB attachment; that
+exposure is not save confirmation.
+
+Cleanup atomically claims the immutable KEY across all actors/operations before
+any DELETE. Fresh references, bound/previous retained history and unexpired
+publishing intents protect it. Reservation-winning or failed claims perform zero
+deletes. Candidate selection excludes protected keys before the 100-item bound;
+claiming rechecks current facts and optimistic revisions in a transaction.
+
+An expired never-bound key is permanently retired with its unresolved operations.
+It cannot be reused/bound after cleanup wins, including by another actor/op with
+the same target/hash. This prevents a late uncertain DELETE deleting a later
+publication. It is a deliberate usability tradeoff: retrying that identical
+retired target/hash yields a conclusive conflict/rejection; do not reset fences.
+Bound/history keys are never reclaimed by this implementation.
+
+Retired keys remain eligible for repeated fair reconciliation, even after a
+successful DELETE or negative GET: an earlier PUT can still finish later.
+LastDeleteSucceeded records the latest attempt, not permanent absence.
+A cleanup 503/cancel/uncertain DB commit must preserve the durable fence.
+Logs include phase, opaque reference and exception type; never provider messages,
+credentials, bearer tokens, private report URLs or image contents.
+
+Do not repeat cleanup "until remaining=0" as a deletion proof: retained tombstones
+can be revisited and remaining is batch-local. Use existing authorized DEV
+operations tooling and record repeated late-write reconciliation. No blanket
+bucket TTL, raw SQL fence reset or manual broad object deletion.
+
+## Exactly one bucket per existing environment
+
+Existing DEV API+DB use **lgym-exercises-dev**. Future authorized production
+API+DB use **lgym-exercises-production**. There is no third staging environment.
+The API never creates a bucket on upload. Report photos retain separate private
+configuration, bucket and credentials.
+
+`ExerciseMediaStorage.Enabled` defaults false. Final keys are Enabled, Endpoint,
+Bucket, AccessKeyId, SecretAccessKey, PublicBaseUrl. Old PrivateBucket and
+PublishedBucket keys are rejected, including when disabled.
 
 ```json
 {
   "ExerciseMediaStorage": {
     "Enabled": false,
-    "Endpoint": "https://ACCOUNT_ID.r2.cloudflarestorage.com",
+    "Endpoint": "https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com",
+    "Bucket": "lgym-exercises-dev",
     "AccessKeyId": "",
     "SecretAccessKey": "",
-    "PrivateBucket": "lgym-exercise-private-staging",
-    "PublishedBucket": "lgym-exercise-published-staging",
-    "PublicBaseUrl": "https://exercise-media-staging.example.invalid"
+    "PublicBaseUrl": "https://<VERIFIED_DEV_WORKER_HOST>"
   }
 }
 ```
 
-See [`deployment/exercise-media/`](../deployment/exercise-media/) for tested Worker/CORS/lifecycle templates and exact provisioning checks. Both bucket origins remain private (`r2.dev` disabled); only the dedicated exercise CDN Worker has a read-only published-bucket binding and exposes validated exercise paths. Never bind the private staging or report bucket into that Worker. Distinct staging/production domains, restricted API credentials, browser PUT CORS, anonymous denied staging/reports/writes/listing and actual CDN headers must be checked against real infrastructure before activation.
+Use the existing external DEV config/secret store. Environment keys use double
+underscores, e.g. ExerciseMediaStorage__Bucket. The external-db Compose mounts
+LGYM_CONFIG_FILE read-only to /run/config/appsettings.container.json and sets
+LGYM_APP_CONFIG_PATH; it does not automatically forward arbitrary host variables.
+Preserve ConnectionStrings__Postgres. Enabled configuration rejects invalid/raw
+R2 public origins, wrong bucket, reused report bucket or report access-key ID.
+No credential goes into Page/Mobile or Wrangler.
 
-## Conditional rollback and release order
+Tracked secrets-free examples are LgymApi.Api/appsettings.Development.json.example,
+appsettings.container.example.json and appsettings.exercise-media.dev.example.json.
+appsettings.exercise-media.production.example.json is a disabled future template,
+not authorization to create/configure production.
 
-For one audited record, invoke the same PATCH with a fresh operation UUID, `expectedImage` equal to the URL being reverted and `restoreImage` equal to a previously recorded `PreviousImage`/`ResultImage` for that exact exercise. The server rejects arbitrary URLs. If the former value was null, use explicit `remove:true`. A later legitimate edit produces 409 instead of being overwritten. Keep the immutable objects and evidence; rollback changes only Image, never metadata/translations/training records. Bulk writes and automatic catalog publication are outside scope.
+[Deployment templates](../deployment/exercise-media/README.md) use env.dev,
+Worker lgym-exercise-media-dev and one EXERCISE_MEDIA binding. Bucket r2.dev and
+direct bucket domains remain disabled. Only the read-only Worker exposes strict
+HTTPS GET/HEAD exercise paths, MIME/nosniff/digest ETag/immutable cache.
+Worker workers.dev is a DEV-only fallback, distinct from raw bucket r2.dev.
+Browser CORS is actual Page DEV origin to existing API; no R2 direct-PUT CORS.
 
-Review/deploy Image protection and this API first, verify dedicated storage/CDN privacy, deploy matching generated Page/native Mobile clients, complete the real staging matrix, then publish the ten individually approved assets through actual client UI with per-record confirmation and rollback precondition. API merge, native releases, production deployments and human movement/identity approvals remain explicit external gates.
+The mandatory Polish owner guide is in
+[OFFICIAL PR8](https://github.com/KLesiu/LGYM-APP-OFFICIAL/pull/8), path
+docs/exercise-media/DEV-TEST-CLOUDFLARE-SETUP-PL.md. It gives Dashboard clicks,
+token Object Read & Write limited to lgym-exercises-dev, verified host choice,
+secret injection and runnable final-contract smoke commands. Cloudflare resources,
+actual DEV host and privacy are not verified by local templates/dry-run.
+**DO NOT CREATE OR CONFIGURE PRODUCTION YET.**
 
-## Reproducible contract and checks
+## Conditional rollback and validation
 
-Export the actual host Swagger document (no production service/database needed):
+For the exact audited exercise, PATCH with a fresh operationId, expectedImage
+equal to the current URL being reverted and restoreImage equal to actual retained
+history. For a confirmed former null use remove=true. A later edit returns 409.
+Read current state after mutation. Keep previous objects/receipts; no bulk writes.
 
-```powershell
-$env:LGYM_OPENAPI_OUTPUT = Join-Path $PWD 'docs/openapi/exercise-media.json'
-dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~ExerciseMediaOpenApiTests
-```
+Canonical actual-host OpenAPI:
+[openapi/exercise-media.json](openapi/exercise-media.json), SHA-256
+`c27c6f394b26aae5989f655309baf493af3f8a11c347da54dcc9f57f90c4f663`.
+Export with LGYM_OPENAPI_OUTPUT and ExerciseMediaOpenApiTests. Both Orval clients
+consume the exact same file. Do not hand-edit generated code.
+[Validation/evidence](exercise-media-validation.md) records current versus
+historical runs. Real existing DEV/TEST storage/CDN/privacy, physical Android/iOS
+acceptance, code review and production release remain incomplete external gates.
 
-The read-only `dotnet fsi scripts/verify-exercise-media-pilot.fsx ARCHIVE OUTPUT_JSON` utility runs the actual verifier on all ten draft GIF entries and records source/final digests and exact coalesced frame-pixel parity. This technical evidence does not approve movement technique or match the target catalog.
-
-Generate both clients with `ORVAL_SWAGGER_URL` pointing to that exact file. Do not hand-edit generated clients. Focused test suites are `ExerciseMediaTests`, `ExerciseMediaVerifierTests`, `PostgreSqlExerciseMediaConcurrencyTests` and `ExerciseMediaOpenApiTests`; run the normal authorization/architecture/CI suites as well. PostgreSQL tests use the repository's Docker-backed runner, never the application database. Mocked storage tests do not prove public CDN access or private-bucket isolation.
-
-Primary API references checked for this implementation: [Magick.NET 15.1.0 package](https://www.nuget.org/packages/Magick.NET-Q8-AnyCPU/15.1.0), [reading images/collections](https://github.com/dlemstra/Magick.NET/blob/main/docs/ReadingImages.md), installed 15.1.0 XML docs for `MagickReadSettings`, `ResourceLimits`, profiles and collection Ping; [Cloudflare .NET upload compatibility](https://developers.cloudflare.com/r2/examples/aws/aws-sdk-net/), [S3 conditional-write compatibility](https://developers.cloudflare.com/r2/api/s3/api/), [Cloudflare presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/), [public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/), [CORS](https://developers.cloudflare.com/r2/buckets/cors/), and pinned AWSSDK.S3 4.0.104.8 API XML docs. ImageSharp 4 was evaluated and excluded because no license was available; no license check was bypassed.
+Primary references: [R2 consistency](https://developers.cloudflare.com/r2/reference/consistency/),
+[S3 compatibility](https://developers.cloudflare.com/r2/api/s3/api/),
+[R2 .NET SDK](https://developers.cloudflare.com/r2/examples/aws/aws-sdk-net/),
+[Worker API](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/).
+Permanent retirement is a conservative design inference for uncertain I/O, not
+a claim that live R2 version-conditional deletes were verified.

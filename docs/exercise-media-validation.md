@@ -1,73 +1,149 @@
-# Local exercise-media validation — 9 November 2026
+# Direct-API exercise media validation
 
-Scope: LGYM-244 and LGYM-247, `feat/lgym-244-247-exercise-asset-upload`, based on API main `8d0ae98dc19d2e90e846bb49d492ee0d4344fcec`. Checks ran on the feature working tree before its review commit; the final commit/PR is recorded by the cross-repository checkpoint. No API merge, production deployment or asset publication was performed.
+Date: 2026-11-09. LGYM-244/LGYM-247, existing PR528 to main and branch
+`feat/lgym-244-247-exercise-asset-upload`. This document describes the rewritten
+multipart/one-bucket source. The focused results below were completed before
+the coordinated source-freeze commit. Final full-suite/CI/Sonar and artifact
+results are maintained in the linked OFFICIAL checkpoint with exact revisions;
+focused subsets are not substituted for those full gates.
 
-The canonical actual-host OpenAPI snapshot is [`openapi/exercise-media.json`](openapi/exercise-media.json), SHA-256 **36C5C52A121F0D2ECA0E94006018336F3CB72BDE33137869C9C0C200D479DD88**. Page and Mobile regenerate from this identical file.
+## Source provenance
 
-## Executed checks
+Actual main fetched from origin is
+`b2dc7ff1e526acb9ca8a1490e211870cc2a709e6` (PR530 note-author rights).
+The genuine integration merge is
+`c45a6ee46c4ded8d65d7c86aee1842c726e1e1db`, with parents
+`056c9487f960ce6b614116a0d6600a3b2409b78c` and that actual main.
+No reset/rebase/force-push was used. The final pushed feature revision,
+mergeability, current CI/Sonar and cross-client versions are recorded in the
+[OFFICIAL checkpoint](https://github.com/KLesiu/LGYM-APP-OFFICIAL/blob/docs/lgym-242-exercise-media-contract/docs/exercise-media/checkpoint.md).
 
-Environment: Windows, .NET SDK 10.0.401, repository PowerShell entry points, Docker Desktop Linux backend with isolated disposable PostgreSQL databases. Test credentials, images and records are synthetic unless explicitly identified as draft source-archive technical checks.
+Canonical actual-host OpenAPI:
+[openapi/exercise-media.json](openapi/exercise-media.json), SHA-256
+**c27c6f394b26aae5989f655309baf493af3f8a11c347da54dcc9f57f90c4f663**.
+Page and Mobile consume those exact file bytes through ORVAL_SWAGGER_URL;
+generated clients are not hand-edited. Full schema also preserves current-main
+note original-author fields.
 
-| Check | Result | Local evidence |
-| --- | --- | --- |
-| Solution restore and Release build | Passed; no framework/solution retargeting | `TestResults/exercise-media-release-final.log` |
-| Full UnitTests | **2165/2165**, zero skipped | `LgymApi.UnitTests/TestResults/exercise-media-full-unit-final.trx` |
-| Authorization.UnitTests | **5/5** | `LgymApi.Authorization.UnitTests/TestResults/exercise-media-authorization.trx` |
-| Identity.UnitTests | **11/11** | `LgymApi.Identity.UnitTests/TestResults/exercise-media-identity.trx` |
-| Reporting.UnitTests | **227/227** | `LgymApi.Reporting.UnitTests/TestResults/exercise-media-reporting.trx` |
-| Notifications.UnitTests | **31/31** | `LgymApi.Notifications.UnitTests/TestResults/exercise-media-notifications.trx` |
-| DataSeeder.Tests | **82/82**; exact 41-seeder composition, no seeded exercise-upload authorities/receipts | `LgymApi.DataSeeder.Tests/TestResults/exercise-media-seeder-final.trx` |
-| Full ArchitectureTests | **723/723** | `LgymApi.ArchitectureTests/TestResults/exercise-media-architecture-verified.trx` |
-| Reviewed HTTP contract/host inventory slice | **48/48**; 205 routes, exact capabilities/evidence and 49 mapper profiles | `LgymApi.IntegrationTests/TestResults/exercise-media-reviewed-http-inventory-final.trx` |
-| Unfiltered repository PostgreSQL-enabled integration runner | **1036/1036**, zero skipped; includes full HTTP suite and real PostgreSQL cases | `TestResults/ExerciseMediaPostgreSqlFinalFull/integration-tests-with-postgresql-010a44bb9519456fa8d6cc5e10875238.trx` |
-| Focused real PostgreSQL exercise-media cases | **8/8**: expected-null/stale CAS, deletion fence, actor-operation uniqueness, transaction rollback, concurrent create retry, metadata/formula/delete conflict preservation | `TestResults/ExerciseMediaPostgreSqlFinal/integration-tests-with-postgresql-0c9771457be84f3b9bed27c15f86cf51.trx` |
-| EF pending-model check | No pending model changes | `dotnet ef migrations has-pending-model-changes --project LgymApi.Infrastructure --startup-project LgymApi.Api --configuration Release --no-build` |
-| Worker/configuration checks | **9/9** mocked R2 binding tests; Wrangler 4.159.0 staging dry-run bundle succeeds without deployment | `deployment/exercise-media/README.md` |
-| API Docker image | Final local production Dockerfile build succeeds: `sha256:a31e9d9c258e7a32fb4fbdd37a2bbc65f136bda1804b0d341089f91802923be2`; Linux native Magick library is packaged and `ldd` dependencies resolve | `TestResults/exercise-media-docker-final.log` |
-| Ten available draft GIFs, actual API verifier | **10/10 on Windows and Linux SDK container**; frame/canvas budgets, sanitized output, source/final digests and exact coalesced per-frame pixel parity | `TestResults/exercise-media-pilot-technical.json`, `TestResults/exercise-media-pilot-technical-linux.json`; durable metadata copied into OFFICIAL |
+Migration `20261109212642_AddExerciseMediaOperationsAndObjectFences` replaces the
+old unreleased signed-upload migration. Current-main migration files remain
+unchanged; the integrated snapshot contains the operation ledger and immutable
+object fences. No migration was applied to an actual DEV/production database by
+this implementation work.
 
-After the broad PostgreSQL/architecture suites passed, two narrowly scoped corrections were made: cleaned expired references consistently return 410, and server-side R2 PUTs use Cloudflare-compatible non-streaming settings with mandatory bounded GET/SHA-256 confirmation after every new or duplicate immutable write. Full UnitTests were then rerun (2165/2165), and the following focused checks ran on those final corrections:
+## New executable evidence
 
-| Final focused check | Result |
+Local environment: Windows, .NET SDK 10.0.401, repository-owned PowerShell entry
+points and Docker Desktop Linux backend. PostgreSQL runs use isolated disposable
+test databases, not the application's DEV/production database. Storage bindings
+and SDK/provider failures are synthetic unless explicitly identified as live.
+
+| Check | Current observation / evidence |
 | --- | --- |
-| ExerciseMediaStorageTests + storage options + decoder | **14/14**; SDK request flags, immutable 412 retry, corrupt read-back rejection, private/public bucket separation, real streamed-byte bounds, GIF integrity and photo metadata/orientation |
-| ExerciseMediaTests + actual-host OpenAPI | **13/13**; includes all six routes denied for anonymous/ordinary/pre-issued demoted sessions, cancellation, deleted global target and 410 after cleanup |
-| OpenAPI export/hash verification | Unchanged canonical SHA-256 above |
-| Whitespace check | `git diff --check` clean |
+| Production API + integration Release compile | Passed for focused checks below; final solution restore/build result and exact source are recorded in the OFFICIAL checkpoint. |
+| Actual-host multipart HTTP | 19/19 media cases PASS; 68/68 with startup/schema/matrix checks. Covers authorization/global eligibility, original bytes, metadata Image compatibility, remove/restore/CAS, invalid-name fencing, accepted replay validation failures, malformed/chunked bounds, sourceRequired and 16000 UTF-16 description. |
+| Actual-host OpenAPI export | 1/1 PASS; hash above, old handshake routes/types removed. |
+| Four rewritten Unit fixtures | 123/123 PASS: Options 40, Storage 24, RequestValidation 54, Mapping 5. With endpoint-response guard 3: 126/126, zero skipped. TestResults/ExerciseMediaDirectMultipartUnits/direct-api-storage-validation-mapping.trx. |
+| Full Unit / owner suites | Unit 2297/2297 PASS at source freeze. Post-commit unfiltered owner/CI results are recorded in the OFFICIAL checkpoint; old architecture counts below are not reused. |
+| Architecture / strict inventories | Full 725/725 PASS; focused ownership/registrar 40/40 and surface/persistence/docs 70/70 are subsets. Exact 55-entity/WP13 catalog, four intentional media export replacements and reviewed migration/snapshot pins; no scanner exclusions or threshold weakening. Post-commit result is recorded in OFFICIAL. |
+| Real PostgreSQL concurrency | 27/27 PASS: 26 media cases and the independently targeted Coaching migration regression. Includes reservation-before-PUT, cross-actor same-key fencing, late PUT/delete retry, cancellation/uncertain commit,101 protected frontier, retained restore, legacy CAS, late personal-create references with8 URL aliases and fail-closed media Down preserving receipts/fences. Unfiltered post-commit integration result is recorded in OFFICIAL. |
+| EF snapshot/pending-model validation | CLI no-pending-model PASS; exact integrated snapshot/closed migration pins are guarded. Post-commit result and source are recorded in OFFICIAL. |
+| Worker | 11/11 PASS using mocked binding; exact original bytes, GET/HEAD/cache/conditional reads, TLS/host/port/path/query/method/error cases. |
+| Config | 11/11 PASS; wrong/report/split buckets, raw R2 including apex, host/route mismatch, distinct environments, no object expiry/CORS and optimized-Python rejection. |
+| Wrangler | 4.159.0 env.dev deploy --dry-run PASS; exactly EXERCISE_MEDIA bound to lgym-exercises-dev. No deployment/authentication or live privacy proof. |
+| Fresh Windows/Linux verifier / production image | Source-specific output/artifact records are linked from the OFFICIAL checkpoint/evidence; old outputs below remain historical. |
+| Same-head CI/Sonar | Final source/outcome belongs to the OFFICIAL checkpoint; old successful runs do not validate this rewrite. |
 
-The broad counts are not double-counted with focused subsets. Earlier failing local runs exposed closed inventory expectations (new entity/seeder/mapper/routes) and were corrected without removing tests or weakening behavior assertions. Temporary Windows output-copy contention occurred when an integration assembly was rebuilt during a long-running test host; the shared build and final checks ran after that host ended.
+Focused sets are subsets of full suites, not extra counts to add twice.
+Initial compile/behavior failures during the rewrite are corrected before final
+validation; removed tests are obsolete signed-upload state-machine cases replaced
+with direct-API risks rather than weakened assertions.
 
-## Technical draft-asset evidence
+Reproduce after the coordinator's shared build window:
 
-Read-only source: `D:/Downloads/LGYM_calosc.zip`, ten `LGYM/gif_pilot/{historical UUID}/animacja.gif` entries. All were 418×418 with 16 decoded frames. Total source size is **6,090,991 bytes**; total sanitized output is **5,975,791 bytes**. Windows and Linux produced identical published SHA-256 values for every file, and every coalesced frame matched its source pixels. Reproduce with `dotnet fsi scripts/verify-exercise-media-pilot.fsx ARCHIVE OUTPUT_JSON` after a Release build.
+```powershell
+dotnet restore LgymApi.slnx
+dotnet build LgymApi.slnx --configuration Release --no-restore
+$env:LGYM_OPENAPI_OUTPUT = Join-Path $PWD 'docs/openapi/exercise-media.json'
+dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build --filter FullyQualifiedName~ExerciseMediaOpenApiTests
+# Run focused HTTP and the ordinary owner/architecture suites under AGENTS.md.
+dotnet test LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj --configuration Release --no-build --filter FullyQualifiedName~ExerciseMediaTests
+pwsh scripts/run-postgresql-integration-tests.ps1 -NoBuild -TestFilter FullyQualifiedName~PostgreSqlExerciseMediaConcurrencyTests -ResultsDirectory TestResults/ExerciseMediaDirectPostgreSql
+pwsh scripts/run-postgresql-integration-tests.ps1 -NoBuild -ResultsDirectory TestResults/ExerciseMediaDirectFullPostgreSql
+dotnet ef migrations has-pending-model-changes --project LgymApi.Infrastructure --startup-project LgymApi.Api --configuration Release --no-build
+node --test deployment/exercise-media/worker.test.mjs
+python -m unittest discover -s deployment/exercise-media -p "test_*.py"
+python deployment/exercise-media/validate_config.py --allow-example-hosts
+```
 
-These checks are **technical only**. Historical archive UUIDs are not verified catalog associations, and no human movement/technique approval is implied. No draft image binaries were committed or published.
+The repository workflow also owns anti-regression inventories, same-SHA evidence,
+PostgreSQL cleanup probes and required Sonar. Run its existing gates unchanged.
+Do not rebuild loaded test-host assemblies concurrently; Windows output-copy
+contention is not a reason to retarget/remove projects or skip required suites.
 
-## Remaining external gates
+Migration downgrade is deliberately fail-closed: receipts and permanently
+retired-key fences must not be dropped to roll back a binary.
 
-- Reviewed API merge/deployment, compatible generated clients and the canonical migration must precede activation.
-- An authorized exercise-only R2/CDN environment is required to verify real signing/PUT/read-back, anonymous published reads, denied private staging/report access, CORS, HTTPS/cache behavior and lifecycle cleanup. Mocked adapter/Worker tests are not real-storage evidence.
-- Physical Android and iOS staging create/edit/upload/replace/remove, original GIF selection, background/offline recovery, accessibility and repeated-navigation performance remain native release gates owned by LGYM-251/LGYM-256.
-- Ten exercise identities and movement techniques require explicit human approval against the actual target catalog before one-by-one client UI publication. Conditional rollback is prepared in [`exercise-media.md`](exercise-media.md); no bulk publication or automatic release is authorized.
+## Reconciliation proof obligations
 
-The implementation is prepared for human review. Staging acceptance and production release are separate, incomplete milestones.
+Controlled PostgreSQL interleavings must show:
+- reservation wins stale selection: zero storage deletes, publication/replay safe;
+- cleanup wins a truly unused key: durable retirement blocks later same-key bind;
+- another actor/op cannot bypass a key claim; delayed DELETE/PUT, duplicate
+  cleanup, storage failure/cancel and uncertain DB commit preserve safety;
+- protected objects do not starve the bounded orphan frontier;
+- retained/previous binding and conditional rollback survive replace/remove;
+- legacy metadata/formula/deletion races cannot overwrite a current Image.
 
-Canonical byte normalization: the initial Windows working export used a trailing CRLF (SHA-256 `5fa542318229a7660ee607c57d82ea70338e9c5e95cf5c1a28d47be71e13c475`). The committed LF document is pinned above. The API exporter and Git attributes now enforce LF; both Orval generation commands were rerun and produced byte-identical generated clients. Earlier behavior evidence remains valid and retains its original provenance.
+R2 lacks a verified unique-version delete condition under this scoped S3 path.
+Permanent retirement is a conservative policy for never-bound keys, not an
+assumption that a timeout stopped storage I/O. Repeated reconciliation must
+handle late PUT after an apparently successful DELETE. Actual R2 testing remains
+separate from deterministic database/fake-storage proof.
 
-## CI quality-gate follow-up
+## Technical pilot evidence
 
-[Ubuntu run 42652940432](https://github.com/withelm/LGYM-APP-APIv3/actions/runs/42652940432), head `b2af897fd8f159da4846bd27ca65e068f35ae602`, passed the Release build, cleanup probe, all nine full suites (**5,153 passing tests**) and the final evidence/aggregate gates. Its same-SHA evidence validates PR merge SHA `1de81211d9d493bf349f41142f1345d9e6574c63`. Sonar then reported new-code coverage 78.7% (required 80%), duplication 3.6% (maximum 3%) and Security B (required A), with the security finding identifying a missing regex timeout. These are quality-gate findings in the feature, not test failures or an external service outage.
+The available archive is `D:/Downloads/LGYM_calosc.zip`, SHA-256
+`072cd61097dfb12c986cfd44bec185f2ecd41f18a0c972e2d7dc3962b7b99e71`.
+Ten candidate GIFs are 418x418 / 16 frames / 2660 ms, source total 6090991 bytes.
+These source facts are not actual catalog identity, UUID or upload evidence.
 
-The scoped correction bounds the public-key regex with nonbacktracking matching and a 100 ms timeout, adds fail-closed origin/credentials, cancellation, malformed-key, truncated/oversized-object and corrupt immutable-replay tests, and consolidates ledger copying in the existing registered profile through the feature-local typed state interface. Both mapping directions still allocate fresh objects and explicitly convert actor IDs; entity audit state, schema and HTTP contracts are unchanged. No Sonar thresholds, exclusions or strict architecture guards changed.
+After a final Release build, the read-only
+`dotnet fsi scripts/verify-exercise-media-pilot.fsx ARCHIVE OUTPUT_JSON` runs the
+actual verifier. Fresh output records source/final hashes, pixel and per-frame
+timing/duration/loop parity, verifier source/assembly hashes and decoder version.
+It uses verificationScope=technical_only_no_publication, not asset approval.
+No GIF binaries or personal photos are committed/published.
 
-| Correction check | Result and evidence |
-| --- | --- |
-| Focused exercise-media UnitTests with OpenCover | **47/47**, zero skipped; includes both complete ledger/actor mapping directions and source-object isolation. `TestResults/ExerciseMediaSonar/exercise-media-sonar-feature.trx` |
-| Storage/options focused subset | **36/36**; options cover all 46 measured branch points in the focused OpenCover result. `TestResults/ExerciseMediaSonar/exercise-media-sonar-storage.trx` |
-| Strict public-surface/compiled-export/Workout ownership slice | **57/57**, zero skipped; no inventory changes or exemptions. `TestResults/ExerciseMediaStateSurface/exercise-media-state-surface.trx` |
-| EF pending-model check after state-interface extraction | Passed: no changes since the canonical migration |
-| Canonical OpenAPI and whitespace | SHA-256 remains `36c5c52a121f0d2eca0e94006018336f3cb72bde33137869c9c0c200d479dd88`; `git diff --check` clean |
+## Historical evidence, explicitly superseded
 
-The full same-head CI/Sonar rerun for this correction is recorded in the cross-repository checkpoint after completion; the earlier run above retains its original outcome.
+The old signed-R2/two-bucket implementation head was
+`056c9487f960ce6b614116a0d6600a3b2409b78c`; its canonical schema was
+`36c5c52a121f0d2eca0e94006018336f3cb72bde33137869c9c0c200d479dd88`.
+Its old successful [CI 42660990928](https://github.com/withelm/LGYM-APP-APIv3/actions/runs/42660990928),
+Sonar, Docker image, Windows/Linux GIF results, old PostgreSQL cases and earlier
+coverage-fix iterations are historical. The full former evidence document is
+preserved in
+[that exact revision](https://github.com/withelm/LGYM-APP-APIv3/blob/056c9487f960ce6b614116a0d6600a3b2409b78c/docs/exercise-media-validation.md).
+OFFICIAL also preserves the old audit/sanitizer outputs. None proves the new
+multipart transport, object-key race fix or current client native runtime.
 
-[Follow-up Ubuntu run 42657173552](https://github.com/withelm/LGYM-APP-APIv3/actions/runs/42657173552), head `97265891373660ed786693d5fa7e8898442d5f1b`, passed all nine full suites (**5,184 passing tests**), Release/cleanup and final evidence/aggregate gates. Sonar confirmed Security A and duplication **1.6%**; coverage **79.5%** remained below 80%. The subsequent correction adds request-validation, report/exercise storage-authority isolation and successful private-read/cleanup delegation cases, and constrains the private common-state copy to its intended reference-type targets. It does not synthesize tests for unreachable compiler branches or change production contracts. The final focused exercise-media suite is **70/70**, zero skipped, with OpenCover evidence in `TestResults/ExerciseMediaSonar/exercise-media-sonar-final-coverage.trx`; final same-head CI/Sonar results remain recorded in the cross-repository checkpoint.
+## Real DEV and release gates
+
+The owner reports no exercise bucket has been created. Wrangler is unauthenticated.
+No bucket/token/Worker/DNS/billing/production mutation was performed. Actual
+Cloudflare account/zone/Worker origin and the existing DEV API identity are
+unverified; Page/Mobile's existing API setting is not proof of a separate DEV API.
+
+Complete the Polish owner guide in OFFICIAL: existing DEV API+DB only, exactly
+lgym-exercises-dev, one private origin, one read-only Worker and narrow S3 token.
+There is no third staging environment or R2 direct-PUT CORS.
+Real Page and physical Android/iOS must prove source bytes/native transport,
+create/edit/retry, privacy/animation/cache/performance and conditional rollback.
+Admin Save auto-publishes after technical validation; editorial matching is
+normal data quality, not a human approval queue.
+
+Code/security review, real DEV integration, compatible native acceptance and
+separate production release authorization remain. **DO NOT CREATE OR CONFIGURE
+PRODUCTION YET.** Keep report-photo storage unchanged/private and do not retry
+the previously forbidden .omo cleanup.

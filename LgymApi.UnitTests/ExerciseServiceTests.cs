@@ -141,6 +141,22 @@ public sealed class ExerciseServiceTests
             Arg.Any<CancellationToken>());
     }
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task PersonalCreate_RejectsUnboundManagedImageWithoutStagingOrCommit(bool withFormula)
+    {
+        var actor = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
+        _accounts.GetByIdAsync(actor.Id, Arg.Any<CancellationToken>()).Returns(Facts(actor.Id));
+        const string image = "https://exercise.test/exercises/unbound/animation.gif";
+        _exercises.IsUnboundManagedImageAsync(image, Arg.Any<CancellationToken>()).Returns(true);
+        var result = withFormula
+            ? await _service.AddUserExerciseWithFormulaAsync(actor, new(actor.Id, "Personal", BodyParts.Chest, ExerciseEloFormula.Standard, null, image))
+            : await _service.AddUserExerciseAsync(actor, new(actor.Id, "Personal", BodyParts.Chest, null, image));
+        result.Error.Should().BeOfType<InvalidExerciseError>();
+        await _exercises.DidNotReceive().AddAsync(Arg.Any<WorkoutExerciseWriteModel>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
     [Test]
     public async Task DeleteExercise_WhenRouteDoesNotMatchActor_ReturnsForbiddenWithoutLookupOrSave()
     {

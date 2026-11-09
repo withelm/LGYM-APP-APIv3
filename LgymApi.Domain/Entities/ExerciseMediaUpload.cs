@@ -23,5 +23,7 @@ public sealed class ExerciseMediaUpload : EntityBase<ExerciseMediaUpload>, IExer
     public string? OperationHash { get; set; }
     public string? PreviousImage { get; set; }
     public string? ResultImage { get; set; }
-    public bool PrivateObjectsCleaned { get; set; }
+    public bool IsCreate { get; set; }
+    public string? ObjectKey { get; set; }
+    public int? RejectionStatusCode { get; set; }
 }

@@ -3,12 +3,12 @@ const contentTypes = { gif: "image/gif", png: "image/png", jpg: "image/jpeg", we
 const isUnchanged = (request, etag) => request.headers.get("If-None-Match")?.split(",")
     .map(value => value.trim()).some(value => value === "*" || value === etag || value === `W/${etag}`);
 
-/** Public reads of verified exercise objects only. No staging/report bucket binding. */
+/** Read-only view of the one private exercise bucket; the API is its sole writer. */
 export default {
     async fetch(request, environment, context) {
         const url = new URL(request.url);
         const match = publishedPath.exec(url.pathname);
-        if (url.protocol !== "https:" || url.hostname !== environment.EXPECTED_HOST || url.search || !match) {
+        if (url.protocol !== "https:" || url.host !== environment.EXPECTED_HOST || url.search || !match) {
             return new Response(null, { status: 404, headers: { "Cache-Control": "no-store" } });
         }
         if (request.method !== "GET" && request.method !== "HEAD") {
@@ -33,11 +33,11 @@ export default {
                 }
                 return cached;
             }
-        } catch { /* A cache failure falls back to the private published-only origin. */ }
+        } catch { /* A cache failure falls back to the private exercise origin. */ }
         try {
             const object = request.method === "HEAD"
-                ? await environment.PUBLISHED_EXERCISE_MEDIA.head(key)
-                : await environment.PUBLISHED_EXERCISE_MEDIA.get(key);
+                ? await environment.EXERCISE_MEDIA.head(key)
+                : await environment.EXERCISE_MEDIA.get(key);
             if (!object) return new Response(null, { status: 404, headers: { "Cache-Control": "no-store" } });
             const headers = new Headers({
                 "Content-Type": contentTypes[match[2].split(".").at(-1)],
@@ -45,7 +45,6 @@ export default {
                 "Cache-Control": "public, max-age=31536000, immutable",
                 "X-Content-Type-Options": "nosniff",
                 "Referrer-Policy": "no-referrer",
-                "Access-Control-Allow-Origin": "*",
                 ETag: etag,
             });
             if (isUnchanged(request, etag)) {

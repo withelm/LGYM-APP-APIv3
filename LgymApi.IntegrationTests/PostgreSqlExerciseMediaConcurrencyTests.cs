@@ -55,11 +55,11 @@ public sealed class PostgreSqlExerciseMediaConcurrencyTests : PostgreSqlIntegrat
         var input = new CreateExerciseMediaInput(Id<ExerciseMediaOperationReference>.New(), "Concurrent create receipt", BodyParts.Chest, null, null, null);
         using var first = Factory.Services.CreateScope(); using var second = Factory.Services.CreateScope();
         var results = await Task.WhenAll(
-            first.ServiceProvider.GetRequiredService<IExerciseMediaService>().CreateAsync(actor, input, default),
-            second.ServiceProvider.GetRequiredService<IExerciseMediaService>().CreateAsync(actor, input, default));
+            first.ServiceProvider.GetRequiredService<IExerciseMediaService>().CreateAsync(actor, input, null, default),
+            second.ServiceProvider.GetRequiredService<IExerciseMediaService>().CreateAsync(actor, input, null, default));
         results.Should().Contain(x => x.IsSuccess);
         using var retry = Factory.Services.CreateScope();
-        var confirmed = await retry.ServiceProvider.GetRequiredService<IExerciseMediaService>().CreateAsync(actor, input, default);
+        var confirmed = await retry.ServiceProvider.GetRequiredService<IExerciseMediaService>().CreateAsync(actor, input, null, default);
         confirmed.IsSuccess.Should().BeTrue();
         var db = retry.ServiceProvider.GetRequiredService<AppDbContext>();
         (await db.Exercises.CountAsync(x => x.Name == input.Name)).Should().Be(1);

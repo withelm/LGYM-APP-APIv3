@@ -96,6 +96,11 @@ public sealed partial class ExerciseService : IExerciseService
             }
         }
 
+        if (userId.HasValue && !string.IsNullOrEmpty(image) && await _exerciseRepository.IsUnboundManagedImageAsync(image, cancellationToken))
+        {
+            return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.ExerciseMediaInvalid));
+        }
+
         var exercise = new WorkoutExerciseWriteModel(Id<Domain.Entities.Exercise>.New(), userId, name, bodyPart, eloFormula, description, image, false);
 
         await _exerciseRepository.AddAsync(exercise, cancellationToken);

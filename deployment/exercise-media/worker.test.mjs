@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import worker from "./worker.mjs";
 
-const host = "exercises.staging.example.com";
+const host = "exercise-media-dev.test";
 const digest = "a".repeat(64);
 const path = `/exercises/06d1ebc9-e570-42f3-8b1d-6fe0425a1887/${digest}/animation.gif`;
 const original = new Uint8Array([71, 73, 70, 56, 57, 97]);
 function fixture() {
     const calls = [];
-    return { calls, environment: { EXPECTED_HOST: host, PUBLISHED_EXERCISE_MEDIA: {
+    return { calls, environment: { EXPECTED_HOST: host, EXERCISE_MEDIA: {
         get: async key => { calls.push(["get", key]); return { body: new Blob([original]).stream(), size: original.length }; },
         head: async key => { calls.push(["head", key]); return { size: original.length }; },
     } } };
@@ -52,24 +52,46 @@ test("anonymous write/delete/list methods are rejected", async () => {
 });
 
 test("alternate hostname and cleartext origin cannot expose storage", async () => {
-    for (const url of [`https://alternate.example.com${path}`, `http://${host}${path}`]) {
+    for (const url of [`https://alternate.example.com${path}`, `http://${host}${path}`, `https://${host}:8443${path}`]) {
         const { environment, calls } = fixture();
         assert.equal((await worker.fetch(new Request(url), environment)).status, 404);
         assert.equal(calls.length, 0);
     }
 });
 
+test("DEV Worker workers.dev fallback still requires its exact configured host", async () => {
+    const { environment, calls } = fixture();
+    environment.EXPECTED_HOST = "lgym-exercise-media-dev.owner.workers.dev";
+    const response = await worker.fetch(new Request(`https://${environment.EXPECTED_HOST}${path}`), environment);
+    assert.equal(response.status, 200);
+    await response.body.cancel();
+    assert.equal((await worker.fetch(request(), environment)).status, 404);
+    assert.equal(calls.length, 1);
+});
+
+test("missing object and failed binding are not cached or exposed", async () => {
+    const { environment } = fixture();
+    environment.EXERCISE_MEDIA.get = async () => null;
+    const missing = await worker.fetch(request(), environment);
+    assert.equal(missing.status, 404);
+    assert.equal(missing.headers.get("Cache-Control"), "no-store");
+    delete environment.EXERCISE_MEDIA;
+    const unavailable = await worker.fetch(request(), environment);
+    assert.equal(unavailable.status, 503);
+    assert.equal(await unavailable.text(), "");
+});
+
 test("conditional request is 304 only for an existing immutable object", async () => {
     const { environment } = fixture();
     const response = await worker.fetch(request(path, { headers: { "If-None-Match": `W/"${digest}"` } }), environment);
     assert.equal(response.status, 304);
-    environment.PUBLISHED_EXERCISE_MEDIA.get = async () => null;
+    environment.EXERCISE_MEDIA.get = async () => null;
     assert.equal((await worker.fetch(request(), environment)).status, 404);
 });
 
 test("provider failure is retryable and contains no private error detail", async () => {
     const { environment } = fixture();
-    environment.PUBLISHED_EXERCISE_MEDIA.get = async () => { throw new Error("sensitive-provider-url"); };
+    environment.EXERCISE_MEDIA.get = async () => { throw new Error("sensitive-provider-url"); };
     const response = await worker.fetch(request(), environment);
     assert.equal(response.status, 503);
     assert.equal(await response.text(), "");

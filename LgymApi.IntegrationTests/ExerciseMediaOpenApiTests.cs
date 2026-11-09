@@ -15,9 +15,9 @@ public sealed class ExerciseMediaOpenApiTests : IntegrationTestBase
         using var text = new StringWriter();
         document.SerializeAsV3(new OpenApiJsonWriter(text));
         var json = text.ToString();
-        json.Should().Contain("/api/exercise/media/uploads").And.Contain("/api/exercise/media/create").And.Contain("expectedImage");
+        json.Should().NotContain("/api/exercise/media/uploads").And.Contain("/api/exercise/media/create").And.Contain("multipart/form-data").And.Contain("X-Exercise-Media-Operation-Id");
         using var parsed = System.Text.Json.JsonDocument.Parse(json);
-        parsed.RootElement.GetProperty("components").GetProperty("schemas").GetProperty("ChangeExerciseMediaDto").GetProperty("required").EnumerateArray().Select(x => x.GetString()).Should().Contain("expectedImage");
+        parsed.RootElement.GetProperty("paths").GetProperty("/api/exercise/{id}/media").GetProperty("patch").GetProperty("requestBody").GetProperty("content").GetProperty("multipart/form-data").GetProperty("schema").GetProperty("required").EnumerateArray().Select(x => x.GetString()).Should().Contain("expectedImage");
         var output = Environment.GetEnvironmentVariable("LGYM_OPENAPI_OUTPUT");
         if (!string.IsNullOrWhiteSpace(output))
         {

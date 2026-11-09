@@ -1,116 +1,138 @@
-# Dedicated exercise R2/CDN configuration
+# Exercise-only R2 and read-only Worker
 
-LGYM-246 / LGYM-247. This directory is executable release preparation. It has
-not provisioned storage, deployed a Worker or published any production asset.
-See [the API runbook](../../docs/exercise-media.md) and the OFFICIAL LGYM-242 ADR.
+LGYM-246 / LGYM-247. Repository configuration and local tests do **not** create a
+bucket, issue a token, deploy a Worker, attach DNS, or prove live privacy.
+See [the API runbook](../../docs/exercise-media.md) and OFFICIAL
+`docs/exercise-media/DEV-TEST-CLOUDFLARE-SETUP-PL.md` for the Polish owner guide.
 
-## Boundary
+## Existing environment boundary
 
-- One private exercise bucket holds `staging/` and frozen `verified/` bytes.
-- A second private exercise bucket holds only verified `exercises/{uuid}/{digest}/...`
-  published objects. The API alone writes both through dedicated credentials.
-- This Worker binds **only** the published bucket. It exposes HTTPS GET/HEAD of
-  exact immutable GIF/PNG/JPEG/WebP paths; no listing, staging, report binding,
-  anonymous writes or other formats. Public CORS reads are intentional.
-- Disable bucket `r2.dev` access and direct bucket custom domains for both
-  exercise buckets. Use the Worker custom domain. CORS does not make a bucket
-  private and is not an authorization policy.
-- Staging and production have separate bucket names, domains and credentials.
-  Restrict the API's R2 token to the two exercise buckets, excluding all private
-  report buckets. Do not put credentials in Wrangler config or client bundles.
+- Existing DEV/TEST API + DEV database use exactly **lgym-exercises-dev**.
+- Existing production API + production database may later use exactly
+  **lgym-exercises-production**, only after separate release authorization.
+- There is no third staging API, database or bucket.
+- In either environment the API receives authenticated bounded multipart source
+  bytes, validates/sanitizes them, reserves durable publication, then is the sole
+  R2 writer. No client R2 PUT, signed URL, upload reference or R2 PUT CORS remains.
+- One private bucket contains only immutable
+  `exercises/{exerciseUuid}/{finalSha256}/{animation.gif|image.png|image.jpg|image.webp}`.
+  No `staging/` or `verified/` storage prefixes or second published bucket.
+- One Worker binding, `EXERCISE_MEDIA`, points at that environment's bucket.
+  No report-photo bucket or credentials are shared.
+- Keep bucket public development access (`r2.dev`) **disabled** and direct bucket
+  custom domains **empty**. Public access is through the Worker only.
+- No bucket object-deletion lifecycle/48-hour TTL: it could erase live or retained
+  images. The API's fenced orphan reconciliation owns cleanup. Permanent
+  retirement of never-bound cleanup-claimed keys prevents a delayed delete from
+  racing future publication; retries keep reconciling delayed writes.
+- Admin Save publishes automatically after technical validation. No moderation
+  state, approval button or second person image gate.
 
-The Worker sets true format MIME, nosniff, digest ETag and one-year immutable
-cache headers. Workers Cache API caches successful GETs; HEAD reuses GET metadata
-without filling the cache with an empty body. Unknown/error paths are not cached.
-Detaching an image does not erase existing public immutable caches globally.
+## Local checks
 
-## Local validation
+From the repository root:
 
 ```powershell
 node --test deployment/exercise-media/worker.test.mjs
+python -m unittest discover -s deployment/exercise-media -p "test_*.py"
 python deployment/exercise-media/validate_config.py --allow-example-hosts
 ```
 
-Tests use a synthetic in-memory R2 binding and do not prove real R2 privacy or
-CDN behavior. The validator rejects example domains by default; the explicit
-flag validates templates only. No credentials/network mutations are involved.
-Wrangler's staging `deploy --dry-run` can additionally bundle-check the Worker
-without deploying or authenticating. Record the actual Wrangler version used.
+The Worker tests use synthetic in-memory bindings. Config tests reject wrong or
+split/report buckets, a third environment, raw R2 public origins, wrong route/host,
+PUT CORS and object-deletion lifecycle policies. `bucket-policy.example.json`
+records expected Dashboard state; it is **not** an API request/import file and
+its successful validation does not inspect Cloudflare.
 
-## Authorized staging provisioning
+The checked-in Wrangler template has `workers_dev=false`, no public routes and a
+deliberately unusable `EXPECTED_HOST`. Without `--allow-example-hosts`, validation
+requires a real configured host for the selected environment. A local dry-run
+can bundle-check the code without deployment:
 
-The following commands are for an operator in an authorized staging account,
-after reviewing the concrete configuration. They have **not** been executed by
-implementation work. Use a pinned, reviewed Wrangler version in the environment.
+```powershell
+# From deployment/exercise-media; use the reviewed pinned Wrangler version.
+npx wrangler@4.159.0 deploy --env dev --dry-run --outdir .wrangler/dry-run
+```
 
-1. Copy/edit `wrangler.toml` with owned staging/production hostnames and distinct
-   published bucket names. Copy/edit the private CORS policy for the exact Page
-   staging origin; use a separate production-origin copy for later production.
-2. Create two dedicated staging buckets using `wrangler r2 bucket create`:
-   `lgym-exercise-private-staging` and `lgym-exercise-published-staging` (or reviewed
-   equivalents). Keep public development URLs and direct bucket domains disabled
-   in the dashboard. No existing report bucket is modified.
-3. Apply the private PUT policy only to the private exercise bucket:
+## Owner configuration, after review
+
+1. In the existing DEV account first check whether `lgym-exercises-dev` exists.
+   If absent, create exactly that bucket. Keep raw R2 public URLs and direct bucket
+   domains disabled; no R2 browser CORS and no object-deletion lifecycle rules.
+   Do not create production yet.
+2. R2 Dashboard → Manage R2 API Tokens → Create API Token: dedicated **Object Read
+   & Write**, limited to **lgym-exercises-dev only**. Store the S3 Access Key ID
+   and Secret Access Key solely in the existing DEV API secret store. The Worker
+   uses its binding and needs no S3 secret.
+3. Select a verified Worker host:
+   - Owned Cloudflare zone: set `env.dev.vars.EXPECTED_HOST` to the exact lower-case
+     host (for example the placeholder `exercises-dev.<VERIFIED_DOMAIN>` after
+     replacement), `env.dev.workers_dev=false`, and
+     `routes=[{pattern="<SAME_VERIFIED_HOST>",custom_domain=true}]`.
+   - DEV-only Worker fallback: use the actual assigned
+     `lgym-exercise-media-dev.<VERIFIED_ACCOUNT_SUBDOMAIN>.workers.dev`,
+     `env.dev.workers_dev=true`, `routes=[]`, and that exact `EXPECTED_HOST`.
+     A public **Worker workers.dev** is different from forbidden raw **bucket r2.dev**.
+   Leave preview URLs disabled and keep one binding to `lgym-exercises-dev`.
+4. Validate locally, comparing the nonsecret API origin:
 
    ```powershell
-   npx wrangler r2 bucket cors set lgym-exercise-private-staging --file deployment/exercise-media/private-cors.example.json
-   npx wrangler r2 bucket lifecycle set lgym-exercise-private-staging --file deployment/exercise-media/private-lifecycle.example.json
-   npx wrangler r2 bucket cors list lgym-exercise-private-staging
-   npx wrangler r2 bucket lifecycle list lgym-exercise-private-staging
+   python deployment/exercise-media/validate_config.py --env dev --public-base-url "https://<SAME_VERIFIED_HOST>"
    ```
 
-   Replace the example Page origin first. The lifecycle file uses Cloudflare's
-   REST/Wrangler format and seconds. Its **48-hour private-only** expiry outlives
-   the 24-hour reserved-operation recovery window, including verification time
-   before reservation. API cleanup handles abandoned sessions earlier. Do not
-   apply this lifecycle to published storage; retain published versions/history
-   at least 30 days and perform no automatic published deletion during the pilot.
-4. Inject `ExerciseMediaStorage` settings into the API secret/configuration
-   system: Enabled, Endpoint, dedicated AccessKeyId/SecretAccessKey, PrivateBucket,
-   PublishedBucket and PublicBaseUrl. See the API example. Keep report settings
-   separate. Deploy the reviewed compatible API/migration first.
-5. Validate edited config locally, then deploy the reviewed Worker staging
-   environment using `wrangler deploy --env staging` from this directory. This
-   requires actual account/DNS rights; the dry-run is not a deployment.
-6. Execute the real staging UI/API/storage probes below before release signoff.
+   The future production template can remain fail-closed. The validator checks
+   real hostname syntax/consistency, **not domain ownership, TLS or live routing**.
+5. Inject final API keys: `ExerciseMediaStorage:Enabled`, `Endpoint`, `Bucket`,
+   `AccessKeyId`, `SecretAccessKey`, `PublicBaseUrl`. Endpoint is
+   `https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com`; Bucket is literally
+   `lgym-exercises-dev`; PublicBaseUrl is `https://<SAME_VERIFIED_HOST>`.
+   Environment forms use double underscores, e.g. `ExerciseMediaStorage__Bucket`.
+   Keep disabled until the migration, scoped token, private bucket and Worker
+   route are verified. Existing DEV database connection remains unchanged.
+6. After the code review/deployment gate, an authorized operator deploys the
+   reviewed `env.dev` Worker and compatible API using the existing DEV deployment
+   path. These commands have **not** been executed by implementation work.
+   Dashboard custom-domain path:
+   Workers & Pages → lgym-exercise-media-dev → Settings → Domains & Routes →
+   Add → Custom Domain. Do not attach that domain to the bucket.
 
-Production provisioning/deployment needs the existing release authorization and
-passed staging/native gates. Merely having a production config section does not
-authorize executing it.
+Existing API CORS allowlists the actual Page DEV origin for authenticated
+multipart requests if cross-origin. Native API requests do not use browser CORS.
+There is no direct-to-R2 browser upload or R2 CORS configuration.
 
-## Required real environment probes
+## Required real DEV probes
 
-Record environment, API/Worker config commit, timestamp, UUID, source/published
-SHA-256 and redacted HTTP status/headers. Never capture signed URLs, credentials,
-private report URLs or image data in public logs.
+Use the exact final multipart API and evidence checklist in the owner guide.
+Record environment, final API/Worker/client commits, test UUID, operation ID,
+source/final SHA-256 and redacted statuses/headers. Do not capture credentials,
+JWTs, private report-photo URLs or personal image bytes in public logs.
 
-1. Anonymous GET/HEAD of staging, verified snapshots, listing and raw bucket paths
-   must fail, including the exact uploaded staging key. Confirm `r2.dev` is
-   disabled. Test report-photo privacy independently with existing authorized
-   checks; this Worker must have no report binding.
-2. Use a clearly labeled technical fixture through Page/native signed PUT. Check
-   PUT method/type/key scope, expiry and actual byte-size/checksum validation.
-   Browser oversize/malformed content is rejected at API verification even if R2
-   accepted the private PUT. CORS failures must not be interpreted as proof of
-   storage denial; native transport is tested independently.
-3. After verified persistence, anonymous permanent CDN GET/HEAD must return only
-   published sanitized bytes, correct MIME, ETag, TLS, nosniff and cache headers.
-   Probe invalid/encoded paths, writes/deletes and an unknown object. Repeated
-   reads should use edge/client caches; verify actual cache behavior in staging.
-4. Overwrite the still-valid source PUT after verification. Final published
-   digest/bytes must remain the original verified snapshot. Verify source and
-   published checksums separately when sanitization changes bytes.
-5. Exercise R2/DB failure, same-operation replay, atomic expected-image conflict,
-   cleanup retry, retained old versions and conditional rollback. List/reconcile
-   abandoned publication intents by their durable target/digest; never delete
-   published objects automatically or infer a successful DB attachment from R2.
+- Through Page and Android/iOS, create a TEST global exercise with/without a
+  small known GIF. Verify persisted Image from a fresh API read and public
+  Worker GET/HEAD bytes, frame count/duration/loop and source/final hashes.
+- Replace/remove with required expectedImage; test stale 409 and conditional
+  history restore. Retain exact operation identity through lost-response replay.
+- Test nonadmin 403, malformed bytes/metadata 422, oversize 413, cancellation,
+  unresolved 503 and orphan reconciliation. Never clear an ambiguous receipt.
+- Probe Worker listing, invalid/encoded paths, query, PUT/DELETE, wrong host and
+  HTTP. Verify HTTPS, correct MIME, nosniff, digest ETag and immutable caching.
+  Unknown/error responses must be no-store.
+- Independently verify raw bucket privacy, no direct public domains, and
+  unchanged private report-photo privacy. A browser CORS failure is not proof
+  of storage privacy.
 
-## Sources checked for this implementation
+Worker code exposes only strict GET/HEAD paths. HEAD does not fetch the body;
+successful immutable GETs may be cached. Removing an Image database binding
+does not erase previously public bytes from downstream caches.
 
-- [R2 Workers API](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/)
-- [Workers Cache API example](https://developers.cloudflare.com/r2/examples/cache-api/)
-- [Public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/)
-- [Presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/)
-- [Wrangler CORS configuration](https://developers.cloudflare.com/r2/buckets/cors/)
-- [Object lifecycle format](https://developers.cloudflare.com/r2/buckets/object-lifecycles/)
-- [Lifecycle API age in seconds](https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/lifecycle/methods/update/)
+## Primary references
+
+- [R2 Worker bindings/API](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/)
+- [Worker environment configuration](https://developers.cloudflare.com/workers/wrangler/configuration/)
+- [Worker custom domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/)
+- [Public bucket controls](https://developers.cloudflare.com/r2/buckets/public-buckets/)
+- [R2 token permissions](https://developers.cloudflare.com/r2/api/tokens/)
+- [R2 consistency](https://developers.cloudflare.com/r2/reference/consistency/)
+
+Production setup/deployment, real DEV integration and physical Android/iOS
+acceptance remain separate gates. **DO NOT CREATE OR CONFIGURE PRODUCTION YET.**

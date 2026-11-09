@@ -48,22 +48,21 @@ public sealed class EndpointResponseTypeTests
             }
         }
 
-        invalid.Should().BeEmpty("Endpoints require GET/POST or the exact reviewed exercise-media DELETE/PATCH: " + string.Join(", ", invalid));
+        invalid.Should().BeEmpty("Endpoints require GET/POST or the exact reviewed exercise-media PATCH: " + string.Join(", ", invalid));
     }
 
     private static bool IsApprovedExerciseMediaVerb(Type controller, string action, HttpMethodAttribute attribute) =>
         controller == typeof(ExerciseMediaController) &&
-        (action == nameof(ExerciseMediaController.CancelExerciseMedia) && attribute is HttpDeleteAttribute { Template: "media/uploads/{uploadReference}" } ||
-         action == nameof(ExerciseMediaController.ChangeExerciseMedia) && attribute is HttpPatchAttribute { Template: "{id}/media" });
+        action == nameof(ExerciseMediaController.ChangeExerciseMedia) && attribute is HttpPatchAttribute { Template: "{id}/media" };
 
     [Test]
     public void ExerciseMediaVerbApproval_RejectsOtherActionsRoutesAndControllers()
     {
-        IsApprovedExerciseMediaVerb(typeof(ExerciseMediaController), nameof(ExerciseMediaController.CreateExerciseWithMedia), new HttpDeleteAttribute("media/uploads/{uploadReference}")).Should().BeFalse();
-        IsApprovedExerciseMediaVerb(typeof(ExerciseMediaController), nameof(ExerciseMediaController.CancelExerciseMedia), new HttpDeleteAttribute("other/{id}")).Should().BeFalse();
-        IsApprovedExerciseMediaVerb(typeof(EndpointResponseTypeTests), nameof(ExerciseMediaController.CancelExerciseMedia), new HttpDeleteAttribute("media/uploads/{uploadReference}")).Should().BeFalse();
-        typeof(ExerciseMediaController).GetMethod(nameof(ExerciseMediaController.CancelExerciseMedia))!
-            .GetCustomAttributes<HttpMethodAttribute>().Should().ContainSingle().Which.Should().BeOfType<HttpDeleteAttribute>();
+        IsApprovedExerciseMediaVerb(typeof(ExerciseMediaController), nameof(ExerciseMediaController.CreateExerciseWithMedia), new HttpPatchAttribute("{id}/media")).Should().BeFalse();
+        IsApprovedExerciseMediaVerb(typeof(ExerciseMediaController), nameof(ExerciseMediaController.ChangeExerciseMedia), new HttpPatchAttribute("other/{id}")).Should().BeFalse();
+        IsApprovedExerciseMediaVerb(typeof(EndpointResponseTypeTests), nameof(ExerciseMediaController.ChangeExerciseMedia), new HttpPatchAttribute("{id}/media")).Should().BeFalse();
+        IsApprovedExerciseMediaVerb(typeof(ExerciseMediaController), nameof(ExerciseMediaController.ChangeExerciseMedia), new HttpDeleteAttribute("{id}/media")).Should().BeFalse();
+        typeof(ExerciseMediaController).GetMethod("CancelExerciseMedia").Should().BeNull();
         typeof(ExerciseMediaController).GetMethod(nameof(ExerciseMediaController.ChangeExerciseMedia))!
             .GetCustomAttributes<HttpMethodAttribute>().Should().ContainSingle().Which.Should().BeOfType<HttpPatchAttribute>();
     }

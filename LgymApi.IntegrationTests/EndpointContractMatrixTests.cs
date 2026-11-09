@@ -12,6 +12,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Routing;
@@ -566,6 +567,12 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .Select(parameter => parameter.Type.Name)
             .DefaultIfEmpty("none")
             .SingleOrDefault() ?? "none";
+        if (request == "none")
+        {
+            request = action.Parameters.OfType<ControllerParameterDescriptor>()
+                .Where(parameter => parameter.ParameterInfo.GetCustomAttribute<FromFormAttribute>() is not null)
+                .Select(parameter => parameter.ParameterType.Name).DefaultIfEmpty("none").Single();
+        }
         var responses = apiDescription is null
             ? Array.Empty<string>()
             : apiDescription.SupportedResponseTypes

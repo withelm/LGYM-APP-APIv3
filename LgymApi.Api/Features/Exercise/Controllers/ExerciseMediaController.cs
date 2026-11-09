@@ -1,10 +1,12 @@
 using LgymApi.Api.Middleware;
-using LgymApi.Domain.ValueObjects;
 using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Features.Exercise.Filters;
+using LgymApi.Application.BuildingBlocks.Errors;
+using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.WorkoutProgress.ExerciseMedia;
-using LgymApi.Domain.Entities;
+using LgymApi.Application.WorkoutProgress.Errors;
 using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,50 +16,38 @@ namespace LgymApi.Api.Features.Exercise.Controllers;
 [ApiController]
 [Route("api/exercise")]
 [Authorize(Policy = AuthConstants.Policies.ManageGlobalExercises)]
-[ProducesResponseType(typeof(LgymApi.Api.Features.Common.Contracts.ResponseMessageDto), 400)]
+[TypeFilter(typeof(ExerciseMediaRequestFilter))]
+[RequestSizeLimit(ExerciseMediaLimits.MaxRequestBytes)]
+[RequestFormLimits(MultipartBodyLengthLimit = ExerciseMediaLimits.MaxRequestBytes, ValueLengthLimit = 64 * 1024, ValueCountLimit = 32)]
+[ProducesResponseType(typeof(ExerciseMediaErrorDto), 400)]
 [ProducesResponseType(typeof(LgymApi.Api.Features.Common.Contracts.ResponseMessageDto), 401)]
 [ProducesResponseType(typeof(LgymApi.Api.Features.Common.Contracts.ResponseMessageDto), 403)]
-[ProducesResponseType(typeof(LgymApi.Api.Features.Common.Contracts.ResponseMessageDto), 404)]
-[ProducesResponseType(typeof(LgymApi.Api.Features.Common.Contracts.ResponseMessageDto), 409)]
-[ProducesResponseType(typeof(LgymApi.Api.Features.Common.Contracts.ResponseMessageDto), 410)]
-[ProducesResponseType(typeof(LgymApi.Api.Features.Common.Contracts.ResponseMessageDto), 422)]
-[ProducesResponseType(typeof(LgymApi.Api.Features.Common.Contracts.ResponseMessageDto), 503)]
+[ProducesResponseType(typeof(ExerciseMediaErrorDto), 404)]
+[ProducesResponseType(typeof(ExerciseMediaErrorDto), 409)]
+[ProducesResponseType(typeof(ExerciseMediaErrorDto), 413)]
+[ProducesResponseType(typeof(ExerciseMediaErrorDto), 422)]
+[ProducesResponseType(typeof(ExerciseMediaErrorDto), 428)]
+[ProducesResponseType(typeof(ExerciseMediaErrorDto), 503)]
 public sealed class ExerciseMediaController(IExerciseMediaService service, IMapper mapper) : ControllerBase
 {
-    [HttpPost("media/uploads")]
-    [ProducesResponseType(typeof(ExerciseMediaUploadDto), 200)]
-    public async Task<IActionResult> InitiateExerciseMedia([FromBody] InitiateExerciseMediaDto request, CancellationToken cancellationToken)
-    {
-        var result = await service.InitiateAsync(HttpContext.GetAuthenticatedAccountContext(), mapper.Map<InitiateExerciseMediaDto, InitiateExerciseMediaInput>(request), cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : Ok(mapper.Map<ExerciseMediaUploadResult, ExerciseMediaUploadDto>(result.Value));
-    }
-
-    [HttpPost("media/uploads/{uploadReference}/verify")]
-    [ProducesResponseType(typeof(ExerciseMediaVerificationDto), 200)]
-    public async Task<IActionResult> VerifyExerciseMedia(string uploadReference, CancellationToken cancellationToken)
-    {
-        var result = await service.VerifyAsync(HttpContext.GetAuthenticatedAccountContext(), uploadReference.ToIdOrEmpty<ExerciseMediaUpload>(), cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : Ok(mapper.Map<ExerciseMediaVerificationResult, ExerciseMediaVerificationDto>(result.Value));
-    }
-
-    [HttpDelete("media/uploads/{uploadReference}")]
-    [ProducesResponseType(200)]
-    public async Task<IActionResult> CancelExerciseMedia(string uploadReference, CancellationToken cancellationToken) => (await service.CancelAsync(HttpContext.GetAuthenticatedAccountContext(), uploadReference.ToIdOrEmpty<ExerciseMediaUpload>(), cancellationToken)).ToActionResult();
-
     [HttpPost("media/create")]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ExerciseMediaMutationDto), 200)]
-    public async Task<IActionResult> CreateExerciseWithMedia([FromBody] CreateExerciseMediaDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateExerciseWithMedia([FromForm] CreateExerciseMediaDto request, CancellationToken cancellationToken)
     {
-        var result = await service.CreateAsync(HttpContext.GetAuthenticatedAccountContext(), mapper.Map<CreateExerciseMediaDto, CreateExerciseMediaInput>(request), cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : Ok(mapper.Map<ExerciseMediaMutationResult, ExerciseMediaMutationDto>(result.Value));
+        var bytes = await ExerciseMediaRequestFilter.ReadSourceAsync(request.File, cancellationToken);
+        var result = await service.CreateAsync(HttpContext.GetAuthenticatedAccountContext(), mapper.Map<CreateExerciseMediaDto, CreateExerciseMediaInput>(request), bytes, cancellationToken);
+        return MutationResult(result, request.OperationId);
     }
 
     [HttpPatch("{id}/media")]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ExerciseMediaMutationDto), 200)]
-    public async Task<IActionResult> ChangeExerciseMedia(string id, [FromBody] ChangeExerciseMediaDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ChangeExerciseMedia(string id, [FromForm] ChangeExerciseMediaDto request, CancellationToken cancellationToken)
     {
-        var result = await service.ChangeAsync(HttpContext.GetAuthenticatedAccountContext(), id.ToIdOrEmpty<LgymApi.Domain.Entities.Exercise>(), mapper.Map<ChangeExerciseMediaDto, ChangeExerciseMediaInput>(request), cancellationToken);
-        return result.IsFailure ? result.ToActionResult() : Ok(mapper.Map<ExerciseMediaMutationResult, ExerciseMediaMutationDto>(result.Value));
+        var bytes = await ExerciseMediaRequestFilter.ReadSourceAsync(request.File, cancellationToken);
+        var result = await service.ChangeAsync(HttpContext.GetAuthenticatedAccountContext(), id.ToIdOrEmpty<LgymApi.Domain.Entities.Exercise>(), mapper.Map<ChangeExerciseMediaDto, ChangeExerciseMediaInput>(request), bytes, cancellationToken);
+        return MutationResult(result, request.OperationId);
     }
 
     [HttpPost("media/cleanup")]
@@ -66,5 +56,12 @@ public sealed class ExerciseMediaController(IExerciseMediaService service, IMapp
     {
         var result = await service.CleanupAsync(HttpContext.GetAuthenticatedAccountContext(), cancellationToken);
         return result.IsFailure ? result.ToActionResult() : Ok(mapper.Map<ExerciseMediaCleanupResult, ExerciseMediaCleanupDto>(result.Value));
+    }
+
+    private IActionResult MutationResult(Result<ExerciseMediaMutationResult, AppError> result, string operationId)
+    {
+        if (result.IsSuccess) return Ok(mapper.Map<ExerciseMediaMutationResult, ExerciseMediaMutationDto>(result.Value));
+        var disposition = result.Error is ExerciseMediaOperationError error ? error.Disposition : ExerciseMediaOperationError.Unresolved;
+        return StatusCode(result.Error.HttpStatusCode, mapper.Map<ExerciseMediaFailureResult, ExerciseMediaErrorDto>(new(operationId, result.Error.Message, disposition)));
     }
 }

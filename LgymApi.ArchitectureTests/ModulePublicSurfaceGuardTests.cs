@@ -34,11 +34,11 @@ public sealed class ModulePublicSurfaceGuardTests
     private static readonly string[] ReviewedManifestRows =
     [
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaLimits",
-        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.InitiateExerciseMediaInput",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaSourceInput",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.CreateExerciseMediaInput",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ChangeExerciseMediaInput",
-        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaUploadResult",
-        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaVerificationResult",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaFailureResult",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaObjectState.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaObjectState",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaMutationResult",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaCleanupResult",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.VerifiedExerciseMedia",
@@ -48,7 +48,7 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.IExerciseMediaPersistence",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaRejectedException",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaSession.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaSession",
-        "LgymApi.Application/WorkoutProgress/Errors/ExerciseMediaErrors.cs\tLgymApi.Application.WorkoutProgress.Errors.ExerciseMediaExpiredError",
+        "LgymApi.Application/WorkoutProgress/Errors/ExerciseMediaErrors.cs\tLgymApi.Application.WorkoutProgress.Errors.ExerciseMediaOperationError",
         "LgymApi.Application/WorkoutProgress/Errors/ExerciseMediaErrors.cs\tLgymApi.Application.WorkoutProgress.Errors.ExerciseMediaRetryError",
         "LgymApi.Identity/Contracts/Approval/ITrainerApprovalService.cs\tLgymApi.Identity.Contracts.Approval.ITrainerApprovalService",
         "LgymApi.Identity/Contracts/Approval/ITrainerApprovalService.cs\tLgymApi.Identity.Contracts.Approval.TrainerApplication",
