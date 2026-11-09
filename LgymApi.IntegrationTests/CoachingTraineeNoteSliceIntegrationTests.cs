@@ -8,6 +8,7 @@ using LgymApi.Application.Coaching.TraineeNotes.TrainerList;
 using LgymApi.Application.Coaching.TraineeNotes.Update;
 using LgymApi.Application.Coaching.TraineeNotes.VisibleList;
 using LgymApi.Application.Coaching.TraineeNotes.VisibleSingle;
+using LgymApi.Application.Coaching.TraineeNotes.VisibleHistory;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -100,7 +101,7 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         history.Last().PreviousContent.Should().Be("Updated content");
         history.Last().NewContent.Should().Be("Updated content");
         (await database.CommandEnvelopes.CountAsync(envelope =>
-            envelope.CommandTypeFullName.Contains("TraineeNoteUpdatedInAppNotificationCommand"))).Should().Be(2);
+            envelope.CommandTypeFullName.Contains("TraineeNoteUpdatedInAppNotificationCommand"))).Should().Be(1);
     }
 
     [Test]
@@ -373,9 +374,10 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         var ownerNotes = await ownerResponse.Content.ReadFromJsonAsync<List<TraineeNoteDto>>();
         ownerNotes.Should().NotBeNull();
         ownerNotes!.Should().ContainSingle(item => item.Id == note.Id.ToString() && item.Content == note.Content);
+        ownerNotes.Single().OriginalAuthorId.Should().Be(trainer.Id.ToString());
 
         using var unrelatedResponse = await Client.GetAsync($"/api/trainer/trainees/{unrelated.Id}/notes");
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var unrelatedText = await unrelatedResponse.Content.ReadAsStringAsync();
         unrelatedText.Should().NotContain(note.Id.ToString());
         unrelatedText.Should().NotContain(note.Content);
@@ -390,10 +392,9 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         }
 
         using var formerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes");
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        var formerText = await formerResponse.Content.ReadAsStringAsync();
-        formerText.Should().NotContain(note.Id.ToString());
-        formerText.Should().NotContain(note.Content);
+        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var formerNotes = await formerResponse.Content.ReadFromJsonAsync<List<TraineeNoteDto>>();
+        formerNotes.Should().ContainSingle(item => item.Id == note.Id.ToString() && item.Content == note.Content);
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes");
@@ -542,7 +543,7 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         }
 
         using var formerResponse = await Client.PostAsync($"/api/trainer/trainees/{linked.Id}/notes/{protectedNote.Id}/delete", null);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.PostAsync($"/api/trainer/trainees/{linked.Id}/notes/{protectedNote.Id}/delete", null);
@@ -604,7 +605,7 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         }
 
         using var formerResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{linked.Id}/notes/{created.Id}/update", updatePayload);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{linked.Id}/notes/{created.Id}/update", updatePayload);
@@ -671,10 +672,9 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         }
 
         using var formerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes/{note.Id}/history");
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        var formerText = await formerResponse.Content.ReadAsStringAsync();
-        formerText.Should().NotContain(note.Id.ToString());
-        formerText.Should().NotContain(history.NewContent);
+        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var formerHistory = await formerResponse.Content.ReadFromJsonAsync<List<TraineeNoteHistoryDto>>();
+        formerHistory.Should().ContainSingle(item => item.NewContent == history.NewContent && item.ChangeType == history.ChangeType);
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes/{note.Id}/history");
@@ -689,6 +689,89 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
         anonymousText.Should().NotContain(note.Id.ToString());
         anonymousText.Should().NotContain(history.NewContent);
+    }
+
+    [Test]
+    [Authorization.AuthorizationEvidence("GET", "/api/trainee/notes/{noteId}/history", "own", "visibility-transition-redaction-and-revocation")]
+    public async Task TraineeNoteHistoryRoute_ReturnsOnlySharedVersionsRedactsPrivatePredecessorsAndRevokesStaleIds()
+    {
+        var trainer = await SeedUserAsync("history-author", "history-author@example.test");
+        var trainee = await SeedUserAsync("history-trainee", "history-trainee@example.test");
+        var note = VisibleNote(trainer.Id, trainee.Id, "Shared again", DateTimeOffset.UtcNow);
+        var now = DateTimeOffset.UtcNow;
+        var history = new[]
+        {
+            History(note, trainer.Id, "", "Initially shared", false, true, "Created", now.AddMinutes(-3)),
+            History(note, trainer.Id, "Initially shared", "Private revision", true, false, "Updated", now.AddMinutes(-2)),
+            History(note, trainer.Id, "Private revision", "Shared again", false, true, "Updated", now.AddMinutes(-1))
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.TraineeNotes.Add(note);
+            database.TraineeNoteHistories.AddRange(history);
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainee.Id);
+        using var sharedResponse = await Client.GetAsync($"/api/trainee/notes/{note.Id}/history");
+        sharedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var visibleHistory = await sharedResponse.Content.ReadFromJsonAsync<List<TraineeNoteHistoryDto>>();
+        visibleHistory.Should().HaveCount(2);
+        visibleHistory!.Select(entry => entry.NewContent).Should().BeEquivalentTo("Initially shared", "Shared again");
+        visibleHistory.Single(entry => entry.NewContent == "Shared again").PreviousContent.Should().BeNull();
+        (await sharedResponse.Content.ReadAsStringAsync()).Should().NotContain("Private revision");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var tracked = await database.TraineeNotes.SingleAsync(candidate => candidate.Id == note.Id);
+            tracked.VisibleToTrainee = false;
+            await database.SaveChangesAsync();
+        }
+
+        using var hiddenResponse = await Client.GetAsync($"/api/trainee/notes/{note.Id}/history");
+        hiddenResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await hiddenResponse.Content.ReadAsStringAsync()).Should().NotContain("Initially shared");
+    }
+
+    [Test]
+    [Authorization.AuthorizationEvidence("GET", "/api/trainee/notes/{noteId}/history", "own", "concurrent-read-after-delete-revocation")]
+    public async Task TraineeNoteHistoryRoute_ConcurrentReadsAfterDeletionDoNotDiscloseStaleHistory()
+    {
+        var trainer = await SeedUserAsync("concurrent-history-author", "concurrent-history-author@example.test");
+        var trainee = await SeedUserAsync("concurrent-history-trainee", "concurrent-history-trainee@example.test");
+        var note = VisibleNote(trainer.Id, trainee.Id, "Concurrent shared", DateTimeOffset.UtcNow);
+        var history = History(note, trainer.Id, "", "Concurrent shared", false, true, "Created", DateTimeOffset.UtcNow);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.TraineeNotes.Add(note);
+            database.TraineeNoteHistories.Add(history);
+            await database.SaveChangesAsync();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var tracked = await database.TraineeNotes.SingleAsync(candidate => candidate.Id == note.Id);
+            tracked.IsDeleted = true;
+            tracked.VisibleToTrainee = false;
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainee.Id);
+        var responses = await Task.WhenAll(Enumerable.Range(0, 8)
+            .Select(_ => Client.GetAsync($"/api/trainee/notes/{note.Id}/history")));
+        foreach (var response in responses)
+        {
+            using (response)
+            {
+                response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+                (await response.Content.ReadAsStringAsync()).Should().NotContain("Concurrent shared");
+            }
+        }
     }
 
     private async Task SeedRelationshipAsync(
@@ -739,5 +822,19 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             LastUpdatedByUserId = trainerId,
             LastUpdatedAt = lastUpdatedAt,
             IsDeleted = isDeleted
+        };
+
+    private static TraineeNoteHistory History(TraineeNote note, Id<User> trainerId, string previousContent, string newContent, bool previousVisible, bool newVisible, string changeType, DateTimeOffset changedAt)
+        => new()
+        {
+            Id = Id<TraineeNoteHistory>.New(),
+            TraineeNoteId = note.Id,
+            ChangedByUserId = trainerId,
+            ChangedAt = changedAt,
+            PreviousContent = previousContent,
+            NewContent = newContent,
+            PreviousVisibleToTrainee = previousVisible,
+            NewVisibleToTrainee = newVisible,
+            ChangeType = changeType
         };
 }

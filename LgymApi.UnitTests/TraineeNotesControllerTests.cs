@@ -6,6 +6,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Application.Coaching.TraineeNotes.Models;
 using LgymApi.Application.Coaching.TraineeNotes.VisibleList;
 using LgymApi.Application.Coaching.TraineeNotes.VisibleSingle;
+using LgymApi.Application.Coaching.TraineeNotes.VisibleHistory;
 using LgymApi.Application.Coaching.ApiAdapters;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -66,14 +67,15 @@ public sealed class TraineeNotesControllerTests
 
     private static TraineeNotesController CreateController(
         IListVisibleTraineeNotesUseCase? listNotes = null,
-        IGetVisibleTraineeNoteUseCase? getNote = null)
+        IGetVisibleTraineeNoteUseCase? getNote = null,
+        IGetVisibleTraineeNoteHistoryUseCase? getHistory = null)
     {
         var services = new ServiceCollection();
         services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         using var provider = services.BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var controller = new TraineeNotesController(
-            new TraineeNotesApiAdapter(listNotes ?? Substitute.For<IListVisibleTraineeNotesUseCase>(), getNote ?? Substitute.For<IGetVisibleTraineeNoteUseCase>(), mapper),
+            new TraineeNotesApiAdapter(listNotes ?? Substitute.For<IListVisibleTraineeNotesUseCase>(), getNote ?? Substitute.For<IGetVisibleTraineeNoteUseCase>(), getHistory ?? Substitute.For<IGetVisibleTraineeNoteHistoryUseCase>(), mapper),
             mapper)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
@@ -95,5 +97,6 @@ public sealed class TraineeNotesControllerTests
             Id<User>.New(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            "Original trainer");
 }

@@ -9,6 +9,8 @@ public sealed class TraineeNoteHistory : EntityBase<TraineeNoteHistory>
     public DateTimeOffset ChangedAt { get; set; }
     public string? PreviousContent { get; set; }
     public string NewContent { get; set; } = string.Empty;
+    public bool PreviousVisibleToTrainee { get; set; }
+    public bool NewVisibleToTrainee { get; set; }
     public string ChangeType { get; set; } = string.Empty;
 
     public TraineeNote TraineeNote { get; set; } = null!;

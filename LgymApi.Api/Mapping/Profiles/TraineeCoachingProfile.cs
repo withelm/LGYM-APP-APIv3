@@ -34,6 +34,8 @@ public sealed class TraineeCoachingProfile : IMappingProfile
         {
             Id = source.Id.ToString(),
             TrainerId = source.TrainerId.ToString(),
+            OriginalAuthorId = source.TrainerId.ToString(),
+            OriginalAuthorDisplayName = source.OriginalAuthorDisplayName,
             TraineeId = source.TraineeId.ToString(),
             Title = source.Title,
             Content = source.Content,

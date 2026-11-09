@@ -82,7 +82,8 @@ public sealed record CoachingTraineeNoteWriteModel(
     bool IsPinned,
     Id<UserEntity> LastUpdatedByUserId,
     DateTimeOffset LastUpdatedAt,
-    bool IsDeleted = false);
+    bool IsDeleted = false,
+    DateTimeOffset? ExpectedUpdatedAt = null);
 
 public sealed record CoachingTraineeNoteHistoryWriteModel(
     Id<TraineeNoteHistoryEntity> Id,
@@ -91,6 +92,8 @@ public sealed record CoachingTraineeNoteHistoryWriteModel(
     DateTimeOffset ChangedAt,
     string? PreviousContent,
     string NewContent,
+    bool PreviousVisibleToTrainee,
+    bool NewVisibleToTrainee,
     string ChangeType);
 
 public sealed record CoachingTraineeNoteFact(
@@ -113,6 +116,10 @@ public sealed record CoachingTraineeNoteHistoryFact(
     DateTimeOffset ChangedAt,
     string? PreviousContent,
     string NewContent,
+    bool PreviousVisibleToTrainee,
+    bool NewVisibleToTrainee,
     string ChangeType,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+
+public sealed record CoachingVisibleNoteHistoryResult(IReadOnlyList<CoachingTraineeNoteHistoryFact> History);

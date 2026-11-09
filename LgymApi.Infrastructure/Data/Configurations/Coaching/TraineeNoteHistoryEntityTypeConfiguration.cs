@@ -12,6 +12,8 @@ internal sealed class TraineeNoteHistoryEntityTypeConfiguration : IEntityTypeCon
 
         builder.Property(e => e.PreviousContent).HasMaxLength(8000);
         builder.Property(e => e.NewContent).HasMaxLength(8000).IsRequired();
+        builder.Property(e => e.PreviousVisibleToTrainee).IsRequired();
+        builder.Property(e => e.NewVisibleToTrainee).IsRequired();
         builder.Property(e => e.ChangeType).HasMaxLength(64).IsRequired();
 
         builder.HasIndex(e => new { e.TraineeNoteId, e.ChangedAt });

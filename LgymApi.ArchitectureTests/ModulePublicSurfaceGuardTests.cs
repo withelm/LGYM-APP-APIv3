@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 824;
+    private const int ManifestEntryCount = 827;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -86,7 +86,10 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Application/MainRecords/Models/BestMainRecordsWithTranslations.cs\tLgymApi.Application.Features.MainRecords.Models.BestMainRecordsWithTranslations",
         "LgymApi.Application/Training/Models/TrainingsByDateWithTranslations.cs\tLgymApi.Application.Features.Training.Models.TrainingsByDateWithTranslations",
         "LgymApi.Application/WorkoutProgress/Dashboard/Models/WorkoutProgressDashboardTrainingsWithTranslations.cs\tLgymApi.Application.WorkoutProgress.Dashboard.Models.WorkoutProgressDashboardTrainingsWithTranslations",
-        "LgymApi.Application/WorkoutProgress/Authorization/WorkoutProgressOwnershipAuthorization.cs\tLgymApi.Application.WorkoutProgress.Authorization.IWorkoutProgressOwnershipAuthorizationService"
+        "LgymApi.Application/WorkoutProgress/Authorization/WorkoutProgressOwnershipAuthorization.cs\tLgymApi.Application.WorkoutProgress.Authorization.IWorkoutProgressOwnershipAuthorizationService",
+        "LgymApi.Application/Coaching/Persistence/CoachingPersistenceModels.cs\tLgymApi.Application.Coaching.Persistence.CoachingVisibleNoteHistoryResult",
+        "LgymApi.Application/Coaching/TraineeNotes/VisibleHistory/Contracts/IGetVisibleTraineeNoteHistoryUseCase.cs\tLgymApi.Application.Coaching.TraineeNotes.VisibleHistory.IGetVisibleTraineeNoteHistoryUseCase",
+        "LgymApi.Application/Coaching/TraineeNotes/VisibleHistory/Models/GetVisibleTraineeNoteHistoryQuery.cs\tLgymApi.Application.Coaching.TraineeNotes.VisibleHistory.GetVisibleTraineeNoteHistoryQuery"
     ];
 
 

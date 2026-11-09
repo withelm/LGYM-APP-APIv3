@@ -184,7 +184,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Application -> LgymApi.Domain` | `LgymApi.Application/Coaching/Access/CoachingRelationshipAccessService.cs:4` |
 | `LgymApi.Application -> LgymApi.Authorization` | `LgymApi.Application/Coaching/Access/CoachingEpisodeAuthorizationService.cs:3` |
 | `LgymApi.Application -> LgymApi.Identity` | `LgymApi.Application/Coaching/Access/CoachingRelationshipAccessService.cs:3` |
-| `LgymApi.Application -> LgymApi.Platform` | `LgymApi.Application/Coaching/ApiAdapters/CoachingApiAdapterMappingProfile.cs:24` |
+| `LgymApi.Application -> LgymApi.Platform` | `LgymApi.Application/Coaching/ApiAdapters/CoachingApiAdapterMappingProfile.cs:34` |
 | `LgymApi.Application -> LgymApi.Resources` | `LgymApi.Application/Coaching/Invitations/Accept/AcceptInvitationUseCase.cs:49` |
 | `LgymApi.Application -> LgymApi.TrainingPlanning` | `LgymApi.Application/Coaching/Adapters/PlanDayRelationshipAccessAdapter.cs:2` |
 | `LgymApi.ArchitectureTests -> LgymApi.Api` | `LgymApi.ArchitectureTests/CoachingApiContractImmutabilityGuardTests.cs:2` |

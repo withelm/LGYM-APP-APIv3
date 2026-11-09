@@ -48,6 +48,7 @@ public interface ITraineeNotesApiPort
 {
     Task<Result<IReadOnlyList<TraineeNoteReadModel>, AppError>> GetVisibleNotesAsync(AuthenticatedAccountContext trainee, CancellationToken cancellationToken = default);
     Task<Result<TraineeNoteReadModel, AppError>> GetVisibleNoteAsync(AuthenticatedAccountContext trainee, Id<TraineeNote> noteId, CancellationToken cancellationToken = default);
+    Task<Result<IReadOnlyList<TraineeNoteHistoryReadModel>, AppError>> GetVisibleNoteHistoryAsync(AuthenticatedAccountContext trainee, Id<TraineeNote> noteId, CancellationToken cancellationToken = default);
 }
 
 public interface ITraineeRelationshipApiPort
