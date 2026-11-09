@@ -78,7 +78,7 @@ public sealed partial class ExerciseService : IExerciseService
         bool verifyTargetAccount,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(name) || bodyPart == BodyParts.Unknown)
+        if ((!userId.HasValue && !string.IsNullOrEmpty(image)) || string.IsNullOrWhiteSpace(name) || bodyPart == BodyParts.Unknown)
         {
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.FieldRequired));
         }
@@ -122,7 +122,14 @@ public sealed partial class ExerciseService : IExerciseService
         }
 
         await _exerciseRepository.UpdateAsync(new WorkoutExerciseWriteModel(exercise.Id, exercise.OwnerId, exercise.Name, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image, true), cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (_exerciseRepository.IsConcurrencyFailure(exception))
+        {
+            return Result<Unit, AppError>.Failure(new ConflictError(Messages.ExerciseMediaConflict));
+        }
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -171,10 +178,17 @@ public sealed partial class ExerciseService : IExerciseService
             exercise = exercise with { EloFormula = request.EloFormula.Value };
         }
 
-        exercise = exercise with { Description = request.Description, Image = request.Image };
+        exercise = exercise with { Description = request.Description };
 
         await _exerciseRepository.UpdateAsync(new WorkoutExerciseWriteModel(exercise.Id, exercise.OwnerId, exercise.Name, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image, exercise.IsDeleted), cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (_exerciseRepository.IsConcurrencyFailure(exception))
+        {
+            return Result<Unit, AppError>.Failure(new ConflictError(Messages.ExerciseMediaConflict));
+        }
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 

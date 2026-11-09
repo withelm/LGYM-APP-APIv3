@@ -19,3 +19,5 @@
 - `ReportSubmissionProgressReceipt` is the account-free Workout & Progress receipt entity; its typed report-submission identifier is an opaque idempotency key, not a Domain navigation or cross-owner write relationship.
 - Reporting owns trainer photo dictionary entries and independent issued-request definition snapshots. A source dictionary ID records ancestry; the request's frozen slot identity binds photos and upload sessions. Dictionary archival and renaming do not mutate snapshot contents. Whole-record retention remains separate from dictionary lifecycle.
 - `Measurements/MeasurementUnitResolver.cs` is a Domain helper used by Reporting and Workout & Progress without introducing an Application dependency.
+
+- Workout & Progress owns ExerciseMediaUpload, a scoped durable staging/operation receipt with source/published digests and optimistic revision, and the opaque ExerciseMediaOperationReference marker. Exercise.Image remains the permanent URL field; no general ExerciseMedia aggregate is introduced.

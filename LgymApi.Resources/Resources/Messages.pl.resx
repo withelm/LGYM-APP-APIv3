@@ -351,4 +351,8 @@
   <data name="TrainerApplicationPagingInvalid" xml:space="preserve">
     <value>Numer strony musi być dodatni, a rozmiar strony musi wynosić od 1 do 100.</value>
   </data>
+  <data name="ExerciseMediaRetry" xml:space="preserve"><value>Nie udało się potwierdzić zapisu multimediów. Ponów z tym samym identyfikatorem operacji, aby sprawdzić wynik.</value></data>
+  <data name="ExerciseMediaInvalid" xml:space="preserve"><value>Plik lub identyfikator przesyłania jest nieprawidłowy. Wybierz GIF, PNG, JPEG lub statyczny WebP do 5 MiB; HEIC oraz animowane PNG/WebP nie są obsługiwane.</value></data>
+  <data name="ExerciseMediaConflict" xml:space="preserve"><value>Multimedia ćwiczenia zmieniły się lub operacja jest już w toku. Odśwież przed ponowieniem; przy przerwanym zapisie zachowaj identyfikator operacji.</value></data>
+  <data name="ExerciseMediaExpired" xml:space="preserve"><value>Przesyłanie wygasło. Wybierz plik ponownie i spróbuj jeszcze raz.</value></data>
 </root>

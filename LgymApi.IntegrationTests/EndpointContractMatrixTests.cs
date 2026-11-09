@@ -79,7 +79,8 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         "credential-or-token-current;notifications-installation-current-replay",
         "private-response-current;notifications-installation-current-replay",
         "private-response-current;notifications-source-current-replay",
-        "private-response-current;notifications-actor-current-replay"
+        "private-response-current;notifications-actor-current-replay",
+        "idempotent-current;exercise-media-ledger-current"
     ];
 
     private static readonly string[] ApprovedMigrationTasks =

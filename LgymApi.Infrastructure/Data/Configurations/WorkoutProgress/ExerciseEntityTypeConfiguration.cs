@@ -10,6 +10,9 @@ internal sealed class ExerciseEntityTypeConfiguration : IEntityTypeConfiguration
     public void Configure(EntityTypeBuilder<Exercise> builder)
     {
         builder.ToTable("Exercises");
+        builder.Property(e => e.Image).IsConcurrencyToken();
+        builder.Property(e => e.IsDeleted).IsConcurrencyToken();
+        builder.Property(e => e.UserId).IsConcurrencyToken();
 
         builder.Property(e => e.BodyPart).HasConversion<string>();
         builder.Property(e => e.EloFormula)

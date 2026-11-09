@@ -76,9 +76,10 @@ public sealed class DataSeederProgramTests
 
         passwordService.Verify("seed-password", password.Hash, password.Salt, password.Iterations, password.KeyLength, password.Digest)
             .Should().BeTrue();
-        seeders.Should().HaveCount(40);
+        seeders.Should().HaveCount(41);
         seeders.Should().ContainSingle(seeder => seeder is CoachingEpisodeSeeder);
         seeders.Should().ContainSingle(seeder => seeder is RecurringReportAssignmentSeeder);
+        seeders.Should().ContainSingle(seeder => seeder is ExerciseMediaUploadSeeder);
     }
 
     [Test]
@@ -102,10 +103,11 @@ public sealed class DataSeederProgramTests
 
         await orchestrator.RunAsync(context, new SeedContext(), seedOptions, CancellationToken.None);
 
-        seeders.Should().HaveCount(40);
+        seeders.Should().HaveCount(41);
         (await context.Users.CountAsync()).Should().Be(firstUserCount);
         (await context.Roles.CountAsync()).Should().Be(firstRoleCount);
         (await context.RoleClaims.CountAsync()).Should().Be(firstRoleClaimCount);
+        (await context.ExerciseMediaUploads.CountAsync()).Should().Be(0, "seeding must never grant a media upload capability or fabricate an operation receipt");
     }
 
     private static string CreateTempRepo()

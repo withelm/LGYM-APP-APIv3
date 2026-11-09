@@ -212,6 +212,7 @@ services.AddScoped<IEntitySeeder, TrainerTraineeLinkSeeder>();
         services.AddScoped<IEntitySeeder, UserExternalLoginSeeder>();
         services.AddScoped<IEntitySeeder, PhotoSeeder>();
         services.AddScoped<IEntitySeeder, PhotoUploadSessionSeeder>();
+        services.AddScoped<IEntitySeeder, ExerciseMediaUploadSeeder>();
         services.AddScoped<IEntitySeeder, PushInstallationSeeder>();
         services.AddScoped<IEntitySeeder, PushNotificationMessageSeeder>();
         services.AddScoped<SeedOrchestrator>();

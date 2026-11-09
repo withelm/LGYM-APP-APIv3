@@ -107,6 +107,7 @@ public sealed partial class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/{id}/deleteExercise")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
@@ -131,6 +132,7 @@ public sealed partial class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/updateExercise")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
@@ -154,6 +156,7 @@ public sealed partial class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/updateExerciseWithFormula")]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     [Authorize(Policy = AuthConstants.Policies.ManageGlobalExercises)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]

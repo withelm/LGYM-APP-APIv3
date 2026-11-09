@@ -59,3 +59,5 @@
 - The canonical operator procedure, diagnostics, staging exit criteria, and break-glass rollback are in [`tutorial-rls-pilot.md`](../docs/security/tutorial-rls-pilot.md). Production continues to expect disabled RLS until a separate go/no-go changes configuration and database state together before traffic.
 
 LGYM-186 adds approval/audit columns in the existing AppDbContext migration stream. Selective legacy Trainer backfill and rollback limitations are in [trainer account approval](../docs/security/trainer-account-approval.md).
+
+- ExerciseMediaInfrastructure registers isolated R2 private/published storage, the pinned Magick.NET byte verifier, the stage-only upload/session/Image CAS adapter and its registered IMapper profile. The canonical migration adds ExerciseMediaUploadSessions; Image, UserId and IsDeleted are atomic concurrency preconditions. Ordinary metadata persistence never marks Image modified. Disabled configuration is safe by default; see docs/exercise-media.md.

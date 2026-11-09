@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 824;
+    private const int ManifestEntryCount = 841;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -33,6 +33,23 @@ public sealed class ModulePublicSurfaceGuardTests
 
     private static readonly string[] ReviewedManifestRows =
     [
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaLimits",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.InitiateExerciseMediaInput",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.CreateExerciseMediaInput",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ChangeExerciseMediaInput",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaUploadResult",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaVerificationResult",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaMutationResult",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaCleanupResult",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.VerifiedExerciseMedia",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.IExerciseMediaService",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.IExerciseMediaStorage",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.IExerciseMediaVerifier",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.IExerciseMediaPersistence",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaRejectedException",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaSession.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaSession",
+        "LgymApi.Application/WorkoutProgress/Errors/ExerciseMediaErrors.cs\tLgymApi.Application.WorkoutProgress.Errors.ExerciseMediaExpiredError",
+        "LgymApi.Application/WorkoutProgress/Errors/ExerciseMediaErrors.cs\tLgymApi.Application.WorkoutProgress.Errors.ExerciseMediaRetryError",
         "LgymApi.Identity/Contracts/Approval/ITrainerApprovalService.cs\tLgymApi.Identity.Contracts.Approval.ITrainerApprovalService",
         "LgymApi.Identity/Contracts/Approval/ITrainerApprovalService.cs\tLgymApi.Identity.Contracts.Approval.TrainerApplication",
         "LgymApi.Application/Coaching/Contracts/Access/ICoachingEpisodeAuthorizationService.cs\tLgymApi.Application.Coaching.Contracts.Access.CoachingEpisodeAuthorizationAction",

@@ -10,6 +10,7 @@ namespace LgymApi.Infrastructure.Repositories.WorkoutProgress;
 
 public sealed class WorkoutExercisePersistenceRepository(AppDbContext dbContext) : IWorkoutExercisePersistence
 {
+    public bool IsConcurrencyFailure(Exception exception) => exception is DbUpdateConcurrencyException;
     public Task<WorkoutExercisePersistenceModel?> FindByIdAsync(Id<Exercise> id, CancellationToken cancellationToken = default)
         => FindUnrestrictedByIdAsync(id, cancellationToken);
 
@@ -89,7 +90,7 @@ public sealed class WorkoutExercisePersistenceRepository(AppDbContext dbContext)
         entity.BodyPart = exercise.BodyPart;
         entity.EloFormula = exercise.EloFormula;
         entity.Description = exercise.Description;
-        entity.Image = exercise.Image;
+        // Media is changed only by the verified, conditional media workflow.
         entity.IsDeleted = exercise.IsDeleted;
     }
 

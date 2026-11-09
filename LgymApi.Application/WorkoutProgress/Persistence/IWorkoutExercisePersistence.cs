@@ -6,6 +6,7 @@ namespace LgymApi.Application.WorkoutProgress.Persistence;
 
 public interface IWorkoutExercisePersistence
 {
+    bool IsConcurrencyFailure(Exception exception);
     Task<WorkoutExercisePersistenceModel?> FindByIdAsync(Id<LgymApi.Domain.Entities.Exercise> id, CancellationToken cancellationToken = default);
     Task<WorkoutExercisePersistenceModel?> FindUnrestrictedByIdAsync(Id<LgymApi.Domain.Entities.Exercise> id, CancellationToken cancellationToken = default);
     Task<WorkoutExercisePersistenceModel?> FindGlobalByIdAsync(Id<LgymApi.Domain.Entities.Exercise> id, CancellationToken cancellationToken = default);

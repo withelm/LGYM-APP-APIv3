@@ -165,6 +165,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `PlanDayExercise` | `Training Planning` |
 | `Exercise` | `Workout & Progress` |
 | `ExerciseTranslation` | `Workout & Progress` |
+| `ExerciseMediaUpload` | `Workout & Progress` |
 | `Training` | `Workout & Progress` |
 | `TrainingExerciseScore` | `Workout & Progress` |
 | `ExerciseScore` | `Workout & Progress` |
@@ -190,7 +191,12 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `CommandEnvelope` | `Platform / Reference Data` |
 | `ApiIdempotencyRecord` | `Platform / Reference Data` |
 
-Totals are fixed: Identity & Accounts 10, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 11, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 53 persisted entities.
+Totals are fixed: Identity & Accounts 10, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 12, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 54 persisted entities.
+
+LGYM-244/247 adds only the Workout & Progress-owned `ExerciseMediaUpload` ledger
+for scoped private uploads, immutable publication intent and idempotent media
+operation receipts. It retains `Exercise.Image` as the final URL field and does
+not add a general media aggregate, new context, database or migration stream.
 
 ## Ownership tie-breaker
 

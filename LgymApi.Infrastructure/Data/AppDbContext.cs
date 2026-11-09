@@ -26,6 +26,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     public DbSet<PlanDay> PlanDays => Set<PlanDay>();
     public DbSet<PlanDayExercise> PlanDayExercises => Set<PlanDayExercise>();
     public DbSet<Exercise> Exercises => Set<Exercise>();
+    public DbSet<ExerciseMediaUpload> ExerciseMediaUploads => Set<ExerciseMediaUpload>();
     public DbSet<ExerciseTranslation> ExerciseTranslations => Set<ExerciseTranslation>();
     public DbSet<Training> Trainings => Set<Training>();
     public DbSet<TrainingExerciseScore> TrainingExerciseScores => Set<TrainingExerciseScore>();

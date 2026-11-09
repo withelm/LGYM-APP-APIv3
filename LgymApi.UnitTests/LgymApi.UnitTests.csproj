@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="MailKit" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" />
     <PackageReference Include="FluentAssertions" />
   </ItemGroup>
 

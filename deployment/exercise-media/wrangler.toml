@@ -1,0 +1,25 @@
+name = "lgym-exercise-media"
+main = "worker.mjs"
+compatibility_date = "2026-11-09"
+workers_dev = false
+preview_urls = false
+
+# Replace example domains/bucket names with reviewed environment configuration.
+# Neither private staging nor report storage may be bound to this Worker.
+[env.staging]
+name = "lgym-exercise-media-staging"
+routes = [{ pattern = "exercises.staging.example.com", custom_domain = true }]
+[env.staging.vars]
+EXPECTED_HOST = "exercises.staging.example.com"
+[[env.staging.r2_buckets]]
+binding = "PUBLISHED_EXERCISE_MEDIA"
+bucket_name = "lgym-exercise-published-staging"
+
+[env.production]
+name = "lgym-exercise-media-production"
+routes = [{ pattern = "exercises.example.com", custom_domain = true }]
+[env.production.vars]
+EXPECTED_HOST = "exercises.example.com"
+[[env.production.r2_buckets]]
+binding = "PUBLISHED_EXERCISE_MEDIA"
+bucket_name = "lgym-exercise-published-production"

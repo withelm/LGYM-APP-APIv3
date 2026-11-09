@@ -18,6 +18,7 @@ public static partial class ServiceCollectionExtensions
         services.AddRowSecurity();
         services.AddTrainingPlanningInfrastructure();
         services.AddWorkoutProgressInfrastructure();
+        services.AddExerciseMediaInfrastructure(configuration);
         services.AddCoachingInfrastructure();
         services.AddNutritionInfrastructure();
         services.AddReportingInfrastructure(configuration, enableSensitiveLogging, isTesting);
