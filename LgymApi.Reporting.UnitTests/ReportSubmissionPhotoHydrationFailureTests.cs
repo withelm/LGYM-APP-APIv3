@@ -122,12 +122,23 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
         IReportRequestSubmissionPersistence requestPersistence,
         IReportPhotoPersistence photoPersistence,
         IUnitOfWork unitOfWork)
-        => new(
+    {
+        var relationships = Substitute.For<IReportingRelationshipAccessPersistence>();
+        var activeEpisode = new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0);
+        relationships.GetAccessAsync(
+                Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(),
+                Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new ReportingRelationshipAccessFact(true, [], activeEpisode));
+        relationships.StageActiveEpisodeRevisionCheckAsync(activeEpisode, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        return new ReportingService(
             Substitute.For<IReportTemplatePersistence>(),
             requestPersistence,
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             photoPersistence,
-            Substitute.For<IReportingRelationshipAccessPersistence>(),
+            relationships,
             Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             Substitute.For<ICommandDispatcher>(),
@@ -137,4 +148,5 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
             ReportingTestData.Mapper(),
             Substitute.For<ILogger<ReportingService>>(),
             new PhotoStorageOptions());
+    }
 }

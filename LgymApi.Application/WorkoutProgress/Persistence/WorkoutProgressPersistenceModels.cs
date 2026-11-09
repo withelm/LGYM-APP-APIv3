@@ -2,6 +2,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.TrainingPlanning.Contracts;
+using LgymApi.Application.WorkoutProgress.Contracts.Measurements;
 
 namespace LgymApi.Application.WorkoutProgress.Persistence;
 
@@ -96,7 +97,31 @@ public sealed record WorkoutMeasurementPersistenceModel(
     string Unit,
     double Value,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    Id<LgymApi.Domain.Entities.ReportSubmission>? SourceReportSubmissionId = null,
+    Id<LgymApi.Domain.Entities.ReportRequest>? SourceReportRequestId = null,
+    Id<LgymApi.Domain.Entities.CoachingEpisode>? SourceCoachingEpisodeId = null,
+    DateTimeOffset? SourceReportAcceptedAt = null,
+    DateTimeOffset? RecordedAt = null);
+
+public sealed record MeasurementReadScope(IReadOnlyList<MeasurementsRelationshipPeriod> Periods)
+{
+    public bool Allows(WorkoutMeasurementPersistenceModel measurement)
+        => Periods.Any(period =>
+            (measurement.SourceReportSubmissionId is not null
+                && measurement.SourceReportRequestId is not null
+                && measurement.SourceCoachingEpisodeId == period.EpisodeId
+                && measurement.SourceReportAcceptedAt is not null
+                && (period.EndedAt is null || measurement.SourceReportAcceptedAt < period.EndedAt))
+            || (measurement.SourceReportSubmissionId is null
+                && measurement.SourceReportRequestId is null
+                && measurement.SourceCoachingEpisodeId is null
+                && measurement.SourceReportAcceptedAt is null
+                && measurement.RecordedAt is not null
+                && period.StartedAt is not null
+                && period.StartedAt <= measurement.RecordedAt
+                && (period.EndedAt is null || measurement.RecordedAt < period.EndedAt)));
+}
 
 public sealed record WorkoutMeasurementWriteModel(
     Id<LgymApi.Domain.Entities.Measurement> Id,

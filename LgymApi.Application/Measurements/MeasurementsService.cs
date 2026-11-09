@@ -12,6 +12,7 @@ using LgymApi.Identity.Contracts.Accounts;
 using LgymApi.Domain.Security;
 using LgymApi.Resources;
 using LgymApi.Application.WorkoutProgress.Authorization;
+using LgymApi.Application.WorkoutProgress.Persistence;
 
 namespace LgymApi.Application.Features.Measurements;
 
@@ -53,53 +54,67 @@ public sealed class MeasurementsService : IMeasurementsService
             return Result<MeasurementReadModel, AppError>.Failure(owner.Error);
         }
 
-        var access = await ValidateAccessAsync(currentUser, owner.Value, cancellationToken);
-        return access.IsFailure ? Result<MeasurementReadModel, AppError>.Failure(access.Error) : await _progress.GetMeasurementDetailForOwnerAsync(owner.Value, measurementId, cancellationToken);
+        var access = await GetAccessAsync(currentUser, owner.Value, cancellationToken);
+        return access.IsFailure ? Result<MeasurementReadModel, AppError>.Failure(access.Error) : await _progress.GetMeasurementDetailForOwnerAsync(owner.Value, measurementId, cancellationToken, access.Value);
     }
 
     public async Task<Result<List<MeasurementReadModel>, AppError>> GetMeasurementsListAsync(AuthenticatedAccountContext? currentUser, Id<AccountReference> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default)
     {
-        var access = await ValidateAccessAsync(currentUser, routeUserId, cancellationToken);
-        return access.IsFailure ? Result<List<MeasurementReadModel>, AppError>.Failure(access.Error) : await _progress.GetMeasurementsListForOwnerAsync(routeUserId, bodyPart, unit, cancellationToken);
+        var access = await GetAccessAsync(currentUser, routeUserId, cancellationToken);
+        return access.IsFailure ? Result<List<MeasurementReadModel>, AppError>.Failure(access.Error) : await _progress.GetMeasurementsListForOwnerAsync(routeUserId, bodyPart, unit, cancellationToken, access.Value);
     }
 
     public async Task<Result<List<MeasurementReadModel>, AppError>> GetMeasurementsHistoryAsync(AuthenticatedAccountContext? currentUser, Id<AccountReference> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default)
     {
-        var access = await ValidateAccessAsync(currentUser, routeUserId, cancellationToken);
-        return access.IsFailure ? Result<List<MeasurementReadModel>, AppError>.Failure(access.Error) : await _progress.GetMeasurementsHistoryForOwnerAsync(routeUserId, bodyPart, unit, cancellationToken);
+        var access = await GetAccessAsync(currentUser, routeUserId, cancellationToken);
+        return access.IsFailure ? Result<List<MeasurementReadModel>, AppError>.Failure(access.Error) : await _progress.GetMeasurementsHistoryForOwnerAsync(routeUserId, bodyPart, unit, cancellationToken, access.Value);
     }
 
     public async Task<Result<MeasurementTrendReadModel, AppError>> GetMeasurementsTrendAsync(AuthenticatedAccountContext? currentUser, Id<AccountReference> routeUserId, BodyParts bodyPart, MeasurementUnits unit, CancellationToken cancellationToken = default)
     {
-        var access = await ValidateAccessAsync(currentUser, routeUserId, cancellationToken);
-        return access.IsFailure ? Result<MeasurementTrendReadModel, AppError>.Failure(access.Error) : await _progress.GetMeasurementsTrendForOwnerAsync(routeUserId, bodyPart, unit, cancellationToken);
+        var access = await GetAccessAsync(currentUser, routeUserId, cancellationToken);
+        return access.IsFailure ? Result<MeasurementTrendReadModel, AppError>.Failure(access.Error) : await _progress.GetMeasurementsTrendForOwnerAsync(routeUserId, bodyPart, unit, cancellationToken, access.Value);
     }
 
     public async Task<Result<List<MeasurementTrendReadModel>, AppError>> GetMeasurementsTrendsAsync(AuthenticatedAccountContext? currentUser, Id<AccountReference> routeUserId, CancellationToken cancellationToken = default)
     {
-        var access = await ValidateAccessAsync(currentUser, routeUserId, cancellationToken);
-        return access.IsFailure ? Result<List<MeasurementTrendReadModel>, AppError>.Failure(access.Error) : await _progress.GetMeasurementsTrendsForOwnerAsync(routeUserId, cancellationToken);
+        var access = await GetAccessAsync(currentUser, routeUserId, cancellationToken);
+        return access.IsFailure ? Result<List<MeasurementTrendReadModel>, AppError>.Failure(access.Error) : await _progress.GetMeasurementsTrendsForOwnerAsync(routeUserId, cancellationToken, access.Value);
     }
 
-    private async Task<Result<Unit, AppError>> ValidateAccessAsync(AuthenticatedAccountContext? currentUser, Id<AccountReference> routeUserId, CancellationToken cancellationToken)
+    private async Task<Result<MeasurementReadScope?, AppError>> GetAccessAsync(AuthenticatedAccountContext? currentUser, Id<AccountReference> routeUserId, CancellationToken cancellationToken)
     {
         if (currentUser == null || routeUserId.IsEmpty)
         {
-            return Result<Unit, AppError>.Failure(new InvalidMeasurementError(Messages.InvalidId));
+            return Result<MeasurementReadScope?, AppError>.Failure(new InvalidMeasurementError(Messages.InvalidId));
+        }
+
+        var subject = await _accountAccess.GetByIdAsync(routeUserId, cancellationToken);
+        if (subject is null || subject.IsDeleted)
+        {
+            return Result<MeasurementReadScope?, AppError>.Failure(new MeasurementNotFoundError(Messages.DidntFind));
         }
 
         if (_ownershipAuthorization.IsOwner(currentUser, routeUserId))
         {
-            return Result<Unit, AppError>.Success(Unit.Value);
+            return Result<MeasurementReadScope?, AppError>.Success(null);
         }
 
         var account = await _accountAccess.GetByIdAsync(currentUser.Id, cancellationToken);
-        if (account?.Roles.Contains(AuthConstants.Roles.Trainer, StringComparer.Ordinal) != true ||
-            !await _relationshipAccess.HasActiveRelationshipAsync(currentUser.Id, routeUserId, cancellationToken))
+        if (account?.Roles.Contains(AuthConstants.Roles.Trainer, StringComparer.Ordinal) != true)
         {
-            return Result<Unit, AppError>.Failure(new MeasurementForbiddenError(Messages.Forbidden));
+            return Result<MeasurementReadScope?, AppError>.Failure(new MeasurementForbiddenError(Messages.Forbidden));
         }
 
-        return Result<Unit, AppError>.Success(Unit.Value);
+        var relationshipAccess = await _relationshipAccess.GetAccessAsync(currentUser.Id, routeUserId, cancellationToken);
+        if (relationshipAccess.HasActiveRelationship)
+        {
+            return Result<MeasurementReadScope?, AppError>.Success(null);
+        }
+
+        var scope = new MeasurementReadScope(relationshipAccess.Periods);
+        return relationshipAccess.Periods.Count == 0
+            ? Result<MeasurementReadScope?, AppError>.Failure(new MeasurementForbiddenError(Messages.Forbidden))
+            : Result<MeasurementReadScope?, AppError>.Success(scope);
     }
 }

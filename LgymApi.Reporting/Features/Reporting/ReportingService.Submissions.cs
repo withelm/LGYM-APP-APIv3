@@ -63,11 +63,28 @@ public sealed partial class ReportingService : IReportingService
         }
 
         var submittedAtUtc = DateTimeOffset.UtcNow;
+        var relationshipAccess = await _relationshipAccessPersistence.GetAccessAsync(
+            request.TrainerId,
+            request.TraineeId,
+            cancellationToken);
+        var sourceEpisodeId = request.SourceCoachingEpisodeId ?? relationshipAccess.ActiveEpisode?.EpisodeId;
+        if (!relationshipAccess.HasActiveRelationship
+            || sourceEpisodeId is null
+            || relationshipAccess.ActiveEpisode?.EpisodeId != sourceEpisodeId
+            || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
+                relationshipAccess.ActiveEpisode,
+                cancellationToken))
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
         var submission = new NewReportSubmissionPersistenceModel(
             Id<ReportSubmission>.New(),
             request.Id,
             currentTrainee.Id,
             JsonSerializer.Serialize(normalizedAnswers),
+            submittedAtUtc,
+            sourceEpisodeId,
             submittedAtUtc);
 
         await _requestSubmissionPersistence.AddSubmissionAsync(submission, cancellationToken);
@@ -79,7 +96,8 @@ public sealed partial class ReportingService : IReportingService
             submission.Id,
             request.Id,
             currentTrainee.Id,
-            submittedAtUtc);
+            submittedAtUtc,
+            sourceEpisodeId);
         if (acceptedProgressCommand != null)
         {
             await _commandOutboxWriter.StageAsync(acceptedProgressCommand, cancellationToken);
@@ -94,6 +112,10 @@ public sealed partial class ReportingService : IReportingService
         try
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
         catch (Exception exception) when (IsDuplicateSubmissionException(exception))
         {

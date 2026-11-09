@@ -43,6 +43,14 @@ public sealed class ReportSubmissionAcceptedProgressConsumer : IReportSubmission
         }
 
         Id<ReportSubmission>.TryParse(@event.ReportSubmissionId, out var reportSubmissionId);
+        var sourceReportRequestId = Id<ReportRequest>.Empty;
+        var hasTrustedProvenance = @event.SchemaVersion == ReportSubmissionAcceptedProgressEvent.CurrentSchemaVersion
+            && @event.SourceReportRequestId is not null
+            && Id<ReportRequest>.TryParse(@event.SourceReportRequestId, out sourceReportRequestId);
+        var sourceCoachingEpisodeId = @event.SourceCoachingEpisodeId is not null
+            && Id<CoachingEpisode>.TryParse(@event.SourceCoachingEpisodeId, out var parsedEpisodeId)
+            ? parsedEpisodeId
+            : (Id<CoachingEpisode>?)null;
         if (await _persistence.HasReceiptAsync(reportSubmissionId, cancellationToken))
         {
             return ReportSubmissionAcceptedProgressConsumeResult.Duplicate();
@@ -54,7 +62,11 @@ public sealed class ReportSubmissionAcceptedProgressConsumer : IReportSubmission
             .ToArray();
 
         await _persistence.AddReceiptAsync(
-            new AcceptedReportSubmissionReceiptPersistenceModel(reportSubmissionId),
+            new AcceptedReportSubmissionReceiptPersistenceModel(
+                reportSubmissionId,
+                hasTrustedProvenance ? sourceReportRequestId : null,
+                hasTrustedProvenance ? sourceCoachingEpisodeId : null,
+                hasTrustedProvenance ? @event.AcceptedAt.ToUniversalTime() : null),
             cancellationToken);
 
         foreach (var measurement in measurements)
@@ -64,7 +76,11 @@ public sealed class ReportSubmissionAcceptedProgressConsumer : IReportSubmission
                 measurement.BodyPart,
                 measurement.Unit,
                 measurement.Value,
-                @event.ObservedAt.ToUniversalTime()), cancellationToken);
+                @event.ObservedAt.ToUniversalTime(),
+                reportSubmissionId,
+                hasTrustedProvenance ? sourceReportRequestId : null,
+                hasTrustedProvenance ? sourceCoachingEpisodeId : null,
+                hasTrustedProvenance ? @event.AcceptedAt.ToUniversalTime() : null), cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

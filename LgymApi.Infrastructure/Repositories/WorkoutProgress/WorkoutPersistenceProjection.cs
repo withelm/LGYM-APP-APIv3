@@ -56,7 +56,12 @@ internal static class WorkoutPersistenceProjection
         entity.Unit,
         entity.Value,
         entity.CreatedAt,
-        entity.UpdatedAt);
+        entity.UpdatedAt,
+        entity.SourceReportSubmissionId,
+        entity.SourceReportRequestId,
+        entity.SourceCoachingEpisodeId,
+        entity.SourceReportAcceptedAt,
+        entity.RecordedAt);
 
     public static WorkoutMainRecordPersistenceModel MainRecord(MainRecord entity) => new(
         entity.Id,

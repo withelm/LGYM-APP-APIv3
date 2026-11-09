@@ -88,8 +88,11 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
         addedSubmission.Should().NotBeNull();
         await outbox.Received(1).StageAsync(Arg.Is<ReportSubmissionAcceptedProgressCommand>(command =>
             command.Event.Validate().IsValid
+            && command.Event.SchemaVersion == ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion
             && command.Event.ReportSubmissionId == addedSubmission!.Id.ToString()
             && command.Event.CorrelationId == requestId.ToString()
+            && command.Event.SourceReportRequestId == requestId.ToString()
+            && command.Event.SourceCoachingEpisodeId != null
             && command.Event.TraineeId == traineeId
             && command.Event.Measurements.SequenceEqual(new[]
             {
@@ -160,12 +163,21 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
         ICommandDispatcher dispatcher,
         ICommandOutboxWriter outbox)
     {
+        var activeEpisode = new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0);
+        var relationshipAccess = Substitute.For<IReportingRelationshipAccessPersistence>();
+        relationshipAccess.GetAccessAsync(
+                Arg.Any<Id<AccountReference>>(),
+                Arg.Any<Id<AccountReference>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new ReportingRelationshipAccessFact(true, [], activeEpisode));
+        relationshipAccess.StageActiveEpisodeRevisionCheckAsync(activeEpisode, Arg.Any<CancellationToken>())
+            .Returns(true);
         return new ReportingService(
             Substitute.For<IReportTemplatePersistence>(),
             persistence,
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             Substitute.For<IReportPhotoPersistence>(),
-            Substitute.For<IReportingRelationshipAccessPersistence>(),
+            relationshipAccess,
             Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             dispatcher,

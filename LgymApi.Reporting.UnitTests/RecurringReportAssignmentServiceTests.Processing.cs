@@ -318,6 +318,15 @@ public sealed partial class RecurringReportAssignmentServiceTests
         assignmentPersistence
             .FindByIdForUpdateAsync(Arg.Any<Id<RecurringReportAssignment>>(), Arg.Any<CancellationToken>())
             .Returns(call => byId[call.ArgAt<Id<RecurringReportAssignment>>(0)]);
+        relationshipPersistence
+            .GetAccessAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+            .Returns(new ReportingRelationshipAccessFact(
+                true,
+                [],
+                new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0)));
+        relationshipPersistence
+            .StageActiveEpisodeRevisionCheckAsync(Arg.Any<ReportingActiveRelationshipFact>(), Arg.Any<CancellationToken>())
+            .Returns(true);
         outboxWriter.StageAsync(
                 Arg.Any<ReportRequestCreatedInAppNotificationCommand>(),
                 Arg.Any<CancellationToken>())

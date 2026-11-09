@@ -210,6 +210,12 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
             template,
             nextEligibleAt: now.AddDays(-1),
             createdAt: now.AddDays(-3));
+        var activeLink = new TrainerTraineeLink
+        {
+            Id = Id<TrainerTraineeLink>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id
+        };
 
         database.AddRange(
             template,
@@ -218,7 +224,8 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
             first.Assignment,
             second.Request,
             second.Submission,
-            second.Assignment);
+            second.Assignment,
+            activeLink);
         await database.SaveChangesAsync(cancellationToken);
 
         return new ProcessingScenario(

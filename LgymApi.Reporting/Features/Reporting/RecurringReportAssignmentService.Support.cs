@@ -289,5 +289,6 @@ public sealed partial class RecurringReportAssignmentService
                 request.TemplateId,
                 snapshotJson,
                 ReportTemplateSnapshotFactory.Provenance,
-                request.CreatedAt));
+                request.CreatedAt),
+            request.SourceCoachingEpisodeId);
 }

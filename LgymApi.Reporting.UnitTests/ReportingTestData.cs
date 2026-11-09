@@ -75,7 +75,8 @@ internal static class ReportingTestData
                     entity.DefinitionSnapshot.SourceTemplateId,
                     entity.DefinitionSnapshot.DefinitionJson,
                     entity.DefinitionSnapshot.Provenance,
-                    entity.DefinitionSnapshot.CreatedAt));
+                    entity.DefinitionSnapshot.CreatedAt),
+            entity.SourceCoachingEpisodeId);
 
     public static ReportSubmissionPersistenceModel Submission(ReportSubmission entity)
         => new(
@@ -88,7 +89,9 @@ internal static class ReportingTestData
             entity.TrainerFeedbackAddedAt,
             entity.TrainerFeedbackReadAt,
             entity.CreatedAt,
-            Request(entity.ReportRequest));
+            Request(entity.ReportRequest),
+            entity.SourceCoachingEpisodeId,
+            entity.AcceptedAt);
 
     public static RecurringReportAssignmentPersistenceModel Assignment(RecurringReportAssignment entity)
         => new(

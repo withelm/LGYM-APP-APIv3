@@ -102,8 +102,11 @@ public sealed class ReportingPhotoTypeSnapshotTests
         requests.AddRequestAsync(Arg.Do<NewReportRequestPersistenceModel>(request => staged = request), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
         var relationships = Substitute.For<IReportingRelationshipAccessPersistence>();
+        var activeEpisode = new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0);
         relationships.GetAccessAsync(trainer.Id, traineeId, Arg.Any<CancellationToken>())
-            .Returns(new ReportingRelationshipAccessFact(true));
+            .Returns(new ReportingRelationshipAccessFact(true, [], activeEpisode));
+        relationships.StageActiveEpisodeRevisionCheckAsync(activeEpisode, Arg.Any<CancellationToken>())
+            .Returns(true);
         var service = CreateService(templates, requests, relationships);
 
         var result = await service.CreateReportRequestAsync(trainer, traineeId, new CreateReportRequestCommand { TemplateId = template.Id });

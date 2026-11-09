@@ -3,8 +3,8 @@
   "assemblies": [
     {
       "name": "LgymApi.Application",
-      "exportedTypeCount": 437,
-      "sha256": "92bc87e0d8e805afc686fa0b0029a1d9bafa9d89cece647400ea8e90890df69a"
+      "exportedTypeCount": 441,
+      "sha256": "7960e86d8ff53094cd6205d03f3031fa223d09f3c08b57ace489084c3b80b6f6"
     },
     {
       "name": "LgymApi.Identity",
@@ -23,8 +23,8 @@
     },
     {
       "name": "LgymApi.Reporting",
-      "exportedTypeCount": 82,
-      "sha256": "ef312e3040a768fe4af82ed040733d1c268ee87c443d27fd508b105908c5635d"
+      "exportedTypeCount": 83,
+      "sha256": "def9cdd4dad501ed828b04624bf4477b4f74c553fa0ab045f0e146cd05faf901"
     },
     {
       "name": "LgymApi.TrainingPlanning",

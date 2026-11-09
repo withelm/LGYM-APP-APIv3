@@ -150,6 +150,34 @@ public sealed class CoachingActiveLinkPersistenceRepository : ICoachingActiveLin
             cancellationToken);
     }
 
+    public async Task<CoachingMeasurementsRelationshipAccessFact> GetMeasurementsAccessAsync(
+        Id<AccountReference> trainerId,
+        Id<AccountReference> traineeId,
+        CancellationToken cancellationToken = default)
+    {
+        var persistedTrainerId = trainerId.Rebind<User>();
+        var persistedTraineeId = traineeId.Rebind<User>();
+        var rows = await _dbContext.CoachingEpisodes.AsNoTracking()
+            .Where(episode => episode.TrainerId == persistedTrainerId && episode.TraineeId == persistedTraineeId)
+            .Select(episode => new
+            {
+                Episode = episode,
+                IsActive = _dbContext.TrainerTraineeLinks.AsNoTracking().Any(link =>
+                    link.TrainerId == persistedTrainerId
+                    && link.TraineeId == persistedTraineeId
+                    && link.EpisodeId == episode.Id)
+            })
+            .ToListAsync(cancellationToken);
+
+        var mappingContext = _mapper.CreateContext();
+        var episodes = rows
+            .Select(row => _mapper.Map<CoachingEpisode, CoachingEpisodeFact>(row.Episode, mappingContext))
+            .ToArray();
+        return _mapper.Map<(bool, IReadOnlyList<CoachingEpisodeFact>), CoachingMeasurementsRelationshipAccessFact>(
+            (rows.Any(row => row.IsActive), episodes),
+            mappingContext);
+    }
+
     private async Task<CoachingActiveLinkFact?> FindAsync(IQueryable<TrainerTraineeLink> query, CancellationToken cancellationToken)
     {
         var link = await query.FirstOrDefaultAsync(cancellationToken);

@@ -18,4 +18,8 @@ public interface ICoachingActiveLinkPersistence
     Task<CoachingActiveLinkFact?> FindByTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<CoachingActiveLinkFact?> FindByTraineeAsync(Id<User> traineeId, CancellationToken cancellationToken = default);
     Task<bool> HasActiveRelationshipAsync(Id<AccountReference> trainerId, Id<AccountReference> traineeId, CancellationToken cancellationToken = default);
+    Task<CoachingMeasurementsRelationshipAccessFact> GetMeasurementsAccessAsync(
+        Id<AccountReference> trainerId,
+        Id<AccountReference> traineeId,
+        CancellationToken cancellationToken = default);
 }

@@ -11,13 +11,26 @@ internal sealed class MeasurementsRelationshipAccessAdapter(
     IAccountAccessReader accountAccess,
     ICoachingActiveLinkPersistence activeLinks) : IMeasurementsRelationshipAccessPort
 {
-    public async Task<bool> HasActiveRelationshipAsync(
+    public async Task<MeasurementsRelationshipAccessFact> GetAccessAsync(
         Id<AccountReference> trainerId,
         Id<AccountReference> traineeId,
         CancellationToken cancellationToken = default)
     {
         var trainer = await accountAccess.GetByIdAsync(trainerId, cancellationToken);
-        return trainer?.Roles.Contains(AuthConstants.Roles.Trainer, StringComparer.Ordinal) == true
-            && await activeLinks.HasActiveRelationshipAsync(trainerId, traineeId, cancellationToken);
+        if (trainer?.Roles.Contains(AuthConstants.Roles.Trainer, StringComparer.Ordinal) != true)
+        {
+            return MeasurementsRelationshipAccessFact.None;
+        }
+
+        var access = await activeLinks.GetMeasurementsAccessAsync(trainerId, traineeId, cancellationToken);
+        var episodes = access.HasActiveRelationship
+            ? access.Episodes
+            : access.Episodes.Where(episode => episode.EndedAt is not null);
+        return new MeasurementsRelationshipAccessFact(
+            access.HasActiveRelationship,
+            episodes.Select(episode => new MeasurementsRelationshipPeriod(
+                episode.Id,
+                episode.StartedAt,
+                episode.EndedAt)).ToArray());
     }
 }

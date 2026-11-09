@@ -27,7 +27,8 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
             DueAt = request.DueAt,
             SubmittedAt = request.SubmittedAt,
             Note = request.Note,
-            CreatedAt = request.CreatedAt
+            CreatedAt = request.CreatedAt,
+            SourceCoachingEpisodeId = request.SourceCoachingEpisodeId
         }, cancellationToken);
         if (!string.IsNullOrWhiteSpace(request.DefinitionSnapshotJson))
         {
@@ -81,7 +82,9 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
             ReportRequestId = submission.ReportRequestId,
             TraineeId = ReportingPersistenceAccountIds.ToPersisted(submission.TraineeId),
             PayloadJson = submission.PayloadJson,
-            CreatedAt = submission.CreatedAt
+            CreatedAt = submission.CreatedAt,
+            SourceCoachingEpisodeId = submission.SourceCoachingEpisodeId,
+            AcceptedAt = submission.AcceptedAt
         }, cancellationToken).AsTask();
 
     public Task<ReportSubmissionPersistenceModel?> FindSubmissionForTrainerAsync(
