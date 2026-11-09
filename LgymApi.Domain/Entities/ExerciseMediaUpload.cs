@@ -9,21 +9,16 @@ public sealed class ExerciseMediaUpload : EntityBase<ExerciseMediaUpload>, IExer
     public Id<User> ActorId { get; set; }
     public Id<Exercise>? TargetExerciseId { get; set; }
     public string ContentType { get; set; } = string.Empty;
-    public long SizeBytes { get; set; }
     public string SourceSha256 { get; set; } = string.Empty;
     public string? PublishedSha256 { get; set; }
     public string? Extension { get; set; }
-    public int Width { get; set; }
-    public int Height { get; set; }
-    public int Frames { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
-    public string Status { get; set; } = "pending";
+    public string Status { get; set; } = "publishing";
     public long Revision { get; set; }
-    public Id<ExerciseMediaOperationReference>? OperationId { get; set; }
+    public Id<ExerciseMediaOperationReference> OperationId { get; set; }
     public string? OperationHash { get; set; }
     public string? PreviousImage { get; set; }
     public string? ResultImage { get; set; }
-    public bool IsCreate { get; set; }
     public string? ObjectKey { get; set; }
     public int? RejectionStatusCode { get; set; }
 }

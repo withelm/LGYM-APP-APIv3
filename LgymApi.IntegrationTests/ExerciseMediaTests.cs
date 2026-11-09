@@ -123,6 +123,23 @@ public sealed class ExerciseMediaTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task DisabledStorage_AllowsDatabaseOnlyCreateAndReadWhileFileIntentRemainsUnresolved()
+    {
+        await ManagerAsync(); _storage.IsConfigured = false;
+        using var created = await CreateAsync(CreateFields("Storage disabled fixture", false));
+        created.StatusCode.Should().Be(HttpStatusCode.OK);
+        var saved = (await created.Content.ReadFromJsonAsync<ExerciseMediaMutationDto>())!;
+        using var read = await MediaClient().GetAsync($"/api/exercise/{saved.Id}/getExercise");
+        read.StatusCode.Should().Be(HttpStatusCode.OK);
+        var fileFields = CreateFields("Unconfigured file intent");
+        using var unavailable = await CreateAsync(fileFields, Gif);
+        unavailable.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        var error = (await unavailable.Content.ReadFromJsonAsync<ExerciseMediaErrorDto>())!;
+        error.OperationId.Should().Be(fileFields["operationId"]); error.Disposition.Should().Be("unresolved");
+        _storage.Published.Should().BeEmpty();
+    }
+
+    [Test]
     public async Task PublicationFailure_RetryReusesDurablyReservedUuidAndImmutableObject()
     {
         await ManagerAsync(); var fields = CreateFields("Interrupted create"); _storage.FailAfterPublish = true;
@@ -188,15 +205,15 @@ public sealed class ExerciseMediaTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task InvalidBytesOversizeAndLegacyHandshake_AreRejectedWithoutPublishing()
+    public async Task InvalidBytesOversizeAndUnknownFields_AreRejectedWithoutPublishing()
     {
         await ManagerAsync(); var fields = CreateFields(); AddManifest(fields, [1, 2, 3]);
         using var invalid = await CreateAsync(fields, [1, 2, 3]); invalid.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
         (await invalid.Content.ReadFromJsonAsync<ExerciseMediaErrorDto>())!.Disposition.Should().Be("rejected");
         fields = CreateFields(); using var oversized = await CreateAsync(fields, new byte[ExerciseMediaLimits.MaxBytes + 1]); oversized.StatusCode.Should().Be(HttpStatusCode.RequestEntityTooLarge);
         (await oversized.Content.ReadFromJsonAsync<ExerciseMediaErrorDto>())!.Disposition.Should().Be("rejected");
-        fields = CreateFields("Legacy receipt", false); fields["uploadReference"] = Id<ExerciseMediaUpload>.New().ToString();
-        using var legacy = await CreateAsync(fields); legacy.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        fields = CreateFields("Unknown field", false); fields["unexpectedField"] = "unsupported-value";
+        using var unknown = await CreateAsync(fields); unknown.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         using var removedRoute = await MediaClient().PostAsJsonAsync("/api/exercise/media/uploads", new {}); removedRoute.StatusCode.Should().Be(HttpStatusCode.NotFound);
         _storage.Published.Should().BeEmpty();
     }
@@ -362,7 +379,7 @@ public sealed class ExerciseMediaTests : IntegrationTestBase
         public bool FailAfterPublish { get; set; }
         public bool FailBeforePublish { get; set; }
         public int DeleteCalls { get; private set; }
-        public bool IsConfigured => true;
+        public bool IsConfigured { get; set; } = true;
         public string GetPublicUrl(string key) => "https://exercise.test/" + key;
         public Task<byte[]?> ReadAsync(string key, CancellationToken cancellationToken) => Task.FromResult(Published.TryGetValue(key, out var bytes) ? bytes.ToArray() : null);
         public Task<string> PublishAsync(string key, byte[] bytes, string contentType, CancellationToken cancellationToken)
@@ -373,6 +390,6 @@ public sealed class ExerciseMediaTests : IntegrationTestBase
             return Task.FromResult(GetPublicUrl(key));
         }
         public Task DeleteAsync(string key, CancellationToken cancellationToken) { DeleteCalls++; Published.TryRemove(key, out _); return Task.CompletedTask; }
-        public void Reset() { Published.Clear(); FailAfterPublish = false; FailBeforePublish = false; DeleteCalls = 0; }
+        public void Reset() { Published.Clear(); FailAfterPublish = false; FailBeforePublish = false; DeleteCalls = 0; IsConfigured = true; }
     }
 }

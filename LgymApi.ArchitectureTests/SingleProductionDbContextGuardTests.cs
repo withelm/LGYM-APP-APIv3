@@ -56,15 +56,15 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261107094438_AddCoachingEpisodes.Designer.cs"] = "9f802f8b1097ec56c5478ece5fd9685f39637fa59e48b5a625b307c6a83cf85c",
         [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.cs"] = "d6a64a469455b5e5fa220c7bb8e7c6fe3975c00b9db192bbf3a8c75f78322070",
         [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.Designer.cs"] = "1417f96bcd7abf046858cde05ebb26faa354862f5c9c99aeaac2ce05152c1758",
-        [MigrationRoot + "/20261109212642_AddExerciseMediaOperationsAndObjectFences.cs"] = "5b10153db9370923d42a5be5771e33fa8640c45448a43a65edf09a576e22a680",
-        [MigrationRoot + "/20261109212642_AddExerciseMediaOperationsAndObjectFences.Designer.cs"] = "85507484f0fea5ea632f7c0d30f8d1dd497fa22ea7889990dbb8d95111ea619a",
+        [MigrationRoot + "/20261109212642_AddExerciseMediaOperationsAndObjectFences.cs"] = "50b44b3ec4eb78a650d9439f2ffbec38d9e18f721dbe7a504442125f5cd4e2cf",
+        [MigrationRoot + "/20261109212642_AddExerciseMediaOperationsAndObjectFences.Designer.cs"] = "f55340c14ebde58053eabccbf90f69ba05425cda68791470fffd9b5f88dd9dd0",
         [MigrationRoot + "/20261108120000_AddTraineeNoteHistoryVisibility.cs"] = "b83b471ee554febd7001f0a32417eba1866b5bdd731bc03ce2b4e19646d16a68",
         [MigrationRoot + "/20261108120000_AddTraineeNoteHistoryVisibility.Designer.cs"] = "e3907d80e4c04c1735f8ce675fca9986fa9ae5e6dd7aabd81f8e2b5c2c81143c",
         [MigrationRoot + "/20261108222532_AddTraineeNoteUpdatedAtConcurrency.cs"] = "cc9810729bf6fd033d497af90876eb60cecde575229f76095819e6cba1eaa936",
         [MigrationRoot + "/20261108222532_AddTraineeNoteUpdatedAtConcurrency.Designer.cs"] = "23b5c30f392eb9796ecb95ca84c5d2b1dd708dfaf7f7dbf0255c5b0509b9da84",
         [MigrationRoot + "/20261109193431_AddMeasurementTrustedProvenance.cs"] = "1e3ee8c63fb2830698e9547b492eb613a2c3ed46a03f6d84827162ddd35bded8",
         [MigrationRoot + "/20261109193431_AddMeasurementTrustedProvenance.Designer.cs"] = "afc02d9a47b8039af77f64e47fa23c1b699c8e81105b01f2ff6d915c49897b6e",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "d0ec9e229c1d99dd609f119bef5daa3093809d03e38c84ddcb1b66664be8bdae"
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "0f26296e8ce4ce7a121943b89bf591e1602ad143ea42cffecc269f5b5698279e"
     };
 
     [Test]

@@ -61,7 +61,7 @@ test("alternate hostname and cleartext origin cannot expose storage", async () =
 
 test("DEV Worker workers.dev fallback still requires its exact configured host", async () => {
     const { environment, calls } = fixture();
-    environment.EXPECTED_HOST = "lgym-exercise-media-dev.owner.workers.dev";
+    environment.EXPECTED_HOST = "exercise-worker.operator.workers.dev";
     const response = await worker.fetch(new Request(`https://${environment.EXPECTED_HOST}${path}`), environment);
     assert.equal(response.status, 200);
     await response.body.cancel();

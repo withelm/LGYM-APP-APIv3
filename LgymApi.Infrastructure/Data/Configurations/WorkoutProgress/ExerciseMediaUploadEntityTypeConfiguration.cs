@@ -11,9 +11,10 @@ internal sealed class ExerciseMediaUploadEntityTypeConfiguration : IEntityTypeCo
     {
         builder.ToTable("ExerciseMediaUploads");
         builder.Property(x => x.Revision).IsConcurrencyToken();
-        builder.Property(x => x.OperationId).HasConversion<NullableTypedIdValueConverter<ExerciseMediaOperationReference>>();
+        builder.Property(x => x.OperationId).HasConversion<TypedIdValueConverter<ExerciseMediaOperationReference>>();
         builder.HasIndex(x => new { x.ActorId, x.OperationId }).IsUnique();
         builder.HasIndex(x => new { x.ObjectKey, x.ExpiresAt });
+        builder.HasIndex(x => new { x.Status, x.ExpiresAt });
         builder.Property(x => x.ObjectKey).HasMaxLength(256);
         builder.Property(x => x.Status).HasMaxLength(16);
         builder.Property(x => x.ContentType).HasMaxLength(32);

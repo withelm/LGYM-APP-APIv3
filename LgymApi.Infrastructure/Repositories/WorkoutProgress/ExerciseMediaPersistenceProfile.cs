@@ -37,13 +37,9 @@ internal sealed class ExerciseMediaPersistenceProfile : IMappingProfile
     {
         target.TargetExerciseId = source.TargetExerciseId;
         target.ContentType = source.ContentType;
-        target.SizeBytes = source.SizeBytes;
         target.SourceSha256 = source.SourceSha256;
         target.PublishedSha256 = source.PublishedSha256;
         target.Extension = source.Extension;
-        target.Width = source.Width;
-        target.Height = source.Height;
-        target.Frames = source.Frames;
         target.ExpiresAt = source.ExpiresAt;
         target.Status = source.Status;
         target.Revision = source.Revision;
@@ -51,7 +47,6 @@ internal sealed class ExerciseMediaPersistenceProfile : IMappingProfile
         target.OperationHash = source.OperationHash;
         target.PreviousImage = source.PreviousImage;
         target.ResultImage = source.ResultImage;
-        target.IsCreate = source.IsCreate;
         target.ObjectKey = source.ObjectKey;
         target.RejectionStatusCode = source.RejectionStatusCode;
         return target;

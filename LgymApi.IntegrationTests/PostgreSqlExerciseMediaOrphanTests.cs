@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Results;
+using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.WorkoutProgress.Errors;
@@ -28,13 +29,16 @@ public sealed class PostgreSqlExerciseMediaOrphanTests : PostgreSqlIntegrationTe
     private WebApplicationFactory<Program>? _mediaFactory;
     private readonly ControlledStorage _storage = new();
     private int _uncertainCommit;
+    private int _boundSaveAckFailure;
+    private int _saveCalls;
+    private int _transactionStarts;
     private static readonly byte[] Gif = Convert.FromHexString("47494638396101000100800000000000ffffff21ff0b4e45545343415045322e30030100000021f904000a0000002c000000000100010000020244010021f90400140000002c00000000010001000002024c01003b");
 
     [TearDown]
     public async Task DisposeMediaHostAsync()
     {
         if (_mediaFactory is not null) await _mediaFactory.DisposeAsync();
-        _mediaFactory = null; _storage.Reset(); _uncertainCommit = 0;
+        _mediaFactory = null; _storage.Reset(); _uncertainCommit = 0; _boundSaveAckFailure = 0; _saveCalls = 0; _transactionStarts = 0;
     }
 
     private IServiceScope Scope()
@@ -42,7 +46,19 @@ public sealed class PostgreSqlExerciseMediaOrphanTests : PostgreSqlIntegrationTe
         _mediaFactory ??= Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
         {
             services.AddSingleton<IExerciseMediaStorage>(_storage);
-            services.AddScoped<IUnitOfWork>(provider => new UncertainCommitUnitOfWork(new EfUnitOfWork(provider.GetRequiredService<AppDbContext>()), () => Interlocked.Exchange(ref _uncertainCommit, 0) == 1));
+            services.AddScoped<IUnitOfWork>(provider =>
+            {
+                var db = provider.GetRequiredService<AppDbContext>();
+                return new UncertainCommitUnitOfWork(new EfUnitOfWork(db),
+                    () => Interlocked.Exchange(ref _uncertainCommit, 0) == 1,
+                    () =>
+                    {
+                        Interlocked.Increment(ref _saveCalls);
+                        return db.ChangeTracker.Entries<ExerciseMediaUpload>().Any(x => (x.State is EntityState.Added or EntityState.Modified) && x.Entity.Status == "bound")
+                            && Interlocked.Exchange(ref _boundSaveAckFailure, 0) == 1;
+                    },
+                    () => Interlocked.Increment(ref _transactionStarts));
+            });
         }));
         return _mediaFactory.Services.CreateScope();
     }
@@ -139,7 +155,10 @@ public sealed class PostgreSqlExerciseMediaOrphanTests : PostgreSqlIntegrationTe
     [Test]
     public async Task ConcurrentCleanupClaims_OneCasLoserMakesZeroDeleteCalls()
     {
-        await SeedOrphanAsync(); using var a = Scope(); using var b = Scope();
+        var orphan = await SeedOrphanAsync();
+        using (var resolver = Scope())
+            (await resolver.ServiceProvider.GetRequiredService<IExerciseMediaService>().ChangeAsync(orphan.Actor, orphan.Exercise.Id, orphan.Input, null, default)).Error.HttpStatusCode.Should().Be(409);
+        using var a = Scope(); using var b = Scope();
         var aDb = a.ServiceProvider.GetRequiredService<AppDbContext>(); var bDb = b.ServiceProvider.GetRequiredService<AppDbContext>();
         using var aGate = new SaveGate(aDb, () => aDb.ChangeTracker.Entries<ExerciseMediaObjectFence>().Any(x => x.Entity.IsRetired));
         using var bGate = new SaveGate(bDb, () => bDb.ChangeTracker.Entries<ExerciseMediaObjectFence>().Any(x => x.Entity.IsRetired));
@@ -305,8 +324,340 @@ public sealed class PostgreSqlExerciseMediaOrphanTests : PostgreSqlIntegrationTe
         Func<Task> downgrade = () => db.Database.MigrateAsync("20261108222532_AddTraineeNoteUpdatedAtConcurrency");
         await downgrade.Should().ThrowAsync<InvalidOperationException>().WithMessage("*permanent retired-key fences must be retained*");
         (await db.ExerciseMediaObjectFences.AsNoTracking().SingleAsync(x => x.ObjectKey == orphan.Key)).IsRetired.Should().BeTrue();
-        (await db.ExerciseMediaUploads.AsNoTracking().SingleAsync(x => x.OperationId == orphan.Input.OperationId)).Status.Should().Be("retired");
+        (await db.ExerciseMediaUploads.AsNoTracking().SingleAsync(x => x.OperationId == orphan.Input.OperationId)).Status.Should().Be("rejected");
         (await db.Database.GetAppliedMigrationsAsync()).Should().Contain("20261109212642_AddExerciseMediaOperationsAndObjectFences");
+    }
+
+    [TestCase("create")]
+    [TestCase("remove")]
+    [TestCase("restore")]
+    public async Task DatabaseOnlyMutation_OneAtomicSaveAndLostAckReplaysCommittedResult(string kind)
+    {
+        var intent = await DatabaseOnlyIntentAsync(kind);
+        var priorPublishes = _storage.PublishCalls; _saveCalls = 0; _transactionStarts = 0; _boundSaveAckFailure = 1;
+        using (var initial = Scope())
+        {
+            var ambiguous = await ExecuteIntentAsync(initial, intent);
+            ambiguous.IsFailure.Should().BeTrue(); ambiguous.Error.HttpStatusCode.Should().Be(503);
+        }
+        _saveCalls.Should().Be(1); _transactionStarts.Should().Be(0);
+        _storage.PublishCalls.Should().Be(priorPublishes); _storage.DeleteCalls.Should().Be(0);
+        ExerciseMediaUpload committed;
+        using (var read = Scope())
+        {
+            var db = read.ServiceProvider.GetRequiredService<AppDbContext>();
+            committed = await db.ExerciseMediaUploads.AsNoTracking().SingleAsync(x => x.OperationId == intent.OperationId);
+            committed.Status.Should().Be("bound"); committed.TargetExerciseId.Should().NotBeNull();
+            var exercise = await db.Exercises.AsNoTracking().SingleAsync(x => x.Id == committed.TargetExerciseId);
+            exercise.Image.Should().Be(committed.ResultImage);
+            committed.ExpiresAt.Should().BeBefore(DateTimeOffset.UtcNow, "bound receipts replay independently of an expiry timestamp");
+        }
+        using var replay = Scope(); var result = await ExecuteIntentAsync(replay, intent);
+        result.IsSuccess.Should().BeTrue(); result.Value.Id.Should().Be(committed.TargetExerciseId!.Value.ToString()); result.Value.Image.Should().Be(committed.ResultImage);
+        _saveCalls.Should().Be(1); _transactionStarts.Should().Be(0);
+    }
+
+    [TestCase("create")]
+    [TestCase("remove")]
+    [TestCase("restore")]
+    public async Task ExistingUnexpiredDatabaseReservation_ResumesSameIdentityAndThenReplaysAfterExpiry(string kind)
+    {
+        var intent = await ReservedDatabaseIntentAsync(kind, false);
+        _saveCalls = 0; _transactionStarts = 0;
+        using (var resume = Scope())
+        {
+            var result = await ExecuteIntentAsync(resume, intent);
+            result.IsSuccess.Should().BeTrue(); result.Value.Id.Should().Be(intent.ExerciseId.ToString());
+        }
+        _saveCalls.Should().Be(1); _transactionStarts.Should().Be(0);
+        using (var expire = Scope()) await ExpireIntentAsync(expire, intent);
+        using var replay = Scope(); (await ExecuteIntentAsync(replay, intent)).IsSuccess.Should().BeTrue();
+        _saveCalls.Should().Be(1);
+    }
+
+    [TestCase("create", false)]
+    [TestCase("create", true)]
+    [TestCase("remove", false)]
+    [TestCase("remove", true)]
+    [TestCase("restore", false)]
+    [TestCase("restore", true)]
+    public async Task ExpiredObjectlessReservation_IsDurablyRejectedByRetryOrCleanupWithoutDeleting(string kind, bool byCleanup)
+    {
+        var intent = await ReservedDatabaseIntentAsync(kind, true);
+        var priorPublishes = _storage.PublishCalls;
+        using (var resolve = Scope())
+        {
+            if (byCleanup) (await resolve.ServiceProvider.GetRequiredService<IExerciseMediaService>().CleanupAsync(Actor(), default)).IsSuccess.Should().BeTrue();
+            else AssertTerminal(await ExecuteIntentAsync(resolve, intent));
+        }
+        using (var committed = Scope())
+        {
+            var persisted = await committed.ServiceProvider.GetRequiredService<AppDbContext>().ExerciseMediaUploads.AsNoTracking().SingleAsync(x => x.OperationId == intent.OperationId);
+            persisted.Status.Should().Be("rejected"); persisted.RejectionStatusCode.Should().Be(409);
+        }
+        using (var replay = Scope()) AssertTerminal(await ExecuteIntentAsync(replay, intent));
+        using var check = Scope(); var db = check.ServiceProvider.GetRequiredService<AppDbContext>();
+        var row = await db.ExerciseMediaUploads.AsNoTracking().SingleAsync(x => x.OperationId == intent.OperationId);
+        row.Status.Should().Be("rejected"); row.ObjectKey.Should().BeNull();
+        var exercise = await db.Exercises.AsNoTracking().SingleOrDefaultAsync(x => x.Id == intent.ExerciseId);
+        if (intent.Create is not null) exercise.Should().BeNull();
+        else exercise!.Image.Should().Be(intent.Change!.ExpectedImage);
+        _storage.PublishCalls.Should().Be(priorPublishes); _storage.DeleteCalls.Should().Be(0);
+    }
+
+    [Test]
+    public async Task ExpiredPublishingOperation_OnProtectedKeyResolvesWithoutRetiringOrDeletingKey()
+    {
+        var intent = await DatabaseOnlyIntentAsync("remove");
+        var request = new ChangeExerciseMediaInput(Id<ExerciseMediaOperationReference>.New(), intent.Change!.ExpectedImage, Source(), false, null);
+        _storage.FailAfterPublish = true;
+        using (var reserve = Scope())
+            (await reserve.ServiceProvider.GetRequiredService<IExerciseMediaService>().ChangeAsync(intent.Actor, intent.ExerciseId, request, Gif, default)).Error.HttpStatusCode.Should().Be(503);
+        using (var expire = Scope())
+        {
+            var db = expire.ServiceProvider.GetRequiredService<AppDbContext>(); var operation = await db.ExerciseMediaUploads.SingleAsync(x => x.OperationId == request.OperationId);
+            operation.ExpiresAt = DateTimeOffset.UtcNow.AddDays(-1); await db.SaveChangesAsync();
+        }
+        using (var cleanup = Scope()) (await cleanup.ServiceProvider.GetRequiredService<IExerciseMediaService>().CleanupAsync(Actor(), default)).Value.Cleaned.Should().Be(0);
+        using (var committed = Scope())
+        {
+            var persisted = await committed.ServiceProvider.GetRequiredService<AppDbContext>().ExerciseMediaUploads.AsNoTracking().SingleAsync(x => x.OperationId == request.OperationId);
+            persisted.Status.Should().Be("rejected"); persisted.RejectionStatusCode.Should().Be(409);
+        }
+        using (var replay = Scope()) AssertTerminal(await replay.ServiceProvider.GetRequiredService<IExerciseMediaService>().ChangeAsync(intent.Actor, intent.ExerciseId, request, null, default));
+        using var check = Scope(); var database = check.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await database.ExerciseMediaObjectFences.SingleAsync()).IsRetired.Should().BeFalse();
+        (await database.Exercises.SingleAsync(x => x.Id == intent.ExerciseId)).Image.Should().Be(intent.Change.ExpectedImage);
+        _storage.DeleteCalls.Should().Be(0);
+    }
+
+    [TestCase("create", false)]
+    [TestCase("create", true)]
+    [TestCase("remove", false)]
+    [TestCase("remove", true)]
+    [TestCase("restore", false)]
+    [TestCase("restore", true)]
+    public async Task ExpiryResolutionVersusLateDatabaseCompletion_OnlyOneRevisionCanCommit(string kind, bool terminalWins)
+    {
+        var intent = await ReservedDatabaseIntentAsync(kind, false);
+        using var oldWriter = Scope(); var writerDb = oldWriter.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var boundGate = new SaveGate(writerDb, () => writerDb.ChangeTracker.Entries<ExerciseMediaUpload>().Any(x => x.Entity.OperationId == intent.OperationId && x.Entity.Status == "bound"));
+        var completion = Task.Run(() => ExecuteIntentAsync(oldWriter, intent));
+        Task<Result<ExerciseMediaMutationResult, AppError>>? terminal = null;
+        using var resolver = Scope(); var resolverDb = resolver.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var terminalGate = new SaveGate(resolverDb, () => resolverDb.ChangeTracker.Entries<ExerciseMediaUpload>().Any(x => x.Entity.OperationId == intent.OperationId && x.Entity.Status == "rejected"));
+        try
+        {
+            await boundGate.Arrived.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            using (var expire = Scope()) await ExpireIntentAsync(expire, intent);
+            terminal = Task.Run(() => ExecuteIntentAsync(resolver, intent));
+            await terminalGate.Arrived.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            if (terminalWins)
+            {
+                terminalGate.Release(); AssertTerminal(await terminal.WaitAsync(TimeSpan.FromSeconds(30)));
+                boundGate.Release(); (await completion.WaitAsync(TimeSpan.FromSeconds(30))).IsFailure.Should().BeTrue();
+                using var replay = Scope(); AssertTerminal(await ExecuteIntentAsync(replay, intent));
+                var db = replay.ServiceProvider.GetRequiredService<AppDbContext>();
+                var exercise = await db.Exercises.AsNoTracking().SingleOrDefaultAsync(x => x.Id == intent.ExerciseId);
+                if (intent.Create is not null) exercise.Should().BeNull();
+                else exercise!.Image.Should().Be(intent.Change!.ExpectedImage);
+            }
+            else
+            {
+                boundGate.Release(); (await completion.WaitAsync(TimeSpan.FromSeconds(30))).IsSuccess.Should().BeTrue();
+                terminalGate.Release(); var lost = await terminal.WaitAsync(TimeSpan.FromSeconds(30));
+                lost.IsFailure.Should().BeTrue(); ((ExerciseMediaOperationError)lost.Error).Disposition.Should().Be(ExerciseMediaOperationError.Conflict);
+                using var replay = Scope(); var persisted = await ExecuteIntentAsync(replay, intent);
+                persisted.IsSuccess.Should().BeTrue(); persisted.Value.Id.Should().Be(intent.ExerciseId.ToString());
+            }
+            _storage.DeleteCalls.Should().Be(0);
+        }
+        finally
+        {
+            boundGate.Release(); terminalGate.Release(); await completion.WaitAsync(TimeSpan.FromSeconds(30));
+            if (terminal is not null) await terminal.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+    }
+
+    [Test]
+    public async Task CleanupBatch_StaleFirstClaimMakesZeroDeletesAndSecondUnusedKeyProgresses()
+    {
+        var first = await SeedOrphanAsync(); var second = await SeedOrphanAsync();
+        using var cleaner = Scope(); var db = cleaner.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var gate = new SaveGate(db, () => db.ChangeTracker.Entries<ExerciseMediaObjectFence>().Any(x => x.Entity.ObjectKey == first.Key && x.Entity.IsRetired));
+        var writeEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); var releaseWrite = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _storage.BeforePublish = async (_, _, cancellationToken) => { writeEntered.TrySetResult(); await releaseWrite.Task.WaitAsync(cancellationToken); };
+        var cleanup = Task.Run(() => cleaner.ServiceProvider.GetRequiredService<IExerciseMediaService>().CleanupAsync(Actor(), default));
+        Task<Result<ExerciseMediaMutationResult, AppError>>? publication = null;
+        using var publisher = Scope();
+        try
+        {
+            await gate.Arrived.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            publication = publisher.ServiceProvider.GetRequiredService<IExerciseMediaService>().ChangeAsync(Actor(), first.Exercise.Id, Replacement(), Gif, default);
+            await writeEntered.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            gate.Release(); (await cleanup.WaitAsync(TimeSpan.FromSeconds(30))).Value.Cleaned.Should().Be(1);
+            _storage.Deleted.Should().Equal(new[] { second.Key }, "the losing first claim cannot delete and its failed tracked state cannot poison the second claim");
+            releaseWrite.TrySetResult(); (await publication.WaitAsync(TimeSpan.FromSeconds(30))).IsSuccess.Should().BeTrue();
+            _storage.Objects.Should().ContainKey(first.Key);
+        }
+        finally
+        {
+            gate.Release(); releaseWrite.TrySetResult(); await cleanup.WaitAsync(TimeSpan.FromSeconds(30));
+            if (publication is not null) await publication.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+    }
+
+    [Test]
+    public async Task CleanupBatch_UncertainFirstClaimPerformsNoDeleteAndSecondUnusedKeyProgresses()
+    {
+        var first = await SeedOrphanAsync(); var second = await SeedOrphanAsync(); _uncertainCommit = 1;
+        using (var cleanup = Scope()) (await cleanup.ServiceProvider.GetRequiredService<IExerciseMediaService>().CleanupAsync(Actor(), default)).Value.Cleaned.Should().Be(1);
+        _storage.Deleted.Should().Equal(second.Key); _storage.Objects.Should().ContainKey(first.Key);
+        using (var read = Scope())
+            (await read.ServiceProvider.GetRequiredService<AppDbContext>().ExerciseMediaObjectFences.SingleAsync(x => x.ObjectKey == first.Key)).IsRetired.Should().BeTrue();
+        using var retry = Scope(); (await retry.ServiceProvider.GetRequiredService<IExerciseMediaService>().CleanupAsync(Actor(), default)).IsSuccess.Should().BeTrue();
+        _storage.Deleted.Should().Contain(first.Key);
+    }
+
+    [Test]
+    public async Task CleanupBatch_PostDeleteMarkerConflictDoesNotPoisonSecondUnusedKey()
+    {
+        var first = await SeedOrphanAsync(); var second = await SeedOrphanAsync();
+        using var cleaner = Scope(); var db = cleaner.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var markerGate = new SaveGate(db, () => db.ChangeTracker.Entries<ExerciseMediaObjectFence>().Any(x => x.Entity.ObjectKey == first.Key && x.Entity.LastDeleteSucceeded));
+        var cleanup = Task.Run(() => cleaner.ServiceProvider.GetRequiredService<IExerciseMediaService>().CleanupAsync(Actor(), default));
+        try
+        {
+            await markerGate.Arrived.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            using (var competingClaim = Scope())
+            {
+                var persistence = competingClaim.ServiceProvider.GetRequiredService<IExerciseMediaPersistence>();
+                var row = await persistence.FindObjectAsync(first.Key, default); row!.IsRetired.Should().BeTrue();
+                await persistence.SaveObjectRevisionAsync(row, default);
+                await competingClaim.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
+            }
+            markerGate.Release(); (await cleanup.WaitAsync(TimeSpan.FromSeconds(30))).Value.Cleaned.Should().Be(1);
+            _storage.Deleted.Should().Equal(first.Key, second.Key);
+            using var read = Scope(); var rows = await read.ServiceProvider.GetRequiredService<AppDbContext>().ExerciseMediaObjectFences.AsNoTracking().ToListAsync();
+            rows.Single(x => x.ObjectKey == first.Key).LastDeleteSucceeded.Should().BeFalse();
+            rows.Single(x => x.ObjectKey == second.Key).LastDeleteSucceeded.Should().BeTrue();
+        }
+        finally { markerGate.Release(); await cleanup.WaitAsync(TimeSpan.FromSeconds(30)); }
+    }
+
+    [Test]
+    public async Task ExpiryBatch_LateCompletionWinsFirstRevisionAndSecondObjectlessOperationStillResolves()
+    {
+        var first = await ReservedDatabaseIntentAsync("create", false); var second = await ReservedDatabaseIntentAsync("create", true);
+        using var writer = Scope(); var writerDb = writer.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var boundGate = new SaveGate(writerDb, () => writerDb.ChangeTracker.Entries<ExerciseMediaUpload>().Any(x => x.Entity.OperationId == first.OperationId && x.Entity.Status == "bound"));
+        var completion = Task.Run(() => ExecuteIntentAsync(writer, first));
+        using var cleaner = Scope(); var cleanerDb = cleaner.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var expiryGate = new SaveGate(cleanerDb, () => cleanerDb.ChangeTracker.Entries<ExerciseMediaUpload>().Any(x => x.Entity.OperationId == first.OperationId && x.Entity.Status == "rejected"));
+        Task<Result<ExerciseMediaCleanupResult, AppError>>? cleanup = null;
+        try
+        {
+            await boundGate.Arrived.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            using (var expire = Scope()) await ExpireIntentAsync(expire, first, -2);
+            cleanup = Task.Run(() => cleaner.ServiceProvider.GetRequiredService<IExerciseMediaService>().CleanupAsync(Actor(), default));
+            await expiryGate.Arrived.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            boundGate.Release(); (await completion.WaitAsync(TimeSpan.FromSeconds(30))).IsSuccess.Should().BeTrue();
+            expiryGate.Release(); (await cleanup.WaitAsync(TimeSpan.FromSeconds(30))).IsSuccess.Should().BeTrue();
+            using (var committed = Scope())
+            {
+                var persisted = await committed.ServiceProvider.GetRequiredService<AppDbContext>().ExerciseMediaUploads.AsNoTracking().SingleAsync(x => x.OperationId == second.OperationId);
+                persisted.Status.Should().Be("rejected"); persisted.RejectionStatusCode.Should().Be(409);
+            }
+            using var replay = Scope(); (await ExecuteIntentAsync(replay, first)).IsSuccess.Should().BeTrue();
+            AssertTerminal(await ExecuteIntentAsync(replay, second));
+            _storage.DeleteCalls.Should().Be(0);
+        }
+        finally
+        {
+            boundGate.Release(); expiryGate.Release(); await completion.WaitAsync(TimeSpan.FromSeconds(30));
+            if (cleanup is not null) await cleanup.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+    }
+
+    [Test]
+    public async Task FeatureMigration_FromActualMainPreservesExerciseAndCreatesOnlyMinimalEmptyLedgers()
+    {
+        await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync(activate: false,
+            targetMigration: "20261109193431_AddMeasurementTrustedProvenance");
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(environment.RuntimeConnectionString).Options);
+        var exercise = new Exercise { Id = Id<Exercise>.New(), Name = "Main baseline exercise", BodyPart = BodyParts.Chest, Image = "https://legacy.example/main.gif" };
+        db.Exercises.Add(exercise); await db.SaveChangesAsync();
+        await db.Database.MigrateAsync(); db.ChangeTracker.Clear();
+        var preserved = await db.Exercises.AsNoTracking().SingleAsync(x => x.Id == exercise.Id);
+        preserved.Name.Should().Be(exercise.Name); preserved.Image.Should().Be(exercise.Image);
+        (await db.ExerciseMediaUploads.CountAsync()).Should().Be(0); (await db.ExerciseMediaObjectFences.CountAsync()).Should().Be(0);
+        var properties = db.Model.FindEntityType(typeof(ExerciseMediaUpload))!.GetProperties().Select(x => x.Name).ToArray();
+        properties.Should().NotContain(["IsCreate", "SizeBytes", "Width", "Height", "Frames"]);
+        db.Model.FindEntityType(typeof(ExerciseMediaUpload))!.FindProperty(nameof(ExerciseMediaUpload.OperationId))!.IsNullable.Should().BeFalse();
+        (await db.Database.GetAppliedMigrationsAsync()).Should().Contain("20261109193431_AddMeasurementTrustedProvenance").And.Contain("20261109212642_AddExerciseMediaOperationsAndObjectFences");
+    }
+
+    private static void AssertTerminal(Result<ExerciseMediaMutationResult, AppError> result)
+    {
+        result.IsFailure.Should().BeTrue(); result.Error.HttpStatusCode.Should().Be(409);
+        ((ExerciseMediaOperationError)result.Error).Disposition.Should().Be(ExerciseMediaOperationError.Rejected);
+    }
+
+    private async Task<DatabaseIntent> DatabaseOnlyIntentAsync(string kind)
+    {
+        var actor = Actor();
+        if (kind == "create") return new(actor, Id<Exercise>.Empty, new(Id<ExerciseMediaOperationReference>.New(), "Atomic database-only create", BodyParts.Chest, null, null, null), null);
+        ExerciseMediaMutationResult published;
+        using (var publish = Scope())
+        {
+            var result = await publish.ServiceProvider.GetRequiredService<IExerciseMediaService>().CreateAsync(actor,
+                new(Id<ExerciseMediaOperationReference>.New(), "Retained version fixture", BodyParts.Chest, null, null, Source()), Gif, default);
+            result.IsSuccess.Should().BeTrue(); published = result.Value;
+        }
+        Id<Exercise>.TryParse(published.Id, out var id).Should().BeTrue();
+        if (kind == "remove") return new(actor, id, null, new(Id<ExerciseMediaOperationReference>.New(), published.Image, null, true, null));
+        using (var remove = Scope())
+            (await remove.ServiceProvider.GetRequiredService<IExerciseMediaService>().ChangeAsync(actor, id, new(Id<ExerciseMediaOperationReference>.New(), published.Image, null, true, null), null, default)).IsSuccess.Should().BeTrue();
+        return new(actor, id, null, new(Id<ExerciseMediaOperationReference>.New(), null, null, false, published.Image));
+    }
+
+    private static Task<Result<ExerciseMediaMutationResult, AppError>> ExecuteIntentAsync(IServiceScope scope, DatabaseIntent intent)
+    {
+        var service = scope.ServiceProvider.GetRequiredService<IExerciseMediaService>();
+        return intent.Create is not null ? service.CreateAsync(intent.Actor, intent.Create, null, default)
+            : service.ChangeAsync(intent.Actor, intent.ExerciseId, intent.Change!, null, default);
+    }
+
+    private async Task<DatabaseIntent> ReservedDatabaseIntentAsync(string kind, bool expired)
+    {
+        var intent = await DatabaseOnlyIntentAsync(kind);
+        using (var initial = Scope())
+        {
+            var result = await ExecuteIntentAsync(initial, intent); result.IsSuccess.Should().BeTrue();
+            Id<Exercise>.TryParse(result.Value.Id, out var id).Should().BeTrue(); intent = intent with { ExerciseId = id };
+        }
+        // Reconstruct an older unconfirmed reservation using its actual fingerprint, not a copied serializer.
+        using var reserved = Scope(); var db = reserved.ServiceProvider.GetRequiredService<AppDbContext>();
+        var operation = await db.ExerciseMediaUploads.SingleAsync(x => x.OperationId == intent.OperationId);
+        operation.Status = "publishing"; operation.ResultImage = null;
+        operation.ExpiresAt = DateTimeOffset.UtcNow.AddHours(expired ? -1 : 1);
+        var exercise = await db.Exercises.SingleAsync(x => x.Id == intent.ExerciseId);
+        if (intent.Create is not null) db.Exercises.Remove(exercise);
+        else exercise.Image = intent.Change!.ExpectedImage;
+        await db.SaveChangesAsync();
+        return intent;
+    }
+
+    private static async Task ExpireIntentAsync(IServiceScope scope, DatabaseIntent intent, int hours = -1)
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var row = await db.ExerciseMediaUploads.SingleAsync(x => x.OperationId == intent.OperationId);
+        row.ExpiresAt = DateTimeOffset.UtcNow.AddHours(hours); await db.SaveChangesAsync();
+    }
+
+    private sealed record DatabaseIntent(AuthenticatedAccountContext Actor, Id<Exercise> ExerciseId, CreateExerciseMediaInput? Create, ChangeExerciseMediaInput? Change)
+    {
+        public Id<ExerciseMediaOperationReference> OperationId => Create?.OperationId ?? Change!.OperationId;
     }
 
     private sealed record Orphan(Exercise Exercise, AuthenticatedAccountContext Actor, ChangeExerciseMediaInput Input, string Key, byte[] Bytes);
@@ -354,10 +705,20 @@ public sealed class PostgreSqlExerciseMediaOrphanTests : PostgreSqlIntegrationTe
         }
         public void Reset() { Objects.Clear(); Deleted.Clear(); FailAfterPublish = false; FailNextDelete = false; BeforeDelete = null; BeforePublish = null; DeleteCalls = 0; PublishCalls = 0; }
     }
-    private sealed class UncertainCommitUnitOfWork(IUnitOfWork inner, Func<bool> shouldFail) : IUnitOfWork
+    private sealed class UncertainCommitUnitOfWork(IUnitOfWork inner, Func<bool> shouldFail, Func<bool> loseSaveAck, Action startingTransaction) : IUnitOfWork
     {
-        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => inner.SaveChangesAsync(cancellationToken);
-        public async Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) => new UncertainTransaction(await inner.BeginTransactionAsync(cancellationToken), shouldFail);
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var failAfterSave = loseSaveAck();
+            var saved = await inner.SaveChangesAsync(cancellationToken);
+            if (failAfterSave) throw new IOException("Synthetic lost atomic-save acknowledgement");
+            return saved;
+        }
+        public async Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            startingTransaction();
+            return new UncertainTransaction(await inner.BeginTransactionAsync(cancellationToken), shouldFail);
+        }
     }
     private sealed class UncertainTransaction(IUnitOfWorkTransaction inner, Func<bool> shouldFail) : IUnitOfWorkTransaction
     {

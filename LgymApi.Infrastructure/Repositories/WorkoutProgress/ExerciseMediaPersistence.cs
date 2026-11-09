@@ -28,6 +28,13 @@ public sealed class ExerciseMediaPersistence(AppDbContext context, IMapper mappe
         context.Entry(entity).CurrentValues.SetValues(values);
         return Task.CompletedTask;
     }
+    public async Task<IReadOnlyList<ExerciseMediaSession>> ExpiredOperationsAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var entities = await context.ExerciseMediaUploads.IgnoreQueryFilters().AsNoTracking()
+            .Where(x => x.Status == "publishing" && x.ExpiresAt <= now)
+            .OrderBy(x => x.ExpiresAt).ThenBy(x => x.CreatedAt).Take(100).ToListAsync(cancellationToken);
+        return mapper.MapList<ExerciseMediaUpload, ExerciseMediaSession>(entities);
+    }
     public Task StageImageAsync(Id<Exercise> exerciseId, string? expectedImage, string? newImage, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -63,7 +70,7 @@ public sealed class ExerciseMediaPersistence(AppDbContext context, IMapper mappe
             .Where(x => !context.Exercises.IgnoreQueryFilters().Any(exercise => exercise.Image == x.PublicUrl))
             .Where(x => !context.ExerciseMediaUploads.IgnoreQueryFilters().Any(operation => operation.Status == "bound" && (operation.ObjectKey == x.ObjectKey || operation.PreviousImage == x.PublicUrl || operation.ResultImage == x.PublicUrl)))
             .Where(x => !context.ExerciseMediaUploads.IgnoreQueryFilters().Any(operation => operation.ObjectKey == x.ObjectKey
-                && (operation.Status != "publishing" && operation.Status != "rejected" && operation.Status != "retired"
+                && (operation.Status != "publishing" && operation.Status != "rejected"
                     || operation.Status == "publishing" && operation.ExpiresAt > now)))
             .OrderBy(x => x.LastCleanupAt ?? DateTimeOffset.MinValue).ThenBy(x => x.CreatedAt).Take(100).ToListAsync(cancellationToken);
         return mapper.MapList<ExerciseMediaObjectFence, ExerciseMediaObjectState>(entities);
@@ -76,5 +83,10 @@ public sealed class ExerciseMediaPersistence(AppDbContext context, IMapper mappe
     public async Task<bool> IsImageReferencedAsync(string image, CancellationToken cancellationToken) =>
         await context.Exercises.IgnoreQueryFilters().AsNoTracking().AnyAsync(x => x.Image == image, cancellationToken)
         || await context.ExerciseMediaUploads.IgnoreQueryFilters().AsNoTracking().AnyAsync(x => x.Status == "bound" && (x.PreviousImage == image || x.ResultImage == image), cancellationToken);
+    public void DiscardTrackedState()
+    {
+        foreach (var entry in context.ChangeTracker.Entries<ExerciseMediaUpload>().ToList()) entry.State = EntityState.Detached;
+        foreach (var entry in context.ChangeTracker.Entries<ExerciseMediaObjectFence>().ToList()) entry.State = EntityState.Detached;
+    }
     public bool IsConcurrencyFailure(Exception exception) => exception is DbUpdateConcurrencyException || exception is DbUpdateException { InnerException: Npgsql.PostgresException { SqlState: "23505", ConstraintName: "IX_ExerciseMediaUploads_ActorId_OperationId" or "IX_ExerciseMediaObjectFences_ObjectKey" } };
 }

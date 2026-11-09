@@ -13,9 +13,10 @@ public sealed class ExerciseMediaStorageOptions
     {
         if (!Enabled) return;
         if (!Uri.TryCreate(Endpoint, UriKind.Absolute, out var endpoint) || endpoint.Scheme != "https" || !endpoint.Host.EndsWith(".r2.cloudflarestorage.com", StringComparison.Ordinal) || endpoint.AbsolutePath != "/" || endpoint.UserInfo.Length > 0 || endpoint.Query.Length > 0 || endpoint.Fragment.Length > 0 || !endpoint.IsDefaultPort) throw new InvalidOperationException("ExerciseMediaStorage requires an HTTPS R2 endpoint.");
-        if (Bucket is not ("lgym-exercises-dev" or "lgym-exercises-production")) throw new InvalidOperationException("ExerciseMediaStorage requires the exact DEV or separately approved production bucket.");
+        if (string.IsNullOrWhiteSpace(Bucket) || Bucket.Length is < 3 or > 63 || Bucket[0] == '-' || Bucket[^1] == '-'
+            || Bucket.Any(character => character is not (>= 'a' and <= 'z' or >= '0' and <= '9' or '-')))
+            throw new InvalidOperationException("ExerciseMediaStorage requires a valid R2 bucket name.");
         if (!Uri.TryCreate(PublicBaseUrl, UriKind.Absolute, out var cdn) || cdn.Scheme != "https" || cdn.AbsolutePath != "/" || cdn.Query.Length > 0 || cdn.Fragment.Length > 0 || cdn.UserInfo.Length > 0 || !cdn.IsDefaultPort || (cdn.IdnHost.TrimEnd('.') == "r2.dev" || cdn.IdnHost.TrimEnd('.').EndsWith(".r2.dev", StringComparison.Ordinal)) || (cdn.IdnHost.TrimEnd('.') == "r2.cloudflarestorage.com" || cdn.IdnHost.TrimEnd('.').EndsWith(".r2.cloudflarestorage.com", StringComparison.Ordinal))) throw new InvalidOperationException("ExerciseMediaStorage requires a dedicated HTTPS Worker origin.");
-        if (Bucket == "lgym-exercises-production" && (cdn.IdnHost.TrimEnd('.') == "workers.dev" || cdn.IdnHost.TrimEnd('.').EndsWith(".workers.dev", StringComparison.Ordinal))) throw new InvalidOperationException("Production exercise media requires its reviewed owned CDN hostname.");
         if (string.IsNullOrWhiteSpace(AccessKeyId) || string.IsNullOrWhiteSpace(SecretAccessKey)) throw new InvalidOperationException("ExerciseMediaStorage requires dedicated credentials.");
     }
 }

@@ -12,10 +12,9 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class ExerciseMediaPersistenceMappingTests
 {
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(true, true)]
-    public void RegisteredLedgerDirections_PreserveEveryStateFieldAndActorWithoutEntityAudit(bool bound, bool isCreate)
+    [TestCase(false)]
+    [TestCase(true)]
+    public void RegisteredLedgerDirections_PreserveEveryStateFieldAndActorWithoutEntityAudit(bool bound)
     {
         using var provider = CompositionRootTestHost.Create().BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
@@ -25,14 +24,13 @@ public sealed class ExerciseMediaPersistenceMappingTests
         {
             Id = Id<ExerciseMediaUpload>.New(), ActorId = Id<User>.New(),
             TargetExerciseId = bound ? exerciseId : null,
-            ContentType = "image/gif", SizeBytes = 4321, SourceSha256 = new string('a', 64),
+            ContentType = "image/gif", SourceSha256 = new string('a', 64),
             PublishedSha256 = bound ? new string('b', 64) : null, Extension = bound ? "gif" : null,
-            Width = 418, Height = 419, Frames = 16,
             ExpiresAt = DateTimeOffset.UtcNow.AddHours(24), Status = bound ? "bound" : "rejected", Revision = 17,
             OperationId = Id<ExerciseMediaOperationReference>.New(), OperationHash = new string('c', 64),
             PreviousImage = bound ? "https://legacy.owner.test/retained.gif" : null,
-            ResultImage = bound ? "https://exercises-dev.owner.test/" + objectKey : null,
-            IsCreate = isCreate, ObjectKey = bound ? objectKey : null, RejectionStatusCode = bound ? null : 422,
+            ResultImage = bound ? "https://media.example.test/" + objectKey : null,
+            ObjectKey = bound ? objectKey : null, RejectionStatusCode = bound ? null : 422,
             CreatedAt = DateTimeOffset.UtcNow.AddDays(-1), UpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-1), IsDeleted = true
         };
 
@@ -50,7 +48,7 @@ public sealed class ExerciseMediaPersistenceMappingTests
         roundtrip.UpdatedAt.Should().Be(default);
         roundtrip.IsDeleted.Should().BeFalse();
 
-        session.Status = "retired";
+        session.Status = "changed-projection-only";
         session.ObjectKey = "changed-projection-only";
         source.Status.Should().Be(bound ? "bound" : "rejected");
         source.ObjectKey.Should().Be(bound ? objectKey : null);
@@ -69,7 +67,7 @@ public sealed class ExerciseMediaPersistenceMappingTests
         var source = new ExerciseMediaObjectFence
         {
             Id = Id<ExerciseMediaObjectFence>.New(), ExerciseId = exerciseId, ObjectKey = objectKey,
-            PublicUrl = "https://exercises-dev.owner.test/" + objectKey, Revision = 19,
+            PublicUrl = "https://media.example.test/" + objectKey, Revision = 19,
             IsRetired = retired, LastCleanupAt = retired ? DateTimeOffset.UtcNow.AddMinutes(-2) : null,
             LastDeleteSucceeded = retired,
             CreatedAt = DateTimeOffset.UtcNow.AddDays(-1), UpdatedAt = DateTimeOffset.UtcNow, IsDeleted = true

@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.WorkoutProgress.ExerciseMedia;
 
-internal sealed class ExerciseMediaService(
+internal sealed partial class ExerciseMediaService(
     IExerciseMediaPersistence sessions,
     IWorkoutExercisePersistence exercises,
     IExerciseMediaStorage storage,
@@ -29,7 +29,6 @@ internal sealed class ExerciseMediaService(
     private const string Publishing = "publishing";
     private const string Bound = "bound";
     private const string Rejected = "rejected";
-    private const string Retired = "retired";
     private bool Allowed(AuthenticatedAccountContext? actor) => actor is not null && authorization.HasPermission(actor, AuthConstants.Permissions.ManageGlobalExercises);
     private static Result<T, AppError> Fail<T>(int status, string disposition) => Result<T, AppError>.Failure(new ExerciseMediaOperationError(disposition, status));
     private static Result<ExerciseMediaMutationResult, AppError> Unresolved() => Result<ExerciseMediaMutationResult, AppError>.Failure(new ExerciseMediaRetryError());
@@ -62,6 +61,8 @@ internal sealed class ExerciseMediaService(
         var operation = await sessions.FindOperationAsync(actor.Id, request.OperationId, cancellationToken);
         var replay = Replay(operation, hash);
         if (replay.HasValue) return replay.Value;
+        if (operation is not null && operation.ExpiresAt <= DateTimeOffset.UtcNow)
+            return await ResolveExpiredAsync(operation, cancellationToken);
         if (!ValidIntent(request)) return await RejectMutationAsync(actor, request.OperationId, 400, cancellationToken);
         var target = request.IsCreate ? null : await exercises.FindGlobalByIdAsync(request.ExerciseId, cancellationToken);
         if (!request.IsCreate && target is not { IsDeleted: false }) return Fail<ExerciseMediaMutationResult>(404, ExerciseMediaOperationError.Conflict);
@@ -74,10 +75,19 @@ internal sealed class ExerciseMediaService(
             if (prepared.Error.HttpStatusCode == 422 && operation is null) return await RejectMutationAsync(actor, request.OperationId, 422, cancellationToken);
             return Result<ExerciseMediaMutationResult, AppError>.Failure(prepared.Error);
         }
-        if (operation is null) operation = await ReserveAsync(actor, request, prepared.Value, hash, cancellationToken);
+        if (request.Source is null)
+        {
+            if (operation is null)
+            {
+                operation = MutationIntent(actor, request, hash);
+                await sessions.AddAsync(operation, cancellationToken);
+            }
+            // No storage side effect: exercise change and bound receipt have one atomic save.
+            return await BindAsync(operation, request, request.RestoreImage, cancellationToken);
+        }
+        operation ??= await ReserveAsync(actor, request, prepared.Value!, hash, cancellationToken);
         if (operation.Status == Rejected) return Fail<ExerciseMediaMutationResult>(operation.RejectionStatusCode ?? 400, ExerciseMediaOperationError.Rejected);
-        if (operation.ExpiresAt <= DateTimeOffset.UtcNow) return Unresolved();
-        return await PublishAndBindAsync(operation, request, prepared.Value, cancellationToken);
+        return await PublishAndBindAsync(operation, request, prepared.Value!, cancellationToken);
     }
 
     private static bool ValidIntent(MutationRequest request)
@@ -89,7 +99,7 @@ internal sealed class ExerciseMediaService(
     private static Result<ExerciseMediaMutationResult, AppError>? Replay(ExerciseMediaSession? operation, string hash)
     {
         if (operation is null) return null;
-        if (operation.Status is Rejected or Retired) return Fail<ExerciseMediaMutationResult>(operation.RejectionStatusCode ?? 409, ExerciseMediaOperationError.Rejected);
+        if (operation.Status == Rejected) return Fail<ExerciseMediaMutationResult>(operation.RejectionStatusCode ?? 409, ExerciseMediaOperationError.Rejected);
         if (operation.OperationHash != hash) return Conflict();
         if (operation.Status == Bound && operation.TargetExerciseId.HasValue)
             return Result<ExerciseMediaMutationResult, AppError>.Success(new(operation.TargetExerciseId.Value.ToString(), operation.ResultImage));
@@ -115,73 +125,64 @@ internal sealed class ExerciseMediaService(
         var published = await storage.ReadAsync(operation.ObjectKey, cancellationToken);
         if (published is null) return Fail<VerifiedExerciseMedia?>(428, ExerciseMediaOperationError.SourceRequired);
         if (Convert.ToHexStringLower(SHA256.HashData(published)) != operation.PublishedSha256) return Fail<VerifiedExerciseMedia?>(503, ExerciseMediaOperationError.Unresolved);
-        return Result<VerifiedExerciseMedia?, AppError>.Success(new(published, operation.ContentType, operation.Extension!, operation.SourceSha256, operation.PublishedSha256, operation.Width, operation.Height, operation.Frames));
+        return Result<VerifiedExerciseMedia?, AppError>.Success(new(published, operation.ContentType, operation.Extension!, operation.SourceSha256, operation.PublishedSha256));
     }
 
-    private async Task<ExerciseMediaSession> ReserveAsync(AuthenticatedAccountContext actor, MutationRequest request, VerifiedExerciseMedia? media, string hash, CancellationToken cancellationToken)
+    private static ExerciseMediaSession MutationIntent(AuthenticatedAccountContext actor, MutationRequest request, string hash)
     {
-        var targetId = request.IsCreate ? Id<Exercise>.New() : request.ExerciseId;
         var operation = NewOperation(actor, request.OperationId);
         operation.OperationHash = hash;
-        operation.IsCreate = request.IsCreate;
-        operation.TargetExerciseId = targetId;
+        operation.TargetExerciseId = request.IsCreate ? Id<Exercise>.New() : request.ExerciseId;
         operation.PreviousImage = request.ExpectedImage;
+        return operation;
+    }
+
+    private async Task<ExerciseMediaSession> ReserveAsync(AuthenticatedAccountContext actor, MutationRequest request, VerifiedExerciseMedia media, string hash, CancellationToken cancellationToken)
+    {
+        var operation = MutationIntent(actor, request, hash);
         operation.ExpiresAt = DateTimeOffset.UtcNow.AddHours(24);
-        CopyVerifiedState(operation, media, request.Source);
+        operation.ContentType = media.ContentType;
+        operation.SourceSha256 = media.SourceSha256;
+        operation.PublishedSha256 = media.PublishedSha256;
+        operation.Extension = media.Extension;
+        var filename = media.Extension == "gif" ? "animation.gif" : $"image.{media.Extension}";
+        operation.ObjectKey = $"exercises/{operation.TargetExerciseId}/{media.PublishedSha256}/{filename}";
+        // An owned commit must confirm publication authority before any external PUT.
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
-        if (media is not null)
+        var keyFence = await sessions.FindObjectAsync(operation.ObjectKey, cancellationToken);
+        if (keyFence is { IsRetired: true })
         {
-            var filename = media.Extension == "gif" ? "animation.gif" : $"image.{media.Extension}";
-            operation.ObjectKey = $"exercises/{targetId}/{media.PublishedSha256}/{filename}";
-            var keyFence = await sessions.FindObjectAsync(operation.ObjectKey, cancellationToken);
-            if (keyFence is { IsRetired: true })
-            {
-                operation.Status = Rejected;
-                operation.RejectionStatusCode = 409;
-            }
-            else if (keyFence is null)
-                await sessions.AddObjectAsync(new() { Id = Id<ExerciseMediaObjectFence>.New(), ExerciseId = targetId, ObjectKey = operation.ObjectKey, PublicUrl = storage.GetPublicUrl(operation.ObjectKey) }, cancellationToken);
-            else await sessions.SaveObjectRevisionAsync(keyFence, cancellationToken);
+            operation.Status = Rejected;
+            operation.RejectionStatusCode = 409;
         }
+        else if (keyFence is null)
+            await sessions.AddObjectAsync(new() { Id = Id<ExerciseMediaObjectFence>.New(), ExerciseId = operation.TargetExerciseId!.Value, ObjectKey = operation.ObjectKey, PublicUrl = storage.GetPublicUrl(operation.ObjectKey) }, cancellationToken);
+        else await sessions.SaveObjectRevisionAsync(keyFence, cancellationToken);
         await sessions.AddAsync(operation, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return operation;
     }
 
-    private static void CopyVerifiedState(ExerciseMediaSession operation, VerifiedExerciseMedia? media, ExerciseMediaSourceInput? source)
+    private async Task<Result<ExerciseMediaMutationResult, AppError>> PublishAndBindAsync(ExerciseMediaSession operation, MutationRequest request, VerifiedExerciseMedia media, CancellationToken cancellationToken)
     {
-        operation.ContentType = media?.ContentType ?? string.Empty;
-        operation.SizeBytes = source?.SizeBytes ?? 0;
-        operation.SourceSha256 = media?.SourceSha256 ?? string.Empty;
-        operation.PublishedSha256 = media?.PublishedSha256;
-        operation.Extension = media?.Extension;
-        operation.Width = media?.Width ?? 0;
-        operation.Height = media?.Height ?? 0;
-        operation.Frames = media?.Frames ?? 0;
+        var keyFence = await sessions.FindObjectAsync(operation.ObjectKey!, cancellationToken);
+        if (keyFence is null || keyFence.IsRetired) return Conflict();
+        var image = await storage.PublishAsync(operation.ObjectKey!, media.Bytes, media.ContentType, cancellationToken);
+        await sessions.SaveObjectRevisionAsync(keyFence, cancellationToken);
+        return await BindAsync(operation, request, image, cancellationToken);
     }
 
-    private async Task<Result<ExerciseMediaMutationResult, AppError>> PublishAndBindAsync(ExerciseMediaSession operation, MutationRequest request, VerifiedExerciseMedia? media, CancellationToken cancellationToken)
+    private async Task<Result<ExerciseMediaMutationResult, AppError>> BindAsync(ExerciseMediaSession operation, MutationRequest request, string? image, CancellationToken cancellationToken)
     {
-        ExerciseMediaObjectState? keyFence = null;
-        var image = request.RestoreImage;
-        if (operation.ObjectKey is not null)
-        {
-            keyFence = await sessions.FindObjectAsync(operation.ObjectKey, cancellationToken);
-            if (keyFence is null || keyFence.IsRetired || media is null) return Conflict();
-            image = await storage.PublishAsync(operation.ObjectKey, media.Bytes, media.ContentType, cancellationToken);
-        }
-        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
         operation.Status = Bound;
         operation.ResultImage = image;
         await sessions.SaveSessionRevisionAsync(operation, cancellationToken);
-        if (keyFence is not null) await sessions.SaveObjectRevisionAsync(keyFence, cancellationToken);
         var id = operation.TargetExerciseId!.Value;
         if (request.IsCreate)
             await exercises.AddAsync(new(id, null, request.Name.Trim(), request.BodyPart, request.EloFormula ?? ExerciseEloFormula.Standard, request.Description, image, false), cancellationToken);
         else await sessions.StageImageAsync(id, request.ExpectedImage, image, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
         return Result<ExerciseMediaMutationResult, AppError>.Success(new(id.ToString(), image));
     }
 
@@ -191,7 +192,7 @@ internal sealed class ExerciseMediaService(
         try
         {
             var operation = await sessions.FindOperationAsync(actor!.Id, operationId, cancellationToken);
-            if (operation is not null) return operation.Status is Rejected or Retired;
+            if (operation is not null) return operation.Status == Rejected;
             operation = NewOperation(actor, operationId);
             operation.Status = Rejected;
             operation.RejectionStatusCode = statusCode;
@@ -212,60 +213,6 @@ internal sealed class ExerciseMediaService(
 
     private static ExerciseMediaSession NewOperation(AuthenticatedAccountContext actor, Id<ExerciseMediaOperationReference> operationId) =>
         new() { Id = Id<ExerciseMediaUpload>.New(), ActorId = actor.Id, OperationId = operationId, Status = Publishing };
-
-    public async Task<Result<ExerciseMediaCleanupResult, AppError>> CleanupAsync(AuthenticatedAccountContext? actor, CancellationToken cancellationToken)
-    {
-        if (!Allowed(actor)) return Result<ExerciseMediaCleanupResult, AppError>.Failure(new ForbiddenError(Messages.Forbidden));
-        var candidates = await sessions.CleanupCandidatesAsync(DateTimeOffset.UtcNow, cancellationToken);
-        var cleaned = 0;
-        foreach (var candidate in candidates)
-        {
-            try
-            {
-                var claimed = await ClaimOrphanAsync(candidate.ObjectKey, cancellationToken);
-                if (claimed is null) continue;
-                // No storage call occurs before the transaction's atomic key/operation fence commits.
-                await storage.DeleteAsync(claimed.ObjectKey, cancellationToken);
-                claimed.LastDeleteSucceeded = true;
-                await sessions.SaveObjectRevisionAsync(claimed, cancellationToken);
-                await unitOfWork.SaveChangesAsync(cancellationToken);
-                cleaned++;
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception exception)
-            {
-                LogDeferred("cleanup", candidate.Id.ToString(), exception);
-                // A failed commit can leave this request's tracked state uncertain. Retry in a fresh scope.
-                break;
-            }
-        }
-        return Result<ExerciseMediaCleanupResult, AppError>.Success(new(cleaned, candidates.Count - cleaned));
-    }
-
-    private async Task<ExerciseMediaObjectState?> ClaimOrphanAsync(string objectKey, CancellationToken cancellationToken)
-    {
-        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
-        var keyFence = await sessions.FindObjectAsync(objectKey, cancellationToken);
-        if (keyFence is null) return null;
-        var linked = await sessions.SessionsForObjectAsync(objectKey, cancellationToken);
-        var now = DateTimeOffset.UtcNow;
-        if (await sessions.IsImageReferencedAsync(keyFence.PublicUrl, cancellationToken)
-            || linked.Any(x => x.Status == Bound || x.Status is not (Publishing or Rejected or Retired) || x.Status == Publishing && x.ExpiresAt > now)) return null;
-        foreach (var operation in linked.Where(x => x.Status is not (Bound or Rejected or Retired)))
-        {
-            operation.Status = Retired;
-            operation.RejectionStatusCode = 409;
-            await sessions.SaveSessionRevisionAsync(operation, cancellationToken);
-        }
-        // Permanent retirement is essential: a timed-out DELETE may complete after a later retry.
-        keyFence.IsRetired = true;
-        keyFence.LastCleanupAt = now;
-        keyFence.LastDeleteSucceeded = false;
-        await sessions.SaveObjectRevisionAsync(keyFence, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return keyFence;
-    }
 
     private void LogDeferred(string phase, string reference, Exception exception) => logger.LogWarning("Exercise media deferred: phase={Phase}, reference={Reference}, category={Category}", phase, reference, exception.GetType().Name);
 

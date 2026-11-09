@@ -19,4 +19,4 @@
 - Coaching coverage exercises focused use cases and ports, persistence staging without repository commits, the Worker invitation-email adapter mapping, and exact-one port registration. Run the suite with `dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build` after a Release build.
 - `ActorRowSecurityScopeTests` cover empty actors, InMemory no-op behavior, fail-closed relational setup, cancellation, and preservation of pre-existing tracked entries.
 
-- ExerciseMediaVerifierTests uses the centrally pinned Magick.NET package to validate GIF frame pixel/timing preservation, still-image metadata removal/orientation, byte checksums and frame/canvas/aggregate budgets.
+- Exercise-media unit coverage checks arbitrary valid bucket names, disabled-storage isolation and minimal ledger mapping without audit leakage; obsolete split-config and persisted-geometry cases are removed. ExerciseMediaVerifierTests uses the centrally pinned Magick.NET package to validate GIF frame pixel/timing preservation, still-image metadata removal/orientation, byte checksums and frame/canvas/aggregate budgets.

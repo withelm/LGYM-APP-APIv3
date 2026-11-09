@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -40,21 +40,16 @@ namespace LgymApi.Infrastructure.Migrations
                     ActorId = table.Column<Guid>(type: "uuid", nullable: false),
                     TargetExerciseId = table.Column<Guid>(type: "uuid", nullable: true),
                     ContentType = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    SizeBytes = table.Column<long>(type: "bigint", nullable: false),
                     SourceSha256 = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     PublishedSha256 = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     Extension = table.Column<string>(type: "character varying(8)", maxLength: 8, nullable: true),
-                    Width = table.Column<int>(type: "integer", nullable: false),
-                    Height = table.Column<int>(type: "integer", nullable: false),
-                    Frames = table.Column<int>(type: "integer", nullable: false),
                     ExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
                     Revision = table.Column<long>(type: "bigint", nullable: false),
-                    OperationId = table.Column<Guid>(type: "uuid", nullable: true),
+                    OperationId = table.Column<Guid>(type: "uuid", nullable: false),
                     OperationHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     PreviousImage = table.Column<string>(type: "text", nullable: true),
                     ResultImage = table.Column<string>(type: "text", nullable: true),
-                    IsCreate = table.Column<bool>(type: "boolean", nullable: false),
                     ObjectKey = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     RejectionStatusCode = table.Column<int>(type: "integer", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -87,6 +82,11 @@ namespace LgymApi.Infrastructure.Migrations
                 name: "IX_ExerciseMediaUploads_ObjectKey_ExpiresAt",
                 table: "ExerciseMediaUploads",
                 columns: new[] { "ObjectKey", "ExpiresAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ExerciseMediaUploads_Status_ExpiresAt",
+                table: "ExerciseMediaUploads",
+                columns: new[] { "Status", "ExpiresAt" });
         }
 
         /// <inheritdoc />

@@ -58,10 +58,15 @@ Workout execution and completed-training history belong to `Workout & Progress`.
 Exercise media uses the Workout & Progress-owned `ExerciseMediaUpload` operation
 ledger and `ExerciseMediaObjectFence` immutable-key fence. Authenticated multipart
 bytes are bounded, decoded and sanitized by the API before publication directly
-to one private exercise bucket per environment. Actor-scoped receipts preserve
-idempotency; the ledger and object revision commit before external publication.
+to the single private exercise bucket selected by that backend configuration.
+Actor-scoped receipts preserve
+idempotency. Only file publication reserves ledger/key authority before external
+PUT; DB-only create/remove/restore use one atomic exercise-and-receipt save.
+Expired operations are independently revision-fenced even without a deletable key.
 Cleanup must win the shared-key revision before any DELETE, permanently retires
-claimed never-bound keys and periodically reconciles late writes. Current or
+claimed never-bound keys and periodically reconciles late writes. After a failed
+candidate, only owned
+ledger/fence tracking is discarded so later candidates read fresh state. Current or
 retained bindings and unresolved intents protect their bytes. `Exercise.Image`
 remains the permanent Worker/CDN URL. The single Infrastructure context/migration
 stream and Workout & Progress ownership remain authoritative; Reporting photos

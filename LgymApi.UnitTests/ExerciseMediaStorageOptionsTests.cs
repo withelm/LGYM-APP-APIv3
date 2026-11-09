@@ -17,28 +17,29 @@ public sealed class ExerciseMediaStorageOptionsTests
         Endpoint = "https://technical-account.r2.cloudflarestorage.com",
         AccessKeyId = "synthetic-exercise-access",
         SecretAccessKey = "synthetic-exercise-secret",
-        Bucket = "lgym-exercises-dev",
+        Bucket = "tenant-one-assets",
         PublicBaseUrl = "https://exercises-dev.owner.test"
     };
 
-    [TestCase("lgym-exercises-dev")]
-    [TestCase("lgym-exercises-production")]
-    public void ExactEnvironmentBucket_WithDedicatedOwnedOrigin_IsAccepted(string bucket)
+    [TestCase("tenant-one-assets")]
+    [TestCase("tenant-two-images")]
+    public void ArbitraryValidBucket_WithDedicatedOwnedOrigin_IsAccepted(string bucket)
     {
         var options = Options();
         options.Bucket = bucket;
-        if (bucket == "lgym-exercises-production") options.PublicBaseUrl = "https://exercises.owner.test";
         options.Validate();
     }
 
     [TestCase("")]
     [TestCase(" ")]
-    [TestCase("lgym-exercises-staging")]
-    [TestCase("report-photos")]
-    [TestCase("lgym-exercise-private-dev")]
-    [TestCase("lgym-exercise-published-dev")]
-    [TestCase("LGYM-EXERCISES-DEV")]
-    public void AnyOtherBucket_IsRejected(string bucket)
+    [TestCase("ab")]
+    [TestCase("-first")]
+    [TestCase("last-")]
+    [TestCase("contains.dot")]
+    [TestCase("contains_underscore")]
+    [TestCase("UPPERCASE")]
+    [TestCase("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+    public void InvalidR2BucketSyntax_IsRejected(string bucket)
     {
         var options = Options();
         options.Bucket = bucket;
@@ -85,25 +86,14 @@ public sealed class ExerciseMediaStorageOptionsTests
         validate.Should().Throw<InvalidOperationException>();
     }
 
-    [Test]
-    public void PublicWorkerOrigin_IsAllowedForDevBucket()
+    [TestCase("tenant-one-assets")]
+    [TestCase("tenant-two-images")]
+    public void WorkerOriginPolicy_DoesNotDependOnBucketSpelling(string bucket)
     {
         var options = Options();
-        options.PublicBaseUrl = "https://lgym-exercise-media-dev.owner.workers.dev";
+        options.Bucket = bucket;
+        options.PublicBaseUrl = "https://exercise-media.operator.workers.dev";
         options.Validate();
-    }
-
-    [TestCase("https://workers.dev.")]
-    [TestCase("https://lgym-exercise-media-production.owner.workers.dev.")]
-    [TestCase("https://workers.dev")]
-    [TestCase("https://lgym-exercise-media-production.owner.workers.dev")]
-    public void ProductionBucket_RejectsWorkerDevelopmentOrigin(string origin)
-    {
-        var options = Options();
-        options.PublicBaseUrl = origin;
-        options.Bucket = "lgym-exercises-production";
-        Action validate = options.Validate;
-        validate.Should().Throw<InvalidOperationException>();
     }
 
     [TestCase("AccessKeyId")]
@@ -143,15 +133,20 @@ public sealed class ExerciseMediaStorageOptionsTests
         register.Should().Throw<InvalidOperationException>();
     }
 
-    [TestCase("PrivateBucket")]
-    [TestCase("PublishedBucket")]
-    public void InfrastructureRegistration_RejectsObsoleteSplitKeysEvenWhenDisabled(string obsoleteKey)
+    [Test]
+    public void DisabledInfrastructure_IgnoresUnusedStorageSettingsAndStillResolvesExercisePersistence()
     {
         var values = DedicatedConfiguration();
         values["ExerciseMediaStorage:Enabled"] = "false";
-        values["ExerciseMediaStorage:" + obsoleteKey] = "obsolete-split-bucket";
-        Action register = () => new ServiceCollection().AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true);
-        register.Should().Throw<InvalidOperationException>();
+        values["ExerciseMediaStorage:Bucket"] = "YOUR_EXERCISE_MEDIA_BUCKET";
+        values["ExerciseMediaStorage:Endpoint"] = "not an enabled endpoint";
+        values["ExerciseMediaStorage:AccessKeyId"] = values["PhotoStorage:AccessKeyId"];
+        var services = new ServiceCollection();
+        services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>().IsConfigured.Should().BeFalse();
+        scope.ServiceProvider.GetRequiredService<LgymApi.Application.WorkoutProgress.Persistence.IWorkoutExercisePersistence>().Should().NotBeNull();
     }
 
     [Test]
@@ -162,7 +157,7 @@ public sealed class ExerciseMediaStorageOptionsTests
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>().IsConfigured.Should().BeTrue();
-        provider.GetRequiredService<ExerciseMediaStorageOptions>().Bucket.Should().Be("lgym-exercises-dev");
+        provider.GetRequiredService<ExerciseMediaStorageOptions>().Bucket.Should().Be("tenant-one-assets");
     }
 
     private static Dictionary<string, string?> DedicatedConfiguration()

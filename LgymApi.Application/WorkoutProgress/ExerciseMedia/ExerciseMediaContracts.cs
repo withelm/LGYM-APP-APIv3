@@ -24,7 +24,7 @@ public sealed record ChangeExerciseMediaInput(Id<ExerciseMediaOperationReference
 public sealed record ExerciseMediaMutationResult(string Id, string? Image, string Status = "persisted");
 public sealed record ExerciseMediaFailureResult(string OperationId, string Message, string Disposition);
 public sealed record ExerciseMediaCleanupResult(int Cleaned, int Remaining);
-public sealed record VerifiedExerciseMedia(byte[] Bytes, string ContentType, string Extension, string SourceSha256, string PublishedSha256, int Width, int Height, int Frames);
+public sealed record VerifiedExerciseMedia(byte[] Bytes, string ContentType, string Extension, string SourceSha256, string PublishedSha256, int Width = 0, int Height = 0, int Frames = 0);
 
 public interface IExerciseMediaService
 {
@@ -56,6 +56,7 @@ public interface IExerciseMediaPersistence
     Task<ExerciseMediaSession?> FindOperationAsync(Id<AccountReference> actorId, Id<ExerciseMediaOperationReference> operationId, CancellationToken cancellationToken);
     Task AddAsync(ExerciseMediaSession session, CancellationToken cancellationToken);
     Task SaveSessionRevisionAsync(ExerciseMediaSession session, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ExerciseMediaSession>> ExpiredOperationsAsync(DateTimeOffset now, CancellationToken cancellationToken);
     Task StageImageAsync(Id<Exercise> exerciseId, string? expectedImage, string? newImage, CancellationToken cancellationToken);
     Task<bool> WasRetainedAsync(Id<Exercise> exerciseId, string image, CancellationToken cancellationToken);
     Task<ExerciseMediaObjectState?> FindObjectAsync(string objectKey, CancellationToken cancellationToken);
@@ -64,5 +65,6 @@ public interface IExerciseMediaPersistence
     Task<IReadOnlyList<ExerciseMediaObjectState>> CleanupCandidatesAsync(DateTimeOffset before, CancellationToken cancellationToken);
     Task<IReadOnlyList<ExerciseMediaSession>> SessionsForObjectAsync(string objectKey, CancellationToken cancellationToken);
     Task<bool> IsImageReferencedAsync(string image, CancellationToken cancellationToken);
+    void DiscardTrackedState();
     bool IsConcurrencyFailure(Exception exception);
 }

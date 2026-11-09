@@ -38,13 +38,13 @@ jobs:
         with:
           dotnet-version: 10.0.102
 
-      - name: Verify exercise-media Worker and DEV configuration
+      - name: Verify exercise-media Worker configuration
         shell: bash
         run: |
           set -euo pipefail
           node --test deployment/exercise-media/worker.test.mjs
           python -m unittest discover -s deployment/exercise-media -p 'test_*.py'
-          python deployment/exercise-media/validate_config.py --allow-example-hosts
+          python deployment/exercise-media/validate_config.py --allow-placeholders
 
       - name: Restore, Release build, and create same-SHA discovery evidence
         shell: pwsh

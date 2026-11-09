@@ -1,28 +1,15 @@
-name = "lgym-exercise-media"
+# Neutral example. Copy to ignored wrangler.local.toml and fill operator values.
+# One binding is selected by this Worker's corresponding backend configuration.
+name = "YOUR_WORKER_NAME"
 main = "worker.mjs"
 compatibility_date = "2026-11-09"
 workers_dev = false
 preview_urls = false
-
-# Fail-closed templates: no public route until the owner verifies the real host.
-# Existing DEV API/DB only; there is no third staging environment.
-[env.dev]
-name = "lgym-exercise-media-dev"
-workers_dev = false
 routes = []
-[env.dev.vars]
-EXPECTED_HOST = "REPLACE_WITH_VERIFIED_DEV_WORKER_HOST"
-[[env.dev.r2_buckets]]
-binding = "EXERCISE_MEDIA"
-bucket_name = "lgym-exercises-dev"
 
-# Future template only. Production creation/deployment is separately authorized.
-[env.production]
-name = "lgym-exercise-media-production"
-workers_dev = false
-routes = []
-[env.production.vars]
-EXPECTED_HOST = "REPLACE_WITH_VERIFIED_PRODUCTION_WORKER_HOST"
-[[env.production.r2_buckets]]
+[vars]
+EXPECTED_HOST = "media.example.invalid"
+
+[[r2_buckets]]
 binding = "EXERCISE_MEDIA"
-bucket_name = "lgym-exercises-production"
+bucket_name = "YOUR_EXERCISE_MEDIA_BUCKET"

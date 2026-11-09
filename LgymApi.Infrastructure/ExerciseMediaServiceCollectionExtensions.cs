@@ -12,8 +12,6 @@ public static partial class ServiceCollectionExtensions
 {
     internal static IServiceCollection AddExerciseMediaInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        if (configuration["ExerciseMediaStorage:PrivateBucket"] is not null || configuration["ExerciseMediaStorage:PublishedBucket"] is not null)
-            throw new InvalidOperationException("The unreleased split exercise bucket configuration is not supported.");
         var options = configuration.GetSection("ExerciseMediaStorage").Get<ExerciseMediaStorageOptions>() ?? new();
         options.Validate();
         var reportsBucket = configuration["PhotoStorage:BucketName"];

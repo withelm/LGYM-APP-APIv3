@@ -14,7 +14,7 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class ExerciseMediaStorageTests
 {
-    private const string Bucket = "lgym-exercises-dev";
+    private const string Bucket = "tenant-one-assets";
     private static string Key(byte[] bytes) => "exercises/00000000-0000-0000-0000-000000000001/" + Convert.ToHexStringLower(SHA256.HashData(bytes)) + "/animation.gif";
 
     [TestCase(false)]
